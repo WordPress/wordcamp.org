@@ -285,7 +285,14 @@ body.error404 .site-content-container h1 {
 	flex-wrap: nowrap;
 }
 
-.groups-site-hero-meta .wporg-group-membership::before {
+/* `wporg/group-location` renders nothing at all when the group hasn't set a
+   location, so the separator is bound to the sibling it separates from —
+   otherwise the member count picks up a leading middle dot with nothing on
+   its left. */
+
+.groups-site-hero-meta
+	.wp-block-wporg-group-location
+	+ .wporg-group-membership::before {
 	content: "\00b7";
 	content: "\00b7" / "";
 	color: var(--wp--preset--color--charcoal-5);
@@ -323,8 +330,14 @@ body.error404 .site-content-container h1 {
 	text-decoration: none;
 }
 
+/* The card is a full-height flex column: equal heights across a grid row,
+   and a column direction so the meta cluster further down can claim the
+   leftover space and pin itself to the bottom edge (see below). */
+
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
 	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
 	height: 100%;
 }
 
@@ -348,23 +361,15 @@ body.error404 .site-content-container h1 {
  * substitutes this element instead, keeping the same 16:9 region and the
  * same rounded top corners.
  *
- * The fill is two tones of the same blue plus a faint diagonal: quiet
- * enough not to compete with real photography in the cards beside it,
- * but not a flat empty slab.
+ * The fill is the flat blueberry-4 surface the design guide specifies for
+ * missing imagery (docs/design/groups-site.md, "Missing imagery") — a
+ * consistent region, not invented artwork.
  */
 
 .groups-site-featured-placeholder {
 	aspect-ratio: 16 / 9;
 	border-radius: 3px 3px 0 0;
 	background-color: var(--wp--preset--color--blueberry-4);
-	background-image: linear-gradient(
-			135deg,
-			var(--wp--preset--color--blueberry-4),
-			var(--wp--preset--color--blueberry-3)
-		),
-		linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.4) 48% 52%, transparent 52%);
-	background-blend-mode: normal, overlay;
-	background-size: 100% 100%, 24px 24px;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {
@@ -387,14 +392,10 @@ body.error404 .site-content-container h1 {
  * Pin the meta cluster (RSVP count + venue) to the card's bottom edge. The
  * cards in a grid row share a height, but their excerpts don't share a
  * length, so without this the venue lines end at three different heights
- * across one row. The card and its body become flex columns; the meta group
- * takes the leftover space as top margin.
+ * across one row. The card body becomes a flex column as well (the card
+ * itself already is, above); the meta group takes the leftover space as
+ * top margin.
  */
-
-.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
-	display: flex;
-	flex-direction: column;
-}
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
 	display: flex;
@@ -726,7 +727,8 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
-   Single-event comment form — meetup-style "Leave a reply" composer
+   Discussion composer — the compact "leave a reply" form shared by the
+   single-event and single-post views
    ========================================================================== */
 
 .wp-block-post-comments-form,
@@ -735,7 +737,12 @@ body.error404 .site-content-container h1 {
 }
 
 /* Suppress the auto "Leave a Reply" heading and any logged-in-as boilerplate
-   that core might re-inject despite our comment_form_defaults filter. */
+   that core might re-inject despite our comment_form_defaults filter.
+
+   `#reply-title` is core's wrapper for that heading *and* for the Cancel
+   reply link nested inside it. `has_compact_comment_form()` empties the
+   wrapper on every singular this section styles, so the link is a sibling
+   here rather than a casualty of this rule — see the note on it below. */
 
 .wp-block-post-comments-form .comment-reply-title,
 .wp-block-post-comments-form #reply-title,
@@ -743,6 +750,26 @@ body.error404 .site-content-container h1 {
 .wp-block-post-comments-form .comment-notes,
 .wp-block-post-comments-form .form-allowed-tags {
 	display: none !important;
+}
+
+/* Cancel reply. Core prints it inside `#respond` ahead of the form, carrying
+   an inline `display: none` that `comment-reply.js` clears when it moves the
+   form under a comment — so this styles the visible state only, and the
+   inline rule keeps winning while the form sits at the bottom of the page.
+   Quiet by design: it undoes a choice, it doesn't compete with Post
+   comment. */
+
+.wp-block-post-comments-form #cancel-comment-reply-link {
+	display: inline-block;
+	margin-bottom: 8px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wp-block-post-comments-form #cancel-comment-reply-link:hover,
+.wp-block-post-comments-form #cancel-comment-reply-link:focus-visible {
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wp-block-post-comments-form .comment-form {
@@ -885,8 +912,21 @@ body.error404 .site-content-container h1 {
 	margin-bottom: 0;
 }
 
-.wp-block-comments .wp-block-comment-reply-link {
+/* Reply, and — for anyone who can edit the comment — Edit, sit on one row
+   under the comment body. `single.html` wraps them in the actions group;
+   `single-event.html` still renders a bare reply link. */
+
+.wp-block-comments .wp-block-comment-reply-link,
+.wp-block-comments .groups-site-comment__actions {
 	margin-top: 6px;
+}
+
+.wp-block-comments .groups-site-comment__actions {
+	align-items: baseline;
+}
+
+.wp-block-comments .groups-site-comment__actions .wp-block-comment-reply-link {
+	margin-top: 0;
 }
 
 /* Reply threads — core renders children as a bare `ol` inside the parent

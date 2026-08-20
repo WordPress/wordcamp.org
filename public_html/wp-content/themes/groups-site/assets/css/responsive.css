@@ -100,6 +100,7 @@
 	/* Group membership block: stack the sidebar variants. Scoped to the
 	   sidebar because the standalone count in the hero meta row stays
 	   inline next to the group location at every width. */
+
 	.groups-site-sidebar .wporg-group-membership {
 		flex-direction: column;
 		align-items: flex-start;

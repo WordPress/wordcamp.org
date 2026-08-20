@@ -20,8 +20,7 @@ $shows_preference = in_array( $variant, array( 'combined', 'preference' ), true 
 // The standalone count lives in the hero's meta row next to the group
 // location; the sidebar membership variant leaves it out so the number
 // isn't stated twice on the same page.
-$shows_count      = in_array( $variant, array( 'combined', 'count' ), true );
-$needs_count_data = $shows_count || $shows_membership;
+$shows_count = in_array( $variant, array( 'combined', 'count' ), true );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
@@ -55,7 +54,12 @@ $member_count = 0;
 $count_label  = '';
 $members_url  = '';
 
-if ( $needs_count_data ) {
+// Gated on `$shows_count` alone. `count_users()` runs Core's CPU-intensive
+// usermeta aggregate, and the group front page renders two of these blocks
+// — the hero count and the sidebar membership controls — so tying this to
+// `$shows_membership` as well ran that aggregate twice on every request for
+// a number the membership variant no longer prints.
+if ( $shows_count ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
 	$member_count = $user_count['total_users'] ?? 0;
 	$count_label  = sprintf(
@@ -80,8 +84,8 @@ $context = array(
 );
 
 // The count markup reads its label through the store's context-backed
-// getter, so the standalone variant needs these two keys as well.
-if ( 'count' === $variant ) {
+// getter, so every variant that prints a count needs these two keys.
+if ( $shows_count ) {
 	$context = array_merge(
 		$context,
 		array(
@@ -96,10 +100,8 @@ if ( $shows_membership ) {
 		$context,
 		array(
 			'roleLabel'    => $role_label,
-			'memberCount'  => $member_count,
 			'memberLabel'  => __( 'Member', 'wporg-groups-frontend' ),
 			'joinLabel'    => __( 'Join this group', 'wporg-groups-frontend' ),
-			'countLabel'   => $count_label,
 			'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
@@ -109,19 +111,29 @@ if ( $shows_membership ) {
 	);
 }
 
-// Registered for every variant that prints the count: the server-side
-// directive processor resolves `state.countLabel` from here, so without
-// it the standalone count would render empty until hydration.
-if ( $needs_count_data ) {
-	wp_interactivity_state(
-		'wporg/group-membership',
-		array(
-			'buttonLabel' => $is_member ? $role_label : __( 'Join this group', 'wporg-groups-frontend' ),
-			'isMember'    => $is_member,
-			'memberCount' => $member_count,
-			'countLabel'  => $count_label,
-		)
-	);
+/*
+ * The server-side directive processor can't run the store's JavaScript
+ * getters, so it resolves `state.*` straight out of what's registered here.
+ * Both halves matter and neither implies the other: without `buttonLabel`
+ * the Join button and the role badge render with empty text until
+ * hydration, and without `countLabel` the count does. Register each
+ * alongside the markup that reads it.
+ */
+if ( $shows_membership || $shows_count ) {
+	$interactivity_state = array( 'isMember' => $is_member );
+
+	if ( $shows_membership ) {
+		$interactivity_state['buttonLabel'] = $is_member
+			? $role_label
+			: __( 'Join this group', 'wporg-groups-frontend' );
+	}
+
+	if ( $shows_count ) {
+		$interactivity_state['memberCount'] = $member_count;
+		$interactivity_state['countLabel']  = $count_label;
+	}
+
+	wp_interactivity_state( 'wporg/group-membership', $interactivity_state );
 }
 
 if ( $renders_preference ) {
@@ -196,7 +208,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 			<?php if ( $renders_leave ) : ?>
 				<button
-					class="wporg-group-membership__count wporg-group-membership__leave"
+					class="wporg-group-membership__leave"
 					data-wp-on--click="actions.leave"
 					data-wp-bind--disabled="context.loading"
 					data-wp-bind--aria-busy="context.loading"

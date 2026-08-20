@@ -46,9 +46,11 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, per-event messaging, the
-  auto-publish-notification email, and the member directory. Needs
+  auto-publish-notification email, the member directory, and Reply →
+  Cancel on a group news post's comment form. Needs
   `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
-  `eventorganiser4`/`eventorganiser5`/`member1` (all `password`) — **every
+  `eventorganiser4`/`eventorganiser5`/`eventorganiser6`/`member1` (all
+  `password`) — **every
   individual test that logs in as an author has its own dedicated
   `eventorganiser*` account, not just every spec *file*.**
   `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
@@ -222,6 +224,22 @@ Environment gotchas that look like code bugs but aren't:
   even though `ls /app` lists the file. Its bind mounts go stale when a
   mounted file's inode changes on the host (macOS Docker); fix with
   `docker compose -f docker-compose.phpunit.yml up -d --force-recreate phpunit_wp`.
+- **Hooks a PHPUnit class fixture registers only survive that class's
+  first test.** `WP_UnitTestCase` snapshots `$wp_filter` once per *process*
+  (`self::$hooks_saved` is static) and restores that snapshot after every
+  test, so anything added in `wpSetUpBeforeClass()` — including the
+  `groups-site` filters that
+  `mu-plugins/groups/tests/test-groups-site-{comment-form,event-cards}.php`
+  pull in by requiring the theme's `functions.php` directly — is wiped from
+  the second test onwards. It looks exactly like a broken filter, and it
+  only reproduces in a full-suite run. Re-add such hooks in `setUp()`;
+  `add_filter()` is a no-op for a callback already at that priority. (This
+  is also why every hook the theme registers needs a *named* callback, not
+  a closure.)
+- **`go_to( get_permalink( $id ) )` does not make `is_singular()` true** in
+  this fixture — no rewrite rules are flushed, so a pretty permalink 404s.
+  Address singulars by query string instead:
+  `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
 - **Freshly created `eventorganiser*`/`member*` accounts commonly fail
   their first E2E run** at `dismissEditorOnboarding` — a brand-new account
   hits the welcome-guide reinit race hardest because nothing is dismissed
@@ -252,7 +270,7 @@ and a REST application password (the browser pass needs the former, the
 REST pass needs the latter):
 
 ```bash
-for pair in "organiser1:editor" "eventorganiser1:author" "member1:subscriber"; do
+for pair in "organiser1:editor" "eventorganiser1:author" "eventorganiser6:author" "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \
@@ -616,6 +634,19 @@ which is how #1874's bug stayed hidden. Prefer patterns referenced from a
 template via `wp:pattern`, so ordinary front-end rendering exercises them;
 a pattern that must stay orphaned needs a test that includes the file
 directly.
+
+`test-groups-site-event-cards.php` is its successor, and covers a cost that
+`wp:pattern` reference introduced. `render_block_core_post_template()`
+scans its *parsed* inner blocks for a literal `core/post-featured-image`
+before calling `update_post_thumbnail_cache()`; it cannot see through
+`core/pattern`, which core only expands at render time. A post-template
+holding nothing but the shared card therefore primed nothing, and each card
+ran its own attachment + image-metadata lookup — twelve cards, two dozen
+queries. `WordCamp\Groups\Site\prime_event_card_thumbnails()` restores
+the batched fetch on `loop_start`, and the file's query-count test is what
+keeps it honest. Watch for the same shape anywhere else core inspects
+literal inner blocks: moving markup behind `core/pattern` is invisible to
+those scans.
 
 Note the shape of risk that replacement creates. A GatherPress *class or
 method* that disappears fails loudly, and `test-gatherpress-api-contract.php`

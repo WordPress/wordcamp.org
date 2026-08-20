@@ -11,10 +11,18 @@ test.describe( 'anonymous visitor', () => {
 		const response = await page.goto( '' );
 		expect( response.status() ).toBe( 200 );
 
+		// The member count belongs to the hero's meta row, next to the group
+		// location — the sidebar's membership block deliberately leaves it
+		// out so the number isn't stated twice on one page (and so only one
+		// block pays for `count_users()`).
+		const heroCount = page.locator( '.groups-site-hero-meta .wporg-group-membership__count' );
+		await expect( heroCount ).toBeVisible();
+		await expect( heroCount ).toHaveText( /\d+ members?/ );
+		await expect( heroCount ).toHaveAttribute( 'href', /\/members\/$/ );
+
 		const sidebar = page.locator( '.groups-site-sidebar' );
 		await expect( sidebar.getByRole( 'button', { name: 'Join this group' } ) ).toBeVisible();
-		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveText( /\d+ members?/ );
-		await expect( page.locator( '.groups-site-identity .wporg-group-membership' ) ).toHaveCount( 0 );
+		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {

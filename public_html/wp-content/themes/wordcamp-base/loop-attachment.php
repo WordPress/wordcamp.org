@@ -39,7 +39,7 @@
 						<?php
 							printf(
 								'<span class="meta-prep meta-prep-author">%1$s</span> <span class="author vcard"><a class="url fn n" href="%2$s" title="%3$s">%4$s</a></span>',
-								esc_html__( 'By', 'wordcamporg' ),
+								esc_html_x( 'By', 'post author byline', 'wordcamporg' ),
 								esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
 								/* translators: %s - author display name */
 								sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), esc_attr( get_the_author() ) ),
@@ -50,22 +50,27 @@
 						<?php
 							printf(
 								'<span class="meta-prep meta-prep-entry-date">%1$s</span> <span class="entry-date"><abbr class="published" title="%2$s">%3$s</abbr></span>',
-								esc_html__( 'Published', 'wordcamporg' ),
+								esc_html_x( 'Published', 'post publication date', 'wordcamporg' ),
 								esc_attr( get_the_time() ),
 								esc_html( get_the_date() )
 							);
+
 							if ( wp_attachment_is_image() ) {
-								echo ' <span class="meta-sep">|</span> ';
 								$metadata = wp_get_attachment_metadata();
-								/* translators: %s - a link reading "<width> × <height>" */
-								printf( esc_html__( 'Full size is %s pixels', 'wordcamporg' ),
-									sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
-										esc_url( wp_get_attachment_url() ),
-										esc_attr__( 'Link to full-size image', 'wordcamporg' ),
-										absint( $metadata['width'] ),
-										absint( $metadata['height'] )
-									)
-								);
+
+								if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
+									echo ' <span class="meta-sep">|</span> ';
+
+									/* translators: %s - a link reading "<width> × <height>" */
+									printf( esc_html__( 'Full size is %s pixels', 'wordcamporg' ),
+										sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
+											esc_url( wp_get_attachment_url() ),
+											esc_attr__( 'Link to full-size image', 'wordcamporg' ),
+											absint( $metadata['width'] ),
+											absint( $metadata['height'] )
+										)
+									);
+								}
 							}
 						?>
 						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>

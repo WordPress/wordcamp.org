@@ -36,7 +36,7 @@ get_header(); ?>
 						<?php
 							printf(
 								'<span class="meta-prep meta-prep-author">%1$s</span> <span class="author vcard"><a class="url fn n" href="%2$s" title="%3$s">%4$s</a></span>',
-								esc_html__( 'By', 'wordcamporg' ),
+								esc_html_x( 'By', 'post author byline', 'wordcamporg' ),
 								esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
 								/* translators: %s - author display name */
 								sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), esc_attr( get_the_author() ) ),
@@ -47,7 +47,7 @@ get_header(); ?>
 						<?php
 							printf(
 								'<span class="meta-prep meta-prep-entry-date">%1$s</span> <span class="entry-date"><abbr class="published" title="%2$s">%3$s</abbr></span>',
-								esc_html__( 'Published', 'wordcamporg' ),
+								esc_html_x( 'Published', 'post publication date', 'wordcamporg' ),
 								esc_attr( get_the_time() ),
 								esc_html( get_the_date() )
 							);

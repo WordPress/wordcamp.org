@@ -149,6 +149,26 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Inner-page header band
+   ========================================================================== */
+
+/* Every inner page — news post, events archive, static page, venue, search —
+   opens with the same compact band: back link, then an h1. The templates only
+   supply the content; the band's look and the title size live here so the
+   pages can't drift apart. */
+
+.groups-site-page-header {
+	background-color: var(--wp--preset--color--blueberry-4);
+	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--edge-space);
+}
+
+.groups-site-page-header h1 {
+	font-size: var(--wp--preset--font-size--heading-3);
+	line-height: 1.15;
+}
+
+/* ==========================================================================
    Front-page hero
    ========================================================================== */
 

@@ -63,7 +63,7 @@ class Test_Rest_Lockdown extends WP_UnitTestCase {
 		$lockdown = $this->lockdown_callback( 'on' );
 
 		add_filter( 'rest_request_before_callbacks', $lockdown, 99, 3 );
-		add_filter( 'rest_request_after_callbacks', $lockdown, 999, 3 );
+		add_filter( 'rest_request_after_callbacks', $lockdown, PHP_INT_MAX, 3 );
 
 		if ( $interference ) {
 			add_filter( 'rest_request_after_callbacks', $interference, 10, 3 );
@@ -75,7 +75,7 @@ class Test_Rest_Lockdown extends WP_UnitTestCase {
 			remove_filter( 'rest_request_after_callbacks', $interference, 10 );
 		}
 
-		remove_filter( 'rest_request_after_callbacks', $lockdown, 999 );
+		remove_filter( 'rest_request_after_callbacks', $lockdown, PHP_INT_MAX );
 		remove_filter( 'rest_request_before_callbacks', $lockdown, 99 );
 
 		return $response;
@@ -100,7 +100,7 @@ class Test_Rest_Lockdown extends WP_UnitTestCase {
 		}
 
 		$this->assertSame( 99, $before );
-		$this->assertSame( 999, $after );
+		$this->assertSame( PHP_INT_MAX, $after );
 	}
 
 	/**
@@ -135,9 +135,9 @@ class Test_Rest_Lockdown extends WP_UnitTestCase {
 		$lockdown = $this->lockdown_callback( 'off' );
 
 		add_filter( 'rest_request_before_callbacks', $lockdown, 99, 3 );
-		add_filter( 'rest_request_after_callbacks', $lockdown, 999, 3 );
+		add_filter( 'rest_request_after_callbacks', $lockdown, PHP_INT_MAX, 3 );
 		$response = rest_do_request( new WP_REST_Request( 'GET', '/wp/v2/posts' ) );
-		remove_filter( 'rest_request_after_callbacks', $lockdown, 999 );
+		remove_filter( 'rest_request_after_callbacks', $lockdown, PHP_INT_MAX );
 		remove_filter( 'rest_request_before_callbacks', $lockdown, 99 );
 
 		$this->assertSame( 200, $response->get_status() );

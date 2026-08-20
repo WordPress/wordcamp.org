@@ -594,16 +594,10 @@ the same class of bug on the *next* upgrade is a wasted rediscovery — turn
 what this pass found into a permanent regression test before moving on,
 not a one-off fix.
 
-A test written after the 0.35.0 bump is the reference example for
-what this looks like in practice — it lives in
+The reference example written after the 0.35.0 bump lives in
 `mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
 exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
-there by including the real theme files directly). A second example,
-`test-groups-site-event-cards-patterns.php`, covered the theme's PHP
-event-cards patterns (the code path #1874's bug lived in) until those
-patterns were removed as dead code — the lesson it encoded still stands:
-find coverage gaps by asking what *does* exercise a given file today,
-and whether "nothing" is an acceptable answer.
+there by including the real theme files directly):
 
 - **`test-gatherpress-api-contract.php`** — a data-provider-driven test
   asserting every GatherPress class/method/constant/property this
@@ -612,6 +606,33 @@ and whether "nothing" is an acceptable answer.
   a one-time manual pass that has to be redone by hand on every future
   bump — extend `CONTRACT` in that file whenever the audit finds a call
   site it doesn't cover yet, rather than leaving the gap for next time.
+
+A third test, `test-groups-site-event-cards-patterns.php`, covered the
+theme's PHP event-cards patterns until #1915 replaced them with the
+`gatherpress-event-query` block. Why it existed still matters: those
+patterns were `Inserter: no` and referenced by no template, so the
+block-patterns REST endpoint was the only thing that ever executed them —
+which is how #1874's bug stayed hidden. Prefer patterns referenced from a
+template via `wp:pattern`, so ordinary front-end rendering exercises them;
+a pattern that must stay orphaned needs a test that includes the file
+directly.
+
+Note the shape of risk that replacement creates. A GatherPress *class or
+method* that disappears fails loudly, and `test-gatherpress-api-contract.php`
+catches it. A GatherPress *block* referenced from a template fails by
+rendering blank, which no PHP contract can see. The blocks `groups-site`
+now depends on — `gatherpress/event-date`, `gatherpress/rsvp-count`,
+`gatherpress/venue`, `gatherpress/venue-detail`, `gatherpress/venue-map`,
+`gatherpress/online-event`, `gatherpress/online-event-link`,
+`gatherpress/add-to-calendar`, and the `gatherpress-event-query` query
+variation — have no automated check that they are still registered
+(`wporg-groups-frontend/tests/test-blocks.php` asserts only `wporg/*`
+blocks). Extend Section 8's audit to cover block names alongside classes
+and methods.
+
+When a call site goes away, prune its `CONTRACT` entry in the same pass —
+`GatherPress\Core\Event\Query` outlived its last caller in #1915 and now
+guards nothing.
 
 When a version bump (or this checklist) surfaces something that wasn't
 caught automatically, before moving on:

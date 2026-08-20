@@ -12,8 +12,6 @@ namespace WordCamp\Groups\Site;
 
 defined( 'ABSPATH' ) || exit;
 
-require_once __DIR__ . '/inc/event-cards.php';
-
 /**
  * Theme support.
  */

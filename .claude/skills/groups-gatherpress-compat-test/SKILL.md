@@ -594,20 +594,17 @@ the same class of bug on the *next* upgrade is a wasted rediscovery — turn
 what this pass found into a permanent regression test before moving on,
 not a one-off fix.
 
-Two tests written after the 0.35.0 bump are the reference examples for
-what this looks like in practice — both live in
+A test written after the 0.35.0 bump is the reference example for
+what this looks like in practice — it lives in
 `mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
 exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
-there by including the real theme files directly, see the first example):
+there by including the real theme files directly). A second example,
+`test-groups-site-event-cards-patterns.php`, covered the theme's PHP
+event-cards patterns (the code path #1874's bug lived in) until those
+patterns were removed as dead code — the lesson it encoded still stands:
+find coverage gaps by asking what *does* exercise a given file today,
+and whether "nothing" is an acceptable answer.
 
-- **`test-groups-site-event-cards-patterns.php`** — executes the actual
-  `groups-site` theme pattern files GatherPress renders via the
-  block-patterns REST endpoint (the exact code path #1874's bug lived in
-  and nothing else exercises), asserting real output for both the
-  has-events and no-events branches of each pattern. The template for
-  "this class of bug had zero coverage because nothing calls this code
-  path" — find other such gaps by asking what *does* exercise a given file
-  today, and whether "nothing" is an acceptable answer.
 - **`test-gatherpress-api-contract.php`** — a data-provider-driven test
   asserting every GatherPress class/method/constant/property this
   integration calls still exists, sourced from the same list Section 8's

@@ -80,8 +80,7 @@ Block theme (FSE) for group sites — the public-facing side of `events.wordpres
 
 - `templates/` — page templates: `front-page.html`, `single-event.html`, `single-venue.html`, `archive-gatherpress_event.html`, `page-members.html`, `search.html`, `404.html`, etc.
 - `parts/` — `header.html`, `footer.html`
-- `patterns/` — reusable block patterns for event cards/lists (`upcoming-events-cards.php`, `past-events-cards.php`, `manage-event-cta.php`, etc.)
-- `inc/event-cards.php` — PHP support for the event-card patterns
+- `patterns/` — reusable block patterns (`event-card.php`, `group-back-link.php`, `manage-event-cta.php`, etc.)
 - `assets/`, `theme.json`, `style.css`, `functions.php`
 
 ### Other related files

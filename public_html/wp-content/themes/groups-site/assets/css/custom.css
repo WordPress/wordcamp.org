@@ -350,16 +350,23 @@ body.error404 .site-content-container h1 {
  * substitutes this element instead, keeping the same 16:9 region and the
  * same rounded top corners.
  *
- * The fill is shared with `.groups-site-event-card__media--placeholder`
- * below — the archive and the front page render the same events, so an
- * image-less event must look the same in both places. Two tones of the
- * same blue plus a faint diagonal: quiet enough not to compete with real
- * photography in the cards beside it, but not a flat empty slab.
+ * The fill is two tones of the same blue plus a faint diagonal: quiet
+ * enough not to compete with real photography in the cards beside it,
+ * but not a flat empty slab.
  */
 
 .groups-site-featured-placeholder {
 	aspect-ratio: 16 / 9;
 	border-radius: 3px 3px 0 0;
+	background-color: var(--wp--preset--color--blueberry-4);
+	background-image: linear-gradient(
+			135deg,
+			var(--wp--preset--color--blueberry-4),
+			var(--wp--preset--color--blueberry-3)
+		),
+		linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.4) 48% 52%, transparent 52%);
+	background-blend-mode: normal, overlay;
+	background-size: 100% 100%, 24px 24px;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {
@@ -367,13 +374,23 @@ body.error404 .site-content-container h1 {
 	color: var(--wp--preset--color--blueberry-1);
 }
 
+/* Cap the excerpt at three lines so one wordy event can't stretch its whole
+   grid row — the `groups-site/event-card` pattern feeds every card the same
+   25-word excerpt, and this keeps the tall ones in check. */
+
+.gatherpress-event-query .wp-block-post-excerpt__excerpt {
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
 /*
  * Pin the meta cluster (RSVP count + venue) to the card's bottom edge. The
  * cards in a grid row share a height, but their excerpts don't share a
  * length, so without this the venue lines end at three different heights
  * across one row. The card and its body become flex columns; the meta group
- * takes the leftover space as top margin. Mirrors the front-page PHP cards,
- * which pin their `__rsvp` line the same way.
+ * takes the leftover space as top margin.
  */
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
@@ -601,159 +618,6 @@ body.error404 .site-content-container h1 {
 	gap: var(--wp--preset--spacing--10);
 }
 
-
-/* ==========================================================================
-   Event card grid — used by both the front-page upcoming list (compact)
-   and the events archive (expanded). The compact / expanded variants
-   share the same per-card markup; the differences are in column count,
-   gap, padding, and excerpt line-clamp.
-   ========================================================================== */
-
-.groups-site-event-cards {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 28px;
-}
-
-.groups-site-event-cards--past .groups-site-event-card {
-	opacity: 0.85;
-}
-
-.groups-site-event-cards--past .groups-site-event-card .groups-site-event-card__date {
-	color: var(--wp--preset--color--charcoal-4);
-}
-
-.groups-site-event-card {
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	background: var(--wp--preset--color--white);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
-	border-radius: 4px;
-	color: inherit;
-	text-decoration: none;
-	transition: border-color 0.18s ease, box-shadow 0.18s ease,
-		transform 0.18s ease;
-}
-
-.groups-site-event-card:hover,
-.groups-site-event-card:focus-visible {
-	border-color: var(--wp--preset--color--blueberry-1);
-	box-shadow: 0 18px 36px -16px rgba(56, 88, 233, 0.22),
-		0 4px 12px rgba(30, 30, 30, 0.04);
-	transform: translateY(-2px);
-}
-
-.groups-site-event-card__media {
-	aspect-ratio: 16 / 9;
-	background-color: var(--wp--preset--color--blueberry-4);
-	background-position: center;
-	background-size: cover;
-	background-repeat: no-repeat;
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
-}
-
-/* Shared with the archive's `.groups-site-featured-placeholder` (see the
-   query-loop section above): an image-less event must look the same in the
-   front-page cards and the archive grid. Must stay after the
-   `background-size: cover` above, which it overrides for the placeholder. */
-
-.groups-site-featured-placeholder,
-.groups-site-event-card__media--placeholder {
-	background-color: var(--wp--preset--color--blueberry-4);
-	background-image: linear-gradient(
-			135deg,
-			var(--wp--preset--color--blueberry-4),
-			var(--wp--preset--color--blueberry-3)
-		),
-		linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.4) 48% 52%, transparent 52%);
-	background-blend-mode: normal, overlay;
-	background-size: 100% 100%, 24px 24px;
-}
-
-.groups-site-event-card__body {
-	padding: 24px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	flex: 1;
-}
-
-.groups-site-event-cards--expanded .groups-site-event-card__body {
-	padding: 32px;
-	gap: 12px;
-}
-
-.groups-site-event-card__date {
-	margin: 0 0 4px;
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	color: var(--wp--preset--color--blueberry-1);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-
-.groups-site-event-card__title {
-	margin: 0;
-	font-family: var(--wp--preset--font-family--eb-garamond);
-	font-size: var(--wp--preset--font-size--heading-5);
-	font-weight: 500;
-	line-height: 1.2;
-	color: var(--wp--preset--color--charcoal-1);
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-}
-
-.groups-site-event-card:hover .groups-site-event-card__title,
-.groups-site-event-card:focus-visible .groups-site-event-card__title {
-	color: var(--wp--preset--color--blueberry-1);
-}
-
-.groups-site-event-card__excerpt {
-	margin: 0;
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-3);
-	line-height: 1.55;
-	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-}
-
-.groups-site-event-cards--expanded .groups-site-event-card__excerpt {
-	font-size: var(--wp--preset--font-size--normal);
-	-webkit-line-clamp: 6;
-	line-height: 1.6;
-}
-
-.groups-site-event-card__rsvp {
-	margin: auto 0 0;
-	padding-top: 12px;
-	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	color: var(--wp--preset--color--charcoal-4);
-}
-
-.groups-site-event-card__venue {
-	margin: 0;
-	padding-top: 4px;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-4);
-}
-
-.groups-site-event-card__icon {
-	flex-shrink: 0;
-	color: var(--wp--preset--color--blueberry-1);
-	font-size: 16px;
-	width: 16px;
-	height: 16px;
-}
 
 /* ==========================================================================
    About this group

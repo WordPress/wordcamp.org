@@ -850,11 +850,11 @@ body.error404 .site-content-container h1 {
 	margin: 0 0 24px;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: 16px;
 }
 
 .wp-block-comments .wp-block-comment-template > li {
-	padding: 14px 16px;
+	padding: 16px;
 	background: var(--wp--preset--color--light-grey-2);
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
@@ -891,15 +891,26 @@ body.error404 .site-content-container h1 {
 	margin-top: 6px;
 }
 
-.wp-block-comments .wp-block-comment-template > li > ol {
+/* Reply threads — core renders children as a bare `ol` inside the parent
+   `li`, at any depth, so target descendant lists rather than only depth 2.
+   The rail sits under the centre of the parent's 40px avatar
+   (19px margin + 2px rail + 27px padding = the same 48px text indent the
+   replies had before), tying each reply visually to the comment above it.
+   The gap keeps consecutive replies from running together. */
+
+.wp-block-comments .wp-block-comment-template li ol {
 	list-style: none;
-	padding: 0;
-	margin: 12px 0 0 48px;
+	margin: 16px 0 0 19px;
+	padding: 0 0 0 27px;
+	border-left: 2px solid var(--wp--preset--color--light-grey-1);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
 }
 
 @media (max-width: 480px) {
-	.wp-block-comments .wp-block-comment-template > li > ol {
-		margin-left: 20px;
+	.wp-block-comments .wp-block-comment-template li ol {
+		padding-left: 12px;
 	}
 }
 

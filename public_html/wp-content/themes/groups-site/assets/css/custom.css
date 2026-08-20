@@ -149,18 +149,27 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
-   Front-page identity row
+   Front-page hero
    ========================================================================== */
 
 /* The nav bar above already carries the group name — this row stays on the
    page background and closes with a hairline instead of a second slab. */
 
-.groups-site-identity {
+.groups-site-hero {
 	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
-.groups-site-identity .wp-block-site-title {
+.groups-site-hero-content .wp-block-site-title {
 	text-wrap: balance;
+}
+
+/* Only renders when an organizer sets a featured image on the Home page —
+   core's post-featured-image block outputs nothing otherwise, so there's no
+   empty crop to guard against here. */
+
+.groups-site-hero-media img {
+	width: 100%;
+	object-fit: cover;
 }
 
 /* ==========================================================================
@@ -235,17 +244,9 @@ body.error404 .site-content-container h1 {
 	min-width: 0;
 }
 
-/* ==========================================================================
-   Front-page hero
-   ========================================================================== */
-
 .groups-site-hero .wp-block-site-tagline {
 	max-width: 52ch;
 	text-wrap: pretty;
-}
-
-.groups-site-hero .wp-block-wporg-group-location {
-	padding-top: var(--wp--preset--spacing--10);
 }
 
 /* ==========================================================================

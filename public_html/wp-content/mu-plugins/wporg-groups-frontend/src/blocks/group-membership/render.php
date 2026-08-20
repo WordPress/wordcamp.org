@@ -6,6 +6,7 @@
  */
 
 use function WordCamp\Groups\Frontend\Capabilities\get_role_tier_label;
+use const WordCamp\Groups\Frontend\Capabilities\EVENT_MANAGER_ROLES;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
@@ -31,6 +32,12 @@ $is_organizer       = in_array( $user_role, ORGANIZER_ROLES, true );
 $renders_leave      = $shows_membership && $is_member && ! $is_organizer;
 $renders_preference = $shows_preference && $is_member;
 
+// Plain "Member" is the default for everyone who isn't an organizer or
+// event organizer — badging it back at people who already know they've
+// joined adds a status pill with nothing to say. Reserve the badge for
+// roles the label actually distinguishes.
+$renders_role_badge = $shows_membership && $is_member && in_array( $user_role, EVENT_MANAGER_ROLES, true );
+
 if ( ! $shows_membership && ! $renders_preference ) {
 	return;
 }
@@ -40,6 +47,7 @@ $rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
 
 $member_count = 0;
 $count_label  = '';
+$members_url  = '';
 
 if ( $shows_membership ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
@@ -48,6 +56,11 @@ if ( $shows_membership ) {
 		_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
 		number_format_i18n( $member_count )
 	);
+
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$members_url = get_permalink( $members_page );
+	}
 }
 
 $notification_opt_in = $renders_preference
@@ -121,9 +134,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endif; ?>
 
 		<?php if ( $is_member ) : ?>
-			<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
-				<?php echo esc_html( $role_label ); ?>
-			</span>
+			<?php if ( $renders_role_badge ) : ?>
+				<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
+					<?php echo esc_html( $role_label ); ?>
+				</span>
+			<?php endif; ?>
 		<?php else : ?>
 			<div class="wp-block-button">
 				<button
@@ -137,16 +152,15 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</div>
 		<?php endif; ?>
 
-		<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
-			<?php
-			echo esc_html(
-				sprintf(
-					_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
-					number_format_i18n( $member_count )
-				)
-			);
-			?>
-		</span>
+		<?php if ( $members_url ) : ?>
+			<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
+				<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
+			</a>
+		<?php else : ?>
+			<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
+				<?php echo esc_html( $count_label ); ?>
+			</span>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( $renders_leave ) : ?>

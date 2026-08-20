@@ -27,20 +27,33 @@
 	border-radius: 100px;
 }
 
+/*
+ * Set apart from the badge/count above it — a hairline plus its own
+ * top-padding, rather than the shared 10px flex gap everything else here
+ * uses — so leaving reads as a distinct, lower-frequency action instead of
+ * one more link in the same list. Quiet by default (no underline) for the
+ * same reason; it only picks up the "this will change something" red on
+ * interaction.
+ */
 .wporg-group-membership__leave {
+	width: 100%;
+	margin-top: 4px;
+	padding: 10px 0 0;
 	background: none;
 	border: none;
-	border-radius: 2px;
-	padding: 0;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 0;
 	font-family: var(--wp--preset--font-family--inter);
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal-4);
+	text-align: left;
 	cursor: pointer;
-	text-decoration: underline;
+	text-decoration: none;
 }
 
 .wporg-group-membership__leave:hover {
 	color: #b32d0f;
+	text-decoration: underline;
 }
 
 .wporg-group-membership__leave:disabled {
@@ -52,6 +65,14 @@
 .wporg-group-membership__count {
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal-4);
+}
+
+a.wporg-group-membership__count {
+	text-decoration: underline;
+}
+
+a.wporg-group-membership__count:hover {
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-group-membership__preference {

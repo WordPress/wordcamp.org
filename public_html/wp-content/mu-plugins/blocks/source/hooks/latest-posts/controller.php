@@ -132,7 +132,7 @@ function is_swappable_container( $markup ) {
 		return false;
 	}
 
-	preg_match_all( '#<(/?)ul\b#i', $markup, $matches );
+	preg_match_all( '#<(/?)ul\b#', $markup, $matches );
 	$depth = 0;
 
 	foreach ( $matches[1] as $index => $slash ) {

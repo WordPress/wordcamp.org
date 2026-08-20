@@ -232,6 +232,10 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 	/**
 	 * The default combined variant preserves the original unheaded output.
+	 *
+	 * A plain member gets no role badge — "Member" tells them nothing they
+	 * don't already know; the badge is reserved for roles the label
+	 * actually distinguishes (see `$renders_role_badge` in render.php).
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -239,7 +243,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-membership /-->' );
 
-		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
 		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
@@ -260,10 +264,23 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$this->assertStringContainsString( '<h2 class="wporg-group-membership__heading">', $output );
 		$this->assertStringContainsString( 'Membership', $output );
-		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__preference', $output );
+	}
+
+	/**
+	 * Event-manager roles keep the role badge a plain member doesn't get.
+	 */
+	public function test_group_membership_block_badges_event_manager_roles() {
+		$organizer_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $organizer_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
+		);
+
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
 	}
 
 	/**

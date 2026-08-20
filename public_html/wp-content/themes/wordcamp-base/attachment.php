@@ -52,23 +52,23 @@ get_header(); ?>
 								esc_html( get_the_date() )
 							);
 
-							if ( wp_attachment_is_image() ) {
-								$metadata = wp_get_attachment_metadata();
-								
-								if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
-									echo ' <span class="meta-sep">|</span> ';
+						if ( wp_attachment_is_image() ) {
+							$metadata = wp_get_attachment_metadata();
 
-									/* translators: %s - a link reading "<width> × <height>" */
-									printf( esc_html__( 'Full size is %s pixels', 'wordcamporg' ),
-										sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
-											esc_url( wp_get_attachment_url() ),
-											esc_attr__( 'Link to full-size image', 'wordcamporg' ),
-											absint( $metadata['width'] ),
-											absint( $metadata['height'] )
-										)
-									);
-								}
+							if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
+								echo ' <span class="meta-sep">|</span> ';
+
+								/* translators: %s - a link reading "<width> × <height>" */
+								printf( esc_html__( 'Full size is %s pixels', 'wordcamporg' ),
+									sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
+										esc_url( wp_get_attachment_url() ),
+										esc_attr__( 'Link to full-size image', 'wordcamporg' ),
+										absint( $metadata['width'] ),
+										absint( $metadata['height'] )
+									)
+								);
 							}
+						}
 						?>
 						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 					</div><!-- .entry-meta -->

@@ -65,7 +65,7 @@ get_header(); ?>
 										<?php if ( has_post_thumbnail() ) : ?>
 											<?php the_post_thumbnail( 'wccentral-thumbnail-past', array( 'class' => 'wc-image' ) ); ?>
 										<?php else : ?>
-											<div class="wc-image wp-post-image past-wordcamp-placeholder-thumb" title="<?php the_title(); ?>"></div>
+											<div class="wc-image wp-post-image past-wordcamp-placeholder-thumb" title="<?php the_title_attribute(); ?>"></div>
 										<?php endif; ?>
 
 										<h2 class="wc-title"><?php wcpt_wordcamp_title(); ?></h2>

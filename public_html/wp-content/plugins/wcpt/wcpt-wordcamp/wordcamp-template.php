@@ -143,7 +143,7 @@ function wcpt_get_wordcamp_id() {
 /**
  * wcpt_wordcamp_permalink ()
  *
- * Output the link to the WordCamp in the WordCamp loop
+ * Output the link to the WordCamp in the WordCamp loop, escaped for an attribute
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
@@ -151,9 +151,10 @@ function wcpt_get_wordcamp_id() {
  *
  * @param int $wordcamp_id optional
  * @uses wcpt_get_wordcamp_permalink()
+ * @uses esc_url()
  */
 function wcpt_wordcamp_permalink( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_permalink( $wordcamp_id );
+	echo esc_url( wcpt_get_wordcamp_permalink( $wordcamp_id ) );
 }
 
 /**
@@ -342,17 +343,18 @@ function wcpt_get_wordcamp_end_date( $wordcamp_id = 0, $format = 'F j, Y' ) {
 /**
  * wcpt_wordcamp_location ()
  *
- * Output the WordCamps location
+ * Output the WordCamps location, escaped for element text
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  *
  * @uses wcpt_get_wordcamp_location()
+ * @uses esc_html()
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_location( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_location( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_location( $wordcamp_id ) );
 }
 
 /**
@@ -378,17 +380,18 @@ function wcpt_get_wordcamp_location( $wordcamp_id = 0 ) {
 /**
  * wcpt_wordcamp_organizer_name ()
  *
- * Output the WordCamps organizer
+ * Output the WordCamps organizer name, escaped for element text
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  *
  * @uses wcpt_get_wordcamp_organizer_name()
+ * @uses esc_html()
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_organizer_name( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_organizer_name( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_organizer_name( $wordcamp_id ) );
 }
 
 /**
@@ -414,23 +417,24 @@ function wcpt_get_wordcamp_organizer_name( $wordcamp_id = 0 ) {
 /**
  * wcpt_wordcamp_venue_name ()
  *
- * Output the WordCamps organizer
+ * Output the WordCamps venue name, escaped for element text
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  *
  * @uses wcpt_get_wordcamp_venue_name()
+ * @uses esc_html()
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_venue_name( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_venue_name( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_venue_name( $wordcamp_id ) );
 }
 
 /**
  * wcpt_get_wordcamp_venue_name ()
  *
- * Return the WordCamps organizer
+ * Return the WordCamps venue name
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
@@ -450,17 +454,18 @@ function wcpt_get_wordcamp_venue_name( $wordcamp_id = 0 ) {
 /**
  * wcpt_wordcamp_url ()
  *
- * Output the WordCamps URL
+ * Output the WordCamps URL, escaped for an attribute
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  *
  * @uses wcpt_get_wordcamp_url()
+ * @uses esc_url()
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_url( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_url( $wordcamp_id );
+	echo esc_url( wcpt_get_wordcamp_url( $wordcamp_id ) );
 }
 
 /**
@@ -486,16 +491,17 @@ function wcpt_get_wordcamp_url( $wordcamp_id = 0 ) {
 /**
  * wcpt_wordcamp_pagination_count ()
  *
- * Output the pagination count
+ * Output the pagination count, escaped for element text
  *
  * @package WordCamp Post Type
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  *
  * @global WP_Query $wcpt_template
+ * @uses esc_html()
  */
 function wcpt_wordcamp_pagination_count() {
-	echo wcpt_get_wordcamp_pagination_count();
+	echo esc_html( wcpt_get_wordcamp_pagination_count() );
 }
 
 /**

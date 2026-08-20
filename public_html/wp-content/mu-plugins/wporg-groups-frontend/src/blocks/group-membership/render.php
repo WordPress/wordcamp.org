@@ -152,24 +152,27 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</div>
 		<?php endif; ?>
 
-		<?php if ( $members_url ) : ?>
-			<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
-				<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
-			</a>
-		<?php else : ?>
-			<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
-				<?php echo esc_html( $count_label ); ?>
-			</span>
-		<?php endif; ?>
-	<?php endif; ?>
+		<div class="wporg-group-membership__meta">
+			<?php if ( $members_url ) : ?>
+				<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
+					<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
+				</a>
+			<?php else : ?>
+				<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
+					<?php echo esc_html( $count_label ); ?>
+				</span>
+			<?php endif; ?>
 
-	<?php if ( $renders_leave ) : ?>
-		<button
-			class="wporg-group-membership__leave"
-			data-wp-on--click="actions.leave"
-			data-wp-bind--disabled="context.loading"
-			data-wp-bind--aria-busy="context.loading"
-		><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+			<?php if ( $renders_leave ) : ?>
+				<span class="wporg-group-membership__meta-divider" aria-hidden="true">&middot;</span>
+				<button
+					class="wporg-group-membership__count wporg-group-membership__leave"
+					data-wp-on--click="actions.leave"
+					data-wp-bind--disabled="context.loading"
+					data-wp-bind--aria-busy="context.loading"
+				><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+			<?php endif; ?>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>

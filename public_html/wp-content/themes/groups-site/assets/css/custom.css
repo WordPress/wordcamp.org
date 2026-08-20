@@ -234,8 +234,12 @@ body.error404 .site-content-container h1 {
 	color: var(--wp--preset--color--charcoal-1);
 }
 
-.groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {
-	margin-top: var(--wp--preset--spacing--10) !important;
+/* Each direct child here is a distinct concern — membership status, event
+   management, settings, email preferences — not more lines in the same
+   list, so every one after the first gets its own hairline and padding on
+   top of the block gap, whichever combination a given visitor sees. */
+
+.groups-site-sidebar > *:not(:first-child) {
 	padding-top: var(--wp--preset--spacing--20);
 	border-top: 1px solid var(--wp--preset--color--light-grey-1);
 }

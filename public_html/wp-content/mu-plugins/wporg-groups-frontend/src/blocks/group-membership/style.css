@@ -1,9 +1,10 @@
 /**
  * Group Membership block styles.
  *
- * Two variants share this file: the membership block (join button or role
- * badge, plus the member count) and the notification-preference checkbox.
- * Both live in the front page's sidebar, so text here is the 14px secondary
+ * Three variants share this file: the membership block (join button or
+ * role badge, plus leave), the notification-preference checkbox, and the
+ * standalone member count that renders in the front page hero. The first
+ * two live in the front page's sidebar, so text here is the 14px secondary
  * size rather than the 16px body size used in the main column.
  */
 
@@ -27,20 +28,53 @@
 	border-radius: 100px;
 }
 
-.wporg-group-membership__leave {
-	background: none;
-	border: none;
-	border-radius: 2px;
-	padding: 0;
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-4);
-	cursor: pointer;
-	text-decoration: underline;
+/* Both of these are text about your membership, not a primary/secondary
+   action pair — so they share one row and one style. */
+.wporg-group-membership__meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
 }
 
+.wporg-group-membership__meta-divider {
+	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* text-decoration-thickness/text-underline-offset match the parent theme's
+   global `:root a` rule — another one scoped to the `a` element, so the
+   leave button would otherwise fall back to the browser's `auto` for both
+   and render a visibly different underline than the link next to it. */
+.wporg-group-membership__count,
+.wporg-group-membership__leave {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+
+/* Drop the native control chrome and inherit line-height so the button
+   measures and renders identically to the count link next to it. */
+.wporg-group-membership__leave {
+	-webkit-appearance: none;
+	appearance: none;
+	background: none;
+	border: none;
+	padding: 0;
+	font-family: var(--wp--preset--font-family--inter);
+	line-height: inherit;
+	cursor: pointer;
+}
+
+/* Declared explicitly rather than left to the theme's global `a:hover`
+   rule — that selector only ever matches the count link, not the leave
+   button, which would silently re-break this parity on the next
+   `theme.json` change. */
+a.wporg-group-membership__count:hover,
 .wporg-group-membership__leave:hover {
-	color: #b32d0f;
+	color: var(--wp--preset--color--blueberry-1);
+	text-decoration: none;
 }
 
 .wporg-group-membership__leave:disabled {
@@ -49,9 +83,8 @@
 	text-decoration: none;
 }
 
-.wporg-group-membership__count {
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-4);
+span.wporg-group-membership__count {
+	text-decoration: none;
 }
 
 .wporg-group-membership__preference {

@@ -92,6 +92,20 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$request['date']    = wp_date( 'c' );
 		$request['parent']  = 0;
 
+		/*
+		 * `WP_REST_Comments_Controller::prepare_item_for_database()` copies the display name and email address of
+		 * whatever `author` it is given, so the identity has to come from the session rather than the request. The
+		 * form collects no URL for either kind of author.
+		 */
+		unset( $request['author_url'] );
+
+		if ( is_user_logged_in() ) {
+			$request['author'] = get_current_user_id();
+			unset( $request['author_name'], $request['author_email'] );
+		} else {
+			unset( $request['author'] );
+		}
+
 		$prepared_feedback = $this->prepare_item_for_creation( $request );
 		if ( is_wp_error( $prepared_feedback ) ) {
 			return $prepared_feedback;
@@ -221,8 +235,11 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $accepts_feedback;
 		}
 
-		// TODO Should we do a nonce check, or other permissions?
-
+		/*
+		 * Feedback without an account is a supported flow, so there is deliberately no capability check here. A
+		 * nonce would not narrow who can reach the endpoint, and session pages are cached, so a stale one would
+		 * reject valid submissions. `create_item()` decides who the feedback is attributed to.
+		 */
 		return true;
 	}
 

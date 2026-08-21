@@ -158,6 +158,19 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Get the single feedback comment created against the valid session, failing if there isn't exactly one.
+	 *
+	 * @return \WordCamp\SpeakerFeedback\Feedback
+	 */
+	protected function get_only_feedback() {
+		$feedback = get_feedback( array( self::$posts['valid-session']->ID ) );
+
+		$this->assertCount( 1, $feedback );
+
+		return array_shift( $feedback );
+	}
+
+	/**
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
 	 */
 	public function test_create_item_user_id() {
@@ -180,6 +193,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
 	 */
 	public function test_create_item_user_array() {
+		wp_set_current_user( 0 );
+
 		$params = array(
 			'post'         => self::$posts['valid-session']->ID,
 			'author_name'  => 'Foo',
@@ -193,13 +208,20 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( 0, $feedback->user_id );
+		$this->assertSame( 'Foo', $feedback->comment_author );
+		$this->assertSame( 'bar@example.org', $feedback->comment_author_email );
 	}
 
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
 	 */
 	public function test_create_item_no_user() {
+		wp_set_current_user( 0 );
+
 		$params = array(
 			'post' => self::$posts['valid-session']->ID,
 			'meta' => self::$valid_meta,
@@ -212,6 +234,146 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		$this->assertWPError( $response );
 		$this->assertEquals( 'rest_feedback_author_data_required', $response->get_error_code() );
 		$this->assertCount( 0, get_feedback( array( self::$posts['valid-session']->ID ) ) );
+	}
+
+	/**
+	 * A logged-in submitter is identified by their session, so the form sends no author details for them.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_logged_in_without_author_params() {
+		wp_set_current_user( self::$users['subscriber']->ID );
+
+		$params = array(
+			'post' => self::$posts['valid-session']->ID,
+			'meta' => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( self::$users['subscriber']->ID, $feedback->user_id );
+		$this->assertSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
+	}
+
+	/**
+	 * An unauthenticated submission cannot borrow an identity by naming a user in `author`.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_anonymous_cannot_claim_a_user() {
+		wp_set_current_user( 0 );
+
+		$params = array(
+			'post'   => self::$posts['valid-session']->ID,
+			'author' => self::$users['subscriber']->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item( $this->request );
+
+		// Without an author of its own, the submission no longer has any name or email to be stored under.
+		$this->assertWPError( $response );
+		$this->assertEquals( 'rest_feedback_author_data_required', $response->get_error_code() );
+		$this->assertCount( 0, get_feedback( array( self::$posts['valid-session']->ID ) ) );
+	}
+
+	/**
+	 * An unauthenticated submission is stored under the name and email it supplied, not a named user's.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_anonymous_keeps_its_own_details() {
+		wp_set_current_user( 0 );
+
+		$params = array(
+			'post'         => self::$posts['valid-session']->ID,
+			'author'       => self::$users['subscriber']->ID,
+			'author_name'  => 'Foo',
+			'author_email' => 'bar@example.org',
+			'meta'         => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( 0, $feedback->user_id );
+		$this->assertSame( 'Foo', $feedback->comment_author );
+		$this->assertSame( 'bar@example.org', $feedback->comment_author_email );
+		$this->assertNotSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
+	}
+
+	/**
+	 * A logged-in submission is attributed to the current user, not to the one named in `author`.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_uses_current_user_over_requested_author() {
+		wp_set_current_user( self::$users['subscriber']->ID );
+
+		$params = array(
+			'post'   => self::$posts['valid-session']->ID,
+			'author' => self::$users['admin']->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( self::$users['subscriber']->ID, $feedback->user_id );
+		$this->assertSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
+		$this->assertNotSame( self::$users['admin']->user_email, $feedback->comment_author_email );
+	}
+
+	/**
+	 * A logged-in submission cannot relabel itself with a different name, email, or URL.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_ignores_author_details_from_logged_in_user() {
+		wp_set_current_user( self::$users['subscriber']->ID );
+
+		$params = array(
+			'post'         => self::$posts['valid-session']->ID,
+			'author_name'  => 'Foo',
+			'author_email' => 'bar@example.org',
+			'author_url'   => 'https://example.org',
+			'meta'         => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response->get_status() );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( self::$users['subscriber']->ID, $feedback->user_id );
+		$this->assertSame( self::$users['subscriber']->display_name, $feedback->comment_author );
+		$this->assertSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
+		$this->assertSame( self::$users['subscriber']->user_url, $feedback->comment_author_url );
 	}
 
 	/**

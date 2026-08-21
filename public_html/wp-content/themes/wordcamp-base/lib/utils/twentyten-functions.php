@@ -230,14 +230,16 @@ add_filter( 'excerpt_length', 'twentyten_excerpt_length' );
  * @return string "Continue Reading" link
  */
 function twentyten_continue_reading_link() {
+	$title = get_the_title();
+
 	$link = sprintf(
 		' <a href="%s">%s</a>',
 		esc_url( get_permalink() ),
 		sprintf(
-			// translators: The title of the post to continue reading
-			__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-			sprintf( '<span class="screen-reader-text">%s</span> ', get_the_title() )
-		)
+			/* translators: %s - the title of the post to continue reading */
+			esc_html__( 'Continue reading %s', 'wordcamporg' ),
+			$title ? sprintf( '<span class="screen-reader-text">%s</span> ', esc_html( $title ) ) : ''
+		) . '<span class="meta-nav">&rarr;</span>'
 	);
 
 	return $link;
@@ -448,14 +450,13 @@ if ( ! function_exists( 'twentyten_posted_on' ) ) :
 	 */
 	function twentyten_posted_on() {
 		printf(
-			'<span class="meta-prep meta-prep-author">%1$s</span> %2$s <span class="meta-sep">%3$s</span> %4$s',
-			esc_html_x( 'Posted on', 'post publication date label', 'wordcamporg' ),
+			wp_kses_post( __( '<span class="%1$s">Posted on</span> %2$s <span class="meta-sep">by</span> %3$s', 'wordcamporg' ) ),
+			'meta-prep meta-prep-author',
 			sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a>',
 				esc_url( get_permalink() ),
 				esc_attr( get_the_time() ),
 				esc_html( get_the_date() )
 			),
-			esc_html_x( 'by', 'post author separator', 'wordcamporg' ),
 			sprintf( '<span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>',
 				esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
 				/* translators: %s - author display name */
@@ -484,8 +485,10 @@ if ( ! function_exists( 'twentyten_posted_in' ) ) :
 		}
 
 		/*
-		 * The three strings above carry an anchor the translator has to keep, so the composed
-		 * result is filtered rather than escaped -- kses keeps the link and drops anything else.
+		 * The three strings above carry an anchor the translator has to keep and reposition, so
+		 * kses does the real work here: it keeps that link and drops anything else. The category
+		 * list and tag list are already markup, and the esc_url()/the_title_attribute() calls
+		 * below are belt-and-braces -- kses would sanitise both attributes on its own.
 		 */
 		echo wp_kses_post(
 			sprintf(

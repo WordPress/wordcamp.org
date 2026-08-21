@@ -52,12 +52,18 @@
 
 			} // end check for categories on this blog
 
-			printf(
-				$meta_text,
-				$category_list,
-				$tag_list,
-				get_permalink(),
-				the_title_attribute( 'echo=0' )
+			/*
+			 * The strings above carry an anchor the translator has to keep and reposition, so
+			 * kses filters the composed sentence -- it keeps the link and drops anything else.
+			 */
+			echo wp_kses_post(
+				sprintf(
+					$meta_text,
+					$category_list,
+					$tag_list,
+					esc_url( get_permalink() ),
+					the_title_attribute( 'echo=0' )
+				)
 			);
 		?>
 

@@ -149,11 +149,13 @@ if ( ! $gallery_term ) {
 			<?php else : ?>
 				<div class="entry-content">
 					<?php
+					$more_title = get_the_title();
+
 					the_content(
 						sprintf(
 							/* translators: %s - the title of the post to continue reading */
 							esc_html__( 'Continue reading %s', 'wordcamporg' ),
-							'<span class="screen-reader-text">' . esc_html( get_the_title() ) . '</span> '
+							$more_title ? '<span class="screen-reader-text">' . esc_html( $more_title ) . '</span> ' : ''
 						) . '<span class="meta-nav">&rarr;</span>'
 					);
 					?>
@@ -171,8 +173,8 @@ if ( ! $gallery_term ) {
 				<?php if ( count( get_the_category() ) ) : ?>
 					<span class="cat-links">
 						<?php printf(
-							'<span class="entry-utility-prep entry-utility-prep-cat-links">%1$s</span> %2$s',
-							esc_html_x( 'Posted in', 'post categories label', 'wordcamporg' ),
+							wp_kses_post( __( '<span class="%1$s">Posted in</span> %2$s', 'wordcamporg' ) ),
+							'entry-utility-prep entry-utility-prep-cat-links',
 							get_the_category_list( ', ' )
 						); ?>
 					</span>
@@ -184,8 +186,8 @@ if ( ! $gallery_term ) {
 				if ( $tags_list ) : ?>
 					<span class="tag-links">
 						<?php printf(
-							'<span class="entry-utility-prep entry-utility-prep-tag-links">%1$s</span> %2$s',
-							esc_html_x( 'Tagged', 'post tags label', 'wordcamporg' ),
+							wp_kses_post( __( '<span class="%1$s">Tagged</span> %2$s', 'wordcamporg' ) ),
+							'entry-utility-prep entry-utility-prep-tag-links',
 							$tags_list
 						); ?>
 					</span>

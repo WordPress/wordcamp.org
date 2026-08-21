@@ -23,11 +23,13 @@
 	<?php else : ?>
 	<div class="entry-content">
 		<?php
+		$more_title = get_the_title();
+
 		the_content(
 			sprintf(
 				/* translators: %s - the title of the post to continue reading */
 				esc_html__( 'Continue reading %s', 'wordcamporg' ),
-				'<span class="assistive-text">' . esc_html( get_the_title() ) . '</span> '
+				$more_title ? '<span class="assistive-text">' . esc_html( $more_title ) . '</span> ' : ''
 			) . '<span class="meta-nav">&rarr;</span>'
 		);
 

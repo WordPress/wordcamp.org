@@ -32,11 +32,11 @@ if ( have_posts() ) {
 
 			<h1 class="page-title">
 <?php if ( is_day() ) : ?>
-				<?php printf( __( 'Daily Archives: <span>%s</span>', 'wordcamporg' ), get_the_date() ); ?>
+				<?php printf( esc_html__( 'Daily Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date() ) . '</span>' ); ?>
 <?php elseif ( is_month() ) : ?>
-				<?php printf( __( 'Monthly Archives: <span>%s</span>', 'wordcamporg' ), get_the_date('F Y') ); ?>
+				<?php printf( esc_html__( 'Monthly Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date('F Y') ) . '</span>' ); ?>
 <?php elseif ( is_year() ) : ?>
-				<?php printf( __( 'Yearly Archives: <span>%s</span>', 'wordcamporg' ), get_the_date('Y') ); ?>
+				<?php printf( esc_html__( 'Yearly Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date('Y') ) . '</span>' ); ?>
 <?php else : ?>
 				<?php esc_html_e( 'Blog Archives', 'wordcamporg' ); ?>
 <?php endif; ?>

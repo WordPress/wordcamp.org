@@ -124,6 +124,10 @@ add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_ren
  * belong to the same element. A sibling list would otherwise leave
  * `<div>…</ul><ul>…</div>`.
  *
+ * The nesting count reads the raw string. That is safe because `esc_attr()` escapes
+ * `<`, so `<ul` and `</ul` cannot appear inside an attribute value. If that stops
+ * being true the count goes wrong and the rewrite silently stops attaching.
+ *
  * @param string $markup Rendered block markup.
  * @return bool
  */

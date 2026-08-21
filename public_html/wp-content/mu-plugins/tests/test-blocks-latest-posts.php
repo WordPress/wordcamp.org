@@ -142,6 +142,25 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The route renders every post it is asked for, and `postsToShow` has no maximum
+	 * in the block's schema, so an oversized request is not the live block polling.
+	 */
+	public function test_oversized_posts_to_show_is_not_safelisted() {
+		$response = $this->render( 'core/latest-posts', array( 'attributes' => array( 'postsToShow' => 500 ) ) );
+
+		$this->assertSame( 401, $response->get_status() );
+	}
+
+	/**
+	 * The bound is inclusive, so a block sitting on it still polls.
+	 */
+	public function test_posts_to_show_at_the_bound_is_safelisted() {
+		$response = $this->render( 'core/latest-posts', array( 'attributes' => array( 'postsToShow' => 100 ) ) );
+
+		$this->assertSame( 200, $response->get_status() );
+	}
+
+	/**
 	 * An objection other than core's authorization error keeps its response, so a
 	 * Coming Soon lockdown is not discarded along with it.
 	 */

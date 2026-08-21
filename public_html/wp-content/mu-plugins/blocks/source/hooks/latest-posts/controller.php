@@ -108,6 +108,12 @@ function safelist_block_renderer( $response, $handler, $request ) {
 		return $response;
 	}
 
+	// `postsToShow` has no maximum in the block's schema. A live block shows a handful.
+	$attributes = $request->get_param( 'attributes' );
+	if ( isset( $attributes['postsToShow'] ) && (int) $attributes['postsToShow'] > 100 ) {
+		return $response;
+	}
+
 	// Leave any other objection standing, including the Coming Soon lockdown.
 	if ( ! is_wp_error( $response ) || 'block_cannot_read' !== $response->get_error_code() ) {
 		return $response;

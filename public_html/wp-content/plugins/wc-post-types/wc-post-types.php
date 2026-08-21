@@ -572,18 +572,19 @@ class WordCamp_Post_Types_Plugin {
 
 				// Determine the session title.
 				if ( 'permalink' === $attr['session_link'] && 'session' === $session_type ) {
-					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( get_permalink( $session->ID ) ), $session_title );
+					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( get_permalink( $session->ID ) ), esc_html( $session_title ) );
 				} elseif ( 'anchor' === $attr['session_link'] && 'session' === $session_type ) {
-					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( $this->get_wcpt_anchor_permalink( $session->ID ) ), $session_title );
+					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( $this->get_wcpt_anchor_permalink( $session->ID ) ), esc_html( $session_title ) );
 				} else {
-					$session_title_html = sprintf( '<span class="wcpt-session-title">%s</span>', $session_title );
+					$session_title_html = sprintf( '<span class="wcpt-session-title">%s</span>', esc_html( $session_title ) );
 				}
 
 				$content .= $session_title_html;
 
 				$speakers_names = array();
 				foreach ( $speakers as $speaker ) {
-					$speaker_name = apply_filters( 'the_title', $speaker->post_title );
+					$speaker_name      = esc_html( apply_filters( 'the_title', $speaker->post_title ) );
+					$speaker_permalink = '';
 
 					if ( 'anchor' === $attr['speaker_link'] ) {
 						// speakers/#wcorg-speaker-slug.
@@ -597,7 +598,7 @@ class WordCamp_Post_Types_Plugin {
 					}
 
 					if ( ! empty( $speaker_permalink ) ) {
-						$speaker_name = sprintf( '<a href="%s">%s</a>', esc_url( $speaker_permalink ), esc_html( $speaker_name ) );
+						$speaker_name = sprintf( '<a href="%s">%s</a>', esc_url( $speaker_permalink ), $speaker_name );
 					}
 
 					$speakers_names[] = $speaker_name;
@@ -615,7 +616,7 @@ class WordCamp_Post_Types_Plugin {
 				if ( 'session' === $session_type ) {
 					$content .= '<div class="wcb-session-favourite-icon">';
 					$content .= '<a href="#" role="button" class="fav-session-button" aria-pressed="false"><span class="screen-reader-text">';
-					$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), $session_title );
+					$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), esc_html( $session_title ) );
 					$content .= '</span><span class="dashicons dashicons-star-filled"></span></a></div>';
 				}
 
@@ -637,7 +638,7 @@ class WordCamp_Post_Types_Plugin {
 					}
 				}
 
-				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', $colspan, esc_attr( implode( ' ', $classes ) ), $session_track_titles, esc_attr( $session->ID ), $content );
+				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', (int) $colspan, esc_attr( implode( ' ', $classes ) ), esc_attr( $session_track_titles ), esc_attr( $session->ID ), $content );
 			}
 
 			$global_session      = count( $columns ) === $colspan ? ' global-session' : '';

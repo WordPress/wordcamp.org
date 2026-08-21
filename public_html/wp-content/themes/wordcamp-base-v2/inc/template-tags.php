@@ -25,7 +25,7 @@ function wcbs_content_nav( $nav_id ) {
 		<?php if ( is_single() ) : // navigation links for single posts ?>
 	
 			<nav role="navigation" id="<?php echo esc_attr( $nav_id ); ?>" class="<?php echo esc_attr( $nav_class ); ?>">
-				<h1 class="assistive-text"><?php _e( 'Post navigation', 'wordcamporg' ); ?></h1>
+				<h1 class="assistive-text"><?php esc_html_e( 'Post navigation', 'wordcamporg' ); ?></h1>
 				<?php previous_post_link( '<div class="nav-previous">%link</div>', '<span class="meta-nav">' . _x( '&larr;', 'Previous post link', 'wordcamporg' ) . '</span> %title' ); ?>
 				<?php next_post_link( '<div class="nav-next">%link</div>', '%title <span class="meta-nav">' . _x( '&rarr;', 'Next post link', 'wordcamporg' ) . '</span>' ); ?>
 			</nav>
@@ -33,7 +33,7 @@ function wcbs_content_nav( $nav_id ) {
 		<?php elseif ( $wp_query->max_num_pages > 1 && ( is_home() || is_archive() || is_search() ) ) : // navigation links for home, archive, and search pages ?>
 	
 			<nav role="navigation" id="<?php echo esc_attr( $nav_id ); ?>" class="<?php echo esc_attr( $nav_class ); ?>">
-				<h1 class="assistive-text"><?php _e( 'Post navigation', 'wordcamporg' ); ?></h1>
+				<h1 class="assistive-text"><?php esc_html_e( 'Post navigation', 'wordcamporg' ); ?></h1>
 				<?php if ( get_next_posts_link() ) : ?>
 					<div class="nav-previous"><?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?></div>
 				<?php endif; ?>
@@ -65,7 +65,7 @@ function wcbs_comment( $comment, $args, $depth ) {
 		case 'trackback' :
 	?>
 	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __( '(Edit)', 'wordcamporg' ), ' ' ); ?></p>
+		<p><?php esc_html_e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( esc_html__( '(Edit)', 'wordcamporg' ), ' ' ); ?></p>
 	<?php
 			break;
 		default :
@@ -78,7 +78,7 @@ function wcbs_comment( $comment, $args, $depth ) {
 					<?php printf( __( '%s <span class="says">says:</span>', 'wordcamporg' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
 				</div><!-- .comment-author .vcard -->
 				<?php if ( $comment->comment_approved == '0' ) : ?>
-					<em><?php _e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
+					<em><?php esc_html_e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
 					<br />
 				<?php endif; ?>
 
@@ -88,7 +88,7 @@ function wcbs_comment( $comment, $args, $depth ) {
 						/* translators: 1: date, 2: time */
 						printf( __( '%1$s at %2$s', 'wordcamporg' ), get_comment_date(), get_comment_time() ); ?>
 					</time></a>
-					<?php edit_comment_link( __( '(Edit)', 'wordcamporg' ), ' ' );
+					<?php edit_comment_link( esc_html__( '(Edit)', 'wordcamporg' ), ' ' );
 					?>
 				</div><!-- .comment-meta .commentmetadata -->
 			</footer>

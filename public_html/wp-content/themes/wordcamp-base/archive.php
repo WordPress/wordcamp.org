@@ -38,7 +38,7 @@ if ( have_posts() ) {
 <?php elseif ( is_year() ) : ?>
 				<?php printf( __( 'Yearly Archives: <span>%s</span>', 'wordcamporg' ), get_the_date('Y') ); ?>
 <?php else : ?>
-				<?php _e( 'Blog Archives', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Blog Archives', 'wordcamporg' ); ?>
 <?php endif; ?>
 			</h1>
 

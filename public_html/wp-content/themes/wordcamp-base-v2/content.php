@@ -67,7 +67,7 @@
 
 		<?php if ( ! post_password_required() && ( comments_open() || '0' != get_comments_number() ) ) : ?>
 		<span class="sep"> | </span>
-		<span class="comments-link"><?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?></span>
+		<span class="comments-link"><?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?></span>
 		<?php endif; ?>
 
 		<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span><span class="edit-link">', '</span>' ); ?>

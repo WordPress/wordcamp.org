@@ -48,7 +48,7 @@ get_header(); ?>
 							printf( __( 'Yearly Archives: %s', 'wordcamporg' ), '<span>' . get_the_date( 'Y' ) . '</span>' );
 
 						} else {
-							_e( 'Archives', 'wordcamporg' );
+							esc_html_e( 'Archives', 'wordcamporg' );
 
 						}
 						?>

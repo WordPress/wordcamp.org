@@ -24,11 +24,11 @@ if ( ! $gallery_term ) {
 <?php if ( ! have_posts() ) : ?>
 	<div id="post-0" class="post error404 not-found">
 		<h1 class="entry-title">
-			<?php _e( 'Not Found', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Not Found', 'wordcamporg' ); ?>
 		</h1>
 
 		<div class="entry-content">
-			<p><?php _e( 'Apologies, but no results were found for the requested archive. Perhaps searching will help find a related post.', 'wordcamporg' ); ?></p>
+			<p><?php esc_html_e( 'Apologies, but no results were found for the requested archive. Perhaps searching will help find a related post.', 'wordcamporg' ); ?></p>
 			<?php get_search_form(); ?>
 		</div>
 	</div>
@@ -97,7 +97,7 @@ if ( ! $gallery_term ) {
 				</a>
 				<span class="meta-sep">|</span>
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
 				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
@@ -121,7 +121,7 @@ if ( ! $gallery_term ) {
 				<?php twentyten_posted_on(); ?>
 				<span class="meta-sep">|</span>
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div>
@@ -193,7 +193,7 @@ if ( ! $gallery_term ) {
 				<?php endif; ?>
 
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
 				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>

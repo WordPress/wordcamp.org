@@ -15,7 +15,7 @@
 
 			<div id="comments">
 <?php if ( post_password_required() ) : ?>
-				<p class="nopassword"><?php _e( 'This post is password protected. Enter the password to view any comments.', 'wordcamporg' ); ?></p>
+				<p class="nopassword"><?php esc_html_e( 'This post is password protected. Enter the password to view any comments.', 'wordcamporg' ); ?></p>
 			</div><!-- #comments -->
 	<?php
 		/*
@@ -93,7 +93,7 @@
 	 */
 	if ( ! comments_open() ) :
 		?>
-	<p class="nocomments"><?php _e( 'Comments are closed.', 'wordcamporg' ); ?></p>
+	<p class="nocomments"><?php esc_html_e( 'Comments are closed.', 'wordcamporg' ); ?></p>
 <?php endif; // end ! comments_open() ?>
 
 <?php endif; // end have_comments() ?>

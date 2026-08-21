@@ -310,14 +310,14 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
 				<?php printf( __( '%s <span class="says">says:</span>', 'wordcamporg' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
 		</div><!-- .comment-author .vcard -->
 				<?php if ( $comment->comment_approved == '0' ) : ?>
-			<em><?php _e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
+			<em><?php esc_html_e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
 			<br />
 		<?php endif; ?>
 
 		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
 				<?php
 				/* translators: 1: date, 2: time */
-				printf( __( '%1$s at %2$s', 'wordcamporg' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'wordcamporg' ), ' ' );
+				printf( esc_html__( '%1$s at %2$s', 'wordcamporg' ), esc_html( get_comment_date() ), esc_html( get_comment_time() ) ); ?></a><?php edit_comment_link( esc_html__( '(Edit)', 'wordcamporg' ), ' ' );
 ?>
 		</div><!-- .comment-meta .commentmetadata -->
 
@@ -339,7 +339,7 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
 			case 'trackback':
 				?>
 	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __('(Edit)', 'wordcamporg'), ' ' ); ?></p>
+		<p><?php esc_html_e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( esc_html__('(Edit)', 'wordcamporg'), ' ' ); ?></p>
 				<?php
 				break;
 		endswitch;

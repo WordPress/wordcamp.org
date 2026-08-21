@@ -54,11 +54,8 @@ $member_count = 0;
 $count_label  = '';
 $members_url  = '';
 
-// Gated on `$shows_count` alone. `count_users()` runs Core's CPU-intensive
-// usermeta aggregate, and the group front page renders two of these blocks
-// — the hero count and the sidebar membership controls — so tying this to
-// `$shows_membership` as well ran that aggregate twice on every request for
-// a number the membership variant no longer prints.
+// `count_users()` runs Core's CPU-intensive usermeta aggregate, so only the
+// variants that actually print the number pay for it.
 if ( $shows_count ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
 	$member_count = $user_count['total_users'] ?? 0;
@@ -114,10 +111,8 @@ if ( $shows_membership ) {
 /*
  * The server-side directive processor can't run the store's JavaScript
  * getters, so it resolves `state.*` straight out of what's registered here.
- * Both halves matter and neither implies the other: without `buttonLabel`
- * the Join button and the role badge render with empty text until
- * hydration, and without `countLabel` the count does. Register each
- * alongside the markup that reads it.
+ * An unregistered `state.*` reference server-renders as empty text, so each
+ * half is registered alongside the markup that reads it.
  */
 if ( $shows_membership || $shows_count ) {
 	$interactivity_state = array( 'isMember' => $is_member );

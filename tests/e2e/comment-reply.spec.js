@@ -5,17 +5,11 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
 /**
  * Reply → Cancel on a group news post.
  *
- * `single.html` renders comments with core's ordinary post comment form,
- * whose Cancel reply link core nests inside `#reply-title` — the heading the
- * theme's stylesheet hides. Until the theme's compact comment-form defaults
- * covered `post` as well as `gatherpress_event`, clicking Reply moved the
- * form into nested-reply mode and hid the only control that could undo it:
- * every later comment silently became a child of the one being replied to.
- *
  * Only a browser can cover this half — `comment-reply.js` is what moves the
- * form and rewrites `#comment_parent`. The server-rendered half (no
- * `#reply-title`, a visible cancel link, the placeholder and the
- * screen-reader label) is pinned in
+ * form and rewrites `#comment_parent`, and a Cancel link the stylesheet has
+ * hidden strands every later comment under the one being replied to. The
+ * server-rendered half (no `#reply-title`, a visible cancel link, the
+ * placeholder and the screen-reader label) is pinned in
  * `mu-plugins/groups/tests/test-groups-site-comment-form.php`.
  *
  * Requires the `eventorganiser6` / `password` test user from the skill's
@@ -57,8 +51,7 @@ test.describe( 'news post comments', () => {
 		} );
 
 		// `?p=` rather than the permalink: the editor URL is the one thing
-		// that reliably identifies the post just published, and the News
-		// section on the front page is capped.
+		// that reliably identifies the post just published.
 		const postId = new URL( page.url() ).searchParams.get( 'post' );
 		expect( postId ).toBeTruthy();
 

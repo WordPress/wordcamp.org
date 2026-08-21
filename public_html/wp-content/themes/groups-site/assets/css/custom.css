@@ -182,9 +182,8 @@ body.error404 .site-content-container h1 {
 	text-wrap: balance;
 }
 
-/* Only renders when an organizer sets a featured image on the Home page —
-   core's post-featured-image block outputs nothing otherwise, so there's no
-   empty crop to guard against here. */
+/* Core's post-featured-image block outputs nothing when the Home page has no
+   featured image, so there's no empty crop to guard against here. */
 
 .groups-site-hero-media img {
 	width: 100%;
@@ -405,9 +404,8 @@ body.error404 .site-content-container h1 {
 	text-decoration: none;
 }
 
-/* The card is a full-height flex column: equal heights across a grid row,
-   and a column direction so the meta cluster further down can claim the
-   leftover space and pin itself to the bottom edge (see below). */
+/* Full-height flex column so the meta cluster below can pin itself to the
+   card's bottom edge. */
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
 	box-sizing: border-box;
@@ -452,9 +450,8 @@ body.error404 .site-content-container h1 {
 	color: var(--wp--preset--color--blueberry-1);
 }
 
-/* Cap the excerpt at three lines so one wordy event can't stretch its whole
-   grid row — the `groups-site/event-card` pattern feeds every card the same
-   25-word excerpt, and this keeps the tall ones in check. */
+/* The pattern's 25-word excerpt still wraps to five or six lines in a narrow
+   column, which would stretch the whole grid row. */
 
 .gatherpress-event-query .wp-block-post-excerpt__excerpt {
 	display: -webkit-box;
@@ -464,12 +461,10 @@ body.error404 .site-content-container h1 {
 }
 
 /*
- * Pin the meta cluster (RSVP count + venue) to the card's bottom edge. The
- * cards in a grid row share a height, but their excerpts don't share a
- * length, so without this the venue lines end at three different heights
- * across one row. The card body becomes a flex column as well (the card
- * itself already is, above); the meta group takes the leftover space as
- * top margin.
+ * Cards in a grid row share a height, but their excerpts don't share a
+ * length — without this the venue lines end at three different heights across
+ * one row. The body becomes a flex column too, and the meta group takes the
+ * leftover space as top margin.
  */
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
@@ -775,14 +770,9 @@ body.error404 .site-content-container h1 {
    Single post (news)
    ========================================================================== */
 
-/* The header band puts the featured image beside the title rather than
-   above it, so it costs no height above the fold. The band runs on the
-   same 1160px rail as every other inner page, which is what gives the
-   image room to read as a picture rather than a thumbnail; the article
-   below stays at 680px because that is the readable measure for prose.
-   When a post has no featured image the block renders nothing, which
-   would leave a blank column and a squeezed title — drop the column
-   entirely so the title takes the full width. */
+/* `single.html` puts the featured image in a column beside the title. With
+   no featured image the block renders nothing, leaving a blank column and a
+   squeezed title — drop the column so the title takes the full width. */
 
 .groups-site-post-hero-media:not(:has(.wp-block-post-featured-image)) {
 	display: none;
@@ -814,10 +804,9 @@ body.error404 .site-content-container h1 {
 /* Suppress the auto "Leave a Reply" heading and any logged-in-as boilerplate
    that core might re-inject despite our comment_form_defaults filter.
 
-   `#reply-title` is core's wrapper for that heading *and* for the Cancel
-   reply link nested inside it. `has_compact_comment_form()` empties the
-   wrapper on every singular this section styles, so the link is a sibling
-   here rather than a casualty of this rule — see the note on it below. */
+   `#reply-title` also wraps the Cancel reply link;
+   `compact_comment_form_defaults()` empties it so the link is a sibling here
+   rather than a casualty of this rule. */
 
 .wp-block-post-comments-form .comment-reply-title,
 .wp-block-post-comments-form #reply-title,
@@ -830,9 +819,7 @@ body.error404 .site-content-container h1 {
 /* Cancel reply. Core prints it inside `#respond` ahead of the form, carrying
    an inline `display: none` that `comment-reply.js` clears when it moves the
    form under a comment — so this styles the visible state only, and the
-   inline rule keeps winning while the form sits at the bottom of the page.
-   Quiet by design: it undoes a choice, it doesn't compete with Post
-   comment. */
+   inline rule keeps winning while the form sits at the bottom of the page. */
 
 .wp-block-post-comments-form #cancel-comment-reply-link {
 	display: inline-block;

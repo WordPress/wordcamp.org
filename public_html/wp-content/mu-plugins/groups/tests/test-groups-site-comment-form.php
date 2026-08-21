@@ -12,14 +12,9 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  * `single-event.html` and `single.html` render the same "Discussion" section
  * and share one block of comment styling, including a rule that hides
  * `#reply-title` — core's heading wrapper, which is also where core nests
- * `#cancel-comment-reply-link`. The composer defaults empty that wrapper, so
- * the Cancel reply link ends up a plain child of `#respond` and survives the
- * rule. While those defaults applied to `gatherpress_event` only, group news
- * posts kept core's markup: clicking Reply moved the form into nested-reply
- * mode and hid the only control that could undo it, stranding every later
- * comment under the one being replied to.
- *
- * These tests pin both post types to the compact defaults, and pin the
+ * `#cancel-comment-reply-link`. These tests pin both post types to the
+ * compact defaults (which empty that wrapper, see
+ * `WordCamp\Groups\Site\compact_comment_form_defaults()`) and pin the
  * reply/cancel pair to a form the reader can actually get back out of.
  *
  * @group groups

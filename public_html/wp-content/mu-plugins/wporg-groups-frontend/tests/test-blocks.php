@@ -232,10 +232,8 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 	/**
 	 * The default combined variant preserves the original unheaded output.
-	 *
-	 * A plain member gets no role badge — "Member" tells them nothing they
-	 * don't already know; the badge is reserved for roles the label
-	 * actually distinguishes (see `$renders_role_badge` in render.php).
+	 * A plain member gets no role badge; see
+	 * `test_group_membership_block_badges_event_manager_roles()`.
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -253,9 +251,8 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 	/**
 	 * Membership placements include their heading, and omit both the
-	 * preference and the member count. The count belongs to the hero's
-	 * standalone `count` variant; the Leave control carries only its own
-	 * class, so an accidental count node can't hide behind it.
+	 * preference and the member count — the count belongs to the hero's
+	 * standalone `count` variant.
 	 */
 	public function test_group_membership_block_renders_membership_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -290,8 +287,8 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	/**
 	 * Force `count_users()` to a known result and record how often it runs.
 	 *
-	 * Returns a reference to the call counter; the filter is removed in
-	 * `tear_down()` via `remove_all_filters()` on the WordPress test case.
+	 * Returns the call counter; the filter is removed in `tear_down()` via
+	 * `remove_all_filters()` on the WordPress test case.
 	 *
 	 * @param int $total_users The member count to report.
 	 *
@@ -367,10 +364,10 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * The regression this guards: the front page renders a `count` block in
-	 * the hero and a `membership` block in the sidebar, and only the first
-	 * one needs the total. `count_users()` runs Core's usermeta aggregate,
-	 * so pricing it into both blocks doubled it on every request.
+	 * The front page renders a `count` block in the hero and a `membership`
+	 * block in the sidebar, and only the first needs the total.
+	 * `count_users()` runs Core's usermeta aggregate, so a second block
+	 * asking for it is a second aggregate on every request.
 	 */
 	public function test_group_membership_counts_members_once_per_front_page_render() {
 		$counter = $this->stub_count_users( 7 );

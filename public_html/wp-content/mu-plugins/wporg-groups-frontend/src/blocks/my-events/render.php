@@ -10,9 +10,9 @@
  *
  * Renders nothing when the member has no upcoming events, so the surrounding
  * page content gets the visibility instead of a permanent empty-state message.
- * That's safe now that authored events are part of the query: an empty result
- * genuinely means nothing upcoming, unlike the pre-#1810 behavior where it
- * could mean the query was missing the member's own events.
+ * Safe because authored events are part of the query (#1810): an empty result
+ * genuinely means nothing upcoming, not a query missing the member's own
+ * events.
  *
  * @package WordCamp\Groups\Frontend
  */

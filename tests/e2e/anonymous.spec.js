@@ -11,10 +11,8 @@ test.describe( 'anonymous visitor', () => {
 		const response = await page.goto( '' );
 		expect( response.status() ).toBe( 200 );
 
-		// The member count belongs to the hero's meta row, next to the group
-		// location — the sidebar's membership block deliberately leaves it
-		// out so the number isn't stated twice on one page (and so only one
-		// block pays for `count_users()`).
+		// The count lives in the hero's meta row; the sidebar's membership
+		// block deliberately leaves it out.
 		const heroCount = page.locator( '.groups-site-hero-meta .wporg-group-membership__count' );
 		await expect( heroCount ).toBeVisible();
 		await expect( heroCount ).toHaveText( /\d+ members?/ );

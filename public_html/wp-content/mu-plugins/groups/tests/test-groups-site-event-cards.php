@@ -11,20 +11,10 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  *
  * The front page and the events archive draw the same card, defined once in
  * `patterns/event-card.php` and pulled into both `core/post-template`s with a
- * `wp:pattern` reference. That indirection costs something core can't see
- * through: `render_block_core_post_template()` scans its *parsed* inner
- * blocks for a literal `core/post-featured-image`
- * (`block_core_post_template_uses_featured_image()`) and only then calls
- * `update_post_thumbnail_cache()`. A lone `core/pattern` — which core expands
- * at render time — fails that scan, so each card would resolve its own
- * thumbnail: one `get_post()` for the attachment plus one
- * `wp_get_attachment_metadata()` read, up to twelve cards per archive page.
- * `WordCamp\Groups\Site\prime_event_card_thumbnails()` puts the batched fetch
- * back on `loop_start`, and the query-count test below is what keeps it there.
- *
- * The rest of the class covers the card itself, which — like the patterns
- * this file's predecessor tested (see the compat-test skill's section 9) —
- * has no unit test of its own beyond the pages that render it.
+ * `wp:pattern` reference. Nothing but those two pages renders it, and the
+ * indirection costs a thumbnail cache core would otherwise prime — see
+ * `WordCamp\Groups\Site\prime_event_card_thumbnails()` for why, and the
+ * query-count test below for what keeps it in place.
  *
  * @group groups
  */
@@ -93,13 +83,9 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
-	 * Re-add the theme's hooks for every test.
-	 *
-	 * `WP_UnitTestCase` snapshots the hook table once per process and
-	 * restores that snapshot after every test, so anything a class fixture
-	 * registers only survives the fixture's first test. `add_filter()` is a
-	 * no-op for a callback already at the same priority, so re-adding here
-	 * is safe either way.
+	 * Re-add the theme's hooks for every test: `WP_UnitTestCase` restores its
+	 * per-process hook snapshot after each one, so what `wpSetUpBeforeClass()`
+	 * registered is gone from the second test on.
 	 */
 	protected function setUp(): void {
 		parent::setUp();
@@ -247,10 +233,8 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
-	 * Both grids draw the one shared card. This is also the condition that
-	 * makes the priming above necessary: core can't see a featured image
-	 * through `core/pattern`, so a post-template holding nothing else has no
-	 * thumbnail cache of its own.
+	 * Both grids draw the one shared card — which is also the condition that
+	 * makes the priming above necessary.
 	 */
 	public function test_both_card_grids_reference_the_shared_pattern() {
 		foreach ( self::CARD_GRID_TEMPLATES as $template ) {

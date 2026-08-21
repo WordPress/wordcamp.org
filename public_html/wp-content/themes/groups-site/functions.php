@@ -272,10 +272,8 @@ add_filter( 'the_content', __NAMESPACE__ . '\strip_event_metadata_blocks', 5 );
  *
  * `single-event.html` and `single.html` render the same "Discussion" section
  * and share one block of comment styling, so both need the same form
- * defaults. Leaving group news posts on core's defaults is what hid their
- * Cancel reply control: core nests `#cancel-comment-reply-link` inside
- * `#reply-title`, and `custom.css` hides `#reply-title` — so clicking Reply
- * moved the form into nested-reply mode with no way back out.
+ * defaults. See `compact_comment_form_defaults()` for what a post type left
+ * off this list gets instead.
  */
 const COMPACT_COMMENT_FORM_POST_TYPES = array( 'gatherpress_event', 'post' );
 
@@ -294,9 +292,10 @@ function has_compact_comment_form(): bool {
  * textarea so it reads like a meetup-style discussion box.
  *
  * Emptying `title_reply_before`/`title_reply_after` also takes the
- * `#reply-title` wrapper out of the markup, which leaves core's Cancel reply
- * link a plain child of `#respond` — visible on its own terms rather than
- * inheriting the heading's `display: none`.
+ * `#reply-title` wrapper out of the markup, which is load-bearing: core nests
+ * `#cancel-comment-reply-link` inside that wrapper and `custom.css` hides it,
+ * so without this the Cancel reply link is unreachable and a reader who clicks
+ * Reply can't get back to writing a top-level comment.
  */
 function compact_comment_form_defaults( $defaults ) {
 	if ( ! has_compact_comment_form() ) {

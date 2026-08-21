@@ -60,8 +60,8 @@
 
 	<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // Are there comments to navigate through? ?>
 			<div class="navigation">
-				<div class="nav-previous"><?php previous_comments_link( __( '<span class="meta-nav">&larr;</span> Older Comments', 'wordcamporg' ) ); ?></div>
-				<div class="nav-next"><?php next_comments_link( __( 'Newer Comments <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?></div>
+				<div class="nav-previous"><?php previous_comments_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+				<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?></div>
 			</div> <!-- .navigation -->
 	<?php endif; // check for comment navigation ?>
 
@@ -80,8 +80,8 @@
 
 	<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // Are there comments to navigate through? ?>
 			<div class="navigation">
-				<div class="nav-previous"><?php previous_comments_link( __( '<span class="meta-nav">&larr;</span> Older Comments', 'wordcamporg' ) ); ?></div>
-				<div class="nav-next"><?php next_comments_link( __( 'Newer Comments <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?></div>
+				<div class="nav-previous"><?php previous_comments_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+				<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?></div>
 			</div><!-- .navigation -->
 	<?php endif; // check for comment navigation ?>
 

@@ -35,11 +35,11 @@ function wcbs_content_nav( $nav_id ) {
 			<nav role="navigation" id="<?php echo esc_attr( $nav_id ); ?>" class="<?php echo esc_attr( $nav_class ); ?>">
 				<h1 class="assistive-text"><?php _e( 'Post navigation', 'wordcamporg' ); ?></h1>
 				<?php if ( get_next_posts_link() ) : ?>
-					<div class="nav-previous"><?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'wordcamporg' ) ); ?></div>
+					<div class="nav-previous"><?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?></div>
 				<?php endif; ?>
 	
 				<?php if ( get_previous_posts_link() ) : ?>
-					<div class="nav-next"><?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?></div>
+					<div class="nav-next"><?php previous_posts_link( esc_html__( 'Newer posts', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?></div>
 				<?php endif; ?>
 			</nav>
 	

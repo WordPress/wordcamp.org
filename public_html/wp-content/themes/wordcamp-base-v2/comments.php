@@ -38,8 +38,8 @@ if ( post_password_required() ) {
 		<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // are there comments to navigate through ?>
 		<nav role="navigation" id="comment-nav-above" class="site-navigation comment-navigation">
 			<h1 class="assistive-text"><?php _e( 'Comment navigation', 'wordcamporg' ); ?></h1>
-			<div class="nav-previous"><?php previous_comments_link( __( '&larr; Older Comments', 'wordcamporg' ) ); ?></div>
-			<div class="nav-next"><?php next_comments_link( __( 'Newer Comments &rarr;', 'wordcamporg' ) ); ?></div>
+			<div class="nav-previous"><?php previous_comments_link( '&larr; ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+			<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' &rarr;' ); ?></div>
 		</nav>
 		<?php endif; // check for comment navigation ?>
 
@@ -59,8 +59,8 @@ if ( post_password_required() ) {
 		<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // are there comments to navigate through ?>
 		<nav role="navigation" id="comment-nav-below" class="site-navigation comment-navigation">
 			<h1 class="assistive-text"><?php _e( 'Comment navigation', 'wordcamporg' ); ?></h1>
-			<div class="nav-previous"><?php previous_comments_link( __( '&larr; Older Comments', 'wordcamporg' ) ); ?></div>
-			<div class="nav-next"><?php next_comments_link( __( 'Newer Comments &rarr;', 'wordcamporg' ) ); ?></div>
+			<div class="nav-previous"><?php previous_comments_link( '&larr; ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+			<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' &rarr;' ); ?></div>
 		</nav>
 		<?php endif; // check for comment navigation ?>
 

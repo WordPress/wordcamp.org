@@ -11,11 +11,11 @@ if ( ! $gallery_term ) {
 <?php if ( $wp_query->max_num_pages > 1 ) : ?>
 	<div id="nav-above" class="navigation">
 		<div class="nav-previous">
-			<?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'wordcamporg' ) ); ?>
+			<?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?>
 		</div>
 
 		<div class="nav-next">
-			<?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+			<?php previous_posts_link( esc_html__( 'Newer posts', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 		</div>
 	</div>
 <?php endif; ?>
@@ -171,8 +171,8 @@ if ( ! $gallery_term ) {
 				<?php if ( count( get_the_category() ) ) : ?>
 					<span class="cat-links">
 						<?php printf(
-							__( '<span class="%1$s">Posted in</span> %2$s', 'wordcamporg' ),
-							'entry-utility-prep entry-utility-prep-cat-links',
+							'<span class="entry-utility-prep entry-utility-prep-cat-links">%1$s</span> %2$s',
+							esc_html_x( 'Posted in', 'post categories label', 'wordcamporg' ),
 							get_the_category_list( ', ' )
 						); ?>
 					</span>
@@ -184,8 +184,8 @@ if ( ! $gallery_term ) {
 				if ( $tags_list ) : ?>
 					<span class="tag-links">
 						<?php printf(
-							__( '<span class="%1$s">Tagged</span> %2$s', 'wordcamporg' ),
-							'entry-utility-prep entry-utility-prep-tag-links',
+							'<span class="entry-utility-prep entry-utility-prep-tag-links">%1$s</span> %2$s',
+							esc_html_x( 'Tagged', 'post tags label', 'wordcamporg' ),
 							$tags_list
 						); ?>
 					</span>
@@ -209,11 +209,11 @@ if ( ! $gallery_term ) {
 <?php if ( $wp_query->max_num_pages > 1 ) : ?>
 	<div id="nav-below" class="navigation">
 		<div class="nav-previous">
-			<?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'wordcamporg' ) ); ?>
+			<?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?>
 		</div>
 
 		<div class="nav-next">
-			<?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+			<?php previous_posts_link( esc_html__( 'Newer posts', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 		</div>
 	</div>
 <?php endif; ?>

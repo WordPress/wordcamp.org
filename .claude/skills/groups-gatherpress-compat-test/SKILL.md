@@ -211,41 +211,22 @@ docker compose exec wordcamp.test wp plugin install \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
-Environment gotchas that look like code bugs but aren't:
+Environment gotchas:
 
-- **A new `groups-site` pattern file silently doesn't register** (its
-  `wp:pattern` reference renders empty, no error). WordPress caches the
-  theme's `patterns/` directory scan keyed by the theme's `Version:` header
-  — and `wp cache flush` does *not* clear it. Locally, run
-  `wp eval 'wp_get_theme()->delete_pattern_cache();' --url=<site>`; for a
-  deploy, bump the theme `Version:` in `style.css` (which invalidates the
-  cache everywhere) whenever adding/removing a pattern file.
-- **The phpunit container reports `Could not read "phpunit.xml.dist"`**
-  even though `ls /app` lists the file. Its bind mounts go stale when a
-  mounted file's inode changes on the host (macOS Docker); fix with
+- Adding/removing a `groups-site` pattern requires a theme `Version:` bump.
+  Locally, clear the otherwise-stale scan with
+  `wp eval 'wp_get_theme()->delete_pattern_cache();' --url=<site>`;
+  `wp cache flush` does not clear it.
+- If PHPUnit cannot read a mounted file that exists on the host, run
   `docker compose -f docker-compose.phpunit.yml up -d --force-recreate phpunit_wp`.
-- **Hooks a PHPUnit class fixture registers only survive that class's
-  first test.** `WP_UnitTestCase` snapshots `$wp_filter` once per *process*
-  (`self::$hooks_saved` is static) and restores that snapshot after every
-  test, so anything added in `wpSetUpBeforeClass()` — including the
-  `groups-site` filters that
-  `mu-plugins/groups/tests/test-groups-site-{comment-form,event-cards}.php`
-  pull in by requiring the theme's `functions.php` directly — is wiped from
-  the second test onwards. It looks exactly like a broken filter, and it
-  only reproduces in a full-suite run. Re-add such hooks in `setUp()`;
-  `add_filter()` is a no-op for a callback already at that priority. (This
-  is also why every hook the theme registers needs a *named* callback, not
-  a closure.)
-- **`go_to( get_permalink( $id ) )` does not make `is_singular()` true** in
-  this fixture — no rewrite rules are flushed, so a pretty permalink 404s.
-  Address singulars by query string instead:
-  `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
-- **Freshly created `eventorganiser*`/`member*` accounts commonly fail
-  their first E2E run** at `dismissEditorOnboarding` — a brand-new account
-  hits the welcome-guide reinit race hardest because nothing is dismissed
-  in its server-side preferences yet. If the `error-context.md` shows the
-  editor with the welcome dialog (not a login form), just re-run once; the
-  account's stored dismissal makes later runs stable.
+- Hooks loaded in `wpSetUpBeforeClass()` disappear after the first test in
+  a full suite because `WP_UnitTestCase` restores a process-wide hook
+  snapshot. Re-add named callbacks in `setUp()`.
+- `go_to( get_permalink( $id ) )` does not establish a singular query in
+  this fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
+- If a new test account's first E2E run fails in
+  `dismissEditorOnboarding`, rerun once only when `error-context.md` shows
+  the Welcome dialog reinitializing.
 
 **After bumping the pinned GatherPress version, also install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
@@ -270,7 +251,7 @@ and a REST application password (the browser pass needs the former, the
 REST pass needs the latter):
 
 ```bash
-for pair in "organiser1:editor" "eventorganiser1:author" "eventorganiser6:author" "member1:subscriber"; do
+for pair in "organiser1:editor" eventorganiser{1..6}:author "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \
@@ -612,7 +593,7 @@ the same class of bug on the *next* upgrade is a wasted rediscovery — turn
 what this pass found into a permanent regression test before moving on,
 not a one-off fix.
 
-The reference example written after the 0.35.0 bump lives in
+The remaining reference test lives in
 `mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
 exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
 there by including the real theme files directly):
@@ -625,45 +606,21 @@ there by including the real theme files directly):
   bump — extend `CONTRACT` in that file whenever the audit finds a call
   site it doesn't cover yet, rather than leaving the gap for next time.
 
-A third test, `test-groups-site-event-cards-patterns.php`, covered the
-theme's PHP event-cards patterns until #1915 replaced them with the
-`gatherpress-event-query` block. Why it existed still matters: those
-patterns were `Inserter: no` and referenced by no template, so the
-block-patterns REST endpoint was the only thing that ever executed them —
-which is how #1874's bug stayed hidden. Prefer patterns referenced from a
-template via `wp:pattern`, so ordinary front-end rendering exercises them;
-a pattern that must stay orphaned needs a test that includes the file
-directly.
+`test-groups-site-event-cards-patterns.php` was removed with the old PHP
+event-card patterns. Directly include any future orphaned PHP pattern that
+normal template rendering cannot exercise.
 
-`test-groups-site-event-cards.php` is its successor, and covers a cost that
-`wp:pattern` reference introduced. `render_block_core_post_template()`
-scans its *parsed* inner blocks for a literal `core/post-featured-image`
-before calling `update_post_thumbnail_cache()`; it cannot see through
-`core/pattern`, which core only expands at render time. A post-template
-holding nothing but the shared card therefore primed nothing, and each card
-ran its own attachment + image-metadata lookup — twelve cards, two dozen
-queries. `WordCamp\Groups\Site\prime_event_card_thumbnails()` restores
-the batched fetch on `loop_start`, and the file's query-count test is what
-keeps it honest. Watch for the same shape anywhere else core inspects
-literal inner blocks: moving markup behind `core/pattern` is invisible to
-those scans.
+Its successor, `test-groups-site-event-cards.php`, preserves thumbnail
+cache priming that core cannot infer through a `core/pattern` reference.
 
-Note the shape of risk that replacement creates. A GatherPress *class or
-method* that disappears fails loudly, and `test-gatherpress-api-contract.php`
-catches it. A GatherPress *block* referenced from a template fails by
-rendering blank, which no PHP contract can see. The blocks `groups-site`
-now depends on — `gatherpress/event-date`, `gatherpress/rsvp-count`,
+The PHP API contract does not detect missing blocks, which render blank.
+Also audit the theme's dependencies: `gatherpress/event-date`,
+`gatherpress/rsvp-count`,
 `gatherpress/venue`, `gatherpress/venue-detail`, `gatherpress/venue-map`,
 `gatherpress/online-event`, `gatherpress/online-event-link`,
 `gatherpress/add-to-calendar`, and the `gatherpress-event-query` query
-variation — have no automated check that they are still registered
-(`wporg-groups-frontend/tests/test-blocks.php` asserts only `wporg/*`
-blocks). Extend Section 8's audit to cover block names alongside classes
-and methods.
-
-When a call site goes away, prune its `CONTRACT` entry in the same pass —
-`GatherPress\Core\Event\Query` outlived its last caller in #1915 and now
-guards nothing.
+variation; `wporg-groups-frontend/tests/test-blocks.php` asserts only
+`wporg/*` blocks. Prune `CONTRACT` entries when call sites disappear.
 
 When a version bump (or this checklist) surfaces something that wasn't
 caught automatically, before moving on:

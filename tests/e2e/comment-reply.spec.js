@@ -89,13 +89,15 @@ test.describe( 'news post comments', () => {
 		await expect( parentField ).not.toHaveValue( '0' );
 
 		// The form really did move under the comment being replied to.
-		await expect( comment.locator( '#respond' ) ).toBeVisible();
+		const movedComposer = page.locator( '.wp-block-comment-template > #respond' );
+		await expect( movedComposer ).toBeVisible();
 
 		// --- Cancel. ------------------------------------------------------
 		await cancelLink.click();
 
 		await expect( cancelLink ).toBeHidden();
 		await expect( parentField ).toHaveValue( '0' );
-		await expect( comment.locator( '#respond' ) ).toHaveCount( 0 );
+		await expect( movedComposer ).toHaveCount( 0 );
+		await expect( page.locator( '.wp-block-comments > #respond' ) ).toBeVisible();
 	} );
 } );

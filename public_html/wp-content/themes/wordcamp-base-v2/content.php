@@ -22,12 +22,22 @@
 	</div><!-- .entry-summary -->
 	<?php else : ?>
 	<div class="entry-content">
-		<?php the_content( sprintf(
-			// translators: The title of the post to continue reading
-			__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-			the_title( '<span class="assistive-text">', '</span> ', false )
-		) ); ?>
-		<?php wp_link_pages( array( 'before' => '<div class="page-links">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+		<?php
+		the_content(
+			sprintf(
+				/* translators: %s - the title of the post to continue reading */
+				esc_html__( 'Continue reading %s', 'wordcamporg' ),
+				'<span class="assistive-text">' . esc_html( get_the_title() ) . '</span> '
+			) . '<span class="meta-nav">&rarr;</span>'
+		);
+
+		wp_link_pages(
+			array(
+				'before' => '<div class="page-links">' . esc_html__( 'Pages:', 'wordcamporg' ),
+				'after'  => '</div>',
+			)
+		);
+		?>
 	</div><!-- .entry-content -->
 	<?php endif; ?>
 
@@ -60,6 +70,6 @@
 		<span class="comments-link"><?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?></span>
 		<?php endif; ?>
 
-		<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span><span class="edit-link">', '</span>' ); ?>
+		<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span><span class="edit-link">', '</span>' ); ?>
 	</footer><!-- #entry-meta -->
 </article><!-- #post-<?php the_ID(); ?> -->

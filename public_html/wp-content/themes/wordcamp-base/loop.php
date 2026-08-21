@@ -100,7 +100,7 @@ if ( ! $gallery_term ) {
 					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div>
 		</div><!-- #post-## -->
 
@@ -113,7 +113,7 @@ if ( ! $gallery_term ) {
 				</div>
 			<?php else : ?>
 				<div class="entry-content">
-					<?php the_content( __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+					<?php the_content( esc_html__( 'Continue reading', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 				</div>
 			<?php endif; ?>
 
@@ -123,7 +123,7 @@ if ( ! $gallery_term ) {
 				<span class="comments-link">
 					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div>
 		</div><!-- #post-## -->
 
@@ -148,15 +148,19 @@ if ( ! $gallery_term ) {
 
 			<?php else : ?>
 				<div class="entry-content">
-					<?php the_content( sprintf(
-						// translators: The title of the post to continue reading
-						__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-						the_title( '<span class="screen-reader-text">', '</span> ', false )
-					) ); ?>
+					<?php
+					the_content(
+						sprintf(
+							/* translators: %s - the title of the post to continue reading */
+							esc_html__( 'Continue reading %s', 'wordcamporg' ),
+							'<span class="screen-reader-text">' . esc_html( get_the_title() ) . '</span> '
+						) . '<span class="meta-nav">&rarr;</span>'
+					);
+					?>
 
 					<?php
 					wp_link_pages( array(
-						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
+						'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
 						'after'  => '</div>',
 					) );
 					?>
@@ -192,7 +196,7 @@ if ( ! $gallery_term ) {
 					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div><!-- .entry-utility -->
 		</div><!-- #post-## -->
 

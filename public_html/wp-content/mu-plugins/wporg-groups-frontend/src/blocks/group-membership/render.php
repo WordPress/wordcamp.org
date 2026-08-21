@@ -6,15 +6,21 @@
  */
 
 use function WordCamp\Groups\Frontend\Capabilities\get_role_tier_label;
+use const WordCamp\Groups\Frontend\Capabilities\EVENT_MANAGER_ROLES;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
-if ( ! in_array( $variant, array( 'combined', 'membership', 'preference' ), true ) ) {
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count' ), true ) ) {
 	$variant = 'combined';
 }
 
 $shows_membership = in_array( $variant, array( 'combined', 'membership' ), true );
 $shows_preference = in_array( $variant, array( 'combined', 'preference' ), true );
+
+// The standalone count lives in the hero's meta row next to the group
+// location; the sidebar membership variant leaves it out so the number
+// isn't stated twice on the same page.
+$shows_count = in_array( $variant, array( 'combined', 'count' ), true );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
@@ -31,7 +37,13 @@ $is_organizer       = in_array( $user_role, ORGANIZER_ROLES, true );
 $renders_leave      = $shows_membership && $is_member && ! $is_organizer;
 $renders_preference = $shows_preference && $is_member;
 
-if ( ! $shows_membership && ! $renders_preference ) {
+// Plain "Member" is the default for everyone who isn't an organizer or
+// event organizer — badging it back at people who already know they've
+// joined adds a status pill with nothing to say. Reserve the badge for
+// roles the label actually distinguishes.
+$renders_role_badge = $shows_membership && $is_member && in_array( $user_role, EVENT_MANAGER_ROLES, true );
+
+if ( ! $shows_membership && ! $renders_preference && ! $shows_count ) {
 	return;
 }
 
@@ -40,14 +52,22 @@ $rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
 
 $member_count = 0;
 $count_label  = '';
+$members_url  = '';
 
-if ( $shows_membership ) {
+// `count_users()` runs Core's CPU-intensive usermeta aggregate, so only the
+// variants that actually print the number pay for it.
+if ( $shows_count ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
 	$member_count = $user_count['total_users'] ?? 0;
 	$count_label  = sprintf(
 		_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
 		number_format_i18n( $member_count )
 	);
+
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$members_url = get_permalink( $members_page );
+	}
 }
 
 $notification_opt_in = $renders_preference
@@ -60,15 +80,25 @@ $context = array(
 	'restNonce'  => $rest_nonce,
 );
 
+// The count markup reads its label through the store's context-backed
+// getter, so every variant that prints a count needs these two keys.
+if ( $shows_count ) {
+	$context = array_merge(
+		$context,
+		array(
+			'memberCount' => $member_count,
+			'countLabel'  => $count_label,
+		)
+	);
+}
+
 if ( $shows_membership ) {
 	$context = array_merge(
 		$context,
 		array(
 			'roleLabel'    => $role_label,
-			'memberCount'  => $member_count,
 			'memberLabel'  => __( 'Member', 'wporg-groups-frontend' ),
 			'joinLabel'    => __( 'Join this group', 'wporg-groups-frontend' ),
-			'countLabel'   => $count_label,
 			'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
@@ -76,16 +106,29 @@ if ( $shows_membership ) {
 			'loading'      => false,
 		)
 	);
+}
 
-	wp_interactivity_state(
-		'wporg/group-membership',
-		array(
-			'buttonLabel' => $is_member ? $role_label : __( 'Join this group', 'wporg-groups-frontend' ),
-			'isMember'    => $is_member,
-			'memberCount' => $member_count,
-			'countLabel'  => $count_label,
-		)
-	);
+/*
+ * The server-side directive processor can't run the store's JavaScript
+ * getters, so it resolves `state.*` straight out of what's registered here.
+ * An unregistered `state.*` reference server-renders as empty text, so each
+ * half is registered alongside the markup that reads it.
+ */
+if ( $shows_membership || $shows_count ) {
+	$interactivity_state = array( 'isMember' => $is_member );
+
+	if ( $shows_membership ) {
+		$interactivity_state['buttonLabel'] = $is_member
+			? $role_label
+			: __( 'Join this group', 'wporg-groups-frontend' );
+	}
+
+	if ( $shows_count ) {
+		$interactivity_state['memberCount'] = $member_count;
+		$interactivity_state['countLabel']  = $count_label;
+	}
+
+	wp_interactivity_state( 'wporg/group-membership', $interactivity_state );
 }
 
 if ( $renders_preference ) {
@@ -121,9 +164,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endif; ?>
 
 		<?php if ( $is_member ) : ?>
-			<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
-				<?php echo esc_html( $role_label ); ?>
-			</span>
+			<?php if ( $renders_role_badge ) : ?>
+				<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
+					<?php echo esc_html( $role_label ); ?>
+				</span>
+			<?php endif; ?>
 		<?php else : ?>
 			<div class="wp-block-button">
 				<button
@@ -136,26 +181,35 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
 			</div>
 		<?php endif; ?>
-
-		<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
-			<?php
-			echo esc_html(
-				sprintf(
-					_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
-					number_format_i18n( $member_count )
-				)
-			);
-			?>
-		</span>
 	<?php endif; ?>
 
-	<?php if ( $renders_leave ) : ?>
-		<button
-			class="wporg-group-membership__leave"
-			data-wp-on--click="actions.leave"
-			data-wp-bind--disabled="context.loading"
-			data-wp-bind--aria-busy="context.loading"
-		><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+	<?php if ( $shows_count || $renders_leave ) : ?>
+		<div class="wporg-group-membership__meta">
+			<?php if ( $shows_count ) : ?>
+				<?php if ( $members_url ) : ?>
+					<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
+						<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
+					</a>
+				<?php else : ?>
+					<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
+						<?php echo esc_html( $count_label ); ?>
+					</span>
+				<?php endif; ?>
+			<?php endif; ?>
+
+			<?php if ( $shows_count && $renders_leave ) : ?>
+				<span class="wporg-group-membership__meta-divider" aria-hidden="true">&middot;</span>
+			<?php endif; ?>
+
+			<?php if ( $renders_leave ) : ?>
+				<button
+					class="wporg-group-membership__leave"
+					data-wp-on--click="actions.leave"
+					data-wp-bind--disabled="context.loading"
+					data-wp-bind--aria-busy="context.loading"
+				><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+			<?php endif; ?>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>

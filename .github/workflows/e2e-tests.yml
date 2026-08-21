@@ -193,7 +193,7 @@ jobs:
     - name: Create role-tier test users
       # Users are independent rows (different usernames), so creating them
       # concurrently is safe -- backgrounded rather than sequential to avoid
-      # paying `docker compose exec`'s per-call overhead 7 times over.
+      # paying `docker compose exec`'s per-call overhead 8 times over.
       run: |
         SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
         create_user() {
@@ -219,6 +219,7 @@ jobs:
         create_user eventorganiser3 author & pids+=( "$!" )
         create_user eventorganiser4 author & pids+=( "$!" )
         create_user eventorganiser5 author & pids+=( "$!" )
+        create_user eventorganiser6 author & pids+=( "$!" )
         create_user member1 subscriber & pids+=( "$!" )
         status=0
         for pid in "${pids[@]}"; do

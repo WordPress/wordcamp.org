@@ -48,9 +48,6 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 			'constants'  => array( 'TABLE_FORMAT' ),
 			'properties' => array( 'rsvp' ),
 		),
-		'GatherPress\Core\Event\Query'      => array(
-			'methods' => array( 'get_upcoming_events', 'get_past_events' ),
-		),
 		'GatherPress\Core\Event\Setup'      => array(
 			'methods' => array( 'handle_event_archive_redirect' ),
 		),

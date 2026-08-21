@@ -59,6 +59,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		self::$users['subscriber'] = $factory->user->create_and_get( array(
 			'role' => 'subscriber',
+			// The user factory leaves this empty, which would make the author URL assertions vacuous.
+			'user_url' => 'https://subscriber.example.org',
 		) );
 
 		self::$users['speaker'] = $factory->user->create_and_get( array(
@@ -211,7 +213,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$feedback = $this->get_only_feedback();
 
-		$this->assertEquals( 0, $feedback->user_id );
+		$this->assertSame( '0', $feedback->user_id );
 		$this->assertSame( 'Foo', $feedback->comment_author );
 		$this->assertSame( 'bar@example.org', $feedback->comment_author_email );
 	}
@@ -299,6 +301,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 			'author'       => self::$users['subscriber']->ID,
 			'author_name'  => 'Foo',
 			'author_email' => 'bar@example.org',
+			'author_url'   => 'https://example.org',
 			'meta'         => self::$valid_meta,
 		);
 
@@ -311,9 +314,38 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$feedback = $this->get_only_feedback();
 
-		$this->assertEquals( 0, $feedback->user_id );
+		$this->assertSame( '0', $feedback->user_id );
 		$this->assertSame( 'Foo', $feedback->comment_author );
 		$this->assertSame( 'bar@example.org', $feedback->comment_author_email );
+		$this->assertSame( '', $feedback->comment_author_url );
+		$this->assertNotSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
+	}
+
+	/**
+	 * The other tests call the controller directly. This one goes through the REST server, so it also covers the
+	 * permission callback and the session as the REST authentication pipeline resolves it.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
+	 */
+	public function test_create_item_dispatch_ignores_author_when_unauthenticated() {
+		wp_set_current_user( 0 );
+
+		$request = new WP_REST_Request( 'POST', '/wordcamp-speaker-feedback/v1/feedback' );
+		$request->set_body_params( array(
+			'post'         => self::$posts['valid-session']->ID,
+			'author'       => self::$users['subscriber']->ID,
+			'author_name'  => 'Foo',
+			'author_email' => 'bar@example.org',
+			'meta'         => self::$valid_meta,
+		) );
+
+		$response = rest_do_request( $request );
+
+		$this->assertEquals( 201, $response->get_status() );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertSame( '0', $feedback->user_id );
 		$this->assertNotSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
 	}
 
@@ -402,9 +434,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		wp_set_current_user( self::$users['admin']->ID );
 
 		$params = array(
-			'post'   => self::$posts['valid-session']->ID,
-			'author' => self::$users['subscriber']->ID,
-			'meta'   => self::$valid_meta,
+			'post' => self::$posts['valid-session']->ID,
+			'meta' => self::$valid_meta,
 		);
 
 		$this->request->set_body_params( $params );
@@ -430,9 +461,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		wp_set_current_user( self::$users['admin']->ID );
 
 		$params = array(
-			'post'   => self::$posts['valid-session']->ID,
-			'author' => self::$users['subscriber']->ID,
-			'meta'   => array(
+			'post' => self::$posts['valid-session']->ID,
+			'meta' => array(
 				'rating' => 1,
 				'q1'     => 'asdf 1',
 				'q2'     => 'asdf 2',

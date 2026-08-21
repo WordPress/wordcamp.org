@@ -36,8 +36,6 @@
 	.groups-site-sidebar {
 		padding-left: 0;
 		padding-top: var(--wp--preset--spacing--40);
-		border-left: 0;
-		border-top: 1px solid var(--wp--preset--color--light-grey-1);
 	}
 }
 
@@ -68,6 +66,22 @@
 		padding-top: var(--wp--preset--spacing--20);
 	}
 
+	/* Post hero: the columns stack here, so the featured image jumps from a
+	   side panel to the full width of the band. Left alone that renders a
+	   400px-tall billboard on tablets, pushing the title and the opening
+	   paragraph off the fold — the exact cost the side placement exists to
+	   avoid. Cap the height so it stays a banner strip. Phones are already
+	   under the cap at their natural 16/9, so nothing changes there.
+
+	   The crop is biased above centre because a centred one takes the middle
+	   band of the frame, which is where a photo of people has their necks.
+	   Faces sit in the upper third, so that is the part worth keeping. */
+
+	.groups-site-post-hero-media img {
+		max-height: 200px;
+		object-position: 50% 35%;
+	}
+
 	/* Query Loop event cards: single column. */
 	.wp-block-post-template.is-layout-grid {
 		grid-template-columns: 1fr !important;
@@ -83,8 +97,11 @@
 		grid-template-columns: 1fr !important;
 	}
 
-	/* Group membership block: wrap and center. */
-	.wporg-group-membership {
+	/* Group membership block: stack the sidebar variants. Scoped to the
+	   sidebar because the standalone count in the hero meta row stays
+	   inline next to the group location at every width. */
+
+	.groups-site-sidebar .wporg-group-membership {
 		flex-direction: column;
 		align-items: flex-start;
 	}

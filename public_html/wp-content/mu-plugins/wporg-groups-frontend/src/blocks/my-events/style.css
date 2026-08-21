@@ -123,11 +123,3 @@
 	color: var(--wp--preset--color--blueberry-1);
 	text-decoration: none;
 }
-
-.wporg-my-events__empty {
-	margin: 0;
-	max-width: 68ch;
-	font-size: var(--wp--preset--font-size--small);
-	line-height: 1.55;
-	color: var(--wp--preset--color--charcoal-3);
-}

@@ -152,7 +152,26 @@ class Test_Event_Application_Rate_Limit extends WP_UnitTestCase {
 	public function test_counting_depends_on_registered_statuses() {
 		$this->create_applications( self::LIMIT );
 
-		$this->assertTrue( $this->application->is_rate_limited() );
-		$this->assertContains( WCPT_DEFAULT_STATUS, get_post_stati() );
+		$this->assertTrue( $this->application->is_rate_limited(), 'Should count where the statuses are registered.' );
+
+		// Drop them the way a site that never ran the loader's `init` hook would have
+		// them, then confirm the cap stops counting. This is why the Campus Connect
+		// handler registers them before it asks.
+		$registered = array();
+
+		foreach ( array_keys( \WordCamp_Loader::get_post_statuses() ) as $status ) {
+			if ( isset( $GLOBALS['wp_post_statuses'][ $status ] ) ) {
+				$registered[ $status ] = $GLOBALS['wp_post_statuses'][ $status ];
+				unset( $GLOBALS['wp_post_statuses'][ $status ] );
+			}
+		}
+
+		$limited_without_statuses = $this->application->is_rate_limited();
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring what the test removed.
+		$GLOBALS['wp_post_statuses'] = array_merge( $GLOBALS['wp_post_statuses'], $registered );
+
+		$this->assertFalse( $limited_without_statuses, 'Should not count where the statuses are unregistered.' );
+		$this->assertTrue( $this->application->is_rate_limited(), 'Restoring the statuses restores counting.' );
 	}
 }

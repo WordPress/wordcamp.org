@@ -54,7 +54,6 @@ class Test_CampTix_Payment_Instamojo extends WP_UnitTestCase {
 		$gateway->camptix_options['currency'] = 'INR';
 
 		$options = new ReflectionProperty( 'CampTix_Payment_Method_Instamojo', 'options' );
-		$options->setAccessible( true );
 		$options->setValue(
 			$gateway,
 			array(
@@ -451,7 +450,6 @@ class Test_CampTix_Payment_Instamojo extends WP_UnitTestCase {
 	public function test_payment_request_owns_token_reads_the_echoed_urls() {
 		$gateway = $this->make_configured_gateway();
 		$method  = new ReflectionMethod( 'CampTix_Payment_Method_Instamojo', 'payment_request_owns_token' );
-		$method->setAccessible( true );
 
 		$request = json_decode( wp_json_encode( $this->payment_request( 'req_x', 'tok_mine' )['payment_request'] ) );
 

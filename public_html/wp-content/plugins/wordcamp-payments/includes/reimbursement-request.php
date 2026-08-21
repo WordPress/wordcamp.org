@@ -1466,7 +1466,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 	$report = fopen( 'php://output', 'w' );
 
 	// JPM Header
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ) );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ), ',', '"', '\\', "\n" );
 
 	$total = 0;
 	$count = 0;

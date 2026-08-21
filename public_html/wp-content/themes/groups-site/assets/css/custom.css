@@ -229,6 +229,68 @@ body.error404 .site-content-container h1 {
 	gap: var(--wp--preset--spacing--10);
 }
 
+/* Create event and Settings are the group's two organizer actions, stacked
+   in a rail around 230px wide. At the global button size — 16px/600 in
+   14px 32px — they render as two mismatched slabs, each only as wide as its
+   own label, and the pair outweighs the page it sits beside. Stretch both to
+   the rail so their edges line up, and step them down to the compact 14px
+   size so they read as sidebar controls rather than the page's primary call
+   to action. Scoped to the sidebar: on a single event the same two blocks
+   sit side by side in the wide content column, where intrinsic width is
+   right. */
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-settings-block {
+	align-items: stretch;
+}
+
+.groups-site-sidebar .wporg-event-manage .wp-block-button,
+.groups-site-sidebar .wporg-group-settings-block .wp-block-button {
+	width: 100%;
+}
+
+.groups-site-sidebar .wporg-event-manage .wp-block-button__link.wp-element-button,
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button__link.wp-element-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+	max-width: 320px;
+	padding: 10px 16px;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* The outline variant carries a 1px border and the filled one doesn't, so
+   two buttons with identical padding sit 2px apart in height. A transparent
+   border on the filled variant squares them up. */
+
+.groups-site-sidebar
+	.wporg-event-manage
+	.wp-block-button:not(.is-style-outline)
+	> .wp-block-button__link.wp-element-button,
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button:not(.is-style-outline)
+	> .wp-block-button__link.wp-element-button {
+	border: 1px solid transparent;
+}
+
+/* Dashicons ship at 20px in a 20px box — a third taller than the label it
+   sits next to once the button drops to 14px. */
+
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button__link
+	.dashicons {
+	width: auto;
+	height: auto;
+	font-size: 16px;
+	line-height: 1;
+}
+
 /*
  * Sidebar headings are the one place that keeps the Inter 16px/600 utility
  * treatment. Every heading in the main column — My upcoming events,
@@ -260,6 +322,19 @@ body.error404 .site-content-container h1 {
 .groups-site-sidebar > *:not(:first-child) {
 	padding-top: var(--wp--preset--spacing--20);
 	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+/* Create event and Settings are the exception: both are organizer tools
+   that act on this group, so they read as one cluster of buttons rather
+   than two concerns. Drop the hairline between them and close the gap to
+   match — an organizer sees three rules in a short rail otherwise. */
+
+.groups-site-sidebar > .wporg-event-manage + .wporg-group-settings-block {
+	padding-top: 0;
+	margin-top: calc(
+		var(--wp--preset--spacing--10) - var(--wp--preset--spacing--30)
+	);
+	border-top: 0;
 }
 
 .groups-site-main-column {

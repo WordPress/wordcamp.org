@@ -97,6 +97,110 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Build a `wporg/query-total` block carrying a query context.
+	 *
+	 * The block itself lives in the wporg design system, outside this repo,
+	 * so it isn't registered here — the filter under test only reads
+	 * `$block->context`, which is public and can be set directly.
+	 *
+	 * @param string $post_type The post type the surrounding query loop runs.
+	 */
+	private function make_query_total_block( string $post_type ): \WP_Block {
+		$block = new \WP_Block(
+			array(
+				'blockName'   => 'wporg/query-total',
+				'attrs'       => array(),
+				'innerBlocks' => array(),
+			)
+		);
+
+		$block->context = array( 'query' => array( 'postType' => $post_type ) );
+
+		return $block;
+	}
+
+	/**
+	 * The events archive counts events, not "items" — on a page whose only
+	 * content is events, the generic label reads like placeholder copy.
+	 */
+	public function test_query_total_label_counts_events_on_event_queries() {
+		$block = $this->make_query_total_block( 'gatherpress_event' );
+
+		$this->assertSame(
+			'%s event',
+			apply_filters( 'wporg_query_total_label', '%s item', 1, $block )
+		);
+		$this->assertSame(
+			'%s events',
+			apply_filters( 'wporg_query_total_label', '%s items', 12, $block )
+		);
+	}
+
+	/**
+	 * Every other query loop keeps the design system's own label.
+	 */
+	public function test_query_total_label_is_untouched_on_other_queries() {
+		$block = $this->make_query_total_block( 'post' );
+
+		$this->assertSame(
+			'%s item',
+			apply_filters( 'wporg_query_total_label', '%s item', 1, $block )
+		);
+	}
+
+	/**
+	 * Read the archive's Time filter options as the query-filter block would.
+	 *
+	 * @param string|null $event_time The `event_time` query arg to simulate.
+	 */
+	private function get_event_time_filter( ?string $event_time ): array {
+		if ( null === $event_time ) {
+			unset( $_GET['event_time'] );
+		} else {
+			$_GET['event_time'] = $event_time;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_time', array() );
+
+		unset( $_GET['event_time'] );
+
+		return $filter;
+	}
+
+	/**
+	 * Single-select filters get no count badge from the wporg block, so the
+	 * toggle itself has to say which view is applied.
+	 */
+	public function test_event_time_filter_names_the_applied_choice() {
+		$filter = $this->get_event_time_filter( 'past' );
+
+		$this->assertSame( 'Time: Past', $filter['label'] );
+		$this->assertSame( array( 'past' ), $filter['selected'] );
+	}
+
+	/**
+	 * "Upcoming" is the default view, so the toggle stays unannotated — but its
+	 * radio remains selected so the filter exposes the view currently on screen.
+	 */
+	public function test_event_time_filter_marks_upcoming_selected_on_the_default_view() {
+		$filter = $this->get_event_time_filter( null );
+
+		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+	}
+
+	/**
+	 * A hand-typed `event_time` that isn't one of the three views falls back
+	 * to the default rather than naming itself in the toggle.
+	 */
+	public function test_event_time_filter_ignores_an_unknown_value() {
+		$filter = $this->get_event_time_filter( 'whenever' );
+
+		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+	}
+
+	/**
 	 * Venues are metadata on events, not their own front-end destination —
 	 * confirm the post type stays non-public even though GatherPress itself
 	 * registers it.

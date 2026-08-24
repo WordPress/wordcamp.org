@@ -418,7 +418,7 @@ class WordCamp_Forms_To_Drafts {
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
 			'post_title'   => $all_values['Company Name'] ?? '',
-			'post_content' => $all_values['Company Description'] ?? '',
+			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -645,6 +645,22 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Escape shortcode delimiters in submitted content.
+	 *
+	 * Submitted free-text is placed into draft post content that organizers later
+	 * render (e.g. when previewing the draft). Encoding the `[` and `]` delimiters
+	 * keeps that text as literal characters instead of letting it run as shortcodes,
+	 * so a submission is shown as written rather than executed.
+	 *
+	 * @param string $content Submitted content.
+	 *
+	 * @return string Content with shortcode delimiters encoded.
+	 */
+	protected function escape_shortcodes( $content ) {
+		return str_replace( array( '[', ']' ), array( '&#91;', '&#93;' ), (string) $content );
+	}
+
+	/**
 	 * Create a drafted speaker post
 	 *
 	 * @param array $speaker
@@ -652,7 +668,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_speaker( $speaker ) {
-		$content = $speaker['Your Bio'] ?? '';
+		$content = $this->escape_shortcodes( $speaker['Your Bio'] ?? '' );
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -701,7 +717,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_session( $session, $speaker ) {
-		$content = $session['Topic Description'] ?? '';
+		$content = $this->escape_shortcodes( $session['Topic Description'] ?? '' );
 
 		if ( $content ) {
 			$content = wpautop( $content );

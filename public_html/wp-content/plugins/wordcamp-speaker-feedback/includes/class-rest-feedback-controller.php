@@ -94,8 +94,9 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 
 		/*
 		 * `WP_REST_Comments_Controller::prepare_item_for_database()` copies the display name and email address of
-		 * whatever `author` it is given, so the identity has to come from the session rather than the request. The
-		 * form collects no URL for either kind of author.
+		 * whatever `author` it is given, so the identity has to come from the session rather than the request.
+		 * Dropping `author_url` only removes the request's override. A logged-in author keeps the URL from their
+		 * profile, which core applies earlier from the same `author`.
 		 */
 		unset( $request['author_url'] );
 

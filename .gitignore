@@ -13,6 +13,8 @@ docker-compose.override.yaml
 #
 # Misc
 #
+.idea
+.DS_Store
 .phpunit
 test-results/
 playwright-report/

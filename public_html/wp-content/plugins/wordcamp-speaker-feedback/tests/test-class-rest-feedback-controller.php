@@ -173,9 +173,14 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Session pages are cached, so a visitor can still be running the previous script, which sent the author
+	 * along with the submission. That request must keep working.
+	 *
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
 	 */
 	public function test_create_item_user_id() {
+		wp_set_current_user( self::$users['subscriber']->ID );
+
 		$params = array(
 			'post'   => self::$posts['valid-session']->ID,
 			'author' => self::$users['subscriber']->ID,
@@ -188,7 +193,11 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
+
+		$feedback = $this->get_only_feedback();
+
+		$this->assertEquals( self::$users['subscriber']->ID, $feedback->user_id );
+		$this->assertSame( self::$users['subscriber']->user_email, $feedback->comment_author_email );
 	}
 
 	/**
@@ -412,9 +421,11 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item()
 	 */
 	public function test_create_item_no_meta() {
+		// Logged in, so the author check passes and the missing meta is what fails.
+		wp_set_current_user( self::$users['subscriber']->ID );
+
 		$params = array(
-			'post'   => self::$posts['valid-session']->ID,
-			'author' => self::$users['subscriber']->ID,
+			'post' => self::$posts['valid-session']->ID,
 		);
 
 		$this->request->set_body_params( $params );
@@ -504,9 +515,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 */
 	public function test_create_item_permissions_check_is_valid() {
 		$params = array(
-			'post'   => self::$posts['valid-session']->ID,
-			'author' => self::$users['subscriber']->ID,
-			'meta'   => self::$valid_meta,
+			'post' => self::$posts['valid-session']->ID,
+			'meta' => self::$valid_meta,
 		);
 
 		$this->request->set_body_params( $params );

@@ -26,6 +26,14 @@ class WordCamp_Loader extends Event_Loader {
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
+
+		/*
+		 * From here rather than `includes()`, which is hooked to `plugins_loaded`.
+		 * `mu-plugins/events/jetpack-form-to-wcpt-application.php` requires the plugin
+		 * loader from inside a form handler, long after that hook, and this constructor
+		 * still runs on that path while `includes()` does not.
+		 */
+		WordCamp_Status_Guard::init();
 	}
 
 	/**

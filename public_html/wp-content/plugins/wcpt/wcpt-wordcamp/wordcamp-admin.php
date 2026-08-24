@@ -49,8 +49,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Priority 11 so the organizer email (sent by WCOR_Mailer at 10) goes out first.
 			add_action( 'wcpt_cc_needs_orientation', array( $this, 'handle_cc_needs_orientation' ), 11 );
 
-			add_filter( 'wp_insert_post_data', array( $this, 'enforce_post_status' ), 10, 2 );
-
 			add_filter(
 				'wp_insert_post_data',
 				array(
@@ -59,7 +57,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				),
 				11,
 				2
-			); // after enforce_post_status.
+			); // after WordCamp_Status_Guard::enforce_post_status().
 
 			// Filters - Subtype filtering on the WordCamp list table.
 			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
@@ -1081,48 +1079,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Enforce a valid post status for WordCamps.
-		 *
-		 * @param array $post_data
-		 * @param array $post_data_raw
-		 * @return array
-		 */
-		public function enforce_post_status( $post_data, $post_data_raw ) {
-			if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) ) {
-				return $post_data;
-			}
-
-			$post = get_post( $post_data_raw['ID'] );
-			if ( ! $post ) {
-				return $post_data;
-			}
-
-			if ( ! empty( $post_data['post_status'] ) ) {
-				$wcpt = get_post_type_object( WCPT_POST_TYPE_ID );
-
-				// Only WordCamp Wranglers can change WordCamp statuses.
-				if ( is_user_logged_in() && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
-					$post_data['post_status'] = $post->post_status;
-				}
-
-				// Enforce a valid status. Include all global statuses plus CC-exclusive ones.
-				$statuses = array_keys( WordCamp_Loader::get_post_statuses() );
-				$statuses[] = 'trash';
-
-				if ( ! in_array( $post_data['post_status'], $statuses, true ) ) {
-					$post_data['post_status'] = $statuses[0];
-				}
-
-				// Block CC-exclusive statuses from being applied to non-Campus-Connect posts.
-				if ( 'wcpt-needs-action' === $post_data['post_status'] && ! self::is_campus_connect_post_for_save( $post_data_raw['ID'] ) ) {
-					$post_data['post_status'] = $post->post_status;
-				}
-			}
-
-			return $post_data;
-		}
-
-		/**
 		 * Prevent WordCamp posts from being set to pending or published until all the required fields are completed.
 		 *
 		 * @param array $post_data
@@ -1164,7 +1120,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
-						$post_data['post_status']     = self::is_campus_connect_post_for_save( $post_data_raw['ID'] )
+						$post_data['post_status']     = WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_data_raw['ID'] )
 							? 'wcpt-approved-pre-pl'
 							: 'wcpt-needs-schedule';
 						$this->active_admin_notices[] = 3;
@@ -1450,22 +1406,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $post_id && 'campusconnect' === get_post_meta( $post_id, 'event_subtype', true );
-		}
-
-		/**
-		 * Check whether a post being saved is a Campus Connect event.
-		 *
-		 * Uses the submitted subtype when present so direct POSTs are validated
-		 * against the value being saved, then falls back to stored post meta.
-		 *
-		 * @param int $post_id Post ID.
-		 * @return bool
-		 */
-		protected static function is_campus_connect_post_for_save( $post_id ) {
-			$submitted_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ?? '' ) );
-			$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_id ), 'event_subtype', true );
-
-			return 'campusconnect' === $event_subtype;
 		}
 
 		/**
@@ -1800,9 +1740,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * The WordCamp posts the current user authored or mentors.
 		 *
+		 * Wider than what they can edit: an author cannot edit their own camp once it is
+		 * scheduled or closed, because `edit_published_posts` is a wrangler capability. They
+		 * should still see it listed.
+		 *
 		 * The mentor half has to agree with `WordCamp\SubRoles\map_subrole_caps()`, which
 		 * resolves the stored name through `wcorg_get_user_by_canonical_names()` and so
-		 * accepts either the login or the nicename.
+		 * accepts either the login or the nicename. `Event_Admin::standardize_usernames()`
+		 * canonicalises the meta on save, so the two agree on anything written since.
 		 *
 		 * @return WP_Post[]
 		 */

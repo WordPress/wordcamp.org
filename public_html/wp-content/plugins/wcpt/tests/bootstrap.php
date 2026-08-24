@@ -14,6 +14,12 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/wcpt-wordcamp/wordcamp-new-site.php';
 
 	/*
+	 * `wc-post-types` imports `site_supports_block_templates()` from here and calls it
+	 * from `the_content`, so rendering a post without this is a fatal.
+	 */
+	require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/mu-plugins/theme-templates/bootstrap.php';
+
+	/*
 	 * `WCPT_Loader` only loads the admin class when `WP_ADMIN` is defined, which happens
 	 * in another plugin's bootstrap, and a second plugin's bootstrap then assigns the
 	 * global. Own both here so this suite does not depend on either of them. The loader

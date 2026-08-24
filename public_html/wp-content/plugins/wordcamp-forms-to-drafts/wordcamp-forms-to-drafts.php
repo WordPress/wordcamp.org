@@ -209,17 +209,19 @@ class WordCamp_Forms_To_Drafts {
 	 * NOTE: This accepts submissions and marks as spam, it does not inform the submitter.
 	 */
 	public function prevent_form_submission( $is_spam ) {
-		global $post;
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$contact_form_post_id = absint( $_POST['contact-form-id'] ?? 0 );
-
-		// Already marked as spam, no form known, or user is already logged in..
-		if ( $is_spam || ! $contact_form_post_id || is_user_logged_in() ) {
+		// Already flagged, or the user is signed in and allowed to submit.
+		if ( $is_spam || is_user_logged_in() ) {
 			return $is_spam;
 		}
 
-		$form_id = get_post_meta( $contact_form_post_id, 'wcfd-key', true );
+		// Identify the form from the source Jetpack has authenticated (the signed
+		// JWT), rather than the request-supplied `contact-form-id`. When a token
+		// is present Jetpack routes and stores the submission by the token's
+		// source, and does not require `contact-form-id` to match it, so the
+		// gate has to look at the same source Jetpack does.
+		$source_id = $this->get_verified_form_source_id();
+
+		$form_id = $source_id ? get_post_meta( $source_id, 'wcfd-key', true ) : '';
 
 		if ( $this->form_requires_login( $form_id ) ) {
 			// String not shown when logged out.
@@ -227,6 +229,44 @@ class WordCamp_Forms_To_Drafts {
 		}
 
 		return $is_spam;
+	}
+
+	/**
+	 * Resolve the post ID of the form being submitted, from an authenticated source.
+	 *
+	 * When Jetpack renders a form it embeds a signed JWT describing the form and the
+	 * post it lives on. That signed source is the identity Jetpack uses to store the
+	 * feedback and route it, so it is the value our login gate must key on too. The
+	 * `contact-form-id` request field is not bound to that signed source and must not
+	 * drive an access-control decision.
+	 *
+	 * For legacy submissions with no JWT, Jetpack itself validates `contact-form-id`
+	 * against the current post before processing, so it is safe to fall back to.
+	 *
+	 * @return int Post ID of the form's source, or 0 when it cannot be determined.
+	 */
+	protected function get_verified_form_source_id() {
+		$contact_form_class = '\Automattic\Jetpack\Forms\ContactForm\Contact_Form';
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Jetpack verifies the token below.
+		if ( isset( $_POST['jetpack_contact_form_jwt'] ) && class_exists( $contact_form_class ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$jwt = sanitize_text_field( wp_unslash( $_POST['jetpack_contact_form_jwt'] ) );
+
+			try {
+				$form = $contact_form_class::get_instance_from_jwt( $jwt );
+			} catch ( \Exception $e ) {
+				$form = null;
+			}
+
+			// An unverifiable token resolves to no source, so the gate does not
+			// treat it as a known form. Jetpack rejects the same token before it
+			// stores anything, so nothing is created for it downstream either.
+			return $form ? (int) $form->get_source()->get_id() : 0;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		return absint( $_POST['contact-form-id'] ?? 0 );
 	}
 
 	/**

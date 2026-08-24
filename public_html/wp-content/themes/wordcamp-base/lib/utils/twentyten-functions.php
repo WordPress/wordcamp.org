@@ -230,14 +230,16 @@ add_filter( 'excerpt_length', 'twentyten_excerpt_length' );
  * @return string "Continue Reading" link
  */
 function twentyten_continue_reading_link() {
+	$title = get_the_title();
+
 	$link = sprintf(
 		' <a href="%s">%s</a>',
 		esc_url( get_permalink() ),
 		sprintf(
-			// translators: The title of the post to continue reading
-			__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-			sprintf( '<span class="screen-reader-text">%s</span> ', get_the_title() )
-		)
+			/* translators: %s - the title of the post to continue reading */
+			esc_html__( 'Continue reading %s', 'wordcamporg' ),
+			$title ? sprintf( '<span class="screen-reader-text">%s</span> ', esc_html( $title ) ) : ''
+		) . '<span class="meta-nav">&rarr;</span>'
 	);
 
 	return $link;
@@ -311,14 +313,14 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
 				<?php printf( __( '%s <span class="says">says:</span>', 'wordcamporg' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
 		</div><!-- .comment-author .vcard -->
 				<?php if ( $comment->comment_approved == '0' ) : ?>
-			<em><?php _e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
+			<em><?php esc_html_e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
 			<br />
 		<?php endif; ?>
 
 		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
 				<?php
 				/* translators: 1: date, 2: time */
-				printf( __( '%1$s at %2$s', 'wordcamporg' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'wordcamporg' ), ' ' );
+				printf( esc_html__( '%1$s at %2$s', 'wordcamporg' ), esc_html( get_comment_date() ), esc_html( get_comment_time() ) ); ?></a><?php edit_comment_link( esc_html__( '(Edit)', 'wordcamporg' ), ' ' );
 ?>
 		</div><!-- .comment-meta .commentmetadata -->
 
@@ -340,7 +342,7 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
 			case 'trackback':
 				?>
 	<li class="post pingback">
-		<p><?php _e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __('(Edit)', 'wordcamporg'), ' ' ); ?></p>
+		<p><?php esc_html_e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( esc_html__('(Edit)', 'wordcamporg'), ' ' ); ?></p>
 				<?php
 				break;
 		endswitch;
@@ -447,18 +449,20 @@ if ( ! function_exists( 'twentyten_posted_on' ) ) :
 	 * @since Twenty Ten 1.0
 	 */
 	function twentyten_posted_on() {
-		printf( __( '<span class="%1$s">Posted on</span> %2$s <span class="meta-sep">by</span> %3$s', 'wordcamporg' ),
-		'meta-prep meta-prep-author',
-		sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a>',
-			get_permalink(),
-			esc_attr( get_the_time() ),
-			get_the_date()
-		),
-		sprintf( '<span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>',
-			get_author_posts_url( get_the_author_meta( 'ID' ) ),
-			sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), get_the_author() ),
-			get_the_author()
-		)
+		printf(
+			wp_kses_post( __( '<span class="%1$s">Posted on</span> %2$s <span class="meta-sep">by</span> %3$s', 'wordcamporg' ) ),
+			'meta-prep meta-prep-author',
+			sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a>',
+				esc_url( get_permalink() ),
+				esc_attr( get_the_time() ),
+				esc_html( get_the_date() )
+			),
+			sprintf( '<span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>',
+				esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
+				/* translators: %s - author display name */
+				sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), esc_attr( get_the_author() ) ),
+				esc_html( get_the_author() )
+			)
 		);
 	}
 endif;
@@ -479,13 +483,21 @@ if ( ! function_exists( 'twentyten_posted_in' ) ) :
 		} else {
 			$posted_in = __( 'Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
 		}
-		// Prints the string, replacing the placeholders.
-		printf(
-		$posted_in,
-		get_the_category_list( ', ' ),
-		$tag_list,
-		get_permalink(),
-		the_title_attribute( 'echo=0' )
+
+		/*
+		 * The three strings above carry an anchor the translator has to keep and reposition, so
+		 * kses does the real work here: it keeps that link and drops anything else. The category
+		 * list and tag list are already markup, and the esc_url()/the_title_attribute() calls
+		 * below are belt-and-braces -- kses would sanitise both attributes on its own.
+		 */
+		echo wp_kses_post(
+			sprintf(
+				$posted_in,
+				get_the_category_list( ', ' ),
+				$tag_list,
+				esc_url( get_permalink() ),
+				the_title_attribute( 'echo=0' )
+			)
 		);
 	}
 endif;

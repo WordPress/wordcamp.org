@@ -4,6 +4,7 @@
  */
 namespace WordPress_Community\Applications\JetpackIntegration;
 use WordPress_Community\Applications\WordCamp_Application;
+use WordCamp\Logger;
 
 /**
  * This mu-plugin operates on the Events.wordpress.org network, targetting the Jetpack Forms on
@@ -69,10 +70,44 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	];
 
 	foreach ( $fields as $field_id => $field ) {
-		$application_data[ $field->attributes['label'] ?? $field_id ] = $field->value;
+		// `sanitize_textarea_field()` rather than the single-line variant, because the
+		// record is rendered through `nl2br()` and some answers are multi-line.
+		$application_data[ $field->attributes['label'] ?? $field_id ] = map_deep( $field->value, 'sanitize_textarea_field' );
 	}
 
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	/*
+	 * The cap counts by post status, and this network runs `init` without ever
+	 * registering the `wordcamp` statuses, so they have to be registered before the
+	 * check or the query filters on statuses that cannot match and the cap never trips.
+	 */
+	foreach ( \WordCamp_Loader::get_post_statuses() as $status => $label ) {
+		if ( ! get_post_status_object( $status ) ) {
+			// `public` to match how `Event_Loader::register_post_statuses()` registers
+			// them on the central site. Left to the defaults these would come out
+			// `internal`, which is a different status on one network to the other.
+			register_post_status(
+				$status,
+				array(
+					'label'  => $label,
+					'public' => true,
+				)
+			);
+		}
+	}
+
+	/*
+	 * Same 3-per-IP-per-hour cap the regular application form applies. It runs after the
+	 * switch, because the tracker posts and the IP meta it counts both live on the
+	 * central site.
+	 */
+	if ( ( new WordCamp_Application() )->is_rate_limited() ) {
+		Logger\log( 'campus_connect_application_rate_limited', compact( 'post_id' ) );
+		restore_current_blog();
+
+		return;
+	}
 
 	$post = array(
 		'post_type'   => 'wordcamp',
@@ -83,6 +118,9 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 
 	$post_id = wp_insert_post( $post, true );
 	if ( is_wp_error( $post_id ) ) {
+		// Without this the rest of the request runs against the central site.
+		restore_current_blog();
+
 		return;
 	}
 
@@ -131,10 +169,18 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 /**
  * Find the first field matching a given label.
  *
+ * The form is public and unauthenticated, so the value is sanitised here rather than at
+ * each `add_post_meta()` call, matching `validate_data()` in the other application
+ * converters. Single-line, because these values are the components the callers build
+ * `post_title` and the address from, not the multi-line answers.
+ *
+ * A field can be an array (a checkbox group whose label matches the needle), so those
+ * are flattened the way the application metabox already displays them.
+ *
  * @param array        $fields The fields submitted.
  * @param string|array $needles The needle to search for.
  *
- * @return mixed The field value if found, false otherwise.
+ * @return string|false The sanitised field value if found, false otherwise.
  */
 function find_first_field_matching_label( $fields, $needles ) {
 	// If the needle has uppercase letters, also search for the lowercase version (but secondly).
@@ -146,7 +192,9 @@ function find_first_field_matching_label( $fields, $needles ) {
 	foreach ( (array) $needles as $needle ) {
 		foreach ( $fields as $field ) {
 			if ( str_contains( $field->attributes['label'], $needle ) ) {
-				return $field->value ?? '';
+				$value = $field->value ?? '';
+
+				return sanitize_text_field( is_array( $value ) ? implode( ', ', $value ) : $value );
 			}
 		}
 	}

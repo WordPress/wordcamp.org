@@ -1955,6 +1955,12 @@ class WordCamp_Post_Types_Plugin {
 	 *
 	 * This generates the output to the extra columns added to the posts lists in the admin.
 	 *
+	 * The screen is gated only on the post type's generic `edit_posts`, which every
+	 * Contributor holds, so the columns carrying the speaker's e-mail address and the
+	 * sponsor's agreed amount check the row, which is the rule `meta_auth_callback()`
+	 * already applies to those keys over REST. The avatar columns check it through
+	 * `edit_post_link()`.
+	 *
 	 * @see manage_post_types_columns()
 	 */
 	public function manage_post_types_columns_output( $column, $post_id ) {
@@ -1968,7 +1974,9 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_speaker_email':
-				echo esc_html( get_post_meta( get_the_ID(), '_wcb_speaker_email', true ) );
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					echo esc_html( get_post_meta( $post_id, '_wcb_speaker_email', true ) );
+				}
 				break;
 
 			case 'wcb_speaker_wporg_username':
@@ -2001,6 +2009,13 @@ class WordCamp_Post_Types_Plugin {
 				$output = array();
 
 				foreach ( $speakers as $speaker ) {
+					// `post_status => any` includes `private`, which `wp_edit_posts_query()`
+					// restricts to its author on the Speakers screen. Drafts are listed there
+					// for everyone, so they stay listed here.
+					if ( 'private' === $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
+					}
+
 					$status_label = ( 'publish' !== $speaker->post_status ) ? get_post_status_object( $speaker->post_status )->label . ': ' : '';
 					$output[] = sprintf(
 						'<a href="%1$s">%2$s%3$s</a>',
@@ -2033,11 +2048,13 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_sponsor_amount':
-				echo sprintf(
-					'%1$s %2$s',
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_amount', true ) ),
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_currency', true ) )
-				);
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					printf(
+						'%1$s %2$s',
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_amount', true ) ),
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_currency', true ) )
+					);
+				}
 				break;
 			default:
 		}

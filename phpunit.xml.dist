@@ -74,6 +74,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Forms to Drafts">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-forms-to-drafts/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Groups">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/

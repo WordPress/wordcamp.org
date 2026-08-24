@@ -20,3 +20,11 @@
 	--wp-components-color-accent-darker-20: var(--wp--preset--color--dark-blueberry, #1d35b4);
 	--wp-components-color-accent-inverted: var(--wp--preset--color--white, #fff);
 }
+
+/*
+ * Fix form elements overlapping form header.
+ */
+.wporg-groups-modal-accent .components-modal__header {
+	background: var(--wp--preset--color--white, #fff);
+	z-index: 32;
+}

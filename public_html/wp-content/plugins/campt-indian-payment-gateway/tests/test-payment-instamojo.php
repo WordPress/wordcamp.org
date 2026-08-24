@@ -313,6 +313,90 @@ class Test_CampTix_Payment_Instamojo extends WP_UnitTestCase {
 	}
 
 	/**
+	 * WordPress escapes $_POST before any handler sees it, but Instamojo signed the
+	 * unescaped values. A buyer whose name contains a quote must still have their
+	 * order settled, rather than the signature failing on every such payment.
+	 */
+	public function test_notify_verifies_the_signature_over_unescaped_values() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_quote', 500 );
+
+		$body = $this->sign(
+			array(
+				'buyer_name'         => "D'Souza",
+				'payment_request_id' => 'req_quote',
+				'payment_id'         => 'MOJO_quote',
+				'status'             => 'Credit',
+				'amount'             => '500.00',
+			)
+		);
+
+		// wp_slash() is what WordPress does to $_POST on every request.
+		$this->drive_notify( $gateway, wp_slash( $body ), 'tok_quote', $this->payment_request( 'req_quote', 'tok_quote', array( array( 'Credit', '500.00' ) ) ) );
+
+		$this->assertSame( 'publish', get_post_status( $attendee ) );
+	}
+
+	/**
+	 * When Instamojo cannot be reached the webhook says nothing about who the payment
+	 * belongs to. Answering 4xx would tell Instamojo not to retry and strand a paid
+	 * order, so the order is left alone and a retry is invited instead.
+	 */
+	public function test_notify_asks_for_a_retry_when_instamojo_cannot_be_reached() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_down', 500 );
+
+		$body = $this->sign(
+			array(
+				'payment_request_id' => 'req_down',
+				'payment_id'         => 'MOJO_down',
+				'status'             => 'Credit',
+				'amount'             => '500.00',
+			)
+		);
+
+		$down = function () {
+			return new WP_Error( 'http_request_failed', 'Connection timed out.' );
+		};
+
+		add_filter( 'pre_http_request', $down, 10, 3 );
+		$died = $this->drive_notify( $gateway, $body, 'tok_down' );
+		remove_filter( 'pre_http_request', $down, 10 );
+
+		$this->assertNotNull( $died );
+		$this->assertStringContainsString( 'Could not confirm the payment', $died );
+		$this->assertSame( 'draft', get_post_status( $attendee ) );
+	}
+
+	/**
+	 * A transport failure must not be read as "this request belongs to someone else".
+	 */
+	public function test_payment_request_owns_token_rejects_a_failed_fetch() {
+		$gateway = $this->make_configured_gateway();
+		$method  = new ReflectionMethod( 'CampTix_Payment_Method_Instamojo', 'payment_request_owns_token' );
+
+		$this->assertFalse( $method->invoke( $gateway, new WP_Error( 'http_request_failed', 'nope' ), 'tok_x' ) );
+	}
+
+	/**
+	 * A confirmed return records the payment id Instamojo confirmed, not one the
+	 * returning browser supplied -- that value is what reconciliation keys off.
+	 */
+	public function test_return_records_the_confirmed_payment_id() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_txn', 500 );
+
+		$_REQUEST['payment_id'] = 'MOJO_supplied_by_the_browser';
+
+		$this->drive_return( $gateway, 'tok_txn', 'req_txn', $this->payment_request( 'req_txn', 'tok_txn', array( array( 'Credit', '500.00' ) ) ) );
+
+		unset( $_REQUEST['payment_id'] );
+
+		$this->assertSame( 'pending', get_post_status( $attendee ) );
+		$this->assertSame( 'MOJO_req_txn_0', get_post_meta( $attendee, 'tix_transaction_id', true ) );
+	}
+
+	/**
 	 * A webhook whose signature does not verify establishes nothing about an order and
 	 * must leave it exactly as it was.
 	 */

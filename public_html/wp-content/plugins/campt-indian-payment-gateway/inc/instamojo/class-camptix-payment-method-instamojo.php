@@ -140,9 +140,15 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		 * page: the webhook is what settles orders, and it is signed.
 		 */
 		if ( 'draft' == $attendee->post_status ) {
-			$request = $this->get_payment_request( isset( $_REQUEST['payment_request_id'] ) ? trim( $_REQUEST['payment_request_id'] ) : '' );
+			$payment_request_id = isset( $_REQUEST['payment_request_id'] ) ? trim( $_REQUEST['payment_request_id'] ) : '';
+			$request            = $payment_request_id ? $this->get_payment_request( $payment_request_id ) : false;
+			$credit             = $this->payment_request_owns_token( $request, $payment_token ) ? $this->get_credit_payment( $request ) : null;
 
-			if ( $this->payment_request_owns_token( $request, $payment_token ) && $this->get_credit_payment( $request ) ) {
+			if ( $credit ) {
+				// Instamojo's id for the payment it confirmed, not one the browser supplied.
+				$payment_data['transaction_id']  = $credit->payment_id ?? '';
+				$payment_data['payment_request'] = $request;
+
 				return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 			}
 		}
@@ -168,7 +174,8 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 
 		//Basic PHP script to handle Instamojo RAP webhook.
 		$instamojo_salt  = $this->options['Instamojo-salt'];
-		$data         = $_POST;
+		// The MAC covers the values Instamojo posted, not the slashes WordPress adds.
+		$data         = wp_unslash( $_POST );
 		$mac_provided = $data['mac'] ?? '';  // Get the MAC from the POST data, if it sent one.
 		unset( $data['mac'] );  // Remove the MAC key from the data.
 		$ver   = explode( '.', phpversion() );
@@ -205,7 +212,20 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 
 		// Request is valid, but this might be a webhook for a timed out payment / failed payment, where one has actually passed.
 		// Check the payment request to see what other statuses are.
-		$request = $this->get_payment_request( $data['payment_request_id'] );
+		$payment_request_id = $data['payment_request_id'] ?? '';
+		$request            = $payment_request_id ? $this->get_payment_request( $payment_request_id ) : false;
+
+		/*
+		 * Instamojo could not be asked, which says nothing about who the payment belongs
+		 * to. Answer 5xx so it retries this webhook rather than 4xx, which would tell it
+		 * not to and leave a paid order unsettled.
+		 */
+		if ( is_wp_error( $request ) ) {
+			$this->log( 'Could not reach Instamojo to confirm a webhook; asking for a retry.', null, array( 'error' => $request->get_error_message() ) );
+
+			wp_die( esc_html__( 'Could not confirm the payment right now.', 'campt-indian-payment-gateway' ), '', array( 'response' => 503 ) );
+		}
+
 		if ( $request ) {
 			$payment_data['payment_request'] = $request;
 		}
@@ -265,7 +285,7 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	 * @return bool
 	 */
 	protected function payment_request_owns_token( $request, $payment_token ) {
-		if ( ! $request || ! $payment_token ) {
+		if ( ! $request || is_wp_error( $request ) || ! $payment_token ) {
 			return false;
 		}
 
@@ -505,11 +525,16 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	/**
 	 * Get payment request details from Instamojo.
 	 *
+	 * "Instamojo says there is no such request" and "Instamojo could not be asked" are
+	 * different answers, and only the first says anything about who a payment belongs
+	 * to, so they are kept apart.
+	 *
 	 * @param string $payment_request_id Payment Request ID.
-	 * @return object|false
+	 * @return object|false|WP_Error The payment request; false when there is no such
+	 *                               request; WP_Error when Instamojo was not reached.
 	 */
 	public function get_payment_request( $payment_request_id ) {
-		$url = 'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/payment-requests/' . $payment_request_id . '/';
+		$url = 'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/payment-requests/' . rawurlencode( $payment_request_id ) . '/';
 		$response = wp_remote_get(
 			$url,
 			array(
@@ -522,6 +547,19 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 				),
 			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+
+		// A 404 is a definitive "no such request"; anything else leaves the question open.
+		if ( 200 !== $code ) {
+			return 404 === $code
+				? false
+				: new WP_Error( 'camptix_instamojo_http_error', sprintf( 'Instamojo returned HTTP %d.', $code ) );
+		}
 
 		return json_decode( wp_remote_retrieve_body( $response ) )->payment_request ?? false;
 	}

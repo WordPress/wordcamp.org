@@ -5,9 +5,11 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
 
 /**
  * Automatic "event published" notification (#1829): publishing a
- * GatherPress event for the first time schedules GatherPress's existing
- * "all members" email exactly once; editing an already-published event
- * afterwards does not schedule (and therefore does not send) a duplicate.
+ * GatherPress event for the first time sends GatherPress's existing
+ * "all members" email exactly once, from late `shutdown` of the publish
+ * request — after the event's datetimes and venue are saved, so the email
+ * carries real data; editing an already-published event afterwards does
+ * not send a duplicate.
  *
  * Requires the `eventorganiser3` / `password` test user from the
  * groups-gatherpress-compat-test skill's environment-setup step, and a
@@ -89,17 +91,6 @@ test.describe( 'event publish notification', () => {
 	}
 
 	/**
-	 * Forces WP-Cron to run now, so the scheduled `gatherpress_send_emails`
-	 * job doesn't depend on WordPress's own opportunistic auto-spawn timing
-	 * — the HTTP equivalent of `wp cron event run --due-now`.
-	 *
-	 * @param {import('@playwright/test').Page} page
-	 */
-	async function runDueCron( page ) {
-		await page.request.get( 'wp-cron.php?doing_wp_cron', { failOnStatusCode: false } );
-	}
-
-	/**
 	 * Emails in MailCatcher whose subject contains the given event title.
 	 *
 	 * @param {import('@playwright/test').Page} page
@@ -112,23 +103,19 @@ test.describe( 'event publish notification', () => {
 	}
 
 	/**
-	 * Waits until at least one matching email has arrived, re-triggering
-	 * cron on every poll attempt — on a slower CI runner, a single
-	 * `runDueCron()` call can race the scheduled event's own timestamp, or
-	 * wp-cron's spawn can simply take a moment to complete.
+	 * Waits until at least one matching email has arrived. The send happens
+	 * synchronously at `shutdown` of the publish request (no cron), but on a
+	 * slower CI runner MailCatcher can take a moment to ingest the batch.
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
 	 */
 	async function waitForEmailsToArrive( page, title ) {
 		await expect
-			.poll(
-				async () => {
-					await runDueCron( page );
-					return ( await matchingEmails( page, title ) ).length;
-				},
-				{ timeout: 20000, intervals: [ 1000 ] }
-			)
+			.poll( async () => ( await matchingEmails( page, title ) ).length, {
+				timeout: 20000,
+				intervals: [ 1000 ],
+			} )
 			.toBeGreaterThan( 0 );
 	}
 
@@ -174,8 +161,13 @@ test.describe( 'event publish notification', () => {
 		const countAfterPublish = await stableMatchingCount( page, title );
 		expect( countAfterPublish ).toBeGreaterThan( 0 );
 
+		// The regression this notification path fixed (#1862 follow-up): the
+		// email must carry the persisted event data, not the pre-save "Date: —".
+		const [ firstEmail ] = await matchingEmails( page, title );
+		const bodyResponse = await page.request.get( `${ MAILCATCHER_URL }/messages/${ firstEmail.id }.html` );
+		expect( await bodyResponse.text() ).toMatch( /Date:[^<]*2099/ );
+
 		await editPublishedEvent( page, postId );
-		await runDueCron( page );
 		// Give a genuine duplicate a moment to land before settling the count.
 		await page.waitForTimeout( 3000 );
 		const countAfterEdit = await stableMatchingCount( page, title );

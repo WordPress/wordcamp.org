@@ -94,17 +94,31 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	 * @return bool Whether the post can be read.
 	 */
 	public function check_read_permission( $post ) {
-		$public_statuses = WordCamp_Loader::get_public_post_statuses();
-
-		// Camps that are scheduled and then cancelled should still be available (though not included by default).
-		$public_statuses[] = 'wcpt-cancelled';
-
-		// If post status is not listed as public, it cannot be read.
-		if ( ! in_array( $post->post_status, $public_statuses ) ) {
-			return false;
+		// A status the plugin calls public defers to the default read permission check.
+		if ( in_array( $post->post_status, WordCamp_Loader::get_public_post_statuses(), true ) ) {
+			return WP_REST_Posts_Controller::check_read_permission( $post );
 		}
 
-		// Fallback to default read permission check.
-		return WP_REST_Posts_Controller::check_read_permission( $post );
+		// Everything else is an application record, readable in one case only.
+		return self::is_cancelled_after_scheduling( $post );
+	}
+
+	/**
+	 * Whether a post is a camp that reached the official schedule and was then cancelled.
+	 *
+	 * Those stay readable so Official WordPress Events can drop them from the events
+	 * widget. A camp cancelled while it was still an application was never listed
+	 * anywhere, so it is not readable, the same as the rest of the application statuses.
+	 *
+	 * `menu_order` holds the date the camp was added to the schedule, so it is the record
+	 * of whether the camp was ever public. See `WordCamp_Loader::set_scheduled_date()`.
+	 * It is only written from 2016-06-23 onwards, so a camp scheduled before that and
+	 * cancelled later reads as never scheduled.
+	 *
+	 * @param object $post Post object.
+	 * @return bool
+	 */
+	protected static function is_cancelled_after_scheduling( $post ) {
+		return 'wcpt-cancelled' === $post->post_status && $post->menu_order > 0;
 	}
 }

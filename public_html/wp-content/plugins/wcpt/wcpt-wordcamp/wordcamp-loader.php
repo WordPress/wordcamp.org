@@ -234,24 +234,20 @@ class WordCamp_Loader extends Event_Loader {
 	/**
 	 * Statuses whose single view resolves for everyone.
 	 *
-	 * Wider than `get_public_post_statuses()` because two groups aren't listed on the
-	 * schedule but are still reached by URL:
+	 * Wider than `get_public_post_statuses()` because pre-planning camps aren't listed on
+	 * the schedule but are still reached by URL: they usually have no site of their own
+	 * yet, so the map markers link their Central permalink through
+	 * `WordCamp_Central_Theme::get_best_wordcamp_url()`.
 	 *
-	 * - `wcpt-cancelled` is served over the v2 REST API to unauthenticated clients, so
-	 *   Official WordPress Events can drop cancelled camps from the events widget. That
-	 *   works via the `public` flag, through the parent `check_read_permission()`.
-	 * - Pre-planning camps usually have no site of their own yet, so the map markers link
-	 *   their Central permalink through `WordCamp_Central_Theme::get_best_wordcamp_url()`.
-	 *
-	 * Both are addressable, but each needs its own change first. Until then they keep
-	 * resolving.
+	 * `wcpt-cancelled` is not here. It reaches the v2 REST API through
+	 * `WordCamp_REST_WordCamps_Controller::check_read_permission()`, which decides per
+	 * post rather than per status.
 	 *
 	 * @return array Post status names.
 	 */
 	public static function get_publicly_viewable_post_statuses() {
 		return array_merge(
 			self::get_public_post_statuses(),
-			array( 'wcpt-cancelled' ),
 			self::get_pre_planning_post_statuses()
 		);
 	}

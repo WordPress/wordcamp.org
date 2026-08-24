@@ -20,6 +20,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 	class WordCamp_Admin extends Event_Admin {
 
 		/**
+		 * Applications each user authored or mentors, once looked up.
+		 *
+		 * Keyed by user ID, because both callers run in the same request and the current
+		 * user is not a fixed thing over a request's lifetime.
+		 *
+		 * @var array<int, WP_Post[]>
+		 */
+		protected $own_wordcamps = array();
+
+		/**
 		 * Initialize WCPT Admin
 		 */
 		public function __construct() {
@@ -64,8 +74,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
 
-			// "Mine (Mentoring)" query filter on the WordCamp list table.
+			// WordCamp list table query filters: the "Mine (Mentoring)" view, and who sees what.
 			add_action( 'pre_get_posts', array( $this, 'filter_mentoring_view' ) );
+			add_action( 'pre_get_posts', array( $this, 'limit_list_to_editable_wordcamps' ) );
 		}
 
 		/**
@@ -1576,8 +1587,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		public function alter_views( $views ) {
 			global $wp_list_table;
 
-			// For low-privilege users, return without extra views.
-			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			// Everyone else keeps the plain status links, counted over their own applications
+			// by `scope_status_counts()`. The views below are wrangler tools.
+			if ( ! current_user_can( self::get_edit_capability() ) ) {
 				return $views;
 			}
 
@@ -1715,11 +1727,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param WP_Query $query The query to filter.
 		 */
 		public function filter_mentoring_view( $query ) {
-			if ( ! is_admin() || ! $query->is_main_query() ) {
-				return;
-			}
-
-			if ( WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ) {
+			if ( ! $this->is_wordcamp_list_query( $query ) ) {
 				return;
 			}
 
@@ -1736,6 +1744,122 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'value' => $current_user->user_login,
 			);
 			$query->set( 'meta_query', $meta_query );
+		}
+
+		/**
+		 * Limit the WordCamp list table to the applications the current user can edit.
+		 *
+		 * `wp_edit_posts_query()` asks for `perm => 'readable'`, which restricts results to
+		 * their author only for the literal `private` status. This workflow is expressed in
+		 * custom statuses, so without this the screen lists every application to anybody who
+		 * can open it.
+		 *
+		 * @param WP_Query $query The query to filter.
+		 */
+		public function limit_list_to_editable_wordcamps( $query ) {
+			if ( ! $this->is_wordcamp_list_query( $query ) || current_user_can( self::get_edit_capability() ) ) {
+				return;
+			}
+
+			$ids = wp_list_pluck( $this->get_authored_or_mentored_wordcamps(), 'ID' );
+
+			// An empty set has to be spelled out, or `post__in` is ignored and the
+			// unrestricted list comes back.
+			$query->set( 'post__in', $ids ?: array( 0 ) );
+
+			// The status links above the table are built from `wp_count_posts()`, which has
+			// the same blind spot, so they would describe a list this no longer shows.
+			add_filter( 'wp_count_posts', array( $this, 'scope_status_counts' ), 10, 2 );
+		}
+
+		/**
+		 * Count the statuses over the same applications the list table is showing.
+		 *
+		 * Registered only for the restricted list screen, and only rewrites this post type,
+		 * so anything else asking `wp_count_posts()` in the same request is untouched.
+		 *
+		 * @param object $counts Status counts, keyed by status name.
+		 * @param string $type   The post type being counted.
+		 *
+		 * @return object
+		 */
+		public function scope_status_counts( $counts, $type ) {
+			if ( WCPT_POST_TYPE_ID !== $type ) {
+				return $counts;
+			}
+
+			$scoped = array_count_values(
+				wp_list_pluck( $this->get_authored_or_mentored_wordcamps(), 'post_status' )
+			);
+
+			// Keep every key core handed us, so a status with none left reads 0 rather than
+			// disappearing from the object.
+			return (object) array_merge( array_fill_keys( array_keys( (array) $counts ), 0 ), $scoped );
+		}
+
+		/**
+		 * The WordCamp posts the current user authored or mentors.
+		 *
+		 * The mentor half has to agree with `WordCamp\SubRoles\map_subrole_caps()`, which
+		 * resolves the stored name through `wcorg_get_user_by_canonical_names()` and so
+		 * accepts either the login or the nicename.
+		 *
+		 * @return WP_Post[]
+		 */
+		protected function get_authored_or_mentored_wordcamps() {
+			$current_user = wp_get_current_user();
+			$user_id      = $current_user->ID;
+
+			if ( isset( $this->own_wordcamps[ $user_id ] ) ) {
+				return $this->own_wordcamps[ $user_id ];
+			}
+
+			if ( ! $current_user->exists() ) {
+				$this->own_wordcamps[ $user_id ] = array();
+
+				return $this->own_wordcamps[ $user_id ];
+			}
+
+			$common = array(
+				'post_type'              => WCPT_POST_TYPE_ID,
+				'post_status'            => 'any',
+				'posts_per_page'         => -1,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			);
+
+			$authored = get_posts( array( 'author' => $current_user->ID ) + $common );
+
+			$mentored = get_posts(
+				array(
+					'meta_query' => array(
+						array(
+							'key'     => 'Mentor WordPress.org User Name',
+							'value'   => array( $current_user->user_login, $current_user->user_nicename ),
+							'compare' => 'IN',
+						),
+					),
+				) + $common
+			);
+
+			$camps = array_merge( $authored, $mentored );
+
+			$this->own_wordcamps[ $user_id ] = array_values(
+				array_combine( wp_list_pluck( $camps, 'ID' ), $camps )
+			);
+
+			return $this->own_wordcamps[ $user_id ];
+		}
+
+		/**
+		 * Whether a query is the one behind the WordCamp admin list table.
+		 *
+		 * @param WP_Query $query The query to test.
+		 *
+		 * @return bool
+		 */
+		protected function is_wordcamp_list_query( $query ) {
+			return is_admin() && $query->is_main_query() && WCPT_POST_TYPE_ID === $query->get( 'post_type' );
 		}
 
 		/**

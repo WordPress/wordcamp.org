@@ -124,7 +124,7 @@ function schedule_new_event_notification( string $new_status, string $old_status
 }
 
 /**
- * Request-static queue of event IDs awaiting their first-publish notification.
+ * Event IDs queued for this request's shutdown send.
  *
  * @param int|null $enqueue_id Event ID to add, if any.
  * @param bool     $drain      When true, empty the queue and return what it held.

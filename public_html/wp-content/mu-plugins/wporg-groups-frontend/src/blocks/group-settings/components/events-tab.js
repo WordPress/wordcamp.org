@@ -22,23 +22,19 @@ import {
 	SelectControl,
 	ToggleControl,
 } from '@wordpress/components';
-import {
-	BlockEditorProvider,
-	BlockList,
-	BlockToolbar,
-	WritingFlow,
-	ObserveTyping,
-	BlockTools,
-	store as blockEditorStore,
-} from '@wordpress/block-editor';
-import { useDispatch } from '@wordpress/data';
-import { registerCoreBlocks } from '@wordpress/block-library';
-import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __, _x } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies.
+ */
 import VenueEditor from '../../event-manage/venue-editor';
 import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
 import RsvpQuestionsEditor from '../../event-manage/rsvp-questions-editor';
+import DescriptionEditor, { ensureCoreBlocksRegistered } from '../../../components/event-form/description-editor';
+import FeaturedImagePicker from '../../../components/event-form/featured-image-picker';
+import DurationField from '../../../components/event-form/duration-field';
+import VenueField from '../../../components/event-form/venue-field';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -46,165 +42,6 @@ const NS =
 	'wporg-groups/v1';
 const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
-let coreBlocksRegistered = false;
-
-function ensureCoreBlocksRegistered() {
-	if ( ! coreBlocksRegistered ) {
-		registerCoreBlocks();
-		coreBlocksRegistered = true;
-	}
-}
-
-// === Duration helpers ===
-
-const DURATION_OPTIONS = [
-	{ label: __( '30 minutes', 'wporg-groups-frontend' ), value: '30' },
-	{ label: __( '1 hour', 'wporg-groups-frontend' ), value: '60' },
-	{ label: __( '1.5 hours', 'wporg-groups-frontend' ), value: '90' },
-	{ label: __( '2 hours', 'wporg-groups-frontend' ), value: '120' },
-	{ label: __( '2.5 hours', 'wporg-groups-frontend' ), value: '150' },
-	{ label: __( '3 hours', 'wporg-groups-frontend' ), value: '180' },
-	{ label: __( 'Custom', 'wporg-groups-frontend' ), value: 'custom' },
-];
-
-function addMinutesToTime( time, minutes ) {
-	if ( ! time ) return '';
-	const [ hr, min ] = time.split( ':' ).map( Number );
-	const total = hr * 60 + min + minutes;
-	return String( Math.floor( total / 60 ) % 24 ).padStart( 2, '0' ) + ':' + String( total % 60 ).padStart( 2, '0' );
-}
-
-function getMinutesBetween( start, end ) {
-	if ( ! start || ! end ) return 0;
-	const [ sh, sm ] = start.split( ':' ).map( Number );
-	const [ eh, em ] = end.split( ':' ).map( Number );
-	let diff = ( eh * 60 + em ) - ( sh * 60 + sm );
-	if ( diff < 0 ) diff += 24 * 60;
-	return diff;
-}
-
-// === Sub-components ===
-
-// `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
-// registry, so this dispatch only reaches it from a component rendered
-// *inside* the provider — a sibling effect would select a block in the
-// wrong (default) store and `BlockToolbar` would never see it.
-function SelectFirstBlockOnMount( { clientId } ) {
-	const { selectBlock } = useDispatch( blockEditorStore );
-
-	useEffect( () => {
-		if ( clientId ) {
-			// `null` (instead of the default `0`) selects the block
-			// without also moving real DOM focus into it — see
-			// `useFocusFirstElement` in `@wordpress/block-editor`. We only
-			// need the toolbar to appear, not to steal focus from the
-			// modal on open.
-			selectBlock( clientId, null );
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [] );
-
-	return null;
-}
-
-function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
-	// A description with no supported blocks (empty string, or markup that
-	// doesn't parse into anything) yields `[]`, leaving no block to select
-	// and the toolbar permanently empty — fall back to an empty paragraph
-	// so there's always a first block.
-	const [ blocks, setBlocks ] = useState( () => {
-		const parsed = parse( initialValue || '' );
-		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
-	} );
-	if ( getValueRef ) getValueRef.current = () => serialize( blocks );
-
-	const handleChange = ( newBlocks ) => {
-		setBlocks( newBlocks );
-		if ( onDirty ) onDirty();
-	};
-	return h( 'div', { className: 'wporg-event-form__editor' },
-		h( BlockEditorProvider, {
-			value: blocks, onInput: handleChange, onChange: handleChange,
-			settings: { hasFixedToolbar: true },
-		},
-			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),
-			h( 'div', { className: 'wporg-event-form__editor-toolbar' },
-				h( BlockToolbar, { hideDragHandle: true } ) ),
-			h( BlockTools, {},
-				h( WritingFlow, {},
-					h( ObserveTyping, {}, h( BlockList ) ) ) )
-		)
-	);
-}
-
-function FeaturedImagePicker( { imageId, imageUrl, onChange } ) {
-	const openPicker = () => {
-		const frame = wp.media( {
-			title: __( 'Choose featured image', 'wporg-groups-frontend' ),
-			button: { text: __( 'Set featured image', 'wporg-groups-frontend' ) },
-			multiple: false,
-		} );
-		frame.on( 'select', () => {
-			const att = frame.state().get( 'selection' ).first().toJSON();
-			onChange( att.id, att.sizes?.medium?.url || att.url );
-		} );
-		frame.open();
-	};
-	if ( imageUrl ) {
-		return h( 'div', { className: 'wporg-event-form__featured' },
-			h( 'div', { className: 'wporg-event-form__featured-preview' },
-				h( 'img', { src: imageUrl, alt: '' } ),
-				h( 'div', { className: 'wporg-event-form__featured-actions' },
-					h( Button, { variant: 'secondary', isSmall: true, onClick: openPicker }, __( 'Replace', 'wporg-groups-frontend' ) ),
-					h( Button, { variant: 'tertiary', isSmall: true, isDestructive: true, onClick: () => onChange( 0, '' ) }, __( 'Remove', 'wporg-groups-frontend' ) )
-				)
-			)
-		);
-	}
-	return h( Button, { variant: 'secondary', onClick: openPicker }, __( 'Choose featured image', 'wporg-groups-frontend' ) );
-}
-
-function DurationField( { timeStart, timeEnd, onChange } ) {
-	const minutes = getMinutesBetween( timeStart, timeEnd );
-	const known = DURATION_OPTIONS.find( ( o ) => o.value !== 'custom' && Number( o.value ) === minutes );
-	const [ isCustom, setIsCustom ] = useState( ! known && !! timeEnd );
-	const selected = isCustom ? 'custom' : ( known ? String( minutes ) : '' );
-	return h( 'div', { className: 'wporg-event-form__field' },
-		h( SelectControl, {
-			label: __( 'Duration', 'wporg-groups-frontend' ), value: selected,
-			options: [ { label: '—', value: '' } ].concat( DURATION_OPTIONS ),
-			onChange: ( v ) => {
-				if ( v === 'custom' ) setIsCustom( true );
-				else if ( v ) { setIsCustom( false ); onChange( addMinutesToTime( timeStart, Number( v ) ) ); }
-			},
-			__nextHasNoMarginBottom: true,
-		} ),
-		isCustom && h( TextControl, {
-			label: __( 'End time', 'wporg-groups-frontend' ), type: 'time',
-			value: timeEnd, onChange, required: true, __nextHasNoMarginBottom: true,
-		} )
-	);
-}
-
-function VenueField( { venues, venueId, onSelect, onOpenEditor } ) {
-	const options = [
-		{ label: __( '— No venue —', 'wporg-groups-frontend' ), value: '' },
-	].concat(
-		( venues || [] ).map( ( v ) => ( { label: v.name, value: String( v.id ) } ) )
-	).concat( [
-		{ label: __( '+ Add a new venue', 'wporg-groups-frontend' ), value: '__new__' },
-	] );
-	return h( 'div', { className: 'wporg-event-form__field' },
-		h( SelectControl, {
-			label: __( 'Venue', 'wporg-groups-frontend' ), value: venueId ? String( venueId ) : '',
-			options, onChange: ( v ) => v === '__new__' ? onOpenEditor( 0 ) : onSelect( v ),
-			__nextHasNoMarginBottom: true,
-		} ),
-		venueId && venueId !== '__new__' &&
-			h( Button, { variant: 'link', onClick: () => onOpenEditor( parseInt( venueId, 10 ) ), className: 'wporg-event-form__edit-venue' },
-				__( 'Edit venue', 'wporg-groups-frontend' ) )
-	);
-}
 
 // === Event Form (inline) ===
 
@@ -346,14 +183,12 @@ function EventForm( { eventId, onDone, onCancel } ) {
 		h( TextControl, { label: __( 'Event title', 'wporg-groups-frontend' ), value: form.title, onChange: ( v ) => updateField( 'title', v ), required: true, __nextHasNoMarginBottom: true } ),
 		h( 'div', { className: 'wporg-event-form__field' },
 			h( 'label', { className: 'wporg-event-form__label' }, __( 'Description', 'wporg-groups-frontend' ) ),
-			h( DescriptionEditor, { initialValue: initialDescription, getValueRef: descRef } ) ),
-		h( 'div', { className: 'wporg-event-form__field' },
-			h( 'label', { className: 'wporg-event-form__label' }, __( 'Featured image', 'wporg-groups-frontend' ) ),
-			h( FeaturedImagePicker, { imageId: featuredImage.id, imageUrl: featuredImage.url, onChange: ( id, url ) => setFeaturedImage( { id, url } ) } ) ),
+			h( DescriptionEditor, { initialValue: initialDescription, getValueRef: descRef, classPrefix: 'wporg-event-form' } ) ),
+		h( FeaturedImagePicker, { imageId: featuredImage.id, imageUrl: featuredImage.url, onChange: ( id, url ) => setFeaturedImage( { id, url } ), classPrefix: 'wporg-event-form' } ),
 		h( 'div', { className: 'wporg-event-form__row' },
 			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, min: isEdit ? undefined : MINIMUM_EVENT_DATE, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
-			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
+			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ), classPrefix: 'wporg-event-form' } ) ),
 		h( RecurrenceControls, {
 			value: recurrence,
 			eventDate: form.date,
@@ -362,7 +197,8 @@ function EventForm( { eventId, onDone, onCancel } ) {
 		h( VenueField, {
 			venues, venueId: form.venue_select,
 			onSelect: ( v ) => updateField( 'venue_select', v ),
-			onOpenEditor: ( id ) => setVenueEditorId( id ),
+			onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
+			classPrefix: 'wporg-event-form',
 		} ),
 		h( 'div', { className: 'wporg-event-form__online-event' },
 			h( ToggleControl, {

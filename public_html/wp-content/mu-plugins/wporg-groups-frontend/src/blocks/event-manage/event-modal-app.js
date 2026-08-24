@@ -22,7 +22,6 @@ import {
 	useEffect,
 	useRef,
 	render,
-	Fragment,
 } from '@wordpress/element';
 import {
 	Modal,
@@ -33,319 +32,26 @@ import {
 	Notice,
 	Spinner,
 } from '@wordpress/components';
-import {
-	BlockEditorProvider,
-	BlockList,
-	BlockToolbar,
-	WritingFlow,
-	ObserveTyping,
-	BlockTools,
-	store as blockEditorStore,
-} from '@wordpress/block-editor';
-import { useDispatch } from '@wordpress/data';
-import { registerCoreBlocks } from '@wordpress/block-library';
-import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __, _x } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies.
+ */
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
 import RecurrenceControls, { normalizeRecurrence } from '../../components/recurrence-controls';
 import RsvpQuestionsEditor from './rsvp-questions-editor';
+import DescriptionEditor, { ensureCoreBlocksRegistered } from '../../components/event-form/description-editor';
+import FeaturedImagePicker from '../../components/event-form/featured-image-picker';
+import DurationField from '../../components/event-form/duration-field';
+import VenueField from '../../components/event-form/venue-field';
 
 const NS =
 	( window.wporgGroupsEventModal &&
 		window.wporgGroupsEventModal.restNamespace ) ||
 	'wporg-groups/v1';
 const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
-
-	let coreBlocksRegistered = false;
-	function ensureCoreBlocksRegistered() {
-		if ( coreBlocksRegistered ) {
-			return;
-		}
-		try {
-			registerCoreBlocks();
-		} catch ( e ) {
-			// `registerCoreBlocks` complains if called twice, but in some
-			// page contexts the editor isn't loaded yet — swallow.
-		}
-		coreBlocksRegistered = true;
-	}
-
-	/**
-	 * Inline Gutenberg editor for the description field.
-	 *
-	 * Uses the canonical "self-contained" embedding pattern:
-	 *
-	 *   - Block state lives entirely inside this component.
-	 *   - The parent passes `initialValue` once and **never** feeds new
-	 *     values back into the editor (no `value` prop, no `useEffect` on
-	 *     value, no setState ping-pong).
-	 *   - When the parent needs the serialised markup at submit time it
-	 *     calls `getValueRef.current()` — the editor exposes an imperative
-	 *     getter via the supplied ref instead of pushing every keystroke
-	 *     up the tree.
-	 *
-	 * This avoids the feedback loop that was causing per-keystroke lag and
-	 * breaking the slash inserter (parent re-renders were tearing down the
-	 * editor's internal state on every input event).
-	 */
-	// `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
-	// registry, so this dispatch only reaches it from a component rendered
-	// *inside* the provider — a sibling effect would select a block in the
-	// wrong (default) store and `BlockToolbar` would never see it.
-	function SelectFirstBlockOnMount( { clientId } ) {
-		const { selectBlock } = useDispatch( blockEditorStore );
-
-		useEffect( () => {
-			if ( clientId ) {
-				// `null` (instead of the default `0`) selects the block
-				// without also moving real DOM focus into it — see
-				// `useFocusFirstElement` in `@wordpress/block-editor`. We
-				// only need the toolbar to appear, not to steal focus from
-				// the modal on open.
-				selectBlock( clientId, null );
-			}
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-		}, [] );
-
-		return null;
-	}
-
-	function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
-		// A description with no supported blocks (empty string, or markup
-		// that doesn't parse into anything) yields `[]`, leaving no block to
-		// select and the toolbar permanently empty — fall back to an empty
-		// paragraph so there's always a first block.
-		const [ blocks, setBlocks ] = useState( () => {
-			const parsed = parse( initialValue || '' );
-			return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
-		} );
-
-		if ( getValueRef ) {
-			getValueRef.current = () => serialize( blocks );
-		}
-
-		const handleChange = ( newBlocks ) => {
-			setBlocks( newBlocks );
-			if ( onDirty ) {
-				onDirty();
-			}
-		};
-
-		return h(
-			'div',
-			{ className: 'wporg-groups-event-modal__editor' },
-			h(
-				BlockEditorProvider,
-				{
-					value: blocks,
-					onInput: handleChange,
-					onChange: handleChange,
-					settings: {
-						hasFixedToolbar: true,
-					},
-				},
-				h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),
-				h(
-					'div',
-					{ className: 'wporg-groups-event-modal__editor-toolbar' },
-					h( BlockToolbar, { hideDragHandle: true } )
-				),
-				h(
-					BlockTools,
-					{},
-					h(
-						WritingFlow,
-						{},
-						h(
-							ObserveTyping,
-							{},
-							h( BlockList, {} )
-						)
-					)
-				)
-			)
-		);
-	}
-
-	/**
-	 * Featured image picker — opens the standard `wp.media` library frame
-	 * so the organizer can either upload a new image or pick an existing
-	 * one from the site's media library. The selected attachment id is
-	 * lifted up to the parent via `onChange` and the thumbnail URL is
-	 * displayed inline as a preview.
-	 */
-	function FeaturedImagePicker( { imageId, imageUrl, onChange } ) {
-		const openMediaFrame = () => {
-			if ( ! window.wp || ! window.wp.media ) {
-				return;
-			}
-			const frame = window.wp.media( {
-				title: __( 'Select a featured image', 'wporg-groups-frontend' ),
-				button: { text: __( 'Use this image', 'wporg-groups-frontend' ) },
-				library: { type: 'image' },
-				multiple: false,
-			} );
-			frame.on( 'select', () => {
-				const attachment = frame.state().get( 'selection' ).first().toJSON();
-				const url = attachment.sizes && attachment.sizes.medium
-					? attachment.sizes.medium.url
-					: attachment.url;
-				onChange( attachment.id, url );
-			} );
-			frame.open();
-		};
-
-		const handleRemove = () => {
-			onChange( 0, '' );
-		};
-
-		return h(
-			'div',
-			{ className: 'wporg-groups-event-modal__field' },
-			h(
-				'label',
-				{ className: 'components-base-control__label' },
-				__( 'Featured image', 'wporg-groups-frontend' )
-			),
-			h(
-				'div',
-				{ className: 'wporg-groups-event-modal__featured' },
-				imageId
-					? h(
-						'div',
-						{ className: 'wporg-groups-event-modal__featured-preview' },
-						h( 'img', { src: imageUrl, alt: '' } ),
-						h(
-							'div',
-							{ className: 'wporg-groups-event-modal__featured-actions' },
-							h(
-								Button,
-								{ variant: 'secondary', onClick: openMediaFrame },
-								__( 'Replace', 'wporg-groups-frontend' )
-							),
-							h(
-								Button,
-								{ variant: 'tertiary', isDestructive: true, onClick: handleRemove },
-								__( 'Remove', 'wporg-groups-frontend' )
-							)
-						)
-					)
-					: h(
-						Button,
-						{ variant: 'secondary', onClick: openMediaFrame },
-						__( 'Choose featured image', 'wporg-groups-frontend' )
-					)
-			)
-		);
-	}
-
-	const DURATION_OPTIONS = [
-		{ label: __( '30 minutes', 'wporg-groups-frontend' ), value: '30' },
-		{ label: __( '1 hour', 'wporg-groups-frontend' ), value: '60' },
-		{ label: __( '1.5 hours', 'wporg-groups-frontend' ), value: '90' },
-		{ label: __( '2 hours', 'wporg-groups-frontend' ), value: '120' },
-		{ label: __( '2.5 hours', 'wporg-groups-frontend' ), value: '150' },
-		{ label: __( '3 hours', 'wporg-groups-frontend' ), value: '180' },
-		{ label: __( 'Custom', 'wporg-groups-frontend' ), value: 'custom' },
-	];
-
-	function addMinutesToTime( time, minutes ) {
-		if ( ! time ) {
-			return '';
-		}
-		const [ h, m ] = time.split( ':' ).map( Number );
-		const total = h * 60 + m + minutes;
-		const newH = Math.floor( total / 60 ) % 24;
-		const newM = total % 60;
-		return String( newH ).padStart( 2, '0' ) + ':' + String( newM ).padStart( 2, '0' );
-	}
-
-	function getMinutesBetween( start, end ) {
-		if ( ! start || ! end ) {
-			return 0;
-		}
-		const [ sh, sm ] = start.split( ':' ).map( Number );
-		const [ eh, em ] = end.split( ':' ).map( Number );
-		let diff = ( eh * 60 + em ) - ( sh * 60 + sm );
-		if ( diff < 0 ) {
-			diff += 24 * 60;
-		}
-		return diff;
-	}
-
-	function DurationField( { timeStart, timeEnd, onChange } ) {
-		const minutes = getMinutesBetween( timeStart, timeEnd );
-		const knownDuration = DURATION_OPTIONS.find( ( o ) => o.value !== 'custom' && Number( o.value ) === minutes );
-		const [ isCustom, setIsCustom ] = useState( ! knownDuration && !! timeEnd );
-
-		const selectedValue = isCustom ? 'custom' : ( knownDuration ? String( minutes ) : '' );
-
-		return h( 'div', { className: 'wporg-groups-event-modal__field' },
-			h( SelectControl, {
-				label: __( 'Duration', 'wporg-groups-frontend' ),
-				value: selectedValue,
-				options: [ { label: __( '— Select —', 'wporg-groups-frontend' ), value: '' } ].concat( DURATION_OPTIONS ),
-				onChange: ( v ) => {
-					if ( v === 'custom' ) {
-						setIsCustom( true );
-					} else if ( v ) {
-						setIsCustom( false );
-						onChange( addMinutesToTime( timeStart, Number( v ) ) );
-					}
-				},
-				__nextHasNoMarginBottom: true,
-			} ),
-			isCustom && h( TextControl, {
-				label: __( 'End time', 'wporg-groups-frontend' ),
-				type: 'time',
-				value: timeEnd,
-				onChange: onChange,
-				required: true,
-				__nextHasNoMarginBottom: true,
-			} )
-		);
-	}
-
-	function VenueField( { venues, venueId, onSelectExisting, onOpenVenueEditor } ) {
-		const options = [
-			{ label: __( '— Select a venue —', 'wporg-groups-frontend' ), value: '' },
-		].concat(
-			( venues || [] ).map( ( v ) => ( {
-				label: v.name,
-				value: String( v.id ),
-			} ) )
-		).concat( [
-			{ label: __( '+ Add a new venue', 'wporg-groups-frontend' ), value: '__new__' },
-		] );
-
-		const handleChange = ( v ) => {
-			if ( v === '__new__' ) {
-				onOpenVenueEditor( 0 );
-			} else {
-				onSelectExisting( v );
-			}
-		};
-
-		return h(
-			'div',
-			{ className: 'wporg-groups-event-modal__field' },
-			h( SelectControl, {
-				label: __( 'Venue', 'wporg-groups-frontend' ),
-				value: venueId ? String( venueId ) : '',
-				options: options,
-				onChange: handleChange,
-				__nextHasNoMarginBottom: true,
-			} ),
-			venueId && venueId !== '__new__' &&
-				h( Button, {
-					variant: 'link',
-					onClick: () => onOpenVenueEditor( parseInt( venueId, 10 ) ),
-					className: 'wporg-groups-event-modal__edit-venue',
-				}, __( 'Edit venue', 'wporg-groups-frontend' ) )
-		);
-	}
 
 	/**
 	 * Modal containing the create/edit form. Mode is `'create'` or `'edit'`,
@@ -720,6 +426,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 							initialValue: initialDescription,
 							getValueRef: descriptionRef,
 							onDirty: markDirty,
+							classPrefix: 'wporg-groups-event-modal',
 						} )
 					),
 
@@ -730,6 +437,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 							setFeaturedImage( { id, url } );
 							markDirty();
 						},
+						classPrefix: 'wporg-groups-event-modal',
 					} ),
 
 					h(
@@ -759,6 +467,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 								updateField( 'time_end', v );
 								markDirty();
 							},
+							classPrefix: 'wporg-groups-event-modal',
 						} )
 					),
 
@@ -774,7 +483,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 					h( VenueField, {
 						venues: venues,
 						venueId: form.venue_select,
-						onSelectExisting: ( v ) => {
+						onSelect: ( v ) => {
 							updateField( 'venue_select', v );
 							markDirty();
 						},
@@ -782,6 +491,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 							setVenueEditorId( id );
 							setVenueEditorOpen( true );
 						},
+						classPrefix: 'wporg-groups-event-modal',
 					} ),
 
 					h(

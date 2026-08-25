@@ -127,10 +127,10 @@ $camptix_options = $camptix->get_options();
 				<?php endforeach; ?>
 			</ul>
 
-			<h1 class="section-title">Bulk (organizers)</h1>
-			<ul class="filter-bulk section-controls">
-				<li data-attending="true">Mark all matching as attended</li>
-				<li data-attending="false">Mark all matching as did not attend</li>
+			<h1 class="section-title"><?php esc_html_e( 'Bulk (organizers)', 'wordcamporg' ); ?></h1>
+			<ul class="filter-bulk section-controls camptix-attendance-bulk">
+				<li data-attending="true"><?php esc_html_e( 'Mark all matching as attended', 'wordcamporg' ); ?></li>
+				<li data-attending="false"><?php esc_html_e( 'Mark all matching as did not attend', 'wordcamporg' ); ?></li>
 			</ul>
 		</div>
 	</script>
@@ -138,23 +138,23 @@ $camptix_options = $camptix->get_options();
 	<script id="tmpl-attendee-bulk-confirm" type="text/template">
 		<p class="bulk-confirm-message">
 			<# if ( 'count_mismatch' == data.error ) { #>
-				The list changed while you were confirming (now {{ data.count }} matching). Please try again.
+				<?php echo esc_html( sprintf( __( 'The list changed while you were confirming (now %s matching). Please try again.', 'wordcamporg' ), '{{ data.count }}' ) ); ?>
 			<# } else if ( 'not_allowed' == data.error ) { #>
-				Bulk actions require an organizer login on this device.
+				<?php esc_html_e( 'Bulk actions require an organizer login on this device.', 'wordcamporg' ); ?>
 			<# } else if ( 'bad_nonce' == data.error ) { #>
-				Your session expired. Please reload this page and try again.
+				<?php esc_html_e( 'Your session expired. Please reload this page and try again.', 'wordcamporg' ); ?>
 			<# } else if ( data.attending ) { #>
-				Mark <strong>{{ data.count }}</strong> matching attendee<# if ( 1 != data.count ) { #>s<# } #> as <strong>attended</strong>?
+				<?php echo wp_kses( sprintf( __( 'Mark <strong>%s</strong> matching attendee(s) as <strong>attended</strong>?', 'wordcamporg' ), '{{ data.count }}' ), array( 'strong' => array() ) ); ?>
 			<# } else { #>
-				Mark <strong>{{ data.count }}</strong> matching attendee<# if ( 1 != data.count ) { #>s<# } #> as <strong>did not attend</strong>?
+				<?php echo wp_kses( sprintf( __( 'Mark <strong>%s</strong> matching attendee(s) as <strong>did not attend</strong>?', 'wordcamporg' ), '{{ data.count }}' ), array( 'strong' => array() ) ); ?>
 			<# } #>
 		</p>
 
 		<div class="yes-no-container">
 			<# if ( ! data.error ) { #>
-				<a href="#" class="yes">Yes</a>
+				<a href="#" class="yes"><?php esc_html_e( 'Yes', 'wordcamporg' ); ?></a>
 			<# } #>
-			<a href="#" class="no">Cancel</a>
+			<a href="#" class="no"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
 		</div>
 
 		<a href="#" class="close dashicons dashicons-no"></a>

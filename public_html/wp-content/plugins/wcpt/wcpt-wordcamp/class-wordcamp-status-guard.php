@@ -12,11 +12,8 @@ defined( 'WPINC' ) || die();
 class WordCamp_Status_Guard {
 
 	/**
-	 * Register the guard.
-	 *
-	 * Ahead of `WordCamp_Loader::set_scheduled_date()`, which reads the submitted status at
-	 * priority 10 and stamps `menu_order` once and for good. A write this clamps must not
-	 * leave a scheduled date behind.
+	 * Register the guard early: `WordCamp_Admin::require_complete_meta_to_publish_wordcamp()`
+	 * runs at 11 and expects the status to be settled.
 	 */
 	public static function init() {
 		add_filter( 'wp_insert_post_data', array( __CLASS__, 'enforce_post_status' ), 9, 2 );
@@ -40,11 +37,11 @@ class WordCamp_Status_Guard {
 		}
 
 		if ( ! empty( $post_data['post_status'] ) ) {
-			// Only WordCamp Wranglers can change WordCamp statuses. Cron and WP-CLI are
-			// exempt because they have no user to hold the capability, and
-			// `close_wordcamps_after_event()` writes `wcpt-closed` from cron.
+			// Only Wranglers change statuses. Cron and WP-CLI have no user to hold the
+			// capability, and `close_wordcamps_after_event()` writes `wcpt-closed` from cron.
 			$system_context = wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI );
 
+			// Not `WordCamp_Admin::get_edit_capability()`: that class is admin and cron only.
 			if ( ! $system_context && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 				$post_data['post_status'] = $post->post_status;
 			}

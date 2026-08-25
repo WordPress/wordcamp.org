@@ -22,8 +22,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * Applications each user authored or mentors, once looked up.
 		 *
-		 * Keyed by user ID, because both callers run in the same request and the current
-		 * user is not a fixed thing over a request's lifetime.
+		 * Keyed by user ID: the instance outlives a `wp_set_current_user()` switch.
 		 *
 		 * @var array<int, WP_Post[]>
 		 */
@@ -1056,7 +1055,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
-			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+			$start_date   = absint( get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true ) );
 			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
 			$is_event     = is_event_url( $wordcamp_url );
 			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
@@ -1065,7 +1064,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
 				$wordcamp->post_title,
-				gmdate( 'F j, Y', $start_date ),
+				$start_date ? gmdate( 'F j, Y', $start_date ) : '(not set)',
 				$wordcamp_url
 			);
 
@@ -1689,10 +1688,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * Limit the WordCamp list table to the applications the current user can edit.
 		 *
-		 * `wp_edit_posts_query()` asks for `perm => 'readable'`, which restricts results to
-		 * their author only for the literal `private` status. This workflow is expressed in
-		 * custom statuses, so without this the screen lists every application to anybody who
-		 * can open it.
+		 * `wp_edit_posts_query()` asks for `perm => 'readable'` when a status is filtered, and
+		 * `readable` restricts results to their author only for the literal `private` status.
+		 * This workflow is expressed in custom statuses, so without this the screen lists
+		 * every application to anybody who can open it.
 		 *
 		 * @param WP_Query $query The query to filter.
 		 */
@@ -1707,16 +1706,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// unrestricted list comes back.
 			$query->set( 'post__in', $ids ?: array( 0 ) );
 
-			// The status links above the table are built from `wp_count_posts()`, which has
-			// the same blind spot, so they would describe a list this no longer shows.
+			// The status links come from `wp_count_posts()`, which has the same blind spot.
 			add_filter( 'wp_count_posts', array( $this, 'scope_status_counts' ), 10, 2 );
 		}
 
 		/**
 		 * Count the statuses over the same applications the list table is showing.
 		 *
-		 * Registered only for the restricted list screen, and only rewrites this post type,
-		 * so anything else asking `wp_count_posts()` in the same request is untouched.
+		 * Only rewrites this post type, so anything else counting in the request is untouched.
 		 *
 		 * @param object $counts Status counts, keyed by status name.
 		 * @param string $type   The post type being counted.
@@ -1732,8 +1729,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				wp_list_pluck( $this->get_authored_or_mentored_wordcamps(), 'post_status' )
 			);
 
-			// Keep every key core handed us, so a status with none left reads 0 rather than
-			// disappearing from the object.
+			// Keep core's keys, so a status with none left reads 0 rather than disappearing.
 			return (object) array_merge( array_fill_keys( array_keys( (array) $counts ), 0 ), $scoped );
 		}
 
@@ -1741,28 +1737,20 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * The WordCamp posts the current user authored or mentors.
 		 *
 		 * Wider than what they can edit: an author cannot edit their own camp once it is
-		 * scheduled or closed, because `edit_published_posts` is a wrangler capability. They
-		 * should still see it listed.
-		 *
-		 * The mentor half has to agree with `WordCamp\SubRoles\map_subrole_caps()`, which
-		 * resolves the stored name through `wcorg_get_user_by_canonical_names()` and so
-		 * accepts either the login or the nicename. `Event_Admin::standardize_usernames()`
-		 * canonicalises the meta on save, so the two agree on anything written since.
+		 * scheduled, but should still see it listed. Matches a mentor by login or nicename,
+		 * the pair `map_subrole_caps()` resolves.
 		 *
 		 * @return WP_Post[]
 		 */
 		protected function get_authored_or_mentored_wordcamps() {
-			$current_user = wp_get_current_user();
-			$user_id      = $current_user->ID;
+			$user = wp_get_current_user();
 
-			if ( isset( $this->own_wordcamps[ $user_id ] ) ) {
-				return $this->own_wordcamps[ $user_id ];
+			if ( ! $user->exists() ) {
+				return array();
 			}
 
-			if ( ! $current_user->exists() ) {
-				$this->own_wordcamps[ $user_id ] = array();
-
-				return $this->own_wordcamps[ $user_id ];
+			if ( isset( $this->own_wordcamps[ $user->ID ] ) ) {
+				return $this->own_wordcamps[ $user->ID ];
 			}
 
 			$common = array(
@@ -1773,27 +1761,26 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'update_post_term_cache' => false,
 			);
 
-			$authored = get_posts( array( 'author' => $current_user->ID ) + $common );
+			$authored = get_posts( array( 'author' => $user->ID ) + $common );
 
 			$mentored = get_posts(
 				array(
 					'meta_query' => array(
 						array(
 							'key'     => 'Mentor WordPress.org User Name',
-							'value'   => array( $current_user->user_login, $current_user->user_nicename ),
+							'value'   => array( $user->user_login, $user->user_nicename ),
 							'compare' => 'IN',
 						),
 					),
 				) + $common
 			);
 
-			$camps = array_merge( $authored, $mentored );
-
-			$this->own_wordcamps[ $user_id ] = array_values(
-				array_combine( wp_list_pluck( $camps, 'ID' ), $camps )
+			// A user can both author and mentor the same camp.
+			$this->own_wordcamps[ $user->ID ] = array_values(
+				array_column( array_merge( $authored, $mentored ), null, 'ID' )
 			);
 
-			return $this->own_wordcamps[ $user_id ];
+			return $this->own_wordcamps[ $user->ID ];
 		}
 
 		/**
@@ -1804,7 +1791,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return bool
 		 */
 		protected function is_wordcamp_list_query( $query ) {
-			return is_admin() && $query->is_main_query() && WCPT_POST_TYPE_ID === $query->get( 'post_type' );
+			return is_admin() && $query->is_main_query() && self::get_event_type() === $query->get( 'post_type' );
 		}
 
 		/**

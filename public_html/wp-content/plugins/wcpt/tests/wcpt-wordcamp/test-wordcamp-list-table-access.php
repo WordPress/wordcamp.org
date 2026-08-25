@@ -2,8 +2,9 @@
 
 namespace WordCamp\WCPT\Tests;
 
-use WP_Query;
 use WP_UnitTestCase;
+
+require_once dirname( __DIR__ ) . '/trait-wordcamp-fixtures.php';
 
 defined( 'WPINC' ) || die();
 
@@ -13,6 +14,8 @@ defined( 'WPINC' ) || die();
  * @group wcpt
  */
 class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
+
+	use \WordCamp_Fixtures;
 
 	/**
 	 * The admin instance under test, assigned in this suite's bootstrap.
@@ -57,13 +60,8 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_wrangler_query_is_not_limited() {
-		global $wcorg_subroles;
-
-		// The capability has to come through the subroles system: `omit_usermeta_caps()`
-		// deliberately strips anything granted with `WP_User::add_cap()`.
-		$wrangler       = self::factory()->user->create( array( 'role' => 'contributor' ) );
-		$wcorg_subroles = array( $wrangler => array( 'wordcamp_wrangler' ) );
-		wp_set_current_user( $wrangler );
+		$this->become_contributor();
+		$this->become_wrangler();
 
 		$query = $this->build_main_query();
 		$this->admin->limit_list_to_editable_wordcamps( $query );
@@ -78,8 +76,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_contributor_query_is_limited_to_own_applications() {
-		$organizer = self::factory()->user->create( array( 'role' => 'contributor' ) );
-		wp_set_current_user( $organizer );
+		$organizer = $this->become_contributor();
 
 		$own   = $this->create_wordcamp( $organizer );
 		$other = $this->create_wordcamp( self::factory()->user->create() );
@@ -91,49 +88,39 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Mentors reach their mentee camps through this screen. `map_subrole_caps()` lets
-	 * them edit those posts, so the list has to keep offering them.
+	 * Mentors reach their mentee camps through this screen, and `map_subrole_caps()` resolves
+	 * the stored name through `wcorg_get_user_by_canonical_names()`, which accepts the login
+	 * or the nicename. The list has to offer the same pair.
 	 *
+	 * @dataProvider data_mentor_name_fields
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 *
+	 * @param string $field The user field the mentor meta was recorded from.
 	 */
-	public function test_contributor_query_includes_mentored_applications() {
-		$mentor = self::factory()->user->create_and_get( array( 'role' => 'contributor' ) );
-		wp_set_current_user( $mentor->ID );
+	public function test_contributor_query_includes_mentored_applications( $field ) {
+		$mentor = get_userdata( $this->become_contributor() );
 
 		$mentored = $this->create_wordcamp( self::factory()->user->create() );
-		update_post_meta( $mentored, 'Mentor WordPress.org User Name', $mentor->user_login );
+		update_post_meta( $mentored, 'Mentor WordPress.org User Name', $mentor->$field );
 
 		$this->assertContains( $mentored, $this->limited_post_in() );
 	}
 
 	/**
-	 * `map_subrole_caps()` resolves the mentor through `wcorg_get_user_by_canonical_names()`,
-	 * which falls back to `user_nicename`. A mentor recorded that way can edit the post, so
-	 * the list has to offer it.
-	 *
-	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 * @return array
 	 */
-	public function test_contributor_query_matches_a_mentor_recorded_by_nicename() {
-		$mentor = self::factory()->user->create_and_get(
-			array(
-				'role'          => 'contributor',
-				'user_login'    => 'mentor-login',
-				'user_nicename' => 'mentor-nicename',
-			)
+	public function data_mentor_name_fields() {
+		return array(
+			'login'    => array( 'user_login' ),
+			'nicename' => array( 'user_nicename' ),
 		);
-		wp_set_current_user( $mentor->ID );
-
-		$mentored = $this->create_wordcamp( self::factory()->user->create() );
-		update_post_meta( $mentored, 'Mentor WordPress.org User Name', $mentor->user_nicename );
-
-		$this->assertContains( $mentored, $this->limited_post_in() );
 	}
 
 	/**
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_contributor_with_no_applications_gets_an_empty_set() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 
 		$this->create_wordcamp( self::factory()->user->create() );
 
@@ -160,11 +147,11 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_secondary_query_is_not_limited() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 
 		$this->build_main_query();
 
-		$secondary = new WP_Query();
+		$secondary = new \WP_Query();
 		$secondary->set( 'post_type', WCPT_POST_TYPE_ID );
 
 		$this->admin->limit_list_to_editable_wordcamps( $secondary );
@@ -176,7 +163,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_other_post_type_query_is_not_limited() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 
 		$query = $this->build_main_query();
 		$query->set( 'post_type', 'post' );
@@ -192,7 +179,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */
 	public function test_front_end_query_is_not_limited() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 		set_current_screen( 'front' );
 
 		$query = $this->build_main_query();
@@ -208,8 +195,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::scope_status_counts
 	 */
 	public function test_status_counts_cover_only_the_viewers_own_applications() {
-		$organizer = self::factory()->user->create( array( 'role' => 'contributor' ) );
-		wp_set_current_user( $organizer );
+		$organizer = $this->become_contributor();
 
 		$this->create_wordcamp( $organizer );
 		$this->create_wordcamp( self::factory()->user->create() );
@@ -227,7 +213,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::scope_status_counts
 	 */
 	public function test_status_counts_keep_every_key_core_supplied() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 
 		$this->create_wordcamp( self::factory()->user->create() );
 
@@ -249,7 +235,7 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::scope_status_counts
 	 */
 	public function test_status_counts_for_another_post_type_are_untouched() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+		$this->become_contributor();
 
 		$original = (object) array( 'publish' => 42 );
 
@@ -262,18 +248,17 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::alter_views
 	 */
 	public function test_status_links_are_kept_for_a_wrangler() {
-		global $wcorg_subroles;
-
-		$wrangler       = self::factory()->user->create( array( 'role' => 'contributor' ) );
-		$wcorg_subroles = array( $wrangler => array( 'wordcamp_wrangler' ) );
-		wp_set_current_user( $wrangler );
+		$this->become_contributor();
+		$this->become_wrangler();
 
 		// The wrangler branch echoes the Event Subtype links as a side effect.
 		ob_start();
 		$views = $this->admin->alter_views( array( 'all' => 'All (1804)' ) );
 		ob_end_clean();
 
-		$this->assertArrayHasKey( 'all', $views );
+		// `all` survives the non-wrangler branch too, so it proves nothing. `mentoring` is
+		// added only by the branch under test.
+		$this->assertArrayHasKey( 'mentoring', $views );
 	}
 
 	/**
@@ -286,40 +271,5 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 		$this->admin->limit_list_to_editable_wordcamps( $query );
 
 		return $query->get( 'post__in' );
-	}
-
-	/**
-	 * Build a WordCamp query that reports itself as the main query.
-	 *
-	 * `WP_Query::is_main_query()` compares against `$wp_the_query`, which the harness
-	 * replaces in `tear_down()`.
-	 *
-	 * @return WP_Query
-	 */
-	protected function build_main_query() {
-		$query = new WP_Query();
-		$query->set( 'post_type', WCPT_POST_TYPE_ID );
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- `is_main_query()` compares against it.
-		$GLOBALS['wp_the_query'] = $query;
-
-		return $query;
-	}
-
-	/**
-	 * Create an unvetted application.
-	 *
-	 * @param int $author_id The lead organizer.
-	 *
-	 * @return int The post ID.
-	 */
-	protected function create_wordcamp( $author_id ) {
-		return self::factory()->post->create(
-			array(
-				'post_type'   => WCPT_POST_TYPE_ID,
-				'post_status' => WCPT_DEFAULT_STATUS,
-				'post_author' => $author_id,
-			)
-		);
 	}
 }

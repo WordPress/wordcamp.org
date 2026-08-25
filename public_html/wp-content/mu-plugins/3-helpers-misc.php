@@ -34,9 +34,11 @@ function is_wordcamp_type( $type ) {
  * @return bool Returns true if the url matches events url structure.
  */
 function is_event_url( $url ) {
-	$url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
-	$tld = get_top_level_domain();
-	return "events.wordpress.$tld" === $url['host'];
+	// `filter_var()` returns false for anything unparseable, which has no host.
+	$host = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ), PHP_URL_HOST );
+	$tld  = get_top_level_domain();
+
+	return "events.wordpress.$tld" === $host;
 }
 
 /**

@@ -5,6 +5,8 @@ namespace WordCamp\WCPT\Tests;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
+require_once dirname( __DIR__ ) . '/trait-wordcamp-fixtures.php';
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -13,6 +15,8 @@ defined( 'WPINC' ) || die();
  * @group wcpt
  */
 class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
+
+	use \WordCamp_Fixtures;
 
 	/**
 	 * An application waiting to be vetted.
@@ -38,16 +42,8 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 
 		$wcorg_subroles = array();
 
-		$this->organizer = self::factory()->user->create( array( 'role' => 'contributor' ) );
-		$this->camp      = self::factory()->post->create(
-			array(
-				'post_type'   => WCPT_POST_TYPE_ID,
-				'post_status' => WCPT_DEFAULT_STATUS,
-				'post_author' => $this->organizer,
-			)
-		);
-
-		wp_set_current_user( $this->organizer );
+		$this->organizer = $this->become_contributor();
+		$this->camp      = $this->create_wordcamp( $this->organizer );
 	}
 
 	/**
@@ -101,25 +97,37 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `WordCamp_Loader::set_scheduled_date()` stamps `menu_order` off the submitted status
+	 * at priority 10 and never overwrites it, so the clamp has to land first or a rejected
+	 * write leaves behind a scheduled date the camp never had.
+	 *
 	 * @covers WordCamp_Status_Guard::enforce_post_status
 	 */
 	public function test_direct_status_change_by_the_author_is_reverted() {
 		$this->set_status( 'wcpt-scheduled' );
 
 		$this->assertSame( WCPT_DEFAULT_STATUS, get_post_status( $this->camp ) );
+		$this->assertSame( 0, get_post( $this->camp )->menu_order );
 	}
 
 	/**
-	 * `WordCamp_Loader::set_scheduled_date()` stamps `menu_order` off the submitted status,
-	 * and never overwrites it once set. The clamp has to land first, or a rejected write
-	 * leaves behind a scheduled date the camp never had.
+	 * The other arm that reverts a status. `require_complete_meta_to_publish_wordcamp()`
+	 * runs at 11, so the scheduled date has to be stamped after it too, not just after the
+	 * capability clamp.
 	 *
-	 * @covers WordCamp_Status_Guard::init
+	 * @covers WordCamp_Loader::set_scheduled_date
 	 */
-	public function test_a_reverted_write_does_not_stamp_the_scheduled_date() {
+	public function test_an_incomplete_scheduled_write_does_not_stamp_the_date() {
+		$this->become_wrangler();
+
+		// The rule only applies above the site ID it went live for, which no factory post reaches.
+		add_filter( 'wcpt_require_complete_meta_min_site_id', '__return_zero' );
+
 		$this->set_status( 'wcpt-scheduled' );
 
-		$this->assertSame( WCPT_DEFAULT_STATUS, get_post_status( $this->camp ) );
+		remove_filter( 'wcpt_require_complete_meta_min_site_id', '__return_zero' );
+
+		$this->assertSame( 'wcpt-needs-schedule', get_post_status( $this->camp ) );
 		$this->assertSame( 0, get_post( $this->camp )->menu_order );
 	}
 
@@ -193,18 +201,6 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Give the current user the wrangler capability.
-	 *
-	 * It has to come through the subroles system: `omit_usermeta_caps()` deliberately
-	 * strips anything granted with `WP_User::add_cap()`.
-	 */
-	protected function become_wrangler() {
-		global $wcorg_subroles;
-
-		$wcorg_subroles = array( get_current_user_id() => array( 'wordcamp_wrangler' ) );
-	}
-
-	/**
 	 * Write a status straight to the post.
 	 *
 	 * @param string $status The status to write.
@@ -216,6 +212,21 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 				'post_status' => $status,
 			)
 		);
+	}
+
+	/**
+	 * `notify_new_wordcamp_in_slack()` renders the start date, and `gmdate()` raises a
+	 * TypeError on an empty one under PHP 8.4. `require_complete_meta_to_publish_wordcamp()`
+	 * keeps that off the admin path, so a fixture is the only way to reach it.
+	 *
+	 * @covers WordCamp_Admin::notify_new_wordcamp_in_slack
+	 */
+	public function test_scheduling_without_a_start_date_does_not_fatal() {
+		$this->become_wrangler();
+
+		$this->set_status( 'wcpt-scheduled' );
+
+		$this->assertSame( 'wcpt-scheduled', get_post_status( $this->camp ) );
 	}
 
 	/**

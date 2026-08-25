@@ -20,19 +20,15 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	function __construct() {
 		parent::__construct();
-		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date'                ) );
+		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date' ), 20 );
 		add_filter( 'wordcamp_rewrite_rules',          array( $this, 'wordcamp_rewrite_rules'            ) );
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
 
-		/*
-		 * From here rather than `includes()`, which is hooked to `plugins_loaded`.
-		 * `mu-plugins/events/jetpack-form-to-wcpt-application.php` requires the plugin
-		 * loader from inside a form handler, long after that hook, and this constructor
-		 * still runs on that path while `includes()` does not.
-		 */
+		// Not from `includes()`: that is hooked to `plugins_loaded`, and the Jetpack form
+		// bridge requires this loader from a form handler long after that fires.
 		WordCamp_Status_Guard::init();
 	}
 
@@ -181,6 +177,9 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return array
 	 */
 	public function set_scheduled_date( $post_data ) {
+		// Priority 20, so both `WordCamp_Status_Guard::enforce_post_status()` and
+		// `WordCamp_Admin::require_complete_meta_to_publish_wordcamp()` have had their say.
+		// The stamp is written once and never revised, so a rejected write must not reach it.
 		if ( 'wcpt-scheduled' !== $post_data['post_status'] || WCPT_POST_TYPE_ID != $post_data['post_type'] ) {
 			return $post_data;
 		}

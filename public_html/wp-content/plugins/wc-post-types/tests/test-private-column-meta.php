@@ -105,10 +105,13 @@ class Test_Private_Column_Meta extends WP_UnitTestCase {
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
 
-		$this->assertStringContainsString(
-			get_the_title( $speaker ),
-			$this->render_column( 'wcb_session_speakers', $session )
-		);
+		$rendered = $this->render_column( 'wcb_session_speakers', $session );
+
+		$this->assertStringContainsString( get_the_title( $speaker ), $rendered );
+
+		// `get_edit_post_link()` is null for a viewer who cannot edit, and `esc_url( null )`
+		// is deprecated. Name it rather than linking nowhere.
+		$this->assertStringNotContainsString( '<a href', $rendered );
 	}
 
 	/**

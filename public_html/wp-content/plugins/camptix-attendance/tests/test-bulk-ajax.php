@@ -195,12 +195,13 @@ class Test_Bulk_Ajax extends WP_Ajax_UnitTestCase {
 			'tickets'    => array( $ticket ),
 		);
 
-		$_POST = $_REQUEST = array(
+		$_REQUEST = array(
 			'action'          => 'camptix-attendance',
 			'camptix_secret'  => self::SECRET,
 			'camptix_action'  => 'sync-list',
 			'camptix_filters' => $filters,
 		);
+		$_POST    = $_REQUEST;
 
 		$response = $this->dispatch();
 

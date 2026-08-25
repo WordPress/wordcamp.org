@@ -426,9 +426,10 @@ class CampTix_Attendance extends CampTix_Addon {
 		}
 
 		// Normalize headers; strip a possible UTF-8 BOM off the first cell.
-		$header    = array_map( function ( $cell ) {
+		$normalize = function ( $cell ) {
 			return strtolower( trim( str_replace( "\xEF\xBB\xBF", '', (string) $cell ) ) );
-		}, $header );
+		};
+		$header    = array_map( $normalize, $header );
 		$id_col    = array_search( 'id', $header, true );
 		if ( false === $id_col ) {
 			$id_col = array_search( 'attendee id', $header, true );
@@ -587,10 +588,13 @@ class CampTix_Attendance extends CampTix_Addon {
 	 *                     filters cannot match anything (no tickets selected).
 	 */
 	protected function attach_list_filters( $filters, $search = '' ) {
-		$filters = wp_parse_args( (array) $filters, array(
-			'attendance' => 'none',
-			'tickets'    => array(),
-		) );
+		$filters = wp_parse_args(
+			(array) $filters,
+			array(
+				'attendance' => 'none',
+				'tickets'    => array(),
+			)
+		);
 
 		$attached = array();
 
@@ -795,7 +799,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * query under various meta keys.
 	 */
 	public function _filter_query_search( $search ) {
-		$callback = function( $clauses ) use ( $search ) {
+		$callback = function ( $clauses ) use ( $search ) {
 			global $wpdb;
 
 			$search = $wpdb->esc_like( wp_unslash( $search ) );
@@ -825,7 +829,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * Filter WP_Query to include only specific tickets.
 	 */
 	public function _filter_query_tickets( $ticket_ids ) {
-		$callback = function( $clauses ) use ( $ticket_ids ) {
+		$callback = function ( $clauses ) use ( $ticket_ids ) {
 			global $wpdb;
 
 			$clauses['join'] .= " INNER JOIN $wpdb->postmeta tix_ticket_id ON ( ID = tix_ticket_id.post_id AND tix_ticket_id.meta_key = 'tix_ticket_id' ) ";
@@ -842,7 +846,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * Filter WP_Query to include only attending or non-attending attendees.
 	 */
 	public function _filter_query_attendance( $attendance ) {
-		$callback = function( $clauses ) use ( $attendance ) {
+		$callback = function ( $clauses ) use ( $attendance ) {
 			global $wpdb;
 
 			$clauses['join'] .= " LEFT JOIN $wpdb->postmeta tix_attended ON ( ID = tix_attended.post_id AND tix_attended.meta_key = 'tix_attended' ) ";

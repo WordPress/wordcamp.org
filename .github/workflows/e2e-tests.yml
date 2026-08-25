@@ -206,6 +206,10 @@ jobs:
         }
         pids=()
         create_user organiser1 editor & pids+=( "$!" )
+        # event-form.spec.js exercises both event-form surfaces, which
+        # needs the editor tier; its own account for the same reason as
+        # the per-spec author accounts below.
+        create_user organiser2 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

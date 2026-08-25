@@ -3,16 +3,9 @@
  *
  * A small React app that mounts a modal dialog for creating or editing
  * GatherPress events. Listens for clicks on `[data-wporg-groups-modal]`
- * buttons anywhere in the document, fetches the relevant form data from
- * the `wporg-groups/v1` REST API, and renders an inline `@wordpress/block-editor`
- * instance for the description field alongside plain `<input>`s and
- * `<select>`s for the metadata.
- *
- * Written in vanilla JS using `wp.element.createElement` (aliased to `h`)
- * so the file can be loaded directly without a JSX build step. The trade
- * off is some extra verbosity at call sites; the app is small enough that
- * this is a fair price for not having to wire up `@wordpress/scripts` for
- * a single feature.
+ * buttons anywhere in the document and wraps the shared `EventForm` with
+ * the modal's own chrome: draft picker, autosave and the close-confirmation
+ * prompt.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -23,71 +16,26 @@ import {
 	useRef,
 	render,
 } from '@wordpress/element';
-import {
-	Modal,
-	TextControl,
-	Button,
-	SelectControl,
-	ToggleControl,
-	Notice,
-	Spinner,
-} from '@wordpress/components';
+import { Modal, SelectControl } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __, _x } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies.
  */
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
-import RecurrenceControls, { normalizeRecurrence } from '../../components/recurrence-controls';
-import RsvpQuestionsEditor from './rsvp-questions-editor';
-import DescriptionEditor, { ensureCoreBlocksRegistered } from '../../components/event-form/description-editor';
-import FeaturedImagePicker from '../../components/event-form/featured-image-picker';
-import DurationField from '../../components/event-form/duration-field';
-import VenueField from '../../components/event-form/venue-field';
+import EventForm, { NS } from '../../components/event-form/event-form';
 
-const NS =
-	( window.wporgGroupsEventModal &&
-		window.wporgGroupsEventModal.restNamespace ) ||
-	'wporg-groups/v1';
-const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
+	const AUTOSAVE_INTERVAL_MS = 5000;
 
 	/**
 	 * Modal containing the create/edit form. Mode is `'create'` or `'edit'`,
 	 * `eventId` is the integer post id when editing.
 	 */
-	const AUTOSAVE_INTERVAL_MS = 5000;
-	const EMPTY_FORM = {
-		title: '',
-		date: '',
-		time_start: '',
-		time_end: '',
-		venue_id: 0,
-		venue_select: '',
-		is_online: false,
-		online_event_link: '',
-		new_venue_name: '',
-		new_venue_address: '',
-		rsvp_questions: [],
-	};
-
 	function EventModal( { mode, eventId, onClose } ) {
 		const isEdit = mode === 'edit' && eventId > 0;
-
-		const [ loading, setLoading ] = useState( true );
-		const [ saving, setSaving ] = useState( false );
-		const [ error, setError ] = useState( '' );
-
-		// Description is intentionally NOT in form state — the inline block
-		// editor owns it. We grab the current value via `descriptionRef`
-		// only at submit/autosave time.
-		const [ form, setForm ] = useState( EMPTY_FORM );
-		const [ initialDescription, setInitialDescription ] = useState( '' );
-		const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
-		const [ recurrence, setRecurrence ] = useState( null );
-		const [ venues, setVenues ] = useState( [] );
-		const descriptionRef = useRef( () => '' );
+		const formRef = useRef( null );
 
 		// Drafts: list of available drafts (create mode only) and the id
 		// of the draft we're currently autosaving to (0 = none yet).
@@ -104,10 +52,10 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 		const dirtyRef = useRef( false );
 		dirtyRef.current = dirty;
 
-		// Bumped whenever we load fresh data into the form (initial mount,
-		// draft picker selection). Used as a `key` on `DescriptionEditor`
-		// to force a remount with the new initial value.
-		const [ editorKey, setEditorKey ] = useState( 0 );
+		// Bumped on every field change and load so the autosave countdown
+		// below restarts.
+		const [ changeCount, setChangeCount ] = useState( 0 );
+		const restartAutosave = () => setChangeCount( ( c ) => c + 1 );
 
 		const markDirty = () => {
 			if ( ! dirtyRef.current ) {
@@ -115,98 +63,15 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 			}
 		};
 
-		const loadFormData = ( opts ) => {
-			let cancelled = false;
-			setLoading( true );
-			setError( '' );
-
-			const path = opts.eventId
-				? `/${ NS }/event-form-data?event_id=${ opts.eventId }`
-				: `/${ NS }/event-form-data`;
-
-			apiFetch( { path } )
-				.then( ( res ) => {
-					if ( cancelled ) {
-						return;
-					}
-					setVenues( res.venues || [] );
-					setInitialDescription( res.fields.description || '' );
-					setFeaturedImage( {
-						id: res.fields.featured_image_id || 0,
-						url: res.fields.featured_image_url || '',
-					} );
-					setRecurrence( normalizeRecurrence( res.fields.recurrence ) );
-					setForm( {
-						title: res.fields.title || '',
-						date: res.fields.date || '',
-						time_start: res.fields.time_start || '',
-						time_end: res.fields.time_end || '',
-						venue_id: res.fields.venue_id || 0,
-						venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
-						is_online: !! res.fields.is_online,
-						online_event_link: res.fields.online_event_link || '',
-						new_venue_name: '',
-						new_venue_address: '',
-						rsvp_questions: res.fields.rsvp_questions || [],
-					} );
-					setEditorKey( ( k ) => k + 1 );
-					setDirty( false );
-					setLoading( false );
-				} )
-				.catch( ( err ) => {
-					if ( cancelled ) {
-						return;
-					}
-					setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wporg-groups-frontend' ) );
-					setLoading( false );
-				} );
-
-			return () => {
-				cancelled = true;
-			};
-		};
-
-		// Initial mount: register core blocks + fetch the form data + (in
-		// create mode) fetch the existing drafts list.
+		// Create mode: fetch the existing drafts list.
 		useEffect( () => {
-			ensureCoreBlocksRegistered();
-			const cleanup = loadFormData( { eventId: isEdit ? eventId : 0 } );
-
-			if ( ! isEdit ) {
-				apiFetch( { path: `/${ NS }/drafts` } )
-					.then( ( res ) => setDrafts( Array.isArray( res ) ? res : [] ) )
-					.catch( () => {} );
+			if ( isEdit ) {
+				return;
 			}
-
-			return cleanup;
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		}, [ isEdit, eventId ] );
-
-		const buildPayload = () => {
-			const isAddingNewVenue = form.venue_select === '__new__';
-			return {
-				title: form.title,
-				description: descriptionRef.current ? descriptionRef.current() : '',
-				date: form.date,
-				time_start: form.time_start,
-				time_end: form.time_end,
-				venue_id: isAddingNewVenue ? 0 : ( parseInt( form.venue_select, 10 ) || 0 ),
-				is_online: form.is_online,
-				online_event_link: form.is_online ? form.online_event_link : '',
-				new_venue_name: isAddingNewVenue ? form.new_venue_name : '',
-				new_venue_address: isAddingNewVenue ? form.new_venue_address : '',
-				featured_image_id: featuredImage.id,
-				// Recurrence is locked (uneditable) once an event is published,
-				// so editing an existing event never needs to resend it — and
-				// must not send `null`, which fails the endpoint's object schema.
-				...( isEdit ? {} : { recurrence } ),
-				// Blank-labelled rows are just an empty slot the organizer
-				// added and never filled in; the server drops them too.
-				rsvp_questions: ( form.rsvp_questions || [] ).filter(
-					( q ) => q.label.trim() !== ''
-				),
-			};
-		};
+			apiFetch( { path: `/${ NS }/drafts` } )
+				.then( ( res ) => setDrafts( Array.isArray( res ) ? res : [] ) )
+				.catch( () => {} );
+		}, [ isEdit ] );
 
 		// Autosave: every AUTOSAVE_INTERVAL_MS, if the form is dirty and we
 		// aren't already saving, push a draft. Only runs in create mode —
@@ -218,11 +83,12 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 				return undefined;
 			}
 			const interval = setInterval( () => {
-				if ( ! dirtyRef.current || saving || loading ) {
+				const form = formRef.current;
+				if ( ! dirtyRef.current || ! form || form.isSaving() || form.isLoading() ) {
 					return;
 				}
 				setAutosaveStatus( 'saving' );
-				const payload = buildPayload();
+				const payload = form.getPayload();
 				const path = draftId
 					? `/${ NS }/draft/${ draftId }`
 					: `/${ NS }/draft`;
@@ -240,36 +106,24 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 					} );
 			}, AUTOSAVE_INTERVAL_MS );
 			return () => clearInterval( interval );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		}, [ isEdit, draftId, saving, loading, form, recurrence ] );
-
-		const updateField = ( field, value ) => {
-			setForm( ( prev ) => ( { ...prev, [ field ]: value } ) );
-			markDirty();
-		};
+		}, [ isEdit, draftId, changeCount ] );
 
 		const handleSelectDraft = ( id ) => {
 			if ( ! id ) {
 				return;
 			}
 			setDraftId( parseInt( id, 10 ) );
-			loadFormData( { eventId: parseInt( id, 10 ) } );
+			formRef.current.loadEvent( parseInt( id, 10 ) );
 		};
 
 		const handleStartFresh = () => {
 			setDraftId( 0 );
 			setAutosaveStatus( '' );
 			setAutosaveTime( null );
-			loadFormData( { eventId: 0 } );
+			formRef.current.loadEvent( 0 );
 		};
 
-		const onSubmit = ( e ) => {
-			e.preventDefault();
-			setSaving( true );
-			setError( '' );
-
-			const payload = buildPayload();
-
+		const submitPayload = ( payload ) => {
 			let path;
 			if ( isEdit ) {
 				path = `/${ NS }/event/${ eventId }`;
@@ -280,7 +134,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 				path = `/${ NS }/event`;
 			}
 
-			apiFetch( { path, method: 'POST', data: payload } )
+			return apiFetch( { path, method: 'POST', data: payload } )
 				.then( ( res ) => {
 					setDirty( false );
 					if ( res && res.permalink ) {
@@ -288,10 +142,6 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 					} else {
 						window.location.reload();
 					}
-				} )
-				.catch( ( err ) => {
-					setSaving( false );
-					setError( err && err.message ? err.message : __( 'Failed to save the event.', 'wporg-groups-frontend' ) );
 				} );
 		};
 
@@ -308,7 +158,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 		// closing a draft mid-edit is worth confirming even if the
 		// current keystrokes are already auto-saved.
 		const handleClose = () => {
-			if ( saving ) {
+			if ( formRef.current && formRef.current.isSaving() ) {
 				return;
 			}
 			const shouldPrompt = dirty || draftId > 0;
@@ -367,200 +217,69 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 				size: 'large',
 				shouldCloseOnClickOutside: false,
 			},
-			loading
-				? h( 'div', { className: 'wporg-groups-event-modal__loading' }, h( Spinner, {} ) )
-				: h(
-					'form',
-					{ onSubmit: onSubmit, className: 'wporg-groups-event-modal__form' },
-					error &&
-						h( Notice, { status: 'error', isDismissible: false }, error ),
-
-					showDraftPicker &&
+			h( EventForm, {
+				ref: formRef,
+				mode: isEdit ? 'edit' : 'create',
+				eventId: isEdit ? eventId : 0,
+				classPrefix: 'wporg-groups-event-modal',
+				className: 'wporg-groups-event-modal__form',
+				onSubmitPayload: submitPayload,
+				onCancel: handleClose,
+				onOpenVenueEditor: ( id ) => {
+					setVenueEditorId( id );
+					setVenueEditorOpen( true );
+				},
+				onChange: restartAutosave,
+				onDirty: markDirty,
+				onLoad: () => {
+					setDirty( false );
+					restartAutosave();
+				},
+				header: showDraftPicker &&
+					h(
+						'div',
+						{ className: 'wporg-groups-event-modal__draft-picker' },
 						h(
-							'div',
-							{ className: 'wporg-groups-event-modal__draft-picker' },
-							h(
-								SelectControl,
-								{
-									label: __( 'Continue from a draft', 'wporg-groups-frontend' ),
-									value: draftId ? String( draftId ) : '',
-									options: [
-										{ label: __( '— Start fresh —', 'wporg-groups-frontend' ), value: '' },
-									].concat(
-										drafts.map( ( d ) => ( {
-											label: ( d.title || __( '(Untitled)', 'wporg-groups-frontend' ) )
-												+ ( d.event_date ? ` — ${ d.event_date.slice( 0, 10 ) }` : '' ),
-											value: String( d.id ),
-										} ) )
-									),
-									onChange: ( v ) => {
-										if ( v === '' ) {
-											handleStartFresh();
-										} else {
-											handleSelectDraft( v );
-										}
-									},
-									__nextHasNoMarginBottom: true,
-								}
-							)
-						),
-
-					h( TextControl, {
-						label: __( 'Event title', 'wporg-groups-frontend' ),
-						value: form.title,
-						onChange: ( v ) => updateField( 'title', v ),
-						required: true,
-						__nextHasNoMarginBottom: true,
-					} ),
-
-					h(
-						'div',
-						{ className: 'wporg-groups-event-modal__field' },
-						h(
-							'label',
-							{ className: 'components-base-control__label' },
-							__( 'Description', 'wporg-groups-frontend' )
-						),
-						h( DescriptionEditor, {
-							key: editorKey,
-							initialValue: initialDescription,
-							getValueRef: descriptionRef,
-							onDirty: markDirty,
-							classPrefix: 'wporg-groups-event-modal',
-						} )
-					),
-
-					h( FeaturedImagePicker, {
-						imageId: featuredImage.id,
-						imageUrl: featuredImage.url,
-						onChange: ( id, url ) => {
-							setFeaturedImage( { id, url } );
-							markDirty();
-						},
-						classPrefix: 'wporg-groups-event-modal',
-					} ),
-
-					h(
-						'div',
-						{ className: 'wporg-groups-event-modal__row' },
-						h( TextControl, {
-							label: __( 'Date', 'wporg-groups-frontend' ),
-							type: 'date',
-							value: form.date,
-							min: isEdit ? undefined : MINIMUM_EVENT_DATE,
-							onChange: ( v ) => updateField( 'date', v ),
-							required: true,
-							__nextHasNoMarginBottom: true,
-						} ),
-						h( TextControl, {
-							label: __( 'Start time', 'wporg-groups-frontend' ),
-							type: 'time',
-							value: form.time_start,
-							onChange: ( v ) => updateField( 'time_start', v ),
-							required: true,
-							__nextHasNoMarginBottom: true,
-						} ),
-						h( DurationField, {
-							timeStart: form.time_start,
-							timeEnd: form.time_end,
-							onChange: ( v ) => {
-								updateField( 'time_end', v );
-								markDirty();
-							},
-							classPrefix: 'wporg-groups-event-modal',
-						} )
-					),
-
-					h( RecurrenceControls, {
-						value: recurrence,
-						eventDate: form.date,
-						onChange: ( value ) => {
-							setRecurrence( value );
-							markDirty();
-						},
-					} ),
-
-					h( VenueField, {
-						venues: venues,
-						venueId: form.venue_select,
-						onSelect: ( v ) => {
-							updateField( 'venue_select', v );
-							markDirty();
-						},
-						onOpenVenueEditor: ( id ) => {
-							setVenueEditorId( id );
-							setVenueEditorOpen( true );
-						},
-						classPrefix: 'wporg-groups-event-modal',
-					} ),
-
-					h(
-						'div',
-						{ className: 'wporg-groups-event-modal__online-event' },
-						h( ToggleControl, {
-							label: __( 'This is an online event', 'wporg-groups-frontend' ),
-							checked: form.is_online,
-							onChange: ( value ) => updateField( 'is_online', value ),
-							__nextHasNoMarginBottom: true,
-						} ),
-						form.is_online && h( TextControl, {
-							label: __( 'Online event link', 'wporg-groups-frontend' ),
-							type: 'url',
-							value: form.online_event_link,
-							onChange: ( value ) => updateField( 'online_event_link', value ),
-							placeholder: 'https://',
-							required: true,
-							__nextHasNoMarginBottom: true,
-						} )
-					),
-
-					h( RsvpQuestionsEditor, {
-						questions: form.rsvp_questions,
-						onChange: ( value ) => updateField( 'rsvp_questions', value ),
-					} ),
-
-					h(
-						'div',
-						{ className: 'wporg-groups-event-modal__actions' },
-						h(
-							'span',
+							SelectControl,
 							{
-								className: 'wporg-groups-event-modal__autosave wporg-groups-event-modal__autosave--' + ( autosaveStatus || 'idle' ),
-							},
-							autosaveLabel
-						),
-						h(
-							Button,
-							{ variant: 'tertiary', onClick: handleClose, disabled: saving },
-							_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
-						),
-						h(
-							Button,
-							{ variant: 'primary', type: 'submit', isBusy: saving, disabled: saving },
-							isEdit
-								? __( 'Save changes', 'wporg-groups-frontend' )
-								: __( 'Create event', 'wporg-groups-frontend' )
-						)
-					)
-				),
-				venueEditorOpen && h( VenueEditor, {
-					venueId: venueEditorId,
-					onSave: ( saved ) => {
-						setVenueEditorOpen( false );
-						updateField( 'venue_select', String( saved.id ) );
-						setVenues( ( prev ) => {
-							const exists = prev.find( ( v ) => v.id === saved.id );
-							if ( exists ) {
-								return prev.map( ( v ) =>
-									v.id === saved.id ? { ...v, name: saved.name } : v
-								);
+								label: __( 'Continue from a draft', 'wporg-groups-frontend' ),
+								value: draftId ? String( draftId ) : '',
+								options: [
+									{ label: __( '— Start fresh —', 'wporg-groups-frontend' ), value: '' },
+								].concat(
+									drafts.map( ( d ) => ( {
+										label: ( d.title || __( '(Untitled)', 'wporg-groups-frontend' ) )
+											+ ( d.event_date ? ` — ${ d.event_date.slice( 0, 10 ) }` : '' ),
+										value: String( d.id ),
+									} ) )
+								),
+								onChange: ( v ) => {
+									if ( v === '' ) {
+										handleStartFresh();
+									} else {
+										handleSelectDraft( v );
+									}
+								},
+								__nextHasNoMarginBottom: true,
 							}
-							return [ ...prev, { id: saved.id, name: saved.name } ];
-						} );
-						markDirty();
+						)
+					),
+				footerStart: h(
+					'span',
+					{
+						className: 'wporg-groups-event-modal__autosave wporg-groups-event-modal__autosave--' + ( autosaveStatus || 'idle' ),
 					},
-					onCancel: () => setVenueEditorOpen( false ),
-				} )
+					autosaveLabel
+				),
+			} ),
+			venueEditorOpen && h( VenueEditor, {
+				venueId: venueEditorId,
+				onSave: ( saved ) => {
+					setVenueEditorOpen( false );
+					formRef.current.selectVenue( saved );
+				},
+				onCancel: () => setVenueEditorOpen( false ),
+			} )
 		);
 	}
 

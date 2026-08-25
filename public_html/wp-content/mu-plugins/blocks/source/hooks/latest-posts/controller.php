@@ -57,8 +57,6 @@ function init() {
 		'before'
 	);
 
-	wp_set_script_translations( 'wordcamp-live-posts', 'wordcamporg' );
-
 	$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( 'core/latest-posts' );
 	if ( $block_type ) {
 		unregister_block_type( $block_type->name );
@@ -158,6 +156,31 @@ function is_swappable_container( $markup ) {
 }
 
 /**
+ * Drop the attributes the renderer route will not accept.
+ *
+ * The route validates `attributes` against the registered schema and rejects anything
+ * outside it, while the render path still honours older keys such as `postLayout`.
+ * Those only feed container classes, and the container on the page keeps its own, so
+ * dropping them here costs nothing and keeps the request valid.
+ *
+ * This filters keys, not values. A registered key with a stale value can still be
+ * refused, `categories` saved as a string being the one that used to be: it survives
+ * because core migrates it on `render_block_data`, before this filter runs.
+ *
+ * @param array $attrs Saved block attributes.
+ * @return array
+ */
+function pollable_attributes( $attrs ) {
+	$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( 'core/latest-posts' );
+
+	if ( ! $block_type || empty( $block_type->attributes ) ) {
+		return $attrs;
+	}
+
+	return array_intersect_key( $attrs, $block_type->attributes );
+}
+
+/**
  * Filter the content of the latest posts block.
  *
  * @param string $block_content The block content about to be appended.
@@ -189,7 +212,7 @@ function render( $block_content, $block ) {
 		if ( $processor->next_tag() && 'UL' === $processor->get_tag() ) {
 			$processor->add_class( 'has-live-update' );
 			$processor->add_class( 'is-loading' );
-			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( $block['attrs'] ) ) );
+			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( pollable_attributes( $block['attrs'] ) ) ) );
 
 			$block_content = $processor->get_updated_html();
 
@@ -208,7 +231,6 @@ function render( $block_content, $block ) {
 }
 add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
 
-
 /**
  * Add data to be used by the JS scripts in the block editor.
  *
@@ -218,7 +240,10 @@ add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
  */
 function add_script_data( array $data ) {
 	if ( check_version_support() ) {
-		$data['latest-posts'] = array();
+		$data['latest-posts'] = array(
+			// Root-relative, so the request stays same-origin on a non-canonical host.
+			'renderer' => wp_make_link_relative( rest_url( 'wp/v2/block-renderer/core/latest-posts' ) ),
+		);
 	}
 
 	return $data;

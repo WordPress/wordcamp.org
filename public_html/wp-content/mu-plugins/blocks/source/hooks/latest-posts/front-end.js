@@ -1,61 +1,159 @@
 /**
  * WordPress dependencies
  */
-import { __ } from '@wordpress/i18n';
-import { Component } from '@wordpress/element';
-import ServerSideRender from '@wordpress/server-side-render';
+import { addQueryArgs } from '@wordpress/url';
+
+const SELECTOR = '.wp-block-latest-posts.has-live-update';
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds.
 
 /**
- * Internal dependencies
+ * The endpoint that renders this block, localised by the controller.
+ *
+ * @return {string} The endpoint, or an empty string when the data is missing.
  */
-import renderFrontend from '../../utils/render-frontend';
+function rendererUrl() {
+	const data = window.WordCampBlocks || {};
 
-class LivePosts extends Component {
-	constructor( props ) {
-		super( props );
-		this.renderInterval = setInterval(
-			() => {
-				// `forceUpdate` is a React internal that triggers a render cycle.
-				this.forceUpdate();
-			},
-			5 * 60 * 1000 // 5 minutes in milliseconds.
-		);
+	return ( data[ 'latest-posts' ] || {} ).renderer || '';
+}
+
+/**
+ * Read the block's saved attributes off the container.
+ *
+ * @param {Element} element Container element.
+ * @return {Object|null} The attributes, or null when they cannot be read.
+ */
+function readAttributes( element ) {
+	const encoded = element.dataset.attributes;
+
+	if ( ! encoded ) {
+		return null;
 	}
 
-	componentWillUnmount() {
-		clearInterval( this.renderInterval );
-	}
+	try {
+		const parsed = JSON.parse( decodeURIComponent( encoded ) );
 
-	render() {
-		const { attributes } = this.props;
-		// Remove the helper data-attribute.
-		delete attributes.attributes;
-
-		// Note: the `LoadingResponsePlaceholder` is intentionally an anonymous function to trigger re-render when
-		// `forceUpdate` happens.
-		return (
-			<ServerSideRender
-				block="core/latest-posts"
-				attributes={ attributes }
-				LoadingResponsePlaceholder={ () => (
-					<p>{ __( 'Loading', 'wordcamporg' ) }</p>
-				) }
-			/>
-		);
+		// Anything but a plain object would ask the route for the block's defaults.
+		return parsed && 'object' === typeof parsed && ! Array.isArray( parsed )
+			? parsed
+			: null;
+	} catch {
+		return null;
 	}
 }
 
-const getAttributesFromData = ( element ) => {
-	let parsedAttributes = {};
-	const { attributes } = element.dataset;
-	if ( attributes ) {
-		parsedAttributes = JSON.parse( decodeURIComponent( attributes ) );
-	}
-	return { attributes: parsedAttributes };
-};
+/**
+ * Take the list items out of a rendered response.
+ *
+ * The response has been through the `render_block` filter too, so it arrives wearing a
+ * container of its own. The container already on the page is the one carrying the
+ * block's classes, so only its contents are replaced.
+ *
+ * @param {string} html Rendered block markup.
+ * @return {string} The container's contents, or the markup unchanged if it has none.
+ */
+function unwrapContainer( html ) {
+	const template = document.createElement( 'template' );
+	template.innerHTML = html.trim();
 
-renderFrontend(
-	'.wp-block-latest-posts.has-live-update',
-	LivePosts,
-	getAttributesFromData
-);
+	const container = template.content.querySelector(
+		'.wp-block-latest-posts'
+	);
+
+	return container ? container.innerHTML : html;
+}
+
+/**
+ * Keep one container's list up to date.
+ *
+ * The markup is written straight into the container, so a refreshed list has the same
+ * shape as the one the server rendered and any styling written against that markup
+ * still applies. A failed request leaves the page alone.
+ *
+ * @param {Element} element Container element.
+ */
+function start( element ) {
+	const attributes = readAttributes( element );
+
+	element.classList.remove( 'is-loading' );
+
+	/*
+	 * Without the saved attributes a refresh would ask for the block's default
+	 * settings, replacing a correct list with a wrong one. Leave the page's own.
+	 */
+	if ( ! attributes ) {
+		return;
+	}
+
+	let warned = false;
+	let lastContent = null;
+
+	/**
+	 * Report the first failure, so a list that stops updating can be diagnosed.
+	 *
+	 * @param {string} reason What went wrong.
+	 */
+	function warn( reason ) {
+		if ( ! warned ) {
+			warned = true;
+			// eslint-disable-next-line no-console
+			console.warn( 'Latest Posts live update failed:', reason );
+		}
+	}
+
+	function refresh() {
+		// The container can be taken off the page by something else on the site. Stop
+		// rather than keep polling into a node nobody can see.
+		if ( ! element.isConnected ) {
+			clearInterval( timer );
+			return;
+		}
+
+		const endpoint = rendererUrl();
+
+		if ( ! endpoint ) {
+			warn( 'the renderer endpoint is missing' );
+			return;
+		}
+
+		/*
+		 * Deliberately not `apiFetch`: it attaches an `X-WP-Nonce`, which expires for a
+		 * logged-out visitor, and an expired nonce is refused before the request is
+		 * routed. Sending none leaves the request anonymous, which is what this needs.
+		 */
+		window
+			.fetch( addQueryArgs( endpoint, { context: 'edit', attributes } ) )
+			.then( ( response ) => {
+				if ( ! response.ok ) {
+					throw new Error( `HTTP ${ response.status }` );
+				}
+
+				return response.json();
+			} )
+			.then( ( body ) => {
+				if ( ! body || ! body.rendered ) {
+					return;
+				}
+
+				const content = unwrapContainer( body.rendered );
+
+				/*
+				 * Rewriting the list rebuilds every node in it, which drops focus and
+				 * any selection inside it and restarts the images. Most polls return
+				 * what is already on screen, so only write when something changed.
+				 */
+				if ( content === lastContent ) {
+					return;
+				}
+
+				lastContent = content;
+				element.innerHTML = content;
+			} )
+			.catch( ( error ) => warn( error.message ) );
+	}
+
+	// `refresh` closes over this; it only ever runs once the interval exists.
+	const timer = setInterval( refresh, REFRESH_INTERVAL );
+}
+
+document.querySelectorAll( SELECTOR ).forEach( start );

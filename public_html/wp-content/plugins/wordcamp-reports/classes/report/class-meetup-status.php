@@ -330,6 +330,10 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_admin_page() {
+		if ( ! current_user_can( CAPABILITY ) ) {
+			return;
+		}
+
 		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
 		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
 		$status     = wp_unslash( $_POST['status'] ?? '' );
@@ -409,10 +413,16 @@ class Meetup_Status extends Base_Status {
 	public static function export_to_file() {
 		$action = wp_unslash( $_POST['action'] ?? '' );
 		$report = wp_unslash( $_GET['report'] ?? '' );
+		$nonce  = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
+
 		if ( $report !== self::$slug ) {
 			return;
 		}
 		if ( 'Export CSV' !== $action ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

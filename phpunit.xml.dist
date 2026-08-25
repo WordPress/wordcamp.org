@@ -50,6 +50,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Reports">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-reports/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Post Type">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wcpt/tests/
@@ -107,6 +113,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-reports</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
 			<file>./public_html/wp-content/sunrise-events.php</file>

@@ -14,6 +14,9 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
+		// Again after the callbacks, since `before_callbacks` only sets a response and a
+		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
+		add_filter( 'rest_request_after_callbacks', array( $this, 'disable_rest_endpoints' ), PHP_INT_MAX, 3 );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );

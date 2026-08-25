@@ -9,7 +9,7 @@ use WCP_Payment_Request;
 defined( 'WPINC' ) || die();
 
 
-add_filter( 'the_posts',                          __NAMESPACE__ . '\hide_others_payment_files', 10, 2 );
+add_filter( 'posts_clauses',                      __NAMESPACE__ . '\exclude_others_payment_files_from_query', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_personal_data_exporters' );
 add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_personal_data_erasers'   );
@@ -18,83 +18,54 @@ add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_per
 /**
  * Prevent non-admins from viewing payment files uploaded by other users.
  *
- * The files sometimes have sensitive information, like account numbers etc. `the_posts` was chosen over
- * `ajax_query_attachments_args`, `pre_get_posts`, and other techniques, because it is the most comprehensive
- * and flexible solution. It will remove things from the Media Library, but also REST API endpoints, XML-RPC,
- * RSS, etc. It also allows the chance the to only apply the conditions to certain post types, whereas setting
- * query vars is much more limited.
+ * The files sometimes have sensitive information, like account numbers etc.
  *
- * SECURITY WARNING: When querying attachments `get_posts()`, make sure you pass `suppress_filters => false`,
- * otherwise this will not run.
+ * This uses `posts_clauses` to filter at the SQL level, so that `found_posts` and the actual results are
+ * consistent. The previous approach using `the_posts` caused the media library grid view to break for
+ * non-admin users, because removing posts after the query meant fewer results were returned than
+ * `posts_per_page`, which made the JavaScript conclude there were no more items to load.
  *
- * @param WP_Post[] $attachments
- * @param WP_Query  $wp_query
+ * See https://github.com/WordPress/wordcamp.org/issues/1316
  *
- * @return array
+ * SECURITY WARNING: When querying attachments with `get_posts()`, make sure you pass
+ * `suppress_filters => false`, otherwise this will not run.
+ *
+ * @param array    $clauses  SQL clauses for the query.
+ * @param WP_Query $wp_query The WP_Query instance.
+ *
+ * @return array Modified SQL clauses.
  */
-function hide_others_payment_files( $attachments, $wp_query ) {
-	$user = wp_get_current_user();
+function exclude_others_payment_files_from_query( $clauses, $wp_query ) {
+	global $wpdb;
 
 	if ( 'attachment' !== $wp_query->get( 'post_type' ) || current_user_can( 'manage_options' ) ) {
-		return $attachments;
+		return $clauses;
 	}
 
-	$payment_posts_ids = get_payment_file_parent_ids( $attachments );
+	$user_id = get_current_user_id();
 
-	foreach ( $attachments as $index => $attachment ) {
-		if ( ! in_array( $attachment->post_parent, $payment_posts_ids, true ) ) {
-			continue;
-		}
-
-		if ( $attachment->post_author === $user->ID ) {
-			continue;
-		}
-
-		/*
-		 * The post is already cached from the request in `get_payment_file_parent_ids()`, so this doesn't create
-		 * a new database query, it's just a way to access the individual post directly instead of iterating through
-		 * `$payment_posts_with_attachments`.
-		 */
-		$parent_author = (int) get_post( $attachment->post_parent )->post_author;
-
-		if ( $parent_author === $user->ID ) {
-			continue;
-		}
-
-		unset( $attachments[ $index ] );
+	if ( ! $user_id ) {
+		return $clauses;
 	}
 
-	// Re-index the array, because WP_Query functions will assume there are no gaps.
-	return array_values( $attachments );
-}
+	$reimbursement_type = Reimbursement_Requests\POST_TYPE;
+	$payment_type       = WCP_Payment_Request::POST_TYPE;
 
-/**
- * Get the Reimbursement/Vendor Payment posts that are attached to the given media items.
- *
- * @param WP_Post[] $attachments
- *
- * @return int[]
- */
-function get_payment_file_parent_ids( $attachments ) {
-	$parent_ids     = array_unique( wp_list_pluck( $attachments, 'post_parent' ) );
-	$orphaned_index = array_search( 0, $parent_ids, true );
+	// Join only payment-type parent posts so we can check authorship.
+	$clauses['join'] .= $wpdb->prepare(
+		" LEFT JOIN {$wpdb->posts} AS payment_parent ON {$wpdb->posts}.post_parent = payment_parent.ID AND payment_parent.post_type IN (%s, %s)",
+		$reimbursement_type,
+		$payment_type
+	);
 
-	// All payment files should be attached to a post, so unattached files can be removed.
-	if ( false !== $orphaned_index ) {
-		unset( $parent_ids[ $orphaned_index ] );
-	}
+	// Allow the attachment if: no payment parent (NULL), or current user is the attachment/parent author.
+	$clauses['where'] .= $wpdb->prepare(
+		" AND ( payment_parent.ID IS NULL OR {$wpdb->posts}.post_author = %d OR payment_parent.post_author = %d )",
+		$user_id,
+		$user_id
+	);
 
-	$payment_posts_with_attachments = get_posts( array(
-		'post__in'    => $parent_ids,
-		'post_status' => 'any',
-		'numberposts' => 1000,
-		'post_type'   => array(
-			Reimbursement_Requests\POST_TYPE,
-			WCP_Payment_Request::POST_TYPE,
-		),
-	) );
-
-	return wp_list_pluck( $payment_posts_with_attachments, 'ID' );
+	return $clauses;
 }
 
 /**

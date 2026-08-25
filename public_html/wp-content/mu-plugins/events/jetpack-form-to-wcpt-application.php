@@ -58,8 +58,13 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	$date      = find_first_field_matching_label( $fields, 'Date' );
 	$attendees = find_first_field_matching_label( $fields, 'Number of Attendees' );
 
-	// Fetch the user by WP.org username or email.
-	$user      = $wporg && wcorg_get_user_by_canonical_names( $wporg ) ? wcorg_get_user_by_canonical_names( $wporg ) : ( $email ? get_user_by( 'email', $email ) : false );
+	/*
+	 * This form is a public, unauthenticated submission, so there is no signed-in
+	 * user to attribute the application to. Bridged applications are always owned by
+	 * the `wordcamp` service account, and the submitted username is retained only as
+	 * data for the Community Team to review rather than used to set the owner.
+	 */
+	$service_account = 7694169;
 
 	// Include the application processor, although we're not really using it here...
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-loader.php';
@@ -113,7 +118,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		'post_type'   => 'wordcamp',
 		'post_title'  => 'WordPress Campus Connect ' . ( $campus ?: trim( "$city, $country", ', ' ) ),
 		'post_status' => WCPT_DEFAULT_STATUS,
-		'post_author' => $user->ID ?? 7694169, // Set `wordcamp` as author if supplied username is not valid.
+		'post_author' => $service_account, // Public submission: owned by the service account.
 	);
 
 	$post_id = wp_insert_post( $post, true );
@@ -133,7 +138,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	add_post_meta( $post_id, 'Location', trim( "$city, $country", ', ' ) );
 	add_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', strtotime( $date ) );
 	add_post_meta( $post_id, 'Number of Anticipated Attendees', $attendees );
-	add_post_meta( $post_id, 'WordPress.org Username', $wporg ?: ( $user->user_login ?? '' ) );
+	add_post_meta( $post_id, 'WordPress.org Username', $wporg ?: '' );
 	add_post_meta( $post_id, 'Venue Name', $campus );
 	add_post_meta( $post_id, 'Physical Address', implode( "\n", array_filter( [ $campus, $city, $country ] ) ) );
 
@@ -142,7 +147,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		'_status_change',
 		array(
 			'timestamp' => time(),
-			'user_id'   => is_a( $user, 'WP_User' ) ? $user->ID : 0,
+			'user_id'   => 0, // Public submission: no signed-in user to attribute this to.
 			'message'   => sprintf( '%s &rarr; %s', 'Application', \WordCamp_Loader::get_post_statuses()[ WCPT_DEFAULT_STATUS ] ),
 		)
 	);

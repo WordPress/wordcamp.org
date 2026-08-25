@@ -132,34 +132,38 @@ class CampTix_Attendance extends CampTix_Addon {
 		// Two-phase guard: the count the user confirmed must still match the live
 		// set, so a filter change or new registrations between the preview and the
 		// confirmation can't silently widen the write.
-		if ( ! $dry_run && isset( $_REQUEST['camptix_expected_count'] ) ) {
-			$actual = count( $this->query_attendee_ids( $filters, $search ) );
+		$ids = $this->query_attendee_ids( $filters, $search );
 
-			if ( absint( $_REQUEST['camptix_expected_count'] ) !== $actual ) {
-				return wp_send_json_error( array(
-					'error'  => 'count_mismatch',
-					'actual' => $actual,
-				) );
-			}
+		if ( ! $dry_run && isset( $_REQUEST['camptix_expected_count'] )
+			&& absint( $_REQUEST['camptix_expected_count'] ) !== count( $ids )
+		) {
+			return wp_send_json_error( array(
+				'error'  => 'count_mismatch',
+				'actual' => count( $ids ),
+			) );
 		}
 
-		return wp_send_json_success( $this->bulk_set_attendance( $filters, $search, $attending, $dry_run ) );
+		return wp_send_json_success( $this->bulk_set_attendance( $filters, $search, $attending, $dry_run, $ids ) );
 	}
 
 	/**
 	 * Set or unset attendance for every attendee matching the filters.
 	 *
-	 * @param array  $filters   Filter settings (attendance, tickets), as sent by the UI.
-	 * @param string $search    Search keyword.
-	 * @param bool   $attending True to mark attended, false to unmark.
-	 * @param bool   $dry_run   If true, only count the matching set.
+	 * @param array      $filters   Filter settings (attendance, tickets), as sent by the UI.
+	 * @param string     $search    Search keyword.
+	 * @param bool       $attending True to mark attended, false to unmark.
+	 * @param bool       $dry_run   If true, only count the matching set.
+	 * @param int[]|null $ids       Precomputed attendee IDs to act on; null queries
+	 *                              the filters. Pass the IDs the count guard checked
+	 *                              so the confirmed write can't act on a wider set.
 	 *
 	 * @return array { matched, changed, attending, dry_run }
 	 */
-	public function bulk_set_attendance( $filters, $search, $attending, $dry_run = false ) {
-		global $camptix;
+	public function bulk_set_attendance( $filters, $search, $attending, $dry_run = false, $ids = null ) {
+		if ( null === $ids ) {
+			$ids = $this->query_attendee_ids( $filters, $search );
+		}
 
-		$ids     = $this->query_attendee_ids( $filters, $search );
 		$summary = array(
 			'matched'   => count( $ids ),
 			'changed'   => 0,

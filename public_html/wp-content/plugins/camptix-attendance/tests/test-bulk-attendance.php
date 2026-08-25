@@ -244,4 +244,24 @@ class Test_Bulk_Attendance extends WP_UnitTestCase {
 		$this->assertSame( '1', get_post_meta( $this->fx['a3'], 'tix_attended', true ) );
 		$this->assertSame( '', get_post_meta( $this->fx['a2'], 'tix_attended', true ) );
 	}
+
+	/**
+	 * The confirmed write must act on the IDs the count guard already checked.
+	 */
+	public function test_bulk_set_attendance_accepts_precomputed_ids() {
+		$addon = $this->make_fixture();
+
+		$summary = $addon->bulk_set_attendance(
+			$this->filters(),
+			'',
+			true,
+			false,
+			array( $this->fx['a2'] )
+		);
+
+		$this->assertSame( 1, $summary['matched'] );
+		$this->assertSame( 1, $summary['changed'] );
+		$this->assertSame( '1', get_post_meta( $this->fx['a2'], 'tix_attended', true ) );
+		$this->assertSame( '', get_post_meta( $this->fx['a3'], 'tix_attended', true ) );
+	}
 }

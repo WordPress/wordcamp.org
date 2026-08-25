@@ -168,4 +168,51 @@ class Test_Bulk_Ajax extends WP_Ajax_UnitTestCase {
 		$this->assertFalse( $response['success'] );
 		$this->assertSame( 'not_allowed', $response['data']['error'] );
 	}
+
+	/**
+	 * The on-screen list and the bulk query must match the same attendees.
+	 */
+	public function test_sync_list_and_query_attendee_ids_match() {
+		$this->_setRole( 'administrator' );
+
+		$ticket = self::factory()->post->create( array(
+			'post_type'   => 'tix_ticket',
+			'post_status' => 'publish',
+		) );
+
+		foreach ( array( 'Ada Lovelace', 'Grace Hopper', 'Alan Turing' ) as $name ) {
+			$attendee = self::factory()->post->create( array(
+				'post_type'   => 'tix_attendee',
+				'post_status' => 'publish',
+				'post_title'  => $name,
+			) );
+
+			update_post_meta( $attendee, 'tix_ticket_id', $ticket );
+		}
+
+		$filters = array(
+			'attendance' => 'none',
+			'tickets'    => array( $ticket ),
+		);
+
+		$_POST = $_REQUEST = array(
+			'action'          => 'camptix-attendance',
+			'camptix_secret'  => self::SECRET,
+			'camptix_action'  => 'sync-list',
+			'camptix_filters' => $filters,
+		);
+
+		$response = $this->dispatch();
+
+		$this->assertTrue( $response['success'] );
+
+		// _make_object() returns the attendee post ID under 'id'.
+		$listed = array_map( 'absint', wp_list_pluck( $response['data'], 'id' ) );
+		$bulk   = $this->addon->query_attendee_ids( $filters );
+
+		sort( $listed );
+		sort( $bulk );
+
+		$this->assertSame( $bulk, $listed, 'sync-list and query_attendee_ids disagree' );
+	}
 }

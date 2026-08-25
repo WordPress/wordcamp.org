@@ -550,35 +550,10 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * @return int[]
 	 */
 	public function query_attendee_ids( $filters, $search = '' ) {
-		$filters = wp_parse_args( (array) $filters, array(
-			'attendance' => 'none',
-			'tickets'    => array(),
-		) );
+		$attached = $this->attach_list_filters( $filters, $search );
 
-		$active_filters = array();
-
-		// Filter by attendance.
-		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) ) {
-			$active_filters[] = $this->_filter_query_attendance( $filters['attendance'] );
-		}
-
-		// Filter by ticket type.
-		$ticket_ids         = wp_list_pluck( $this->get_tickets(), 'ID' );
-		$filters['tickets'] = array_intersect( (array) $filters['tickets'], $ticket_ids );
-
-		if ( count( array_diff( $ticket_ids, $filters['tickets'] ) ) > 0 ) {
-			// No tickets selected.
-			if ( empty( $filters['tickets'] ) ) {
-				return array();
-			}
-
-			$active_filters[] = $this->_filter_query_tickets( $filters['tickets'] );
-		}
-
-		// Filter by search query.
-		$search = trim( (string) $search );
-		if ( ! empty( $search ) ) {
-			$active_filters[] = $this->_filter_query_search( $search );
+		if ( false === $attached ) {
+			return array();
 		}
 
 		$attendee_ids = get_posts( array(
@@ -589,13 +564,70 @@ class CampTix_Attendance extends CampTix_Addon {
 			'suppress_filters' => false,
 		) );
 
-		// The legacy list flow leaks its clauses for the rest of the request (one
-		// query per request, harmless); repeated calls here would stack them.
-		foreach ( $active_filters as $callback ) {
-			remove_filter( 'posts_clauses', $callback );
-		}
+		$this->detach_list_filters( $attached );
 
 		return array_map( 'absint', $attendee_ids );
+	}
+
+	/**
+	 * Attach the attendee-list filter clauses for this request.
+	 *
+	 * The single source of the matching semantics shared by the on-screen list
+	 * (_ajax_sync_list) and the bulk actions (query_attendee_ids) — a divergence
+	 * between the two would mean bulk-writing attendees the volunteer can't see.
+	 *
+	 * @param array  $filters Filter settings (attendance, tickets).
+	 * @param string $search  Search keyword.
+	 *
+	 * @return array|false Attached posts_clauses callbacks, or false when the
+	 *                     filters cannot match anything (no tickets selected).
+	 */
+	protected function attach_list_filters( $filters, $search = '' ) {
+		$filters = wp_parse_args( (array) $filters, array(
+			'attendance' => 'none',
+			'tickets'    => array(),
+		) );
+
+		$attached = array();
+
+		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ), true ) ) {
+			$attached[] = $this->_filter_query_attendance( $filters['attendance'] );
+		}
+
+		$ticket_ids         = wp_list_pluck( $this->get_tickets(), 'ID' );
+		$filters['tickets'] = array_intersect( (array) $filters['tickets'], $ticket_ids );
+
+		if ( count( array_diff( $ticket_ids, $filters['tickets'] ) ) > 0 ) {
+			if ( empty( $filters['tickets'] ) ) {
+				$this->detach_list_filters( $attached );
+
+				return false;
+			}
+
+			$attached[] = $this->_filter_query_tickets( $filters['tickets'] );
+		}
+
+		$search = trim( (string) $search );
+
+		if ( ! empty( $search ) ) {
+			$attached[] = $this->_filter_query_search( $search );
+		}
+
+		return $attached;
+	}
+
+	/**
+	 * Detach filter clauses attached by attach_list_filters().
+	 *
+	 * The legacy _filter_query_* methods leak their closures for the rest of the
+	 * request; anything running a second query must detach or get silently narrowed.
+	 *
+	 * @param array $attached Callbacks returned by attach_list_filters().
+	 */
+	protected function detach_list_filters( array $attached ) {
+		foreach ( $attached as $callback ) {
+			remove_filter( 'posts_clauses', $callback );
+		}
 	}
 
 	/**
@@ -636,13 +668,9 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * returns a batch back to Backbone.sync.
 	 */
 	public function _ajax_sync_list() {
-		global $wpdb;
-
 		$paged = 1;
 		if ( ! empty( $_REQUEST['camptix_paged'] ) )
 			$paged = absint( $_REQUEST['camptix_paged'] );
-
-		$ticket_ids = wp_list_pluck( $this->get_tickets(), 'ID' );
 
 		$query_args = array(
 			'post_type'      => 'tix_attendee',
@@ -687,27 +715,17 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		$filters['search'] = ! empty( $_REQUEST['camptix_search'] ) ? trim( $_REQUEST['camptix_search'] ) : '';
 
-		// Filter by attendance.
-		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) )
-			$this->_filter_query_attendance( $filters['attendance'] );
+		$attached = $this->attach_list_filters( $filters, $filters['search'] );
 
-		// Filter by ticket type.
-		$filters['tickets'] = array_intersect( $filters['tickets'], $ticket_ids );
-		if ( count( array_diff( $ticket_ids, $filters['tickets'] ) ) > 0 ) {
-
-			// No tickets selected.
-			if ( empty( $filters['tickets'] ) )
-				return wp_send_json_success( array() );
-
-			$this->_filter_query_tickets( $filters['tickets'] );
+		if ( false === $attached ) {
+			// No tickets selected — same "match nothing" rule the bulk query uses.
+			return wp_send_json_success( array() );
 		}
 
-		// Filter by search query.
-		if ( ! empty( $filters['search'] ) )
-			$this->_filter_query_search( $filters['search'] );
-
 		$query_args['suppress_filters'] = false;
-		$attendees = get_posts( $query_args );
+		$attendees                      = get_posts( $query_args );
+
+		$this->detach_list_filters( $attached );
 
 		$output = array();
 		foreach ( $attendees as $attendee ) {

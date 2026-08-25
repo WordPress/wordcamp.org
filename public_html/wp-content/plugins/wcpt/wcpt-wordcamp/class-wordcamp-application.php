@@ -190,9 +190,7 @@ class WordCamp_Application extends Event_Application {
 	 */
 	public function create_post( $data ) {
 		// `submit_application()` only reaches this method for a logged-in submitter, so the
-		// application is owned by the account that is submitting it. The WordPress.org
-		// username field is descriptive data for the Community Team (stored as meta below),
-		// not a claim of ownership.
+		// application is owned by that account. The username field is stored as meta below.
 		$author_id = get_current_user_id();
 		$statues   = \WordCamp_Loader::get_post_statuses();
 		$countries = wcorg_get_countries();

@@ -47,10 +47,11 @@ interaction, cross-plugin capability leaks, exploratory checks):
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, per-event messaging, the
   auto-publish-notification email, and the member directory. Needs
-  `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
+  `organiser1`/`organiser2`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
   `eventorganiser4`/`eventorganiser5`/`member1` (all `password`) — **every
   individual test that logs in as an author has its own dedicated
-  `eventorganiser*` account, not just every spec *file*.**
+  `eventorganiser*` account, not just every spec *file*.** `organiser2`
+  (editor tier) is `event-form.spec.js`'s own, for the same reason.
   `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
   its own three tests also run concurrently against each other under
   `fullyParallel`, not just against other files. Don't consolidate any of

@@ -128,21 +128,28 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `mu-plugins/wporg-groups-frontend/inc/notifications.php`) bypasses
   WP-Cron for this entirely: it calls
   `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
-  directly and synchronously from `transition_post_status`, the same
-  method GatherPress's own `gatherpress_send_emails` cron handler and its
-  "Message all members" REST action both call — trading a brief
-  publish-request delay (already true of GatherPress's own dispatch once
-  cron picks it up) for eliminating the race category outright. **Going
-  synchronous has a real blast radius beyond the notification feature
-  itself**: since `transition_post_status` now runs this on *every*
-  `gatherpress_event` publish, any PHPUnit test that publishes one — not
-  just tests about notifications — started executing real email-template
-  rendering, which needs runtime (theme template functions, etc.) most
-  test bootstraps don't load. `Groups_TestCase::setUp()` now removes this
-  action for every test by default; `Test_Groups_Notifications` is the one
-  class that re-adds it, for its own coverage. Keep this in mind before
-  converting any other deferred-to-cron integration point to a synchronous
-  call — check whether other tests publish through the same hook first.
+  directly and synchronously, the same method GatherPress's own
+  `gatherpress_send_emails` cron handler and its "Message all members"
+  REST action both call — trading a brief publish-request delay (already
+  true of GatherPress's own dispatch once cron picks it up) for
+  eliminating the race category outright. The send is deferred *within*
+  the request, though: `transition_post_status` fires inside
+  `wp_insert_post()` before the event's datetimes/venue are written
+  (sending there produced "Date: —" emails), so the hook only queues the
+  event and `send_pending_new_event_notifications()` sends at `shutdown`
+  priority `PHP_INT_MAX` — after GatherPress's own default-priority
+  shutdown datetime resolver. **Going synchronous has a real blast radius
+  beyond the notification feature itself**: since `transition_post_status`
+  now runs on *every* `gatherpress_event` publish, any PHPUnit test that
+  publishes one — not just tests about notifications — would execute real
+  email-template rendering when the queue drains, which needs runtime
+  (theme template functions, etc.) most test bootstraps don't load.
+  `Groups_TestCase::setUp()` removes this action for every test by
+  default; `Test_Groups_Notifications` is the one class that re-adds it
+  (and drains the queue explicitly), for its own coverage. Keep this in
+  mind before converting any other deferred-to-cron integration point to
+  a synchronous call — check whether other tests publish through the same
+  hook first.
 
 If either automated suite fails, stop and fix that before doing the manual
 pass below — don't duplicate debugging effort across layers.

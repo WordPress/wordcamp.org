@@ -97,13 +97,13 @@ function scope_opt_in_write_to_current_group( $check, int $object_id, string $me
 }
 
 /**
- * Send GatherPress's existing all-members email when an event is first published.
+ * Queue the all-members email when an event is first published.
  *
- * This intentionally delegates recipient resolution, per-user opt-in checks,
- * email rendering, and delivery to GatherPress's own `Rest_Api::send_emails()`
- * (the same method its "Message all members" REST action and its
- * `gatherpress_send_emails` cron handler both call). An already-published
- * event does not send another message when it is edited.
+ * Only records the event: `transition_post_status` fires inside
+ * `wp_insert_post()`, before the event's datetimes/venue/image are written,
+ * so sending here would render an email without them. The send happens on
+ * late `shutdown`. An already-published event does not queue another message
+ * when it is edited.
  *
  * @param string   $new_status New post status.
  * @param string   $old_status Previous post status.
@@ -119,6 +119,46 @@ function schedule_new_event_notification( string $new_status, string $old_status
 		return;
 	}
 
+	pending_notification_queue( $post->ID );
+	add_action( 'shutdown', __NAMESPACE__ . '\send_pending_new_event_notifications', PHP_INT_MAX );
+}
+
+/**
+ * Request-static queue of event IDs awaiting their first-publish notification.
+ *
+ * @param int|null $enqueue_id Event ID to add, if any.
+ * @param bool     $drain      When true, empty the queue and return what it held.
+ * @return int[]
+ */
+function pending_notification_queue( ?int $enqueue_id = null, bool $drain = false ): array {
+	static $pending = array();
+
+	if ( null !== $enqueue_id ) {
+		$pending[ $enqueue_id ] = $enqueue_id;
+	}
+
+	$queued = array_values( $pending );
+
+	if ( $drain ) {
+		$pending = array();
+	}
+
+	return $queued;
+}
+
+/**
+ * Send the queued first-publish notifications.
+ *
+ * This intentionally delegates recipient resolution, per-user opt-in checks,
+ * email rendering, and delivery to GatherPress's own `Rest_Api::send_emails()`
+ * (the same method its "Message all members" REST action and its
+ * `gatherpress_send_emails` cron handler both call).
+ *
+ * Runs at PHP_INT_MAX because GatherPress resolves wp-admin datetime meta in
+ * its own default-priority `shutdown` callback, and the email must render
+ * after that.
+ */
+function send_pending_new_event_notifications(): void {
 	// `all => true` reuses GatherPress's existing "Message all members"
 	// path (`Rest_Api::get_recipients()`), which resolves recipients via
 	// an unbatched `get_users()` and emails each one synchronously in the
@@ -133,35 +173,54 @@ function schedule_new_event_notification( string $new_status, string $old_status
 		'not_attending' => false,
 	);
 
-	// Deliberately not `wp_schedule_single_event() + gatherpress_send_emails`
-	// (GatherPress's own dispatch path for this): that hands off through
-	// WordPress core's single-option cron store, and every
-	// `wp_schedule_single_event()` call anywhere on the site does an
-	// unsynchronized read-modify-write of that same option -- two events
-	// publishing close together (plausible in real usage, and something
-	// this repo's own E2E suite reliably triggers under parallel test
-	// execution) can silently clobber each other's job at any point up
-	// until wp-cron actually gets around to running it, with no error
-	// anywhere. A bounded retry around the scheduling call alone can't
-	// close this, since the vulnerable window is "until cron executes
-	// it", not "until scheduling is confirmed". Calling the same handler
-	// GatherPress's own cron action would have called, directly and
-	// synchronously, sidesteps that store entirely -- at the cost of the
-	// publish request blocking briefly on sending mail, which is already
-	// true of GatherPress's own "Message all members" action once cron
-	// picks it up.
-	$sent = \GatherPress\Core\Event\Rest_Api::get_instance()->send_emails( $post->ID, $recipients, '' );
+	foreach ( pending_notification_queue( null, true ) as $event_id ) {
+		if ( 'publish' !== get_post_status( $event_id ) ) {
+			continue;
+		}
 
-	if ( $sent ) {
-		update_post_meta( $post->ID, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
-		return;
+		$datetime = ( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime();
+
+		if ( empty( $datetime['datetime_start_gmt'] ) ) {
+			trigger_error(
+				sprintf(
+					'Skipped the publish notification for event %d -- it has no start datetime. Members were not notified.',
+					$event_id // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+				),
+				E_USER_WARNING
+			);
+			continue;
+		}
+
+		// Deliberately not `wp_schedule_single_event() + gatherpress_send_emails`
+		// (GatherPress's own dispatch path for this): that hands off through
+		// WordPress core's single-option cron store, and every
+		// `wp_schedule_single_event()` call anywhere on the site does an
+		// unsynchronized read-modify-write of that same option -- two events
+		// publishing close together (plausible in real usage, and something
+		// this repo's own E2E suite reliably triggers under parallel test
+		// execution) can silently clobber each other's job at any point up
+		// until wp-cron actually gets around to running it, with no error
+		// anywhere. A bounded retry around the scheduling call alone can't
+		// close this, since the vulnerable window is "until cron executes
+		// it", not "until scheduling is confirmed". Calling the same handler
+		// GatherPress's own cron action would have called, directly and
+		// synchronously, sidesteps that store entirely -- at the cost of the
+		// publish request blocking briefly on sending mail, which is already
+		// true of GatherPress's own "Message all members" action once cron
+		// picks it up.
+		$sent = \GatherPress\Core\Event\Rest_Api::get_instance()->send_emails( $event_id, $recipients, '' );
+
+		if ( $sent ) {
+			update_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
+			continue;
+		}
+
+		trigger_error(
+			sprintf(
+				'Failed to send the publish notification for event %d -- `Rest_Api::send_emails()` returned false. Members were not notified.',
+				$event_id // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+			),
+			E_USER_WARNING
+		);
 	}
-
-	trigger_error(
-		sprintf(
-			'Failed to send the publish notification for event %d -- `Rest_Api::send_emails()` returned false. Members were not notified.',
-			$post->ID // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
-		),
-		E_USER_WARNING
-	);
 }

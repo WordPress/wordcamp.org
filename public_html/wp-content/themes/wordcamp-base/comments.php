@@ -15,7 +15,7 @@
 
 			<div id="comments">
 <?php if ( post_password_required() ) : ?>
-				<p class="nopassword"><?php _e( 'This post is password protected. Enter the password to view any comments.', 'wordcamporg' ); ?></p>
+				<p class="nopassword"><?php esc_html_e( 'This post is password protected. Enter the password to view any comments.', 'wordcamporg' ); ?></p>
 			</div><!-- #comments -->
 	<?php
 		/*
@@ -60,8 +60,8 @@
 
 	<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // Are there comments to navigate through? ?>
 			<div class="navigation">
-				<div class="nav-previous"><?php previous_comments_link( __( '<span class="meta-nav">&larr;</span> Older Comments', 'wordcamporg' ) ); ?></div>
-				<div class="nav-next"><?php next_comments_link( __( 'Newer Comments <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?></div>
+				<div class="nav-previous"><?php previous_comments_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+				<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?></div>
 			</div> <!-- .navigation -->
 	<?php endif; // check for comment navigation ?>
 
@@ -80,8 +80,8 @@
 
 	<?php if ( get_comment_pages_count() > 1 && get_option( 'page_comments' ) ) : // Are there comments to navigate through? ?>
 			<div class="navigation">
-				<div class="nav-previous"><?php previous_comments_link( __( '<span class="meta-nav">&larr;</span> Older Comments', 'wordcamporg' ) ); ?></div>
-				<div class="nav-next"><?php next_comments_link( __( 'Newer Comments <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?></div>
+				<div class="nav-previous"><?php previous_comments_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older Comments', 'wordcamporg' ) ); ?></div>
+				<div class="nav-next"><?php next_comments_link( esc_html__( 'Newer Comments', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?></div>
 			</div><!-- .navigation -->
 	<?php endif; // check for comment navigation ?>
 
@@ -93,7 +93,7 @@
 	 */
 	if ( ! comments_open() ) :
 		?>
-	<p class="nocomments"><?php _e( 'Comments are closed.', 'wordcamporg' ); ?></p>
+	<p class="nocomments"><?php esc_html_e( 'Comments are closed.', 'wordcamporg' ); ?></p>
 <?php endif; // end ! comments_open() ?>
 
 <?php endif; // end have_comments() ?>

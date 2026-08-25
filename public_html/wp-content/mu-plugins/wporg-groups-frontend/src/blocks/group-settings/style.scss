@@ -449,6 +449,60 @@
 	}
 }
 
+// === Ownership transfer panel (inside Members tab) ===
+
+.wporg-ownership-transfer {
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #e0e0e0;
+
+	&__status {
+		margin-bottom: 12px;
+	}
+
+	&__actions {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	&__form {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		max-width: 400px;
+	}
+
+	&__history {
+		margin-top: 12px;
+		font-size: 13px;
+		color: #656a71;
+
+		summary {
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		ul {
+			margin: 8px 0 0;
+			padding-left: 20px;
+		}
+
+		/*
+		 * stylelint can't resolve `&__history` back to a class, so it compares
+		 * this rule's bare `li` against the venue editor's
+		 * `.wporg-groups-venue-editor__suggestions li` and calls it descending
+		 * specificity. The two selectors can never match the same element --
+		 * different components, neither nested in the other -- so there is no
+		 * cascade to get wrong here.
+		 */
+		/* stylelint-disable-next-line no-descending-specificity */
+		li {
+			margin-bottom: 4px;
+		}
+	}
+}
+
 /* === Registration questions ===
    The editor component is shared with the event-manage modal, so these mirror
    the rules in `event-manage/style.css` — the two blocks load separate

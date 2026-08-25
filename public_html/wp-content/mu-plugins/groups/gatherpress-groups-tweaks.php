@@ -68,21 +68,27 @@ function get_event_venue_post_id( int $event_id ): int {
  * Disable the "Show Timezone" GatherPress setting so event date blocks
  * never append "GMT+0000" or similar suffixes.
  *
- * Also disable anonymous RSVP at the global setting level.
+ * Also disable anonymous RSVP and Open RSVP at the global setting level.
+ *
+ * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
+ * so the forced keys overlay the stored settings (or defaults when unset)
+ * instead of replacing them.
  */
-add_filter(
-	'pre_option_gatherpress_settings',
-	static function ( $value ) {
-		if ( ! is_array( $value ) ) {
-			$value = array();
-		}
-
-		$value['show_timezone']        = 0;
-		$value['enable_anonymous_rsvp'] = 0;
-
-		return $value;
+$force_gatherpress_settings = static function ( $value ) {
+	if ( ! is_array( $value ) ) {
+		$value = array();
 	}
-);
+
+	$value['show_timezone']         = 0;
+	$value['enable_anonymous_rsvp'] = 0;
+	$value['enable_open_rsvp']      = 0;
+
+	return $value;
+};
+add_filter( 'option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'default_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'site_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'default_site_option_gatherpress_settings', $force_gatherpress_settings );
 
 /**
  * Force anonymous RSVP off for all events on group sites.
@@ -255,24 +261,58 @@ add_filter(
 	static function (): array {
 		$current = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
 
-		$selected = array();
-		if ( $current && 'upcoming' !== $current ) {
-			$selected[] = $current;
+		$options = array(
+			'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
+			'past'     => __( 'Past', 'wporg-groups-frontend' ),
+			'all'      => __( 'All events', 'wporg-groups-frontend' ),
+		);
+
+		if ( ! isset( $options[ $current ] ) ) {
+			$current = 'upcoming';
+		}
+
+		$selected = array( $current );
+		$label    = __( 'Time', 'wporg-groups-frontend' );
+		if ( 'upcoming' !== $current ) {
+
+			// Single-select filters hide the wporg count badge, so carry the
+			// applied choice in the toggle text itself.
+			$label = sprintf(
+				/* translators: %s: the selected time filter, e.g. "Past". */
+				__( 'Time: %s', 'wporg-groups-frontend' ),
+				$options[ $current ]
+			);
 		}
 
 		return array(
-			'label'    => __( 'Time', 'wporg-groups-frontend' ),
+			'label'    => $label,
 			'title'    => __( 'Filter by time', 'wporg-groups-frontend' ),
 			'key'      => 'event_time',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
-			'options'  => array(
-				'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
-				'past'     => __( 'Past', 'wporg-groups-frontend' ),
-				'all'      => __( 'All events', 'wporg-groups-frontend' ),
-			),
+			'options'  => $options,
 			'selected' => $selected,
 		);
 	}
+);
+
+/**
+ * Label the archive's result count in the query's own terms.
+ *
+ * The wporg/query-total block defaults to "N items"; on a page whose only
+ * content is events, that generic label reads like lorem ipsum.
+ */
+add_filter(
+	'wporg_query_total_label',
+	static function ( string $label, int $found_posts, \WP_Block $block ): string {
+		if ( 'gatherpress_event' !== ( $block->context['query']['postType'] ?? '' ) ) {
+			return $label;
+		}
+
+		/* translators: %s: the number of events found. */
+		return _n( '%s event', '%s events', $found_posts, 'wporg-groups-frontend' );
+	},
+	10,
+	3
 );
 
 /**

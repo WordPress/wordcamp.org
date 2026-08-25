@@ -26,6 +26,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Indian Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/campt-indian-payment-gateway/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/
@@ -65,6 +71,12 @@
 		<testsuite name="WordCamp Coming Soon Page">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-coming-soon-page/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Forms to Drafts">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-forms-to-drafts/tests/
 			</directory>
 		</testsuite>
 

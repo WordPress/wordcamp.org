@@ -16,7 +16,14 @@
 
 	<div class="entry-content">
 		<?php the_content(); ?>
-		<?php wp_link_pages( array( 'before' => '<div class="page-links">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+		<?php
+		wp_link_pages(
+			array(
+				'before' => '<div class="page-links">' . esc_html__( 'Pages:', 'wordcamporg' ),
+				'after'  => '</div>',
+			)
+		);
+		?>
 	</div><!-- .entry-content -->
 
 	<footer class="entry-meta">
@@ -45,15 +52,21 @@
 
 			} // end check for categories on this blog
 
-			printf(
-				$meta_text,
-				$category_list,
-				$tag_list,
-				get_permalink(),
-				the_title_attribute( 'echo=0' )
+			/*
+			 * The strings above carry an anchor the translator has to keep and reposition, so
+			 * kses filters the composed sentence -- it keeps the link and drops anything else.
+			 */
+			echo wp_kses_post(
+				sprintf(
+					$meta_text,
+					$category_list,
+					$tag_list,
+					esc_url( get_permalink() ),
+					the_title_attribute( 'echo=0' )
+				)
 			);
 		?>
 
-		<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
+		<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
 	</footer><!-- .entry-meta -->
 </article><!-- #post-<?php the_ID(); ?> -->

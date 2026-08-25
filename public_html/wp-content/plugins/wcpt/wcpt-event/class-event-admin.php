@@ -504,10 +504,14 @@ abstract class Event_Admin {
 			}
 		}
 
-		// Save the Event Subtype.
+		// Save the Event Subtype. Only a key of the known list, so the read side has
+		// something it can filter and label.
 		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
 			$event_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) );
-			update_post_meta( $post_id, 'event_subtype', $event_subtype );
+
+			if ( array_key_exists( $event_subtype, $this->get_event_subtypes() ) ) {
+				update_post_meta( $post_id, 'event_subtype', $event_subtype );
+			}
 		}
 
 		$meta_keys        = $this->meta_keys();

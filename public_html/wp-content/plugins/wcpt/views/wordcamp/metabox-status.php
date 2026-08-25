@@ -29,6 +29,12 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 							<span id="post-status-display">
 							<select name="event_subtype">
 								<?php
+								// If the stored subtype is not in the list, add it so saving never
+								// silently mutates it, the same as the status dropdown below.
+								if ( $event_subtype && ! array_key_exists( $event_subtype, $event_subtypes ) ) {
+									$event_subtypes[ $event_subtype ] = $event_subtype;
+								}
+
 								foreach ( $event_subtypes as $key => $event_subtype_label ) {
 									printf(
 										'<option %s value="%s">%s</option>',
@@ -44,7 +50,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 						<?php else : ?>
 
 							<span id="post-status-display">
-							<?php echo esc_html( $event_subtypes[ $event_subtype ] ); ?>
+							<?php echo esc_html( $event_subtypes[ $event_subtype ] ?? $event_subtype ); ?>
 						</span>
 
 						<?php endif; ?>

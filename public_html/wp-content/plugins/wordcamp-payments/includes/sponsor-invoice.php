@@ -436,6 +436,24 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 		$post_data['post_status'] = 'wcbsi_submitted';
 	}
 
+	/*
+	 * Statuses past submission (approval, payment, etc.) are reserved for network admins. For everyone
+	 * else, keep the status within the set a requester can set, defaulting to draft.
+	 *
+	 * Keyed on the stored status, so this only applies while the invoice is still requester-editable
+	 * (draft). Status changes made once it's further along, and the initial insert of a new invoice, are
+	 * left as-is.
+	 */
+	if ( ! current_user_can( 'manage_network' ) ) {
+		$requester_editable_statuses = array( 'auto-draft', 'draft' );
+		$requester_statuses          = array( 'auto-draft', 'draft', 'wcbsi_submitted' );
+		$stored_status               = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+
+		if ( in_array( $stored_status, $requester_editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
+			$post_data['post_status'] = 'draft';
+		}
+	}
+
 	return $post_data;
 }
 

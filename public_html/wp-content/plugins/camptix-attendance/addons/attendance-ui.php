@@ -24,6 +24,9 @@ $camptix_options = $camptix->get_options();
 	<script>
 		_camptixAttendanceSecret = '<?php echo esc_js( $_GET['camptix-attendance'] ); ?>';
 		_camptixAttendanceTickets = [ <?php echo esc_js( implode( ', ', array_map( 'absint', wp_list_pluck( $camptix_tickets, 'ID' ) ) ) ); ?> ];
+		// Session-bound CSRF token for bulk actions; only useful when the viewer
+		// is a logged-in organizer (the bulk endpoint requires that anyway).
+		_camptixAttendanceBulkNonce = '<?php echo esc_js( wp_create_nonce( 'camptix-attendance-bulk' ) ); ?>';
 	</script>
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
@@ -123,6 +126,37 @@ $camptix_options = $camptix->get_options();
 				<li data-ticket-id="<?php echo absint( $ticket->ID ); ?>" <# if ( _.contains( data.tickets, <?php echo absint( $ticket->ID ); ?> ) ) { #> class="selected" <# } #> ><?php echo esc_html( $ticket->post_title ); ?></li>
 				<?php endforeach; ?>
 			</ul>
+
+			<h1 class="section-title">Bulk (organizers)</h1>
+			<ul class="filter-bulk section-controls">
+				<li data-attending="true">Mark all matching as attended</li>
+				<li data-attending="false">Mark all matching as did not attend</li>
+			</ul>
 		</div>
+	</script>
+
+	<script id="tmpl-attendee-bulk-confirm" type="text/template">
+		<p class="bulk-confirm-message">
+			<# if ( 'count_mismatch' == data.error ) { #>
+				The list changed while you were confirming (now {{ data.count }} matching). Please try again.
+			<# } else if ( 'not_allowed' == data.error ) { #>
+				Bulk actions require an organizer login on this device.
+			<# } else if ( 'bad_nonce' == data.error ) { #>
+				Your session expired. Please reload this page and try again.
+			<# } else if ( data.attending ) { #>
+				Mark <strong>{{ data.count }}</strong> matching attendee<# if ( 1 != data.count ) { #>s<# } #> as <strong>attended</strong>?
+			<# } else { #>
+				Mark <strong>{{ data.count }}</strong> matching attendee<# if ( 1 != data.count ) { #>s<# } #> as <strong>did not attend</strong>?
+			<# } #>
+		</p>
+
+		<div class="yes-no-container">
+			<# if ( ! data.error ) { #>
+				<a href="#" class="yes">Yes</a>
+			<# } #>
+			<a href="#" class="no">Cancel</a>
+		</div>
+
+		<a href="#" class="close dashicons dashicons-no"></a>
 	</script>
 </body>

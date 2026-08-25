@@ -22,6 +22,14 @@ class CampTix_Attendance extends CampTix_Addon {
 			add_filter( 'camptix_validate_options', array( $this, 'validate_options' ), 10, 2 );
 		}
 
+		// Attendance file import under Tickets → Tools. Available regardless of
+		// whether the front-end Attendance UI / secret link is enabled — importing
+		// after the event mustn't require turning the live UI on.
+		if ( current_user_can( $camptix->caps['manage_attendees'] ) ) {
+			add_filter( 'camptix_menu_tools_tabs', array( $this, 'add_import_tools_tab' ) );
+			add_action( 'camptix_menu_tools_attendance-import', array( $this, 'render_import_tools_tab' ) );
+		}
+
 		$camptix_options = $camptix->get_options();
 		if ( empty( $camptix_options['attendance-secret'] ) )
 			return;
@@ -88,7 +96,506 @@ class CampTix_Attendance extends CampTix_Addon {
 			return $this->_ajax_sync_model();
 		} elseif ( 'sync-list' == $action ) {
 			return $this->_ajax_sync_list();
+		} elseif ( 'sync-bulk' == $action ) {
+			return $this->_ajax_sync_bulk();
 		}
+	}
+
+	/**
+	 * Bulk-set attendance for every attendee matching the current filters.
+	 *
+	 * Unlike the per-tap flow, bulk writes are gated to logged-in users with the
+	 * manage_attendees capability by default (the secret link alone shouldn't be
+	 * able to rewrite the whole event). Disable via the filter at your own risk.
+	 */
+	public function _ajax_sync_bulk() {
+		global $camptix;
+
+		if ( apply_filters( 'camptix_attendance_bulk_require_cap', true )
+			&& ! current_user_can( $camptix->caps['manage_attendees'] )
+		) {
+			return wp_send_json_error( array( 'error' => 'not_allowed' ) );
+		}
+
+		// CSRF guard: the capability alone isn't enough — auth cookies ride along
+		// on cross-site top-level GETs (SameSite=Lax), so a logged-in organizer
+		// clicking a crafted link could otherwise trigger a mass write.
+		if ( ! wp_verify_nonce( $_REQUEST['camptix_bulk_nonce'] ?? '', 'camptix-attendance-bulk' ) ) {
+			return wp_send_json_error( array( 'error' => 'bad_nonce' ) );
+		}
+
+		$filters   = isset( $_REQUEST['camptix_filters'] ) ? (array) $_REQUEST['camptix_filters'] : array();
+		$search    = isset( $_REQUEST['camptix_search'] ) ? trim( $_REQUEST['camptix_search'] ) : '';
+		$attending = ! empty( $_REQUEST['camptix_set_attendance'] ) && 'true' == $_REQUEST['camptix_set_attendance'];
+		$dry_run   = ! empty( $_REQUEST['camptix_dry_run'] );
+
+		// Two-phase guard: the count the user confirmed must still match the live
+		// set, so a filter change or new registrations between the preview and the
+		// confirmation can't silently widen the write.
+		if ( ! $dry_run && isset( $_REQUEST['camptix_expected_count'] ) ) {
+			$actual = count( $this->query_attendee_ids( $filters, $search ) );
+
+			if ( absint( $_REQUEST['camptix_expected_count'] ) !== $actual ) {
+				return wp_send_json_error( array(
+					'error'  => 'count_mismatch',
+					'actual' => $actual,
+				) );
+			}
+		}
+
+		return wp_send_json_success( $this->bulk_set_attendance( $filters, $search, $attending, $dry_run ) );
+	}
+
+	/**
+	 * Set or unset attendance for every attendee matching the filters.
+	 *
+	 * @param array  $filters   Filter settings (attendance, tickets), as sent by the UI.
+	 * @param string $search    Search keyword.
+	 * @param bool   $attending True to mark attended, false to unmark.
+	 * @param bool   $dry_run   If true, only count the matching set.
+	 *
+	 * @return array { matched, changed, attending, dry_run }
+	 */
+	public function bulk_set_attendance( $filters, $search, $attending, $dry_run = false ) {
+		global $camptix;
+
+		$ids     = $this->query_attendee_ids( $filters, $search );
+		$summary = array(
+			'matched'   => count( $ids ),
+			'changed'   => 0,
+			'attending' => (bool) $attending,
+			'dry_run'   => (bool) $dry_run,
+		);
+
+		if ( $dry_run ) {
+			return $summary;
+		}
+
+		$summary['changed'] = $this->set_attendance_for_ids( $ids, $attending, 'bulk' );
+
+		return $summary;
+	}
+
+	/**
+	 * The shared write core: set or unset attendance for a list of attendee IDs.
+	 *
+	 * Only writes when the state actually changes, keeps the running stat in
+	 * sync, and logs each change for the audit trail.
+	 *
+	 * @param int[]  $ids       Attendee post IDs.
+	 * @param bool   $attending True to mark attended, false to unmark.
+	 * @param string $source    Short label for the log entries ('bulk', 'import').
+	 *
+	 * @return int Number of attendees actually changed.
+	 */
+	public function set_attendance_for_ids( array $ids, $attending, $source = 'bulk' ) {
+		global $camptix;
+
+		$changed = 0;
+		$source  = sanitize_key( $source );
+
+		// Mass actions are organizer actions with a real session — record the
+		// actor so a wrong-direction bulk/import is attributable in the log.
+		$actor   = wp_get_current_user();
+		$context = $actor->exists() ? "$source by {$actor->user_login}" : $source;
+
+		foreach ( $ids as $attendee_id ) {
+			$attendee_id  = absint( $attendee_id );
+			$is_attending = (bool) get_post_meta( $attendee_id, 'tix_attended', true );
+
+			if ( $is_attending === (bool) $attending ) {
+				continue;
+			}
+
+			if ( $attending ) {
+				update_post_meta( $attendee_id, 'tix_attended', true );
+				$camptix->increment_stats( 'attended', 1 );
+				$this->log( "Marked attendee as attended ($context).", $attendee_id );
+			} else {
+				delete_post_meta( $attendee_id, 'tix_attended' );
+				$camptix->increment_stats( 'attended', -1 );
+				$this->log( "Marked attendee as did not attend ($context).", $attendee_id );
+			}
+
+			$changed++;
+		}
+
+		return $changed;
+	}
+
+	/**
+	 * Add the Attendance Import tab to Tickets → Tools.
+	 *
+	 * @param array $sections
+	 *
+	 * @return array
+	 */
+	public function add_import_tools_tab( $sections ) {
+		$sections['attendance-import'] = __( 'Attendance Import', 'wordcamporg' );
+
+		return $sections;
+	}
+
+	/**
+	 * Render (and handle) the Attendance Import tools tab.
+	 *
+	 * Three states: the upload form; the preview of a parsed file (stored in a
+	 * short-lived user-keyed transient, so the file itself is read once and
+	 * discarded); and the result summary after applying.
+	 */
+	public function render_import_tools_tab() {
+		global $camptix;
+
+		if ( ! current_user_can( $camptix->caps['manage_attendees'] ) ) {
+			return;
+		}
+
+		$transient_key = 'tix_attendance_import_' . get_current_user_id();
+
+		// Step 3: apply a previously previewed plan.
+		if ( isset( $_POST['tix_attendance_import_apply'] )
+			&& wp_verify_nonce( $_POST['tix_attendance_import_nonce'] ?? '', 'tix-attendance-import-apply' )
+		) {
+			$plan = get_transient( $transient_key );
+			delete_transient( $transient_key );
+
+			if ( ! is_array( $plan ) ) {
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'The preview expired. Please upload the file again.', 'wordcamporg' ) . '</p></div>';
+			} elseif ( ! hash_equals( $plan['token'], (string) ( $_POST['tix_attendance_import_token'] ?? '' ) ) ) {
+				// A newer upload replaced this preview (e.g. another tab) — don't
+				// apply a plan the user isn't looking at.
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'This preview was replaced by a newer upload. Please review the latest preview and apply again.', 'wordcamporg' ) . '</p></div>';
+			} else {
+				$marked   = $this->set_attendance_for_ids( $plan['set'], true, 'import' );
+				$unmarked = $this->set_attendance_for_ids( $plan['unset'], false, 'import' );
+
+				printf(
+					'<div class="notice notice-success"><p>%s</p></div>',
+					esc_html( sprintf(
+						__( 'Import applied: %1$d marked attended, %2$d marked did-not-attend, %3$d already correct.', 'wordcamporg' ),
+						$marked,
+						$unmarked,
+						count( $plan['set'] ) + count( $plan['unset'] ) - $marked - $unmarked
+					) )
+				);
+			}
+
+			$this->render_import_form();
+
+			return;
+		}
+
+		// Step 2: parse an uploaded file and preview the plan.
+		if ( isset( $_FILES['tix_attendance_import_file'] )
+			&& wp_verify_nonce( $_POST['tix_attendance_import_nonce'] ?? '', 'tix-attendance-import-upload' )
+		) {
+			$file = $_FILES['tix_attendance_import_file'];
+
+			if ( ! empty( $file['error'] ) || empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'The upload failed. Please try again.', 'wordcamporg' ) . '</p></div>';
+				$this->render_import_form();
+
+				return;
+			}
+
+			$rows = $this->parse_attendance_csv( $file['tmp_name'] );
+
+			if ( is_wp_error( $rows ) ) {
+				echo '<div class="notice notice-error"><p>' . esc_html( $rows->get_error_message() ) . '</p></div>';
+				$this->render_import_form();
+
+				return;
+			}
+
+			$plan = $this->resolve_attendance_rows( $rows );
+
+			set_transient( $transient_key, $plan, 15 * MINUTE_IN_SECONDS );
+
+			$this->render_import_preview( $plan );
+
+			return;
+		}
+
+		// Step 1: the upload form.
+		$this->render_import_form();
+	}
+
+	/**
+	 * The upload form for the import tab.
+	 */
+	protected function render_import_form() {
+		?>
+		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( add_query_arg( 'tix_section', 'attendance-import' ) ); ?>">
+			<?php wp_nonce_field( 'tix-attendance-import-upload', 'tix_attendance_import_nonce' ); ?>
+
+			<p><?php esc_html_e( 'Upload a CSV of attendees to set their attendance in bulk — e.g. a badge-scanner export, a sign-in sheet, or an edited copy of the attendee Export.', 'wordcamporg' ); ?></p>
+
+			<ul style="list-style: disc; margin-left: 2em;">
+				<li><?php esc_html_e( 'The file needs a header row with an "id" or "email" column (or both — id wins).', 'wordcamporg' ); ?></li>
+				<li><?php esc_html_e( 'An optional "attended" column (yes/no) sets the direction per row; without it, every row is marked attended.', 'wordcamporg' ); ?></li>
+				<li><?php esc_html_e( 'Nothing is written until you confirm a preview of the changes.', 'wordcamporg' ); ?></li>
+			</ul>
+
+			<p>
+				<input type="file" name="tix_attendance_import_file" accept=".csv,text/csv" required />
+			</p>
+
+			<?php submit_button( __( 'Preview Import', 'wordcamporg' ), 'primary', 'tix_attendance_import_preview' ); ?>
+		</form>
+		<?php
+	}
+
+	/**
+	 * The preview screen: what the uploaded file will change.
+	 *
+	 * @param array $plan The resolved plan from resolve_attendance_rows().
+	 */
+	protected function render_import_preview( $plan ) {
+		?>
+		<h3><?php esc_html_e( 'Import Preview', 'wordcamporg' ); ?></h3>
+
+		<table class="widefat striped" style="max-width: 500px;">
+			<tbody>
+			<tr>
+				<td><?php esc_html_e( 'Rows in file', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( $plan['total_rows'] ); ?></td>
+			</tr>
+			<tr>
+				<td><?php esc_html_e( 'Will be marked attended', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( count( $plan['set'] ) ); ?></td>
+			</tr>
+			<tr>
+				<td><?php esc_html_e( 'Will be marked did-not-attend', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( count( $plan['unset'] ) ); ?></td>
+			</tr>
+			<tr>
+				<td><?php esc_html_e( 'Unmatched rows (will be skipped)', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( count( $plan['unmatched'] ) ); ?></td>
+			</tr>
+			</tbody>
+		</table>
+
+		<?php if ( ! empty( $plan['unmatched'] ) ) : ?>
+			<p><strong><?php esc_html_e( 'Unmatched rows:', 'wordcamporg' ); ?></strong></p>
+			<ul style="list-style: disc; margin-left: 2em;">
+				<?php foreach ( array_slice( $plan['unmatched'], 0, 20 ) as $unmatched ) : ?>
+					<li><code><?php echo esc_html( $unmatched ); ?></code></li>
+				<?php endforeach; ?>
+				<?php if ( count( $plan['unmatched'] ) > 20 ) : ?>
+					<li><?php echo esc_html( sprintf( __( '… and %d more.', 'wordcamporg' ), count( $plan['unmatched'] ) - 20 ) ); ?></li>
+				<?php endif; ?>
+			</ul>
+		<?php endif; ?>
+
+		<form method="post" action="<?php echo esc_url( add_query_arg( 'tix_section', 'attendance-import' ) ); ?>">
+			<?php wp_nonce_field( 'tix-attendance-import-apply', 'tix_attendance_import_nonce' ); ?>
+			<input type="hidden" name="tix_attendance_import_token" value="<?php echo esc_attr( $plan['token'] ); ?>" />
+			<?php submit_button( __( 'Apply Import', 'wordcamporg' ), 'primary', 'tix_attendance_import_apply', false ); ?>
+			<a class="button" href="<?php echo esc_url( add_query_arg( 'tix_section', 'attendance-import' ) ); ?>"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Parse an attendance CSV into normalized rows.
+	 *
+	 * Strict column allowlist: only id, email, and attended are ever read.
+	 *
+	 * @param string $file_path Path to the uploaded CSV.
+	 *
+	 * @return array|WP_Error List of rows: { id: int|0, email: string, attended: bool }.
+	 */
+	public function parse_attendance_csv( $file_path ) {
+		$handle = fopen( $file_path, 'r' );
+
+		if ( ! $handle ) {
+			return new WP_Error( 'unreadable', __( 'Could not read the uploaded file.', 'wordcamporg' ) );
+		}
+
+		// Explicit $escape: '' is the future PHP default and the correct CSV behavior.
+		$header = fgetcsv( $handle, null, ',', '"', '' );
+
+		if ( ! is_array( $header ) ) {
+			fclose( $handle );
+
+			return new WP_Error( 'empty', __( 'The file appears to be empty.', 'wordcamporg' ) );
+		}
+
+		// Normalize headers; strip a possible UTF-8 BOM off the first cell.
+		$header    = array_map( function ( $cell ) {
+			return strtolower( trim( str_replace( "\xEF\xBB\xBF", '', (string) $cell ) ) );
+		}, $header );
+		$id_col    = array_search( 'id', $header, true );
+		if ( false === $id_col ) {
+			$id_col = array_search( 'attendee id', $header, true );
+		}
+		$email_col = array_search( 'email', $header, true );
+		$att_col   = array_search( 'attended', $header, true );
+
+		if ( false === $id_col && false === $email_col ) {
+			fclose( $handle );
+
+			return new WP_Error( 'no_key_column', __( 'The file needs an "id" or "email" column in its header row.', 'wordcamporg' ) );
+		}
+
+		$rows     = array();
+		$max_rows = apply_filters( 'camptix_attendance_import_max_rows', 5000 );
+
+		while ( false !== ( $line = fgetcsv( $handle, null, ',', '"', '' ) ) ) {
+			if ( array( null ) === $line ) {
+				continue; // Blank line.
+			}
+
+			if ( count( $rows ) >= $max_rows ) {
+				fclose( $handle );
+
+				return new WP_Error(
+					'too_many_rows',
+					sprintf( __( 'The file has more than %d rows. Please split it into smaller files.', 'wordcamporg' ), $max_rows )
+				);
+			}
+
+			$attended = true;
+
+			if ( false !== $att_col ) {
+				$raw      = strtolower( trim( (string) ( $line[ $att_col ] ?? '' ) ) );
+				$attended = in_array( $raw, array( 'yes', 'y', '1', 'true' ), true );
+			}
+
+			$rows[] = array(
+				'id'       => false !== $id_col ? absint( $line[ $id_col ] ?? 0 ) : 0,
+				'email'    => false !== $email_col ? strtolower( trim( (string) ( $line[ $email_col ] ?? '' ) ) ) : '',
+				'attended' => $attended,
+			);
+		}
+
+		fclose( $handle );
+
+		return $rows;
+	}
+
+	/**
+	 * Resolve parsed rows to attendee IDs.
+	 *
+	 * A row's id column wins when it points at a real published attendee;
+	 * otherwise the email is matched against tix_email (all matches count —
+	 * duplicate emails each get the row's attendance). Rows matching nothing
+	 * are reported, never silently dropped.
+	 *
+	 * @param array $rows Rows from parse_attendance_csv().
+	 *
+	 * @return array { set: int[], unset: int[], unmatched: string[], total_rows: int }
+	 */
+	public function resolve_attendance_rows( array $rows ) {
+		$plan = array(
+			'set'        => array(),
+			'unset'      => array(),
+			'unmatched'  => array(),
+			'total_rows' => count( $rows ),
+			// One-time token binding this exact plan to its preview's Apply button.
+			'token'      => wp_generate_password( 20, false, false ),
+		);
+
+		foreach ( $rows as $row ) {
+			$matched = array();
+
+			if ( $row['id'] ) {
+				$post = get_post( $row['id'] );
+
+				if ( $post && 'tix_attendee' === $post->post_type && 'publish' === $post->post_status ) {
+					$matched[] = $post->ID;
+				}
+			}
+
+			if ( ! $matched && '' !== $row['email'] && is_email( $row['email'] ) ) {
+				$matched = get_posts( array(
+					'post_type'      => 'tix_attendee',
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'meta_key'       => 'tix_email',
+					'meta_value'     => $row['email'],
+				) );
+			}
+
+			if ( ! $matched ) {
+				$plan['unmatched'][] = $row['id'] ? '#' . $row['id'] : $row['email'];
+
+				continue;
+			}
+
+			foreach ( $matched as $attendee_id ) {
+				if ( $row['attended'] ) {
+					$plan['set'][] = (int) $attendee_id;
+				} else {
+					$plan['unset'][] = (int) $attendee_id;
+				}
+			}
+		}
+
+		$plan['set']   = array_values( array_unique( $plan['set'] ) );
+		$plan['unset'] = array_values( array_unique( array_diff( $plan['unset'], $plan['set'] ) ) );
+
+		return $plan;
+	}
+
+	/**
+	 * Get the IDs of all published attendees matching the filters — the same
+	 * matching semantics as the list the volunteer is looking at (_ajax_sync_list),
+	 * without pagination.
+	 *
+	 * @param array  $filters Filter settings (attendance, tickets).
+	 * @param string $search  Search keyword.
+	 *
+	 * @return int[]
+	 */
+	public function query_attendee_ids( $filters, $search = '' ) {
+		$filters = wp_parse_args( (array) $filters, array(
+			'attendance' => 'none',
+			'tickets'    => array(),
+		) );
+
+		$active_filters = array();
+
+		// Filter by attendance.
+		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) ) {
+			$active_filters[] = $this->_filter_query_attendance( $filters['attendance'] );
+		}
+
+		// Filter by ticket type.
+		$ticket_ids         = wp_list_pluck( $this->get_tickets(), 'ID' );
+		$filters['tickets'] = array_intersect( (array) $filters['tickets'], $ticket_ids );
+
+		if ( count( array_diff( $ticket_ids, $filters['tickets'] ) ) > 0 ) {
+			// No tickets selected.
+			if ( empty( $filters['tickets'] ) ) {
+				return array();
+			}
+
+			$active_filters[] = $this->_filter_query_tickets( $filters['tickets'] );
+		}
+
+		// Filter by search query.
+		$search = trim( (string) $search );
+		if ( ! empty( $search ) ) {
+			$active_filters[] = $this->_filter_query_search( $search );
+		}
+
+		$attendee_ids = get_posts( array(
+			'post_type'        => 'tix_attendee',
+			'post_status'      => 'publish',
+			'posts_per_page'   => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		) );
+
+		// The legacy list flow leaks its clauses for the rest of the request (one
+		// query per request, harmless); repeated calls here would stack them.
+		foreach ( $active_filters as $callback ) {
+			remove_filter( 'posts_clauses', $callback );
+		}
+
+		return array_map( 'absint', $attendee_ids );
 	}
 
 	/**
@@ -266,7 +773,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * query under various meta keys.
 	 */
 	public function _filter_query_search( $search ) {
-		add_filter( 'posts_clauses', function( $clauses ) use ( $search ) {
+		$callback = function( $clauses ) use ( $search ) {
 			global $wpdb;
 
 			$search = $wpdb->esc_like( wp_unslash( $search ) );
@@ -285,27 +792,35 @@ class CampTix_Attendance extends CampTix_Addon {
 			", $search, $search, $search );
 
 			return $clauses;
-		} );
+		};
+
+		add_filter( 'posts_clauses', $callback );
+
+		return $callback;
 	}
 
 	/**
 	 * Filter WP_Query to include only specific tickets.
 	 */
 	public function _filter_query_tickets( $ticket_ids ) {
-		add_filter( 'posts_clauses', function( $clauses ) use ( $ticket_ids ) {
+		$callback = function( $clauses ) use ( $ticket_ids ) {
 			global $wpdb;
 
 			$clauses['join'] .= " INNER JOIN $wpdb->postmeta tix_ticket_id ON ( ID = tix_ticket_id.post_id AND tix_ticket_id.meta_key = 'tix_ticket_id' ) ";
 			$clauses['where'] .= sprintf( " AND ( tix_ticket_id.meta_value IN ( %s ) ) ", implode( ', ', array_map( 'absint', $ticket_ids ) ) );
 			return $clauses;
-		} );
+		};
+
+		add_filter( 'posts_clauses', $callback );
+
+		return $callback;
 	}
 
 	/**
 	 * Filter WP_Query to include only attending or non-attending attendees.
 	 */
 	public function _filter_query_attendance( $attendance ) {
-		add_filter( 'posts_clauses', function( $clauses ) use ( $attendance ) {
+		$callback = function( $clauses ) use ( $attendance ) {
 			global $wpdb;
 
 			$clauses['join'] .= " LEFT JOIN $wpdb->postmeta tix_attended ON ( ID = tix_attended.post_id AND tix_attended.meta_key = 'tix_attended' ) ";
@@ -316,7 +831,11 @@ class CampTix_Attendance extends CampTix_Addon {
 				$clauses['where'] .= " AND ( tix_attended.meta_value IS NULL ) ";
 
 			return $clauses;
-		} );
+		};
+
+		add_filter( 'posts_clauses', $callback );
+
+		return $callback;
 	}
 
 	/**

@@ -82,16 +82,21 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	 * registering the `wordcamp` statuses, so they have to be registered before the
 	 * check or the query filters on statuses that cannot match and the cap never trips.
 	 */
+	$viewable = \WordCamp_Loader::get_publicly_viewable_post_statuses();
+
 	foreach ( \WordCamp_Loader::get_post_statuses() as $status => $label ) {
 		if ( ! get_post_status_object( $status ) ) {
-			// `public` to match how `Event_Loader::register_post_statuses()` registers
-			// them on the central site. Left to the defaults these would come out
-			// `internal`, which is a different status on one network to the other.
+			// `public` / `protected` to match how `Event_Loader::register_post_statuses()`
+			// registers them on the central site. Left to the defaults these would come
+			// out `internal`, which is a different status on one network to the other.
+			$is_viewable = in_array( $status, $viewable, true );
+
 			register_post_status(
 				$status,
 				array(
-					'label'  => $label,
-					'public' => true,
+					'label'     => $label,
+					'public'    => $is_viewable,
+					'protected' => ! $is_viewable,
 				)
 			);
 		}

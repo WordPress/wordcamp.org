@@ -260,32 +260,62 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * payload in $_POST. Verify the payload and use $this->payment_result
 	 * to signal a transaction result back to CampTix.
 	 *
-	 * @return mixed Null if returning early, or an integer matching one of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
+	 * The token in the request says which order to settle, but the sender chooses it
+	 * and it is not private: payment_checkout() puts it in the CANCELURL. So the
+	 * transaction has to be shown to belong to the order that was named.
+	 *
+	 * @return mixed A CampTix_Plugin::PAYMENT_STATUS_{status} constant. Anything not
+	 *               settled ends in ipn_die() instead of returning.
 	 */
 	function payment_notify() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$payment_token = isset( $_REQUEST['tix_payment_token'] ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
+		$payment_token = isset( $_REQUEST['tix_payment_token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['tix_payment_token'] ) ) : '';
 
 		// Verify the IPN came from PayPal.
-		$payload = stripslashes_deep( $_POST );
+		$payload  = stripslashes_deep( $_POST );
 		$response = $this->verify_ipn( $payload );
-		if ( '200' != wp_remote_retrieve_response_code( $response ) || 'VERIFIED' != wp_remote_retrieve_body( $response ) ) {
+
+		// Unreachable, so whether this IPN is genuine is unknown. Ask for a resend.
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			$camptix->log( 'Could not reach PayPal to verify an IPN.', 0, compact( 'response' ) );
+
+			$this->ipn_die( 503 );
+		}
+
+		if ( 'VERIFIED' !== trim( wp_remote_retrieve_body( $response ) ) ) {
 			$camptix->log( 'Could not verify PayPal IPN.', 0, null );
-			return;
+
+			$this->ipn_die( 403 );
 		}
 
 		// Grab the txn id (or the parent id in case of refunds, cancels, etc)
-		$txn_id = ! empty( $payload['txn_id'] ) ? $payload['txn_id'] : 'None';
+		$txn_id = ! empty( $payload['txn_id'] ) ? sanitize_text_field( $payload['txn_id'] ) : '';
 		if ( ! empty( $payload['parent_txn_id'] ) ) {
-			$txn_id = $payload['parent_txn_id'];
+			$txn_id = sanitize_text_field( $payload['parent_txn_id'] );
+		}
+
+		// There is no transaction to look up, and sending the message again would not produce one.
+		if ( ! $txn_id ) {
+			$camptix->log( 'Received IPN with no transaction id.', 0, $payload );
+
+			$this->ipn_die( 200 );
 		}
 
 		// Make sure we have a status
 		if ( empty( $payload['payment_status'] ) ) {
 			$camptix->log( sprintf( 'Received IPN with no payment status %s', $txn_id ), 0, $payload );
-			return;
+
+			$this->ipn_die( 200 );
+		}
+
+		$order = $this->get_order( $payment_token );
+
+		if ( ! $order ) {
+			$camptix->log( sprintf( 'Received IPN for %s naming an order that does not exist.', $txn_id ), 0, compact( 'payment_token' ) );
+
+			$this->ipn_die( 200 );
 		}
 
 		// Fetch latest transaction details to avoid race conditions.
@@ -294,12 +324,38 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			'TRANSACTIONID' => $txn_id,
 		);
 		$txn_details         = wp_parse_args( wp_remote_retrieve_body( $this->request( $txn_details_payload ) ) );
-		if ( ! isset( $txn_details['ACK'] ) || 'Success' != $txn_details['ACK'] ) {
-			$camptix->log( sprintf( 'Fetching transaction after IPN failed %s.', $txn_id, 0, $txn_details ) );
-			return;
+		if ( ! isset( $txn_details['ACK'] ) || 'Success' !== $txn_details['ACK'] ) {
+			// Nothing about the transaction is known, so ask for the IPN again rather than reporting it handled.
+			$camptix->log( sprintf( 'Fetching transaction after IPN failed %s.', $txn_id ), $order['attendee_id'], $txn_details );
+
+			$this->ipn_die( 503 );
 		}
 
 		$camptix->log( sprintf( 'Payment details for %s via IPN', $txn_id ), null, $txn_details );
+
+		$recorded_txn_id = (string) get_post_meta( $order['attendee_id'], 'tix_transaction_id', true );
+
+		if ( '' !== $recorded_txn_id ) {
+			/*
+			 * The order names its own transaction, so it is this order's by our own record.
+			 * Repeat IPNs, refunds and reversals arrive this way, including for orders that
+			 * predate the reference below. Requiring that same transaction also stops a
+			 * later payment displacing the one an organizer would refund.
+			 */
+			if ( ! hash_equals( $recorded_txn_id, $txn_id ) ) {
+				$this->ignore_ipn( sprintf( 'this order was paid by %1$s, not %2$s', $recorded_txn_id, $txn_id ), $order, compact( 'payment_token', 'txn_details' ) );
+			}
+		} else {
+			// Nothing recorded, so the echoed reference ties them together, backed by the amount.
+			if ( ! $this->transaction_was_made_for_order( $order, $txn_details ) ) {
+				$this->ignore_ipn( sprintf( 'transaction %s was not made for this order', $txn_id ), $order, compact( 'payment_token', 'txn_details' ) );
+			}
+
+			if ( ! $this->transaction_covers_order( $order, $txn_details ) ) {
+				$this->ignore_ipn( sprintf( 'transaction %s does not cover this order', $txn_id ), $order, compact( 'payment_token', 'txn_details' ) );
+			}
+		}
+
 		$payment_status = $txn_details['PAYMENTSTATUS'];
 
 		$payment_data = array(
@@ -315,6 +371,123 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		 * payment result twice. In fact, it's typical for payment methods with IPN support.
 		 */
 		return $camptix->payment_result( $payment_token, $this->get_status_from_string( $payment_status ), $payment_data );
+	}
+
+	/**
+	 * End an IPN request without recording a payment result.
+	 *
+	 * PayPal resends anything it does not get a 200 for, for up to four days, and one
+	 * account serves many camps, so a retry it can never satisfy is everyone's problem:
+	 *
+	 * - 503 when the outcome could not be determined, such as PayPal being unreachable.
+	 * - 200 when the message was understood and will never settle this order.
+	 * - 403 when PayPal will not confirm the message as its own. Resent like any
+	 *   non-200, which is wanted: a mangled but genuine IPN can pass on a resend.
+	 *
+	 * @param int $status_code
+	 *
+	 * @return void
+	 */
+	protected function ipn_die( $status_code ) {
+		wp_die(
+			esc_html__( 'This payment notification could not be processed.', 'wordcamporg' ),
+			esc_html__( 'PayPal notification', 'wordcamporg' ),
+			array( 'response' => absint( $status_code ) )
+		);
+	}
+
+	/**
+	 * Log why an IPN will never settle the order it names, and stop.
+	 *
+	 * @param string $reason
+	 * @param array  $order
+	 * @param array  $context
+	 *
+	 * @return void
+	 */
+	protected function ignore_ipn( $reason, $order, $context ) {
+		/** @var $camptix CampTix_Plugin */
+		global $camptix;
+
+		$camptix->log( 'Ignoring IPN: ' . $reason . '.', $order['attendee_id'], $context );
+
+		$this->ipn_die( 200 );
+	}
+
+	/**
+	 * Whether PayPal says this transaction was made for the given CampTix order.
+	 *
+	 * The evidence is the reference fill_payload_with_order() sends as
+	 * PAYMENTREQUEST_0_CUSTOM and GetTransactionDetails echoes back, compared against
+	 * the order's stored token rather than the request's: get_order() matches with a
+	 * MySQL CHAR comparison, which ignores case and trailing spaces, hash_equals()
+	 * neither. First settlement only, per payment_notify().
+	 *
+	 * @param array $order
+	 * @param array $txn_details
+	 *
+	 * @return bool
+	 */
+	protected function transaction_was_made_for_order( $order, $txn_details ) {
+		// An order taken through another gateway has no PayPal transaction to be settled by.
+		if ( get_post_meta( $order['attendee_id'], 'tix_payment_method', true ) !== $this->id ) {
+			return false;
+		}
+
+		/*
+		 * Only a checkout CampTix started can settle an order with no transaction yet;
+		 * a payment sent any other way had its CUSTOM chosen by the payer. Separators
+		 * are stripped because PayPal spells this differently across its APIs.
+		 */
+		$transaction_type = isset( $txn_details['TRANSACTIONTYPE'] ) ? (string) $txn_details['TRANSACTIONTYPE'] : '';
+		$transaction_type = strtolower( preg_replace( '/[^a-zA-Z]/', '', $transaction_type ) );
+
+		if ( ! in_array( $transaction_type, array( 'cart', 'expresscheckout' ), true ) ) {
+			return false;
+		}
+
+		$echoed_reference = isset( $txn_details['CUSTOM'] ) ? (string) $txn_details['CUSTOM'] : '';
+		$payment_token    = (string) get_post_meta( $order['attendee_id'], 'tix_payment_token', true );
+
+		if ( '' === $echoed_reference || '' === $payment_token ) {
+			return false;
+		}
+
+		return hash_equals( $this->get_order_reference( $payment_token ), $echoed_reference );
+	}
+
+	/**
+	 * Whether a PayPal transaction paid at least what the given order asks for.
+	 *
+	 * The reference above is echoed faithfully but is not proof on its own, since a
+	 * payer outside Express Checkout sets `custom` themselves. The amount is what they
+	 * cannot set. "Covers" not "equals", because some sites charge a fee on top;
+	 * compared as integers because verify_order() accumulates the total in floats.
+	 *
+	 * @param array $order
+	 * @param array $txn_details
+	 *
+	 * @return bool
+	 */
+	protected function transaction_covers_order( $order, $txn_details ) {
+		// A free order never went to PayPal, so no transaction was ever made for one.
+		$due = isset( $order['total'] ) ? (float) $order['total'] : 0;
+
+		if ( $due <= 0 || ! isset( $txn_details['AMT'] ) ) {
+			return false;
+		}
+
+		$expected_currency = strtoupper( (string) $this->camptix_options['currency'] );
+		$paid_currency     = isset( $txn_details['CURRENCYCODE'] ) ? strtoupper( (string) $txn_details['CURRENCYCODE'] ) : '';
+
+		if ( '' === $paid_currency || $expected_currency !== $paid_currency ) {
+			return false;
+		}
+
+		// NVP amounts document the thousands separator as an optional comma, and "1,234.56" casts to 1.0.
+		$paid = (float) str_replace( ',', '', (string) $txn_details['AMT'] );
+
+		return (int) round( $paid * 100 ) >= (int) round( $due * 100 );
 	}
 
 	/**
@@ -517,10 +690,6 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			wp_die( 'could not find order' );
 		}
 
-		/**
-		 * @todo maybe check tix_paypal_token for security.
-		 */
-
 		$payload = array(
 			'METHOD' => 'GetExpressCheckoutDetails',
 			'TOKEN'  => $paypal_token,
@@ -545,7 +714,31 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 				'PAYMENTREQUEST_0_NOTIFYURL'            => esc_url_raw( $notify_url ),
 			);
 
-			$this->fill_payload_with_order( $payload, $order );
+			$this->fill_payload_with_order( $payload, $order, $payment_token );
+
+			/*
+			 * The PayPal token and the CampTix token arrive as independent request values,
+			 * so confirm this checkout was set up for this order before charging it. The
+			 * amount below is not enough alone: two orders of the same price satisfy it,
+			 * and DoExpressCheckoutPayment answers a repeat call with the original payment
+			 * (error 11607) rather than refusing. A checkout predating the reference
+			 * carries none, and those tokens expire within hours, so accepting a missing
+			 * one costs nothing for long. Either spelling is read because PayPal documents
+			 * the bare CUSTOM here while the fields beside it carry the prefix.
+			 */
+			$echoed_reference = '';
+
+			foreach ( array( 'PAYMENTREQUEST_0_CUSTOM', 'CUSTOM' ) as $field ) {
+				if ( isset( $checkout_details[ $field ] ) && '' !== $checkout_details[ $field ] ) {
+					$echoed_reference = (string) $checkout_details[ $field ];
+					break;
+				}
+			}
+
+			if ( '' !== $echoed_reference && ! hash_equals( $this->get_order_reference( $payment_token ), $echoed_reference ) ) {
+				$camptix->log( 'Dying because the PayPal checkout was set up for another order', $order['attendee_id'], compact( 'checkout_details', 'payment_token' ) );
+				wp_die( esc_html__( 'We could not confirm that this payment is for your order. Please contact the event organizers.', 'wordcamporg' ) );
+			}
 
 			if ( (float) $checkout_details['PAYMENTREQUEST_0_AMT'] != $order['total'] ) {
 				$camptix->log( 'Dying because unexpected total', $order['attendee_id'], compact( 'checkout_details', 'order' ) );
@@ -661,7 +854,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$options = array_merge( $this->options, $this->get_predefined_account( $this->options['api_predef'] ) );
 
 		$order = $this->get_order( $payment_token );
-		$this->fill_payload_with_order( $payload, $order );
+		$this->fill_payload_with_order( $payload, $order, $payment_token );
 
 		$request  = $this->request( $payload );
 		$response = wp_parse_args( wp_remote_retrieve_body( $request ) );
@@ -704,12 +897,15 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	/**
 	 * Helper function for PayPal which fills a $payload array with items from the $order array.
 	 *
-	 * @param array $payload
-	 * @param array $order
+	 * @param array  $payload
+	 * @param array  $order
+	 * @param string $payment_token The CampTix order this payment is for. When given, it is
+	 *                              sent as PAYMENTREQUEST_0_CUSTOM so that PayPal echoes back
+	 *                              which order a transaction was made for.
 	 *
 	 * @return array
 	 */
-	function fill_payload_with_order( &$payload, $order ) {
+	public function fill_payload_with_order( &$payload, $order, $payment_token = '' ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -734,7 +930,31 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$payload['PAYMENTREQUEST_0_AMT']          = $order['total'];
 		$payload['PAYMENTREQUEST_0_CURRENCYCODE'] = $this->camptix_options['currency'];
 
+		/*
+		 * Tell PayPal which order this payment is for; it echoes CUSTOM back, which is
+		 * what payment_notify() matches on. Set here rather than in the callers so it
+		 * covers both API calls and the `camptix_paypal_payload` filter cannot drop it.
+		 */
+		if ( $payment_token ) {
+			$payload['PAYMENTREQUEST_0_CUSTOM'] = $this->get_order_reference( $payment_token );
+		}
+
 		return $payload;
+	}
+
+	/**
+	 * The value sent to PayPal as PAYMENTREQUEST_0_CUSTOM to identify a CampTix order.
+	 *
+	 * The blog id is part of it because several WordCamps share one set of PayPal
+	 * credentials (the "WordPress Community Support, PBC" predefined account), so a
+	 * payment token on its own does not say which site an order belongs to.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return string
+	 */
+	protected function get_order_reference( $payment_token ) {
+		return get_current_blog_id() . ':' . $payment_token;
 	}
 
 	/**

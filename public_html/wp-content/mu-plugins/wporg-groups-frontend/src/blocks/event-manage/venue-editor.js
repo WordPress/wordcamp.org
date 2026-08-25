@@ -24,6 +24,9 @@ import {
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __, _x } from '@wordpress/i18n';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const PHOTON_API = 'https://photon.komoot.io/api/';
 
@@ -135,6 +138,15 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				}
 
 				const L = module.default || module;
+
+				// Leaflet guesses its icon folder from the stylesheet's
+				// background-image URL, which the build has hashed.
+				delete L.Icon.Default.prototype._getIconUrl;
+				L.Icon.Default.mergeOptions( {
+					iconUrl: markerIcon,
+					iconRetinaUrl: markerIcon2x,
+					shadowUrl: markerShadow,
+				} );
 
 				if ( mapInstanceRef.current ) {
 					mapInstanceRef.current.setView( [ lat, lng ], 15 );

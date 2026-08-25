@@ -16,6 +16,7 @@ import {
 	useState,
 } from '@wordpress/element';
 import SettingsApp from './components/settings-app';
+import 'leaflet/dist/leaflet.css';
 
 ( function () {
 	const root = document.getElementById( 'wporg-group-settings-root' );

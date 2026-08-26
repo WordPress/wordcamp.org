@@ -95,10 +95,8 @@ class Test_WCOR_Reminder_Capabilities extends WP_UnitTestCase {
 			array( 'post_type' => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG )
 		);
 
-		unset( $_GET['action'] );
-		$_POST = array( 'wcor_send_when' => 'wcor_send_before' );
-
-		$plugin = $GLOBALS['WCOR_Reminder'] ?? new WCOR_Reminder();
+		$_POST  = array( 'wcor_send_when' => 'wcor_send_before' );
+		$plugin = $GLOBALS['WCOR_Reminder'];
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
 		$plugin->save_post( $reminder, get_post( $reminder ) );
@@ -107,7 +105,5 @@ class Test_WCOR_Reminder_Capabilities extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$plugin->save_post( $reminder, get_post( $reminder ) );
 		$this->assertSame( 'wcor_send_before', get_post_meta( $reminder, 'wcor_send_when', true ), 'An administrator could not write reminder meta.' );
-
-		$_POST = array();
 	}
 }

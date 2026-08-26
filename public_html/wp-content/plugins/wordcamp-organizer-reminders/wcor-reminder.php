@@ -206,7 +206,6 @@ class WCOR_Reminder {
 			return;
 		}
 
-		// `edit_posts` is a primitive, so the post ID passed to it was never consulted.
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}

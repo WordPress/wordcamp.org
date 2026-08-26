@@ -232,6 +232,8 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 	/**
 	 * The default combined variant preserves the original unheaded output.
+	 * A plain member gets no role badge; see
+	 * `test_group_membership_block_badges_event_manager_roles()`.
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -239,7 +241,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-membership /-->' );
 
-		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
 		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
@@ -248,7 +250,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * Membership placements include their heading and omit the preference.
+	 * Membership placements include their heading, and omit both the
+	 * preference and the member count — the count belongs to the hero's
+	 * standalone `count` variant.
 	 */
 	public function test_group_membership_block_renders_membership_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -260,10 +264,160 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$this->assertStringContainsString( '<h2 class="wporg-group-membership__heading">', $output );
 		$this->assertStringContainsString( 'Membership', $output );
-		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
-		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__preference', $output );
+	}
+
+	/**
+	 * Event-manager roles keep the role badge a plain member doesn't get.
+	 */
+	public function test_group_membership_block_badges_event_manager_roles() {
+		$organizer_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $organizer_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
+		);
+
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
+	}
+
+	/**
+	 * Force `count_users()` to a known result and record how often it runs.
+	 *
+	 * Returns the call counter; the filter is removed in `tear_down()` via
+	 * `remove_all_filters()` on the WordPress test case.
+	 *
+	 * @param int $total_users The member count to report.
+	 *
+	 * @return object A `{ calls: int }` counter, updated as the filter fires.
+	 */
+	private function stub_count_users( int $total_users ): object {
+		$counter = new \stdClass();
+
+		$counter->calls = 0;
+
+		add_filter(
+			'pre_count_users',
+			static function () use ( &$counter, $total_users ) {
+				++$counter->calls;
+
+				return array(
+					'total_users' => $total_users,
+					'avail_roles' => array( 'subscriber' => $total_users ),
+				);
+			}
+		);
+
+		return $counter;
+	}
+
+	/**
+	 * The hero's standalone count prints a locale-formatted total that links
+	 * to the member directory.
+	 */
+	public function test_group_membership_count_variant_renders_count_and_members_link() {
+		$this->stub_count_users( 1234 );
+
+		self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_title'  => 'Members',
+				'post_name'   => 'members',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"count"} /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( '1,234 members', $output );
+		$this->assertStringContainsString(
+			'href="' . esc_url( get_permalink( get_page_by_path( 'members' ) ) ) . '"',
+			$output
+		);
+		$this->assertStringNotContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringNotContainsString( 'Join this group', $output );
+	}
+
+	/**
+	 * The count's own text comes from the interactivity store, not from the
+	 * PHP fallback: the server-side directive processor blanks a
+	 * `data-wp-text` node whose `state.*` reference isn't registered, so the
+	 * registered `countLabel` is what actually reaches the page.
+	 */
+	public function test_group_membership_count_variant_registers_server_rendered_count_label() {
+		$this->stub_count_users( 42 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"count"} /-->' );
+
+		$state = wp_interactivity_state( 'wporg/group-membership' );
+
+		$this->assertSame( '42 members', $state['countLabel'] );
+		$this->assertSame( 42, $state['memberCount'] );
+		$this->assertMatchesRegularExpression(
+			'/data-wp-text="state\.countLabel"[^>]*>\s*42 members\s*</',
+			$output
+		);
+	}
+
+	/**
+	 * The front page renders a `count` block in the hero and a `membership`
+	 * block in the sidebar, and only the first needs the total.
+	 * `count_users()` runs Core's usermeta aggregate, so a second block
+	 * asking for it is a second aggregate on every request.
+	 */
+	public function test_group_membership_counts_members_once_per_front_page_render() {
+		$counter = $this->stub_count_users( 7 );
+
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"count"} /-->'
+			. '<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
+		);
+
+		$this->assertSame( 1, $counter->calls );
+	}
+
+	/**
+	 * A logged-out visitor still gets a labelled Join button. The label is
+	 * server-rendered through `state.buttonLabel`, which the membership
+	 * variant has to keep registering even though it no longer counts
+	 * members — an unregistered reference renders the button empty.
+	 */
+	public function test_group_membership_membership_variant_renders_labelled_join_button() {
+		wp_set_current_user( 0 );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
+		);
+
+		$this->assertMatchesRegularExpression(
+			'/data-wp-text="state\.buttonLabel"[^>]*>\s*Join this group\s*</',
+			$output
+		);
+	}
+
+	/**
+	 * Combined placements keep both halves: the count and the membership
+	 * controls around it.
+	 */
+	public function test_group_membership_combined_variant_renders_count_and_controls() {
+		$this->stub_count_users( 9 );
+
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"combined"} /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( '9 members', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__meta-divider', $output );
 	}
 
 	/**
@@ -284,6 +438,18 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__leave', $output );
+	}
+
+	/**
+	 * A member with nothing coming up gets no "My upcoming events" section at
+	 * all — the block leaves the space to the page rather than printing a
+	 * permanent empty state.
+	 */
+	public function test_my_events_block_is_hidden_without_upcoming_events() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/my-events /-->' ) ) );
 	}
 
 	/**

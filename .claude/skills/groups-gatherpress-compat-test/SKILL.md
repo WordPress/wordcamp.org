@@ -46,9 +46,11 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, per-event messaging, the
-  auto-publish-notification email, and the member directory. Needs
+  auto-publish-notification email, the member directory, and Reply →
+  Cancel on a group news post's comment form. Needs
   `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
-  `eventorganiser4`/`eventorganiser5`/`member1` (all `password`) — **every
+  `eventorganiser4`/`eventorganiser5`/`eventorganiser6`/`member1` (all
+  `password`) — **every
   individual test that logs in as an author has its own dedicated
   `eventorganiser*` account, not just every spec *file*.**
   `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
@@ -126,21 +128,28 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `mu-plugins/wporg-groups-frontend/inc/notifications.php`) bypasses
   WP-Cron for this entirely: it calls
   `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
-  directly and synchronously from `transition_post_status`, the same
-  method GatherPress's own `gatherpress_send_emails` cron handler and its
-  "Message all members" REST action both call — trading a brief
-  publish-request delay (already true of GatherPress's own dispatch once
-  cron picks it up) for eliminating the race category outright. **Going
-  synchronous has a real blast radius beyond the notification feature
-  itself**: since `transition_post_status` now runs this on *every*
-  `gatherpress_event` publish, any PHPUnit test that publishes one — not
-  just tests about notifications — started executing real email-template
-  rendering, which needs runtime (theme template functions, etc.) most
-  test bootstraps don't load. `Groups_TestCase::setUp()` now removes this
-  action for every test by default; `Test_Groups_Notifications` is the one
-  class that re-adds it, for its own coverage. Keep this in mind before
-  converting any other deferred-to-cron integration point to a synchronous
-  call — check whether other tests publish through the same hook first.
+  directly and synchronously, the same method GatherPress's own
+  `gatherpress_send_emails` cron handler and its "Message all members"
+  REST action both call — trading a brief publish-request delay (already
+  true of GatherPress's own dispatch once cron picks it up) for
+  eliminating the race category outright. The send is deferred *within*
+  the request, though: `transition_post_status` fires inside
+  `wp_insert_post()` before the event's datetimes/venue are written
+  (sending there produced "Date: —" emails), so the hook only queues the
+  event and `send_pending_new_event_notifications()` sends at `shutdown`
+  priority `PHP_INT_MAX` — after GatherPress's own default-priority
+  shutdown datetime resolver. **Going synchronous has a real blast radius
+  beyond the notification feature itself**: since `transition_post_status`
+  now runs on *every* `gatherpress_event` publish, any PHPUnit test that
+  publishes one — not just tests about notifications — would execute real
+  email-template rendering when the queue drains, which needs runtime
+  (theme template functions, etc.) most test bootstraps don't load.
+  `Groups_TestCase::setUp()` removes this action for every test by
+  default; `Test_Groups_Notifications` is the one class that re-adds it
+  (and drains the queue explicitly), for its own coverage. Keep this in
+  mind before converting any other deferred-to-cron integration point to
+  a synchronous call — check whether other tests publish through the same
+  hook first.
 
 If either automated suite fails, stop and fix that before doing the manual
 pass below — don't duplicate debugging effort across layers.
@@ -209,6 +218,23 @@ docker compose exec wordcamp.test wp plugin install \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
+Environment gotchas:
+
+- Adding/removing a `groups-site` pattern requires a theme `Version:` bump.
+  Locally, clear the otherwise-stale scan with
+  `wp eval 'wp_get_theme()->delete_pattern_cache();' --url=<site>`;
+  `wp cache flush` does not clear it.
+- If PHPUnit cannot read a mounted file that exists on the host, run
+  `docker compose -f docker-compose.phpunit.yml up -d --force-recreate phpunit_wp`.
+- Hooks loaded in `wpSetUpBeforeClass()` disappear after the first test in
+  a full suite because `WP_UnitTestCase` restores a process-wide hook
+  snapshot. Re-add named callbacks in `setUp()`.
+- `go_to( get_permalink( $id ) )` does not establish a singular query in
+  this fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
+- If a new test account's first E2E run fails in
+  `dismissEditorOnboarding`, rerun once only when `error-context.md` shows
+  the Welcome dialog reinitializing.
+
 **After bumping the pinned GatherPress version, also install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
 (version-locked to core) and run its one-time migration.** GatherPress ships
@@ -232,7 +258,7 @@ and a REST application password (the browser pass needs the former, the
 REST pass needs the latter):
 
 ```bash
-for pair in "organiser1:editor" "eventorganiser1:author" "member1:subscriber"; do
+for pair in "organiser1:editor" eventorganiser{1..6}:author "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \
@@ -574,20 +600,11 @@ the same class of bug on the *next* upgrade is a wasted rediscovery — turn
 what this pass found into a permanent regression test before moving on,
 not a one-off fix.
 
-Two tests written after the 0.35.0 bump are the reference examples for
-what this looks like in practice — both live in
+The remaining reference test lives in
 `mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
 exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
-there by including the real theme files directly, see the first example):
+there by including the real theme files directly):
 
-- **`test-groups-site-event-cards-patterns.php`** — executes the actual
-  `groups-site` theme pattern files GatherPress renders via the
-  block-patterns REST endpoint (the exact code path #1874's bug lived in
-  and nothing else exercises), asserting real output for both the
-  has-events and no-events branches of each pattern. The template for
-  "this class of bug had zero coverage because nothing calls this code
-  path" — find other such gaps by asking what *does* exercise a given file
-  today, and whether "nothing" is an acceptable answer.
 - **`test-gatherpress-api-contract.php`** — a data-provider-driven test
   asserting every GatherPress class/method/constant/property this
   integration calls still exists, sourced from the same list Section 8's
@@ -595,6 +612,22 @@ there by including the real theme files directly, see the first example):
   a one-time manual pass that has to be redone by hand on every future
   bump — extend `CONTRACT` in that file whenever the audit finds a call
   site it doesn't cover yet, rather than leaving the gap for next time.
+
+`test-groups-site-event-cards-patterns.php` was removed with the old PHP
+event-card patterns. Directly include any future orphaned PHP pattern that
+normal template rendering cannot exercise.
+
+Its successor, `test-groups-site-event-cards.php`, preserves thumbnail
+cache priming that core cannot infer through a `core/pattern` reference.
+
+The PHP API contract does not detect missing blocks, which render blank.
+Also audit the theme's dependencies: `gatherpress/event-date`,
+`gatherpress/rsvp-count`,
+`gatherpress/venue`, `gatherpress/venue-detail`, `gatherpress/venue-map`,
+`gatherpress/online-event`, `gatherpress/online-event-link`,
+`gatherpress/add-to-calendar`, and the `gatherpress-event-query` query
+variation; `wporg-groups-frontend/tests/test-blocks.php` asserts only
+`wporg/*` blocks. Prune `CONTRACT` entries when call sites disappear.
 
 When a version bump (or this checklist) surfaces something that wasn't
 caught automatically, before moving on:

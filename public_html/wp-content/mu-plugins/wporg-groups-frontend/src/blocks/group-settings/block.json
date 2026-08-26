@@ -14,6 +14,7 @@
 	},
 	"render": "file:./render.php",
 	"viewScript": "file:./view.js",
+	"viewStyle": "file:./view.css",
 	"editorScript": "file:./index.js",
 	"style": "file:./style-index.css"
 }

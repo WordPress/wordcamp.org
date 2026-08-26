@@ -9,44 +9,235 @@ use WCP_Payment_Request;
 defined( 'WPINC' ) || die();
 
 
-add_filter( 'the_posts',                          __NAMESPACE__ . '\hide_others_payment_files', 10, 2 );
+add_action( 'pre_get_posts',                      __NAMESPACE__ . '\unsuppress_attachment_query_filters', 1 );
+add_filter( 'posts_clauses',                      __NAMESPACE__ . '\exclude_others_payment_files', 10, 2 );
+add_filter( 'the_posts',                          __NAMESPACE__ . '\hide_others_payment_files' );
+add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_personal_data_exporters' );
 add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_personal_data_erasers'   );
 
 
 /**
+ * The post types whose attachments carry financial details.
+ *
+ * These are the slugs behind `WordCamp\Budgets\Reimbursement_Requests\POST_TYPE` and
+ * `WCP_Payment_Request::POST_TYPE`. They're repeated here rather than referenced, because the files that define
+ * those constants only load in the admin, and this file has to run on every request. `Test_Privacy` asserts the
+ * two stay in step.
+ *
+ * @return string[]
+ */
+function get_budget_request_post_types() {
+	return array( 'wcb_reimbursement', 'wcp_payment_request' );
+}
+
+
+/**
+ * Make sure `hide_others_payment_files()` gets a chance to run on any query that can return attachments.
+ *
+ * `get_posts()` -- and therefore `get_children()` -- passes `suppress_filters => true` by default, which makes
+ * `WP_Query` skip `the_posts` along with every other query filter. Several callers in Core use those defaults to
+ * list attachments, so a guard hung off those filters alone doesn't apply to them.
+ *
+ * `pre_get_posts` is the right place to correct that, because it is the one hook `WP_Query` fires before it
+ * reads `suppress_filters`, so it cannot itself be suppressed. Unsuppressing costs those callers the small
+ * optimization they asked for, which is a fair trade for not having the visibility of the files depend on every
+ * call site remembering to opt in.
+ *
+ * @param WP_Query $wp_query
+ */
+function unsuppress_attachment_query_filters( $wp_query ) {
+	if ( ! $wp_query->get( 'suppress_filters' ) ) {
+		return;
+	}
+
+	if ( ! query_may_return_attachments( $wp_query ) ) {
+		return;
+	}
+
+	$wp_query->set( 'suppress_filters', false );
+}
+
+/**
+ * Whether a query could return attachments, and therefore needs the payment file guard applied to it.
+ *
+ * `any` qualifies because it means every post type that isn't excluded from search, and `attachment` is public,
+ * so it isn't. That's how `get_children()` queries by default. A query that names no post type at all also
+ * qualifies, because `WP_Query` picks the set itself in that case -- a front-end search, for instance, covers
+ * the same searchable post types that `any` does.
+ *
+ * @param WP_Query $wp_query
+ *
+ * @return bool
+ */
+function query_may_return_attachments( $wp_query ) {
+	$post_types = array_filter( (array) $wp_query->get( 'post_type' ) );
+
+	if ( ! $post_types ) {
+		return true;
+	}
+
+	return (bool) array_intersect( array( 'attachment', 'any' ), $post_types );
+}
+
+/**
+ * Exclude other users' payment files from a query, in SQL.
+ *
+ * This has to happen in the query rather than in its results, for two reasons. `WP_Query` returns early for
+ * `fields => ids` and for the count that backs `found_posts`, before it ever reaches `the_posts`, so a filter on
+ * the results can't reach either -- and a `found_posts` that counts rows the caller never receives is what breaks
+ * "Load more" in the Media Library grid for non-admins.
+ *
+ * The condition mirrors `get_hidden_payment_file_ids()`: a payment file stays visible to whoever uploaded it and
+ * to whoever filed the request it's attached to. Logged-out visitors match neither, so they see none of them.
+ *
+ * @param string[] $clauses
+ * @param WP_Query $wp_query
+ *
+ * @return string[]
+ */
+function exclude_others_payment_files( $clauses, $wp_query ) {
+	global $wpdb;
+
+	/*
+	 * Check the query before the capability, so that a query which can't return attachments doesn't force the
+	 * current user to be resolved. That matters for anything that runs a query before the auth cookie has been
+	 * read.
+	 */
+	if ( ! query_may_return_attachments( $wp_query ) || current_user_can( 'manage_options' ) ) {
+		return $clauses;
+	}
+
+	$user_id      = get_current_user_id();
+	$post_types   = get_budget_request_post_types();
+	$placeholders = implode( ', ', array_fill( 0, count( $post_types ), '%s' ) );
+
+	/*
+	 * `$placeholders` is a generated run of `%s`, one per post type, so that the `IN` list stays in step with
+	 * `get_budget_request_post_types()`. Everything the caller supplies still goes through the argument list.
+	 */
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+	$clauses['where'] .= $wpdb->prepare(
+		" AND (
+			{$wpdb->posts}.post_type != 'attachment'
+			OR {$wpdb->posts}.post_author = %d
+			OR {$wpdb->posts}.post_parent NOT IN (
+				SELECT budget_request.ID
+				FROM {$wpdb->posts} AS budget_request
+				WHERE budget_request.post_type IN ( $placeholders )
+				AND budget_request.post_author != %d
+			)
+		)",
+		array_merge( array( $user_id ), $post_types, array( $user_id ) )
+	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+	return $clauses;
+}
+
+/**
  * Prevent non-admins from viewing payment files uploaded by other users.
  *
- * The files sometimes have sensitive information, like account numbers etc. `the_posts` was chosen over
- * `ajax_query_attachments_args`, `pre_get_posts`, and other techniques, because it is the most comprehensive
- * and flexible solution. It will remove things from the Media Library, but also REST API endpoints, XML-RPC,
- * RSS, etc. It also allows the chance the to only apply the conditions to certain post types, whereas setting
- * query vars is much more limited.
+ * The files sometimes have sensitive information, like account numbers etc. `exclude_others_payment_files()`
+ * already keeps them out of the query, so this is a second pass over whatever the query returned, for the case
+ * where the SQL never ran: a plugin that short-circuits `posts_pre_query` -- an external search index, say --
+ * supplies its own results, and those clauses are built but discarded.
  *
- * SECURITY WARNING: When querying attachments `get_posts()`, make sure you pass `suppress_filters => false`,
- * otherwise this will not run.
+ * The post type is read off each result rather than off the query, so that a query which returns attachments
+ * incidentally -- `post_type => 'any'`, a mixed array of post types, a front-end search -- is covered too.
  *
- * @param WP_Post[] $attachments
- * @param WP_Query  $wp_query
+ * @param WP_Post[]|int[] $posts
  *
  * @return array
  */
-function hide_others_payment_files( $attachments, $wp_query ) {
-	$user = wp_get_current_user();
-
-	if ( 'attachment' !== $wp_query->get( 'post_type' ) || current_user_can( 'manage_options' ) ) {
-		return $attachments;
+function hide_others_payment_files( $posts ) {
+	if ( ! $posts ) {
+		return $posts;
 	}
 
-	$payment_posts_ids = get_payment_file_parent_ids( $attachments );
+	$attachments = get_attachments_from_results( $posts );
+
+	// As in `exclude_others_payment_files()`, don't resolve the current user unless there's a reason to.
+	if ( ! $attachments || current_user_can( 'manage_options' ) ) {
+		return $posts;
+	}
+
+	$hidden = get_hidden_payment_file_ids( $attachments );
+
+	if ( ! $hidden ) {
+		return $posts;
+	}
 
 	foreach ( $attachments as $index => $attachment ) {
+		if ( in_array( $attachment->ID, $hidden, true ) ) {
+			unset( $posts[ $index ] );
+		}
+	}
+
+	// Re-index the array, because WP_Query functions will assume there are no gaps.
+	return array_values( $posts );
+}
+
+/**
+ * Pick the attachments out of a set of query results, keyed by their position in that set.
+ *
+ * `the_posts` receives whatever `fields` the query asked for: `WP_Post` objects normally, but bare IDs for
+ * `fields => ids`, and lightweight objects for `fields => id=>parent`. Only the first two can be mapped back to
+ * a post, so the rest are ignored.
+ *
+ * @param WP_Post[]|int[] $posts
+ *
+ * @return WP_Post[] Indexed by the corresponding key in `$posts`.
+ */
+function get_attachments_from_results( $posts ) {
+	$ids_to_prime = array();
+
+	foreach ( $posts as $post ) {
+		if ( is_numeric( $post ) ) {
+			$ids_to_prime[] = (int) $post;
+		}
+	}
+
+	if ( $ids_to_prime ) {
+		_prime_post_caches( $ids_to_prime, false, false );
+	}
+
+	$attachments = array();
+
+	foreach ( $posts as $index => $post ) {
+		if ( is_numeric( $post ) ) {
+			$post = get_post( (int) $post );
+		}
+
+		if ( $post instanceof WP_Post && 'attachment' === $post->post_type ) {
+			$attachments[ $index ] = $post;
+		}
+	}
+
+	return $attachments;
+}
+
+/**
+ * Determine which of the given attachments are payment files that the current user may not see.
+ *
+ * The uploader and the person who filed the request both keep access; everyone else who isn't an admin loses it.
+ *
+ * @param WP_Post[] $attachments
+ *
+ * @return int[]
+ */
+function get_hidden_payment_file_ids( $attachments ) {
+	$user_id           = get_current_user_id();
+	$payment_posts_ids = get_payment_file_parent_ids( $attachments );
+	$hidden            = array();
+
+	foreach ( $attachments as $attachment ) {
 		if ( ! in_array( $attachment->post_parent, $payment_posts_ids, true ) ) {
 			continue;
 		}
 
-		if ( $attachment->post_author === $user->ID ) {
+		if ( (int) $attachment->post_author === $user_id ) {
 			continue;
 		}
 
@@ -57,15 +248,37 @@ function hide_others_payment_files( $attachments, $wp_query ) {
 		 */
 		$parent_author = (int) get_post( $attachment->post_parent )->post_author;
 
-		if ( $parent_author === $user->ID ) {
+		if ( $parent_author === $user_id ) {
 			continue;
 		}
 
-		unset( $attachments[ $index ] );
+		$hidden[] = $attachment->ID;
 	}
 
-	// Re-index the array, because WP_Query functions will assume there are no gaps.
-	return array_values( $attachments );
+	return $hidden;
+}
+
+/**
+ * Strip the details of other users' payment files out of XML-RPC responses.
+ *
+ * `wp.getMediaItem` looks an attachment up by ID with `get_post()`, so it never runs a `WP_Query` for the query
+ * guards to apply to. Returning an empty struct keeps the method able to answer without describing the file.
+ *
+ * @param array   $media_item_struct
+ * @param WP_Post $media_item
+ *
+ * @return array
+ */
+function redact_others_payment_files( $media_item_struct, $media_item ) {
+	if ( current_user_can( 'manage_options' ) ) {
+		return $media_item_struct;
+	}
+
+	if ( get_hidden_payment_file_ids( array( $media_item ) ) ) {
+		return array();
+	}
+
+	return $media_item_struct;
 }
 
 /**
@@ -84,14 +297,19 @@ function get_payment_file_parent_ids( $attachments ) {
 		unset( $parent_ids[ $orphaned_index ] );
 	}
 
+	/*
+	 * `post__in` treats an empty array as "no restriction", so bail rather than pulling in every request on the
+	 * site to compare against a set of attachments that can't match any of them.
+	 */
+	if ( ! $parent_ids ) {
+		return array();
+	}
+
 	$payment_posts_with_attachments = get_posts( array(
 		'post__in'    => $parent_ids,
 		'post_status' => 'any',
 		'numberposts' => 1000,
-		'post_type'   => array(
-			Reimbursement_Requests\POST_TYPE,
-			WCP_Payment_Request::POST_TYPE,
-		),
+		'post_type'   => get_budget_request_post_types(),
 	) );
 
 	return wp_list_pluck( $payment_posts_with_attachments, 'ID' );
@@ -112,10 +330,7 @@ function get_payment_file_parent_ids( $attachments ) {
  */
 function obscure_payment_file_names( $filename, $extension ) {
 	$attached_post       = get_post( absint( $_REQUEST['post_id'] ?? 0 ) );
-	$relevant_post_types = array(
-		Reimbursement_Requests\POST_TYPE,
-		WCP_Payment_Request::POST_TYPE,
-	);
+	$relevant_post_types = get_budget_request_post_types();
 
 	if ( $attached_post instanceof WP_Post && in_array( $attached_post->post_type, $relevant_post_types, true ) ) {
 		$filename = sprintf(

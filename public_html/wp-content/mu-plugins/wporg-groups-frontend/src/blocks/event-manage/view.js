@@ -8,5 +8,4 @@
  * @package WordCamp\Groups\Frontend
  */
 
-import 'leaflet/dist/leaflet.css';
 import './event-modal-app';

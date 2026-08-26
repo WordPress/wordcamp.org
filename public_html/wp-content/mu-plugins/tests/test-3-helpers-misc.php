@@ -25,8 +25,8 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 	 *
 	 * @dataProvider data_wcorg_sanitize_plain_text
 	 */
-	public function test_wcorg_sanitize_plain_text( $value, $keep_line_breaks, $expected ) {
-		$this->assertSame( $expected, wcorg_sanitize_plain_text( $value, $keep_line_breaks ) );
+	public function test_wcorg_sanitize_plain_text( $value, $expected ) {
+		$this->assertSame( $expected, wcorg_sanitize_plain_text( $value ) );
 	}
 
 	/**
@@ -38,64 +38,49 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 		return array(
 			'ordinary text is untouched' => array(
 				'WordCamp Narnia',
-				false,
 				'WordCamp Narnia',
 			),
 
 			'real elements are stripped' => array(
 				'<code>Narnia</code>',
-				false,
 				'Narnia',
 			),
 
 			'a space after the angle bracket does not carry an element through' => array(
 				self::SPACED_TAG,
-				false,
 				'Portland&lt; code >" data-x="&lt; /code >Oregon',
 			),
 
 			'an element outside the kses allow-list is handled the same way' => array(
 				'< pre >Narnia< /pre >',
-				false,
 				'&lt; pre >Narnia&lt; /pre >',
 			),
 
 			// `wp_kses( $value, array() )` deletes the whole `<...>` span here, returning `Hall  seats`.
 			'an angle bracket pair does not swallow the text between it' => array(
 				'Hall < 100 > seats',
-				false,
 				'Hall &lt; 100 > seats',
 			),
 
 			// Already-encoded input must not be decoded back into something kses can rebuild.
 			'entity-encoded angle brackets are left encoded' => array(
 				'&lt; code &gt;Narnia',
-				false,
 				'&lt; code &gt;Narnia',
 			),
 
 			'numeric character references are not decoded' => array(
 				'&#60; code >Narnia',
-				false,
 				'&#60; code >Narnia',
 			),
 
 			'ampersands are left for the kses pass to normalize' => array(
 				'Smith & Sons Hall',
-				false,
 				'Smith & Sons Hall',
 			),
 
 			'line breaks are collapsed by default' => array(
 				"Narnia\nHall",
-				false,
 				'Narnia Hall',
-			),
-
-			'line breaks are kept when asked for' => array(
-				"Narnia\nHall",
-				true,
-				"Narnia\nHall",
 			),
 
 			'arrays are sanitized recursively' => array(
@@ -103,7 +88,6 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 					'a' => '< code >x',
 					'b' => array( '< code >y' ),
 				),
-				false,
 				array(
 					'a' => '&lt; code >x',
 					'b' => array( '&lt; code >y' ),
@@ -112,8 +96,19 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 
 			'non-string scalars are cast' => array(
 				42,
-				false,
 				'42',
+			),
+
+			// `sanitize_text_field()` would delete these, quietly breaking a pasted URL.
+			'percent-encoded sequences are preserved' => array(
+				'See https://example.org/My%20Notes.pdf',
+				'See https://example.org/My%20Notes.pdf',
+			),
+
+			// The wrapper is no less forgiving than the `sanitize_*_field()` it replaces.
+			'a value that is neither array nor scalar becomes an empty string' => array(
+				new \stdClass(),
+				'',
 			),
 		);
 	}

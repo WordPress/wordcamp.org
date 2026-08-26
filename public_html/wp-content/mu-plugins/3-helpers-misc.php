@@ -404,35 +404,35 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
  * `sanitize_text_field()` and `wp_kses()` disagree about what opens a tag: `strip_tags()`, which the
  * former is built on, needs a letter, `/`, `!` or `?` after the `<`, while kses also accepts whitespace.
  * A value like `< code >` therefore passes the sanitiser untouched, and the `wp_filter_kses()` that core
- * puts on `title_save_pre` and `content_save_pre` then rebuilds it into a real element -- so a handler
- * that meant to store text ends up storing markup. Encoding the `<` that survives settles the
- * disagreement, and leaves the character visible to readers.
+ * puts on `title_save_pre` then rebuilds it into a real element -- so a handler that meant to store text
+ * ends up storing markup. Encoding the `<` that survives settles the disagreement, and leaves the
+ * character visible to readers.
  *
- * `wp_kses( $value, array() )` is not a substitute: it drops whole `<...>` spans, turning
- * `Hall < 100 > seats` into `Hall  seats`, and rewrites every `&`.
+ * This deliberately does not call `sanitize_text_field()`, which would also delete every `%[a-f0-9]{2}`
+ * sequence and so quietly break a percent-encoded URL. `wp_kses( $value, array() )` is not usable either:
+ * it drops whole `<...>` spans rather than neutralising them, turning `Hall < 100 > seats` into
+ * `Hall  seats`, and rewrites every `&`.
  *
  * The result is encoded for HTML. Decode it before using it in a plain-text medium such as an email
  * body or a CSV column.
  *
- * @param string|array $value            The submitted value. Arrays are handled recursively; keys are
- *                                       left alone.
- * @param bool         $keep_line_breaks Whether to keep newlines, as `sanitize_textarea_field()` does.
+ * @param mixed $value The submitted value. Arrays are handled recursively; array keys are left alone,
+ *                     and anything that is neither an array nor a scalar becomes an empty string, as
+ *                     `sanitize_text_field()` does.
  *
  * @return string|array A string, or an array of strings when `$value` is an array.
  */
-function wcorg_sanitize_plain_text( $value, $keep_line_breaks = false ) {
+function wcorg_sanitize_plain_text( $value ) {
 	if ( is_array( $value ) ) {
-		return array_map(
-			function ( $item ) use ( $keep_line_breaks ) {
-				return wcorg_sanitize_plain_text( $item, $keep_line_breaks );
-			},
-			$value
-		);
+		return array_map( 'wcorg_sanitize_plain_text', $value );
 	}
 
-	$value = $keep_line_breaks
-		? sanitize_textarea_field( (string) $value )
-		: sanitize_text_field( (string) $value );
+	if ( ! is_scalar( $value ) ) {
+		return '';
+	}
+
+	$value = wp_check_invalid_utf8( (string) $value );
+	$value = wp_strip_all_tags( $value, true );
 
 	return str_replace( '<', '&lt;', $value );
 }

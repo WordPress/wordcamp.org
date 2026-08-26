@@ -119,8 +119,8 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		return;
 	}
 
-	// Jetpack only puts these through `sanitize_textarea_field()`, which is not enough on its own
-	// to keep the title text. See `wcorg_sanitize_plain_text()`.
+	// `find_first_field_matching_label()` applies `sanitize_text_field()`, which is not enough on
+	// its own to keep the title text. See `wcorg_sanitize_plain_text()`.
 	$post = array(
 		'post_type'   => 'wordcamp',
 		'post_title'  => 'WordPress Campus Connect ' . wcorg_sanitize_plain_text( $campus ?: trim( "$city, $country", ', ' ) ),

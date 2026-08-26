@@ -418,7 +418,7 @@ class WordCamp_Forms_To_Drafts {
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
 			'post_title'   => wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ),
-			'post_content' => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Description'] ?? '', true ) ),
+			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -652,7 +652,8 @@ class WordCamp_Forms_To_Drafts {
 	 * keeps that text as literal characters instead of letting it run as shortcodes,
 	 * so a submission is shown as written rather than executed.
 	 *
-	 * Callers pair this with `wcorg_sanitize_plain_text()`, which does the same job for `<`.
+	 * Tags are not a concern here: Jetpack has already run these values through `wp_kses_post()`,
+	 * and `content_save_pre` runs them through it again on the way into the database.
 	 *
 	 * @param string $content Submitted content.
 	 *
@@ -670,7 +671,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_speaker( $speaker ) {
-		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $speaker['Your Bio'] ?? '', true ) );
+		$content = $this->escape_shortcodes( $speaker['Your Bio'] ?? '' );
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -719,7 +720,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_session( $session, $speaker ) {
-		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $session['Topic Description'] ?? '', true ) );
+		$content = $this->escape_shortcodes( $session['Topic Description'] ?? '' );
 
 		if ( $content ) {
 			$content = wpautop( $content );

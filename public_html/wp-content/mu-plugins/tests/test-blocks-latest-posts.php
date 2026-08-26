@@ -128,6 +128,27 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertStringContainsString( 'Published title', $response->get_data()['rendered'] );
+
+		// Only this response is safe to hold, and only after every guard has run.
+		$headers = $response->get_headers();
+		$this->assertArrayHasKey( 'Cache-Control', $headers );
+		$this->assertStringContainsString( 's-maxage=', $headers['Cache-Control'] );
+	}
+
+	/**
+	 * An authorised render is not marked cacheable.
+	 *
+	 * The header belongs to the anonymous re-run and nothing else. A logged-in
+	 * editor's response returns before it, and telling a shared cache to hold that
+	 * one would hand it to everyone behind the cache.
+	 */
+	public function test_an_authorised_request_is_not_marked_cacheable() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->render( 'core/latest-posts', array( 'attributes' => array( 'postsToShow' => 2 ) ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertArrayNotHasKey( 'Cache-Control', $response->get_headers() );
 	}
 
 	/**
@@ -216,6 +237,10 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 
 		$this->assertSame( 403, $response->get_status() );
 		$this->assertSame( 'rest_cannot_access', $response->get_data()['code'] );
+
+		// A refusal must never be cached: moving the header above the guards would
+		// tell a shared cache to hold a lockdown for everyone behind it.
+		$this->assertArrayNotHasKey( 'Cache-Control', $response->get_headers() );
 	}
 
 	/**
@@ -368,12 +393,18 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 			'leading'  => '<!-- x --><ul class="wp-block-latest-posts"><li>a</li></ul>',
 			'trailing' => '<ul class="wp-block-latest-posts"><li>a</li></ul><style>.x{}</style>',
 			'siblings' => '<ul class="wp-block-latest-posts"><li>a</li></ul><ul class="other"><li>b</li></ul>',
+			'siblings-reversed' => '<ul class="other"><li>b</li></ul><ul class="wp-block-latest-posts"><li>a</li></ul>',
 		);
 
 		foreach ( $cases as $label => $markup ) {
 			$output = $this->render_container( $markup );
 
-			$this->assertStringContainsString( 'has-live-update', $output, $label . ': container was not marked.' );
+			// The marking has to land on the block's own list, not on a neighbour's.
+			$this->assertSame(
+				1,
+				preg_match( '/<ul[^>]*class="[^"]*\bwp-block-latest-posts\b[^"]*\bhas-live-update\b[^"]*"/', $output ),
+				$label . ': the block\'s own list was not the one marked.'
+			);
 			$this->assertStringContainsString( 'data-attributes=', $output, $label . ': no attributes were written.' );
 		}
 	}

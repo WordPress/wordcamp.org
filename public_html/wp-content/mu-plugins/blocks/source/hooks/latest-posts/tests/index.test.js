@@ -70,8 +70,11 @@ describe( 'unwrapContainer', () => {
 		);
 	} );
 
-	it( 'returns the markup unchanged when there is no container to strip', () => {
-		expect( unwrapContainer( '<li>one</li>' ) ).toBe( '<li>one</li>' );
-		expect( unwrapContainer( '' ) ).toBe( '' );
+	// The container on the page is a `<ul>`, so markup without a container of its own
+	// is not something we can write into it. The caller leaves the list alone.
+	it( 'returns null when there is no container to strip', () => {
+		expect( unwrapContainer( '<li>one</li>' ) ).toBeNull();
+		expect( unwrapContainer( '<p>something else</p>' ) ).toBeNull();
+		expect( unwrapContainer( '' ) ).toBeNull();
 	} );
 } );

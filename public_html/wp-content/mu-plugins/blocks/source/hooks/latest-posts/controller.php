@@ -122,12 +122,16 @@ function safelist_block_renderer( $response, $handler, $request ) {
 	$response = call_user_func( $handler['callback'], $request );
 
 	/*
-	 * Everyone on a page polls the same URL, so let a cache answer most of them. A
-	 * minute is short against the five the block waits between polls, and core only
-	 * sends no-cache headers for a logged-in request, which this never is.
+	 * Everyone on a page polls the same URL, so let a shared cache answer most of
+	 * them. A minute is short against the five the block waits between polls, and core
+	 * only sends no-cache headers for a logged-in request, which this never is.
+	 *
+	 * `s-maxage` because all of the value is in a shared cache: a browser's own copy
+	 * expires long before that browser polls again. And every guard above has to have
+	 * run first, since this is the one response here that is safe to hold.
 	 */
 	if ( $response instanceof \WP_REST_Response ) {
-		$response->header( 'Cache-Control', 'max-age=' . POLL_CACHE_SECONDS );
+		$response->header( 'Cache-Control', 'public, s-maxage=' . POLL_CACHE_SECONDS );
 	}
 
 	return $response;
@@ -197,7 +201,16 @@ function render( $block_content, $block ) {
 		 */
 		$processor = new \WP_HTML_Tag_Processor( $block_content );
 
-		if ( $processor->next_tag() && 'UL' === $processor->get_tag() ) {
+		// By what it is, not by what comes first: the markup can hold a list belonging
+		// to something else, and a container of ours can sit inside a group.
+		$found = $processor->next_tag(
+			array(
+				'tag_name'   => 'UL',
+				'class_name' => 'wp-block-latest-posts',
+			)
+		);
+
+		if ( $found ) {
 			$processor->add_class( 'has-live-update' );
 			$processor->add_class( 'is-loading' );
 			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( pollable_attributes( $block['attrs'] ) ) ) );

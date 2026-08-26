@@ -50,8 +50,12 @@ export function readAttributes( element ) {
  * container of its own. The container already on the page is the one carrying the
  * block's classes, so only its contents are replaced.
  *
+ * The container on the page is the `<ul>` core rendered, which can only legally hold
+ * list items, so markup that does not carry a container is not written at all. The
+ * server's list stays where it is instead.
+ *
  * @param {string} html Rendered block markup.
- * @return {string} The container's contents, or the markup unchanged if it has none.
+ * @return {string|null} The container's contents, or null if there is no container.
  */
 export function unwrapContainer( html ) {
 	const template = document.createElement( 'template' );
@@ -61,7 +65,7 @@ export function unwrapContainer( html ) {
 		'.wp-block-latest-posts'
 	);
 
-	return container ? container.innerHTML : html;
+	return container ? container.innerHTML : null;
 }
 
 /**
@@ -130,7 +134,13 @@ function start( element ) {
 			.fetch( addQueryArgs( endpoint, { context: 'edit', attributes } ) )
 			.then( ( response ) => {
 				if ( ! response.ok ) {
-					throw new Error( `HTTP ${ response.status }` );
+					const error = new Error( `HTTP ${ response.status }` );
+
+					// A refusal repeats; a dropped connection does not.
+					error.permanent =
+						response.status >= 400 && response.status < 500;
+
+					throw error;
 				}
 
 				return response.json();
@@ -144,6 +154,10 @@ function start( element ) {
 				}
 
 				const content = unwrapContainer( body.rendered );
+
+				if ( null === content ) {
+					return;
+				}
 
 				/*
 				 * Rewriting the list rebuilds every node in it, which drops focus and
@@ -164,13 +178,26 @@ function start( element ) {
 				warn( error.message );
 
 				/*
-				 * A refusal usually repeats: a page cached before the deploy sends
-				 * attributes the route no longer accepts, and will until it expires.
-				 * Give the network a couple of chances, then stop asking.
+				 * A refusal repeats by construction: a page cached before the deploy
+				 * sends attributes the route no longer accepts, and will until it
+				 * expires. A dropped connection is the opposite, and a screen left
+				 * running unattended has to survive a bad afternoon of them, so only
+				 * a refusal counts against the budget.
 				 */
+				if ( ! error.permanent ) {
+					return;
+				}
+
 				failures++;
 
 				if ( failures >= MAX_FAILURES ) {
+					// `warn()` latched on the first one, so say this separately.
+					// eslint-disable-next-line no-console
+					console.warn(
+						'Latest Posts live update gave up after',
+						failures,
+						'refused requests.'
+					);
 					clearInterval( timer );
 				}
 			} );

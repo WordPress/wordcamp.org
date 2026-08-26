@@ -994,8 +994,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		public function add_organizer_to_central( $post ) {
 
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- WordCamp status can be moved to pre-planning status only from the admin edit screen where nonce is already verified.
-			$lead_organizer = get_user_by( 'login', $_POST['wcpt_wordpress_org_username'] );
+			// Only the admin edit screen posts this, and the same transition is reachable from
+			// the Jetpack application bridge, WP-CLI and cron, where there is no form at all.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The admin edit screen has already verified its nonce.
+			$username = $_POST['wcpt_wordpress_org_username'] ?? '';
+
+			if ( ! $username ) {
+				return;
+			}
+
+			$lead_organizer = get_user_by( 'login', $username );
 
 			if ( $lead_organizer && add_user_to_blog( get_current_blog_id(), $lead_organizer->ID, 'contributor' ) ) {
 				do_action( 'wcor_organizer_added_to_central', $post );

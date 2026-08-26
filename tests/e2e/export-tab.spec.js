@@ -44,8 +44,10 @@ test.describe( 'export tab', () => {
 
 		const csv = await downloadFrom( page, dialog, 'Download CSV' );
 		expect( csv.filename ).toMatch( /-events-\d{4}-\d{2}-\d{2}\.csv$/ );
+		// Every field is quoted, whatever it contains, so a reader that splits
+		// on a delimiter other than the comma can't re-split a cell.
 		expect( csv.content ).toContain(
-			'event_id,event_title,event_start_gmt,event_end_gmt,venue,organiser'
+			'"event_id","event_title","event_start_gmt","event_end_gmt","venue","organiser"'
 		);
 
 		const json = await downloadFrom( page, dialog, 'Download JSON' );
@@ -73,6 +75,6 @@ test.describe( 'export tab', () => {
 		const csv = await downloadFrom( page, dialog, 'Download CSV' );
 		const [ header ] = csv.content.replace( /^﻿/, '' ).split( '\n' );
 
-		expect( header.trim() ).toBe( 'event_title,rsvp_status' );
+		expect( header.trim() ).toBe( '"event_title","rsvp_status"' );
 	} );
 } );

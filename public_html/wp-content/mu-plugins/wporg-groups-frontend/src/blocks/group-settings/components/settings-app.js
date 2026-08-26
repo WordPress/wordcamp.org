@@ -81,7 +81,7 @@ export default function SettingsApp( {
 		{
 			title: siteName || __( 'Group Settings', 'wporg-groups-frontend' ),
 			onRequestClose: onClose,
-			className: 'wporg-group-settings-modal',
+			className: 'wporg-groups-modal-accent wporg-group-settings-modal',
 			isFullScreen: true,
 			shouldCloseOnClickOutside: false,
 		},

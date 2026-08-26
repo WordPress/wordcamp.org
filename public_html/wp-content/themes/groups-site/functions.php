@@ -12,8 +12,6 @@ namespace WordCamp\Groups\Site;
 
 defined( 'ABSPATH' ) || exit;
 
-require_once __DIR__ . '/inc/event-cards.php';
-
 /**
  * Theme support.
  */
@@ -54,24 +52,102 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
- * Remove the featured image link from keyboard tab order in event card grids.
+ * Adjust the featured image inside event card grids.
  *
- * The title link already provides keyboard access to the event. A second
- * focusable link on the image is redundant and slows tab navigation.
+ * Two changes, both scoped so the single-event hero is left alone. The guard
+ * tests `is_singular( 'gatherpress_event' )` rather than a bare
+ * `is_singular()`: the group front page is a static Page, so it is singular
+ * too, and the broader test excluded the very cards this is meant to fix.
+ *
+ *   - Drop the image link from the keyboard tab order. The title link already
+ *     provides keyboard access to the event, so a second focusable link on
+ *     the image is redundant and slows tab navigation.
+ *   - Substitute a placeholder when the event has no thumbnail. Core renders
+ *     the block as an empty string in that case, so one image-less event in a
+ *     row of three used to start its date where its neighbours started their
+ *     image — the cards shared a grid row but no baseline. The placeholder
+ *     holds the same 16:9 region; `custom.css` fills it with flat
+ *     Blueberry 4 rather than invented artwork.
+ *
+ * @param string $content The rendered featured-image block.
+ * @param array  $block   The parsed block, including its context.
  */
-add_filter(
-	'render_block_core/post-featured-image',
-	static function ( string $content, array $block ): string {
-		$post_type = $block['context']['postType'] ?? get_post_type();
+function filter_event_card_featured_image( string $content, array $block ): string {
+	$post_type = $block['context']['postType'] ?? get_post_type();
 
-		if ( ! is_singular() && 'gatherpress_event' === $post_type ) {
-			$content = str_replace( '<a href=', '<a tabindex="-1" href=', $content );
-		}
+	if ( 'gatherpress_event' !== $post_type || is_singular( 'gatherpress_event' ) ) {
 		return $content;
-	},
-	10,
-	2
-);
+	}
+
+	if ( '' === trim( $content ) ) {
+		return '<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"></div>';
+	}
+
+	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+}
+add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_event_card_featured_image', 10, 2 );
+
+/**
+ * Prime the featured-image cache for the theme's event card grids.
+ *
+ * `core/post-template` primes it itself — but only after
+ * `block_core_post_template_uses_featured_image()` finds a literal
+ * `core/post-featured-image` among its *parsed* inner blocks. The event
+ * grids on the front page and the events archive reference their card
+ * through `wp:pattern`, which core only expands at render time, so that
+ * scan sees a lone `core/pattern` and skips the priming. Every card then
+ * resolves its own thumbnail: one `get_post()` for the attachment plus one
+ * `wp_get_attachment_metadata()` lookup, up to twelve cards per archive
+ * page.
+ *
+ * `loop_start` fires from the first `the_post()` of the loop, before any
+ * card renders, which is exactly where core would have primed. Scoped to
+ * secondary `gatherpress_event` queries: the main query is primed by
+ * whichever template renders it, and no other loop on these sites draws
+ * card thumbnails.
+ *
+ * @param \WP_Query $query The query starting its loop.
+ */
+function prime_event_card_thumbnails( $query ) {
+	if ( ! $query instanceof \WP_Query || $query->is_main_query() ) {
+		return;
+	}
+
+	$post_types = (array) $query->get( 'post_type' );
+
+	if ( array( 'gatherpress_event' ) !== $post_types ) {
+		return;
+	}
+
+	update_post_thumbnail_cache( $query );
+}
+add_action( 'loop_start', __NAMESPACE__ . '\prime_event_card_thumbnails' );
+
+/**
+ * Describe the events archive's view state on `<body>` so the stylesheet can
+ * react to it.
+ *
+ * Adds `groups-site-events-view-{upcoming|past|all}`, mirroring the Time
+ * filter. Past events shouldn't wear the same blue "coming up" date
+ * treatment as upcoming ones, and the query loop itself has no idea which
+ * mode it rendered in.
+ */
+function event_archive_body_classes( array $classes ): array {
+	if ( ! is_post_type_archive( 'gatherpress_event' ) ) {
+		return $classes;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$time = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+	if ( ! in_array( $time, array( 'upcoming', 'past', 'all' ), true ) ) {
+		$time = 'upcoming';
+	}
+
+	$classes[] = 'groups-site-events-view-' . $time;
+
+	return $classes;
+}
+add_filter( 'body_class', __NAMESPACE__ . '\event_archive_body_classes' );
 
 /**
  * Register a block pattern category for the theme.
@@ -192,15 +268,37 @@ function strip_event_metadata_blocks( $content ) {
 add_filter( 'the_content', __NAMESPACE__ . '\strip_event_metadata_blocks', 5 );
 
 /**
+ * Post types whose singular view uses the compact discussion composer.
+ *
+ * `single-event.html` and `single.html` render the same "Discussion" section
+ * and share one block of comment styling, so both need the same form
+ * defaults. See `compact_comment_form_defaults()` for what a post type left
+ * off this list gets instead.
+ */
+const COMPACT_COMMENT_FORM_POST_TYPES = array( 'gatherpress_event', 'post' );
+
+/**
+ * Whether the current request is a singular view that uses that composer.
+ */
+function has_compact_comment_form(): bool {
+	return is_singular( COMPACT_COMMENT_FORM_POST_TYPES );
+}
+
+/**
  * Reshape the comment form into a compact "leave a reply" composer.
  *
  * Drops the "Leave a Reply" heading, the "Logged in as…" boilerplate, and the
  * notes-before/after copy. Replaces the comment field with a placeholder
- * textarea so it reads like a meetup-style discussion box. Only applies on
- * `gatherpress_event` singulars so we don't change comment forms elsewhere.
+ * textarea so it reads like a meetup-style discussion box.
+ *
+ * Emptying `title_reply_before`/`title_reply_after` also takes the
+ * `#reply-title` wrapper out of the markup, which is load-bearing: core nests
+ * `#cancel-comment-reply-link` inside that wrapper and `custom.css` hides it,
+ * so without this the Cancel reply link is unreachable and a reader who clicks
+ * Reply can't get back to writing a top-level comment.
  */
-function event_comment_form_defaults( $defaults ) {
-	if ( ! is_singular( 'gatherpress_event' ) ) {
+function compact_comment_form_defaults( $defaults ) {
+	if ( ! has_compact_comment_form() ) {
 		return $defaults;
 	}
 
@@ -211,8 +309,16 @@ function event_comment_form_defaults( $defaults ) {
 	$defaults['comment_notes_before'] = '';
 	$defaults['comment_notes_after']  = '';
 	$defaults['logged_in_as']         = '';
-	$defaults['label_submit']         = __( 'Post comment', 'groups-site' );
-	$defaults['class_submit']         = 'submit wp-element-button';
+
+	// Core wraps the Cancel reply link in a `<small>`. Dropping the wrapper
+	// leaves the link a direct child of `#respond`, so while it's hidden it
+	// generates no line box above the composer — and `custom.css` sizes it
+	// rather than the browser's `<small>` default.
+	$defaults['cancel_reply_before'] = '';
+	$defaults['cancel_reply_after']  = '';
+
+	$defaults['label_submit'] = __( 'Post comment', 'groups-site' );
+	$defaults['class_submit'] = 'submit wp-element-button';
 
 	$defaults['comment_field'] = sprintf(
 		'<p class="comment-form-comment"><label class="screen-reader-text" for="comment">%1$s</label><textarea id="comment" name="comment" cols="45" rows="3" maxlength="65525" required placeholder="%2$s"></textarea></p>',
@@ -222,17 +328,17 @@ function event_comment_form_defaults( $defaults ) {
 
 	return $defaults;
 }
-add_filter( 'comment_form_defaults', __NAMESPACE__ . '\event_comment_form_defaults' );
+add_filter( 'comment_form_defaults', __NAMESPACE__ . '\compact_comment_form_defaults' );
 
 /**
- * Change "Reply" link text to "Reply" (keeping it, but ensuring the cancel
- * text also says the right thing). Override the default "Leave a Reply" title.
+ * Say "Reply" and "Log in to comment" on the singulars that use the compact
+ * composer, rather than core's longer defaults.
  */
-function event_comment_reply_link_args( $args ) {
-	if ( is_singular( 'gatherpress_event' ) ) {
-		$args['reply_text']  = __( 'Reply', 'groups-site' );
-		$args['login_text']  = __( 'Log in to comment', 'groups-site' );
+function compact_comment_reply_link_args( $args ) {
+	if ( has_compact_comment_form() ) {
+		$args['reply_text'] = __( 'Reply', 'groups-site' );
+		$args['login_text'] = __( 'Log in to comment', 'groups-site' );
 	}
 	return $args;
 }
-add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\event_comment_reply_link_args' );
+add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );

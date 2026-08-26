@@ -36,6 +36,8 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/wporg-groups-archive.php';
 	require_once dirname( __DIR__ ) . '/group-site-provisioning.php';
 	require_once dirname( __DIR__ ) . '/network-messaging.php';
+	require_once dirname( __DIR__ ) . '/group-ownership-transfer.php';
+	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
 	require_once dirname( __DIR__ ) . '/network-export.php';
 }
 

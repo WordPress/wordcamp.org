@@ -3,7 +3,7 @@ const { login } = require( './utils/login' );
 const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
- * Event Organisers (author role) manage events through wp-admin's native
+ * Event Organizers (author role) manage events through wp-admin's native
  * GatherPress editor — the custom `wporg/event-manage` front-end block is
  * registered but not placed in any template (a known, tracked issue; see
  * the "Known-issues appendix" in the groups-gatherpress-compat-test skill),
@@ -12,7 +12,7 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
  * Requires the `eventorganiser1` / `password` test user from the skill's
  * environment-setup step.
  */
-test.describe( 'event organiser (author role)', () => {
+test.describe( 'event organizer (author role)', () => {
 	test( 'can create and publish an event via wp-admin, and it appears on the front page', async ( { page } ) => {
 		test.slow(); // The block editor can be slow to boot on a cold local dev stack.
 
@@ -50,7 +50,7 @@ test.describe( 'event organiser (author role)', () => {
 		// up with older same-day events, so a brand-new one isn't guaranteed a
 		// slot in it (the same issue event-manage-messaging.spec.js hit and
 		// worked around). The my-events block has no such cap: it's the
-		// #1810 behaviour itself — this organiser published the event and
+		// #1810 behaviour itself — this organizer published the event and
 		// never RSVP'd to it — and reliably shows it regardless of how many
 		// other events exist.
 		await expect(

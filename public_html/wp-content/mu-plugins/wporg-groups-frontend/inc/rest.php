@@ -233,7 +233,7 @@ function register_routes(): void {
 
 	// ----- Group info -----------------------------------------------------
 	//
-	// Organisers cannot use core's /wp/v2/settings endpoint because it requires
+	// Organizers cannot use core's /wp/v2/settings endpoint because it requires
 	// `manage_options`. Expose only the fields managed by this UI behind the
 	// group-settings capability instead.
 
@@ -559,7 +559,7 @@ function current_user_can_publish_event( int $event_id = 0 ): bool {
  * Whether the current user may use an attachment as an event's featured
  * image. Mirrors core's own visibility rules for attachments (public/
  * inherited attachments readable by anyone, private ones only by their
- * owner or users with `read_private_posts`) so a group organiser can't
+ * owner or users with `read_private_posts`) so a group organizer can't
  * point their event at another user's private/unattached media just by
  * guessing its ID.
  */

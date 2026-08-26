@@ -4,7 +4,8 @@
 	"scripts": {
 		"build": "wp-scripts build --webpack-src-dir=src/blocks --output-path=build/blocks --experimental-modules",
 		"start": "wp-scripts start --webpack-src-dir=src/blocks --output-path=build/blocks --experimental-modules",
-		"test": "wp-scripts test-unit-js"
+		"test": "wp-scripts test-unit-js",
+		"lint:css": "wp-scripts lint-style 'src/**/*.css' 'src/**/*.scss'"
 	},
 	"devDependencies": {
 		"@wordpress/interactivity": "6.48.0",

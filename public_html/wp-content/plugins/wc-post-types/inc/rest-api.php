@@ -514,20 +514,40 @@ function register_additional_rest_fields() {
 		array(
 			'get_callback' => function ( $post ) {
 				$speaker_ids = get_post_meta( $post['id'], '_wcpt_speaker_id', false );
-				$speakers = array();
+				$speakers    = array();
 
-				foreach ( $speaker_ids as $speaker_id ) {
-					$speaker = get_post( $speaker_id );
+				if ( empty( $speaker_ids ) ) {
+					return $speakers;
+				}
 
-					// Make sure the speaker post hasn't been deleted.
-					if ( $speaker instanceof WP_Post ) {
-						$speakers[] = array(
-							'id'   => $speaker_id,
-							'slug' => $speaker->post_name,
-							'name' => get_the_title( $speaker_id ),
-							'link' => get_permalink( $speaker_id ),
-						);
+				// One query rather than a lookup per speaker: this runs for every
+				// session in a collection response.
+				$speaker_posts = get_posts( array(
+					'post_type'      => 'wcb_speaker',
+					'post__in'       => array_map( 'absint', $speaker_ids ),
+					'post_status'    => 'any',
+					'posts_per_page' => -1,
+					'orderby'        => 'post__in',
+					'no_found_rows'  => true,
+					// Only the title, slug, permalink and status are used below.
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				) );
+
+				foreach ( $speaker_posts as $speaker ) {
+					// Served in the anonymous `view` context, and the controller's own
+					// read check covers the session, not the posts dereferenced here.
+					if ( 'publish' !== $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
 					}
+
+					$speakers[] = array(
+						// Kept as the stored meta string so the response shape is unchanged.
+						'id'   => (string) $speaker->ID,
+						'slug' => $speaker->post_name,
+						'name' => get_the_title( $speaker->ID ),
+						'link' => get_permalink( $speaker->ID ),
+					);
 				}
 
 				return $speakers;
@@ -618,7 +638,14 @@ function prepare_session_query_args( $args, $request ) {
 		$args['orderby']  = 'meta_value_num';
 	}
 
-	$args['post_status'] = array( 'publish', 'private' );
+	// The controller drops unreadable posts from the body but still counts them
+	// in found_posts, so X-WP-Total would include what the caller never receives.
+	$args['post_status'] = array( 'publish' );
+
+	$post_type = get_post_type_object( 'wcb_session' );
+	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
+		$args['post_status'][] = 'private';
+	}
 
 	return $args;
 }

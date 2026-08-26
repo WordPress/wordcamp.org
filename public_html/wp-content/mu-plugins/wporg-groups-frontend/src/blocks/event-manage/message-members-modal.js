@@ -72,7 +72,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 				? __( 'Message all members', 'wporg-groups-frontend' )
 				: __( 'Message event attendees', 'wporg-groups-frontend' ),
 			onRequestClose: onClose,
-			className: 'wporg-groups-message-modal',
+			className: 'wporg-groups-modal-accent wporg-groups-message-modal',
 			shouldCloseOnClickOutside: false,
 		},
 		sent

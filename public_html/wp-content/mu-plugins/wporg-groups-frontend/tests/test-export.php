@@ -87,6 +87,30 @@ class Test_Groups_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * Creates a published weekly series with `$count` occurrences, the first
+	 * two weeks out so every occurrence starts in the future.
+	 */
+	private function create_recurring_test_event( int $count ): int {
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+
+		Recurring_Events_Database::maybe_install();
+
+		return $this->create_test_event(
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => $count,
+				),
+			)
+		);
+	}
+
+	/**
 	 * Dispatches GET /export through the full REST pipeline, so route
 	 * registration, arg validation, and permission callbacks all run.
 	 */
@@ -376,21 +400,37 @@ class Test_Groups_Export extends Groups_TestCase {
 		$this->assertStringStartsWith( "'+", $rows[1][11] );
 
 		// Unit-level: every trigger character is prefixed, plain text is not.
-		foreach ( array( '=x', '+x', '-x', '@x', "\tx", "\rx" ) as $dangerous ) {
+		foreach ( array( '=x', '+x', '-x', '@x' ) as $dangerous ) {
 			$this->assertSame( "'" . $dangerous, esc_csv_cell( $dangerous ) );
 		}
 		$this->assertSame( 'safe', esc_csv_cell( 'safe' ) );
 		$this->assertSame( '', esc_csv_cell( '' ) );
 
-		// Triggers after a delimiter are escaped too — a reader importing
-		// with `;` (or space, etc.) would otherwise split them into their
-		// own formula cell.
-		$this->assertSame( "safe;'=1+1", esc_csv_cell( 'safe;=1+1' ) );
-		$this->assertSame( "a,'-b", esc_csv_cell( 'a,-b' ) );
-		$this->assertSame( "x '@y", esc_csv_cell( 'x @y' ) );
-		$this->assertSame( 'a;b', esc_csv_cell( 'a;b' ) );
+		// Whitespace a spreadsheet would trim doesn't hide the trigger.
+		$this->assertSame( "'\t=x", esc_csv_cell( "\t=x" ) );
+		$this->assertSame( "' =x", esc_csv_cell( ' =x' ) );
+
+		// Triggers further into the value are data, not formulas — every cell
+		// is quoted, so no delimiter choice can promote one to a cell start.
+		$this->assertSame( 'WordPress - Istanbul', esc_csv_cell( 'WordPress - Istanbul' ) );
+		$this->assertSame( 'Meetup @ Venue', esc_csv_cell( 'Meetup @ Venue' ) );
+		$this->assertSame( 'safe;=1+1', esc_csv_cell( 'safe;=1+1' ) );
+
 		// Negative numbers are numeric, not formulas.
 		$this->assertSame( '-5', esc_csv_cell( '-5' ) );
+	}
+
+	/**
+	 * Every field is quoted, so a reader that splits on a delimiter other
+	 * than the comma still sees one field per value rather than a formula.
+	 */
+	public function test_export_csv_quotes_every_field() {
+		$event_id = $this->create_test_event( array( 'title' => 'Semicolons; =1+1' ) );
+
+		$csv = build_csv( collect_export_data() );
+
+		$this->assertStringContainsString( '"event_id","event_title"', $csv );
+		$this->assertStringContainsString( '"' . $event_id . '","Semicolons; =1+1"', $csv );
 	}
 
 	/**
@@ -522,23 +562,7 @@ class Test_Groups_Export extends Groups_TestCase {
 	 * the selected value(s).
 	 */
 	public function test_export_json_occurrence_field_selection() {
-		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
-		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
-
-		Recurring_Events_Database::maybe_install();
-
-		$this->create_test_event(
-			array(
-				'date'       => $date,
-				'recurrence' => array(
-					'frequency' => 'weekly',
-					'interval'  => 1,
-					'weekdays'  => array( $weekday ),
-					'end_type'  => 'count',
-					'count'     => 2,
-				),
-			)
-		);
+		$this->create_recurring_test_event( 2 );
 
 		$event = filter_json_fields(
 			collect_export_data(),
@@ -580,24 +604,7 @@ class Test_Groups_Export extends Groups_TestCase {
 	 * RSVPs on the same series don't.
 	 */
 	public function test_export_occurrence_attribution() {
-		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
-		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
-
-		Recurring_Events_Database::maybe_install();
-
-		$event_id = $this->create_test_event(
-			array(
-				'date'       => $date,
-				'recurrence' => array(
-					'frequency' => 'weekly',
-					'interval'  => 1,
-					'weekdays'  => array( $weekday ),
-					'end_type'  => 'count',
-					'count'     => 3,
-				),
-			)
-		);
-
+		$event_id    = $this->create_recurring_test_event( 3 );
 		$occurrences = Occurrences::all( $event_id, 'upcoming', 10 );
 		$this->assertNotEmpty( $occurrences, 'The recurring event must project occurrences.' );
 		$first = $occurrences[0];
@@ -618,5 +625,74 @@ class Test_Groups_Export extends Groups_TestCase {
 		$this->assertSame( $first->datetime_start_gmt, $rsvps_by_comment[ $mapped_id ]['occurrence_start_gmt'] );
 		$this->assertSame( $first->datetime_end_gmt, $rsvps_by_comment[ $mapped_id ]['occurrence_end_gmt'] );
 		$this->assertNull( $rsvps_by_comment[ $unmapped_id ]['occurrence_start_gmt'] );
+	}
+
+	/**
+	 * A recurring series is exported occurrence by occurrence: every date
+	 * gets a row even with no RSVPs, and the counts on each row are that
+	 * occurrence's, not the series'.
+	 */
+	public function test_export_csv_row_per_occurrence() {
+		$event_id    = $this->create_recurring_test_event( 3 );
+		$occurrences = Occurrences::all( $event_id, 'upcoming', 10 );
+		$this->assertCount( 3, $occurrences );
+
+		// One RSVP each on the first two dates; nobody on the third.
+		foreach ( array( 0, 1 ) as $index ) {
+			$comment_id = $this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+			Recurring_Events_Database::map_comment( $comment_id, $event_id, $occurrences[ $index ]->recurrence_id );
+		}
+
+		$data = collect_export_data();
+		$rows = array_slice( $this->parse_csv_rows( build_csv( $data ) ), 1 );
+
+		$this->assertCount( 3, $rows, 'Every occurrence needs a row, RSVPs or not.' );
+		$this->assertSame(
+			wp_list_pluck( $occurrences, 'datetime_start_gmt' ),
+			array_column( $rows, 9 )
+		);
+
+		// Series-wide counts would report 2 attending on all three rows.
+		$this->assertSame( array( '1', '1', '0' ), array_column( $rows, 6 ) );
+		$this->assertSame( '', $rows[2][11], 'The RSVP-less occurrence has no attendee.' );
+
+		// The JSON export carries the same per-occurrence counts, alongside
+		// the series totals at the event level.
+		$event = $data['events'][0];
+		$this->assertSame( 2, $event['counts']['attending'] );
+		$this->assertSame( array( 1, 1, 0 ), array_column( array_column( $event['occurrences'], 'counts' ), 'attending' ) );
+	}
+
+	/**
+	 * The range filter judges a series by its occurrences, not by the series
+	 * row — and drops the occurrences that fall outside the range.
+	 */
+	public function test_export_range_filter_uses_occurrences() {
+		$event_id = $this->create_recurring_test_event( 3 );
+
+		// A past series row with future occurrences: judging by the row alone
+		// hid the series from 'upcoming' and exported future dates as 'past'.
+		$this->backdate_event(
+			$event_id,
+			gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks' ) ),
+			gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks +2 hours' ) )
+		);
+
+		$upcoming = collect_export_data( array( 'range' => 'upcoming' ) );
+		$this->assertSame( array( $event_id ), array_column( $upcoming['events'], 'id' ) );
+		$this->assertCount( 3, $upcoming['events'][0]['occurrences'] );
+
+		$this->assertSame( array(), collect_export_data( array( 'range' => 'past' ) )['events'] );
+
+		// A window covering only the first occurrence keeps just that one.
+		$custom = collect_export_data(
+			array(
+				'range'  => 'custom',
+				'after'  => gmdate( 'Y-m-d', strtotime( '+13 days' ) ),
+				'before' => gmdate( 'Y-m-d', strtotime( '+15 days' ) ),
+			)
+		);
+		$this->assertCount( 1, $custom['events'][0]['occurrences'] );
+		$this->assertCount( 1, array_slice( $this->parse_csv_rows( build_csv( $custom ) ), 1 ) );
 	}
 }

@@ -1177,39 +1177,28 @@ function get_download_payload( string $format ) {
 		);
 	}
 
-	$body = build_network_csv( $artifact['rows'] );
-
-	if ( null === $body ) {
-		return new WP_Error( 'export_render_failed', 'The export could not be rendered as CSV.' );
-	}
-
 	return array(
 		'filename'     => $filename,
 		'content_type' => 'text/csv; charset=utf-8',
-		'body'         => $body,
+		'body'         => build_network_csv( $artifact['rows'] ),
 	);
 }
 
 /**
  * Flatten the artifact rows into a CSV file body.
  *
- * Same serialization rules as the per-group export: in-memory stream, UTF-8
- * BOM for Excel, RFC 4180 quoting (no escape character), and formula-trigger
- * escaping on every string cell.
+ * Same serialization rules as the per-group export, via its `csv_line()`:
+ * UTF-8 BOM for Excel, every field quoted, and quotes doubled per RFC 4180
+ * with no escape character. Reusing that helper is what keeps
+ * `esc_csv_cell()` sound here -- it only escapes a leading formula trigger,
+ * on the assumption that universal quoting stops any delimiter choice from
+ * promoting a later trigger to the start of a cell.
  *
  * @param array[] $rows Aggregate rows.
- * @return string|null The file body, or null if the stream failed.
+ * @return string The file body.
  */
-function build_network_csv( array $rows ): ?string {
-	// phpcs:disable WordPress.WP.AlternativeFunctions -- php://temp is an in-memory stream for fputcsv(), not a filesystem write; WP_Filesystem doesn't apply.
-	$handle = fopen( 'php://temp', 'r+' );
-
-	if ( false === $handle ) {
-		return null;
-	}
-
-	fwrite( $handle, "\xEF\xBB\xBF" );
-	fputcsv( $handle, CSV_COLUMNS, ',', '"', '' );
+function build_network_csv( array $rows ): string {
+	$csv = "\xEF\xBB\xBF" . \WordCamp\Groups\Frontend\Export\csv_line( CSV_COLUMNS );
 
 	foreach ( $rows as $row ) {
 		$line = array();
@@ -1221,16 +1210,10 @@ function build_network_csv( array $rows ): ?string {
 				: $value;
 		}
 
-		fputcsv( $handle, $line, ',', '"', '' );
+		$csv .= \WordCamp\Groups\Frontend\Export\csv_line( $line );
 	}
 
-	rewind( $handle );
-	$csv = stream_get_contents( $handle );
-	fclose( $handle );
-	// phpcs:enable WordPress.WP.AlternativeFunctions
-
-	// A `false` here would become an empty file rather than a failed request.
-	return false === $csv ? null : $csv;
+	return $csv;
 }
 
 /**

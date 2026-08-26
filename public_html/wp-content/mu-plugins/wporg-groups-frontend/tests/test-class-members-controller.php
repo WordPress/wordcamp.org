@@ -47,12 +47,12 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 		$editor_request = $this->request( 'GET', '/members/' . $editor->ID );
 		$editor_request->set_param( 'id', $editor->ID );
 		$response = self::$controller->get_item( $editor_request );
-		$this->assertSame( 'Organiser', $response->get_data()['roleLabel'] );
+		$this->assertSame( 'Organizer', $response->get_data()['roleLabel'] );
 
 		$author_request = $this->request( 'GET', '/members/' . $author->ID );
 		$author_request->set_param( 'id', $author->ID );
 		$response = self::$controller->get_item( $author_request );
-		$this->assertSame( 'Event Organiser', $response->get_data()['roleLabel'] );
+		$this->assertSame( 'Event Organizer', $response->get_data()['roleLabel'] );
 
 		$subscriber_request = $this->request( 'GET', '/members/' . $subscriber->ID );
 		$subscriber_request->set_param( 'id', $subscriber->ID );
@@ -73,7 +73,7 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * Authors (Event Organisers) can manage events but not member roles.
+	 * Authors (Event Organizers) can manage events but not member roles.
 	 */
 	public function test_author_blocked_from_role_changes() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -92,7 +92,7 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * Editors (Organisers) can promote a member to Event Organiser.
+	 * Editors (Organizers) can promote a member to Event Organizer.
 	 */
 	public function test_editor_promotes_subscriber_to_author() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -113,7 +113,7 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * No one can change their own group role, even an Organiser.
+	 * No one can change their own group role, even an Organizer.
 	 */
 	public function test_cannot_change_own_role() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -130,10 +130,10 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * A group must always keep at least one organiser.
+	 * A group must always keep at least one organizer.
 	 */
 	public function test_cannot_remove_last_organizer() {
-		// Clear any organisers left over from fixture/site creation so the
+		// Clear any organizers left over from fixture/site creation so the
 		// count below is deterministic.
 		$existing_organizers = get_users(
 			array(
@@ -148,7 +148,7 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 
-		// A second organiser performs the (attempted) demotion so this isn't
+		// A second organizer performs the (attempted) demotion so this isn't
 		// also blocked by the separate "can't change your own role" check.
 		$actor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		get_userdata( $actor_id )->set_role( 'subscriber' );
@@ -181,7 +181,7 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * Organisers must be demoted before they can leave the group.
+	 * Organizers must be demoted before they can leave the group.
 	 */
 	public function test_organiser_cannot_leave_without_demotion() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );

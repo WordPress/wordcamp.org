@@ -92,6 +92,29 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$request['date']    = wp_date( 'c' );
 		$request['parent']  = 0;
 
+		/*
+		 * `WP_REST_Comments_Controller::prepare_item_for_database()` copies the display name and email address of
+		 * whatever `author` it is given, so the identity has to come from the session rather than the request.
+		 * Dropping `author_url` only removes the request's override. A logged-in author keeps the URL from their
+		 * profile, which core applies earlier from the same `author`.
+		 */
+		unset( $request['author_url'] );
+
+		/*
+		 * Core's own permissions check rejects these two for anyone without `moderate_comments`, and this
+		 * controller replaces that check. Neither reaches the database today, but only because
+		 * `prepare_item_for_database()` re-guards `author_ip` and because `handle_status_param()` is never
+		 * called. Drop them here so that stays true if either detail changes.
+		 */
+		unset( $request['author_ip'], $request['status'] );
+
+		if ( is_user_logged_in() ) {
+			$request['author'] = get_current_user_id();
+			unset( $request['author_name'], $request['author_email'] );
+		} else {
+			unset( $request['author'] );
+		}
+
 		$prepared_feedback = $this->prepare_item_for_creation( $request );
 		if ( is_wp_error( $prepared_feedback ) ) {
 			return $prepared_feedback;
@@ -221,8 +244,12 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $accepts_feedback;
 		}
 
-		// TODO Should we do a nonce check, or other permissions?
-
+		/*
+		 * Feedback without an account is a supported flow, so there is deliberately no capability check here.
+		 * Nothing is gained by adding a nonce either: `wp.apiFetch` already sends the REST nonce, and on an
+		 * endpoint anyone may post to, a nonce authorises nothing that loading the page would not also grant.
+		 * `create_item()` decides who the feedback is attributed to.
+		 */
 		return true;
 	}
 

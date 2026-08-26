@@ -35,7 +35,8 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group
 
 /**
  * Column order for the CSV export. One row per RSVP, with the event columns
- * repeated; events with no RSVPs still emit one row so they stay visible.
+ * repeated; a recurring series is walked occurrence by occurrence, and any
+ * event or occurrence with no RSVPs still emits one row so it stays visible.
  */
 const CSV_COLUMNS = array(
 	'event_id',
@@ -310,13 +311,29 @@ function collect_export_data( array $filters = array() ) {
 
 	$events = get_posts( $query );
 
-	// The date filter needs the dates table, so it runs after that one query;
-	// everything else is only fetched for the events that survive it.
-	$dates = get_event_dates( wp_list_pluck( $events, 'ID' ) );
+	// The date filter reads both the dates table and the occurrence table, so
+	// those two queries run first; everything else is only fetched for the
+	// events that survive the filter.
+	$candidate_ids = wp_list_pluck( $events, 'ID' );
+
+	$dates = get_event_dates( $candidate_ids );
 	if ( is_wp_error( $dates ) ) {
 		return $dates;
 	}
-	$events = filter_events_by_range( $events, $dates, $filters['range'], $filters['after'], $filters['before'] );
+
+	$occurrence = get_occurrence_data( $candidate_ids );
+	if ( is_wp_error( $occurrence ) ) {
+		return $occurrence;
+	}
+
+	$events = filter_events_by_range(
+		$events,
+		$dates,
+		$occurrence['by_event'],
+		$filters['range'],
+		$filters['after'],
+		$filters['before']
+	);
 
 	$event_ids = wp_list_pluck( $events, 'ID' );
 	$venues    = get_event_venue_names( $event_ids );
@@ -324,11 +341,6 @@ function collect_export_data( array $filters = array() ) {
 	$rsvps = get_event_rsvps( $event_ids );
 	if ( is_wp_error( $rsvps ) ) {
 		return $rsvps;
-	}
-
-	$occurrence = get_occurrence_data( $event_ids );
-	if ( is_wp_error( $occurrence ) ) {
-		return $occurrence;
 	}
 
 	// Resolve organiser and attendee names in one user query.
@@ -343,25 +355,65 @@ function collect_export_data( array $filters = array() ) {
 		$rsvps_by_event[ $rsvp['event_id'] ][] = $rsvp;
 	}
 
+	$now         = current_time( 'mysql', true );
+	$zero_counts = array(
+		'attending'     => 0,
+		'waiting_list'  => 0,
+		'not_attending' => 0,
+	);
+
 	$export_events = array();
 	foreach ( $events as $event ) {
-		$event_id    = (int) $event->ID;
-		$event_rsvps = $rsvps_by_event[ $event_id ] ?? array();
-		$counts      = array(
-			'attending'     => 0,
-			'waiting_list'  => 0,
-			'not_attending' => 0,
+		$event_id     = (int) $event->ID;
+		$is_recurring = ! empty( $occurrence['by_event'][ $event_id ] );
+
+		// The range filter has to reach individual occurrences, not just the
+		// series row: a series that started in the past can still have dates
+		// ahead of it, and 'past' must not carry those through.
+		$event_occurrences = array_values(
+			array_filter(
+				$occurrence['by_event'][ $event_id ] ?? array(),
+				static function ( $row ) use ( $filters, $now ) {
+					return matches_range(
+						$row['start_gmt'],
+						$row['end_gmt'],
+						$filters['range'],
+						$filters['after'],
+						$filters['before'],
+						$now
+					);
+				}
+			)
+		);
+
+		$counts = $zero_counts;
+		// Keyed by the occurrences that survived the filter, so an RSVP on a
+		// dropped occurrence is recognised and skipped below.
+		$occurrence_counts = array_fill_keys(
+			array_column( $event_occurrences, 'recurrence_id' ),
+			$zero_counts
 		);
 
 		$export_rsvps = array();
-		foreach ( $event_rsvps as $rsvp ) {
-			if ( isset( $counts[ $rsvp['status'] ] ) ) {
-				++$counts[ $rsvp['status'] ];
-			}
-
+		foreach ( $rsvps_by_event[ $event_id ] ?? array() as $rsvp ) {
 			$occurrence_key  = $occurrence['map'][ $rsvp['comment_id'] ] ?? '';
 			$rsvp_occurrence = $occurrence['occurrences'][ $occurrence_key ] ?? null;
-			$attendee        = $users[ $rsvp['user_id'] ] ?? null;
+			$recurrence_id   = $rsvp_occurrence['recurrence_id'] ?? '';
+
+			// An RSVP goes wherever its occurrence went.
+			if ( '' !== $recurrence_id && ! isset( $occurrence_counts[ $recurrence_id ] ) ) {
+				continue;
+			}
+
+			if ( isset( $counts[ $rsvp['status'] ] ) ) {
+				++$counts[ $rsvp['status'] ];
+
+				if ( '' !== $recurrence_id ) {
+					++$occurrence_counts[ $recurrence_id ][ $rsvp['status'] ];
+				}
+			}
+
+			$attendee = $users[ $rsvp['user_id'] ] ?? null;
 
 			if ( $rsvp['anonymous'] ) {
 				$attendee_name  = anonymous_token( $rsvp['comment_id'] );
@@ -378,34 +430,31 @@ function collect_export_data( array $filters = array() ) {
 				'status'               => $rsvp['status'],
 				'timestamp_gmt'        => $rsvp['timestamp_gmt'],
 				'guests'               => $rsvp['guests'],
+				'occurrence_id'        => $recurrence_id,
 				'occurrence_start_gmt' => $rsvp_occurrence['start_gmt'] ?? null,
 				'occurrence_end_gmt'   => $rsvp_occurrence['end_gmt'] ?? null,
 			);
 		}
 
-		$event_occurrences = array_values(
-			array_filter(
-				$occurrence['occurrences'],
-				static function ( $key ) use ( $event_id ) {
-					return 0 === strpos( $key, $event_id . '|' );
-				},
-				ARRAY_FILTER_USE_KEY
-			)
-		);
+		// Counts belong to the occurrence, not the series: repeating series
+		// totals on every occurrence row makes any sum over the file wrong.
+		foreach ( $event_occurrences as $index => $event_occurrence ) {
+			$event_occurrences[ $index ]['counts'] = $occurrence_counts[ $event_occurrence['recurrence_id'] ];
+		}
 
 		$export_events[] = array(
-			'id'          => $event_id,
+			'id'           => $event_id,
 			// Raw title, not get_the_title(): texturizing and entity-encoding
 			// belong to HTML output, not to a data export.
-			'title'       => $event->post_title,
-			'start_gmt'   => $dates[ $event_id ]['start_gmt'] ?? '',
-			'end_gmt'     => $dates[ $event_id ]['end_gmt'] ?? '',
-			'venue'       => $venues[ $event_id ] ?? '',
-			'organiser'   => $users[ (int) $event->post_author ]->display_name ?? '',
-			'is_recurring' => ! empty( $event_occurrences ),
-			'counts'      => $counts,
-			'occurrences' => $event_occurrences,
-			'rsvps'       => $export_rsvps,
+			'title'        => $event->post_title,
+			'start_gmt'    => $dates[ $event_id ]['start_gmt'] ?? '',
+			'end_gmt'      => $dates[ $event_id ]['end_gmt'] ?? '',
+			'venue'        => $venues[ $event_id ] ?? '',
+			'organiser'    => $users[ (int) $event->post_author ]->display_name ?? '',
+			'is_recurring' => $is_recurring,
+			'counts'       => $counts,
+			'occurrences'  => $event_occurrences,
+			'rsvps'        => $export_rsvps,
 		);
 	}
 
@@ -432,18 +481,20 @@ function collect_export_data( array $filters = array() ) {
  *
  * Compares against the GatherPress dates table rows (GMT). Events without a
  * dates row can't be placed in time, so any range other than 'all' drops
- * them. Recurring series are judged by their series dates row, the same way
- * the events archive treats them.
+ * them. A recurring series is judged by its occurrences instead — its series
+ * row only describes the first one, so a series with a past start and future
+ * dates would otherwise be missing from 'upcoming' entirely.
  *
- * @param \WP_Post[] $events Candidate events.
- * @param array      $dates  Start/end rows from `get_event_dates()`, keyed by event ID.
- * @param string     $range  One of 'all', 'upcoming', 'past', 'custom'.
- * @param string     $after  `Y-m-d` lower bound for 'custom', or empty.
- * @param string     $before `Y-m-d` upper bound for 'custom', or empty.
+ * @param \WP_Post[] $events               Candidate events.
+ * @param array      $dates                Start/end rows from `get_event_dates()`, keyed by event ID.
+ * @param array      $occurrences_by_event Occurrence rows from `get_occurrence_data()`, keyed by series post ID.
+ * @param string     $range                One of 'all', 'upcoming', 'past', 'custom'.
+ * @param string     $after                `Y-m-d` lower bound for 'custom', or empty.
+ * @param string     $before               `Y-m-d` upper bound for 'custom', or empty.
  *
  * @return \WP_Post[]
  */
-function filter_events_by_range( array $events, array $dates, string $range, string $after, string $before ): array {
+function filter_events_by_range( array $events, array $dates, array $occurrences_by_event, string $range, string $after, string $before ): array {
 	if ( 'all' === $range ) {
 		return $events;
 	}
@@ -453,34 +504,63 @@ function filter_events_by_range( array $events, array $dates, string $range, str
 	return array_values(
 		array_filter(
 			$events,
-			static function ( $event ) use ( $dates, $range, $after, $before, $now ) {
+			static function ( $event ) use ( $dates, $occurrences_by_event, $range, $after, $before, $now ) {
+				$occurrences = $occurrences_by_event[ (int) $event->ID ] ?? array();
+
+				if ( $occurrences ) {
+					foreach ( $occurrences as $occurrence ) {
+						if ( matches_range( $occurrence['start_gmt'], $occurrence['end_gmt'], $range, $after, $before, $now ) ) {
+							return true;
+						}
+					}
+
+					return false;
+				}
+
 				$row = $dates[ (int) $event->ID ] ?? null;
 
-				if ( ! $row ) {
-					return false;
-				}
-
-				if ( 'upcoming' === $range ) {
-					return $row['end_gmt'] >= $now;
-				}
-
-				if ( 'past' === $range ) {
-					return $row['end_gmt'] < $now;
-				}
-
-				// 'custom': either bound may be open.
-				if ( '' !== $after && $row['start_gmt'] < $after . ' 00:00:00' ) {
-					return false;
-				}
-
-				if ( '' !== $before && $row['start_gmt'] > $before . ' 23:59:59' ) {
-					return false;
-				}
-
-				return true;
+				return $row && matches_range( $row['start_gmt'], $row['end_gmt'], $range, $after, $before, $now );
 			}
 		)
 	);
+}
+
+/**
+ * Whether one start/end pair falls inside the requested range.
+ *
+ * Shared by the event filter and the per-occurrence filter, so a series and
+ * its occurrences are always judged by the same rule.
+ *
+ * @param string $start_gmt Start datetime, `Y-m-d H:i:s` GMT.
+ * @param string $end_gmt   End datetime, `Y-m-d H:i:s` GMT.
+ * @param string $range     One of 'all', 'upcoming', 'past', 'custom'.
+ * @param string $after     `Y-m-d` lower bound for 'custom', or empty.
+ * @param string $before    `Y-m-d` upper bound for 'custom', or empty.
+ * @param string $now       Current datetime, `Y-m-d H:i:s` GMT.
+ */
+function matches_range( string $start_gmt, string $end_gmt, string $range, string $after, string $before, string $now ): bool {
+	if ( 'all' === $range ) {
+		return true;
+	}
+
+	if ( 'upcoming' === $range ) {
+		return $end_gmt >= $now;
+	}
+
+	if ( 'past' === $range ) {
+		return $end_gmt < $now;
+	}
+
+	// 'custom': either bound may be open.
+	if ( '' !== $after && $start_gmt < $after . ' 00:00:00' ) {
+		return false;
+	}
+
+	if ( '' !== $before && $start_gmt > $before . ' 23:59:59' ) {
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -488,9 +568,10 @@ function filter_events_by_range( array $events, array $dates, string $range, str
  *
  * Column selection is defined in CSV terms (the names the UI shows); this
  * maps each CSV column to the JSON fields it covers so both formats honour
- * the same selection. The `anonymous` flag travels with `attendee_name`,
- * and the series occurrence list with either occurrence column. With no
- * RSVP-level column selected the `rsvps` list is dropped entirely.
+ * the same selection. The `anonymous` flag travels with `attendee_name`, and
+ * the series occurrence list — plus each RSVP's occurrence key — with either
+ * occurrence column. With no RSVP-level column selected the `rsvps` list is
+ * dropped entirely.
  *
  * @param array    $data    Export data from `collect_export_data()`.
  * @param string[] $columns Selected CSV column names, in canonical order.
@@ -549,7 +630,9 @@ function filter_json_fields( array $data, array $columns ): array {
 
 		// The series occurrence list stays when either occurrence column is
 		// selected, trimmed to the selected value(s).
-		if ( ! isset( $selected['occurrence_start_gmt'] ) && ! isset( $selected['occurrence_end_gmt'] ) ) {
+		$keep_occurrences = isset( $selected['occurrence_start_gmt'] ) || isset( $selected['occurrence_end_gmt'] );
+
+		if ( ! $keep_occurrences ) {
 			unset( $event['is_recurring'], $event['occurrences'] );
 		} elseif ( isset( $event['occurrences'] ) ) {
 			foreach ( $event['occurrences'] as &$series_occurrence ) {
@@ -558,6 +641,16 @@ function filter_json_fields( array $data, array $columns ): array {
 				}
 				if ( ! isset( $selected['occurrence_end_gmt'] ) ) {
 					unset( $series_occurrence['end_gmt'] );
+				}
+
+				foreach ( $count_fields as $field => $column ) {
+					if ( ! isset( $selected[ $column ] ) ) {
+						unset( $series_occurrence['counts'][ $field ] );
+					}
+				}
+
+				if ( empty( $series_occurrence['counts'] ) ) {
+					unset( $series_occurrence['counts'] );
 				}
 			}
 			unset( $series_occurrence );
@@ -573,6 +666,12 @@ function filter_json_fields( array $data, array $columns ): array {
 				if ( ! isset( $selected[ $column ] ) ) {
 					unset( $rsvp[ $field ] );
 				}
+			}
+
+			// The occurrence key belongs to both occurrence columns, the same
+			// way the occurrence list does.
+			if ( ! $keep_occurrences ) {
+				unset( $rsvp['occurrence_id'] );
 			}
 		}
 		unset( $rsvp );
@@ -778,7 +877,7 @@ function get_event_rsvps( array $event_ids ) {
  *
  * @param int[] $event_ids Event post IDs.
  *
- * @return array{map: array<int, string>, occurrences: array<string, array{recurrence_id: string, start_gmt: string, end_gmt: string, status: string}>}|WP_Error
+ * @return array{map: array<int, string>, occurrences: array<string, array{recurrence_id: string, start_gmt: string, end_gmt: string, status: string}>, by_event: array<int, array[]>}|WP_Error
  */
 function get_occurrence_data( array $event_ids ) {
 	global $wpdb;
@@ -786,6 +885,7 @@ function get_occurrence_data( array $event_ids ) {
 	$empty = array(
 		'map'         => array(),
 		'occurrences' => array(),
+		'by_event'    => array(),
 	);
 
 	if ( empty( $event_ids ) || ! class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
@@ -823,9 +923,12 @@ function get_occurrence_data( array $event_ids ) {
 		return export_db_error();
 	}
 
+	// Indexed both ways: by series+recurrence for the RSVP lookup, and by
+	// series for walking a series' dates in order.
 	$occurrences = array();
+	$by_event    = array();
 	foreach ( (array) $occurrence_rows as $row ) {
-		$occurrences[ $row->series_post_id . '|' . $row->recurrence_id ] = array(
+		$entry = array(
 			'recurrence_id' => $row->recurrence_id,
 			'start_gmt'     => $row->datetime_start_gmt,
 			'end_gmt'       => $row->datetime_end_gmt,
@@ -833,6 +936,9 @@ function get_occurrence_data( array $event_ids ) {
 			// ones in a history export.
 			'status'        => $row->status,
 		);
+
+		$occurrences[ $row->series_post_id . '|' . $row->recurrence_id ] = $entry;
+		$by_event[ (int) $row->series_post_id ][]                        = $entry;
 	}
 
 	$map = array();
@@ -843,6 +949,7 @@ function get_occurrence_data( array $event_ids ) {
 	return array(
 		'map'         => $map,
 		'occurrences' => $occurrences,
+		'by_event'    => $by_event,
 	);
 }
 
@@ -894,32 +1001,71 @@ function anonymous_token( int $comment_id ): string {
 function build_csv( array $data, ?array $columns = null ): string {
 	$columns = $columns ?? CSV_COLUMNS;
 
-	// phpcs:disable WordPress.WP.AlternativeFunctions -- php://temp is an in-memory stream for fputcsv(), not a filesystem write; WP_Filesystem doesn't apply.
-	$handle = fopen( 'php://temp', 'r+' );
-
 	// UTF-8 BOM so Excel detects the encoding.
-	fwrite( $handle, "\xEF\xBB\xBF" );
-	fputcsv( $handle, $columns, ',', '"', '' );
+	$csv = "\xEF\xBB\xBF" . csv_line( $columns );
 
 	foreach ( $data['events'] as $event ) {
-		foreach ( empty( $event['rsvps'] ) ? array( null ) : $event['rsvps'] as $rsvp ) {
-			$cells = csv_row_cells( $event, $rsvp );
-			$line  = array();
+		foreach ( csv_rows_for_event( $event ) as $cells ) {
+			$line = array();
 
 			foreach ( $columns as $column ) {
 				$line[] = $cells[ $column ];
 			}
 
-			fputcsv( $handle, $line, ',', '"', '' );
+			$csv .= csv_line( $line );
 		}
 	}
 
-	rewind( $handle );
-	$csv = stream_get_contents( $handle );
-	fclose( $handle );
-	// phpcs:enable WordPress.WP.AlternativeFunctions
-
 	return $csv;
+}
+
+/**
+ * The CSV rows for one event, in file order.
+ *
+ * A recurring series is walked occurrence by occurrence rather than RSVP by
+ * RSVP, so a date nobody signed up for still gets a row instead of dropping
+ * out of the history. RSVPs with no occurrence of their own — a series that
+ * predates the recurring-events plugin — follow the occurrence rows.
+ *
+ * @param array $event One event from `collect_export_data()`.
+ *
+ * @return array<int, array<string, string|int>>
+ */
+function csv_rows_for_event( array $event ): array {
+	$rows = array();
+
+	if ( empty( $event['occurrences'] ) ) {
+		foreach ( empty( $event['rsvps'] ) ? array( null ) : $event['rsvps'] as $rsvp ) {
+			$rows[] = csv_row_cells( $event, $rsvp );
+		}
+
+		return $rows;
+	}
+
+	$rsvps_by_occurrence = array();
+	$unmapped            = array();
+
+	foreach ( $event['rsvps'] as $rsvp ) {
+		if ( '' === $rsvp['occurrence_id'] ) {
+			$unmapped[] = $rsvp;
+		} else {
+			$rsvps_by_occurrence[ $rsvp['occurrence_id'] ][] = $rsvp;
+		}
+	}
+
+	foreach ( $event['occurrences'] as $occurrence ) {
+		$occurrence_rsvps = $rsvps_by_occurrence[ $occurrence['recurrence_id'] ] ?? array( null );
+
+		foreach ( $occurrence_rsvps as $rsvp ) {
+			$rows[] = csv_row_cells( $event, $rsvp, $occurrence );
+		}
+	}
+
+	foreach ( $unmapped as $rsvp ) {
+		$rows[] = csv_row_cells( $event, $rsvp );
+	}
+
+	return $rows;
 }
 
 /**
@@ -928,12 +1074,30 @@ function build_csv( array $data, ?array $columns = null ): string {
  * Zero-RSVP events pass a null RSVP and get blank RSVP cells, so they stay
  * visible in the file.
  *
- * @param array      $event One event from `collect_export_data()`.
- * @param array|null $rsvp  One of its RSVPs, or null for the event-only row.
+ * @param array      $event      One event from `collect_export_data()`.
+ * @param array|null $rsvp       One of its RSVPs, or null for the event-only row.
+ * @param array|null $occurrence The occurrence this row belongs to, if any.
  *
  * @return array<string, string|int>
  */
-function csv_row_cells( array $event, ?array $rsvp ): array {
+function csv_row_cells( array $event, ?array $rsvp, ?array $occurrence = null ): array {
+	// The count columns describe whatever the row is about: an occurrence on
+	// a recurring series, the event otherwise. An RSVP on a series with no
+	// occurrence of its own is about neither, so it leaves them blank instead
+	// of repeating series totals that any sum over the file would then
+	// double-count.
+	if ( $occurrence ) {
+		$counts = $occurrence['counts'];
+	} elseif ( empty( $event['occurrences'] ) ) {
+		$counts = $event['counts'];
+	} else {
+		$counts = array(
+			'attending'     => '',
+			'waiting_list'  => '',
+			'not_attending' => '',
+		);
+	}
+
 	return array(
 		'event_id'             => $event['id'],
 		'event_title'          => esc_csv_cell( $event['title'] ),
@@ -941,11 +1105,11 @@ function csv_row_cells( array $event, ?array $rsvp ): array {
 		'event_end_gmt'        => $event['end_gmt'],
 		'venue'                => esc_csv_cell( $event['venue'] ),
 		'organiser'            => esc_csv_cell( $event['organiser'] ),
-		'attending_count'      => $event['counts']['attending'],
-		'waiting_list_count'   => $event['counts']['waiting_list'],
-		'not_attending_count'  => $event['counts']['not_attending'],
-		'occurrence_start_gmt' => $rsvp['occurrence_start_gmt'] ?? '',
-		'occurrence_end_gmt'   => $rsvp['occurrence_end_gmt'] ?? '',
+		'attending_count'      => $counts['attending'],
+		'waiting_list_count'   => $counts['waiting_list'],
+		'not_attending_count'  => $counts['not_attending'],
+		'occurrence_start_gmt' => $occurrence['start_gmt'] ?? $rsvp['occurrence_start_gmt'] ?? '',
+		'occurrence_end_gmt'   => $occurrence['end_gmt'] ?? $rsvp['occurrence_end_gmt'] ?? '',
 		'attendee_name'        => esc_csv_cell( $rsvp['attendee_name'] ?? '' ),
 		'attendee_login'       => esc_csv_cell( $rsvp['attendee_login'] ?? '' ),
 		'rsvp_status'          => $rsvp['status'] ?? '',
@@ -955,14 +1119,38 @@ function csv_row_cells( array $event, ?array $rsvp ): array {
 }
 
 /**
+ * One CSV record, with every field quoted.
+ *
+ * Quoting unconditionally — rather than only when the value contains a comma,
+ * as `fputcsv()` does — keeps each value in one field whichever delimiter the
+ * reader picks, and `;` is the default in several locales. That's what stops
+ * a cell from being re-split into a formula, so the escaping itself only has
+ * to look at the start of the value.
+ *
+ * Quotes are doubled per RFC 4180; nothing is backslash-escaped, since strict
+ * readers treat a backslash as data.
+ *
+ * @param array $fields Field values, already passed through `esc_csv_cell()`.
+ */
+function csv_line( array $fields ): string {
+	$quoted = array();
+
+	foreach ( $fields as $field ) {
+		$quoted[] = '"' . str_replace( '"', '""', (string) $field ) . '"';
+	}
+
+	return implode( ',', $quoted ) . "\n";
+}
+
+/**
  * Neutralise spreadsheet formula injection in a CSV cell.
  *
- * A formula trigger (`=`, `+`, `-`, `@`) gets a leading apostrophe when it
- * starts the cell — but also when it follows any common delimiter, because
- * the reader chooses the delimiter on import (`;` is the default in some
- * locales), which can split one of our comma-quoted cells into several.
- * Same policy as CampTix's `esc_csv()`, implemented locally because CampTix
- * isn't loaded on group sites.
+ * A leading formula trigger (`=`, `+`, `-`, `@`) gets an apostrophe, looking
+ * past any leading whitespace a spreadsheet would trim away. Triggers further
+ * into the value are left alone: `csv_line()` quotes every field, so no
+ * delimiter choice can promote one to the start of a cell, and escaping them
+ * the way CampTix's `esc_csv()` does would rewrite ordinary titles such as
+ * `WordPress - Istanbul` or `Meetup @ Venue`.
  *
  * @param string $value Cell value.
  */
@@ -971,30 +1159,7 @@ function esc_csv_cell( string $value ): string {
 		return $value;
 	}
 
-	$triggers   = array( '=', '+', '-', '@' );
-	$delimiters = array( ',', ';', ':', '|', '^', "\n", "\r", "\t", ' ' );
+	$first = mb_substr( ltrim( $value ), 0, 1 );
 
-	$escaped = '';
-
-	// A leading delimiter itself gets escaped, so the cell can't smuggle an
-	// extra empty column past a re-split.
-	if ( in_array( mb_substr( $value, 0, 1 ), $delimiters, true ) ) {
-		$escaped .= "'";
-	}
-
-	$length            = mb_strlen( $value );
-	$prev_is_delimiter = true; // Start-of-cell counts as a boundary.
-
-	for ( $i = 0; $i < $length; $i++ ) {
-		$char = mb_substr( $value, $i, 1 );
-
-		if ( $prev_is_delimiter && in_array( $char, $triggers, true ) ) {
-			$escaped .= "'";
-		}
-
-		$escaped          .= $char;
-		$prev_is_delimiter = in_array( $char, $delimiters, true );
-	}
-
-	return $escaped;
+	return in_array( $first, array( '=', '+', '-', '@' ), true ) ? "'" . $value : $value;
 }

@@ -410,6 +410,25 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The class match works against the class list core actually emits.
+	 *
+	 * Copied from a rendered page: the block class sits mid-string, next to a class
+	 * that has it as a prefix, so a token match is the only thing that finds it.
+	 */
+	public function test_the_real_container_class_list_is_matched() {
+		$output = $this->render_container(
+			'<ul class="wp-block-latest-posts__list has-dates wp-block-latest-posts is-layout-flow wp-block-latest-posts-is-layout-flow"><li>a</li></ul>'
+		);
+
+		$this->assertSame(
+			1,
+			preg_match( '/<ul[^>]*class="[^"]*\bwp-block-latest-posts\b[^"]*\bhas-live-update\b[^"]*"/', $output ),
+			'the block class was not found in the class list core emits.'
+		);
+		$this->assertStringContainsString( 'data-attributes=', $output );
+	}
+
+	/**
 	 * A list nested inside the container is left where it is.
 	 */
 	public function test_nested_list_is_untouched() {

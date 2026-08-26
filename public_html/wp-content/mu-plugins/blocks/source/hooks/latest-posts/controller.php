@@ -122,40 +122,6 @@ function safelist_block_renderer( $response, $handler, $request ) {
 add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_renderer', 10, 3 );
 
 /**
- * Whether the markup is one `<ul>` container spanning the whole string.
- *
- * The tag swap below renames the first `<ul` and the last `</ul>`, so both have to
- * belong to the same element. A sibling list would otherwise leave
- * `<div>…</ul><ul>…</div>`.
- *
- * The nesting count reads the raw string. That is safe because `esc_attr()` escapes
- * `<`, so `<ul` and `</ul` cannot appear inside an attribute value. If that stops
- * being true the count goes wrong and the rewrite silently stops attaching.
- *
- * @param string $markup Rendered block markup.
- * @return bool
- */
-function is_swappable_container( $markup ) {
-	if ( ! preg_match( '#\A\s*<ul\b#', $markup ) || ! preg_match( '#</ul>\s*\z#', $markup ) ) {
-		return false;
-	}
-
-	preg_match_all( '#<(/?)ul\b#', $markup, $matches );
-	$depth = 0;
-
-	foreach ( $matches[1] as $index => $slash ) {
-		$depth += '' === $slash ? 1 : -1;
-
-		// The container closed, so it has to be the last `</ul>` in the markup.
-		if ( 0 === $depth ) {
-			return count( $matches[1] ) - 1 === $index;
-		}
-	}
-
-	return false;
-}
-
-/**
  * Drop the attributes the renderer route will not accept.
  *
  * The route validates `attributes` against the registered schema and rejects anything
@@ -177,7 +143,16 @@ function pollable_attributes( $attrs ) {
 		return $attrs;
 	}
 
-	return array_intersect_key( $attrs, $block_type->attributes );
+	$registered = array_intersect_key( $attrs, $block_type->attributes );
+
+	// A null serialises into the query string as an empty value, which the route
+	// refuses for anything the schema does not type as a string.
+	return array_filter(
+		$registered,
+		static function ( $value ) {
+			return null !== $value;
+		}
+	);
 }
 
 /**
@@ -199,7 +174,7 @@ function render( $block_content, $block ) {
 	$enabled = isset( $block['attrs']['liveUpdateEnabled'] ) && $block['attrs']['liveUpdateEnabled'];
 	// Order by date, desc is the default, so these properties are not set.
 	$order_date_desc = ! isset( $block['attrs']['orderBy'] ) && ! isset( $block['attrs']['order'] );
-	if ( $enabled && $order_date_desc && is_swappable_container( $block_content ) ) {
+	if ( $enabled && $order_date_desc ) {
 		/*
 		 * Rewrite the container through the HTML API, not by string content:
 		 * `str_replace()` also matched its needle inside attribute values (the
@@ -215,15 +190,6 @@ function render( $block_content, $block ) {
 			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( pollable_attributes( $block['attrs'] ) ) ) );
 
 			$block_content = $processor->get_updated_html();
-
-			/*
-			 * `render-frontend.js` renders the polled markup into this element, and that
-			 * markup has been through this filter too, so it arrives as a `<div>`. A
-			 * `<ul>` cannot hold it. Anchored to the ends of the string, where an
-			 * attribute value cannot match.
-			 */
-			$block_content = preg_replace( '#\A(\s*)<ul\b#', '$1<div', $block_content, 1 );
-			$block_content = preg_replace( '#</ul>(\s*)\z#', '</div>$1', $block_content, 1 );
 		}
 	}
 

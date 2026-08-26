@@ -5,6 +5,7 @@ import { addQueryArgs } from '@wordpress/url';
 
 const SELECTOR = '.wp-block-latest-posts.has-live-update';
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds.
+const MAX_FAILURES = 3;
 
 /**
  * The endpoint that renders this block, localised by the controller.
@@ -23,7 +24,7 @@ function rendererUrl() {
  * @param {Element} element Container element.
  * @return {Object|null} The attributes, or null when they cannot be read.
  */
-function readAttributes( element ) {
+export function readAttributes( element ) {
 	const encoded = element.dataset.attributes;
 
 	if ( ! encoded ) {
@@ -52,7 +53,7 @@ function readAttributes( element ) {
  * @param {string} html Rendered block markup.
  * @return {string} The container's contents, or the markup unchanged if it has none.
  */
-function unwrapContainer( html ) {
+export function unwrapContainer( html ) {
 	const template = document.createElement( 'template' );
 	template.innerHTML = html.trim();
 
@@ -86,6 +87,7 @@ function start( element ) {
 	}
 
 	let warned = false;
+	let failures = 0;
 	let lastContent = null;
 
 	/**
@@ -112,7 +114,10 @@ function start( element ) {
 		const endpoint = rendererUrl();
 
 		if ( ! endpoint ) {
+			// A page cached before the deploy carries the old inline data with no
+			// endpoint in it. That will not change while this page is open.
 			warn( 'the renderer endpoint is missing' );
+			clearInterval( timer );
 			return;
 		}
 
@@ -131,6 +136,9 @@ function start( element ) {
 				return response.json();
 			} )
 			.then( ( body ) => {
+				// The route answered, so whatever went wrong before has passed.
+				failures = 0;
+
 				if ( ! body || ! body.rendered ) {
 					return;
 				}
@@ -141,6 +149,9 @@ function start( element ) {
 				 * Rewriting the list rebuilds every node in it, which drops focus and
 				 * any selection inside it and restarts the images. Most polls return
 				 * what is already on screen, so only write when something changed.
+				 * The page's own copy cannot seed this, since the markup it parsed
+				 * from is not byte-identical to the response, so the first poll always
+				 * writes and the saving starts from the second.
 				 */
 				if ( content === lastContent ) {
 					return;
@@ -149,7 +160,20 @@ function start( element ) {
 				lastContent = content;
 				element.innerHTML = content;
 			} )
-			.catch( ( error ) => warn( error.message ) );
+			.catch( ( error ) => {
+				warn( error.message );
+
+				/*
+				 * A refusal usually repeats: a page cached before the deploy sends
+				 * attributes the route no longer accepts, and will until it expires.
+				 * Give the network a couple of chances, then stop asking.
+				 */
+				failures++;
+
+				if ( failures >= MAX_FAILURES ) {
+					clearInterval( timer );
+				}
+			} );
 	}
 
 	// `refresh` closes over this; it only ever runs once the interval exists.

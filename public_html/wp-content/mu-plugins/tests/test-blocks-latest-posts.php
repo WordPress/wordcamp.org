@@ -278,14 +278,14 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 	/**
 	 * The live-update markup the front-end script keys on still gets written.
 	 *
-	 * `render-frontend.js` matches `.wp-block-latest-posts.has-live-update`, reads
-	 * `data-attributes` off it, and renders the polled markup into it.
+	 * `front-end.js` matches `.wp-block-latest-posts.has-live-update` and reads
+	 * `data-attributes` off it. The element itself is left as core rendered it.
 	 */
 	public function test_container_still_gets_live_update_markup() {
 		$output = $this->render_container( $this->markup_with_needles_in_values() );
 
-		$this->assertStringStartsWith( '<div ', $output );
-		$this->assertStringEndsWith( '</div>', $output );
+		$this->assertStringStartsWith( '<ul ', $output );
+		$this->assertStringEndsWith( '</ul>', $output );
 		$this->assertStringContainsString( 'has-live-update', $output );
 		$this->assertStringContainsString( 'is-loading', $output );
 		$this->assertStringContainsString(
@@ -314,7 +314,7 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 			)
 		);
 
-		preg_match( '/data-attributes="([^"]*)"/', $output, $matches );
+		$this->assertSame( 1, preg_match( '/data-attributes="([^"]*)"/', $output, $matches ), 'the container carries no data-attributes.' );
 		$polled = json_decode( rawurldecode( $matches[1] ), true );
 
 		$this->assertArrayNotHasKey( 'wcorgRetiredSetting', $polled );
@@ -339,7 +339,7 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 			)
 		);
 
-		preg_match( '/data-attributes="([^"]*)"/', $markup, $matches );
+		$this->assertSame( 1, preg_match( '/data-attributes="([^"]*)"/', $markup, $matches ), 'the container carries no data-attributes.' );
 		$attributes = json_decode( rawurldecode( $matches[1] ), true );
 
 		$response = $this->render( 'core/latest-posts', array( 'attributes' => $attributes ) );
@@ -357,14 +357,13 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Markup the tag swap cannot handle is left completely alone.
+	 * Markup around the container no longer matters.
 	 *
-	 * The swap renames the first `<ul` and the last `</ul>`, so anything that makes
-	 * those two different elements has to skip the rewrite entirely. Marking a
-	 * container that then keeps its `<ul>` would be just as wrong, because the
-	 * front-end script would render a `<div>` into a list.
+	 * Nothing is renamed any more, so the classes go on the block's own element and
+	 * whatever sits beside it is irrelevant. These shapes used to opt out of live
+	 * update entirely, and silently.
 	 */
-	public function test_unswappable_markup_is_left_alone() {
+	public function test_markup_around_the_container_still_gets_marked() {
 		$cases = array(
 			'leading'  => '<!-- x --><ul class="wp-block-latest-posts"><li>a</li></ul>',
 			'trailing' => '<ul class="wp-block-latest-posts"><li>a</li></ul><style>.x{}</style>',
@@ -372,21 +371,25 @@ class Test_Latest_Posts_Block extends WP_UnitTestCase {
 		);
 
 		foreach ( $cases as $label => $markup ) {
-			$this->assertSame( $markup, $this->render_container( $markup ), $label . ': markup was rewritten.' );
+			$output = $this->render_container( $markup );
+
+			$this->assertStringContainsString( 'has-live-update', $output, $label . ': container was not marked.' );
+			$this->assertStringContainsString( 'data-attributes=', $output, $label . ': no attributes were written.' );
 		}
 	}
 
 	/**
-	 * A list nested inside the container is still one container, so it still swaps.
+	 * A list nested inside the container is left where it is.
 	 */
-	public function test_nested_list_still_swaps() {
+	public function test_nested_list_is_untouched() {
 		$output = $this->render_container(
 			'<ul class="wp-block-latest-posts"><li>a<ul><li>b</li></ul></li></ul>'
 		);
 
-		$this->assertStringStartsWith( '<div ', $output );
-		$this->assertStringEndsWith( '</div>', $output );
-		$this->assertSame( 1, substr_count( $output, '<ul' ), 'the nested list should survive' );
-		$this->assertSame( 1, substr_count( $output, '</ul>' ) );
+		$this->assertStringStartsWith( '<ul ', $output );
+		$this->assertStringEndsWith( '</ul>', $output );
+		$this->assertStringContainsString( 'has-live-update', $output );
+		$this->assertSame( 2, substr_count( $output, '<ul' ), 'the nested list should survive' );
+		$this->assertSame( 2, substr_count( $output, '</ul>' ) );
 	}
 }

@@ -230,6 +230,34 @@ function create_group_site( string $title, string $slug, string $organizer_login
 		Logger\log( 'members_page_failed', compact( 'title', 'slug', 'organizer_login', 'site_id' ) );
 	}
 
+	// The front page teases the About page, but nothing else creates one.
+	// Seed it as a draft: visitors see nothing until the organizer publishes,
+	// and the organizer starts from example prose instead of a blank editor.
+	// The editor's note goes last so an untouched publish leads with the
+	// example prose, not the note.
+	$about_content = sprintf(
+		'<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph --><!-- wp:paragraph --><p><em>%s</em></p><!-- /wp:paragraph -->',
+		esc_html__( 'We are a local community for everyone who uses, builds, or is simply curious about WordPress — all skill levels welcome.', 'wordcamporg' ),
+		esc_html__( 'Our events are a place to share practical knowledge, meet people nearby, and learn together. Join us at an upcoming event and say hello!', 'wordcamporg' ),
+		esc_html__( 'Editor’s note: this is example text — replace it with your group’s own story, then delete this note. The first few paragraphs of this page also appear on your group’s home page.', 'wordcamporg' )
+	);
+
+	$about_page = wp_insert_post(
+		array(
+			'post_type'    => 'page',
+			'post_title'   => __( 'About', 'wordcamporg' ),
+			'post_name'    => 'about',
+			'post_status'  => 'draft',
+			'post_author'  => $organizer->ID,
+			'post_content' => $about_content,
+		),
+		true
+	);
+
+	if ( is_wp_error( $about_page ) ) {
+		Logger\log( 'about_page_failed', compact( 'title', 'slug', 'organizer_login', 'site_id' ) );
+	}
+
 	restore_current_blog();
 
 	Logger\log( 'finished', compact( 'title', 'slug', 'organizer_login', 'site_id' ) );

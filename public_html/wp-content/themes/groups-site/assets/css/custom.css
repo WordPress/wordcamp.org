@@ -293,7 +293,7 @@ body.error404 .site-content-container h1 {
 /*
  * Sidebar headings are the one place that keeps the Inter 16px/600 utility
  * treatment. Every heading in the main column — My upcoming events,
- * Upcoming events, About this group, News, Sponsors — takes the Heading 3
+ * About this group, Upcoming events, News, Sponsors — takes the Heading 3
  * serif; a 36px serif in a 26%-wide rail would outrank the section it
  * labels. Sponsors is listed because it renders in both places.
  */
@@ -693,9 +693,8 @@ body.error404 .site-content-container h1 {
 
    Pulled from the group's own About page by `wporg/page-content`, so the
    prose is edited in one place and this is only ever a view of it. It sits
-   *below* Upcoming events: a visitor who already knows the group came for
-   the dates, and a newcomer still finds the context one scroll down,
-   ahead of News and Sponsors.
+   between My upcoming events and Upcoming events: a member's own dates stay
+   first, and a newcomer gets the group's context before the event listings.
    ========================================================================== */
 
 .groups-site-about > :first-child {
@@ -714,11 +713,30 @@ body.error404 .site-content-container h1 {
 	text-wrap: pretty;
 }
 
+/* "Read more →" follows the quiet link idiom of "View all events →" —
+   a continuation, not a call to action. */
+
+.wporg-page-content__more {
+	margin: var(--wp--preset--spacing--20) 0 0;
+}
+
+/* The organizer-only edit link sits inline right after the heading — on its
+   baseline, not pushed to the far edge like "View all events →": it belongs
+   to the heading, not to the section. The row carries the gap to the prose;
+   the heading inside it is flush. */
+
+.wporg-page-content__header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--20);
+	align-items: baseline;
+	margin-bottom: var(--wp--preset--spacing--30);
+}
+
 /* Organizer-only affordance. Deliberately quiet: it's a maintenance link on
    someone else's reading experience, not a call to action. */
 
 .wporg-page-content__edit {
-	margin: var(--wp--preset--spacing--20) 0 0;
 	font-size: var(--wp--preset--font-size--small);
 }
 

@@ -98,13 +98,7 @@ function register_speaker_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function ( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -266,13 +260,7 @@ function register_organizer_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function ( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -330,13 +318,7 @@ function register_volunteer_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function ( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -370,6 +352,37 @@ function register_volunteer_post_meta() {
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
+}
+
+/**
+ * Sanitize a submitted WordPress.org username for the `_wcpt_user_name` meta.
+ *
+ * The value names the WordPress.org account a participant record represents, so
+ * it is resolved to a canonical `user_login`. A record may only be linked to an
+ * account other than the current user's by someone who can edit other authors'
+ * posts; everyone else may link their own account. Unknown or disallowed values
+ * are stored as an empty string.
+ *
+ * @param string $value The submitted username.
+ *
+ * @return string The canonical `user_login`, or an empty string.
+ */
+function sanitize_user_name_meta( $value ) {
+	$wporg_user = wcorg_get_user_by_canonical_names( $value );
+
+	if ( ! $wporg_user ) {
+		return '';
+	}
+
+	// Linking an account other than the current user's is limited to those who can
+	// edit other authors' posts. When there is no current user (e.g. an anonymous
+	// submission), `get_current_user_id()` is 0 and only a self-link would match,
+	// so a named third-party account is not stored.
+	if ( get_current_user_id() !== $wporg_user->ID && ! current_user_can( 'edit_others_posts' ) ) {
+		return '';
+	}
+
+	return $wporg_user->user_login;
 }
 
 /**

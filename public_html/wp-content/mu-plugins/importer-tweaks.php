@@ -29,10 +29,6 @@ add_filter( 'import_post_meta_key', __NAMESPACE__ . '\skip_file_path_meta' );
  * @return mixed The meta key, or false to skip it. Anything that isn't a string is left alone.
  */
 function skip_file_path_meta( $key ) {
-	if ( ! is_string( $key ) ) {
-		return $key;
-	}
-
 	$file_path_meta = array(
 		'_wp_attached_file',
 		'_wp_attachment_metadata',

@@ -215,6 +215,66 @@ class Client {
 	}
 
 	/**
+	 * The user meta key for storing the OAuth `state` value.
+	 *
+	 * User meta is used rather than an option or a transient because it's shared across every site and network
+	 * in the install, while the redirect URI always points at the WordCamp network. That way an authorization
+	 * that starts on the Events network can still be matched up when QBO sends the user back here.
+	 *
+	 * @return string
+	 */
+	protected static function generate_oauth_state_key() {
+		return PLUGIN_PREFIX . '_oauth_state';
+	}
+
+	/**
+	 * Generate a `state` value for an authorization request, and remember it for the callback.
+	 *
+	 * @return string
+	 */
+	protected static function create_oauth_state() {
+		$state = wp_generate_password( 32, false );
+
+		update_user_meta(
+			get_current_user_id(),
+			self::generate_oauth_state_key(),
+			array(
+				'state'   => $state,
+				'expires' => time() + ( 15 * MINUTE_IN_SECONDS ),
+			)
+		);
+
+		return $state;
+	}
+
+	/**
+	 * Check that a callback's `state` matches the authorization request that this user started.
+	 *
+	 * The stored value is good for one callback only, so it's discarded either way.
+	 *
+	 * @param string $state
+	 *
+	 * @return bool
+	 */
+	protected static function verify_oauth_state( $state ) {
+		$user_id = get_current_user_id();
+		$key     = self::generate_oauth_state_key();
+		$stored  = get_user_meta( $user_id, $key, true );
+
+		delete_user_meta( $user_id, $key );
+
+		if ( ! is_string( $state ) || ! $state || ! is_array( $stored ) ) {
+			return false;
+		}
+
+		if ( empty( $stored['state'] ) || empty( $stored['expires'] ) || time() > $stored['expires'] ) {
+			return false;
+		}
+
+		return hash_equals( $stored['state'], $state );
+	}
+
+	/**
 	 * Shortcut for importing an Exception into the client's WP_Error instance.
 	 *
 	 * @param Exception $exception
@@ -311,37 +371,54 @@ class Client {
 	 */
 	public function get_authorize_url() {
 		try {
-			return $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
+			$url = $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
 		} catch ( Exception $exception ) {
 			$this->add_error_from_exception( $exception );
 
 			return '';
 		}
+
+		// The SDK generates a `state` of its own, but never stores it, so there'd be nothing to compare against
+		// when QBO sends it back. Replace it with one tied to the user who started the process.
+		return add_query_arg( 'state', self::create_oauth_state(), $url );
 	}
 
 	/**
 	 * Send authorization data over to QBO and get back an OAuth token.
 	 *
 	 * Once a user has authorized a connection on the Intuit site, they are redirected back to our page, along with
-	 * an authorization code and realm ID. These are then sent back to the OAuth server to exchange for the actual
-	 * access token.
+	 * an authorization code, a realm ID, and the `state` that was sent along with the authorization request. The
+	 * `state` has to match the one this user started with before the code is worth exchanging, since this leg of
+	 * the process arrives from Intuit and so can't carry a nonce of its own.
 	 *
 	 * @return void
 	 */
 	public function maybe_exchange_code_for_token() {
 		$authorization_code = wp_unslash( $_GET['code'] ?? '' );
 		$realm_id           = wp_unslash( $_GET['realmId'] ?? '' );
+		$state              = sanitize_text_field( wp_unslash( $_GET['state'] ?? '' ) );
 
-		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
-			try {
-				$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+		if ( $this->has_valid_token() || ! $authorization_code || ! $realm_id ) {
+			return;
+		}
 
-				$this->data_service()->updateOAuth2Token( $token );
+		if ( ! self::verify_oauth_state( $state ) ) {
+			$this->error->add(
+				'invalid_state',
+				'Your request could not be validated. Please start the connection process again.'
+			);
 
-				self::save_oauth_token_data( $token );
-			} catch ( Exception | SdkException | ServiceException $exception ) {
-				$this->add_error_from_exception( $exception );
-			}
+			return;
+		}
+
+		try {
+			$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+
+			$this->data_service()->updateOAuth2Token( $token );
+
+			self::save_oauth_token_data( $token );
+		} catch ( Exception | SdkException | ServiceException $exception ) {
+			$this->add_error_from_exception( $exception );
 		}
 	}
 

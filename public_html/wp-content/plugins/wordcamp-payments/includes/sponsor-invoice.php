@@ -9,6 +9,10 @@ use WordCamp_Loader;
 
 defined( 'WPINC' ) || die();
 
+// `register_post_type()` below references `WordCamp_Budgets` on `init`; bootstrap.php loads this file in some
+// contexts (e.g. cron) without that class, so require it directly.
+require_once __DIR__ . '/wordcamp-budgets.php';
+
 const POST_TYPE = 'wcb_sponsor_invoice';
 
 // Initialization.
@@ -65,6 +69,13 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` below suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => array(
+			'edit_posts'   => \WordCamp_Budgets::VIEWER_CAP,
+			'create_posts' => \WordCamp_Budgets::VIEWER_CAP,
+		),
 	);
 
 	return \register_post_type( POST_TYPE, $args );

@@ -3,6 +3,8 @@ namespace WordCamp\Blocks\Hooks\Latest_Posts;
 
 defined( 'WPINC' ) || die();
 
+const POLL_CACHE_SECONDS = 60;
+
 /**
  * Check editor versions.
  *
@@ -117,7 +119,18 @@ function safelist_block_renderer( $response, $handler, $request ) {
 		return $response;
 	}
 
-	return call_user_func( $handler['callback'], $request );
+	$response = call_user_func( $handler['callback'], $request );
+
+	/*
+	 * Everyone on a page polls the same URL, so let a cache answer most of them. A
+	 * minute is short against the five the block waits between polls, and core only
+	 * sends no-cache headers for a logged-in request, which this never is.
+	 */
+	if ( $response instanceof \WP_REST_Response ) {
+		$response->header( 'Cache-Control', 'max-age=' . POLL_CACHE_SECONDS );
+	}
+
+	return $response;
 }
 add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_renderer', 10, 3 );
 

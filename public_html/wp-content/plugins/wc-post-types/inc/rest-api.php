@@ -90,16 +90,7 @@ function register_speaker_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function ( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
 			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
@@ -252,16 +243,7 @@ function register_organizer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function ( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
 			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
@@ -310,16 +292,7 @@ function register_volunteer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function ( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
 			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
@@ -355,6 +328,27 @@ function register_volunteer_post_meta() {
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
+}
+
+/**
+ * Prepare `_wcpt_user_name` for REST reads by resolving it from the derived user ID.
+ *
+ * @param string $value The stored username.
+ *
+ * @return string The linked user's `user_login`, or the stored value when none is derived.
+ */
+function prepare_user_name_meta( $value ) {
+	$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+
+	if ( $user_id ) {
+		$wporg_user = get_userdata( $user_id );
+
+		if ( $wporg_user instanceof WP_User ) {
+			return $wporg_user->user_login;
+		}
+	}
+
+	return $value;
 }
 
 /**

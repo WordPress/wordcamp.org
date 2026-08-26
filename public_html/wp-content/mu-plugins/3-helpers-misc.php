@@ -410,7 +410,8 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
  * percent-encoded URLs; `wp_kses( $value, array() )` drops whole `<...>` spans, turning
  * `Hall < 100 > seats` into `Hall  seats`.
  *
- * The result is HTML-encoded. Decode it for a plain-text medium such as an email body or a CSV column.
+ * The result is HTML-encoded. Decode it for a plain-text medium -- the organizer reminder mails
+ * (`wcor-mailer.php`) are the case already in the tree.
  *
  * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
  *                     scalar becomes `''`, as `sanitize_text_field()` does.

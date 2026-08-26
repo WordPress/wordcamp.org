@@ -449,12 +449,10 @@ function register_user_validation_route() {
 			'args'                => array(
 				'username' => array(
 					'type'              => 'string',
+					// Valid only if the current user is entitled to link the named account, matching the
+					// rule enforced when the value is saved.
 					'validate_callback' => function ( $value ) {
-						if ( ! is_string( $value ) ) {
-							return false;
-						}
-						$wporg_user = wcorg_get_user_by_canonical_names( $value );
-						return (bool) $wporg_user;
+						return is_string( $value ) && '' !== wcorg_get_linkable_user_login( $value );
 					},
 				),
 			),

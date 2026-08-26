@@ -21,8 +21,11 @@
 	--wp-components-color-accent-inverted: var(--wp--preset--color--white, #fff);
 }
 
-/*
- * Fix form elements overlapping form header.
+/**
+ * The block editor's inserter popover (`.block-editor-block-popover`,
+ * position: absolute, z-index: 31) draws over the modal header when the
+ * content scrolls, because the upstream header is z-index: 10 with no
+ * background. Opaque and one above the popover keeps the header on top.
  */
 .wporg-groups-modal-accent .components-modal__header {
 	background: var(--wp--preset--color--white, #fff);

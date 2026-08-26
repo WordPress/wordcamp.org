@@ -29,6 +29,9 @@ add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_user_meta_r
 add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
 add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
 add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
+add_filter( 'rest_pre_insert_wcb_speaker', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'rest_pre_insert_wcb_organizer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'rest_pre_insert_wcb_volunteer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -357,11 +360,9 @@ function register_volunteer_post_meta() {
 /**
  * Sanitize a submitted WordPress.org username for the `_wcpt_user_name` meta.
  *
- * The value names the WordPress.org account a participant record represents, so
- * it is resolved to a canonical `user_login`. A record may only be linked to an
- * account other than the current user's by someone who can edit other authors'
- * posts; everyone else may link their own account. Unknown or disallowed values
- * are stored as an empty string.
+ * Resolves the value to a canonical `user_login`, blanking an unknown username. Who may link which account
+ * is enforced at the write boundary (see `guard_user_name_meta()` and the form handlers), not here, because
+ * this runs on every write path and can only rewrite a value, never reject one.
  *
  * @param string $value The submitted username.
  *
@@ -374,15 +375,48 @@ function sanitize_user_name_meta( $value ) {
 		return '';
 	}
 
-	// Linking an account other than the current user's is limited to those who can
-	// edit other authors' posts. When there is no current user (e.g. an anonymous
-	// submission), `get_current_user_id()` is 0 and only a self-link would match,
-	// so a named third-party account is not stored.
-	if ( get_current_user_id() !== $wporg_user->ID && ! current_user_can( 'edit_others_posts' ) ) {
-		return '';
+	return $wporg_user->user_login;
+}
+
+/**
+ * Reject a REST write that links a participant record to an account the user may not claim.
+ *
+ * A user may set `_wcpt_user_name` to their own account; naming a different one is reserved for those who
+ * can edit other authors' posts. Refusing the write here returns an error, rather than letting the meta
+ * sanitizer silently drop the value.
+ *
+ * @param object          $prepared_post The post about to be inserted or updated.
+ * @param WP_REST_Request $request       The REST request.
+ *
+ * @return object|WP_Error The unchanged post, or an error if the link is not allowed.
+ */
+function guard_user_name_meta( $prepared_post, $request ) {
+	$meta = $request['meta'] ?? null;
+
+	if ( ! is_array( $meta ) || ! array_key_exists( '_wcpt_user_name', $meta ) ) {
+		return $prepared_post;
 	}
 
-	return $wporg_user->user_login;
+	$submitted = $meta['_wcpt_user_name'];
+
+	if ( ! is_string( $submitted ) || '' === $submitted ) {
+		return $prepared_post;
+	}
+
+	// An unknown username is left for the sanitizer to blank, as before.
+	if ( ! wcorg_get_user_by_canonical_names( $submitted ) ) {
+		return $prepared_post;
+	}
+
+	if ( '' === wcorg_get_linkable_user_login( $submitted ) ) {
+		return new \WP_Error(
+			'wcpt_cannot_link_user',
+			__( 'You are not allowed to link this record to another account.', 'wordcamporg' ),
+			array( 'status' => rest_authorization_required_code() )
+		);
+	}
+
+	return $prepared_post;
 }
 
 /**

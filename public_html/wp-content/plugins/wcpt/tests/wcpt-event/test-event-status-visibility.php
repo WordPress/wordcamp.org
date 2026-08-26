@@ -131,14 +131,18 @@ class Test_Event_Status_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Pre-planning camps keep resolving, for the reason in
-	 * `WordCamp_Loader::get_publicly_viewable_post_statuses()`: the map markers link
-	 * their Central permalink.
+	 * Cancelled and pre-planning camps keep resolving, for the reasons in
+	 * `WordCamp_Loader::get_publicly_viewable_post_statuses()`.
 	 *
 	 * @covers WordCamp_Loader::get_publicly_viewable_post_statuses
 	 */
-	public function test_pre_planning_statuses_still_resolve() {
-		foreach ( WordCamp_Loader::get_pre_planning_post_statuses() as $status ) {
+	public function test_deferred_statuses_still_resolve() {
+		$deferred = array_merge(
+			array( 'wcpt-cancelled' ),
+			WordCamp_Loader::get_pre_planning_post_statuses()
+		);
+
+		foreach ( $deferred as $status ) {
 			$this->assertTrue(
 				get_post_status_object( $status )->public,
 				"$status should still be public"
@@ -365,24 +369,25 @@ class Test_Event_Status_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A cancelled camp is an application record like the rest. The v2 REST API keeps
-	 * serving the ones that reached the schedule, but it decides that per post, in
-	 * `WordCamp_REST_WordCamps_Controller::check_read_permission()`, rather than through
-	 * this flag.
+	 * A camp that reached the schedule and was then cancelled keeps resolving for everyone,
+	 * so the v2 REST API keeps serving it. The ones cancelled while still an application
+	 * are withheld by `WordCamp_Loader::hide_unscheduled_cancellations()`, which
+	 * `Test_Cancelled_Camp_Visibility` covers.
 	 *
 	 * @covers WordCamp_Loader::get_publicly_viewable_post_statuses
 	 */
-	public function test_cancelled_single_view_is_empty_for_anonymous_visitors() {
+	public function test_cancelled_single_view_still_resolves_for_anonymous_visitors() {
 		$cancelled = self::factory()->post->create(
 			array(
 				'post_type'   => WCPT_POST_TYPE_ID,
 				'post_status' => 'wcpt-cancelled',
+				'menu_order'  => 1560293422,
 			)
 		);
 
 		wp_set_current_user( 0 );
 
-		$this->assertEmpty( $this->query_single( $cancelled )->posts );
+		$this->assertCount( 1, $this->query_single( $cancelled )->posts );
 	}
 
 	/**

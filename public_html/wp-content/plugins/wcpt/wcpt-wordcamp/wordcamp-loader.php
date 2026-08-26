@@ -21,6 +21,7 @@ class WordCamp_Loader extends Event_Loader {
 	function __construct() {
 		parent::__construct();
 		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date'                ) );
+		add_filter( 'posts_where',                     array( $this, 'hide_unscheduled_cancellations' ), 10, 2 );
 		add_filter( 'wordcamp_rewrite_rules',          array( $this, 'wordcamp_rewrite_rules'            ) );
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
@@ -234,22 +235,74 @@ class WordCamp_Loader extends Event_Loader {
 	/**
 	 * Statuses whose single view resolves for everyone.
 	 *
-	 * Wider than `get_public_post_statuses()` because pre-planning camps aren't listed on
-	 * the schedule but are still reached by URL: they usually have no site of their own
-	 * yet, so the map markers link their Central permalink through
-	 * `WordCamp_Central_Theme::get_best_wordcamp_url()`.
+	 * Wider than `get_public_post_statuses()` because two groups aren't listed on the
+	 * schedule but are still reached by URL:
 	 *
-	 * `wcpt-cancelled` is not here. It reaches the v2 REST API through
-	 * `WordCamp_REST_WordCamps_Controller::check_read_permission()`, which decides per
-	 * post rather than per status.
+	 * - A camp cancelled after it reached the schedule is a public record. The ones
+	 *   cancelled while still an application are withheld by
+	 *   `hide_unscheduled_cancellations()`.
+	 * - Pre-planning camps usually have no site of their own yet, so the map markers link
+	 *   their Central permalink through `WordCamp_Central_Theme::get_best_wordcamp_url()`.
 	 *
 	 * @return array Post status names.
 	 */
 	public static function get_publicly_viewable_post_statuses() {
 		return array_merge(
 			self::get_public_post_statuses(),
+			array( 'wcpt-cancelled' ),
 			self::get_pre_planning_post_statuses()
 		);
+	}
+
+	/**
+	 * Withhold camps cancelled before they ever reached the schedule.
+	 *
+	 * `public` is per status and this is per post, so the query decides. Filtering here
+	 * rather than per row keeps a collection's items, `X-WP-Total` and page count in
+	 * agreement.
+	 *
+	 * @param string   $where
+	 * @param WP_Query $query
+	 *
+	 * @return string
+	 */
+	public function hide_unscheduled_cancellations( $where, $query ) {
+		global $wpdb;
+
+		if ( ! in_array( WCPT_POST_TYPE_ID, (array) $query->get( 'post_type' ), true ) ) {
+			return $where;
+		}
+
+		// No user to hold the capability, and `wp post list` should report the real set.
+		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return $where;
+		}
+
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return $where;
+		}
+
+		// An applicant keeps their own record. `-1` rather than the logged-out `0`, which is
+		// a real `post_author` value and would expose every unattributed camp.
+		return $where . $wpdb->prepare(
+			" AND NOT ( {$wpdb->posts}.post_status = %s AND {$wpdb->posts}.menu_order = 0 AND {$wpdb->posts}.post_author <> %d )",
+			'wcpt-cancelled',
+			get_current_user_id() ?: -1
+		);
+	}
+
+	/**
+	 * Whether a camp ever reached the official schedule.
+	 *
+	 * `menu_order` holds the date it was added, written once by `set_scheduled_date()`
+	 * below. Only written from 2016-06-23, so anything older reads as never scheduled.
+	 *
+	 * @param WP_Post $post
+	 *
+	 * @return bool
+	 */
+	public static function was_ever_scheduled( $post ) {
+		return $post->menu_order > 0;
 	}
 
 	/**

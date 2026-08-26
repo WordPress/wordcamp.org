@@ -29,15 +29,25 @@ add_filter( 'import_post_meta_key', __NAMESPACE__ . '\skip_file_path_meta' );
  * @return mixed The meta key, or false to skip it. Anything that isn't a string is left alone.
  */
 function skip_file_path_meta( $key ) {
-	$file_path_meta = array(
-		'_wp_attached_file',
-		'_wp_attachment_metadata',
-		'_wp_font_face_file',
-	);
-
-	if ( in_array( $key, $file_path_meta, true ) ) {
+	if ( in_array( $key, file_path_meta_keys(), true ) ) {
 		return false;
 	}
 
 	return $key;
+}
+
+/**
+ * The post meta keys that store a filesystem path.
+ *
+ * Shared with the Jetpack importer, which writes meta on its own REST routes rather than through
+ * `import_post_meta_key`, so both importers drop the same keys.
+ *
+ * @return string[]
+ */
+function file_path_meta_keys() {
+	return array(
+		'_wp_attached_file',
+		'_wp_attachment_metadata',
+		'_wp_font_face_file',
+	);
 }

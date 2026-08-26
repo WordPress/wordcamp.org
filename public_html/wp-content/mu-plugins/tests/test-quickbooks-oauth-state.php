@@ -62,8 +62,8 @@ class Test_QuickBooks_OAuth_State extends WP_UnitTestCase {
 	 * @return mixed
 	 */
 	protected function call_client_method( $name, array $args = array() ) {
+		// No `setAccessible()` call -- it's been a no-op since PHP 8.1, and deprecated since 8.5.
 		$method = new ReflectionMethod( Client::class, $name );
-		$method->setAccessible( true );
 
 		return $method->invokeArgs( null, $args );
 	}

@@ -255,11 +255,81 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
+	 * Who may read a cancelled application that never reached the schedule.
+	 *
+	 * This method is the rule. A query cannot call it per row, so
+	 * `hide_unscheduled_cancellations()` mirrors it in SQL, and
+	 * `WordCamp_REST_WordCamps_Controller::check_read_permission()` calls it directly for
+	 * single-item reads. The permalink and the API have to describe the same set, so the two
+	 * move together or not at all.
+	 *
+	 * @param WP_Post $post
+	 *
+	 * @return bool
+	 */
+	public static function can_read_unscheduled_cancellation( $post ) {
+		// No user to hold the capability, and `wp post list` should report the real set.
+		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return true;
+		}
+
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return true;
+		}
+
+		$user = wp_get_current_user();
+
+		if ( ! $user->exists() ) {
+			return false;
+		}
+
+		/*
+		 * The applicant keeps their own record, matched on the author rather than `edit_post`.
+		 * `WordCamp_Admin::add_organizer_to_central()` runs on `wcpt_approved_for_pre_planning`,
+		 * so an application cancelled before it was accepted never added its author to Central
+		 * and that author usually holds no role here at all.
+		 */
+		if ( (int) $post->post_author === $user->ID ) {
+			return true;
+		}
+
+		return self::is_mentored_by( $post, $user );
+	}
+
+	/**
+	 * Whether a camp names this user as its mentor.
+	 *
+	 * Compares the stored name against both of the user's canonical names, which is what
+	 * `WordCamp_Admin::get_authored_or_mentored_wordcamps()` does and what SQL can express.
+	 * `map_subrole_caps()` resolves the other way, name to user, so a login and a nicename
+	 * that collide across two accounts read as mentors here and as one there.
+	 *
+	 * @param WP_Post $post
+	 * @param WP_User $user
+	 *
+	 * @return bool
+	 */
+	protected static function is_mentored_by( $post, $user ) {
+		$mentor = get_post_meta( $post->ID, 'Mentor WordPress.org User Name', true );
+
+		if ( ! $mentor ) {
+			return false;
+		}
+
+		return in_array( $mentor, array( $user->user_login, $user->user_nicename ), true );
+	}
+
+	/**
 	 * Withhold camps cancelled before they ever reached the schedule.
 	 *
 	 * `public` is per status and this is per post, so the query decides. Filtering here
 	 * rather than per row keeps a collection's items, `X-WP-Total` and page count in
 	 * agreement.
+	 *
+	 * This is `can_read_unscheduled_cancellation()` written in SQL. It reaches only queries
+	 * that name the post type and do not suppress filters, so it is not a boundary that
+	 * catches every caller: `post_type => 'any'` and the `suppress_filters` default on
+	 * `get_posts()` both skip it.
 	 *
 	 * @param string   $where
 	 * @param WP_Query $query
@@ -273,8 +343,13 @@ class WordCamp_Loader extends Event_Loader {
 			return $where;
 		}
 
-		// No user to hold the capability, and `wp post list` should report the real set.
 		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return $where;
+		}
+
+		// A personal data export has to be complete whoever is processing it, and a Central
+		// administrator without the subrole does not hold the capability below.
+		if ( $query->get( 'wcpt_include_unscheduled_cancellations' ) ) {
 			return $where;
 		}
 
@@ -282,13 +357,33 @@ class WordCamp_Loader extends Event_Loader {
 			return $where;
 		}
 
-		// An applicant keeps their own record. `-1` rather than the logged-out `0`, which is
-		// a real `post_author` value and would expose every unattributed camp.
-		return $where . $wpdb->prepare(
-			" AND NOT ( {$wpdb->posts}.post_status = %s AND {$wpdb->posts}.menu_order = 0 AND {$wpdb->posts}.post_author <> %d )",
-			'wcpt-cancelled',
-			get_current_user_id() ?: -1
+		$user = wp_get_current_user();
+
+		// `-1` rather than the logged-out `0`, which is a real `post_author` value and would
+		// expose every unattributed camp.
+		$readable = $wpdb->prepare(
+			"{$wpdb->posts}.post_author = %d",
+			$user->exists() ? $user->ID : -1
 		);
+
+		if ( $user->exists() ) {
+			$readable .= $wpdb->prepare(
+				" OR {$wpdb->posts}.ID IN (
+					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( %s, %s )
+				)",
+				'Mentor WordPress.org User Name',
+				$user->user_login,
+				$user->user_nicename
+			);
+		}
+
+		// `menu_order <= 0` rather than `= 0`, to agree with `was_ever_scheduled()`.
+		$hidden = $wpdb->prepare(
+			" AND NOT ( {$wpdb->posts}.post_status = %s AND {$wpdb->posts}.menu_order <= 0",
+			'wcpt-cancelled'
+		);
+
+		return $where . $hidden . " AND NOT ( {$readable} ) )";
 	}
 
 	/**

@@ -44,7 +44,9 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		$wcorg_subroles = array();
 		wp_set_current_user( 0 );
 
-		$organizer = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		// A subscriber, not a contributor: an application cancelled before it was accepted
+		// never ran `add_organizer_to_central()`, so its author holds no role here.
+		$organizer = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 
 		$this->scheduled   = $this->create_cancelled_camp( 1560293422, $organizer );
 		$this->application = $this->create_cancelled_camp( 0, $organizer );
@@ -116,12 +118,95 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	 * @covers WordCamp_REST_WordCamps_Controller::check_read_permission
 	 */
 	public function test_the_author_can_read_their_own_cancelled_application() {
-		$author = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$author = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		$camp   = $this->create_cancelled_camp( 0, $author );
 
 		wp_set_current_user( $author );
 
+		// Without this the test passes on an `edit_post` check too, and proves nothing.
+		$this->assertFalse( current_user_can( 'edit_wordcamps' ), 'The fixture holds the capability.' );
+
 		$this->assertSame( 200, $this->request_camp( $camp )->get_status() );
+		$this->assertCount( 1, $this->query_single( $camp )->posts );
+	}
+
+	/**
+	 * Mentors keep the camps they mentor, the same set the admin list table gives them.
+	 *
+	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
+	 */
+	public function test_a_mentor_reads_their_mentee_application_on_both_surfaces() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', $mentor->user_login );
+		wp_set_current_user( $mentor->ID );
+
+		$this->assertSame( 200, $this->request_camp( $this->application )->get_status() );
+		$this->assertCount( 1, $this->query_single( $this->application )->posts );
+	}
+
+	/**
+	 * The stored name is matched against both canonical names, because that is what the
+	 * list table does and what the SQL clause can express.
+	 *
+	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
+	 */
+	public function test_a_mentor_named_by_nicename_is_recognised() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', $mentor->user_nicename );
+		wp_set_current_user( $mentor->ID );
+
+		$this->assertSame( 200, $this->request_camp( $this->application )->get_status() );
+		$this->assertCount( 1, $this->query_single( $this->application )->posts );
+	}
+
+	/**
+	 * Somebody else's mentee stays somebody else's.
+	 *
+	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
+	 */
+	public function test_mentoring_one_camp_does_not_open_another() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', 'somebody_else' );
+		wp_set_current_user( $mentor->ID );
+
+		$this->assertSame( 403, $this->request_camp( $this->application )->get_status() );
+		$this->assertEmpty( $this->query_single( $this->application )->posts );
+	}
+
+	/**
+	 * `was_ever_scheduled()` reads `menu_order > 0`, so anything at or below zero has to be
+	 * an application-stage cancellation on both surfaces. Nothing writes a negative today.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_a_negative_scheduled_date_counts_as_never_scheduled() {
+		$camp = $this->create_cancelled_camp( -1, 0 );
+
+		$this->assertSame( 401, $this->request_camp( $camp )->get_status() );
+		$this->assertEmpty( $this->query_single( $camp )->posts );
+	}
+
+	/**
+	 * #1931 gave the pre-planning statuses a page on Central, and
+	 * `get_publicly_viewable_post_statuses()` brings the API into line with it. These
+	 * answer anonymously where they used to be refused, which is a deliberate widening.
+	 *
+	 * @covers WordCamp_REST_WordCamps_Controller::check_read_permission
+	 */
+	public function test_pre_planning_camps_are_readable_over_rest() {
+		foreach ( \WordCamp_Loader::get_pre_planning_post_statuses() as $status ) {
+			$camp = self::factory()->post->create(
+				array(
+					'post_type'   => WCPT_POST_TYPE_ID,
+					'post_status' => $status,
+				)
+			);
+
+			$this->assertSame( 200, $this->request_camp( $camp )->get_status(), "$status is not readable." );
+		}
 	}
 
 	/**
@@ -187,6 +272,27 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		$orphan = $this->create_cancelled_camp( 0, 0 );
 
 		$this->assertEmpty( $this->query_single( $orphan )->posts );
+	}
+
+	/**
+	 * A personal data export has to be complete whoever is processing it, and a Central
+	 * administrator without the wrangler subrole does not hold the capability.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_an_export_query_still_sees_an_application_stage_cancellation() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$query = new WP_Query(
+			array(
+				'post_type' => WCPT_POST_TYPE_ID,
+				'name'      => get_post_field( 'post_name', $this->application ),
+
+				'wcpt_include_unscheduled_cancellations' => true,
+			)
+		);
+
+		$this->assertCount( 1, $query->posts );
 	}
 
 	/**

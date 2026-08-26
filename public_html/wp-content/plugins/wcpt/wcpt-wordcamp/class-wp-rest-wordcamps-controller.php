@@ -96,7 +96,7 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 		// A single-item read fetches the post rather than running a query, so it does not
 		// inherit `WordCamp_Loader::hide_unscheduled_cancellations()`.
 		if ( 'wcpt-cancelled' === $post->post_status && ! WordCamp_Loader::was_ever_scheduled( $post ) ) {
-			return current_user_can( 'edit_post', $post->ID );
+			return WordCamp_Loader::can_read_unscheduled_cancellation( $post );
 		}
 
 		// If post status is not listed as public, it cannot be read.

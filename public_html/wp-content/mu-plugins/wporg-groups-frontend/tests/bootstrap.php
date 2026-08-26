@@ -34,6 +34,9 @@ function manually_load_plugins() {
 	// autoloaded in the test environment the way it is on a real request.
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
+	// The REST layer sanitizes post titles with `wcorg_sanitize_plain_text()`.
+	require_once SUT_WPMU_PLUGIN_DIR . '/3-helpers-misc.php';
+
 	// The ownership-transfer REST controller (registered by
 	// `wporg-groups-frontend.php` below) is a thin client of
 	// `WordCamp\Groups\Ownership_Transfer\*`, which normally loads from the

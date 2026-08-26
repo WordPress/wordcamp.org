@@ -296,6 +296,81 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The export escape hatch is a programmatic argument. If a request could set it, it
+	 * would undo everything above.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_the_export_escape_hatch_is_not_reachable_from_a_url() {
+		global $wp;
+
+		// `WP::parse_request()` only copies registered public query vars out of the request,
+		// so a URL cannot reach this one. Asserted rather than exercised, because calling
+		// `parse_request()` here would leave the global `$wp` altered for later tests.
+		$this->assertNotContains( 'wcpt_include_unscheduled_cancellations', $wp->public_query_vars );
+		$this->assertArrayNotHasKey( 'wcpt_include_unscheduled_cancellations', $GLOBALS['wp_query']->query_vars );
+	}
+
+	/**
+	 * The mentor arm is a second way into the `WHERE` clause, and the reason this filters in
+	 * the query at all is that items, `X-WP-Total` and page count have to agree.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_the_collection_agrees_with_its_count_for_a_mentor() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$theirs = $this->create_cancelled_camp( 0, 0 );
+
+		update_post_meta( $theirs, 'Mentor WordPress.org User Name', $mentor->user_login );
+		wp_set_current_user( $mentor->ID );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
+		$request->set_param( 'status', 'wcpt-cancelled' );
+		$request->set_param( '_fields', 'id' );
+		$request->set_param( 'per_page', 2 );
+
+		$response = rest_do_request( $request );
+		$ids      = wp_list_pluck( $response->get_data(), 'id' );
+		$headers  = $response->get_headers();
+
+		$this->assertContains( $theirs, $ids, 'The mentor does not see their mentee camp.' );
+		$this->assertNotContains( $this->application, $ids, 'The mentor sees a camp they do not mentor.' );
+		$this->assertSame( 2, (int) $headers['X-WP-Total'], 'The total disagrees with the readable set.' );
+		$this->assertSame( 1, (int) $headers['X-WP-TotalPages'] );
+	}
+
+	/**
+	 * The clause names `wp_postmeta` inside a subselect while a `meta_query` on the same
+	 * request aliases it in the outer query, which is how the subtype filter runs.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_the_clause_survives_a_meta_query_on_the_same_request() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$theirs = $this->create_cancelled_camp( 0, 0 );
+
+		update_post_meta( $theirs, 'Mentor WordPress.org User Name', $mentor->user_login );
+		update_post_meta( $theirs, 'event_subtype', 'next-gen' );
+		wp_set_current_user( $mentor->ID );
+
+		$query = new WP_Query(
+			array(
+				'post_type'   => WCPT_POST_TYPE_ID,
+				'post_status' => 'wcpt-cancelled',
+				'meta_query'  => array(
+					array(
+						'key'   => 'event_subtype',
+						'value' => 'next-gen',
+					),
+				),
+			)
+		);
+
+		// A malformed clause returns nothing here, so the row coming back is the assertion.
+		$this->assertSame( array( $theirs ), wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
 	 * Run the query a request for a camp's permalink produces.
 	 *
 	 * Queried by name rather than through `go_to()`, which depends on rewrite rules and

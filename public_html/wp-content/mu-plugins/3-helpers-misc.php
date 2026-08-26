@@ -426,7 +426,10 @@ function wcorg_sanitize_plain_text( $value ) {
 		return '';
 	}
 
+	// `strip_tags()` deletes from an unterminated `<` to the end of the string, so encode that
+	// case first -- `Rated <A best` should keep its text, not become `Rated`.
 	$value = wp_check_invalid_utf8( (string) $value );
+	$value = wp_pre_kses_less_than( $value );
 	$value = wp_strip_all_tags( $value, true );
 
 	return str_replace( '<', '&lt;', $value );

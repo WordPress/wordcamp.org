@@ -78,7 +78,7 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 				'Smith & Sons Hall',
 			),
 
-			'line breaks are collapsed by default' => array(
+			'line breaks are collapsed' => array(
 				"Narnia\nHall",
 				'Narnia Hall',
 			),
@@ -97,6 +97,12 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 			'non-string scalars are cast' => array(
 				42,
 				'42',
+			),
+
+			// `strip_tags()` alone deletes from an unterminated `<` to the end of the string.
+			'an unterminated angle bracket does not truncate the value' => array(
+				'Rated <A best',
+				'Rated &lt;A best',
 			),
 
 			// `sanitize_text_field()` would delete these, quietly breaking a pasted URL.

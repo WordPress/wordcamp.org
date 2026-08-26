@@ -37,10 +37,11 @@ class Test_WordCamp_Application extends WP_UnitTestCase {
 
 		$title = get_post( $post_id )->post_title;
 
-		$this->assertStringNotContainsString( '<code>', $title );
 		$this->assertFalse(
 			( new \WP_HTML_Tag_Processor( $title ) )->next_tag(),
 			"Stored title read back as markup: $title"
 		);
+		// In full, so that a value which lost text on the way through fails too.
+		$this->assertSame( 'WordCamp Portland&lt; code &gt;" data-x="&lt; /code &gt;Oregon', $title );
 	}
 }

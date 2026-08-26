@@ -43,6 +43,16 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	const MARKUP_INPUT = 'Test< code >" data-x="< /code >Co';
 
 	/**
+	 * What MARKUP_INPUT must look like once it has been stored as a title.
+	 *
+	 * Asserted in full rather than by "contains no tag", so that a value which lost text on the way
+	 * through -- rather than only one that kept its markup -- fails too.
+	 *
+	 * @var string
+	 */
+	const MARKUP_TITLE = 'Test&lt; code &gt;" data-x="&lt; /code &gt;Co';
+
+	/**
 	 * Set up the plugin instance.
 	 */
 	public function set_up() {
@@ -95,8 +105,8 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			( new \WP_HTML_Tag_Processor( $title ) )->next_tag(),
 			"Stored title read back as markup: $title"
 		);
-		// The submission text itself is still there.
-		$this->assertStringContainsString( 'Test', $title, 'The submission text was not preserved.' );
+		// The whole submission is still there, character for character.
+		$this->assertSame( self::MARKUP_TITLE, $title );
 	}
 
 	/**

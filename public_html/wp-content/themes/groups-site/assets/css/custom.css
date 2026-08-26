@@ -821,6 +821,28 @@ body.error404 .site-content-container h1 {
    Footer
    ========================================================================== */
 
+/* The callout's links render as a ruled list: a hairline above each row and
+   one closing the list, matching the global footer's palette. */
+
+.groups-site-callout-links p {
+	border-top: 1px solid var(--wp--preset--color--charcoal-4);
+	margin: 0;
+	padding: var(--wp--preset--spacing--20) 0;
+}
+
+.groups-site-callout-links p:last-child {
+	border-bottom: 1px solid var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-callout-links a {
+	display: block;
+	text-decoration: none;
+}
+
+.groups-site-callout-links a:hover {
+	text-decoration: underline;
+}
+
 .groups-site-footer a {
 	text-decoration: none;
 }

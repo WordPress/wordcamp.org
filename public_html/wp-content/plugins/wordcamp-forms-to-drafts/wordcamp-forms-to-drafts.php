@@ -361,6 +361,29 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Decide which WordPress.org account a submission may link its draft to.
+	 *
+	 * A logged-in submitter links their own account by default, or the submitted account if entitled to it
+	 * (see `wcorg_get_linkable_user_login()`). An anonymous submission links no account; the submitted name
+	 * is still kept on the Jetpack feedback entry for an organizer to review.
+	 *
+	 * @param string $submitted_username The username from the form.
+	 *
+	 * @return string The username to link, or an empty string.
+	 */
+	protected function resolve_linked_username( $submitted_username ) {
+		$current_user = wp_get_current_user();
+
+		if ( ! $current_user->exists() ) {
+			return '';
+		}
+
+		$linkable = wcorg_get_linkable_user_login( $submitted_username, $current_user->ID );
+
+		return '' !== $linkable ? $linkable : $current_user->user_login;
+	}
+
+	/**
 	 * Simulate the existence of a post type.
 	 *
 	 * This plugin may need to insert a form into a different site, and the targeted post type may not be active
@@ -454,15 +477,9 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
-
-		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
-		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $speaker_user_id ) {
-			$speaker_user_id                      = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
-		}
+		$all_values                           = $this->get_unprefixed_grunion_form_values( $all_values );
+		$all_values['WordPress.org Username'] = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
+		$speaker_user_id                      = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
 
 		$speaker = $this->get_speaker_from_user_id( $speaker_user_id );
 
@@ -498,17 +515,8 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
-
-		$all_values        = $this->get_unprefixed_grunion_form_values( $all_values );
-		$volunteer_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $volunteer_user_id ) {
-			$volunteer_user_id                    = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
-		}
-
-		$volunteer_user = get_user_by( 'id', $volunteer_user_id );
+		$all_values = $this->get_unprefixed_grunion_form_values( $all_values );
+		$user_name  = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
@@ -522,7 +530,7 @@ class WordCamp_Forms_To_Drafts {
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 
 			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ?? '' ) );
-			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
+			update_post_meta( $draft_id, '_wcpt_user_name', $user_name );
 			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
 	}

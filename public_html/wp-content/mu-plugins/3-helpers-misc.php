@@ -401,24 +401,19 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
 /**
  * Reduce a submitted value to text that stays text once WordPress saves it.
  *
- * `sanitize_text_field()` and `wp_kses()` disagree about what opens a tag: `strip_tags()`, which the
- * former is built on, needs a letter, `/`, `!` or `?` after the `<`, while kses also accepts whitespace.
- * A value like `< code >` therefore passes the sanitiser untouched, and the `wp_filter_kses()` that core
- * puts on `title_save_pre` then rebuilds it into a real element -- so a handler that meant to store text
- * ends up storing markup. Encoding the `<` that survives settles the disagreement, and leaves the
- * character visible to readers.
+ * `strip_tags()` wants a letter, `/`, `!` or `?` after a `<` before it counts as a tag, but `wp_kses()`
+ * also accepts whitespace. So `< code >` survives `sanitize_text_field()`, and the `wp_filter_kses()`
+ * core puts on `title_save_pre` then rebuilds it into a real element. Encoding the surviving `<` settles
+ * that, and still reads as `<` to a human.
  *
- * This deliberately does not call `sanitize_text_field()`, which would also delete every `%[a-f0-9]{2}`
- * sequence and so quietly break a percent-encoded URL. `wp_kses( $value, array() )` is not usable either:
- * it drops whole `<...>` spans rather than neutralising them, turning `Hall < 100 > seats` into
- * `Hall  seats`, and rewrites every `&`.
+ * Two near-misses to avoid: `sanitize_text_field()` also deletes every `%[a-f0-9]{2}`, which breaks
+ * percent-encoded URLs; `wp_kses( $value, array() )` drops whole `<...>` spans, turning
+ * `Hall < 100 > seats` into `Hall  seats`.
  *
- * The result is encoded for HTML. Decode it before using it in a plain-text medium such as an email
- * body or a CSV column.
+ * The result is HTML-encoded. Decode it for a plain-text medium such as an email body or a CSV column.
  *
- * @param mixed $value The submitted value. Arrays are handled recursively; array keys are left alone,
- *                     and anything that is neither an array nor a scalar becomes an empty string, as
- *                     `sanitize_text_field()` does.
+ * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
+ *                     scalar becomes `''`, as `sanitize_text_field()` does.
  *
  * @return string|array A string, or an array of strings when `$value` is an array.
  */

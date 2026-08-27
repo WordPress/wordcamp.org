@@ -351,7 +351,7 @@ function register_rest_endpoints() {
 			 */
 			$permission_callback = method_exists( $class, 'rest_permission_callback' )
 				? array( $class, 'rest_permission_callback' )
-				: function() {
+				: function () {
 					return current_user_can( CAPABILITY );
 				};
 

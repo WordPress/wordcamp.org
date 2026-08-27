@@ -417,7 +417,7 @@ class WordCamp_Forms_To_Drafts {
 		// Create the post.
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
-			'post_title'   => $all_values['Company Name'] ?? '',
+			'post_title'   => wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ),
 			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -512,7 +512,7 @@ class WordCamp_Forms_To_Drafts {
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => sanitize_text_field( $all_values['Name'] ?? '' ),
+			'post_title'   => wcorg_sanitize_plain_text( $all_values['Name'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -652,6 +652,9 @@ class WordCamp_Forms_To_Drafts {
 	 * keeps that text as literal characters instead of letting it run as shortcodes,
 	 * so a submission is shown as written rather than executed.
 	 *
+	 * Tags are not a concern here: Jetpack has already run these values through `wp_kses_post()`,
+	 * and `content_save_pre` runs them through it again on the way into the database.
+	 *
 	 * @param string $content Submitted content.
 	 *
 	 * @return string Content with shortcode delimiters encoded.
@@ -683,7 +686,7 @@ class WordCamp_Forms_To_Drafts {
 		$speaker_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_speaker',
-				'post_title'   => $speaker['Name'] ?? 'Untitled',
+				'post_title'   => wcorg_sanitize_plain_text( $speaker['Name'] ?? 'Untitled' ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -731,7 +734,7 @@ class WordCamp_Forms_To_Drafts {
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => $session['Topic Title'] ?? '',
+				'post_title'   => wcorg_sanitize_plain_text( $session['Topic Title'] ?? '' ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),

@@ -53,6 +53,17 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	const MARKUP_TITLE = 'Test&lt; code &gt;" data-x="&lt; /code &gt;Co';
 
 	/**
+	 * The shape these handlers actually receive.
+	 *
+	 * Jetpack runs `wp_kses_post()` over the values before the handler sees them, which rebuilds a
+	 * spaced `< strong >` into a real element -- so on this path markup arrives already formed, and
+	 * MARKUP_INPUT's spaced form never occurs in production. Both are covered.
+	 *
+	 * @var string
+	 */
+	const KSESED_INPUT = '<strong>Test</strong> Co';
+
+	/**
 	 * Set up the plugin instance.
 	 */
 	public function set_up() {
@@ -100,13 +111,13 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	 *
 	 * @param string $title The stored draft title.
 	 */
-	protected function assertTitleIsText( $title ) {
+	protected function assertTitleIsText( $title, $expected = self::MARKUP_TITLE ) {
 		$this->assertFalse(
 			( new \WP_HTML_Tag_Processor( $title ) )->next_tag(),
 			"Stored title read back as markup: $title"
 		);
 		// The whole submission is still there, character for character.
-		$this->assertSame( self::MARKUP_TITLE, $title );
+		$this->assertSame( $expected, $title );
 	}
 
 	/**
@@ -300,5 +311,31 @@ class Test_Draft_Content extends WP_UnitTestCase {
 		$this->assertNotEmpty( $speaker );
 		$this->assertStringContainsString( '<strong>bold</strong>', $speaker[0]->post_content );
 		$this->assertStringContainsString( 'My%20Notes.pdf', $speaker[0]->post_content );
+	}
+
+	/**
+	 * Markup that reached the handler already formed is stored as text too.
+	 *
+	 * This is the production-shaped case: Jetpack's `wp_kses_post()` pass means a submitter's
+	 * `<strong>` arrives as a real element rather than in the spaced form the other cases use.
+	 */
+	public function test_title_from_already_formed_markup_is_stored_as_text() {
+		$this->plugin->call_for_sponsors(
+			$this->make_submission( 'call-for-sponsors' ),
+			array(
+				'Company Name'        => self::KSESED_INPUT,
+				'Company Description' => 'A description.',
+				'Website'             => 'https://example.org',
+			),
+			array()
+		);
+
+		$sponsor = get_posts( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $sponsor );
+		$this->assertTitleIsText( $sponsor[0]->post_title, 'Test Co' );
 	}
 }

@@ -712,7 +712,10 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$is_editing = $event_id > 0 && Event::POST_TYPE === get_post_type( $event_id );
 
 	if ( $is_editing ) {
-		$fields['title'] = (string) get_post_field( 'post_title', $event_id );
+		// Decoded because the stored title is entity-encoded (see `wcorg_sanitize_plain_text()`) and
+		// this pre-fills a text input, not HTML. Matches the other two read sites, `list_drafts()`
+		// and the venue list below. Re-saving the decoded value encodes it back to the same bytes.
+		$fields['title'] = html_entity_decode( (string) get_post_field( 'post_title', $event_id ) );
 		// Hand the editor only the description-prose blocks so it doesn't
 		// trip on the GatherPress metadata blocks (event-date, venue, RSVP,
 		// etc.) it has no way to render. The save path puts the metadata
@@ -860,7 +863,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'draft',
-		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wporg-groups-frontend' ) : $title,
+		// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wporg-groups-frontend' ) : wcorg_sanitize_plain_text( $title ),
 		'post_content' => wp_kses_post( wp_unslash( $description ) ),
 	);
 
@@ -1051,7 +1055,10 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'publish',
-		'post_title'   => $fields['title'],
+		// The `title` arg's `sanitize_text_field()` is not enough on its own here. See
+		// `wcorg_sanitize_plain_text()`. Applied at the write site rather than in the schema, so other
+		// consumers of `$fields` still see the raw value.
+		'post_title'   => wcorg_sanitize_plain_text( $fields['title'] ),
 		'post_content' => build_post_content( $event_id, $fields['description'] ),
 	);
 
@@ -1168,7 +1175,8 @@ function resolve_venue_id( array $fields ): int {
 		array(
 			'post_type'   => Venue::POST_TYPE,
 			'post_status' => 'publish',
-			'post_title'  => $fields['new_venue_name'],
+			// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+			'post_title'  => wcorg_sanitize_plain_text( $fields['new_venue_name'] ),
 		),
 		true
 	);

@@ -153,12 +153,18 @@
 	 * with the sponsors block below it, the card would slide down and cover
 	 * it. `align-self` stops the column stretching to the row's full height,
 	 * which would leave `sticky` no room to travel in.
+	 *
+	 * The `z-index` has to clear the page content but stay under the local
+	 * navigation bar, which sticks at `z-index: 10`. It can't be dropped
+	 * altogether: the column needs a stacking context of its own to trap the
+	 * venue map, whose Leaflet panes and controls run up to `z-index: 1000`
+	 * and would otherwise paint over the header.
 	 */
 
 	.groups-site-event-sidebar {
 		position: sticky;
 		top: 96px;
-		z-index: 100;
+		z-index: 1;
 		align-self: flex-start;
 	}
 }

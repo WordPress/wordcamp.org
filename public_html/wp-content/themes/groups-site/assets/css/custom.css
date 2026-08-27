@@ -329,7 +329,22 @@ body.error404 .site-content-container h1 {
 	gap: 6px;
 	width: 100%;
 	max-width: 320px;
-	padding: 10px 16px;
+
+	/*
+	 * Set the padding through the parent theme's own tokens rather than a
+	 * flat `padding`. Its outline `:focus` and `:active` rules recompute
+	 * padding from these — swapping the 1px border for an equal amount of
+	 * padding so the box stays put — and they restate the *global* 14px/32px
+	 * while doing it, which outranks a plain `padding` here and grows the
+	 * button by 8px the moment it takes focus.
+	 */
+
+	--wp--custom--button--spacing--padding--top: 10px;
+	--wp--custom--button--spacing--padding--bottom: 10px;
+	--wp--custom--button--spacing--padding--left: 16px;
+	--wp--custom--button--spacing--padding--right: 16px;
+	padding: var(--wp--custom--button--spacing--padding--top)
+		var(--wp--custom--button--spacing--padding--right);
 	font-size: var(--wp--preset--font-size--small);
 }
 

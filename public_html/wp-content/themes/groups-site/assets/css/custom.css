@@ -152,6 +152,17 @@ body.error404 .site-content-container h1 {
    Local navigation breadcrumbs
    ========================================================================== */
 
+/* The breadcrumb is a flex item in the bar's row, and a flex item's default
+   `min-width: auto` floors it at its own content width — so a long event
+   title pushed the whole row past the viewport, carrying the navigation off
+   the right edge and scrolling the page sideways, instead of the wrapper
+   below clipping and scrolling within the space the bar can spare. Let it
+   shrink; the wrapper's own overflow then does the rest. */
+
+.wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
+	min-width: 0;
+}
+
 /* The breadcrumb wrapper scrolls sideways when a long event title overflows
    the bar. The block's own fade-out mask already signals the clipped text;
    the scrollbar a classic-scrollbar OS would draw under it is just noise in

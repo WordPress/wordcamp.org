@@ -44,6 +44,14 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		$wcorg_subroles = array();
 		wp_set_current_user( 0 );
 
+		/*
+		 * This suite defines `WP_ADMIN` (see `wcpt/tests/bootstrap.php`), so `is_admin()` is
+		 * true unless a screen says otherwise. A permalink or REST request is neither, and
+		 * the filter exempts wp-admin, so every test starts on the front end and the one
+		 * about the list table opts in.
+		 */
+		set_current_screen( 'front' );
+
 		// A subscriber, not a contributor: an application cancelled before it was accepted
 		// never ran `add_organizer_to_central()`, so its author holds no role here.
 		$organizer = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -283,6 +291,9 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	public function test_an_export_query_still_sees_an_application_stage_cancellation() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
 
+		// Not in wp-admin, or the exemption for it would carry this rather than the argument.
+		set_current_screen( 'front' );
+
 		$query = new WP_Query(
 			array(
 				'post_type' => WCPT_POST_TYPE_ID,
@@ -368,6 +379,71 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 
 		// A malformed clause returns nothing here, so the row coming back is the assertion.
 		$this->assertSame( array( $theirs ), wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
+	 * The stored name is free text, so `MentorJane` for `mentorjane` is ordinary input. The
+	 * SQL compares under the column collation and ignores case, so resolving the name in PHP
+	 * has to ignore it too.
+	 *
+	 * @covers WordCamp_Loader::is_mentored_by
+	 */
+	public function test_a_mentor_named_in_a_different_case_is_recognised() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', strtoupper( $mentor->user_login ) );
+		wp_set_current_user( $mentor->ID );
+
+		$this->assertSame( 200, $this->request_camp( $this->application )->get_status() );
+		$this->assertCount( 1, $this->query_single( $this->application )->posts );
+	}
+
+	/**
+	 * `get_items()` re-checks `check_read_permission()` per row, so when the clause selects a
+	 * camp the predicate then refuses, the item is dropped and the total is not. That short
+	 * page is the failure filtering in the query exists to avoid.
+	 *
+	 * @covers WordCamp_Loader::is_mentored_by
+	 */
+	public function test_the_collection_count_matches_its_items_for_a_differently_cased_mentor() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', strtoupper( $mentor->user_login ) );
+		wp_set_current_user( $mentor->ID );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
+		$request->set_param( 'status', 'wcpt-cancelled' );
+		$request->set_param( '_fields', 'id' );
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( count( $response->get_data() ), (int) $response->get_headers()['X-WP-Total'] );
+		$this->assertContains( $this->application, wp_list_pluck( $response->get_data(), 'id' ) );
+	}
+
+	/**
+	 * wp-admin is not a public surface, and every other application status stays in the list
+	 * table. Which camp a viewer sees there is #1943's subject.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_an_administrator_without_the_subrole_still_sees_it_in_wp_admin() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$this->assertFalse( current_user_can( 'wordcamp_wrangle_wordcamps' ), 'The fixture holds the subrole.' );
+
+		set_current_screen( 'edit-wordcamp' );
+
+		$query = new WP_Query(
+			array(
+				'post_type'   => WCPT_POST_TYPE_ID,
+				'post_status' => 'wcpt-cancelled',
+			)
+		);
+
+		set_current_screen( 'front' );
+
+		$this->assertContains( $this->application, wp_list_pluck( $query->posts, 'ID' ) );
 	}
 
 	/**

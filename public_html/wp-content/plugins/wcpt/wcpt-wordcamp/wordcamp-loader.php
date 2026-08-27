@@ -299,10 +299,15 @@ class WordCamp_Loader extends Event_Loader {
 	/**
 	 * Whether a camp names this user as its mentor.
 	 *
-	 * Compares the stored name against both of the user's canonical names, which is what
-	 * `WordCamp_Admin::get_authored_or_mentored_wordcamps()` does and what SQL can express.
-	 * `map_subrole_caps()` resolves the other way, name to user, so a login and a nicename
-	 * that collide across two accounts read as mentors here and as one there.
+	 * Resolves the stored name through the database, as `map_subrole_caps()` and
+	 * `wordcamp-new-site.php` both already do, rather than comparing strings in PHP. A byte
+	 * comparison here disagrees with the SQL clause below, which runs under the column
+	 * collation and so ignores case and trailing space, and the more permissive side would
+	 * select rows the stricter side then refuses. That returns a short page under an
+	 * unreduced `X-WP-Total`, which is the failure filtering in the query exists to avoid.
+	 *
+	 * `Mentor WordPress.org User Name` is a free-text admin field, so `MentorJane` for
+	 * `mentorjane` is ordinary input rather than a corner case.
 	 *
 	 * @param WP_Post $post
 	 * @param WP_User $user
@@ -310,13 +315,11 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return bool
 	 */
 	protected static function is_mentored_by( $post, $user ) {
-		$mentor = get_post_meta( $post->ID, 'Mentor WordPress.org User Name', true );
+		$mentor = wcorg_get_user_by_canonical_names(
+			get_post_meta( $post->ID, 'Mentor WordPress.org User Name', true )
+		);
 
-		if ( ! $mentor ) {
-			return false;
-		}
-
-		return in_array( $mentor, array( $user->user_login, $user->user_nicename ), true );
+		return $mentor && $mentor->ID === $user->ID;
 	}
 
 	/**
@@ -347,8 +350,21 @@ class WordCamp_Loader extends Event_Loader {
 			return $where;
 		}
 
-		// A personal data export has to be complete whoever is processing it, and a Central
-		// administrator without the subrole does not hold the capability below.
+		/*
+		 * wp-admin is not a public surface and reaching a WordCamp screen already needs
+		 * `edit_wordcamps`. Every other application status stays in the list table, and
+		 * deciding who sees which camp there is #1943's subject, which does it for all of
+		 * them rather than singling this one out. `wp_doing_cron()` above covers cron;
+		 * admin-ajax is `is_admin()` too and is reachable by any logged-in user, so it is
+		 * excluded here and the export below names itself instead.
+		 */
+		if ( is_admin() && ! wp_doing_ajax() ) {
+			return $where;
+		}
+
+		// A personal data export runs over admin-ajax, so the exemption above does not reach
+		// it. It has to be complete whoever is processing it, and a Central administrator
+		// without the subrole does not hold the capability below.
 		if ( $query->get( 'wcpt_include_unscheduled_cancellations' ) ) {
 			return $where;
 		}

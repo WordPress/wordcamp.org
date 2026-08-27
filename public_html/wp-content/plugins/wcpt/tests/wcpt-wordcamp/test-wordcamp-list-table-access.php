@@ -284,6 +284,26 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The view bar has to agree with the table under it. `get_views()` and
+	 * `is_base_request()` read `$_GET` rather than the query, so clearing only the query var
+	 * leaves Mine marked active over a table showing more than that.
+	 *
+	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 */
+	public function test_the_default_screen_is_not_left_looking_like_the_mine_view() {
+		$user = $this->become_contributor();
+
+		$this->create_wordcamp( $user );
+		$mentored = $this->create_wordcamp( self::factory()->user->create() );
+
+		update_post_meta( $mentored, 'Mentor WordPress.org User Name', wp_get_current_user()->user_login );
+
+		$this->run_list_screen_query();
+
+		$this->assertArrayNotHasKey( 'author', $_GET );
+	}
+
+	/**
 	 * An explicitly chosen Mine view still narrows to what they wrote. Core only narrows
 	 * when the request named nobody, so the two cases have to stay distinguishable.
 	 *
@@ -342,6 +362,10 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 				'user_nicename' => 'shared',
 			)
 		);
+
+		// `wp_insert_user()` suffixes a nicename that is already taken. If that ever happens
+		// here the collision never forms and the assertions below stop meaning anything.
+		$this->assertSame( 'shared', get_userdata( $bystander->ID )->user_nicename );
 
 		$camp = $this->create_wordcamp( self::factory()->user->create() );
 		update_post_meta( $camp, 'Mentor WordPress.org User Name', 'shared' );

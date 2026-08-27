@@ -454,7 +454,7 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 	public function test_save_site_url_field_rejects_a_url_claimed_by_a_trashed_event() {
 		$url = 'https://vancouver.wordcamp.test/2099/';
 
-		$trashed = $this->trash_as_wrangler( $this->create_event( array( 'URL' => $url ) ) );
+		$this->trash_as_wrangler( $this->create_event( array( 'URL' => $url ) ) );
 
 		$event = $this->create_event();
 

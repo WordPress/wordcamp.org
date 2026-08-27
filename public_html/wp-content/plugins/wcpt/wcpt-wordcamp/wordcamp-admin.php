@@ -1716,6 +1716,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which view was asked for, not acting on it.
 			if ( empty( $_REQUEST['author'] ) ) {
 				$query->set( 'author', '' );
+
+				// `get_views()` and `is_base_request()` read `$_GET` rather than the query, so
+				// leaving it there highlights Mine over a table that is showing more than that.
+				unset( $_GET['author'] );
 			}
 
 			// The status links come from `wp_count_posts()`, which has the same blind spot.
@@ -1795,14 +1799,22 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			 * disagree about who the mentor is and this list would show a row its viewer
 			 * cannot open. Resolve it the same way and keep what comes back as this user.
 			 */
+			// Keyed by name, not by camp: `WP_User::get_data_by()` does not cache a miss, so a
+			// name stored as a nicename costs a failed `user_login` lookup every time it is
+			// resolved, and a mentor's camps normally carry one or two distinct spellings.
+			$resolved = array();
+
 			$mentored = array_filter(
 				$mentored,
-				function ( $camp ) use ( $user ) {
-					$mentor = wcorg_get_user_by_canonical_names(
-						get_post_meta( $camp->ID, 'Mentor WordPress.org User Name', true )
-					);
+				function ( $camp ) use ( $user, &$resolved ) {
+					$name = get_post_meta( $camp->ID, 'Mentor WordPress.org User Name', true );
 
-					return $mentor && $mentor->ID === $user->ID;
+					if ( ! isset( $resolved[ $name ] ) ) {
+						$mentor            = wcorg_get_user_by_canonical_names( $name );
+						$resolved[ $name ] = $mentor ? $mentor->ID : 0;
+					}
+
+					return $resolved[ $name ] === $user->ID;
 				}
 			);
 

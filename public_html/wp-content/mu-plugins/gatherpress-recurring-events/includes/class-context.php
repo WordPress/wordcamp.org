@@ -197,7 +197,7 @@ final class Context {
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );
 			$label    = wp_date( 'M j @ g:i A T', $date->getTimestamp(), $timezone );
 			if ( 'cancelled' === $occurrence->status ) {
-				$label .= ' — ' . __( 'Cancelled', 'gpre' );
+				$label .= ' — ' . __( 'Cancelled', 'wordcamporg' );
 			}
 
 			$items .= sprintf(
@@ -211,9 +211,9 @@ final class Context {
 
 		$notice = '';
 		if ( 'cancelled' === self::$occurrence->status ) {
-			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been cancelled.', 'gpre' ) . '</p>';
+			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been cancelled.', 'wordcamporg' ) . '</p>';
 		} elseif ( self::$occurrence->datetime_end_gmt < current_time( 'mysql', true ) ) {
-			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'gpre' ) . '</p>';
+			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'wordcamporg' ) . '</p>';
 		}
 
 		return sprintf(
@@ -224,10 +224,10 @@ final class Context {
 			'<button class="gpre-occurrence-selector__control is-next" type="button" aria-label="%4$s">' .
 			'<span aria-hidden="true">›</span></button>' .
 			'</nav>%5$s',
-			esc_attr__( 'Event dates', 'gpre' ),
-			esc_attr__( 'Previous event dates', 'gpre' ),
+			esc_attr__( 'Event dates', 'wordcamporg' ),
+			esc_attr__( 'Previous event dates', 'wordcamporg' ),
 			$items,
-			esc_attr__( 'Next event dates', 'gpre' ),
+			esc_attr__( 'Next event dates', 'wordcamporg' ),
 			$notice
 		);
 	}
@@ -244,7 +244,7 @@ final class Context {
 		}
 
 		if ( 'cancelled' === self::$occurrence->status ) {
-			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this cancelled occurrence.', 'gpre' ) . '</p>';
+			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this cancelled occurrence.', 'wordcamporg' ) . '</p>';
 		}
 
 		$tag = new WP_HTML_Tag_Processor( $content );

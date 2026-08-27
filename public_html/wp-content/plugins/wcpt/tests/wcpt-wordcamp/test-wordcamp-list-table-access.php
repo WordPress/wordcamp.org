@@ -262,11 +262,6 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Run the filter over a main query and return what it limited the results to.
-	 *
-	 * @return array|string The `post__in` query var.
-	 */
-	/**
 	 * The default screen has to show the camps a viewer mentors, not only the ones they
 	 * wrote. Core narrows the query to the current author for anyone who has written one of
 	 * these and cannot edit others', which would hide the rest while the status links above
@@ -358,6 +353,11 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 		$this->assertContains( $camp, wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' ), 'The real mentor lost their camp.' );
 	}
 
+	/**
+	 * Run the filter over a main query and return what it limited the results to.
+	 *
+	 * @return array|string The `post__in` query var.
+	 */
 	protected function limited_post_in() {
 		$query = $this->build_main_query();
 		$this->admin->limit_list_to_editable_wordcamps( $query );

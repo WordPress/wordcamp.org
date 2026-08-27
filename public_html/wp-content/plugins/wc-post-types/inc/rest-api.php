@@ -397,8 +397,17 @@ function guard_user_name_meta( $prepared_post, $request ) {
 		return $prepared_post;
 	}
 
+	$wporg_user = wcorg_get_user_by_canonical_names( $submitted );
+
 	// An unknown username is left for the sanitizer to blank, as before.
-	if ( ! wcorg_get_user_by_canonical_names( $submitted ) ) {
+	if ( ! $wporg_user ) {
+		return $prepared_post;
+	}
+
+	// Only an actual change to the linked account is gated, so other fields on an already-linked record
+	// stay editable by anyone who can edit the post.
+	$post_id = $request['id'] ?? 0;
+	if ( $post_id && get_post_meta( (int) $post_id, '_wcpt_user_name', true ) === $wporg_user->user_login ) {
 		return $prepared_post;
 	}
 

@@ -138,4 +138,44 @@ class Test_User_Name_Meta extends WP_UnitTestCase {
 
 		$this->assertNotInstanceOf( WP_Error::class, guard_user_name_meta( (object) array(), $request ) );
 	}
+
+	/**
+	 * Re-saving the account already linked is allowed, even for a user who couldn't set it.
+	 */
+	public function test_guard_allows_resaving_the_current_link(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		update_post_meta( $post_id, '_wcpt_user_name', $this->victim_login() );
+
+		wp_set_current_user( self::$contributor );
+		$request = $this->meta_request( $this->victim_login() );
+		$request->set_param( 'id', $post_id );
+
+		$this->assertNotInstanceOf( WP_Error::class, guard_user_name_meta( (object) array(), $request ) );
+	}
+
+	/**
+	 * Changing an existing link to another account is still rejected.
+	 */
+	public function test_guard_rejects_changing_the_link(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		update_post_meta( $post_id, '_wcpt_user_name', get_userdata( self::$editor )->user_login );
+
+		wp_set_current_user( self::$contributor );
+		$request = $this->meta_request( $this->victim_login() );
+		$request->set_param( 'id', $post_id );
+
+		$this->assertInstanceOf( WP_Error::class, guard_user_name_meta( (object) array(), $request ) );
+	}
+
+	/**
+	 * The guard is wired to each participant post type, so a renamed filter would be caught.
+	 */
+	public function test_guard_is_hooked_for_each_post_type(): void {
+		foreach ( array( 'speaker', 'organizer', 'volunteer' ) as $type ) {
+			$this->assertNotFalse(
+				has_filter( "rest_pre_insert_wcb_{$type}", 'WordCamp\Post_Types\REST_API\guard_user_name_meta' ),
+				"Guard not hooked for wcb_{$type}."
+			);
+		}
+	}
 }

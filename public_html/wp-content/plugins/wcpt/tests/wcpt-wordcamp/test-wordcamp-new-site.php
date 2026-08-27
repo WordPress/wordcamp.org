@@ -78,6 +78,33 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 	}
 
 	/**
+	 * Move an event to the trash, which `WordCamp_Status_Guard` only lets a wrangler do.
+	 *
+	 * Asserts the move landed, because an untrashed fixture still claims its URL and still
+	 * counts, so a test named for trashed behaviour would pass without testing any.
+	 *
+	 * @param int $post_id
+	 *
+	 * @return int The same post ID.
+	 */
+	protected function trash_as_wrangler( $post_id ) {
+		global $wcorg_subroles;
+
+		$previous_user     = get_current_user_id();
+		$previous_subroles = $wcorg_subroles;
+
+		$this->become_wrangler();
+		wp_trash_post( $post_id );
+
+		$wcorg_subroles = $previous_subroles;
+		wp_set_current_user( $previous_user );
+
+		$this->assertSame( 'trash', get_post_status( $post_id ), 'The fixture was not trashed.' );
+
+		return $post_id;
+	}
+
+	/**
 	 * Switch the current user to a WordCamp wrangler.
 	 *
 	 * The capability has to come through the subroles system: `omit_usermeta_caps()` deliberately strips
@@ -427,7 +454,7 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 	public function test_save_site_url_field_rejects_a_url_claimed_by_a_trashed_event() {
 		$url = 'https://vancouver.wordcamp.test/2099/';
 
-		wp_trash_post( $this->create_event( array( 'URL' => $url ) ) );
+		$trashed = $this->trash_as_wrangler( $this->create_event( array( 'URL' => $url ) ) );
 
 		$event = $this->create_event();
 

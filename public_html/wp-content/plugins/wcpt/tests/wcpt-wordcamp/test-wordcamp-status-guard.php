@@ -98,7 +98,7 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 
 	/**
 	 * `WordCamp_Loader::set_scheduled_date()` stamps `menu_order` off the submitted status
-	 * at priority 10 and never overwrites it, so the clamp has to land first or a rejected
+	 * at priority 20 and never overwrites it, so the clamp has to land first or a rejected
 	 * write leaves behind a scheduled date the camp never had.
 	 *
 	 * @covers WordCamp_Status_Guard::enforce_post_status

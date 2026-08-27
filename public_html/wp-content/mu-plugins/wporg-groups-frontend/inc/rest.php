@@ -712,7 +712,10 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$is_editing = $event_id > 0 && Event::POST_TYPE === get_post_type( $event_id );
 
 	if ( $is_editing ) {
-		$fields['title'] = (string) get_post_field( 'post_title', $event_id );
+		// Decoded because the stored title is entity-encoded (see `wcorg_sanitize_plain_text()`) and
+		// this pre-fills a text input, not HTML. Matches the other two read sites, `list_drafts()`
+		// and the venue list below. Re-saving the decoded value encodes it back to the same bytes.
+		$fields['title'] = html_entity_decode( (string) get_post_field( 'post_title', $event_id ) );
 		// Hand the editor only the description-prose blocks so it doesn't
 		// trip on the GatherPress metadata blocks (event-date, venue, RSVP,
 		// etc.) it has no way to render. The save path puts the metadata

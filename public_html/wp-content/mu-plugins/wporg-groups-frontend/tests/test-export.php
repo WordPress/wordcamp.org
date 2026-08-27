@@ -308,6 +308,41 @@ class Test_Groups_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * The export carries the title the organizer typed, not its stored encoding.
+	 *
+	 * `collect_export_data()` deliberately reads the raw `post_title` rather than
+	 * `get_the_title()`, because entity-encoding belongs to HTML output and not to a
+	 * spreadsheet. Titles are stored encoded (see `wcorg_sanitize_plain_text()`), so
+	 * honouring that intent means decoding on the way out.
+	 */
+	public function test_export_event_title_is_decoded() {
+		$event_id = $this->create_test_event( array( 'title' => 'Hall < 100 > seats' ) );
+
+		$stored = (string) get_post_field( 'post_title', $event_id, 'raw' );
+		$this->assertStringContainsString( '&lt;', $stored, 'Fixture precondition: the stored title is encoded.' );
+
+		$titles = array_column( collect_export_data()['events'], 'title', 'id' );
+		$this->assertSame( 'Hall < 100 > seats', $titles[ $event_id ] );
+
+		// Both formats read the same array, so the CSV follows — and the decoded
+		// value must not gain a leading `=`/`+`/`-`/`@` treatment it didn't need.
+		$rows = str_getcsv( build_csv( collect_export_data(), CSV_COLUMNS ), "\n" );
+		$this->assertStringContainsString( 'Hall < 100 > seats', implode( "\n", $rows ) );
+	}
+
+	/**
+	 * Venue names travel the same path, from the venue post title and from the
+	 * term-name fallback — both of which are stored entity-encoded.
+	 */
+	public function test_export_venue_name_is_decoded() {
+		$event_id = $this->create_test_event( array( 'new_venue_name' => 'Hall < 100 > seats' ) );
+
+		$venues = array_column( collect_export_data()['events'], 'venue', 'id' );
+
+		$this->assertSame( 'Hall < 100 > seats', $venues[ $event_id ] );
+	}
+
+	/**
 	 * Anonymous RSVPs export a stable, non-identifying token — never the
 	 * member's name or login.
 	 */

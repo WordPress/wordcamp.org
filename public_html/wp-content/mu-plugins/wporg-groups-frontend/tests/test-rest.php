@@ -748,4 +748,40 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertSame( 'Hall < 100 > seats', html_entity_decode( $stored ) );
 	}
+
+	/**
+	 * The form pre-fills with what the organizer typed, not with the stored encoding.
+	 *
+	 * `/event-form-data` feeds a text input, so it decodes like the other two read sites,
+	 * `list_drafts()` and the venue list. Without this, reopening an event shows
+	 * `Hall &lt; 100 &gt; seats` in the title field.
+	 */
+	public function test_event_form_data_title_is_decoded(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+		$event_id = (int) $response->get_data()['id'];
+
+		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$request->set_param( 'event_id', $event_id );
+
+		$this->assertSame( 'Hall < 100 > seats', get_event_form_data( $request )->get_data()['fields']['title'] );
+
+		// Round-tripping that value back through the write path must land on the same
+		// bytes — a decode that widened the input would show up here as double encoding.
+		$stored_before = (string) get_post_field( 'post_title', $event_id, 'raw' );
+
+		$this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
+	}
 }

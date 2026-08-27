@@ -35,8 +35,10 @@ test.describe( 'anonymous visitor', () => {
 		const response = await page.goto( `missing-page-${ Date.now() }` );
 		expect( response.status() ).toBe( 404 );
 
-		const groupBackLink = page.locator( '.groups-site-page-header a' );
+		// The route home is the group-name crumb in the local navigation
+		// bar's breadcrumb trail ("{group} / Page not found").
+		const groupBackLink = page.locator( '.wp-block-wporg-site-breadcrumbs a' ).first();
 		await expect( groupBackLink ).toBeVisible();
-		await expect( groupBackLink ).toHaveAttribute( 'href', /\/group\/sunshine-coast-qld\/$/ );
+		await expect( groupBackLink ).toHaveAttribute( 'href', /\/group\/sunshine-coast-qld\/?$/ );
 	} );
 } );

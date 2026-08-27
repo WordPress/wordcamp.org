@@ -150,6 +150,45 @@ function event_archive_body_classes( array $classes ): array {
 add_filter( 'body_class', __NAMESPACE__ . '\event_archive_body_classes' );
 
 /**
+ * Let the `post-author-name` block render just the name.
+ *
+ * The parent theme prefixes every instance with "By " (see
+ * `render_author_prefix()` in its `inc/gutenberg-tweaks.php`). Both uses in
+ * this theme supply their own context — the event hero writes "Hosted by"
+ * ahead of the block, and the news byline pairs the name with the author's
+ * avatar — so the prefix only produces "Hosted by By admin".
+ *
+ * Removed on `after_setup_theme` because the child theme's `functions.php`
+ * loads first: at parse time the parent hasn't added the filter yet.
+ */
+function remove_parent_author_prefix() {
+	remove_filter(
+		'render_block_core/post-author-name',
+		'WordPressdotorg\Theme\Parent_2021\Gutenberg_Tweaks\render_author_prefix',
+		10
+	);
+}
+add_action( 'after_setup_theme', __NAMESPACE__ . '\remove_parent_author_prefix', 11 );
+
+/**
+ * Point author links at WordPress.org profiles.
+ *
+ * The single-event hero credits the event's author as its host through the
+ * `post-author-name` block, whose link targets the local author archive — a
+ * view these sites don't offer. People are always linked to their
+ * WordPress.org profile here (speaker cards, the member directory), so send
+ * author links to the same place.
+ *
+ * @param string $link             The author archive URL.
+ * @param int    $author_id        The author's user ID.
+ * @param string $author_nicename  The author's nicename (profile slug).
+ */
+function author_profile_link( $link, $author_id, $author_nicename ) {
+	return sprintf( 'https://profiles.wordpress.org/%s/', $author_nicename );
+}
+add_filter( 'author_link', __NAMESPACE__ . '\author_profile_link', 10, 3 );
+
+/**
  * Register a block pattern category for the theme.
  */
 function register_pattern_category() {
@@ -203,6 +242,99 @@ function filter_nav_page_list( $pages ) {
 	);
 }
 add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
+
+/**
+ * Supply the menu items for the header's local navigation bar.
+ *
+ * The `header-local-navigation` pattern renders a
+ * `core/navigation {"menuSlug":"local-navigation"}` block, which the wporg
+ * navigation extension (`wporg-mu-plugins/pub-sync/blocks/navigation`)
+ * resolves through this filter — hardcoded items, no per-site nav menu to
+ * provision.
+ *
+ * Built at render time, so the account item can react to the visitor:
+ * logged-out visitors — the ones served from the page cache — all get the
+ * same "Log in" link, while logged-in views bypass the cache, so the
+ * per-user nonce in the logout URL is safe.
+ *
+ * @param array $menus Menus keyed by slug, each an array of label/url items.
+ * @return array
+ */
+function add_local_navigation_menus( $menus ) {
+	global $wp;
+
+	// Return the visitor to the page they logged in or out from.
+	// `$wp->request` is the current path relative to the site's home, so
+	// this stays correct on path-based multisite; it's empty in the admin,
+	// where the fallback is harmless.
+	$current_url = home_url( empty( $wp->request ) ? '/' : trailingslashit( $wp->request ) );
+
+	$menus['local-navigation'] = array(
+		array(
+			'label' => __( 'All Events', 'groups-site' ),
+			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
+		),
+		is_user_logged_in()
+			? array(
+				'label' => __( 'Log out', 'groups-site' ),
+				'url'   => wp_logout_url( $current_url ),
+			)
+			: array(
+				'label' => __( 'Log in', 'groups-site' ),
+				'url'   => wp_login_url( $current_url ),
+			),
+	);
+
+	return $menus;
+}
+add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigation_menus' );
+
+/**
+ * Correct the breadcrumb trail for views the block can't infer.
+ *
+ * The `header-local-navigation` pattern renders a `wporg/site-breadcrumbs`
+ * block in the bar's left slot. Its default trail is "{site} / {the title}",
+ * which covers singular views — event, page, news post, venue — but the
+ * group's other views need help: `get_the_title()` on the events archive
+ * yields the first event in the loop, and the block's stock labels
+ * ("Archives", "Results") don't match the h1s our templates render.
+ *
+ * On the group's front page the trail collapses to just the group name,
+ * unlinked: it's the current page, not a route back to somewhere else.
+ *
+ * @param array $breadcrumbs Crumbs as [url => string|false, title => string];
+ *                           a crumb without a URL renders as the current page.
+ * @return array
+ */
+function filter_site_breadcrumbs( $breadcrumbs ) {
+	if ( is_front_page() ) {
+		return array(
+			array(
+				'url'   => false,
+				'title' => get_bloginfo( 'name', 'display' ),
+			),
+		);
+	}
+
+	$title = '';
+
+	if ( is_post_type_archive( 'gatherpress_event' ) ) {
+		$title = __( 'Events', 'groups-site' );
+	} elseif ( is_home() ) {
+		$title = __( 'Latest posts', 'groups-site' );
+	} elseif ( is_search() ) {
+		$title = __( 'Search results', 'groups-site' );
+	} elseif ( is_404() ) {
+		$title = __( 'Page not found', 'groups-site' );
+	}
+
+	if ( $title ) {
+		$breadcrumbs[ array_key_last( $breadcrumbs ) ]['title'] = $title;
+	}
+
+	return $breadcrumbs;
+}
+add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadcrumbs' );
 
 /**
  * Inject the theme's custom GatherPress templates into the template hierarchy.

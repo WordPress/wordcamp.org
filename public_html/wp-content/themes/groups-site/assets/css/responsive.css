@@ -51,7 +51,6 @@
 		row-gap: var(--wp--preset--spacing--20);
 	}
 
-	.groups-site-event-title,
 	.groups-site-event-sidebar,
 	.groups-site-event-content {
 		grid-column: 1;

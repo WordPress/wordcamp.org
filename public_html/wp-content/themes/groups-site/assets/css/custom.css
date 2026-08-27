@@ -548,33 +548,78 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Single event hero
+   ========================================================================== */
+
+/*
+ * The event hero borrows the front-page split hero's bones — the
+ * `groups-site-hero-*` column classes carry the 16:9 crop and the
+ * hide-the-column-when-there-is-no-photo fallbacks — but each singular
+ * view wears its own band so a visitor always knows which floor of the
+ * house they're on: the group home sits on the plain page background with
+ * its photo in a coloured mat, a news post gets the Blueberry 4 band, and
+ * an event gets Light Grey 2 with the photo hanging bare.
+ */
+
+.groups-site-event-hero .groups-site-hero-text .wp-block-post-title {
+	text-wrap: balance;
+}
+
+/* "{Group name} · {Event title}". The dot is decoration, not content —
+   the slash syntax keeps it out of the accessibility tree, matching the
+   hero-meta separator on the front page. */
+
+.groups-site-event-hero-breadcrumb
+	.wp-block-site-title
+	+ .wp-block-post-title::before {
+	content: "\00b7";
+	content: "\00b7" / "";
+	margin-right: 8px;
+	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* The host's name is a person, not an action — it keeps the text colour
+   and lets the underline mark it as a link, the way speaker and member
+   names render, rather than turning blue like a UI control. */
+
+.groups-site-event-hero-host .wp-block-post-author-name a {
+	color: inherit;
+}
+
+/* "Part of {group} · {count}". The separator binds to the count it
+   introduces, mirroring the location + count pair on the front page. */
+
+.groups-site-event-hero-meta
+	.wp-block-site-title
+	+ .wporg-group-membership::before {
+	content: "\00b7";
+	content: "\00b7" / "";
+	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* ==========================================================================
    Single event layout
    ========================================================================== */
 
-/* Keep the title, event details, and main content in semantic source order. */
+/* The info card leads in the source so that when the columns stack on
+   mobile, date + RSVP land right under the hero, before the description.
+   The grid swaps the pair on desktop: content left, card right. */
 .wp-block-columns.groups-site-event-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
-	grid-template-rows: auto 1fr;
 	column-gap: var(--wp--preset--spacing--60);
-	row-gap: 0;
 	align-items: start;
-}
-
-.groups-site-event-title {
-	grid-column: 1;
-	grid-row: 1;
 }
 
 .groups-site-event-sidebar {
 	grid-column: 2;
-	grid-row: 1 / span 2;
+	grid-row: 1;
 }
 
 .groups-site-event-content {
 	display: block;
 	grid-column: 1;
-	grid-row: 2;
+	grid-row: 1;
 }
 
 /* ----------  Venue extras (description + access) ---------- */

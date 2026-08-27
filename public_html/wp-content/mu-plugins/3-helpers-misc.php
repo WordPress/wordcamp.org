@@ -397,3 +397,41 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
 		true
 	);
 }
+
+/**
+ * Reduce a submitted value to text that stays text once WordPress saves it.
+ *
+ * `strip_tags()` wants a letter, `/`, `!` or `?` after a `<` before it counts as a tag, but `wp_kses()`
+ * also accepts whitespace. So `< code >` survives `sanitize_text_field()`, and the `wp_filter_kses()`
+ * core puts on `title_save_pre` then rebuilds it into a real element. Encoding the surviving `<` settles
+ * that, and still reads as `<` to a human.
+ *
+ * Two near-misses to avoid: `sanitize_text_field()` also deletes every `%[a-f0-9]{2}`, which breaks
+ * percent-encoded URLs; `wp_kses( $value, array() )` drops whole `<...>` spans, turning
+ * `Hall < 100 > seats` into `Hall  seats`.
+ *
+ * The result is HTML-encoded. Decode it for a plain-text medium -- the organizer reminder mails
+ * (`wcor-mailer.php`) are the case already in the tree.
+ *
+ * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
+ *                     scalar becomes `''`, as `sanitize_text_field()` does.
+ *
+ * @return string|array A string, or an array of strings when `$value` is an array.
+ */
+function wcorg_sanitize_plain_text( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wcorg_sanitize_plain_text', $value );
+	}
+
+	if ( ! is_scalar( $value ) ) {
+		return '';
+	}
+
+	// `strip_tags()` deletes from an unterminated `<` to the end of the string, so encode that
+	// case first -- `Rated <A best` should keep its text, not become `Rated`.
+	$value = wp_check_invalid_utf8( (string) $value );
+	$value = wp_pre_kses_less_than( $value );
+	$value = wp_strip_all_tags( $value, true );
+
+	return str_replace( '<', '&lt;', $value );
+}

@@ -182,6 +182,39 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `post_type` is what decides whether a suppressed query needs the guards, and a `pre_get_posts` callback is
+	 * free to set it after the fact. Running last on that hook is what catches this shape.
+	 */
+	public function test_guard_applies_when_a_later_callback_names_the_post_type() {
+		wp_set_current_user( self::$organizer_b );
+
+		$applied = false;
+
+		// Only the outer query, so the lookups the guards run themselves are left alone.
+		$name_attachments = function ( $wp_query ) use ( &$applied ) {
+			if ( $applied ) {
+				return;
+			}
+
+			$applied = true;
+
+			$wp_query->set( 'post_type', 'attachment' );
+		};
+
+		add_action( 'pre_get_posts', $name_attachments, 100 );
+
+		try {
+			$visible = $this->get_visible_attachment_ids( array( 'post_type' => 'post' ) );
+		} finally {
+			remove_action( 'pre_get_posts', $name_attachments, 100 );
+		}
+
+		$this->assertTrue( $applied, 'The callback under test never ran.' );
+		$this->assertContains( self::$public_file_id, $visible );
+		$this->assertNotContains( self::$payment_file_id, $visible );
+	}
+
+	/**
 	 * The flip side: an ordinary front-end query names no post type either, and `WP_Query` narrows those to
 	 * `post`. The guard has to stay out of them, or it lands on nearly every query on the site.
 	 */

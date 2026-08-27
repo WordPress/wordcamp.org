@@ -9,13 +9,35 @@ use WCP_Payment_Request;
 defined( 'WPINC' ) || die();
 
 
-add_action( 'pre_get_posts',                      __NAMESPACE__ . '\unsuppress_attachment_query_filters', 1 );
-add_filter( 'posts_clauses',                      __NAMESPACE__ . '\exclude_others_payment_files', 10, 2 );
-add_filter( 'the_posts',                          __NAMESPACE__ . '\hide_others_payment_files' );
+if ( ! is_cli_request() ) {
+	// `PHP_INT_MAX` so that a `pre_get_posts` callback which sets `post_type` has already run -- see below.
+	add_action( 'pre_get_posts',                  __NAMESPACE__ . '\unsuppress_attachment_query_filters', PHP_INT_MAX );
+	add_filter( 'posts_clauses',                  __NAMESPACE__ . '\exclude_others_payment_files', 10, 2 );
+	add_filter( 'the_posts',                      __NAMESPACE__ . '\hide_others_payment_files' );
+}
+
 add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_personal_data_exporters' );
 add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_personal_data_erasers'   );
+
+
+/**
+ * Whether the request is WP-CLI acting on the site itself, rather than on behalf of a visitor.
+ *
+ * The guards below scope attachments to the current user, and WP-CLI runs with no user set. Applying them there
+ * would leave maintenance commands -- `wp media regenerate`, `wp post list --post_type=attachment`, an export
+ * script -- silently operating on an incomplete set, with nothing to say rows had been skipped. Before this file
+ * started loading on every request it never reached WP-CLI at all, so this keeps that as it was.
+ *
+ * Deliberately not extended to cron: `privacy.php` already loaded there, so cron was covered before, and
+ * loosening it isn't needed to fix anything.
+ *
+ * @return bool
+ */
+function is_cli_request() {
+	return defined( 'WP_CLI' ) && WP_CLI;
+}
 
 
 /**
@@ -37,6 +59,10 @@ function get_budget_request_post_types() {
  * `get_posts()` -- and so `get_children()` -- defaults to `suppress_filters => true`, which skips `posts_clauses`
  * and `the_posts` alike. `pre_get_posts` is the only hook `WP_Query` fires before it reads that var, so it's the
  * one place this can be corrected from.
+ *
+ * Runs at `PHP_INT_MAX` rather than early, because `post_type` is what decides whether a suppressed query needs
+ * correcting, and another `pre_get_posts` callback is free to set it. Every priority on this hook still runs
+ * before `WP_Query` reads `suppress_filters`, so going last costs nothing and catches that shape.
  *
  * @param WP_Query $wp_query
  */

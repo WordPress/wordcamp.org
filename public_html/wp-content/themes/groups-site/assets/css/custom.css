@@ -171,23 +171,78 @@ body.error404 .site-content-container h1 {
    Front-page hero
    ========================================================================== */
 
-/* The nav bar above already carries the group name — this row stays on the
-   page background and closes with a hairline instead of a second slab. */
-
-.groups-site-hero {
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
-}
+/* A split hero on the plain page background: group details on the left and,
+   on the right, a polaroid — a white card holding the 16:9 photo and a share
+   row, dropped low inside a rounded colour mat (generous air above, flush
+   with the bottom edge, centred horizontally). The mat's colour lives on
+   `groups-site-hero-frame` as a plain block `backgroundColor` rather than a
+   CSS rule, so a group owner can retint it from the Site Editor's colour
+   panel without touching code. */
 
 .groups-site-hero-content .wp-block-site-title {
 	text-wrap: balance;
 }
 
-/* Core's post-featured-image block outputs nothing when the Home page has no
-   featured image, so there's no empty crop to guard against here. */
+/* The mat is specced at 640×440 in the design file: 640px is 55.17% of the
+   1160px content width (the media column's share), and the height comes from
+   holding that 640/440 ratio, so the mat renders at exactly the specced size
+   on a full-width desktop and scales in proportion below it. The card is
+   pinned to the mat's bottom edge and the leftover ratio height becomes the
+   air above the card — a fixed top padding would fight the ratio at narrow
+   widths. `aspect-ratio` is a preferred size, not a clamp, so if the card
+   ever outgrows the ratio the mat stretches rather than clips. */
+
+.groups-site-hero-frame {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	aspect-ratio: 640 / 440;
+}
+
+/* A photograph pinned to a mat, so it lifts a touch off it. */
+
+.groups-site-hero-card {
+	box-shadow: 0 2px 8px rgba(30, 30, 30, 0.08);
+}
+
+.groups-site-hero-share .wp-block-social-links {
+	gap: 16px;
+}
+
+/* Inside a phone-width card the seven icons at a 16px gap run 264px — past
+   the ~235px the card can give them, dropping the last icon to its own line.
+   10px brings the row to 228px, one line again down to ~375px viewports. */
+
+@media (max-width: 480px) {
+	.groups-site-hero-share .wp-block-social-links {
+		gap: 10px;
+	}
+}
+
+/* The block attribute already crops to 16:9; this pins the crop even for
+   markup core renders without the inline aspect-ratio (e.g. older saved
+   content), so the photo can never dictate the band's height. */
+
+.groups-site-hero-media .wp-block-post-featured-image {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border-radius: 2px;
+}
 
 .groups-site-hero-media img {
 	width: 100%;
+	height: 100%;
 	object-fit: cover;
+}
+
+/* Core's post-featured-image block outputs nothing when the Home page has no
+   featured image, which would leave this column as an empty colour mat —
+   drop the whole column, polaroid and all. The text column carries no width
+   of its own (core gives width-less columns `flex-grow: 1`), so it takes the
+   freed space with no further rule. */
+
+.groups-site-hero-media:not(:has(.wp-block-post-featured-image)) {
+	display: none;
 }
 
 /* ==========================================================================
@@ -340,12 +395,15 @@ body.error404 .site-content-container h1 {
 	min-width: 0;
 }
 
-/* Body size at a two-line measure — the tagline is a description, not a
-   subtitle, so it shouldn't compete with the site title above it. */
+/* The tagline is a description, not a subtitle, so it drops to 14px and
+   shouldn't compete with the site title above it. The design specs the
+   leading in pixels (14/24 and 14/26 below); neither divides into a tidy
+   ratio, so both stay in px — the sizes are fixed, so nothing scales out
+   from under them. */
 
 .groups-site-hero .wp-block-site-tagline {
 	max-width: 72ch;
-	line-height: 1.6;
+	line-height: 24px;
 	text-wrap: pretty;
 }
 
@@ -357,6 +415,15 @@ body.error404 .site-content-container h1 {
 .groups-site-hero-meta .wporg-group-membership__meta {
 	gap: 8px;
 	flex-wrap: nowrap;
+}
+
+/* Both halves of the meta line share one leading so the dot between them
+   sits on the same baseline as the text on either side. */
+
+.groups-site-hero-meta,
+.groups-site-hero-meta .wp-block-wporg-group-location,
+.groups-site-hero-meta .wporg-group-membership__count {
+	line-height: 26px;
 }
 
 /* `wporg/group-location` renders nothing at all when the group hasn't set a

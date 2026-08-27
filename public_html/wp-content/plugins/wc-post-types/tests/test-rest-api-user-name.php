@@ -3,12 +3,12 @@
 namespace WordCamp\WC_Post_Types\Tests;
 use WP_UnitTestCase, WP_REST_Request, WP_Error;
 use function WordCamp\Post_Types\REST_API\guard_user_name_meta;
+use function WordCamp\Post_Types\REST_API\guard_participant_link_meta;
 
 defined( 'WPINC' ) || die();
 
-// Helpers and stubs the REST code relies on, not otherwise loaded by this suite.
+// Helper the REST code relies on, not otherwise loaded by this suite.
 require_once dirname( __DIR__, 3 ) . '/mu-plugins/3-helpers-misc.php';
-require_once __DIR__ . '/stubs.php';
 
 /**
  * Entitlement rule for the `_wcpt_user_name` participant link.
@@ -140,11 +140,22 @@ class Test_User_Name_Meta extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Create a speaker already linked to the given user, as an organizer would.
+	 */
+	private function linked_speaker( int $linked_user ): int {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+
+		wp_set_current_user( self::$editor );
+		update_post_meta( $post_id, '_wcpt_user_name', get_userdata( $linked_user )->user_login );
+
+		return $post_id;
+	}
+
+	/**
 	 * Re-saving the account already linked is allowed, even for a user who couldn't set it.
 	 */
 	public function test_guard_allows_resaving_the_current_link(): void {
-		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
-		update_post_meta( $post_id, '_wcpt_user_name', $this->victim_login() );
+		$post_id = $this->linked_speaker( self::$victim );
 
 		wp_set_current_user( self::$contributor );
 		$request = $this->meta_request( $this->victim_login() );
@@ -157,8 +168,7 @@ class Test_User_Name_Meta extends WP_UnitTestCase {
 	 * Changing an existing link to another account is still rejected.
 	 */
 	public function test_guard_rejects_changing_the_link(): void {
-		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
-		update_post_meta( $post_id, '_wcpt_user_name', get_userdata( self::$editor )->user_login );
+		$post_id = $this->linked_speaker( self::$editor );
 
 		wp_set_current_user( self::$contributor );
 		$request = $this->meta_request( $this->victim_login() );
@@ -177,5 +187,76 @@ class Test_User_Name_Meta extends WP_UnitTestCase {
 				"Guard not hooked for wcb_{$type}."
 			);
 		}
+	}
+
+	/**
+	 * The metadata guard blocks linking another account through a raw meta write (e.g. XML-RPC).
+	 */
+	public function test_meta_guard_blocks_linking_another_account(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		wp_set_current_user( self::$contributor );
+
+		$this->assertFalse( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $this->victim_login() ) );
+	}
+
+	/**
+	 * The metadata guard blocks setting the derived user ID directly to another account.
+	 */
+	public function test_meta_guard_blocks_setting_derived_id_directly(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		wp_set_current_user( self::$contributor );
+
+		$this->assertFalse( guard_participant_link_meta( null, $post_id, '_wcpt_user_id', self::$victim ) );
+	}
+
+	/**
+	 * The metadata guard allows linking the user's own account.
+	 */
+	public function test_meta_guard_allows_own_account(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		wp_set_current_user( self::$contributor );
+		$login = get_userdata( self::$contributor )->user_login;
+
+		$this->assertNull( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $login ) );
+	}
+
+	/**
+	 * The metadata guard allows a user with `edit_others_posts` to link another account.
+	 */
+	public function test_meta_guard_allows_editor_to_link_another(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		wp_set_current_user( self::$editor );
+
+		$this->assertNull( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $this->victim_login() ) );
+	}
+
+	/**
+	 * The metadata guard allows re-writing the account already linked.
+	 */
+	public function test_meta_guard_allows_rewriting_current_link(): void {
+		$post_id = $this->linked_speaker( self::$victim );
+		wp_set_current_user( self::$contributor );
+
+		$this->assertNull( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $this->victim_login() ) );
+	}
+
+	/**
+	 * The metadata guard allows writes with no current user (WP-CLI, cron, imports).
+	 */
+	public function test_meta_guard_allows_writes_with_no_current_user(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'wcb_speaker' ) );
+		wp_set_current_user( 0 );
+
+		$this->assertNull( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $this->victim_login() ) );
+	}
+
+	/**
+	 * The metadata guard ignores meta on unrelated post types.
+	 */
+	public function test_meta_guard_ignores_other_post_types(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'post' ) );
+		wp_set_current_user( self::$contributor );
+
+		$this->assertNull( guard_participant_link_meta( null, $post_id, '_wcpt_user_name', $this->victim_login() ) );
 	}
 }

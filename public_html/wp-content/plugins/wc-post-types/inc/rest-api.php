@@ -32,6 +32,8 @@ add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
 add_filter( 'rest_pre_insert_wcb_speaker', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
 add_filter( 'rest_pre_insert_wcb_organizer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
 add_filter( 'rest_pre_insert_wcb_volunteer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'add_post_metadata', __NAMESPACE__ . '\guard_participant_link_meta', 10, 4 );
+add_filter( 'update_post_metadata', __NAMESPACE__ . '\guard_participant_link_meta', 10, 4 );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -420,6 +422,57 @@ function guard_user_name_meta( $prepared_post, $request ) {
 	}
 
 	return $prepared_post;
+}
+
+/**
+ * Block a participant meta write that would link the record to an account the user may not claim.
+ *
+ * Gates `_wcpt_user_name` and its derived `_wcpt_user_id` at the metadata layer, so all write paths inherit
+ * the rule, not just the REST endpoint. Only a genuine change to an account the user isn't entitled to is
+ * blocked; re-saving the current link or clearing it stays allowed.
+ *
+ * @param mixed  $check      Short-circuit value; `null` to proceed with the write.
+ * @param int    $object_id  The post the meta is being written to.
+ * @param string $meta_key   The meta key.
+ * @param mixed  $meta_value The value being written.
+ *
+ * @return mixed `false` to block the write, or `$check` to allow it.
+ */
+function guard_participant_link_meta( $check, $object_id, $meta_key, $meta_value ) {
+	if ( '_wcpt_user_name' !== $meta_key && '_wcpt_user_id' !== $meta_key ) {
+		return $check;
+	}
+
+	if ( ! in_array( get_post_type( $object_id ), array( 'wcb_speaker', 'wcb_organizer', 'wcb_volunteer' ), true ) ) {
+		return $check;
+	}
+
+	// No current user means WP-CLI, cron, or an import managing the link directly, not a request; leave it be.
+	if ( 0 === get_current_user_id() ) {
+		return $check;
+	}
+
+	if ( '_wcpt_user_name' === $meta_key ) {
+		$target = wcorg_get_user_by_canonical_names( $meta_value );
+	} else {
+		$target = absint( $meta_value ) ? get_userdata( absint( $meta_value ) ) : false;
+	}
+
+	// An empty or unknown value links no account, so there's nothing to gate.
+	if ( ! $target ) {
+		return $check;
+	}
+
+	// Allow when the linked account isn't actually changing (e.g. a re-save), and when the user may claim it.
+	$linked_id = (int) get_post_meta( $object_id, '_wcpt_user_id', true );
+	if ( $linked_id === (int) $target->ID
+		|| get_current_user_id() === (int) $target->ID
+		|| current_user_can( 'edit_others_posts' )
+	) {
+		return $check;
+	}
+
+	return false;
 }
 
 /**

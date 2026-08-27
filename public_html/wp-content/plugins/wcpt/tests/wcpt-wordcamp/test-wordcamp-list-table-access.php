@@ -266,6 +266,98 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	 *
 	 * @return array|string The `post__in` query var.
 	 */
+	/**
+	 * The default screen has to show the camps a viewer mentors, not only the ones they
+	 * wrote. Core narrows the query to the current author for anyone who has written one of
+	 * these and cannot edit others', which would hide the rest while the status links above
+	 * still count them.
+	 *
+	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 */
+	public function test_the_default_screen_shows_a_mentored_camp_to_an_author() {
+		$user = $this->become_contributor();
+
+		$authored = $this->create_wordcamp( $user );
+		$mentored = $this->create_wordcamp( self::factory()->user->create() );
+
+		update_post_meta( $mentored, 'Mentor WordPress.org User Name', wp_get_current_user()->user_login );
+
+		$ids = wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' );
+
+		$this->assertContains( $authored, $ids );
+		$this->assertContains( $mentored, $ids, 'The camp they mentor is missing from the default screen.' );
+	}
+
+	/**
+	 * An explicitly chosen Mine view still narrows to what they wrote. Core only narrows
+	 * when the request named nobody, so the two cases have to stay distinguishable.
+	 *
+	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 */
+	public function test_the_mine_view_still_narrows_to_what_they_authored() {
+		$user = $this->become_contributor();
+
+		$authored = $this->create_wordcamp( $user );
+		$mentored = $this->create_wordcamp( self::factory()->user->create() );
+
+		update_post_meta( $mentored, 'Mentor WordPress.org User Name', wp_get_current_user()->user_login );
+
+		$_REQUEST['author'] = $user;
+		$_GET['author']     = $user;
+
+		$ids = wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' );
+
+		unset( $_REQUEST['author'], $_GET['author'] );
+
+		$this->assertSame( array( $authored ), $ids );
+	}
+
+	/**
+	 * The stored mentor name is resolved login-first everywhere else, so a user whose
+	 * nicename happens to be somebody else's login is not the mentor.
+	 *
+	 * @covers WordCamp_Admin::get_authored_or_mentored_wordcamps
+	 */
+	public function test_a_nicename_matching_another_users_login_is_not_a_mentor() {
+		$mentor = self::factory()->user->create_and_get(
+			array(
+				'user_login' => 'shared',
+				'role'       => 'contributor',
+			)
+		);
+
+		// Free the slug, so the other account can take it as a nicename.
+		wp_update_user(
+			array(
+				'ID'            => $mentor->ID,
+				'user_nicename' => 'shared-mentor',
+			)
+		);
+
+		$bystander = self::factory()->user->create_and_get(
+			array(
+				'user_login' => 'alpha',
+				'role'       => 'contributor',
+			)
+		);
+
+		wp_update_user(
+			array(
+				'ID'            => $bystander->ID,
+				'user_nicename' => 'shared',
+			)
+		);
+
+		$camp = $this->create_wordcamp( self::factory()->user->create() );
+		update_post_meta( $camp, 'Mentor WordPress.org User Name', 'shared' );
+
+		wp_set_current_user( $bystander->ID );
+		$this->assertNotContains( $camp, wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' ), 'A bystander sees a camp they do not mentor.' );
+
+		wp_set_current_user( $mentor->ID );
+		$this->assertContains( $camp, wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' ), 'The real mentor lost their camp.' );
+	}
+
 	protected function limited_post_in() {
 		$query = $this->build_main_query();
 		$this->admin->limit_list_to_editable_wordcamps( $query );

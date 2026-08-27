@@ -1706,6 +1706,18 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// unrestricted list comes back.
 			$query->set( 'post__in', $ids ?: array( 0 ) );
 
+			/*
+			 * `WP_Posts_List_Table::__construct()` sets `$_GET['author']` for a viewer who has
+			 * authored one of these and lacks `edit_others_posts`. Intersected with the set
+			 * above it hides the camps they only mentor, while the status links still count
+			 * them, so the default screen promises more rows than it shows. Core only injects
+			 * when the request named no author, so the Mine view survives this.
+			 */
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which view was asked for, not acting on it.
+			if ( empty( $_REQUEST['author'] ) ) {
+				$query->set( 'author', '' );
+			}
+
 			// The status links come from `wp_count_posts()`, which has the same blind spot.
 			add_filter( 'wp_count_posts', array( $this, 'scope_status_counts' ), 10, 2 );
 		}
@@ -1765,7 +1777,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			$mentored = get_posts(
 				array(
-					'meta_query' => array(
+					'update_post_meta_cache' => true,
+					'meta_query'             => array(
 						array(
 							'key'     => 'Mentor WordPress.org User Name',
 							'value'   => array( $user->user_login, $user->user_nicename ),
@@ -1773,6 +1786,24 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						),
 					),
 				) + $common
+			);
+
+			/*
+			 * That compare is a prefilter, not the answer. It also matches a camp whose mentor
+			 * name is somebody else's login that happens to be this user's nicename, and
+			 * `map_subrole_caps()` resolves the stored name login-first, so the two would
+			 * disagree about who the mentor is and this list would show a row its viewer
+			 * cannot open. Resolve it the same way and keep what comes back as this user.
+			 */
+			$mentored = array_filter(
+				$mentored,
+				function ( $camp ) use ( $user ) {
+					$mentor = wcorg_get_user_by_canonical_names(
+						get_post_meta( $camp->ID, 'Mentor WordPress.org User Name', true )
+					);
+
+					return $mentor && $mentor->ID === $user->ID;
+				}
 			);
 
 			// A user can both author and mentor the same camp.

@@ -51,6 +51,44 @@ trait WordCamp_Fixtures {
 	}
 
 	/**
+	 * Run the query the WordCamp list screen produces, list table included.
+	 *
+	 * `build_main_query()` alone is not that screen. `WP_Posts_List_Table::__construct()`
+	 * sets `$_GET['author']` for a viewer without `edit_others_posts` who has authored one
+	 * of these, and `wp_edit_posts_query()` then hands it to the main query, so a scoping
+	 * bug that only shows up once those two have run is invisible to a bare `WP_Query`.
+	 *
+	 * @return \WP_Query
+	 */
+	protected function run_list_screen_query() {
+		require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-posts-list-table.php';
+		require_once ABSPATH . 'wp-admin/includes/post.php';
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- `edit.php` sets this.
+		$GLOBALS['typenow'] = WCPT_POST_TYPE_ID;
+
+		// `wp_edit_posts_query()` reads the type off the request, not off `$typenow`.
+		$_GET['post_type']     = WCPT_POST_TYPE_ID;
+		$_REQUEST['post_type'] = WCPT_POST_TYPE_ID;
+
+		set_current_screen( 'edit-' . WCPT_POST_TYPE_ID );
+
+		new \WP_Posts_List_Table( array( 'screen' => get_current_screen() ) );
+
+		/*
+		 * `WP->main()` runs the query and then fires `wp`, where `maybe_add_latest_site_hints()`
+		 * switches to a blog this environment does not have. The query is already done by then,
+		 * so drop the callbacks. `WP_UnitTestCase` restores the hook registry after the test.
+		 */
+		remove_all_actions( 'wp' );
+
+		wp_edit_posts_query();
+
+		return $GLOBALS['wp_query'];
+	}
+
+	/**
 	 * Build a WordCamp query that reports itself as the main query.
 	 *
 	 * `WP_Query::is_main_query()` compares against `$wp_the_query`, which the harness

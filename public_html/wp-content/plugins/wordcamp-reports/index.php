@@ -343,12 +343,25 @@ function register_rest_endpoints() {
 
 	foreach ( $report_classes as $class ) {
 		if ( property_exists( $class, 'rest_base' ) && method_exists( $class, 'rest_callback' ) ) {
+			/*
+			 * Reports read private post meta and non-public post statuses, so a
+			 * route is restricted to users who may view reports unless the
+			 * report class opts into something else with its own
+			 * `rest_permission_callback()`.
+			 */
+			$permission_callback = method_exists( $class, 'rest_permission_callback' )
+				? array( $class, 'rest_permission_callback' )
+				: function() {
+					return current_user_can( CAPABILITY );
+				};
+
 			register_rest_route(
 				$namespace,
 				'/' . $class::$rest_base,
 				array(
-					'methods'  => array( 'GET' ),
-					'callback' => array( $class, 'rest_callback' ),
+					'methods'             => array( 'GET' ),
+					'callback'            => array( $class, 'rest_callback' ),
+					'permission_callback' => $permission_callback,
 				)
 			);
 		}

@@ -10,6 +10,7 @@ if ( 'cli' !== php_sapi_name() ) {
  * Load the plugins that we'll need to be active for the tests
  */
 function manually_load_plugins() {
+	require_once SUT_WPMU_PLUGIN_DIR . '/3-helpers-misc.php';
 	require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/sunrise.php';
 	require_once dirname( __DIR__ ) . '/wcpt-wordcamp/wordcamp-new-site.php';
 

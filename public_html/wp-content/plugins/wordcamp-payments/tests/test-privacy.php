@@ -170,6 +170,30 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An attachment permalink names no post type, and is the one case where `WP_Query` narrows an unnamed post
+	 * type to `attachment`. It's also the only such case the guard opts into, so pin it.
+	 */
+	public function test_attachment_permalink_hides_others_payment_files() {
+		wp_set_current_user( self::$organizer_b );
+
+		$query = new WP_Query( array( 'attachment_id' => self::$payment_file_id ) );
+
+		$this->assertCount( 0, $query->posts );
+	}
+
+	/**
+	 * The flip side: an ordinary front-end query names no post type either, and `WP_Query` narrows those to
+	 * `post`. The guard has to stay out of them, or it lands on nearly every query on the site.
+	 */
+	public function test_guard_skips_queries_that_cannot_return_attachments() {
+		wp_set_current_user( self::$organizer_b );
+
+		$home_shaped = new WP_Query( array( 'posts_per_page' => 10 ) );
+
+		$this->assertStringNotContainsString( 'budget_request', $home_shaped->request );
+	}
+
+	/**
 	 * `found_posts` has to agree with the results, or the Media Library grid stops offering "Load more" as soon
 	 * as a page comes back short. That's what excluding the files in SQL rather than in the results buys.
 	 */

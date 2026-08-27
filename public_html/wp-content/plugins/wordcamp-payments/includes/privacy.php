@@ -56,7 +56,9 @@ function unsuppress_attachment_query_filters( $wp_query ) {
  * Whether a query could return attachments, and so needs the guards applied.
  *
  * `any` counts, because `attachment` is public and so isn't excluded from search -- that's what `get_children()`
- * asks for by default. A query naming no post type counts too, since `WP_Query` picks the set itself.
+ * asks for by default. Naming no post type at all does not: `WP_Query` then narrows to `attachment` only for an
+ * attachment permalink, and to `page` or `post` otherwise, search included. Keeping that case out matters,
+ * because it's the shape of nearly every front-end query on the site.
  *
  * @param WP_Query $wp_query
  *
@@ -66,7 +68,7 @@ function query_may_return_attachments( $wp_query ) {
 	$post_types = array_filter( (array) $wp_query->get( 'post_type' ) );
 
 	if ( ! $post_types ) {
-		return true;
+		return (bool) $wp_query->is_attachment;
 	}
 
 	return (bool) array_intersect( array( 'attachment', 'any' ), $post_types );

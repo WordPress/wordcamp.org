@@ -37,6 +37,12 @@ function manually_load_plugins() {
 	// The REST layer sanitizes post titles with `wcorg_sanitize_plain_text()`.
 	require_once SUT_WPMU_PLUGIN_DIR . '/3-helpers-misc.php';
 
+	// `test-post-titles.php` writes through core's posts controller, whose
+	// `rest_after_insert_*` pass runs `the_content` filters. One of them
+	// (`wc-post-types`) calls `site_supports_block_templates()`, which lives
+	// here and is otherwise not loaded in this suite.
+	require_once SUT_WPMU_PLUGIN_DIR . '/theme-templates/bootstrap.php';
+
 	// The ownership-transfer REST controller (registered by
 	// `wporg-groups-frontend.php` below) is a thin client of
 	// `WordCamp\Groups\Ownership_Transfer\*`, which normally loads from the

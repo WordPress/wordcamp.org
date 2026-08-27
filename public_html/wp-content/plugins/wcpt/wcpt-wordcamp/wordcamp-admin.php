@@ -1060,6 +1060,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$is_event     = is_event_url( $wordcamp_url );
 			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
 
+			/*
+			 * `post_title` can hold `&lt;` for a `<` the applicant typed, see
+			 * `wcorg_sanitize_plain_text()`. Slack decodes that back to `<` in mrkdwn, so it reads
+			 * correctly here -- worth knowing before this string is reused somewhere that does not.
+			 */
 			$message = sprintf(
 				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,

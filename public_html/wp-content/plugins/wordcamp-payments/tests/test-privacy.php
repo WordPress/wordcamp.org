@@ -194,6 +194,23 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `WP_Query` caches result sets, keyed partly on the assembled SQL. The guard puts the current user's ID into
+	 * that SQL, which is what keeps one organizer's cached result from being served to another. Run the permissive
+	 * user first so a wrong key would hand their result set to the restricted one.
+	 */
+	public function test_query_cache_is_not_shared_between_users() {
+		wp_set_current_user( self::$network_admin );
+		$this->assertContains( self::$payment_file_id, $this->get_visible_attachment_ids() );
+
+		wp_set_current_user( self::$organizer_b );
+		$this->assertNotContains( self::$payment_file_id, $this->get_visible_attachment_ids() );
+
+		// And the other way around, in case only one direction is keyed correctly.
+		wp_set_current_user( self::$organizer_a );
+		$this->assertContains( self::$payment_file_id, $this->get_visible_attachment_ids() );
+	}
+
+	/**
 	 * `found_posts` has to agree with the results, or the Media Library grid stops offering "Load more" as soon
 	 * as a page comes back short. That's what excluding the files in SQL rather than in the results buys.
 	 */

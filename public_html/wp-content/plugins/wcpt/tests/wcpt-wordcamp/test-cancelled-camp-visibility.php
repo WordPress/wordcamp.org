@@ -523,29 +523,31 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A stored name can be one account's login and another's nicename. The clause tests it
-	 * against both of this user's names at once, so the lookup here has to as well, or the
-	 * clause selects a row the rule refuses.
+	 * A stored name can be one account's login and another's nicename. It belongs to the login
+	 * holder, because that is who `wcorg_get_user_by_canonical_names()` resolves it to and so
+	 * who holds `edit_post` on the camp through `map_subrole_caps()`. The clause has to select
+	 * the same person, or it returns a row the rule refuses.
 	 *
+	 * @covers WordCamp_Loader::mentor_names_for
 	 * @covers WordCamp_Loader::is_mentored_by
 	 */
-	public function test_a_name_that_is_another_login_still_resolves_by_nicename() {
-		$other = self::factory()->user->create_and_get(
+	public function test_a_name_that_is_another_login_belongs_to_the_login_holder() {
+		$login_holder = self::factory()->user->create_and_get(
 			array(
 				'role'       => 'subscriber',
 				'user_login' => 'sharedname',
 			)
 		);
 
-		// Free the nicename, so the mentor below can hold it while `$other` keeps the login.
+		// Free the nicename, so the account below can hold it while this one keeps the login.
 		wp_update_user(
 			array(
-				'ID'            => $other->ID,
+				'ID'            => $login_holder->ID,
 				'user_nicename' => 'sharedname-other',
 			)
 		);
 
-		$mentor = self::factory()->user->create_and_get(
+		$slug_holder = self::factory()->user->create_and_get(
 			array(
 				'role'          => 'subscriber',
 				'user_login'    => 'mentorbylogin',
@@ -553,19 +555,169 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( 'sharedname', get_user_by( 'login', 'sharedname' )->user_login );
+		// The fixture only means anything if the two accounts ended up holding what they asked
+		// for, and `wp_update_user()` or a uniqueness suffix can quietly refuse either half.
+		$slug_holder = get_user_by( 'id', $slug_holder->ID );
+
+		$this->assertSame( $login_holder->ID, get_user_by( 'login', 'sharedname' )->ID, 'The login went elsewhere.' );
+		$this->assertSame( 'sharedname', $slug_holder->user_nicename, 'The nicename went elsewhere.' );
 
 		update_post_meta( $this->application, 'Mentor WordPress.org User Name', 'sharedname' );
-		wp_set_current_user( $mentor->ID );
 
-		$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
-		$request->set_param( 'status', 'wcpt-cancelled' );
-		$request->set_param( '_fields', 'id' );
+		foreach ( array( $login_holder->ID => true, $slug_holder->ID => false ) as $viewer => $is_the_mentor ) {
+			wp_set_current_user( 0 );
+			wp_set_current_user( $viewer );
 
-		$response = rest_do_request( $request );
+			$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
+			$request->set_param( 'status', 'wcpt-cancelled' );
+			$request->set_param( '_fields', 'id' );
 
-		$this->assertSame( count( $response->get_data() ), (int) $response->get_headers()['X-WP-Total'] );
-		$this->assertContains( $this->application, wp_list_pluck( $response->get_data(), 'id' ) );
+			$response = rest_do_request( $request );
+			$ids      = wp_list_pluck( $response->get_data(), 'id' );
+
+			$this->assertSame( count( $ids ), (int) $response->get_headers()['X-WP-Total'] );
+
+			if ( $is_the_mentor ) {
+				$this->assertContains( $this->application, $ids );
+			} else {
+				$this->assertNotContains( $this->application, $ids );
+			}
+		}
+	}
+
+	/**
+	 * The clause and the rule have to admit the same set.
+	 *
+	 * `hide_unscheduled_cancellations()` decides in SQL and `can_read_unscheduled_cancellation()`
+	 * decides in PHP, about the same camps. Where they disagree the clause selects a row the rule
+	 * then refuses, `get_items()` drops the item without reducing `X-WP-Total`, and the response
+	 * is a page short. Every defect review has found here has been one input the two answered
+	 * differently, each on a dimension nobody had thought to enumerate yet, so this compares them
+	 * across the matrix rather than one case at a time.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
+	 */
+	public function test_the_clause_and_the_rule_admit_the_same_set() {
+		global $wcorg_subroles;
+
+		$author   = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$by_login = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$second   = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$stranger = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		$admin    = self::factory()->user->create_and_get( array( 'role' => 'administrator' ) );
+		$wrangler = self::factory()->user->create_and_get( array( 'role' => 'contributor' ) );
+
+		$by_slug = self::factory()->user->create_and_get(
+			array(
+				'role'          => 'subscriber',
+				'user_login'    => 'matrixslug',
+				'user_nicename' => 'matrix-slug',
+			)
+		);
+
+		// A name that is one account's login and another's nicename.
+		$holds_login = self::factory()->user->create_and_get(
+			array(
+				'role'       => 'subscriber',
+				'user_login' => 'matrixshared',
+			)
+		);
+
+		wp_update_user(
+			array(
+				'ID'            => $holds_login->ID,
+				'user_nicename' => 'matrixshared-moved',
+			)
+		);
+
+		$holds_slug = self::factory()->user->create_and_get(
+			array(
+				'role'          => 'subscriber',
+				'user_login'    => 'matrixother',
+				'user_nicename' => 'matrixshared',
+			)
+		);
+
+		$wcorg_subroles = array( $wrangler->ID => array( 'wordcamp_wrangler' ) );
+
+		// Camps, all cancelled and none of them ever scheduled.
+		$camps = array(
+			'unrelated'        => $this->create_cancelled_camp( 0, 0 ),
+			'negative order'   => $this->create_cancelled_camp( -1, 0 ),
+			'authored'         => $this->create_cancelled_camp( 0, $author->ID ),
+			'mentor by login'  => $this->create_cancelled_camp( 0, 0 ),
+			'mentor by slug'   => $this->create_cancelled_camp( 0, 0 ),
+			'mentor 2nd row'   => $this->create_cancelled_camp( 0, 0 ),
+			'mentor collision' => $this->create_cancelled_camp( 0, 0 ),
+			'mentor cased'     => $this->create_cancelled_camp( 0, 0 ),
+		);
+
+		update_post_meta( $camps['mentor by login'], 'Mentor WordPress.org User Name', $by_login->user_login );
+		update_post_meta( $camps['mentor by slug'], 'Mentor WordPress.org User Name', $by_slug->user_nicename );
+		update_post_meta( $camps['mentor collision'], 'Mentor WordPress.org User Name', 'matrixshared' );
+		update_post_meta( $camps['mentor cased'], 'Mentor WordPress.org User Name', strtoupper( $by_login->user_login ) );
+		add_post_meta( $camps['mentor 2nd row'], 'Mentor WordPress.org User Name', 'nobody_at_all' );
+		add_post_meta( $camps['mentor 2nd row'], 'Mentor WordPress.org User Name', $second->user_login );
+
+		$viewers = array(
+			'logged out'   => 0,
+			'author'       => $author->ID,
+			'by login'     => $by_login->ID,
+			'by slug'      => $by_slug->ID,
+			'second row'   => $second->ID,
+			'holds slug'   => $holds_slug->ID,
+			'holds login'  => $holds_login->ID,
+			'stranger'     => $stranger->ID,
+			'administrator' => $admin->ID,
+			'wrangler'     => $wrangler->ID,
+		);
+
+		$contexts   = array( 'front', 'wp-admin', 'ajax' );
+		$controller = new \WordCamp_REST_WordCamps_Controller( WCPT_POST_TYPE_ID );
+
+		foreach ( $contexts as $context ) {
+			foreach ( $viewers as $viewer_name => $viewer_id ) {
+				foreach ( $camps as $camp_name => $camp_id ) {
+					wp_set_current_user( 0 );
+					wp_set_current_user( $viewer_id );
+
+					set_current_screen( 'front' === $context ? 'front' : 'edit-wordcamp' );
+
+					if ( 'ajax' === $context ) {
+						add_filter( 'wp_doing_ajax', '__return_true' );
+					}
+
+					$query = new WP_Query(
+						array(
+							'post_type'   => WCPT_POST_TYPE_ID,
+							'post_status' => 'wcpt-cancelled',
+							'p'           => $camp_id,
+						)
+					);
+
+					$selected = ! empty( $query->posts );
+					// The controller's decision, not the predicate alone: `get_items()` calls this,
+					// so a change that stops consulting the rule has to be caught here too.
+					$allowed = $controller->check_read_permission( get_post( $camp_id ) );
+
+					if ( 'ajax' === $context ) {
+						remove_filter( 'wp_doing_ajax', '__return_true' );
+					}
+
+					$this->assertSame(
+						$selected,
+						$allowed,
+						"The clause and the rule disagree: $viewer_name, $camp_name, $context. " .
+						'The clause ' . ( $selected ? 'selected' : 'withheld' ) . ' it and the rule ' .
+						( $allowed ? 'allows' : 'refuses' ) . ' it.'
+					);
+				}
+			}
+		}
+
+		set_current_screen( 'front' );
+		$wcorg_subroles = array();
 	}
 
 	/**

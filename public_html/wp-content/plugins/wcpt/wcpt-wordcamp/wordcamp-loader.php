@@ -323,26 +323,49 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	protected static function is_mentored_by( $post, $user ) {
 		/*
-		 * Every row for the key, because `IN ( ... )` below matches any of them while
+		 * Every row for the key, because the clause below matches any of them while
 		 * `get_post_meta( ..., true )` reads only the first. Nothing in the admin writes a
 		 * second row, but an import or WP-CLI can.
 		 *
-		 * Both names per row, rather than `wcorg_get_user_by_canonical_names()`, which stops
-		 * at the first lookup that finds anybody. The clause matches the stored value against
-		 * both of this user's names at once, so a name that is one account's login and another
-		 * account's nicename resolves to the first account there and to neither here.
+		 * Resolved canonically, which is how `map_subrole_caps()` decides who holds `edit_post`
+		 * on a camp and how the admin list table picks the camps it shows. A name that is one
+		 * account's login and another's nicename belongs to the login holder, and only they
+		 * hold anything over the camp. `mentor_names_for()` narrows the clause to suit, rather
+		 * than this widening to suit the clause.
 		 */
 		foreach ( get_post_meta( $post->ID, 'Mentor WordPress.org User Name' ) as $name ) {
-			foreach ( array( 'login', 'slug' ) as $field ) {
-				$mentor = get_user_by( $field, $name );
+			$mentor = wcorg_get_user_by_canonical_names( $name );
 
-				if ( $mentor && $mentor->ID === $user->ID ) {
-					return true;
-				}
+			if ( $mentor && $mentor->ID === $user->ID ) {
+				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * The stored names that resolve back to this user.
+	 *
+	 * `wcorg_get_user_by_canonical_names()` tries `user_login` and falls back to
+	 * `user_nicename` only when the login lookup found nobody, so a login always belongs to
+	 * its owner while a nicename belongs to them only when no other account holds it as a
+	 * login. Stating that here lets the clause select exactly what `is_mentored_by()` allows,
+	 * without SQL having to resolve anything.
+	 *
+	 * @param WP_User $user
+	 *
+	 * @return string[]
+	 */
+	protected static function mentor_names_for( $user ) {
+		$names  = array( $user->user_login );
+		$holder = get_user_by( 'login', $user->user_nicename );
+
+		if ( ! $holder || $holder->ID === $user->ID ) {
+			$names[] = $user->user_nicename;
+		}
+
+		return array_unique( $names );
 	}
 
 	/**
@@ -406,13 +429,14 @@ class WordCamp_Loader extends Event_Loader {
 		);
 
 		if ( $user->exists() ) {
+			$names        = self::mentor_names_for( $user );
+			$placeholders = implode( ', ', array_fill( 0, count( $names ), '%s' ) );
+
 			$readable .= $wpdb->prepare(
 				" OR {$wpdb->posts}.ID IN (
-					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( %s, %s )
+					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( $placeholders )
 				)",
-				'Mentor WordPress.org User Name',
-				$user->user_login,
-				$user->user_nicename
+				array_merge( array( 'Mentor WordPress.org User Name' ), $names )
 			);
 		}
 

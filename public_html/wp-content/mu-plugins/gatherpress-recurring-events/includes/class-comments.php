@@ -109,7 +109,7 @@ final class Comments {
 		if ( $requested ) {
 			$occurrence = Occurrences::get( $post_id, $requested );
 			if ( ! $occurrence ) {
-				wp_die( esc_html__( 'Invalid event occurrence.', 'gpre' ), '', 400 );
+				wp_die( esc_html__( 'Invalid event occurrence.', 'wordcamporg' ), '', 400 );
 			}
 			Context::set( $occurrence );
 		}

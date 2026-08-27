@@ -45,7 +45,7 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		wp_set_current_user( 0 );
 
 		/*
-		 * This suite defines `WP_ADMIN` (see `wcpt/tests/bootstrap.php`), so `is_admin()` is
+		 * `wordcamp-remote-css/tests/bootstrap.php` defines `WP_ADMIN` for the whole run, so `is_admin()` is
 		 * true unless a screen says otherwise. A permalink or REST request is neither, and
 		 * the filter exempts wp-admin, so every test starts on the front end and the one
 		 * about the list table opts in.
@@ -160,7 +160,16 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
 	 */
 	public function test_a_mentor_named_by_nicename_is_recognised() {
-		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		// A distinct nicename, or the factory gives it the login and the lookup never runs.
+		$mentor = self::factory()->user->create_and_get(
+			array(
+				'role'          => 'subscriber',
+				'user_login'    => 'mentorlogin',
+				'user_nicename' => 'mentor-slug',
+			)
+		);
+
+		$this->assertNotSame( $mentor->user_login, $mentor->user_nicename );
 
 		update_post_meta( $this->application, 'Mentor WordPress.org User Name', $mentor->user_nicename );
 		wp_set_current_user( $mentor->ID );
@@ -511,6 +520,47 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		set_current_screen( 'front' );
 
 		$this->assertNotContains( $this->application, wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
+	 * A stored name can be one account's login and another's nicename. The clause tests it
+	 * against both of this user's names at once, so the lookup here has to as well, or the
+	 * clause selects a row the rule refuses.
+	 *
+	 * @covers WordCamp_Loader::is_mentored_by
+	 */
+	public function test_a_name_that_is_another_login_still_resolves_by_nicename() {
+		$other = self::factory()->user->create_and_get(
+			array(
+				'role'       => 'subscriber',
+				'user_login' => 'sharedname',
+			)
+		);
+
+		// Free the nicename, so the mentor below can hold it while `$other` keeps the login.
+		wp_update_user( array( 'ID' => $other->ID, 'user_nicename' => 'sharedname-other' ) );
+
+		$mentor = self::factory()->user->create_and_get(
+			array(
+				'role'          => 'subscriber',
+				'user_login'    => 'mentorbylogin',
+				'user_nicename' => 'sharedname',
+			)
+		);
+
+		$this->assertSame( 'sharedname', get_user_by( 'login', 'sharedname' )->user_login );
+
+		update_post_meta( $this->application, 'Mentor WordPress.org User Name', 'sharedname' );
+		wp_set_current_user( $mentor->ID );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
+		$request->set_param( 'status', 'wcpt-cancelled' );
+		$request->set_param( '_fields', 'id' );
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( count( $response->get_data() ), (int) $response->get_headers()['X-WP-Total'] );
+		$this->assertContains( $this->application, wp_list_pluck( $response->get_data(), 'id' ) );
 	}
 
 	/**

@@ -322,14 +322,23 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return bool
 	 */
 	protected static function is_mentored_by( $post, $user ) {
-		// Every row for the key, because `IN ( ... )` below matches any of them while
-		// `get_post_meta( ..., true )` reads only the first. Nothing in the admin writes a
-		// second one, but an import or WP-CLI can.
+		/*
+		 * Every row for the key, because `IN ( ... )` below matches any of them while
+		 * `get_post_meta( ..., true )` reads only the first. Nothing in the admin writes a
+		 * second row, but an import or WP-CLI can.
+		 *
+		 * Both names per row, rather than `wcorg_get_user_by_canonical_names()`, which stops
+		 * at the first lookup that finds anybody. The clause matches the stored value against
+		 * both of this user's names at once, so a name that is one account's login and another
+		 * account's nicename resolves to the first account there and to neither here.
+		 */
 		foreach ( get_post_meta( $post->ID, 'Mentor WordPress.org User Name' ) as $name ) {
-			$mentor = wcorg_get_user_by_canonical_names( $name );
+			foreach ( array( 'login', 'slug' ) as $field ) {
+				$mentor = get_user_by( $field, $name );
 
-			if ( $mentor && $mentor->ID === $user->ID ) {
-				return true;
+				if ( $mentor && $mentor->ID === $user->ID ) {
+					return true;
+				}
 			}
 		}
 

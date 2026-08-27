@@ -361,6 +361,32 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Decide which WordPress.org account a submission may link its draft to.
+	 *
+	 * With no account named, a logged-in submitter is linked to their own. A named account is linked only if
+	 * the submitter is entitled to it (see `wcorg_get_linkable_user_login()`); otherwise, and for anonymous
+	 * submissions, the draft is left unlinked. In every unlinked case the submitted name is still kept on the
+	 * Jetpack feedback entry for an organizer to resolve during review.
+	 *
+	 * @param string $submitted_username The username from the form.
+	 *
+	 * @return string The username to link, or an empty string.
+	 */
+	protected function resolve_linked_username( $submitted_username ) {
+		$current_user = wp_get_current_user();
+
+		if ( ! $current_user->exists() ) {
+			return '';
+		}
+
+		if ( '' === trim( (string) $submitted_username ) ) {
+			return $current_user->user_login;
+		}
+
+		return wcorg_get_linkable_user_login( $submitted_username, $current_user->ID );
+	}
+
+	/**
 	 * Simulate the existence of a post type.
 	 *
 	 * This plugin may need to insert a form into a different site, and the targeted post type may not be active
@@ -417,7 +443,7 @@ class WordCamp_Forms_To_Drafts {
 		// Create the post.
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
-			'post_title'   => $all_values['Company Name'] ?? '',
+			'post_title'   => wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ),
 			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -454,17 +480,13 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
+		$all_values                           = $this->get_unprefixed_grunion_form_values( $all_values );
+		$all_values['WordPress.org Username'] = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
+		$speaker_user_id                      = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
 
-		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
-		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $speaker_user_id ) {
-			$speaker_user_id                      = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
-		}
-
-		$speaker = $this->get_speaker_from_user_id( $speaker_user_id );
+		// Only reuse an existing speaker post for a linked account; unlinked submissions each get their own
+		// draft rather than collapsing onto one another.
+		$speaker = $speaker_user_id ? $this->get_speaker_from_user_id( $speaker_user_id ) : false;
 
 		if ( ! is_a( $speaker, 'WP_Post' ) ) {
 			$speaker_id = $this->create_draft_speaker( $all_values );
@@ -498,21 +520,12 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
-
-		$all_values        = $this->get_unprefixed_grunion_form_values( $all_values );
-		$volunteer_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $volunteer_user_id ) {
-			$volunteer_user_id                    = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
-		}
-
-		$volunteer_user = get_user_by( 'id', $volunteer_user_id );
+		$all_values = $this->get_unprefixed_grunion_form_values( $all_values );
+		$user_name  = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => sanitize_text_field( $all_values['Name'] ?? '' ),
+			'post_title'   => wcorg_sanitize_plain_text( $all_values['Name'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -522,7 +535,7 @@ class WordCamp_Forms_To_Drafts {
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 
 			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ?? '' ) );
-			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
+			update_post_meta( $draft_id, '_wcpt_user_name', $user_name );
 			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
 	}
@@ -652,6 +665,9 @@ class WordCamp_Forms_To_Drafts {
 	 * keeps that text as literal characters instead of letting it run as shortcodes,
 	 * so a submission is shown as written rather than executed.
 	 *
+	 * Tags are not a concern here: Jetpack has already run these values through `wp_kses_post()`,
+	 * and `content_save_pre` runs them through it again on the way into the database.
+	 *
 	 * @param string $content Submitted content.
 	 *
 	 * @return string Content with shortcode delimiters encoded.
@@ -683,7 +699,7 @@ class WordCamp_Forms_To_Drafts {
 		$speaker_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_speaker',
-				'post_title'   => $speaker['Name'] ?? 'Untitled',
+				'post_title'   => wcorg_sanitize_plain_text( $speaker['Name'] ?? 'Untitled' ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -701,6 +717,8 @@ class WordCamp_Forms_To_Drafts {
 			}
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
+			// The caller resolves 'WordPress.org Username' through resolve_linked_username() first, so this
+			// writes the entitled account (or nobody), not the raw submitted value.
 			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
 			update_post_meta( $speaker_id, '_wcb_speaker_first_time', $first_time );
 		}
@@ -731,7 +749,7 @@ class WordCamp_Forms_To_Drafts {
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => $session['Topic Title'] ?? '',
+				'post_title'   => wcorg_sanitize_plain_text( $session['Topic Title'] ?? '' ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),

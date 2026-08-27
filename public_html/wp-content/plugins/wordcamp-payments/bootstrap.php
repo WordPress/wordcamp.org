@@ -26,6 +26,9 @@ if ( is_admin() ) {
 }
 
 if ( is_admin() || wp_doing_cron() || wp_doing_ajax() ) {
+	// sponsor-invoice.php references WordCamp_Budgets when registering its post type, so it must be available
+	// outside the is_admin() block above too.
+	require_once __DIR__ . '/includes/wordcamp-budgets.php';
 	require_once __DIR__ . '/includes/privacy.php';
 	require_once __DIR__ . '/includes/sponsor-invoice.php';
 }

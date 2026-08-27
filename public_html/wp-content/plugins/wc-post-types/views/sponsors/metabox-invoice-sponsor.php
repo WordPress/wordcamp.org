@@ -29,11 +29,15 @@
 
 	<?php endif; ?>
 
-	<!-- Force-open in a new window because the screen has a form and the link looks like a button, so if it were in
-	the same window, then users would probably assume the button submits the form and starts an invoice, and they
-	could lose any data they entered into the form -->
-	<a href="<?php echo esc_url( $new_invoice_url ); ?>" target="_blank" class="button secondary">
-		<?php _e( 'Add New Invoice', 'wordcamporg' ); ?>
-	</a>
+	<?php if ( current_user_can( get_post_type_object( \WordCamp\Budgets\Sponsor_Invoices\POST_TYPE )->cap->create_posts ) ) : ?>
+
+		<!-- Force-open in a new window because the screen has a form and the link looks like a button, so if it were in
+		the same window, then users would probably assume the button submits the form and starts an invoice, and they
+		could lose any data they entered into the form -->
+		<a href="<?php echo esc_url( $new_invoice_url ); ?>" target="_blank" class="button secondary">
+			<?php esc_html_e( 'Add New Invoice', 'wordcamporg' ); ?>
+		</a>
+
+	<?php endif; ?>
 
 <?php endif;

@@ -22,6 +22,18 @@ class WordCamp_Budgets {
 	);
 
 	/**
+	 * Capability map shared by the payment post types.
+	 *
+	 * Routes the list, creation and delete capabilities through VIEWER_CAP so they match the Budget menu the
+	 * screens live under, instead of the generic post capabilities they would otherwise inherit.
+	 */
+	public const POST_TYPE_CAPABILITIES = array(
+		'edit_posts'   => self::VIEWER_CAP,
+		'create_posts' => self::VIEWER_CAP,
+		'delete_posts' => self::VIEWER_CAP,
+	);
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -39,7 +51,7 @@ class WordCamp_Budgets {
 	 * The list screen and the post type it queries are resolved from separate request parameters, so the
 	 * capability the screen enforces isn't guaranteed to be the one for the type actually queried. Enforce
 	 * VIEWER_CAP against the queried type so the rows always match the access the Budget screens grant. Scoped
-	 * to the admin main query — the list table's query, and the only exposure of these non-public types.
+	 * to the admin main query, which is the list table's query.
 	 *
 	 * @param WP_Query $query
 	 */

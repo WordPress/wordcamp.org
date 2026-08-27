@@ -70,12 +70,9 @@ class WCP_Payment_Request {
 			'supports'          => array( 'title' ),
 			'has_archive'       => true,
 
-			// Keep enabled: supplying `capabilities` below suppresses the mapping core turns on by default.
+			// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
 			'map_meta_cap'      => true,
-			'capabilities'      => array(
-				'edit_posts'   => WordCamp_Budgets::VIEWER_CAP,
-				'create_posts' => WordCamp_Budgets::VIEWER_CAP,
-			),
+			'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 		);
 
 		return register_post_type( self::POST_TYPE, $args );

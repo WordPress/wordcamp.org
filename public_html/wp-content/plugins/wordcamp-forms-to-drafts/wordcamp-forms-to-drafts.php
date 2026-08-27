@@ -363,9 +363,10 @@ class WordCamp_Forms_To_Drafts {
 	/**
 	 * Decide which WordPress.org account a submission may link its draft to.
 	 *
-	 * A logged-in submitter links their own account by default, or the submitted account if entitled to it
-	 * (see `wcorg_get_linkable_user_login()`). An anonymous submission links no account; the submitted name
-	 * is still kept on the Jetpack feedback entry for an organizer to review.
+	 * With no account named, a logged-in submitter is linked to their own. A named account is linked only if
+	 * the submitter is entitled to it (see `wcorg_get_linkable_user_login()`); otherwise, and for anonymous
+	 * submissions, the draft is left unlinked. In every unlinked case the submitted name is still kept on the
+	 * Jetpack feedback entry for an organizer to resolve during review.
 	 *
 	 * @param string $submitted_username The username from the form.
 	 *
@@ -378,9 +379,11 @@ class WordCamp_Forms_To_Drafts {
 			return '';
 		}
 
-		$linkable = wcorg_get_linkable_user_login( $submitted_username, $current_user->ID );
+		if ( '' === trim( (string) $submitted_username ) ) {
+			return $current_user->user_login;
+		}
 
-		return '' !== $linkable ? $linkable : $current_user->user_login;
+		return wcorg_get_linkable_user_login( $submitted_username, $current_user->ID );
 	}
 
 	/**
@@ -481,7 +484,9 @@ class WordCamp_Forms_To_Drafts {
 		$all_values['WordPress.org Username'] = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
 		$speaker_user_id                      = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
 
-		$speaker = $this->get_speaker_from_user_id( $speaker_user_id );
+		// Only reuse an existing speaker post for a linked account; unlinked submissions each get their own
+		// draft rather than collapsing onto one another.
+		$speaker = $speaker_user_id ? $this->get_speaker_from_user_id( $speaker_user_id ) : false;
 
 		if ( ! is_a( $speaker, 'WP_Post' ) ) {
 			$speaker_id = $this->create_draft_speaker( $all_values );
@@ -712,6 +717,8 @@ class WordCamp_Forms_To_Drafts {
 			}
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
+			// The caller resolves 'WordPress.org Username' through resolve_linked_username() first, so this
+			// writes the entitled account (or nobody), not the raw submitted value.
 			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
 			update_post_meta( $speaker_id, '_wcb_speaker_first_time', $first_time );
 		}

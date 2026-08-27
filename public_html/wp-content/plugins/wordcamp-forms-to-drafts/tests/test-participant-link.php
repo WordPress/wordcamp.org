@@ -105,10 +105,19 @@ class Test_Participant_Link extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Naming another account without permission falls back to the submitter.
+	 * Naming another account without permission leaves the draft unlinked.
 	 */
-	public function test_volunteer_without_permission_falls_back_to_self(): void {
+	public function test_volunteer_without_permission_links_nothing(): void {
 		$draft = $this->submit_volunteer( self::$contributor, get_userdata( self::$victim )->user_login );
+
+		$this->assertSame( '', get_post_meta( $draft->ID, '_wcpt_user_name', true ) );
+	}
+
+	/**
+	 * A logged-in submitter who names no account is linked to their own.
+	 */
+	public function test_volunteer_without_username_links_self(): void {
+		$draft = $this->submit_volunteer( self::$contributor, '' );
 
 		$this->assertSame( get_userdata( self::$contributor )->user_login, get_post_meta( $draft->ID, '_wcpt_user_name', true ) );
 	}
@@ -146,12 +155,28 @@ class Test_Participant_Link extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A speaker draft is linked to the submitter when they may not name another.
+	 * A speaker draft names no account when the submitter may not link the one they gave.
 	 */
-	public function test_speaker_without_permission_is_linked_to_self(): void {
+	public function test_speaker_without_permission_links_nothing(): void {
 		$draft = $this->submit_speaker( self::$contributor, get_userdata( self::$victim )->user_login );
 
-		$this->assertSame( self::$contributor, (int) get_post_meta( $draft->ID, '_wcpt_user_id', true ) );
+		$this->assertSame( 0, (int) get_post_meta( $draft->ID, '_wcpt_user_id', true ) );
+	}
+
+	/**
+	 * Two unlinked submissions from one contributor create separate drafts, not one shared post.
+	 */
+	public function test_unlinked_speaker_submissions_do_not_collapse(): void {
+		$this->submit_speaker( self::$contributor, get_userdata( self::$editor )->user_login );
+		$this->submit_speaker( self::$contributor, get_userdata( self::$victim )->user_login );
+
+		$drafts = get_posts( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'draft',
+			'numberposts' => -1,
+		) );
+
+		$this->assertCount( 2, $drafts );
 	}
 
 	/**

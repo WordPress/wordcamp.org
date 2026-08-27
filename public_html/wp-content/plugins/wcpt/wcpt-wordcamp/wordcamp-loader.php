@@ -6,6 +6,8 @@ define( 'WCPT_SLUG',           'wordcamps'          );
 define( 'WCPT_DEFAULT_STATUS', 'wcpt-needs-vetting' );
 define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
 
+require_once __DIR__ . '/class-wordcamp-status-guard.php';
+
 /**
  * WordCamp_Loader
  *
@@ -13,8 +15,6 @@ define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
  * @subpackage Loader
  * @since WordCamp Post Type (0.1)
  */
-require_once __DIR__ . '/class-wordcamp-status-guard.php';
-
 class WordCamp_Loader extends Event_Loader {
 
 	/**

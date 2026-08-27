@@ -1704,6 +1704,24 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return;
 			}
 
+			/*
+			 * `WP_Posts_List_Table::__construct()` sets `$_GET['author']` for a viewer who has
+			 * authored one of these and lacks the type's `edit_others_posts`, which is
+			 * `edit_others_wordcamps` and maps to the curating capability. That narrows the
+			 * default screen to their own rows, which is wrong for everyone here: it hides the
+			 * camps a scoped viewer only mentors while the status links still count them, and
+			 * it opens an exempt viewer on Mine when they are entitled to the whole list. Core
+			 * only injects when the request named no author, so choosing Mine survives it.
+			 */
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which view was asked for, not acting on it.
+			if ( empty( $_REQUEST['author'] ) ) {
+				$query->set( 'author', '' );
+
+				// `get_views()` and `is_base_request()` read `$_GET` rather than the query, so
+				// leaving it there marks Mine active over a table showing more than that.
+				unset( $_GET['author'] );
+			}
+
 			// Wranglers curate the pipeline, and a Central administrator already administers
 			// everything on this site, so both keep the whole list.
 			if ( current_user_can( self::get_edit_capability() ) || current_user_can( 'manage_options' ) ) {
@@ -1715,22 +1733,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// An empty set has to be spelled out, or `post__in` is ignored and the
 			// unrestricted list comes back.
 			$query->set( 'post__in', $ids ?: array( 0 ) );
-
-			/*
-			 * `WP_Posts_List_Table::__construct()` sets `$_GET['author']` for a viewer who has
-			 * authored one of these and lacks `edit_others_posts`. Intersected with the set
-			 * above it hides the camps they only mentor, while the status links still count
-			 * them, so the default screen promises more rows than it shows. Core only injects
-			 * when the request named no author, so the Mine view survives this.
-			 */
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which view was asked for, not acting on it.
-			if ( empty( $_REQUEST['author'] ) ) {
-				$query->set( 'author', '' );
-
-				// `get_views()` and `is_base_request()` read `$_GET` rather than the query, so
-				// leaving it there highlights Mine over a table that is showing more than that.
-				unset( $_GET['author'] );
-			}
 
 			// The status links come from `wp_count_posts()`, which has the same blind spot.
 			add_filter( 'wp_count_posts', array( $this, 'scope_status_counts' ), 10, 2 );

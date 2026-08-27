@@ -304,6 +304,42 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A Central administrator administers this site, so the screen is not narrowed for them.
+	 * That has to hold when they have authored one of these too, because core would otherwise
+	 * default them to their own rows.
+	 *
+	 * @dataProvider data_exempt_viewer_authorship
+	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
+	 *
+	 * @param bool $authored_one Whether the viewer has authored one of the camps.
+	 */
+	public function test_an_exempt_viewer_sees_the_whole_list( $authored_one ) {
+		$viewer = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $viewer );
+
+		$this->assertTrue( current_user_can( 'manage_options' ), 'The fixture is not exempt.' );
+		$this->assertFalse( current_user_can( 'wordcamp_wrangle_wordcamps' ), 'The fixture holds the subrole.' );
+
+		$somebody_elses = $this->create_wordcamp( self::factory()->user->create() );
+
+		if ( $authored_one ) {
+			$this->create_wordcamp( $viewer );
+		}
+
+		$this->assertContains( $somebody_elses, wp_list_pluck( $this->run_list_screen_query()->posts, 'ID' ) );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_exempt_viewer_authorship() {
+		return array(
+			'having authored none of them' => array( false ),
+			'having authored one of them'  => array( true ),
+		);
+	}
+
+	/**
 	 * An explicitly chosen Mine view still narrows to what they wrote. Core only narrows
 	 * when the request named nobody, so the two cases have to stay distinguishable.
 	 *

@@ -538,7 +538,12 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 		);
 
 		// Free the nicename, so the mentor below can hold it while `$other` keeps the login.
-		wp_update_user( array( 'ID' => $other->ID, 'user_nicename' => 'sharedname-other' ) );
+		wp_update_user(
+			array(
+				'ID'            => $other->ID,
+				'user_nicename' => 'sharedname-other',
+			)
+		);
 
 		$mentor = self::factory()->user->create_and_get(
 			array(

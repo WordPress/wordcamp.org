@@ -149,16 +149,32 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Local navigation breadcrumbs
+   ========================================================================== */
+
+/* The breadcrumb wrapper scrolls sideways when a long event title overflows
+   the bar. The block's own fade-out mask already signals the clipped text;
+   the scrollbar a classic-scrollbar OS would draw under it is just noise in
+   a 40px-tall bar. */
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper {
+	scrollbar-width: none;
+}
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper::-webkit-scrollbar {
+	display: none;
+}
+
+/* ==========================================================================
    Inner-page header band
    ========================================================================== */
 
 /* Every inner page — news post, events archive, static page, venue, search —
-   opens with the same compact band: back link, then an h1. The templates only
-   supply the content; the band's look and the title size live here so the
-   pages can't drift apart. */
+   opens with the same compact header on the plain page background. The
+   templates only supply the content; the spacing and the title size live here
+   so the pages can't drift apart. */
 
 .groups-site-page-header {
-	background-color: var(--wp--preset--color--blueberry-4);
 	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--edge-space);
 }
 
@@ -632,19 +648,6 @@ body.error404 .site-content-container h1 {
 	text-wrap: balance;
 }
 
-/* "{Group name} · {Event title}". The dot is decoration, not content —
-   the slash syntax keeps it out of the accessibility tree, matching the
-   hero-meta separator on the front page. */
-
-.groups-site-event-hero-breadcrumb
-	.wp-block-site-title
-	+ .wp-block-post-title::before {
-	content: "\00b7";
-	content: "\00b7" / "";
-	margin-right: 8px;
-	color: var(--wp--preset--color--charcoal-5);
-}
-
 /* The host's name is a person, not an action — it keeps the text colour
    and lets the underline mark it as a link, the way speaker and member
    names render, rather than turning blue like a UI control. */
@@ -892,6 +895,20 @@ body.error404 .site-content-container h1 {
 
 .wp-block-search__button:hover {
 	background: var(--wp--preset--color--deep-blueberry) !important;
+}
+
+/* An icon button is part of the field it sits against, not a call to
+   action: it wears the input's own grey fill so the pair reads as one
+   control. Only the labelled "Search" text button keeps the primary
+   blueberry. */
+
+.wp-block-search__button.has-icon {
+	background: var(--wp--preset--color--light-grey-2) !important;
+	color: var(--wp--preset--color--charcoal-1) !important;
+}
+
+.wp-block-search__button.has-icon:hover {
+	background: var(--wp--preset--color--light-grey-1) !important;
 }
 
 /* ==========================================================================

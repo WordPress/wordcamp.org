@@ -290,6 +290,53 @@ function add_local_navigation_menus( $menus ) {
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigation_menus' );
 
 /**
+ * Correct the breadcrumb trail for views the block can't infer.
+ *
+ * The `header-local-navigation` pattern renders a `wporg/site-breadcrumbs`
+ * block in the bar's left slot. Its default trail is "{site} / {the title}",
+ * which covers singular views — event, page, news post, venue — but the
+ * group's other views need help: `get_the_title()` on the events archive
+ * yields the first event in the loop, and the block's stock labels
+ * ("Archives", "Results") don't match the h1s our templates render.
+ *
+ * On the group's front page the trail collapses to just the group name,
+ * unlinked: it's the current page, not a route back to somewhere else.
+ *
+ * @param array $breadcrumbs Crumbs as [url => string|false, title => string];
+ *                           a crumb without a URL renders as the current page.
+ * @return array
+ */
+function filter_site_breadcrumbs( $breadcrumbs ) {
+	if ( is_front_page() ) {
+		return array(
+			array(
+				'url'   => false,
+				'title' => get_bloginfo( 'name', 'display' ),
+			),
+		);
+	}
+
+	$title = '';
+
+	if ( is_post_type_archive( 'gatherpress_event' ) ) {
+		$title = __( 'Events', 'groups-site' );
+	} elseif ( is_home() ) {
+		$title = __( 'Latest posts', 'groups-site' );
+	} elseif ( is_search() ) {
+		$title = __( 'Search results', 'groups-site' );
+	} elseif ( is_404() ) {
+		$title = __( 'Page not found', 'groups-site' );
+	}
+
+	if ( $title ) {
+		$breadcrumbs[ array_key_last( $breadcrumbs ) ]['title'] = $title;
+	}
+
+	return $breadcrumbs;
+}
+add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadcrumbs' );
+
+/**
  * Inject the theme's custom GatherPress templates into the template hierarchy.
  *
  * The templates are registered via `customTemplates` in `theme.json` so they're

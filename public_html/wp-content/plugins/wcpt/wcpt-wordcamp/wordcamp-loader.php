@@ -429,14 +429,17 @@ class WordCamp_Loader extends Event_Loader {
 		);
 
 		if ( $user->exists() ) {
-			$names        = self::mentor_names_for( $user );
-			$placeholders = implode( ', ', array_fill( 0, count( $names ), '%s' ) );
+			// Two placeholders always: `mentor_names_for()` returns the login and at most the
+			// nicename, and naming one of them twice in an `IN` selects the same rows.
+			$names = array_values( self::mentor_names_for( $user ) );
 
 			$readable .= $wpdb->prepare(
 				" OR {$wpdb->posts}.ID IN (
-					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( $placeholders )
+					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( %s, %s )
 				)",
-				array_merge( array( 'Mentor WordPress.org User Name' ), $names )
+				'Mentor WordPress.org User Name',
+				$names[0],
+				$names[1] ?? $names[0]
 			);
 		}
 

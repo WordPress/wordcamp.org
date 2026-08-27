@@ -564,7 +564,12 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 
 		update_post_meta( $this->application, 'Mentor WordPress.org User Name', 'sharedname' );
 
-		foreach ( array( $login_holder->ID => true, $slug_holder->ID => false ) as $viewer => $is_the_mentor ) {
+		$expected = array(
+			$login_holder->ID => true,
+			$slug_holder->ID  => false,
+		);
+
+		foreach ( $expected as $viewer => $is_the_mentor ) {
 			wp_set_current_user( 0 );
 			wp_set_current_user( $viewer );
 

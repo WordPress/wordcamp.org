@@ -324,10 +324,12 @@ class Test_Groups_Export extends Groups_TestCase {
 		$titles = array_column( collect_export_data()['events'], 'title', 'id' );
 		$this->assertSame( 'Hall < 100 > seats', $titles[ $event_id ] );
 
-		// Both formats read the same array, so the CSV follows — and the decoded
-		// value must not gain a leading `=`/`+`/`-`/`@` treatment it didn't need.
-		$rows = str_getcsv( build_csv( collect_export_data(), CSV_COLUMNS ), "\n" );
-		$this->assertStringContainsString( 'Hall < 100 > seats', implode( "\n", $rows ) );
+		// Both formats read the same array, so the CSV follows. Asserting on the
+		// parsed cell rather than the raw text also pins that the decoded value
+		// doesn't pick up a leading `=`/`+`/`-`/`@` guard it didn't need.
+		$rows = $this->parse_csv_rows( build_csv( collect_export_data(), CSV_COLUMNS ) );
+
+		$this->assertContains( 'Hall < 100 > seats', array_column( $rows, 1 ) );
 	}
 
 	/**

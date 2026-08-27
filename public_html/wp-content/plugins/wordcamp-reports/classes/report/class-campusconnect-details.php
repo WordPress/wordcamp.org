@@ -70,6 +70,17 @@ class CampusConnect_Details extends WordCamp_Details {
 	public static $group = 'campus-connect';
 
 	/**
+	 * REST API base for this report.
+	 *
+	 * Registered by `register_rest_endpoints()` in the plugin bootstrap, which
+	 * only exposes a route for classes that declare both `$rest_base` and
+	 * `rest_callback()`.
+	 *
+	 * @var string
+	 */
+	public static $rest_base = 'campus-connect-details';
+
+	/**
 	 * Get the full list of fields in the order they should appear in.
 	 *
 	 * @return array
@@ -198,6 +209,81 @@ class CampusConnect_Details extends WordCamp_Details {
 		}
 
 		return get_posts( $post_args );
+	}
+
+	/**
+	 * Restrict the REST endpoint to users who may view reports.
+	 *
+	 * This report intentionally queries every post status, not just the public
+	 * ones, and exposes private post meta such as `Actual Attendees`. It must
+	 * therefore never be readable anonymously.
+	 *
+	 * @return bool
+	 */
+	public static function rest_permission_callback() {
+		return current_user_can( CAPABILITY );
+	}
+
+	/**
+	 * The field set returned by the REST endpoint.
+	 *
+	 * Deliberately identical to the checked-by-default fields on the admin
+	 * screen, so the endpoint and the CSV export stay in step.
+	 *
+	 * @return array
+	 */
+	public static function get_rest_fields() {
+		return array(
+			'Start Date (YYYY-mm-dd)',
+			'End Date (YYYY-mm-dd)',
+			'Status',
+			'Name',
+			'Organizer Name',
+			'Venue Name',
+			'_venue_city',
+			'_venue_country_name',
+			'Number of Anticipated Attendees',
+			'Actual Attendees',
+			'Series Event',
+			'Created',
+			'Tracker URL',
+			'URL',
+			'ID',
+		);
+	}
+
+	/**
+	 * Handle a REST request for this report.
+	 *
+	 * Returns the same rows the admin screen renders, so a consumer can read
+	 * the report programmatically instead of exporting the CSV by hand.
+	 *
+	 * @param \WP_REST_Request $request Request object.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function rest_callback( $request ) {
+		$report = new static(
+			null,
+			null,
+			false,
+			array(
+				'fields' => self::get_rest_fields(),
+				'public' => false,
+			)
+		);
+
+		$messages = $report->error->get_error_messages();
+
+		if ( ! empty( $messages ) ) {
+			return new WP_Error(
+				'wcr_campus_connect_details_failed',
+				implode( ' ', $messages ),
+				array( 'status' => 500 )
+			);
+		}
+
+		return rest_ensure_response( $report->prepare_data_for_display( $report->get_data() ) );
 	}
 
 	/**

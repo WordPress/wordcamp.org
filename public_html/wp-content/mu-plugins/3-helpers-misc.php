@@ -185,6 +185,35 @@ function wcorg_get_user_by_canonical_names( $name ) {
 }
 
 /**
+ * Resolve a submitted username to the account a user is allowed to link a participant record to.
+ *
+ * A user may name their own account; naming a different one is reserved for those who can edit other
+ * authors' posts. An unknown name, or one they may not claim, resolves to an empty string.
+ *
+ * @param string   $name    The submitted username (matched against login and nicename).
+ * @param int|null $user_id The user doing the linking. Defaults to the current user.
+ *
+ * @return string The canonical `user_login` the user may link, or an empty string.
+ */
+function wcorg_get_linkable_user_login( $name, $user_id = null ) {
+	if ( is_null( $user_id ) ) {
+		$user_id = get_current_user_id();
+	}
+
+	$wporg_user = wcorg_get_user_by_canonical_names( $name );
+
+	if ( ! $wporg_user ) {
+		return '';
+	}
+
+	if ( (int) $user_id === (int) $wporg_user->ID || user_can( $user_id, 'edit_others_posts' ) ) {
+		return $wporg_user->user_login;
+	}
+
+	return '';
+}
+
+/**
  * Get CLDR country names and codes.
  *
  * @param array $args

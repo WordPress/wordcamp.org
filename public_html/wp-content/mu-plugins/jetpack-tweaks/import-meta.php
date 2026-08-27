@@ -8,19 +8,24 @@
  * classes -- and hand the plain result back to the importer. Normal imports keep working, and the
  * importer only ever receives plain data from the request.
  *
+ * The same routes also drop the meta keys that store a filesystem path, which the WXR importer
+ * drops through `import_post_meta_key`. These routes write meta directly, so they need their own
+ * pass over the same list.
+ *
  * @package WordCamp\Jetpack_Tweaks
  */
 
 namespace WordCamp\Jetpack_Tweaks\Import_Meta;
 
 use WP_REST_Request;
+use function WordCamp\Importer_Tweaks\file_path_meta_keys;
 
 defined( 'WPINC' ) || die();
 
 add_filter( 'rest_request_before_callbacks', __NAMESPACE__ . '\normalize_import_meta', 10, 3 );
 
 /**
- * Replace serialized meta values on the Jetpack import routes with plain, object-free values.
+ * Drop file path meta and replace serialized values on the Jetpack import routes.
  *
  * @param mixed $response The response so far. Returned unchanged.
  * @param array $handler  The matched route handler.
@@ -47,7 +52,15 @@ function normalize_import_meta( $response, $handler, $request ) {
 
 	$changed = false;
 
+	$file_path_meta = file_path_meta_keys();
+
 	foreach ( $metas as $key => $value ) {
+		if ( in_array( $key, $file_path_meta, true ) ) {
+			unset( $metas[ $key ] );
+			$changed = true;
+			continue;
+		}
+
 		$clean = decode_without_objects( $value );
 
 		if ( $clean !== $value ) {

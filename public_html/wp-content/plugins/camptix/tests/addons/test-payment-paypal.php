@@ -17,6 +17,13 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 	protected $requested_urls = array();
 
 	/**
+	 * Every message CampTix logged during the last drive() call.
+	 *
+	 * @var string[]
+	 */
+	protected $logged = array();
+
+	/**
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
@@ -173,6 +180,13 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 	 */
 	protected function drive( $run, $http_stub ) {
 		$this->requested_urls = array();
+		$this->logged         = array();
+
+		$log_spy = function ( $message ) {
+			$this->logged[] = $message;
+		};
+
+		add_action( 'camptix_log_raw', $log_spy );
 
 		$recorder = function ( $pre, $args, $url ) use ( $http_stub ) {
 			$this->requested_urls[] = $url;
@@ -217,6 +231,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 			remove_filter( 'pre_http_request', $recorder, 10 );
 			remove_filter( 'wp_die_handler', $die_handler );
 			remove_action( 'camptix_payment_result', $result_spy, 10 );
+			remove_action( 'camptix_log_raw', $log_spy );
 			$_POST = array();
 		}
 
@@ -247,6 +262,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 				'then'    => 'draft',
 				'txn'     => null,
 				'no_api'  => false,
+				'reason'  => '',
 				'entry'   => 'notify',
 			),
 			$scenario
@@ -296,6 +312,11 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 			$this->assertSame( $scenario['txn'], get_post_meta( $attendee, 'tix_transaction_id', true ) );
 		}
 
+		// Which of the three gates closed, so a later refactor cannot blur them together.
+		if ( $scenario['reason'] ) {
+			$this->assertStringContainsString( $scenario['reason'], implode( "\n", $this->logged ) );
+		}
+
 		if ( $scenario['no_api'] ) {
 			foreach ( $this->requested_urls as $requested ) {
 				$this->assertStringNotContainsString( '/nvp', $requested );
@@ -319,6 +340,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 				array(
 					'order'   => array( 'token' => 'tok_victim' ),
 					'details' => array( 'CUSTOM' => '%blog%:tok_other' ),
+					'reason'  => 'the reference belongs to another order',
 				),
 			),
 
@@ -356,6 +378,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 					'details' => array(
 						'CUSTOM' => '%blog%:tok_standard', 'TRANSACTIONTYPE' => 'web-accept',
 					),
+					'reason'  => 'unexpected transaction type web-accept',
 				),
 			),
 
@@ -378,6 +401,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 						'token' => 'tok_stripe', 'method' => 'stripe',
 					),
 					'details' => array( 'CUSTOM' => '%blog%:tok_stripe' ),
+					'reason'  => 'the order was taken through another gateway',
 				),
 			),
 
@@ -460,6 +484,16 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 					'order'  => array( 'token' => 'tok_502' ),
 					'verify' => 'error',
 					'code'   => '503',
+				),
+			),
+
+			// PayPal refused the argument, and a resend carries the same one.
+			'a transaction PayPal refuses the argument for' => array(
+				array(
+					'order'   => array( 'token' => 'tok_10004' ),
+					'details' => array(
+						'ACK' => 'Failure', 'L_ERRORCODE0' => '10004',
+					),
 				),
 			),
 
@@ -592,7 +626,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 	 *
 	 * @dataProvider data_return
 	 */
-	public function test_return( $checkout_details, $charged ) {
+	public function test_return( $checkout_details, $charged, $request_token = 'tok_ret' ) {
 		$paypal   = $this->make_configured_paypal();
 		$attendee = $this->make_order( array(
 			'token' => 'tok_ret', 'total' => 100,
@@ -606,7 +640,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 			$checkout_details
 		);
 
-		$_REQUEST['tix_payment_token'] = 'tok_ret';
+		$_REQUEST['tix_payment_token'] = $request_token;
 		$_REQUEST['token']             = 'EC-TOKEN';
 		$_REQUEST['PayerID']           = 'PAYER123';
 
@@ -664,6 +698,18 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 			'its own checkout, bare CUSTOM key' => array( array( 'CUSTOM' => '%blog%:tok_ret' ), true ),
 			// Predates the reference; those tokens expire within hours of checkout.
 			'a checkout carrying no reference'  => array( array(), true ),
+
+			/*
+			 * get_order() resolves the token under the column collation, which ignores
+			 * case, so the request can name the order with a token the reference will
+			 * never equal. The check has to build it from the stored token, as
+			 * reason_transaction_is_not_for_order() does.
+			 */
+			'a request naming the order in another case' => array(
+				array( 'PAYMENTREQUEST_0_CUSTOM' => '%blog%:tok_ret' ),
+				true,
+				'TOK_RET',
+			),
 		);
 	}
 

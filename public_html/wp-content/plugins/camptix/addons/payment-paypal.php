@@ -325,10 +325,17 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		);
 		$txn_details         = wp_parse_args( wp_remote_retrieve_body( $this->request( $txn_details_payload ) ) );
 		if ( ! isset( $txn_details['ACK'] ) || 'Success' !== $txn_details['ACK'] ) {
-			// Nothing about the transaction is known, so ask for the IPN again rather than reporting it handled.
 			$camptix->log( sprintf( 'Fetching transaction after IPN failed %s.', $txn_id ), $order['attendee_id'], $txn_details );
 
-			$this->ipn_die( 503 );
+			/*
+			 * 10004 is the only error PayPal documents for GetTransactionDetails, and it
+			 * means the argument was refused. A resend carries the same TRANSACTIONID, so
+			 * it earns the same answer. Everything else, 10001 and a credentials failure
+			 * somebody may fix inside the retry window included, is worth sending again.
+			 */
+			$refused_argument = isset( $txn_details['L_ERRORCODE0'] ) && '10004' === (string) $txn_details['L_ERRORCODE0'];
+
+			$this->ipn_die( $refused_argument ? 200 : 503 );
 		}
 
 		$camptix->log( sprintf( 'Payment details for %s via IPN', $txn_id ), null, $txn_details );
@@ -347,8 +354,10 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			}
 		} else {
 			// Nothing recorded, so the echoed reference ties them together, backed by the amount.
-			if ( ! $this->transaction_was_made_for_order( $order, $txn_details ) ) {
-				$this->ignore_ipn( sprintf( 'transaction %s was not made for this order', $txn_id ), $order, compact( 'payment_token', 'txn_details' ) );
+			$refusal = $this->reason_transaction_is_not_for_order( $order, $txn_details );
+
+			if ( '' !== $refusal ) {
+				$this->ignore_ipn( sprintf( 'transaction %1$s was not made for this order, %2$s', $txn_id, $refusal ), $order, compact( 'payment_token', 'txn_details' ) );
 			}
 
 			if ( ! $this->transaction_covers_order( $order, $txn_details ) ) {
@@ -415,7 +424,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Whether PayPal says this transaction was made for the given CampTix order.
+	 * Why PayPal's account of this transaction does not match the given CampTix order.
 	 *
 	 * The evidence is the reference fill_payload_with_order() sends as
 	 * PAYMENTREQUEST_0_CUSTOM and GetTransactionDetails echoes back, compared against
@@ -423,15 +432,20 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * MySQL CHAR comparison, which ignores case and trailing spaces, hash_equals()
 	 * neither. First settlement only, per payment_notify().
 	 *
+	 * The reason is logged, because the three differ in what they mean. A gateway or
+	 * reference mismatch is the check doing its job. An unexpected type is the only
+	 * one that can refuse a payment somebody really made, since the type list is our
+	 * reading of what PayPal returns, so it is worth being able to spot on its own.
+	 *
 	 * @param array $order
 	 * @param array $txn_details
 	 *
-	 * @return bool
+	 * @return string Empty when the transaction was made for the order.
 	 */
-	protected function transaction_was_made_for_order( $order, $txn_details ) {
+	protected function reason_transaction_is_not_for_order( $order, $txn_details ) {
 		// An order taken through another gateway has no PayPal transaction to be settled by.
 		if ( get_post_meta( $order['attendee_id'], 'tix_payment_method', true ) !== $this->id ) {
-			return false;
+			return 'the order was taken through another gateway';
 		}
 
 		/*
@@ -440,20 +454,21 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		 * are stripped because PayPal spells this differently across its APIs.
 		 */
 		$transaction_type = isset( $txn_details['TRANSACTIONTYPE'] ) ? (string) $txn_details['TRANSACTIONTYPE'] : '';
-		$transaction_type = strtolower( preg_replace( '/[^a-zA-Z]/', '', $transaction_type ) );
+		$comparable_type  = strtolower( preg_replace( '/[^a-zA-Z]/', '', $transaction_type ) );
 
-		if ( ! in_array( $transaction_type, array( 'cart', 'expresscheckout' ), true ) ) {
-			return false;
+		if ( ! in_array( $comparable_type, array( 'cart', 'expresscheckout' ), true ) ) {
+			// Report what PayPal sent rather than the normalised form, so it can be checked against their docs.
+			return sprintf( 'unexpected transaction type %s', '' !== $transaction_type ? $transaction_type : '(none)' );
 		}
 
 		$echoed_reference = isset( $txn_details['CUSTOM'] ) ? (string) $txn_details['CUSTOM'] : '';
 		$payment_token    = (string) get_post_meta( $order['attendee_id'], 'tix_payment_token', true );
 
 		if ( '' === $echoed_reference || '' === $payment_token ) {
-			return false;
+			return 'no order reference came back';
 		}
 
-		return hash_equals( $this->get_order_reference( $payment_token ), $echoed_reference );
+		return hash_equals( $this->get_order_reference( $payment_token ), $echoed_reference ) ? '' : 'the reference belongs to another order';
 	}
 
 	/**
@@ -714,7 +729,16 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 				'PAYMENTREQUEST_0_NOTIFYURL'            => esc_url_raw( $notify_url ),
 			);
 
-			$this->fill_payload_with_order( $payload, $order, $payment_token );
+			/*
+			 * Use the order's stored token, not the request's, for the same reason
+			 * reason_transaction_is_not_for_order() does: get_order() matched it with a
+			 * MySQL CHAR comparison, which ignores case and trailing spaces. The payload
+			 * and the check have to agree, or the CUSTOM sent here would not match what
+			 * payment_notify() later compares against.
+			 */
+			$stored_token = (string) get_post_meta( $order['attendee_id'], 'tix_payment_token', true );
+
+			$this->fill_payload_with_order( $payload, $order, $stored_token );
 
 			/*
 			 * The PayPal token and the CampTix token arrive as independent request values,
@@ -735,7 +759,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 				}
 			}
 
-			if ( '' !== $echoed_reference && ! hash_equals( $this->get_order_reference( $payment_token ), $echoed_reference ) ) {
+			if ( '' !== $echoed_reference && ! hash_equals( $this->get_order_reference( $stored_token ), $echoed_reference ) ) {
 				$camptix->log( 'Dying because the PayPal checkout was set up for another order', $order['attendee_id'], compact( 'checkout_details', 'payment_token' ) );
 				wp_die( esc_html__( 'We could not confirm that this payment is for your order. Please contact the event organizers.', 'wordcamporg' ) );
 			}

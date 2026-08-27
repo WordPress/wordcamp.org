@@ -422,8 +422,8 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * wp-admin is not a public surface, and every other application status stays in the list
-	 * table. Which camp a viewer sees there is #1943's subject.
+	 * The list table is not a public surface, and every other application status stays in it.
+	 * Which camp a viewer sees there is #1943's subject.
 	 *
 	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
 	 */
@@ -447,8 +447,8 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * admin-ajax is `is_admin()` too and any logged-in user can reach it, so the exemption
-	 * for wp-admin must not carry there.
+	 * Any logged-in user can reach admin-ajax, where `is_admin()` is true as well, so the
+	 * exemption for wp-admin must not carry to it.
 	 *
 	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
 	 */

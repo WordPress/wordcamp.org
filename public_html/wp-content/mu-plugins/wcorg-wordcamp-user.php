@@ -7,6 +7,8 @@
  * - Prevents non-super-admins from removing the `wordcamp` user from a site or
  *   changing its role there, so changes to it don't cause unintended side
  *   effects across the network.
+ * - Suppresses "Notes" email notifications for posts/pages authored by the system
+ *   user to prevent noise in the shared support inbox.
  *
  * @package WordCamp\WordCampUser
  */
@@ -19,6 +21,7 @@ const USER_LOGIN = 'wordcamp';
 
 add_action( 'wp_initialize_site', __NAMESPACE__ . '\add_to_new_site', 100, 1 );
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\protect_user', 10, 4 );
+add_filter( 'notify_post_author', __NAMESPACE__ . '\suppress_note_notifications_for_system_user', 10, 2 );
 
 
 /**
@@ -88,4 +91,44 @@ function protect_user( $required_caps, $cap, $acting_user, $args ) {
 	}
 
 	return array( 'do_not_allow' );
+}
+
+/**
+ * Suppress "Notes" email notifications for posts/pages authored by the system user.
+ *
+ * When a note is left on a block, WordPress notifies the post author by email. For
+ * auto-generated content authored by the system account (support@wordcamp.org), these
+ * emails land in the shared support inbox without being actionable.
+ *
+ * @param bool $notify     Whether to notify the post author.
+ * @param int  $comment_id The ID of the note/comment.
+ *
+ * @return bool
+ */
+function suppress_note_notifications_for_system_user( $notify, $comment_id ): bool {
+	if ( ! $notify ) {
+		return false;
+	}
+
+	$comment = get_comment( $comment_id );
+	if ( ! $comment || 'note' !== $comment->comment_type ) {
+		return (bool) $notify;
+	}
+
+	$post = get_post( $comment->comment_post_ID );
+	if ( ! $post ) {
+		return (bool) $notify;
+	}
+
+	$system_user_id = get_user_id();
+	if ( $system_user_id && (int) $post->post_author === $system_user_id ) {
+		return false;
+	}
+
+	$author = get_user_by( 'id', (int) $post->post_author );
+	if ( $author && ( USER_LOGIN === $author->user_login || 'support@wordcamp.org' === $author->user_email ) ) {
+		return false;
+	}
+
+	return (bool) $notify;
 }

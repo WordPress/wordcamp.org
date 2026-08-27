@@ -244,6 +244,52 @@ function filter_nav_page_list( $pages ) {
 add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
 
 /**
+ * Supply the menu items for the header's local navigation bar.
+ *
+ * The `header-local-navigation` pattern renders a
+ * `core/navigation {"menuSlug":"local-navigation"}` block, which the wporg
+ * navigation extension (`wporg-mu-plugins/pub-sync/blocks/navigation`)
+ * resolves through this filter — hardcoded items, no per-site nav menu to
+ * provision.
+ *
+ * Built at render time, so the account item can react to the visitor:
+ * logged-out visitors — the ones served from the page cache — all get the
+ * same "Log in" link, while logged-in views bypass the cache, so the
+ * per-user nonce in the logout URL is safe.
+ *
+ * @param array $menus Menus keyed by slug, each an array of label/url items.
+ * @return array
+ */
+function add_local_navigation_menus( $menus ) {
+	global $wp;
+
+	// Return the visitor to the page they logged in or out from.
+	// `$wp->request` is the current path relative to the site's home, so
+	// this stays correct on path-based multisite; it's empty in the admin,
+	// where the fallback is harmless.
+	$current_url = home_url( empty( $wp->request ) ? '/' : trailingslashit( $wp->request ) );
+
+	$menus['local-navigation'] = array(
+		array(
+			'label' => __( 'All Events', 'groups-site' ),
+			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
+		),
+		is_user_logged_in()
+			? array(
+				'label' => __( 'Log out', 'groups-site' ),
+				'url'   => wp_logout_url( $current_url ),
+			)
+			: array(
+				'label' => __( 'Log in', 'groups-site' ),
+				'url'   => wp_login_url( $current_url ),
+			),
+	);
+
+	return $menus;
+}
+add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigation_menus' );
+
+/**
  * Inject the theme's custom GatherPress templates into the template hierarchy.
  *
  * The templates are registered via `customTemplates` in `theme.json` so they're

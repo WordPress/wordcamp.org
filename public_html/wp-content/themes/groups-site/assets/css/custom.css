@@ -183,8 +183,8 @@ body.error404 .site-content-container h1 {
 	text-wrap: balance;
 }
 
-/* The mat is specced at 640×440 in the design file: 640px is 55.17% of the
-   1160px content width (the media column's share), and the height comes from
+/* The mat is specced at 640×440 in the design file: 640px is half of the
+   1280px content width (the media column's share), and the height comes from
    holding that 640/440 ratio, so the mat renders at exactly the specced size
    on a full-width desktop and scales in proportion below it. The card is
    pinned to the mat's bottom edge and the leftover ratio height becomes the
@@ -823,6 +823,16 @@ body.error404 .site-content-container h1 {
 .groups-site-about p {
 	max-width: 68ch;
 	text-wrap: pretty;
+}
+
+/* Long-form body copy: 16/30 with 20px between paragraphs. The excluded
+   "Read more" link is its own 14px style, not this one. 30/16 is 1.875,
+   so the leading stays in px like the hero's. The 20px margins collapse
+   against each other, which is what makes the gap 20px and not 40px. */
+
+.groups-site-about > p:not(.wporg-page-content__more) {
+	line-height: 30px;
+	margin-block: 20px;
 }
 
 /* "Read more →" follows the quiet link idiom of "View all events →" —

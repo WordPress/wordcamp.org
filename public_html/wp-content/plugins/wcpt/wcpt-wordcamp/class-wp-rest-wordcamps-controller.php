@@ -99,8 +99,18 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 			return WordCamp_Loader::can_read_unscheduled_cancellation( $post );
 		}
 
-		// If post status is not listed as public, it cannot be read.
-		if ( ! in_array( $post->post_status, WordCamp_Loader::get_publicly_viewable_post_statuses(), true ) ) {
+		/*
+		 * The public statuses plus cancelled, not `get_publicly_viewable_post_statuses()`,
+		 * which also carries the six pre-planning statuses. Those resolve at their permalink
+		 * but are refused here, and aligning the two would publish the meta
+		 * `WordCamp_Loader::register_rest_public_fields()` exposes, including `Organizer Name`
+		 * and `WordPress.org Username`, which the permalink template does not render. That is
+		 * its own change, not a side effect of this one. See the `@todo` above.
+		 */
+		$readable_statuses   = WordCamp_Loader::get_public_post_statuses();
+		$readable_statuses[] = 'wcpt-cancelled';
+
+		if ( ! in_array( $post->post_status, $readable_statuses, true ) ) {
 			return false;
 		}
 

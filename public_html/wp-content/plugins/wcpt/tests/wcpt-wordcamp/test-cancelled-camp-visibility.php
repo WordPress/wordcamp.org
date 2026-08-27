@@ -198,13 +198,14 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * #1931 gave the pre-planning statuses a page on Central, and
-	 * `get_publicly_viewable_post_statuses()` brings the API into line with it. These
-	 * answer anonymously where they used to be refused, which is a deliberate widening.
+	 * The pre-planning statuses resolve at their permalink and stay refused here. Widening
+	 * this to `get_publicly_viewable_post_statuses()` would publish the meta
+	 * `register_rest_public_fields()` exposes, `Organizer Name` and `WordPress.org Username`
+	 * among it, which `single-wordcamp.php` never renders. That is its own change.
 	 *
 	 * @covers WordCamp_REST_WordCamps_Controller::check_read_permission
 	 */
-	public function test_pre_planning_camps_are_readable_over_rest() {
+	public function test_pre_planning_camps_are_not_readable_over_rest() {
 		foreach ( \WordCamp_Loader::get_pre_planning_post_statuses() as $status ) {
 			$camp = self::factory()->post->create(
 				array(
@@ -213,8 +214,49 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 				)
 			);
 
-			$this->assertSame( 200, $this->request_camp( $camp )->get_status(), "$status is not readable." );
+			$this->assertSame( 401, $this->request_camp( $camp )->get_status(), "$status is readable." );
 		}
+	}
+
+	/**
+	 * The clause and the predicate have to take the same exemptions. When the clause is the
+	 * more permissive of the two it selects a row the predicate then refuses, and
+	 * `get_items()` drops the item without reducing the total.
+	 *
+	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
+	 */
+	public function test_the_collection_agrees_with_its_count_inside_wp_admin() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		set_current_screen( 'edit-wordcamp' );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/wordcamps' );
+		$request->set_param( 'status', 'wcpt-cancelled' );
+		$request->set_param( '_fields', 'id' );
+
+		$response = rest_do_request( $request );
+
+		set_current_screen( 'front' );
+
+		$this->assertSame( count( $response->get_data() ), (int) $response->get_headers()['X-WP-Total'] );
+		$this->assertContains( $this->application, wp_list_pluck( $response->get_data(), 'id' ) );
+	}
+
+	/**
+	 * A camp can carry more than one row for the key. `IN ( ... )` matches any of them, so
+	 * reading only the first would put the two sides back out of step.
+	 *
+	 * @covers WordCamp_Loader::is_mentored_by
+	 */
+	public function test_a_second_mentor_row_is_recognised() {
+		$mentor = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+
+		add_post_meta( $this->application, 'Mentor WordPress.org User Name', 'somebody_else' );
+		add_post_meta( $this->application, 'Mentor WordPress.org User Name', $mentor->user_login );
+		wp_set_current_user( $mentor->ID );
+
+		$this->assertSame( 200, $this->request_camp( $this->application )->get_status() );
+		$this->assertCount( 1, $this->query_single( $this->application )->posts );
 	}
 
 	/**

@@ -273,6 +273,13 @@ class WordCamp_Loader extends Event_Loader {
 			return true;
 		}
 
+		// Every exemption the clause below takes has to be taken here too. Where the clause is
+		// the more permissive of the two, it selects a row this then refuses, and the response
+		// comes back short under a total that was never reduced.
+		if ( is_admin() && ! wp_doing_ajax() ) {
+			return true;
+		}
+
 		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return true;
 		}
@@ -315,11 +322,18 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return bool
 	 */
 	protected static function is_mentored_by( $post, $user ) {
-		$mentor = wcorg_get_user_by_canonical_names(
-			get_post_meta( $post->ID, 'Mentor WordPress.org User Name', true )
-		);
+		// Every row for the key, because `IN ( ... )` below matches any of them while
+		// `get_post_meta( ..., true )` reads only the first. Nothing in the admin writes a
+		// second one, but an import or WP-CLI can.
+		foreach ( get_post_meta( $post->ID, 'Mentor WordPress.org User Name' ) as $name ) {
+			$mentor = wcorg_get_user_by_canonical_names( $name );
 
-		return $mentor && $mentor->ID === $user->ID;
+			if ( $mentor && $mentor->ID === $user->ID ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

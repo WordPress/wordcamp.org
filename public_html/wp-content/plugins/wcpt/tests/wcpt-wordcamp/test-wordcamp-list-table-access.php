@@ -70,8 +70,8 @@ class Test_WordCamp_List_Table_Access extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The screen opens for anyone holding `edit_wordcamps`, which every lead organizer
-	 * does, so it has to come back with their own applications and nothing else.
+	 * `edit_wordcamps` is what opens this screen, and lead organizers hold it, so the query
+	 * has to come back with their own applications and nothing else.
 	 *
 	 * @covers WordCamp_Admin::limit_list_to_editable_wordcamps
 	 */

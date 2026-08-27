@@ -70,8 +70,9 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 	}
 
 	/**
-	 * `wcpt-scheduled` means the camp is on the official WordPress schedule, and core's
-	 * `handle_status_param()` waves custom statuses through with no capability check.
+	 * `wcpt-scheduled` means the camp is on the official WordPress schedule. Core's
+	 * `handle_status_param()` requires `publish_posts` for `publish`, `future` and `private`,
+	 * so the registered statuses this workflow uses are settled here instead.
 	 *
 	 * @covers WordCamp_Status_Guard::enforce_post_status
 	 */

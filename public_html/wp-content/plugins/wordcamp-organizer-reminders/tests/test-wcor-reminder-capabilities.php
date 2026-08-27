@@ -87,8 +87,8 @@ class Test_WCOR_Reminder_Capabilities extends WP_UnitTestCase {
 	}
 
 	/**
-	 * `save_post()` guarded on the primitive `edit_posts`, which every Contributor holds, and passed
-	 * it a post ID that a primitive never consults.
+	 * `save_post()` guarded on the primitive `edit_posts` and passed it a post ID, which a
+	 * primitive never consults, so the check read as per-post without being one.
 	 */
 	public function test_save_post_ignores_a_writer_who_cannot_edit_the_reminder() {
 		$reminder = self::factory()->post->create(

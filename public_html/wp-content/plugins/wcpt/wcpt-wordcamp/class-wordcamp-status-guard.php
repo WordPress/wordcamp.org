@@ -27,7 +27,30 @@ class WordCamp_Status_Guard {
 	 * @return array
 	 */
 	public static function enforce_post_status( $post_data, $post_data_raw ) {
-		if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) ) {
+		if ( WCPT_POST_TYPE_ID != $post_data['post_type'] ) {
+			return $post_data;
+		}
+
+		/*
+		 * Cron and WP-CLI without a user are the workflow's own writers:
+		 * `close_wordcamps_after_event()` sets `wcpt-closed` from cron, and operators move
+		 * applications from the command line. A user set with `wp --user` is held to the
+		 * capability like any other.
+		 */
+		$system_context = wp_doing_cron()
+			|| ( defined( 'WP_CLI' ) && WP_CLI && ! is_user_logged_in() );
+
+		// Not `WordCamp_Admin::get_edit_capability()`: that class is admin and cron only.
+		$may_set_status = $system_context || current_user_can( 'wordcamp_wrangle_wordcamps' );
+
+		/*
+		 * Updates only. An insert reaching `wp_insert_post()` has already been decided by the
+		 * caller, and clamping there would overrule trusted server-side code that names a
+		 * status on purpose. What keeps an application from being created at an arbitrary
+		 * status is `create_posts`, which `register_post_type()` maps to the curating
+		 * capability, so that mapping is load-bearing and should stay as strict as it is.
+		 */
+		if ( empty( $post_data_raw['ID'] ) ) {
 			return $post_data;
 		}
 
@@ -37,12 +60,8 @@ class WordCamp_Status_Guard {
 		}
 
 		if ( ! empty( $post_data['post_status'] ) ) {
-			// Only Wranglers change statuses. Cron and WP-CLI have no user to hold the
-			// capability, and `close_wordcamps_after_event()` writes `wcpt-closed` from cron.
-			$system_context = wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI );
-
-			// Not `WordCamp_Admin::get_edit_capability()`: that class is admin and cron only.
-			if ( ! $system_context && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			// The curating role owns the workflow, so a status only moves when they say so.
+			if ( ! $may_set_status ) {
 				$post_data['post_status'] = $post->post_status;
 			}
 

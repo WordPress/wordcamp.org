@@ -1955,8 +1955,8 @@ class WordCamp_Post_Types_Plugin {
 	 *
 	 * This generates the output to the extra columns added to the posts lists in the admin.
 	 *
-	 * The screen is gated on the generic `edit_posts`, which every Contributor holds, so
-	 * columns carrying private meta check the row, as `meta_auth_callback()` does for REST.
+	 * Columns carrying private meta check the row, so the screen requires what
+	 * `meta_auth_callback()` already requires for the same keys over REST.
 	 *
 	 * @see manage_post_types_columns()
 	 */

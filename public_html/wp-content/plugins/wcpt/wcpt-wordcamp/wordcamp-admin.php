@@ -1694,14 +1694,19 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * Limit the WordCamp list table to the applications the current user can edit.
 		 *
 		 * `wp_edit_posts_query()` asks for `perm => 'readable'` when a status is filtered, and
-		 * `readable` restricts results to their author only for the literal `private` status.
-		 * This workflow is expressed in custom statuses, so without this the screen lists
-		 * every application to anybody who can open it.
+		 * `readable` author-restricts the literal `private` status only. This workflow is
+		 * expressed in custom statuses, so the scope belongs here.
 		 *
 		 * @param WP_Query $query The query to filter.
 		 */
 		public function limit_list_to_editable_wordcamps( $query ) {
-			if ( ! $this->is_wordcamp_list_query( $query ) || current_user_can( self::get_edit_capability() ) ) {
+			if ( ! $this->is_wordcamp_list_query( $query ) ) {
+				return;
+			}
+
+			// Wranglers curate the pipeline, and a Central administrator already administers
+			// everything on this site, so both keep the whole list.
+			if ( current_user_can( self::get_edit_capability() ) || current_user_can( 'manage_options' ) ) {
 				return;
 			}
 
@@ -1801,8 +1806,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			 * That compare is a prefilter, not the answer. It also matches a camp whose mentor
 			 * name is somebody else's login that happens to be this user's nicename, and
 			 * `map_subrole_caps()` resolves the stored name login-first, so the two would
-			 * disagree about who the mentor is and this list would show a row its viewer
-			 * cannot open. Resolve it the same way and keep what comes back as this user.
+			 * name different mentors for the same camp. Resolve it the same way, so the list
+			 * and the capability system agree, and keep what comes back as this user.
 			 */
 			// Keyed by name, not by camp: `WP_User::get_data_by()` does not cache a miss, so a
 			// name stored as a nicename costs a failed `user_login` lookup every time it is

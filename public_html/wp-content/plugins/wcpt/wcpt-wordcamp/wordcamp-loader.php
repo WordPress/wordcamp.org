@@ -13,6 +13,8 @@ define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
  * @subpackage Loader
  * @since WordCamp Post Type (0.1)
  */
+require_once __DIR__ . '/class-wordcamp-status-guard.php';
+
 class WordCamp_Loader extends Event_Loader {
 
 	/**
@@ -27,8 +29,8 @@ class WordCamp_Loader extends Event_Loader {
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
 
-		// Not from `includes()`: that is hooked to `plugins_loaded`, and the Jetpack form
-		// bridge requires this loader from a form handler long after that fires.
+		// Registered here rather than from a loader method, because callers reach this file
+		// directly: the Jetpack form bridge requires it from a form handler.
 		WordCamp_Status_Guard::init();
 	}
 

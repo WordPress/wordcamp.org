@@ -21,10 +21,8 @@ add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_per
 /**
  * The post types whose attachments carry financial details.
  *
- * These are the slugs behind `WordCamp\Budgets\Reimbursement_Requests\POST_TYPE` and
- * `WCP_Payment_Request::POST_TYPE`. They're repeated here rather than referenced, because the files that define
- * those constants only load in the admin, and this file has to run on every request. `Test_Privacy` asserts the
- * two stay in step.
+ * Duplicates the `POST_TYPE` constants rather than referencing them: those files only load in the admin, and
+ * this one loads everywhere. `Test_Privacy` asserts the two stay in step.
  *
  * @return string[]
  */
@@ -34,16 +32,11 @@ function get_budget_request_post_types() {
 
 
 /**
- * Make sure `hide_others_payment_files()` gets a chance to run on any query that can return attachments.
+ * Apply the guards below even to queries that asked for filters to be suppressed.
  *
- * `get_posts()` -- and therefore `get_children()` -- passes `suppress_filters => true` by default, which makes
- * `WP_Query` skip `the_posts` along with every other query filter. Several callers in Core use those defaults to
- * list attachments, so a guard hung off those filters alone doesn't apply to them.
- *
- * `pre_get_posts` is the right place to correct that, because it is the one hook `WP_Query` fires before it
- * reads `suppress_filters`, so it cannot itself be suppressed. Unsuppressing costs those callers the small
- * optimization they asked for, which is a fair trade for not having the visibility of the files depend on every
- * call site remembering to opt in.
+ * `get_posts()` -- and so `get_children()` -- defaults to `suppress_filters => true`, which skips `posts_clauses`
+ * and `the_posts` alike. `pre_get_posts` is the only hook `WP_Query` fires before it reads that var, so it's the
+ * one place this can be corrected from.
  *
  * @param WP_Query $wp_query
  */
@@ -60,12 +53,10 @@ function unsuppress_attachment_query_filters( $wp_query ) {
 }
 
 /**
- * Whether a query could return attachments, and therefore needs the payment file guard applied to it.
+ * Whether a query could return attachments, and so needs the guards applied.
  *
- * `any` qualifies because it means every post type that isn't excluded from search, and `attachment` is public,
- * so it isn't. That's how `get_children()` queries by default. A query that names no post type at all also
- * qualifies, because `WP_Query` picks the set itself in that case -- a front-end search, for instance, covers
- * the same searchable post types that `any` does.
+ * `any` counts, because `attachment` is public and so isn't excluded from search -- that's what `get_children()`
+ * asks for by default. A query naming no post type counts too, since `WP_Query` picks the set itself.
  *
  * @param WP_Query $wp_query
  *
@@ -84,13 +75,12 @@ function query_may_return_attachments( $wp_query ) {
 /**
  * Exclude other users' payment files from a query, in SQL.
  *
- * This has to happen in the query rather than in its results, for two reasons. `WP_Query` returns early for
- * `fields => ids` and for the count that backs `found_posts`, before it ever reaches `the_posts`, so a filter on
- * the results can't reach either -- and a `found_posts` that counts rows the caller never receives is what breaks
- * "Load more" in the Media Library grid for non-admins.
+ * `WP_Query` returns early for `fields => ids` and for the count behind `found_posts`, both before `the_posts`,
+ * so a filter on the results reaches neither -- and a `found_posts` counting rows the caller never receives is
+ * what breaks "Load more" in the Media Library grid for non-admins.
  *
- * The condition mirrors `get_hidden_payment_file_ids()`: a payment file stays visible to whoever uploaded it and
- * to whoever filed the request it's attached to. Logged-out visitors match neither, so they see none of them.
+ * Mirrors `get_hidden_payment_file_ids()`: the uploader and the requester keep access, nobody else does. A
+ * logged-out visitor is neither.
  *
  * @param string[] $clauses
  * @param WP_Query $wp_query
@@ -100,11 +90,7 @@ function query_may_return_attachments( $wp_query ) {
 function exclude_others_payment_files( $clauses, $wp_query ) {
 	global $wpdb;
 
-	/*
-	 * Check the query before the capability, so that a query which can't return attachments doesn't force the
-	 * current user to be resolved. That matters for anything that runs a query before the auth cookie has been
-	 * read.
-	 */
+	// Test the query before the capability, so a query that can't match doesn't force the current user to resolve.
 	if ( ! query_may_return_attachments( $wp_query ) || current_user_can( 'manage_options' ) ) {
 		return $clauses;
 	}
@@ -113,10 +99,7 @@ function exclude_others_payment_files( $clauses, $wp_query ) {
 	$post_types   = get_budget_request_post_types();
 	$placeholders = implode( ', ', array_fill( 0, count( $post_types ), '%s' ) );
 
-	/*
-	 * `$placeholders` is a generated run of `%s`, one per post type, so that the `IN` list stays in step with
-	 * `get_budget_request_post_types()`. Everything the caller supplies still goes through the argument list.
-	 */
+	// `$placeholders` is a generated run of `%s`, so the `IN` list stays in step with the post types above.
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 	$clauses['where'] .= $wpdb->prepare(
 		" AND (
@@ -137,15 +120,13 @@ function exclude_others_payment_files( $clauses, $wp_query ) {
 }
 
 /**
- * Prevent non-admins from viewing payment files uploaded by other users.
+ * Drop other users' payment files from a set of query results.
  *
- * The files sometimes have sensitive information, like account numbers etc. `exclude_others_payment_files()`
- * already keeps them out of the query, so this is a second pass over whatever the query returned, for the case
- * where the SQL never ran: a plugin that short-circuits `posts_pre_query` -- an external search index, say --
- * supplies its own results, and those clauses are built but discarded.
+ * A second pass behind `exclude_others_payment_files()`, for results the SQL never produced: a `posts_pre_query`
+ * short-circuit (jetpack-search does this) supplies its own, and the clauses are built but discarded.
  *
- * The post type is read off each result rather than off the query, so that a query which returns attachments
- * incidentally -- `post_type => 'any'`, a mixed array of post types, a front-end search -- is covered too.
+ * Reads the post type off each result rather than off the query, so results that include attachments
+ * incidentally -- `post_type => 'any'`, a mixed array, a front-end search -- are covered too.
  *
  * @param WP_Post[]|int[] $posts
  *
@@ -182,9 +163,8 @@ function hide_others_payment_files( $posts ) {
 /**
  * Pick the attachments out of a set of query results, keyed by their position in that set.
  *
- * `the_posts` receives whatever `fields` the query asked for: `WP_Post` objects normally, but bare IDs for
- * `fields => ids`, and lightweight objects for `fields => id=>parent`. Only the first two can be mapped back to
- * a post, so the rest are ignored.
+ * `the_posts` receives whatever `fields` asked for: `WP_Post` objects normally, bare IDs for `fields => ids`,
+ * lightweight objects for `fields => id=>parent`. Only the first two map back to a post; the rest are ignored.
  *
  * @param WP_Post[]|int[] $posts
  *
@@ -219,9 +199,7 @@ function get_attachments_from_results( $posts ) {
 }
 
 /**
- * Determine which of the given attachments are payment files that the current user may not see.
- *
- * The uploader and the person who filed the request both keep access; everyone else who isn't an admin loses it.
+ * Which of the given attachments are payment files the current user may not see.
  *
  * @param WP_Post[] $attachments
  *

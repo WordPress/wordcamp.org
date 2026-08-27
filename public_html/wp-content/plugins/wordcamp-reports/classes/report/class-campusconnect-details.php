@@ -225,10 +225,14 @@ class CampusConnect_Details extends WordCamp_Details {
 	}
 
 	/**
-	 * The field set returned by the REST endpoint.
+	 * The fields the REST endpoint asks for.
 	 *
-	 * Deliberately identical to the checked-by-default fields on the admin
-	 * screen, so the endpoint and the CSV export stay in step.
+	 * An upper bound, not a promise. The safelist a caller actually receives is
+	 * capability-filtered at runtime -- `WordCamp_Admin::meta_keys()` drops
+	 * `Series Event` unless the caller has `manage_options` -- so this list is
+	 * intersected with what is available before the report is built. It is kept
+	 * deliberately narrow rather than defaulting to the whole safelist, which
+	 * would put organiser e-mail addresses and telephone numbers on the wire.
 	 *
 	 * @return array
 	 */
@@ -263,12 +267,27 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function rest_callback( $request ) {
+		/*
+		 * Ask only for fields this caller can actually be given. The safelist is
+		 * capability-filtered, and `validate_fields_input()` rejects the whole
+		 * request if it names one field the caller cannot have -- so without this
+		 * intersection a user holding exactly `view_wordcamp_reports` passes the
+		 * permission check and then receives a 500 instead of their report.
+		 */
+		$probe  = new static( null, null, false, array( 'public' => false ) );
+		$fields = array_values(
+			array_intersect(
+				self::get_rest_fields(),
+				array_keys( $probe->get_data_fields_safelist() )
+			)
+		);
+
 		$report = new static(
 			null,
 			null,
 			false,
 			array(
-				'fields' => self::get_rest_fields(),
+				'fields' => $fields,
 				'public' => false,
 			)
 		);

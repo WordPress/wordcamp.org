@@ -447,6 +447,31 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
+	 * admin-ajax is `is_admin()` too and any logged-in user can reach it, so the exemption
+	 * for wp-admin must not carry there.
+	 *
+	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
+	 */
+	public function test_the_wp_admin_exemption_does_not_reach_admin_ajax() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		set_current_screen( 'edit-wordcamp' );
+		add_filter( 'wp_doing_ajax', '__return_true' );
+
+		$query = new WP_Query(
+			array(
+				'post_type'   => WCPT_POST_TYPE_ID,
+				'post_status' => 'wcpt-cancelled',
+			)
+		);
+
+		remove_filter( 'wp_doing_ajax', '__return_true' );
+		set_current_screen( 'front' );
+
+		$this->assertNotContains( $this->application, wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
 	 * Run the query a request for a camp's permalink produces.
 	 *
 	 * Queried by name rather than through `go_to()`, which depends on rewrite rules and

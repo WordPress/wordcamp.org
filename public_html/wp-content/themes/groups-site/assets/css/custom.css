@@ -216,7 +216,6 @@ body.error404 .site-content-container h1 {
 }
 
 /* A photograph pinned to a mat, so it lifts a touch off it. */
-
 .groups-site-hero-card {
 	box-shadow: 0 2px 8px rgba(30, 30, 30, 0.08);
 }
@@ -689,6 +688,7 @@ body.error404 .site-content-container h1 {
 /* The info card leads in the source so that when the columns stack on
    mobile, date + RSVP land right under the hero, before the description.
    The grid swaps the pair on desktop: content left, card right. */
+
 .wp-block-columns.groups-site-event-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);

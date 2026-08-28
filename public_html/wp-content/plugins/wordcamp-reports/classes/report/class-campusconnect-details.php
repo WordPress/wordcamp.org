@@ -298,7 +298,8 @@ class CampusConnect_Details extends WordCamp_Details {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function rest_callback( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public static function rest_callback( $request ) {
+
 		/*
 		 * Ask only for fields this caller can actually be given. The safelist is
 		 * capability-filtered, and `validate_fields_input()` rejects the whole

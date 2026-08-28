@@ -83,30 +83,34 @@ class Test_Map_Meta_Cap extends WP_UnitTestCase {
 
 		unset( $GLOBALS['post'] );
 
-		remove_action( 'save_post', 'WordCamp\Budgets\Reimbursement_Requests\save_request', 10 );
-		remove_action( 'save_post', 'WordCamp\Budgets\Sponsor_Invoices\save_invoice', 10 );
-		remove_action( 'save_post', array( $GLOBALS['wcp_payment_request'], 'save_payment' ), 10 );
-
-		remove_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Reimbursement_Requests\set_request_status', 10 );
-		remove_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Sponsor_Invoices\set_invoice_status', 10 );
-		remove_filter( 'wp_insert_post_data', array( $GLOBALS['wcp_payment_request'], 'wp_insert_post_data' ), 10 );
+		foreach ( $this->save_handlers() as $handler ) {
+			remove_filter( $handler[0], $handler[1], 10 );
+		}
 	}
 
 	/**
-	 * Re-attach the handlers detached in `set_up()`.
+	 * `WP_UnitTestCase` restores `$wp_filter`, so the handlers detached in `set_up()` re-attach themselves.
 	 */
 	public function tear_down() {
-		add_action( 'save_post', 'WordCamp\Budgets\Reimbursement_Requests\save_request', 10, 2 );
-		add_action( 'save_post', 'WordCamp\Budgets\Sponsor_Invoices\save_invoice', 10, 2 );
-		add_action( 'save_post', array( $GLOBALS['wcp_payment_request'], 'save_payment' ), 10, 2 );
-
-		add_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Reimbursement_Requests\set_request_status', 10, 2 );
-		add_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Sponsor_Invoices\set_invoice_status', 10, 2 );
-		add_filter( 'wp_insert_post_data', array( $GLOBALS['wcp_payment_request'], 'wp_insert_post_data' ), 10, 2 );
-
 		unset( $GLOBALS['post'] );
 
 		parent::tear_down();
+	}
+
+	/**
+	 * The save handlers that run as a budget CPT is stored, as `array( $hook, $callback )` pairs.
+	 *
+	 * @return array
+	 */
+	protected function save_handlers() {
+		return array(
+			array( 'save_post', 'WordCamp\Budgets\Reimbursement_Requests\save_request' ),
+			array( 'save_post', 'WordCamp\Budgets\Sponsor_Invoices\save_invoice' ),
+			array( 'save_post', array( $GLOBALS['wcp_payment_request'], 'save_payment' ) ),
+			array( 'wp_insert_post_data', 'WordCamp\Budgets\Reimbursement_Requests\set_request_status' ),
+			array( 'wp_insert_post_data', 'WordCamp\Budgets\Sponsor_Invoices\set_invoice_status' ),
+			array( 'wp_insert_post_data', array( $GLOBALS['wcp_payment_request'], 'wp_insert_post_data' ) ),
+		);
 	}
 
 	/**
@@ -323,6 +327,25 @@ class Test_Map_Meta_Cap extends WP_UnitTestCase {
 		$this->assertFalse( current_user_can( 'edit_post', 'not-a-post-id' ) );
 		$this->assertFalse( current_user_can( 'delete_post', 'not-a-post-id' ) );
 		$this->assertFalse( current_user_can( 'edit_post', PHP_INT_MAX ) );
+	}
+
+	/**
+	 * An ID carrying trailing characters names no post, matching what `get_post()` resolves it to.
+	 *
+	 * @dataProvider data_budget_post_types
+	 *
+	 * @param string $post_type
+	 */
+	public function test_id_with_trailing_characters_names_no_post( $post_type ) {
+		$request = $this->create_non_draft( $post_type );
+
+		wp_set_current_user( self::$editor_id );
+
+		$this->assertNull( get_post( $request . 'abc' ) );
+		$this->assertNull( WordCamp_Budgets::get_map_meta_cap_post( array( $request . 'abc' ) ) );
+
+		$this->assertFalse( current_user_can( 'edit_post', $request . 'abc' ) );
+		$this->assertFalse( current_user_can( 'delete_post', $request . 'abc' ) );
 	}
 
 	/**

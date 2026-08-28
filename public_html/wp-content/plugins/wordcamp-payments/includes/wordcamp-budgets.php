@@ -872,8 +872,9 @@ class WordCamp_Budgets {
 
 			/*
 			 * $args[0] is whatever was passed to `current_user_can()`, so an ID can arrive as an int or as a
-			 * string -- `wp_ajax_upload_attachment()`, for example, passes `$_REQUEST['post_id']` as-is. Cast
-			 * and look it up the way Core's `map_meta_cap()` does, so both resolve the same post.
+			 * string -- `wp_ajax_upload_attachment()`, for example, passes `$_REQUEST['post_id']` as-is. The
+			 * numeric check and the cast mirror `get_post()`'s own contract, so this resolves the post Core's
+			 * `map_meta_cap()` resolves, and resolves nothing where Core resolves nothing.
 			 */
 			return is_numeric( $args[0] ) ? get_post( (int) $args[0] ) : null;
 		}

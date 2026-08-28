@@ -915,6 +915,11 @@ function notify_organizer_request_updated( $new_status, $old_status, $request ) 
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'draft_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 	if ( ! is_a( $post, 'WP_Post' ) || POST_TYPE !== $post->post_type ) {

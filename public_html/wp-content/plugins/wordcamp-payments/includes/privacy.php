@@ -428,7 +428,8 @@ function vendor_payment_exporter( $email_address, $page ) {
 		);
 
 		$vendor_payment_exp_data = array_merge(
-			$vendor_payment_exp_data, get_meta_details( $meta, PAYMENT_REQUEST_POST_TYPE )
+			$vendor_payment_exp_data,
+			get_meta_details( $meta, PAYMENT_REQUEST_POST_TYPE )
 		);
 
 		if ( ! empty( $vendor_payment_exp_data ) ) {
@@ -484,7 +485,8 @@ function reimbursements_exporter( $email_address, $page ) {
 
 		// Meta fields.
 		$reimbursement_data_to_export = array_merge(
-			$reimbursement_data_to_export, get_meta_details( $meta, REIMBURSEMENT_POST_TYPE )
+			$reimbursement_data_to_export,
+			get_meta_details( $meta, REIMBURSEMENT_POST_TYPE )
 		);
 
 		if ( ! empty( $reimbursement_data_to_export ) ) {

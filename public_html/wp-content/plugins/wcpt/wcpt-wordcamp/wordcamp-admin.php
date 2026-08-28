@@ -994,8 +994,20 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		public function add_organizer_to_central( $post ) {
 
+			/*
+			 * The status can also reach pre-planning without an admin POST -- via
+			 * WP-CLI, an importer, or a test -- in which case there is no username
+			 * to read and nothing to do. Reading the key unguarded warned, then
+			 * passed null to get_user_by(), which is deprecated in PHP 8.
+			 */
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- WordCamp status can be moved to pre-planning status only from the admin edit screen where nonce is already verified.
-			$lead_organizer = get_user_by( 'login', $_POST['wcpt_wordpress_org_username'] );
+			$organizer_username = isset( $_POST['wcpt_wordpress_org_username'] ) ? sanitize_user( wp_unslash( $_POST['wcpt_wordpress_org_username'] ) ) : '';
+
+			if ( '' === $organizer_username ) {
+				return;
+			}
+
+			$lead_organizer = get_user_by( 'login', $organizer_username );
 
 			if ( $lead_organizer && add_user_to_blog( get_current_blog_id(), $lead_organizer->ID, 'contributor' ) ) {
 				do_action( 'wcor_organizer_added_to_central', $post );

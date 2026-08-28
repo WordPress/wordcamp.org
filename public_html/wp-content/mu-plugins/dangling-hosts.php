@@ -458,6 +458,7 @@ function collect_references( array &$accumulator, array $references, $post_id, $
 
 		$reference['post_id']   = $post_id;
 		$reference['blog_id']   = (int) $blog_id;
+		$reference['site']      = home_url();
 		$reference['permalink'] = get_permalink( $post_id );
 
 		$accumulator[ $key ] = $reference;

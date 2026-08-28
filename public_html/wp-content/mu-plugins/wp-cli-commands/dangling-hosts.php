@@ -34,6 +34,10 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 * : Comma-separated reference kinds to report: script, embed, iframe, img, link, url.
 	 * Defaults to all of them.
 	 *
+	 * [--fields=<fields>]
+	 * : Comma-separated columns to output: status, kind, host, domain, site, blog_id, post_id, permalink, url.
+	 * Pass `--fields=site` to get just the affected sites.
+	 *
 	 * [--include-ok]
 	 * : Also list references whose hosts resolve normally. Useful for seeing the full external surface.
 	 *
@@ -67,6 +71,9 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 *     # Every external host the network references, whether or not it still resolves.
 	 *     wp wc-dangling scan --include-ok --format=csv
 	 *
+	 *     # Just the affected sites, one per line.
+	 *     wp wc-dangling scan --fields=site --format=csv | tail -n +2 | sort -u
+	 *
 	 * @subcommand scan
 	 *
 	 * @param array $args
@@ -77,6 +84,9 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 		$post_types = $this->parse_list( WP_CLI\Utils\get_flag_value( $assoc_args, 'post-types', 'post,page' ) );
 		$kinds      = $this->parse_kinds( WP_CLI\Utils\get_flag_value( $assoc_args, 'kinds', '' ) );
 		$blog_ids   = $this->parse_site( WP_CLI\Utils\get_flag_value( $assoc_args, 'site', '' ) );
+
+		// Validated up front -- a bad column name shouldn't surface only after a full network scan.
+		$fields = $this->parse_fields( WP_CLI\Utils\get_flag_value( $assoc_args, 'fields', '' ) );
 
 		// A progress bar would interleave with the report itself in the machine-readable formats.
 		$show_progress = in_array( $format, array( 'table', 'count' ), true );
@@ -110,8 +120,6 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 
 			return;
 		}
-
-		$fields = array( 'status', 'kind', 'host', 'domain', 'permalink', 'url' );
 
 		WP_CLI\Utils\format_items( $format, $references, $fields );
 
@@ -157,6 +165,36 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 		}
 
 		return array_values( array_filter( array_map( 'trim', explode( ',', $value ) ) ) );
+	}
+
+	/**
+	 * Validate the `--fields` option.
+	 *
+	 * @param string $value
+	 *
+	 * @return array
+	 */
+	protected function parse_fields( $value ) {
+		$available = array( 'status', 'kind', 'host', 'domain', 'site', 'blog_id', 'post_id', 'permalink', 'url' );
+		$fields    = $this->parse_list( $value );
+
+		if ( empty( $fields ) ) {
+			return array( 'status', 'kind', 'host', 'domain', 'site', 'permalink', 'url' );
+		}
+
+		$unknown = array_diff( $fields, $available );
+
+		if ( $unknown ) {
+			WP_CLI::error(
+				sprintf(
+					'Unknown field(s): %s. Valid fields are: %s.',
+					implode( ', ', $unknown ),
+					implode( ', ', $available )
+				)
+			);
+		}
+
+		return $fields;
 	}
 
 	/**

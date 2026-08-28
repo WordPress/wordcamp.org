@@ -351,6 +351,32 @@ class Test_Dangling_Hosts extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Dangling_Hosts\scan_site
 	 *
+	 * Each finding has to name the site it came from, so a network-wide report can be grouped by site without
+	 * anyone having to parse it back out of the permalink.
+	 */
+	public function test_scan_site_records_the_site_each_reference_came_from() {
+		$this->create_published_post( '<a href="https://example.net/article">Read more</a>' );
+
+		$references = scan_site( get_current_blog_id() );
+		$matched    = false;
+
+		foreach ( $references as $reference ) {
+			if ( 'example.net' !== $reference['host'] ) {
+				continue;
+			}
+
+			$matched = true;
+
+			$this->assertSame( get_current_blog_id(), $reference['blog_id'] );
+			$this->assertSame( home_url(), $reference['site'] );
+		}
+
+		$this->assertTrue( $matched, 'The seeded reference was not found.' );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
 	 * Unpublished content isn't served to anyone, so it shouldn't generate findings.
 	 */
 	public function test_scan_site_ignores_unpublished_posts() {

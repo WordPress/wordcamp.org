@@ -44,6 +44,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-payments/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Post Types">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wc-post-types/tests/

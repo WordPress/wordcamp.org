@@ -351,9 +351,7 @@ function register_rest_endpoints() {
 			 */
 			$permission_callback = method_exists( $class, 'rest_permission_callback' )
 				? array( $class, 'rest_permission_callback' )
-				: function () {
-					return current_user_can( CAPABILITY );
-				};
+				: __NAMESPACE__ . '\default_rest_permission_callback';
 
 			register_rest_route(
 				$namespace,
@@ -366,6 +364,24 @@ function register_rest_endpoints() {
 			);
 		}
 	}
+}
+
+/**
+ * Default permission callback for a report REST route.
+ *
+ * Applies to any report that declares `$rest_base` without supplying its own
+ * `rest_permission_callback()`. Reports read private post meta and non-public
+ * post statuses, so the default is deny-unless-capable; a report that wants to
+ * be readable publicly has to say so explicitly.
+ *
+ * A named function rather than a closure so it can be tested directly. No route
+ * uses it today -- every current report defines its own -- but it is the line
+ * protecting every report added later.
+ *
+ * @return bool
+ */
+function default_rest_permission_callback() {
+	return current_user_can( CAPABILITY );
 }
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_endpoints' );

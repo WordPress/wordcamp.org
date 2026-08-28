@@ -445,8 +445,10 @@ function collect_export_data( array $filters = array() ) {
 		$export_events[] = array(
 			'id'           => $event_id,
 			// Raw title, not get_the_title(): texturizing and entity-encoding
-			// belong to HTML output, not to a data export.
-			'title'        => $event->post_title,
+			// belong to HTML output, not to a data export. The stored value is
+			// itself entity-encoded (see `wcorg_sanitize_plain_text()`), so it
+			// gets decoded here for the same reason.
+			'title'        => html_entity_decode( $event->post_title ),
 			'start_gmt'    => $dates[ $event_id ]['start_gmt'] ?? '',
 			'end_gmt'      => $dates[ $event_id ]['end_gmt'] ?? '',
 			'venue'        => $venues[ $event_id ] ?? '',
@@ -786,7 +788,10 @@ function get_event_venue_names( array $event_ids ): array {
 		if ( 'online-event' === $term->slug ) {
 			$name = __( 'Online', 'wporg-groups-frontend' );
 		} else {
-			$name = $titles_by_name[ ltrim( $term->slug, '_' ) ] ?? $term->name;
+			// Decoded for the same reason as the event title: both the venue's
+			// `post_title` and the term name are stored entity-encoded, and an
+			// export is not an HTML medium.
+			$name = html_entity_decode( $titles_by_name[ ltrim( $term->slug, '_' ) ] ?? $term->name );
 		}
 
 		$venues[ $event_id ] = isset( $venues[ $event_id ] )

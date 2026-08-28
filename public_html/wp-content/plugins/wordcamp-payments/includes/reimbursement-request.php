@@ -66,6 +66,10 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 	);
 
 	return \register_post_type( POST_TYPE, $args );
@@ -936,7 +940,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 
 		case 'draft_post':
 			if ( $draft_or_incomplete_status ) {
-				$required_capabilities = array( 'edit_posts' );
+				$required_capabilities = array( \WordCamp_Budgets::VIEWER_CAP );
 			} else {
 				$required_capabilities[] = 'manage_network';
 			}

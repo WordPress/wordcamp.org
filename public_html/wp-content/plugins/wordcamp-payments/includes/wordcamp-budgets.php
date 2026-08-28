@@ -11,6 +11,29 @@ class WordCamp_Budgets {
 	public const ADMIN_CAP  = 'manage_options';
 
 	/**
+	 * The post types that make up the budget workflow and live under the Budget menu.
+	 *
+	 * Literal slugs, not each type's `POST_TYPE` constant: this class loads on requests where those files don't.
+	 */
+	public const PAYMENT_POST_TYPES = array(
+		'wcb_reimbursement',
+		'wcp_payment_request',
+		'wcb_sponsor_invoice',
+	);
+
+	/**
+	 * Capability map shared by the payment post types.
+	 *
+	 * Routes the list, creation and delete capabilities through VIEWER_CAP so they match the Budget menu the
+	 * screens live under, instead of the generic post capabilities they would otherwise inherit.
+	 */
+	public const POST_TYPE_CAPABILITIES = array(
+		'edit_posts'   => self::VIEWER_CAP,
+		'create_posts' => self::VIEWER_CAP,
+		'delete_posts' => self::VIEWER_CAP,
+	);
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -19,6 +42,36 @@ class WordCamp_Budgets {
 		add_action( 'admin_enqueue_scripts',  array( $this, 'enqueue_common_assets' ),             11    );
 		add_filter( 'user_has_cap',           array( __CLASS__, 'user_can_view_payment_details' ), 10, 4 );
 		add_filter( 'default_title',          array( $this, 'set_default_payments_title' ),        10, 2 );
+		add_action( 'pre_get_posts',          array( __CLASS__, 'restrict_payment_queries' )             );
+	}
+
+	/**
+	 * Confine budget list queries to users who can access the Budget screens.
+	 *
+	 * A second line of defence behind the post types' `edit_posts` capability: it enforces VIEWER_CAP on the
+	 * query itself, so the rows returned match the access the Budget screens grant even if the screen and the
+	 * query were to resolve their post type differently. Scoped to the admin main query, which is the list
+	 * table's query.
+	 *
+	 * @param WP_Query $query
+	 */
+	public static function restrict_payment_queries( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+
+		$queried_types = (array) $query->get( 'post_type' );
+
+		if ( ! array_intersect( $queried_types, self::PAYMENT_POST_TYPES ) ) {
+			return;
+		}
+
+		if ( current_user_can( self::VIEWER_CAP ) ) {
+			return;
+		}
+
+		// The caller cannot access the Budget screens, so this query must not return any budget records.
+		$query->set( 'post__in', array( 0 ) );
 	}
 
 	/**

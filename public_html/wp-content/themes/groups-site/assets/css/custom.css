@@ -149,16 +149,43 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Local navigation breadcrumbs
+   ========================================================================== */
+
+/* The breadcrumb is a flex item in the bar's row, and a flex item's default
+   `min-width: auto` floors it at its own content width — so a long event
+   title pushed the whole row past the viewport, carrying the navigation off
+   the right edge and scrolling the page sideways, instead of the wrapper
+   below clipping and scrolling within the space the bar can spare. Let it
+   shrink; the wrapper's own overflow then does the rest. */
+
+.wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
+	min-width: 0;
+}
+
+/* The breadcrumb wrapper scrolls sideways when a long event title overflows
+   the bar. The block's own fade-out mask already signals the clipped text;
+   the scrollbar a classic-scrollbar OS would draw under it is just noise in
+   a 40px-tall bar. */
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper {
+	scrollbar-width: none;
+}
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper::-webkit-scrollbar {
+	display: none;
+}
+
+/* ==========================================================================
    Inner-page header band
    ========================================================================== */
 
 /* Every inner page — news post, events archive, static page, venue, search —
-   opens with the same compact band: back link, then an h1. The templates only
-   supply the content; the band's look and the title size live here so the
-   pages can't drift apart. */
+   opens with the same compact header on the plain page background. The
+   templates only supply the content; the spacing and the title size live here
+   so the pages can't drift apart. */
 
 .groups-site-page-header {
-	background-color: var(--wp--preset--color--blueberry-4);
 	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--edge-space);
 }
 
@@ -171,23 +198,77 @@ body.error404 .site-content-container h1 {
    Front-page hero
    ========================================================================== */
 
-/* The nav bar above already carries the group name — this row stays on the
-   page background and closes with a hairline instead of a second slab. */
-
-.groups-site-hero {
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
-}
+/* A split hero on the plain page background: group details on the left and,
+   on the right, a polaroid — a white card holding the 16:9 photo and a share
+   row, dropped low inside a rounded colour mat (generous air above, flush
+   with the bottom edge, centred horizontally). The mat's colour lives on
+   `groups-site-hero-frame` as a plain block `backgroundColor` rather than a
+   CSS rule, so a group owner can retint it from the Site Editor's colour
+   panel without touching code. */
 
 .groups-site-hero-content .wp-block-site-title {
 	text-wrap: balance;
 }
 
-/* Core's post-featured-image block outputs nothing when the Home page has no
-   featured image, so there's no empty crop to guard against here. */
+/* The mat is specced at 640×440 in the design file: 640px is half of the
+   1280px content width (the media column's share), and the height comes from
+   holding that 640/440 ratio, so the mat renders at exactly the specced size
+   on a full-width desktop and scales in proportion below it. The card is
+   pinned to the mat's bottom edge and the leftover ratio height becomes the
+   air above the card — a fixed top padding would fight the ratio at narrow
+   widths. `aspect-ratio` is a preferred size, not a clamp, so if the card
+   ever outgrows the ratio the mat stretches rather than clips. */
+
+.groups-site-hero-frame {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	aspect-ratio: 640 / 440;
+}
+
+/* A photograph pinned to a mat, so it lifts a touch off it. */
+.groups-site-hero-card {
+	box-shadow: 0 2px 8px rgba(30, 30, 30, 0.08);
+}
+
+.groups-site-hero-share .wp-block-social-links {
+	gap: 16px;
+}
+
+/* Inside a phone-width card the seven icons at a 16px gap run 264px — past
+   the ~235px the card can give them, dropping the last icon to its own line.
+   10px brings the row to 228px, one line again down to ~375px viewports. */
+
+@media (max-width: 480px) {
+	.groups-site-hero-share .wp-block-social-links {
+		gap: 10px;
+	}
+}
+
+/* The block attribute already crops to 16:9; this pins the crop even for
+   markup core renders without the inline aspect-ratio (e.g. older saved
+   content), so the photo can never dictate the band's height. */
+
+.groups-site-hero-media .wp-block-post-featured-image {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border-radius: 2px;
+}
 
 .groups-site-hero-media img {
 	width: 100%;
+	height: 100%;
 	object-fit: cover;
+}
+
+/* Core's post-featured-image block outputs nothing when the Home page has no
+   featured image, which would leave this column as an empty colour mat —
+   drop the whole column, polaroid and all. The text column carries no width
+   of its own (core gives width-less columns `flex-grow: 1`), so it takes the
+   freed space with no further rule. */
+
+.groups-site-hero-media:not(:has(.wp-block-post-featured-image)) {
+	display: none;
 }
 
 /* ==========================================================================
@@ -258,7 +339,22 @@ body.error404 .site-content-container h1 {
 	gap: 6px;
 	width: 100%;
 	max-width: 320px;
-	padding: 10px 16px;
+
+	/*
+	 * Set the padding through the parent theme's own tokens rather than a
+	 * flat `padding`. Its outline `:focus` and `:active` rules recompute
+	 * padding from these — swapping the 1px border for an equal amount of
+	 * padding so the box stays put — and they restate the *global* 14px/32px
+	 * while doing it, which outranks a plain `padding` here and grows the
+	 * button by 8px the moment it takes focus.
+	 */
+
+	--wp--custom--button--spacing--padding--top: 10px;
+	--wp--custom--button--spacing--padding--bottom: 10px;
+	--wp--custom--button--spacing--padding--left: 16px;
+	--wp--custom--button--spacing--padding--right: 16px;
+	padding: var(--wp--custom--button--spacing--padding--top)
+		var(--wp--custom--button--spacing--padding--right);
 	font-size: var(--wp--preset--font-size--small);
 }
 
@@ -293,7 +389,7 @@ body.error404 .site-content-container h1 {
 /*
  * Sidebar headings are the one place that keeps the Inter 16px/600 utility
  * treatment. Every heading in the main column — My upcoming events,
- * Upcoming events, About this group, News, Sponsors — takes the Heading 3
+ * About this group, Upcoming events, News, Sponsors — takes the Heading 3
  * serif; a 36px serif in a 26%-wide rail would outrank the section it
  * labels. Sponsors is listed because it renders in both places.
  */
@@ -340,12 +436,15 @@ body.error404 .site-content-container h1 {
 	min-width: 0;
 }
 
-/* Body size at a two-line measure — the tagline is a description, not a
-   subtitle, so it shouldn't compete with the site title above it. */
+/* The tagline is a description, not a subtitle, so it drops to 14px and
+   shouldn't compete with the site title above it. The design specs the
+   leading in pixels (14/24 and 14/26 below); neither divides into a tidy
+   ratio, so both stay in px — the sizes are fixed, so nothing scales out
+   from under them. */
 
 .groups-site-hero .wp-block-site-tagline {
 	max-width: 72ch;
-	line-height: 1.6;
+	line-height: 24px;
 	text-wrap: pretty;
 }
 
@@ -357,6 +456,15 @@ body.error404 .site-content-container h1 {
 .groups-site-hero-meta .wporg-group-membership__meta {
 	gap: 8px;
 	flex-wrap: nowrap;
+}
+
+/* Both halves of the meta line share one leading so the dot between them
+   sits on the same baseline as the text on either side. */
+
+.groups-site-hero-meta,
+.groups-site-hero-meta .wp-block-wporg-group-location,
+.groups-site-hero-meta .wporg-group-membership__count {
+	line-height: 26px;
 }
 
 /* `wporg/group-location` renders nothing at all when the group hasn't set a
@@ -548,33 +656,66 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Single event hero
+   ========================================================================== */
+
+/*
+ * The event hero borrows the front-page split hero's bones — the
+ * `groups-site-hero-*` column classes carry the 16:9 crop and the
+ * hide-the-column-when-there-is-no-photo fallbacks — but each singular
+ * view wears its own band so a visitor always knows which floor of the
+ * house they're on: the group home sits on the plain page background with
+ * its photo in a coloured mat, a news post gets the Blueberry 4 band, and
+ * an event gets Light Grey 2 with the photo hanging bare.
+ */
+
+.groups-site-event-hero .groups-site-hero-text .wp-block-post-title {
+	text-wrap: balance;
+}
+
+/* The host's name is a person, not an action — it keeps the text colour
+   and lets the underline mark it as a link, the way speaker and member
+   names render, rather than turning blue like a UI control. */
+
+.groups-site-event-hero-host .wp-block-post-author-name a {
+	color: inherit;
+}
+
+/* "Part of {group} · {count}". The separator binds to the count it
+   introduces, mirroring the location + count pair on the front page. */
+
+.groups-site-event-hero-meta
+	.wp-block-site-title
+	+ .wporg-group-membership::before {
+	content: "\00b7";
+	content: "\00b7" / "";
+	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* ==========================================================================
    Single event layout
    ========================================================================== */
 
-/* Keep the title, event details, and main content in semantic source order. */
+/* The info card leads in the source so that when the columns stack on
+   mobile, date + RSVP land right under the hero, before the description.
+   The grid swaps the pair on desktop: content left, card right. */
+
 .wp-block-columns.groups-site-event-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
-	grid-template-rows: auto 1fr;
 	column-gap: var(--wp--preset--spacing--60);
-	row-gap: 0;
 	align-items: start;
-}
-
-.groups-site-event-title {
-	grid-column: 1;
-	grid-row: 1;
 }
 
 .groups-site-event-sidebar {
 	grid-column: 2;
-	grid-row: 1 / span 2;
+	grid-row: 1;
 }
 
 .groups-site-event-content {
 	display: block;
 	grid-column: 1;
-	grid-row: 2;
+	grid-row: 1;
 }
 
 /* ----------  Venue extras (description + access) ---------- */
@@ -693,9 +834,8 @@ body.error404 .site-content-container h1 {
 
    Pulled from the group's own About page by `wporg/page-content`, so the
    prose is edited in one place and this is only ever a view of it. It sits
-   *below* Upcoming events: a visitor who already knows the group came for
-   the dates, and a newcomer still finds the context one scroll down,
-   ahead of News and Sponsors.
+   between My upcoming events and Upcoming events: a member's own dates stay
+   first, and a newcomer gets the group's context before the event listings.
    ========================================================================== */
 
 .groups-site-about > :first-child {
@@ -714,11 +854,40 @@ body.error404 .site-content-container h1 {
 	text-wrap: pretty;
 }
 
+/* Long-form body copy: 16/30 with 20px between paragraphs. The excluded
+   "Read more" link is its own 14px style, not this one. 30/16 is 1.875,
+   so the leading stays in px like the hero's. The 20px margins collapse
+   against each other, which is what makes the gap 20px and not 40px. */
+
+.groups-site-about > p:not(.wporg-page-content__more) {
+	line-height: 30px;
+	margin-block: 20px;
+}
+
+/* "Read more →" follows the quiet link idiom of "View all events →" —
+   a continuation, not a call to action. */
+
+.wporg-page-content__more {
+	margin: var(--wp--preset--spacing--20) 0 0;
+}
+
+/* The organizer-only edit link sits inline right after the heading — on its
+   baseline, not pushed to the far edge like "View all events →": it belongs
+   to the heading, not to the section. The row carries the gap to the prose;
+   the heading inside it is flush. */
+
+.wporg-page-content__header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--20);
+	align-items: baseline;
+	margin-bottom: var(--wp--preset--spacing--30);
+}
+
 /* Organizer-only affordance. Deliberately quiet: it's a maintenance link on
    someone else's reading experience, not a call to action. */
 
 .wporg-page-content__edit {
-	margin: var(--wp--preset--spacing--20) 0 0;
 	font-size: var(--wp--preset--font-size--small);
 }
 
@@ -754,9 +923,45 @@ body.error404 .site-content-container h1 {
 	background: var(--wp--preset--color--deep-blueberry) !important;
 }
 
+/* An icon button is part of the field it sits against, not a call to
+   action: it wears the input's own grey fill so the pair reads as one
+   control. Only the labelled "Search" text button keeps the primary
+   blueberry. */
+
+.wp-block-search__button.has-icon {
+	background: var(--wp--preset--color--light-grey-2) !important;
+	color: var(--wp--preset--color--charcoal-1) !important;
+}
+
+.wp-block-search__button.has-icon:hover {
+	background: var(--wp--preset--color--light-grey-1) !important;
+}
+
 /* ==========================================================================
    Footer
    ========================================================================== */
+
+/* The callout's links render as a ruled list: a hairline above each row and
+   one closing the list, matching the global footer's palette. */
+
+.groups-site-callout-links p {
+	border-top: 1px solid var(--wp--preset--color--charcoal-4);
+	margin: 0;
+	padding: var(--wp--preset--spacing--20) 0;
+}
+
+.groups-site-callout-links p:last-child {
+	border-bottom: 1px solid var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-callout-links a {
+	display: block;
+	text-decoration: none;
+}
+
+.groups-site-callout-links a:hover {
+	text-decoration: underline;
+}
 
 .groups-site-footer a {
 	text-decoration: none;

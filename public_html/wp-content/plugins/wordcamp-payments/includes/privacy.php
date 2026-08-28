@@ -3,8 +3,6 @@
 namespace WordCamp\Budgets\Privacy;
 
 use WP_Query, WP_Post;
-use WordCamp\Budgets\Reimbursement_Requests;
-use WCP_Payment_Request;
 
 defined( 'WPINC' ) || die();
 
@@ -41,15 +39,23 @@ function is_cli_request() {
 
 
 /**
- * The post types whose attachments carry financial details.
+ * The post types this file acts on.
  *
- * Duplicates the `POST_TYPE` constants rather than referencing them: those files only load in the admin, and
- * this one loads everywhere. `Test_Privacy` asserts the two stay in step.
+ * Duplicates the `POST_TYPE` constants in `reimbursement-request.php` and `payment-request.php` rather than
+ * referencing them: those files only load in the admin, and this one loads everywhere -- referencing them from
+ * here fatals on front-end, REST, and XML-RPC requests. `Test_Privacy` asserts the two stay in step.
+ */
+const REIMBURSEMENT_POST_TYPE   = 'wcb_reimbursement';
+const PAYMENT_REQUEST_POST_TYPE = 'wcp_payment_request';
+
+
+/**
+ * The post types whose attachments carry financial details.
  *
  * @return string[]
  */
 function get_budget_request_post_types() {
-	return array( 'wcb_reimbursement', 'wcp_payment_request' );
+	return array( REIMBURSEMENT_POST_TYPE, PAYMENT_REQUEST_POST_TYPE );
 }
 
 
@@ -400,7 +406,7 @@ function vendor_payment_exporter( $email_address, $page ) {
 		'done' => true,
 	);
 
-	$vendor_payment_requests = get_post_wp_query( WCP_Payment_Request::POST_TYPE, $page, $email_address );
+	$vendor_payment_requests = get_post_wp_query( PAYMENT_REQUEST_POST_TYPE, $page, $email_address );
 
 	if ( empty( $vendor_payment_requests ) ) {
 		return $results;
@@ -422,14 +428,15 @@ function vendor_payment_exporter( $email_address, $page ) {
 		);
 
 		$vendor_payment_exp_data = array_merge(
-			$vendor_payment_exp_data, get_meta_details( $meta, WCP_Payment_Request::POST_TYPE )
+			$vendor_payment_exp_data,
+			get_meta_details( $meta, PAYMENT_REQUEST_POST_TYPE )
 		);
 
 		if ( ! empty( $vendor_payment_exp_data ) ) {
 			$data_to_export[] = array(
-				'group_id'    => WCP_Payment_Request::POST_TYPE,
+				'group_id'    => PAYMENT_REQUEST_POST_TYPE,
 				'group_label' => __( 'WordCamp Vendor Payments', 'wordcamporg' ),
-				'item_id'     => WCP_Payment_Request::POST_TYPE . "-{$post->ID}",
+				'item_id'     => PAYMENT_REQUEST_POST_TYPE . "-{$post->ID}",
 				'data'        => $vendor_payment_exp_data,
 			);
 		}
@@ -455,7 +462,7 @@ function reimbursements_exporter( $email_address, $page ) {
 		'done' => true,
 	);
 
-	$reimbursements = get_post_wp_query( Reimbursement_Requests\POST_TYPE, $page, $email_address );
+	$reimbursements = get_post_wp_query( REIMBURSEMENT_POST_TYPE, $page, $email_address );
 
 	if ( empty( $reimbursements ) ) {
 		return $results;
@@ -478,14 +485,15 @@ function reimbursements_exporter( $email_address, $page ) {
 
 		// Meta fields.
 		$reimbursement_data_to_export = array_merge(
-			$reimbursement_data_to_export, get_meta_details( $meta, Reimbursement_Requests\POST_TYPE )
+			$reimbursement_data_to_export,
+			get_meta_details( $meta, REIMBURSEMENT_POST_TYPE )
 		);
 
 		if ( ! empty( $reimbursement_data_to_export ) ) {
 			$data_to_export[] = array(
-				'group_id'    => Reimbursement_Requests\POST_TYPE,
+				'group_id'    => REIMBURSEMENT_POST_TYPE,
 				'group_label' => __( 'WordCamp Reimbursement Request', 'wordcamporg' ),
-				'item_id'     => Reimbursement_Requests\POST_TYPE . "-{$post->ID}",
+				'item_id'     => REIMBURSEMENT_POST_TYPE . "-{$post->ID}",
 				'data'        => $reimbursement_data_to_export,
 			);
 		}
@@ -519,7 +527,7 @@ function get_post_wp_query( $query_type, $page, $email_address ) {
 	);
 
 	switch ( $query_type ) {
-		case Reimbursement_Requests\POST_TYPE:
+		case REIMBURSEMENT_POST_TYPE:
 			$user = get_user_by( 'email', $email_address );
 
 			if ( empty( $user ) ) {
@@ -529,7 +537,7 @@ function get_post_wp_query( $query_type, $page, $email_address ) {
 			$query_args = array_merge( $query_args, array( 'post_author' => $user->ID ) );
 			break;
 
-		case WCP_Payment_Request::POST_TYPE:
+		case PAYMENT_REQUEST_POST_TYPE:
 			$query_args['meta_query'] = array(
 				'relation' => 'AND',
 			);
@@ -581,7 +589,7 @@ function get_meta_details( $meta, $post_type ) {
 function get_meta_fields_mapping( $post_type ) {
 	$mapping_fields = array();
 
-	if ( Reimbursement_Requests\POST_TYPE === $post_type ) {
+	if ( REIMBURSEMENT_POST_TYPE === $post_type ) {
 		$prefix         = '_wcbrr_';
 		$mapping_fields = array_merge(
 			$mapping_fields,
@@ -634,7 +642,7 @@ function get_meta_fields_mapping( $post_type ) {
 				$prefix . 'beneficiary_country_iso3166' => __( 'Beneficiary’s Country', 'wordcamporg' ),
 			)
 		);
-	} elseif ( WCP_Payment_Request::POST_TYPE === $post_type ) {
+	} elseif ( PAYMENT_REQUEST_POST_TYPE === $post_type ) {
 		$prefix         = '_camppayments_';
 		$mapping_fields = array_merge(
 			$mapping_fields,

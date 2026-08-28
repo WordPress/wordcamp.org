@@ -77,9 +77,9 @@ class Test_Dangling_Hosts extends Database_TestCase {
 	 * Create a published post whose content reaches the database verbatim.
 	 *
 	 * The suite defines `DISALLOW_UNFILTERED_HTML`, so `wp_insert_post()` runs the content through kses and
-	 * strips tags like `<script>`. Old imported content can still contain them, and they're the highest-risk
-	 * thing this scanner looks for, so the fixture writes the column directly rather than going through the
-	 * editor's sanitization.
+	 * strips tags like `<script>`. Old imported content can still contain them, and the scanner needs to
+	 * report them, so the fixture writes the column directly rather than going through the editor's
+	 * sanitization.
 	 *
 	 * @param string $content
 	 *
@@ -423,8 +423,8 @@ class Test_Dangling_Hosts extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Dangling_Hosts\scan_network
 	 *
-	 * A subdomain that stopped resolving under a domain that's still registered is a broken reference, but
-	 * nobody else can take it over, so it must not be conflated with a lapsed domain.
+	 * A subdomain that stopped resolving under a domain that's still registered needs different follow-up
+	 * than a lapsed registration, so the two must not be conflated.
 	 */
 	public function test_scan_network_separates_unresolved_from_dangling() {
 		$this->create_published_post(

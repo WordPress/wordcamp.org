@@ -15,8 +15,7 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 *
 	 * Walks the published posts and pages on each site, collects every third-party host they link to, embed,
 	 * or load a script from, and checks whether those hosts still resolve. A host that doesn't resolve, and
-	 * whose domain has no nameservers, is a domain somebody else can now register -- at which point our
-	 * content is pointing at whatever they decide to put there.
+	 * whose domain has no nameservers, is pointing at a registration that has lapsed.
 	 *
 	 * This only reports. What to do about a given reference depends on the post, so it needs a human.
 	 *
@@ -62,7 +61,7 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 *     # Audit one site.
 	 *     wp wc-dangling scan --site=seattle.wordcamp.org/2020
 	 *
-	 *     # Only the kinds that execute or render something, as JSON.
+	 *     # Only the kinds that are loaded as part of the page, as JSON.
 	 *     wp wc-dangling scan --kinds=script,embed,url --format=json
 	 *
 	 *     # Every external host the network references, whether or not it still resolves.

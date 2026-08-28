@@ -3,11 +3,7 @@
  * Find external references in published content whose domains no longer exist.
  *
  * Old WordCamp content links to and embeds a lot of third-party sites, and some of those domains eventually
- * lapse. A lapsed domain can be re-registered by anyone, at which point our content is pointing at whatever the
- * new owner puts there. That matters more for some references than others: a stale `<a href>` is a broken link,
- * but a WordPress oEmbed is a live consumer. Core's `wp-embed.min.js` un-hides the `wp-embedded-content` iframe
- * as soon as the framed document answers the embed handshake, so whatever the domain serves ends up rendered in
- * our page without the visitor doing anything.
+ * lapse. Our content goes on referencing them, and nothing currently notices.
  *
  * These functions only report. Deciding what to do about a reference -- update it, unlink it, point it at an
  * archived copy -- needs a human looking at the post.
@@ -54,11 +50,11 @@ const MULTI_LABEL_PUBLIC_SUFFIXES = array(
 );
 
 /**
- * Reference kinds, ordered by how much a re-registered domain would get to do with one.
+ * Reference kinds, ordered by how much the referenced host contributes to the rendered page.
  *
- * `script` is first because a script source runs in our origin. `embed` is a Core oEmbed iframe, which is
- * sandboxed but gets revealed automatically. `url` is a bare URL on its own line, which `WP_Embed::autoembed()`
- * turns into an `embed` when the post is rendered -- so it carries the same weight as one, just later.
+ * A `script` or an `embed` is loaded and used as part of the page, where a `link` is only followed if somebody
+ * clicks it, so the first two are worth reviewing first. `url` is a bare URL on its own line, which
+ * `WP_Embed::autoembed()` turns into an `embed` when the post is rendered, so it belongs with them.
  */
 const REFERENCE_KINDS = array( 'script', 'embed', 'iframe', 'img', 'link', 'url' );
 
@@ -578,10 +574,10 @@ function scan_network( array $args = array() ) {
 }
 
 /**
- * Sort the worst findings to the top.
+ * Sort the findings most worth reviewing to the top.
  *
- * Status first, then reference kind, since a dangling script source deserves attention before a dangling link
- * on the same domain.
+ * Status first, then reference kind, since a stale script source is more worth looking at than a stale link on
+ * the same domain.
  *
  * @param array $a
  * @param array $b

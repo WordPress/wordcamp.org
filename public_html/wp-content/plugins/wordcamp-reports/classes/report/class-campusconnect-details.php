@@ -20,8 +20,15 @@ use WordCamp_Admin, WordCamp_Loader;
  *
  * A report class for exporting a spreadsheet of CampusConnect events.
  *
- * Note that this report does not use caching because it is only used in WP Admin and has a large number of
- * optional parameters.
+ * Reachable two ways: the WP Admin screen, and a REST route for authorized
+ * callers (see `$rest_base`). It was admin-only before the REST route existed.
+ *
+ * This report does not use caching, and must not gain a naive one: the field
+ * safelist is filtered per-user capability (`WordCamp_Admin::meta_keys()` drops
+ * `Series Event` without `manage_options`), while `Base::get_cache_key()` varies
+ * only on slug and public/private context. A cache keyed that way would serve an
+ * administrator's rows to a `report_viewer` caller. Any cache added here must
+ * incorporate capability context.
  *
  * Note that this extends the WordCamp Details report for re-use, since it's very similar.
  *
@@ -227,12 +234,26 @@ class CampusConnect_Details extends WordCamp_Details {
 	/**
 	 * The fields the REST endpoint asks for.
 	 *
-	 * An upper bound, not a promise. The safelist a caller actually receives is
-	 * capability-filtered at runtime -- `WordCamp_Admin::meta_keys()` drops
-	 * `Series Event` unless the caller has `manage_options` -- so this list is
-	 * intersected with what is available before the report is built. It is kept
-	 * deliberately narrow rather than defaulting to the whole safelist, which
-	 * would put organiser e-mail addresses and telephone numbers on the wire.
+	 * A subset of `get_field_order()`, and an upper bound rather than a promise:
+	 * the safelist a caller actually receives is capability-filtered at runtime
+	 * (`WordCamp_Admin::meta_keys()` drops `Series Event` without
+	 * `manage_options`), so this list is intersected with what is available
+	 * before the rows are narrowed.
+	 *
+	 * Kept deliberately narrow rather than defaulting to the whole safelist,
+	 * which in a private context holds organiser e-mail addresses and telephone
+	 * numbers.
+	 *
+	 * `Actual Attendees` is here on purpose, and its presence is subtler than it
+	 * looks: `meta_keys()` unsets it whenever `get_post()` returns a post whose
+	 * status is not `wcpt-closed`. It survives a REST dispatch only because
+	 * there is no global `$post` at that point. If a future change sets up
+	 * postdata before this runs, the field will disappear from the response --
+	 * so that is a deliberate dependency, not an accident.
+	 *
+	 * `Tracker URL` is deliberately absent: it comes from `get_edit_post_link()`,
+	 * which returns null for callers who cannot edit the post -- precisely the
+	 * `report_viewer` audience this endpoint serves.
 	 *
 	 * @return array
 	 */
@@ -250,7 +271,6 @@ class CampusConnect_Details extends WordCamp_Details {
 			'Actual Attendees',
 			'Series Event',
 			'Created',
-			'Tracker URL',
 			'URL',
 			'ID',
 		);
@@ -259,14 +279,26 @@ class CampusConnect_Details extends WordCamp_Details {
 	/**
 	 * Handle a REST request for this report.
 	 *
-	 * Returns the same rows the admin screen renders, so a consumer can read
-	 * the report programmatically instead of exporting the CSV by hand.
+	 * Emits `get_data()` values rather than `prepare_data_for_display()` output:
+	 * the display path renames columns, translates status labels and formats
+	 * dates for humans, none of which is a stable contract for an automated
+	 * consumer. Raw keys and raw values are.
 	 *
-	 * @param \WP_REST_Request $request Request object.
+	 * The row narrowing is done here explicitly rather than being left to the
+	 * display path. `options['fields']` is consumed only by
+	 * `WordCamp_Details::prepare_data_for_display()`, so skipping that method
+	 * would otherwise widen the response to the entire private safelist --
+	 * organiser e-mail addresses and telephone numbers included. Two layers hold
+	 * the line: `get_data()` filters to the capability-filtered safelist, and the
+	 * intersection below narrows that to the fields this endpoint publishes.
+	 *
+	 * @param \WP_REST_Request $request Request object. Unused: this route takes
+	 *                                  no parameters and always returns every
+	 *                                  Campus Connect event.
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function rest_callback( $request ) {
+	public static function rest_callback( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		/*
 		 * Ask only for fields this caller can actually be given. The safelist is
 		 * capability-filtered, and `validate_fields_input()` rejects the whole
@@ -277,7 +309,7 @@ class CampusConnect_Details extends WordCamp_Details {
 		$probe  = new static( null, null, false, array( 'public' => false ) );
 		$fields = array_values(
 			array_intersect(
-				self::get_rest_fields(),
+				static::get_rest_fields(),
 				array_keys( $probe->get_data_fields_safelist() )
 			)
 		);
@@ -295,14 +327,32 @@ class CampusConnect_Details extends WordCamp_Details {
 		$messages = $report->error->get_error_messages();
 
 		if ( ! empty( $messages ) ) {
+			/*
+			 * The validation detail is internal -- it names field and option keys
+			 * -- so it is logged rather than returned to the caller.
+			 */
+			wp_trigger_error(
+				__METHOD__,
+				'Campus Connect Details REST report failed: ' . implode( ' ', $messages ),
+				E_USER_WARNING
+			);
+
 			return new WP_Error(
 				'wcr_campus_connect_details_failed',
-				implode( ' ', $messages ),
+				__( 'The report could not be generated.', 'wordcamporg' ),
 				array( 'status' => 500 )
 			);
 		}
 
-		return rest_ensure_response( $report->prepare_data_for_display( $report->get_data() ) );
+		$allowed = array_flip( $fields );
+		$rows    = array_map(
+			function ( $row ) use ( $allowed ) {
+				return array_intersect_key( $row, $allowed );
+			},
+			$report->get_data()
+		);
+
+		return self::prepare_rest_response( array_values( $rows ) );
 	}
 
 	/**

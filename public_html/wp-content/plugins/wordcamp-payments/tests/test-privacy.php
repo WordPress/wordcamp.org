@@ -323,6 +323,33 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The duplicated slugs above are only worth anything if nothing in `privacy.php` reaches for the originals.
+	 *
+	 * `reimbursement-request.php` and `payment-request.php` load in the admin only, so any reference to a symbol
+	 * they define is a fatal on every front-end, REST, and XML-RPC request -- which is how the personal data
+	 * exporters brought down `wp-json/wporg/v1/data-erase-preflight`. The admin loads both files, so a runtime
+	 * test can't see this; read the source instead.
+	 */
+	public function test_privacy_does_not_reference_admin_only_symbols() {
+		$source = file_get_contents( WORDCAMP_PAYMENTS_PATH . 'includes/privacy.php' );
+
+		$admin_only_symbols = array(
+			'Reimbursement_Requests\\POST_TYPE',
+			'WCP_Payment_Request',
+			'WordCamp_Budgets',
+			'Sponsor_Invoices',
+		);
+
+		foreach ( $admin_only_symbols as $symbol ) {
+			$this->assertStringNotContainsString(
+				$symbol,
+				$source,
+				"`privacy.php` loads outside the admin, so it can't reference `$symbol`."
+			);
+		}
+	}
+
+	/**
 	 * The people who are supposed to see the files.
 	 *
 	 * @return array

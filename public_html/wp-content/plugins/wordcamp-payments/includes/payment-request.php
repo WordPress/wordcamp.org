@@ -69,6 +69,10 @@ class WCP_Payment_Request {
 			'show_in_nav_menus' => true,
 			'supports'          => array( 'title' ),
 			'has_archive'       => true,
+
+			// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+			'map_meta_cap'      => true,
+			'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 		);
 
 		return register_post_type( self::POST_TYPE, $args );
@@ -980,6 +984,12 @@ Thanks for helping us with these details!",
 	 */
 	public function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
 		// todo maybe centralize this, since almost identical to counterparts in other modules
+
+		// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+		if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+			return $required_capabilities;
+		}
+
 		$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 		if ( is_a( $post, 'WP_Post' ) && self::POST_TYPE == $post->post_type ) {

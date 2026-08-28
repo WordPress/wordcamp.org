@@ -14,7 +14,7 @@
 <!-- wp:post-title {"textAlign":"center"} /-->
 
 <!-- wp:group {"layout":{"inherit":true,"type":"constrained"}} -->
-<div class="wp-block-group"><!-- wp:read-more {"content":"<?php esc_attr_e( 'Read More', 'wordcamp' ); ?>"} /--></div>
+<div class="wp-block-group"><!-- wp:read-more {"content":"<?php esc_attr_e( 'Read More', 'wordcamporg' ); ?>"} /--></div>
 <!-- /wp:group -->
 
 <!-- wp:spacer {"height":"50px"} -->

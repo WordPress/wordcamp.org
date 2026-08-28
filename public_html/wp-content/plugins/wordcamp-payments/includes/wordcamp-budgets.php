@@ -854,16 +854,29 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get the current post when inside a `map_meta_cap` callback
+	 * Get the post that a `map_meta_cap` callback is being asked about
 	 *
-	 * Normally it's just the global $post, but sometimes you have to dig it out of $args (e.g., a bulk edit)
+	 * That's the object named in $args. The global $post is only a fallback for checks that don't name one,
+	 * because it's often a different post -- e.g., during a bulk edit, or while a list table builds the row
+	 * actions for a post other than the one in the loop.
 	 *
-	 * @param array $args The $args that was passed to the `map_meta_cap` callback
+	 * @param array $args The $args that was passed to the `map_meta_cap` callback.
 	 *
 	 * @return WP_Post|null
 	 */
 	public static function get_map_meta_cap_post( $args ) {
-		$post = null;
+		if ( isset( $args[0] ) ) {
+			if ( $args[0] instanceof WP_Post ) {
+				return $args[0];
+			}
+
+			/*
+			 * $args[0] is whatever was passed to `current_user_can()`, so an ID can arrive as an int or as a
+			 * string -- `wp_ajax_upload_attachment()`, for example, passes `$_REQUEST['post_id']` as-is. Cast
+			 * and look it up the way Core's `map_meta_cap()` does, so both resolve the same post.
+			 */
+			return is_numeric( $args[0] ) ? get_post( (int) $args[0] ) : null;
+		}
 
 		/*
 		 * Use a reference to the global $post if it already exists, but don't create one otherwise
@@ -873,13 +886,7 @@ class WordCamp_Budgets {
 		 * If $GLOBAL['post'] didn't already exist and then we created one, then that could have unintentional
 		 * side-effects outside of this function.
 		 */
-		if ( isset( $GLOBALS['post'] ) ) {
-			$post = $GLOBALS['post'];
-		} elseif ( isset( $args[0] ) && is_int( $args[0] ) ) {
-			$post = get_post( $args[0] );
-		}
-
-		return $post;
+		return isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
 	}
 
 	/**

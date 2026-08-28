@@ -54,17 +54,14 @@ add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 /**
  * Give the post editor canvas a side gutter. See #1967.
  *
- * The front end gets its gutter from the `edge-space` group wrapping
- * `post-content` in the templates, which the post editor never renders. Not
- * done as `styles.spacing.padding` in `theme.json`, because root padding also
- * lands on `.wp-site-blocks` and would stack with the templates' own.
- *
- * Only the post editor. The site editor draws the template and its gutter.
+ * Not `styles.spacing.padding` in `theme.json`: root padding also hits
+ * `.wp-site-blocks`, stacking with the gutter the templates already set.
  *
  * @param array                    $settings Block editor settings.
  * @param \WP_Block_Editor_Context $context  Editor context.
  */
 function add_post_editor_canvas_gutter( $settings, $context ) {
+	// Post editor only. The site editor draws the template's own gutter.
 	if ( empty( $context->post ) ) {
 		return $settings;
 	}

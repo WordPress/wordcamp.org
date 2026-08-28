@@ -48,10 +48,10 @@ class WordCamp_Budgets {
 	/**
 	 * Confine budget list queries to users who can access the Budget screens.
 	 *
-	 * The list screen and the post type it queries are resolved from separate request parameters, so the
-	 * capability the screen enforces isn't guaranteed to be the one for the type actually queried. Enforce
-	 * VIEWER_CAP against the queried type so the rows always match the access the Budget screens grant. Scoped
-	 * to the admin main query, which is the list table's query.
+	 * A second line of defence behind the post types' `edit_posts` capability: it enforces VIEWER_CAP on the
+	 * query itself, so the rows returned match the access the Budget screens grant even if the screen and the
+	 * query were to resolve their post type differently. Scoped to the admin main query, which is the list
+	 * table's query.
 	 *
 	 * @param WP_Query $query
 	 */

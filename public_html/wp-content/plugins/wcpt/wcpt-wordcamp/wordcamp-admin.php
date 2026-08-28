@@ -993,7 +993,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param WP_Post $post
 		 */
 		public function add_organizer_to_central( $post ) {
-
 			/*
 			 * The status can also reach pre-planning without an admin POST -- via
 			 * WP-CLI, an importer, or a test -- in which case there is no username

@@ -331,7 +331,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	 * test can't see this; read the source instead.
 	 */
 	public function test_privacy_does_not_reference_admin_only_symbols() {
-		$source = file_get_contents( WORDCAMP_PAYMENTS_PATH . 'includes/privacy.php' );
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/privacy.php' );
 
 		$admin_only_symbols = array(
 			'Reimbursement_Requests\\POST_TYPE',

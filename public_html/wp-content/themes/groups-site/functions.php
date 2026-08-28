@@ -52,6 +52,50 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
+ * Give the post editor canvas the same side gutter the front end has.
+ *
+ * On the front end every template wraps `post-content` in a group padded by
+ * `spacing|edge-space` (see `templates/page.html`), so the 1160px content
+ * column never touches the viewport edge. The post editor renders
+ * `post-content` on its own — no template, no wrapper — and the theme sets no
+ * root padding in `theme.json`, so the canvas gets none of that. The
+ * content-width cap doesn't save it either: the canvas is usually *narrower*
+ * than the theme's 1160px `contentSize` (a 1440px window minus the 280px
+ * settings sidebar leaves exactly 1160), so the cap never binds and the text
+ * runs flush to the left edge of the frame.
+ *
+ * Padding the root container rather than adding `styles.spacing.padding` to
+ * `theme.json`: root padding also lands on `.wp-site-blocks` on the front
+ * end, where it would stack on top of the padding the templates already
+ * apply.
+ *
+ * Scoped to the post editor via `$context->post`. The site editor renders the
+ * template, gutter and all, and would come out double-padded.
+ *
+ * @param array                    $settings Block editor settings.
+ * @param \WP_Block_Editor_Context $context  Editor context.
+ */
+function add_post_editor_canvas_gutter( $settings, $context ) {
+	if ( empty( $context->post ) ) {
+		return $settings;
+	}
+
+	// The title sits in its own wrapper, a sibling of the block canvas
+	// rather than a block inside it, so it needs the gutter of its own —
+	// without it the heading hangs off the left of the body below it.
+	$settings['styles'][] = array(
+		'css' => '.is-root-container,
+			.editor-visual-editor__post-title-wrapper {
+				padding-left: var(--wp--preset--spacing--edge-space);
+				padding-right: var(--wp--preset--spacing--edge-space);
+			}',
+	);
+
+	return $settings;
+}
+add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canvas_gutter', 10, 2 );
+
+/**
  * Adjust the featured image inside event card grids.
  *
  * Two changes, both scoped so the single-event hero is left alone. The guard

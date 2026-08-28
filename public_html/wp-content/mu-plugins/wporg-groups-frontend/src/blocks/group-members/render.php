@@ -6,6 +6,7 @@
  */
 
 use WordCamp\Groups\Frontend\Members\Members_Controller;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role;
 
 $role_labels = Members_Controller::ROLE_LABELS;
 
@@ -50,6 +51,47 @@ usort(
 	}
 );
 
+/*
+ * Self-serve role switching is a beta-testing affordance, limited to the
+ * groups in `Capabilities\SELF_SERVE_ROLE_GROUPS` — see that constant for
+ * why it isn't offered on real community groups.
+ */
+$renders_role_switcher = current_user_can_switch_own_role();
+$current_user_role     = '';
+
+if ( $renders_role_switcher ) {
+	$switcher_user     = wp_get_current_user();
+	$current_user_role = reset( $switcher_user->roles ) ?: 'subscriber';
+
+	// A role outside the three switchable tiers (a stray `contributor`, say)
+	// has no button to mark as current; the switcher still lets them move
+	// into one of the three.
+	$switcher_roles = array(
+		'subscriber' => array(
+			'label'       => __( 'Member', 'wporg-groups-frontend' ),
+			'description' => __( 'Join and leave, RSVP, set email preferences.', 'wporg-groups-frontend' ),
+		),
+		'author'     => array(
+			'label'       => __( 'Event Organizer', 'wporg-groups-frontend' ),
+			'description' => __( 'Everything a Member can do, plus create and manage your own events and venues.', 'wporg-groups-frontend' ),
+		),
+		'editor'     => array(
+			'label'       => __( 'Organizer', 'wporg-groups-frontend' ),
+			'description' => __( "Everything an Event Organizer can do, plus manage everyone's events, member roles, group info and design.", 'wporg-groups-frontend' ),
+		),
+	);
+
+	$switcher_context = array(
+		'currentRole' => $current_user_role,
+		'saving'      => false,
+		'message'     => '',
+		'isError'     => false,
+		'roleApi'     => rest_url( 'wporg-groups/v1/members/me/role' ),
+		'restNonce'   => wp_create_nonce( 'wp_rest' ),
+		'errorLabel'  => __( 'Your role could not be changed. Please try again.', 'wporg-groups-frontend' ),
+	);
+}
+
 $total_count = count( $users );
 
 $wrapper_attributes = get_block_wrapper_attributes(
@@ -67,6 +109,52 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		);
 		?>
 	</h2>
+
+	<?php if ( $renders_role_switcher ) : ?>
+		<div
+			class="wporg-group-members__role-switcher"
+			data-wp-interactive="wporg/group-members"
+			data-wp-context="<?php echo esc_attr( wp_json_encode( $switcher_context ) ); ?>"
+		>
+			<h3 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
+				<?php esc_html_e( 'Your role in this group', 'wporg-groups-frontend' ); ?>
+			</h3>
+			<p class="wporg-group-members__role-switcher-help">
+				<?php esc_html_e( 'This is a testing group, so you can switch your own role to try out the organizer tools. Pick a role below, then switch back whenever you like.', 'wporg-groups-frontend' ); ?>
+			</p>
+
+			<div class="wporg-group-members__role-options" role="group" aria-labelledby="wporg-role-switcher-heading">
+				<?php foreach ( $switcher_roles as $role_slug => $switcher_role ) :
+					$is_current = $role_slug === $current_user_role;
+					?>
+					<button
+						type="button"
+						class="wporg-group-members__role-option<?php echo $is_current ? ' is-current' : ''; ?>"
+						data-role="<?php echo esc_attr( $role_slug ); ?>"
+						aria-pressed="<?php echo $is_current ? 'true' : 'false'; ?>"
+						data-wp-on--click="actions.switchRole"
+						data-wp-bind--disabled="context.saving"
+						data-wp-bind--aria-busy="context.saving"
+					>
+						<span class="wporg-group-members__role-option-label">
+							<?php echo esc_html( $switcher_role['label'] ); ?>
+						</span>
+						<span class="wporg-group-members__role-option-description">
+							<?php echo esc_html( $switcher_role['description'] ); ?>
+						</span>
+					</button>
+				<?php endforeach; ?>
+			</div>
+
+			<p
+				class="wporg-group-members__role-switcher-status"
+				role="status"
+				aria-live="polite"
+				data-wp-text="context.message"
+				data-wp-class--is-error="context.isError"
+			></p>
+		</div>
+	<?php endif; ?>
 
 	<div class="wporg-group-members__grid">
 		<?php foreach ( $users as $user ) :

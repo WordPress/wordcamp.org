@@ -52,6 +52,35 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
+ * Give the post editor canvas a side gutter. See #1967.
+ *
+ * Not `styles.spacing.padding` in `theme.json`: root padding also hits
+ * `.wp-site-blocks`, stacking with the gutter the templates already set.
+ *
+ * @param array                    $settings Block editor settings.
+ * @param \WP_Block_Editor_Context $context  Editor context.
+ */
+function add_post_editor_canvas_gutter( $settings, $context ) {
+	// Post editor only. The site editor draws the template's own gutter.
+	if ( empty( $context->post ) ) {
+		return $settings;
+	}
+
+	// The title is a sibling of the block canvas, not a block in it, so it
+	// needs its own padding or it hangs off the left of the body text.
+	$settings['styles'][] = array(
+		'css' => '.is-root-container,
+			.editor-visual-editor__post-title-wrapper {
+				padding-left: var(--wp--preset--spacing--edge-space);
+				padding-right: var(--wp--preset--spacing--edge-space);
+			}',
+	);
+
+	return $settings;
+}
+add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canvas_gutter', 10, 2 );
+
+/**
  * Adjust the featured image inside event card grids.
  *
  * Two changes, both scoped so the single-event hero is left alone. The guard

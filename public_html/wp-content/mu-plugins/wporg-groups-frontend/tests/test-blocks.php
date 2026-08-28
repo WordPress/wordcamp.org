@@ -490,4 +490,250 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'A group update', $output );
 		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}
+
+	/**
+	 * Creates a published page and renders it through the page-content block.
+	 *
+	 * @param string $slug    Page slug, unique per test to dodge path caching.
+	 * @param string $content Block markup for the page content.
+	 * @param bool   $excerpt Whether to render the block in excerpt mode.
+	 * @return string Rendered block output.
+	 */
+	private function render_page_content_block( string $slug, string $content, bool $excerpt = true ): string {
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_name'    => $slug,
+				'post_title'   => 'About',
+				'post_content' => $content,
+			)
+		);
+
+		$attributes = wp_json_encode(
+			array(
+				'slug'    => $slug,
+				'heading' => 'About this group',
+				'excerpt' => $excerpt,
+			)
+		);
+
+		return do_blocks( "<!-- wp:wporg/page-content {$attributes} /-->" );
+	}
+
+	/**
+	 * Excerpt mode shows at most three paragraphs, with a "Read more" link
+	 * pointing at the page whenever content was held back.
+	 */
+	public function test_page_content_excerpt_caps_paragraph_count() {
+		$paragraphs = '';
+		foreach ( range( 1, 5 ) as $n ) {
+			$paragraphs .= "<!-- wp:paragraph --><p>Paragraph number {$n}.</p><!-- /wp:paragraph -->";
+		}
+
+		$output = $this->render_page_content_block( 'about-cap', $paragraphs );
+
+		$this->assertStringContainsString( 'Paragraph number 3.', $output );
+		$this->assertStringNotContainsString( 'Paragraph number 4.', $output );
+		$this->assertStringContainsString( 'Read more', $output );
+		$this->assertStringContainsString( 'about-cap', $output );
+	}
+
+	/**
+	 * The teaser is a strict prefix: it stops at the first non-prose block
+	 * instead of skipping it and stitching later paragraphs together.
+	 */
+	public function test_page_content_excerpt_stops_at_first_non_prose_block() {
+		$content = '<!-- wp:paragraph --><p>Opening prose.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:image --><figure class="wp-block-image"><img src="https://example.com/group.jpg" alt=""/></figure><!-- /wp:image -->'
+			. '<!-- wp:paragraph --><p>Prose after the image.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block( 'about-prefix', $content );
+
+		$this->assertStringContainsString( 'Opening prose.', $output );
+		$this->assertStringNotContainsString( '<img', $output );
+		$this->assertStringNotContainsString( 'Prose after the image.', $output );
+		$this->assertStringContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * A heading before any prose is the page's own title; the block heading
+	 * already labels the section, so the duplicate is dropped without
+	 * counting as truncation.
+	 */
+	public function test_page_content_excerpt_skips_leading_heading() {
+		$content = '<!-- wp:heading {"level":1} --><h1 class="wp-block-heading">About Our Group</h1><!-- /wp:heading -->'
+			. '<!-- wp:paragraph --><p>The only paragraph.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block( 'about-heading', $content );
+
+		$this->assertStringNotContainsString( 'About Our Group', $output );
+		$this->assertStringNotContainsString( '<h1', $output );
+		$this->assertStringContainsString( 'The only paragraph.', $output );
+		$this->assertStringNotContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * A short all-prose page renders in full with no "Read more" link.
+	 */
+	public function test_page_content_excerpt_short_page_renders_fully() {
+		$content = '<!-- wp:paragraph --><p>First short paragraph.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:paragraph --><p>Second short paragraph.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block( 'about-short', $content );
+
+		$this->assertStringContainsString( 'First short paragraph.', $output );
+		$this->assertStringContainsString( 'Second short paragraph.', $output );
+		$this->assertStringNotContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * An explicit "More" block is the organizer's own cut point and
+	 * overrides the paragraph/character heuristics.
+	 */
+	public function test_page_content_excerpt_respects_more_block() {
+		$content = '<!-- wp:paragraph --><p>Before the cut.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:more --><!--more--><!-- /wp:more -->'
+			. '<!-- wp:paragraph --><p>After the cut.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block( 'about-more', $content );
+
+		$this->assertStringContainsString( 'Before the cut.', $output );
+		$this->assertStringNotContainsString( 'After the cut.', $output );
+		$this->assertStringContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * The character budget cuts at a block boundary: a paragraph that would
+	 * push the teaser past the budget is held back whole, never split.
+	 */
+	public function test_page_content_excerpt_applies_character_budget() {
+		$long    = str_repeat( 'Many words about the group. ', 30 ); // ~840 chars.
+		$content = '<!-- wp:paragraph --><p>A short opener.</p><!-- /wp:paragraph -->'
+			. "<!-- wp:paragraph --><p>{$long}</p><!-- /wp:paragraph -->";
+
+		$output = $this->render_page_content_block( 'about-budget', $content );
+
+		$this->assertStringContainsString( 'A short opener.', $output );
+		$this->assertStringNotContainsString( 'Many words about the group.', $output );
+		$this->assertStringContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * A page with no leading prose (e.g. it opens with an image) falls back
+	 * to the section heading and a "Read more" link instead of vanishing or
+	 * leaking the media into the teaser.
+	 */
+	public function test_page_content_excerpt_media_only_page_falls_back_to_read_more() {
+		$content = '<!-- wp:image --><figure class="wp-block-image"><img src="https://example.com/group.jpg" alt=""/></figure><!-- /wp:image -->';
+
+		$output = $this->render_page_content_block( 'about-media', $content );
+
+		$this->assertStringNotContainsString( '<img', $output );
+		$this->assertStringContainsString( 'About this group', $output );
+		$this->assertStringContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * Without the excerpt attribute the block still renders the page
+	 * verbatim — headings, media, and all.
+	 */
+	public function test_page_content_full_mode_renders_everything() {
+		$content = '<!-- wp:heading {"level":1} --><h1 class="wp-block-heading">About Our Group</h1><!-- /wp:heading -->'
+			. '<!-- wp:image --><figure class="wp-block-image"><img src="https://example.com/group.jpg" alt=""/></figure><!-- /wp:image -->'
+			. '<!-- wp:paragraph --><p>Full-page prose.</p><!-- /wp:paragraph -->';
+
+		// Full mode runs `the_content`, and several wc-post-types callbacks
+		// on that filter reach into the theme-templates mu-plugin, which this
+		// suite does not load (see test-rest-api-session-speakers for the
+		// same constraint). Hooks are restored automatically after the test.
+		global $wp_filter;
+		foreach ( $wp_filter['the_content']->callbacks ?? array() as $priority => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$function = $callback['function'];
+				$target   = is_array( $function ) ? $function[0] : null;
+				if ( $target instanceof \WordCamp_Post_Types_Plugin || 'WordCamp_Post_Types_Plugin' === $target ) {
+					remove_filter( 'the_content', $function, $priority );
+				}
+			}
+		}
+
+		$output = $this->render_page_content_block( 'about-full', $content, false );
+
+		$this->assertStringContainsString( 'About Our Group', $output );
+		$this->assertStringContainsString( '<img', $output );
+		$this->assertStringContainsString( 'Full-page prose.', $output );
+		$this->assertStringNotContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * A draft target page (e.g. the About draft seeded during provisioning)
+	 * stays invisible to visitors, while organizers get an edit link to the
+	 * existing draft — not a create link that would duplicate the slug.
+	 */
+	public function test_page_content_draft_page_offers_edit_link_to_organizers() {
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'draft',
+				'post_name'    => 'about-draft',
+				'post_title'   => 'About',
+				'post_content' => '<!-- wp:paragraph --><p>Seeded example prose.</p><!-- /wp:paragraph -->',
+			)
+		);
+
+		$attributes = wp_json_encode(
+			array(
+				'slug'    => 'about-draft',
+				'heading' => 'About this group',
+				'excerpt' => true,
+			)
+		);
+		$markup     = "<!-- wp:wporg/page-content {$attributes} /-->";
+
+		$this->assertSame( '', trim( do_blocks( $markup ) ) );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$organizer_output = do_blocks( $markup );
+		wp_set_current_user( 0 );
+
+		$this->assertStringContainsString( 'Finish the draft', $organizer_output );
+		$this->assertStringContainsString( 'action=edit', $organizer_output );
+		$this->assertStringContainsString( 'post=' . $draft_id, $organizer_output );
+		$this->assertStringNotContainsString( 'post-new.php', $organizer_output );
+		$this->assertStringNotContainsString( 'Seeded example prose.', $organizer_output );
+	}
+
+	/**
+	 * The organizer-only "Edit this content" link sits in one row with the
+	 * section heading; visitors get the heading alone.
+	 */
+	public function test_page_content_edit_link_shares_the_heading_row() {
+		$content = '<!-- wp:paragraph --><p>Header row paragraph.</p><!-- /wp:paragraph -->';
+
+		$visitor_output = $this->render_page_content_block( 'about-header', $content );
+		$this->assertStringNotContainsString( 'wporg-page-content__edit', $visitor_output );
+		$this->assertStringContainsString( 'wporg-page-content__header', $visitor_output );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$attributes       = wp_json_encode(
+			array(
+				'slug'    => 'about-header',
+				'heading' => 'About this group',
+				'excerpt' => true,
+			)
+		);
+		$organizer_output = do_blocks( "<!-- wp:wporg/page-content {$attributes} /-->" );
+
+		wp_set_current_user( 0 );
+
+		$header_start = strpos( $organizer_output, 'wporg-page-content__header' );
+		$header_end   = strpos( $organizer_output, '</div>', $header_start );
+		$header_row   = substr( $organizer_output, $header_start, $header_end - $header_start );
+
+		$this->assertStringContainsString( 'About this group', $header_row );
+		$this->assertStringContainsString( 'wporg-page-content__edit', $header_row );
+		$this->assertStringContainsString( 'Edit this content', $header_row );
+	}
 }

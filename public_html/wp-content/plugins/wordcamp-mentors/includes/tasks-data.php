@@ -326,7 +326,7 @@ function get_task_data() {
 			),
 		),
 		'cxpj' => array(
-			'title'   => __( 'Makes plans for volunteer orientation', 'wordcamporg' ),
+			'title'   => __( 'Make plans for volunteer orientation', 'wordcamporg' ),
 			'excerpt' => __( 'Decide if you will do an in person, video, or text orientation for volunteers and plan accordingly.', 'wordcamporg' ),
 			'cat'     => array( 'volunteer' ),
 			'link'    => array(

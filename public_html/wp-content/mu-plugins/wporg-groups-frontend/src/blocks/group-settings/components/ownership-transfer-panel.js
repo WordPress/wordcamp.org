@@ -36,7 +36,7 @@ const STATUS_LABELS = {
 // PHP side ever writes — see `group-ownership-transfer.php`.
 const FINAL_STATUS_LABELS = {
 	declined: __( 'Declined', 'wporg-groups-frontend' ),
-	cancelled: __( 'Cancelled', 'wporg-groups-frontend' ),
+	cancelled: __( 'Canceled', 'wporg-groups-frontend' ),
 	completed: __( 'Completed', 'wporg-groups-frontend' ),
 	rejected: __( 'Rejected', 'wporg-groups-frontend' ),
 };

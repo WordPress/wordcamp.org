@@ -540,7 +540,7 @@ function get_task_data() {
 		),
 		'gnws' => array(
 			'title'   => __( 'Ship camera kits (if using WordCamp Central kits)', 'wordcamporg' ),
-			'excerpt' => __( 'If you used WordCamp Central\'s camera kits it\'s time to ship them on to the next event or back to their base for service. Someone for WordCamp Central will reach out to you with instructions.', 'wordcamporg' ),
+			'excerpt' => __( 'If you used WordCamp Central\'s camera kits it\'s time to ship them on to the next event or back to their base for service. Someone from WordCamp Central will reach out to you with instructions.', 'wordcamporg' ),
 			'cat'     => array( 'audio-video' ),
 		),
 		'f8k2' => array(

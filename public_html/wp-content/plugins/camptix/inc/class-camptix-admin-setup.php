@@ -56,7 +56,7 @@ class CampTix_Admin_Setup {
 				$this->add_settings_field_helper( 'currency', __( 'Currency', 'wordcamporg' ), 'field_currency' );
 
 				$this->add_settings_field_helper( 'refunds_enabled', __( 'Enable Refund Requests by Attendees', 'wordcamporg' ), 'field_enable_refunds', false,
-					__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form. Organizers are able to refund regardless of this setting.", 'wordcamporg' )
+					__( "This will allows your customers to refund their ticket purchase by filling out a simple refund form. Organizers are able to refund regardless of this setting.", 'wordcamporg' )
 				);
 
 				break;

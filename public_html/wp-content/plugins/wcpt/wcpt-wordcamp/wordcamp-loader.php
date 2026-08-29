@@ -199,7 +199,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => _x( 'On Hold',                                     'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                                    'wordcamp status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                                   'wordcamp status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                                   'wordcamp status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved for Pre-Planning Pending Agreement', 'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
@@ -498,7 +498,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                 'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                 'campus connect status', 'wordcamporg' ),
 		);
 	}
 

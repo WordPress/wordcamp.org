@@ -444,7 +444,7 @@ function get_task_data() {
 			'cat'     => array( 'committee', 'speaker' ),
 		),
 		'c46e' => array(
-			'title'   => __( 'Confirm catering ', 'wordcamporg' ),
+			'title'   => __( 'Confirm catering', 'wordcamporg' ),
 			'excerpt' => __( 'Confirm catering menu for any meals or snacks you have arranged based on attendee numbers. Ensure delivery/pickup is scheduled. Please do not run out of coffee. At this time confirm menus for any ancillary events (ie: contributor day, speaker event, after party, etc.) you may be having.', 'wordcamporg' ),
 			'cat'     => array( 'food' ),
 			'link'    => array(
@@ -544,7 +544,7 @@ function get_task_data() {
 			'cat'     => array( 'audio-video' ),
 		),
 		'f8k2' => array(
-			'title'   => __( 'Close out your budget ', 'wordcamporg' ),
+			'title'   => __( 'Close out your budget', 'wordcamporg' ),
 			'excerpt' => __( 'Make sure all payment requests are submitted and balance your budget within two weeks of your event. If you have any questions reach out to support@wordcamp.org.', 'wordcamporg' ),
 			'cat'     => array( 'budget' ),
 		),

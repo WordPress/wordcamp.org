@@ -103,7 +103,7 @@
 		};
 
 		const endSeries = ( occurrence ) => {
-			if ( window.confirm( __( 'End the series after this occurrence? Later projected occurrences will be cancelled.', 'wordcamporg' ) ) ) {
+			if ( window.confirm( __( 'End the series after this occurrence? Later projected occurrences will be canceled.', 'wordcamporg' ) ) ) {
 				wp.apiFetch( { path: '/gpre/v1/series/' + postId + '/' + occurrence.recurrence_id + '/end', method: 'POST' } ).then( () => {
 					setOccurrences( occurrences.map( ( item ) => item.start > occurrence.start ? { ...item, status: 'cancelled' } : item ) );
 				} );
@@ -162,7 +162,7 @@
 			locked && frequency && el( 'div', { className: 'gpre-editor-occurrences' },
 				el( 'h3', {}, __( 'Upcoming occurrences', 'wordcamporg' ) ),
 				occurrences.slice( 0, 12 ).map( ( occurrence ) => el( 'div', { key: occurrence.recurrence_id, style: { marginBottom: '12px' } },
-					el( 'div', {}, new Date( occurrence.start ).toLocaleString(), occurrence.status === 'cancelled' ? ' — ' + __( 'Cancelled', 'wordcamporg' ) : '' ),
+					el( 'div', {}, new Date( occurrence.start ).toLocaleString(), occurrence.status === 'cancelled' ? ' — ' + __( 'Canceled', 'wordcamporg' ) : '' ),
 					el( wp.components.Button, { variant: 'secondary', size: 'small', onClick: () => changeStatus( occurrence, occurrence.status === 'cancelled' ? 'scheduled' : 'cancelled' ) }, occurrence.status === 'cancelled' ? __( 'Restore', 'wordcamporg' ) : __( 'Cancel', 'wordcamporg' ) ),
 					occurrence.status !== 'cancelled' && el( wp.components.Button, { variant: 'tertiary', size: 'small', onClick: () => endSeries( occurrence ) }, __( 'End series here', 'wordcamporg' ) )
 				) )

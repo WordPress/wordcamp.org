@@ -95,7 +95,7 @@ class CampTix_Admin_Setup {
 				add_settings_section( 'general', __( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
 				$this->add_settings_field_helper( 'reservations_enabled', __( 'Enable Reservations', 'wordcamporg' ), 'field_yesno', false,
-					__( "Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.", 'wordcamporg' )
+					__( "Reservations is a way to make sure that a certain group of people can always purchase their tickets, even if you sell out fast.", 'wordcamporg' )
 				);
 
 				if ( current_user_can( $this->plugin->caps['refund_all'] ) ) {

@@ -100,7 +100,7 @@ class CampTix_Admin_Setup {
 
 				if ( current_user_can( $this->plugin->caps['refund_all'] ) ) {
 					$this->add_settings_field_helper( 'refund_all_enabled', __( 'Enable Refund All', 'wordcamporg' ), 'field_yesno', false,
-						__( "Allows to refund all purchased tickets by an admin via the Tools menu.", 'wordcamporg' )
+						__( "Allows an admin to refund all purchased tickets via the Tools menu.", 'wordcamporg' )
 					);
 				}
 

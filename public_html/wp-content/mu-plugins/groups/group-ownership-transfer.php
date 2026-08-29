@@ -1184,7 +1184,7 @@ function get_group_sites_with_meta_key( string $meta_key ) {
 function get_final_status_label( string $status ): string {
 	$labels = array(
 		'declined'  => __( 'Declined', 'wordcamporg' ),
-		'cancelled' => __( 'Cancelled', 'wordcamporg' ),
+		'cancelled' => __( 'Canceled', 'wordcamporg' ),
 		'completed' => __( 'Completed', 'wordcamporg' ),
 		'rejected'  => __( 'Rejected', 'wordcamporg' ),
 	);

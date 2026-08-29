@@ -197,7 +197,7 @@ final class Context {
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );
 			$label    = wp_date( 'M j @ g:i A T', $date->getTimestamp(), $timezone );
 			if ( 'cancelled' === $occurrence->status ) {
-				$label .= ' — ' . __( 'Cancelled', 'wordcamporg' );
+				$label .= ' — ' . __( 'Canceled', 'wordcamporg' );
 			}
 
 			$items .= sprintf(
@@ -211,7 +211,7 @@ final class Context {
 
 		$notice = '';
 		if ( 'cancelled' === self::$occurrence->status ) {
-			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been cancelled.', 'wordcamporg' ) . '</p>';
+			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been canceled.', 'wordcamporg' ) . '</p>';
 		} elseif ( self::$occurrence->datetime_end_gmt < current_time( 'mysql', true ) ) {
 			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'wordcamporg' ) . '</p>';
 		}
@@ -244,7 +244,7 @@ final class Context {
 		}
 
 		if ( 'cancelled' === self::$occurrence->status ) {
-			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this cancelled occurrence.', 'wordcamporg' ) . '</p>';
+			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this canceled occurrence.', 'wordcamporg' ) . '</p>';
 		}
 
 		$tag = new WP_HTML_Tag_Processor( $content );

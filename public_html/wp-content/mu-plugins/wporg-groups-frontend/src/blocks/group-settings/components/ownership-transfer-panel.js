@@ -208,7 +208,7 @@ export default function OwnershipTransferPanel() {
 					? h(
 						'p',
 						{ className: 'wporg-settings-tab__empty' },
-						__( 'No members are eligible to receive ownership yet — only existing Organisers (editor tier) can be nominated.', 'wporg-groups-frontend' )
+						__( 'No members are eligible to receive ownership yet — only existing Organizers (editor tier) can be nominated.', 'wporg-groups-frontend' )
 					)
 					: [
 						needsFromUser &&

@@ -305,6 +305,9 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
  * media REST endpoints, the Media Library's Attach and Detach actions, XML-RPC. Declining the capability closes
  * all of them at once, instead of each one separately.
  *
+ * Only `edit_post`, because that is the capability every one of those routes checks before it writes the field.
+ * Deletion is a separate question and isn't answered here.
+ *
  * Note that `wp_update_post()` checks no capabilities at all, so anything that reparents through it needs its
  * own check as well -- the Files metabox does that where it handles the field it posts.
  *
@@ -317,7 +320,7 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
  */
 function restrict_others_payment_file_caps( $required_capabilities, $requested_capability, $user_id, $args ) {
 	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
-	if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+	if ( 'edit_post' !== $requested_capability ) {
 		return $required_capabilities;
 	}
 
@@ -328,11 +331,16 @@ function restrict_others_payment_file_caps( $required_capabilities, $requested_c
 	}
 
 	/*
-	 * A file that isn't attached to anything can't be one of these, so say so before spending a query on it --
-	 * `get_payment_file_parent_ids()` drops unattached files for the same reason. This is the common case on the
-	 * Media Library screens, where `map_meta_cap` runs once per attachment in the list.
+	 * Two cheap ways to a "no", before the lookup that costs a query. `map_meta_cap` runs once per attachment on
+	 * the Media Library screens, and on most sites none of those attachments is a payment file at all -- these
+	 * settle that from the post cache. Both restate a condition `get_hidden_payment_file_ids()` applies itself,
+	 * so they only ever return early where it would have found nothing; the rule itself still lives there.
 	 */
-	if ( ! $attachment->post_parent ) {
+	if ( (int) $attachment->post_author === (int) $user_id ) {
+		return $required_capabilities;
+	}
+
+	if ( ! in_array( get_post_type( $attachment->post_parent ), get_budget_request_post_types(), true ) ) {
 		return $required_capabilities;
 	}
 

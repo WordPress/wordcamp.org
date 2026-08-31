@@ -31,6 +31,14 @@ if ( is_admin() ) {
 }
 
 if ( is_admin() || wp_doing_cron() || wp_doing_ajax() ) {
-	require_once __DIR__ . '/includes/privacy.php';
 	require_once __DIR__ . '/includes/sponsor-invoice.php';
 }
+
+/*
+ * Attachments on budget requests hold bank details and invoices, and `privacy.php` is what keeps them scoped to
+ * the organizer they belong to. It has to load on every request, not just the admin ones -- the REST media
+ * endpoints and XML-RPC both list attachments from outside `wp-admin`.
+ *
+ * It deliberately doesn't depend on the files above -- see `get_budget_request_post_types()`.
+ */
+require_once __DIR__ . '/includes/privacy.php';

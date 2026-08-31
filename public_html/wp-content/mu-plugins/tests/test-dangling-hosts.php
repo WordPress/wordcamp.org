@@ -363,6 +363,53 @@ class Test_Dangling_Hosts extends Database_TestCase {
 	 *
 	 * A reference that only exists in the raw post content should be found.
 	 */
+	/**
+	 * The scan reports; it never writes.
+	 *
+	 * That's what makes it safe to point at a production database, and it's a property worth failing a build
+	 * over rather than re-deriving by reading the code. Every `wpdb` query passes through the `query` filter,
+	 * so watching that catches a write wherever somebody later adds one.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 */
+	public function test_the_scan_issues_no_write_statements() {
+		$this->create_published_post(
+			'<a href="https://example.net/article">Read more</a>'
+		);
+
+		$writes = array();
+
+		$watch = function ( $query ) use ( &$writes ) {
+			$normalized = ltrim( $query, "( \t\n\r" );
+			$reads      = array(
+				'SELECT', 'SHOW', 'DESCRIBE', 'DESC', 'EXPLAIN',
+				'SET', 'USE', 'START TRANSACTION', 'BEGIN', 'COMMIT', 'ROLLBACK', 'UNLOCK',
+			);
+
+			foreach ( $reads as $prefix ) {
+				if ( 0 === stripos( $normalized, $prefix ) ) {
+					return $query;
+				}
+			}
+
+			$writes[] = $normalized;
+
+			return $query;
+		};
+
+		add_filter( 'query', $watch );
+
+		try {
+			scan_site( get_current_blog_id() );
+			scan_network( array( 'blog_ids' => array( get_current_blog_id() ) ) );
+		} finally {
+			remove_filter( 'query', $watch );
+		}
+
+		$this->assertSame( array(), $writes, 'The scan issued a statement that writes.' );
+	}
+
 	public function test_scan_site_finds_references_in_post_content() {
 		$post_id = $this->create_published_post(
 			'<a href="https://example.net/article">Read more</a>'

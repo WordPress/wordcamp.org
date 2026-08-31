@@ -157,7 +157,11 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	}
 
 	/**
-	 * Say so when the registry couldn't be reached.
+	 * Say so when the registry didn't settle a finding.
+	 *
+	 * Covers being unable to reach it at all and its answering with something that decides nothing -- a
+	 * rate limit, a 5xx, a redirect that goes nowhere. The distinction doesn't change what the reader has to
+	 * do about it, and claiming the stronger one would misdescribe a registry that plainly did answer.
 	 *
 	 * Only for a run that asked for verification -- `--skip-verify` opting out of it is not a surprise worth
 	 * a warning. Without this the run looks like a clean verified pass, when its findings are actually resting
@@ -179,7 +183,7 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 
 		WP_CLI::warning(
 			sprintf(
-				'Could not reach the registry for %d domain(s), so they are reported on DNS evidence alone: %s.',
+				'Could not confirm %d domain(s) against the registry, so they are reported on DNS evidence alone: %s.',
 				count( array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) ),
 				implode( ', ', array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) )
 			)

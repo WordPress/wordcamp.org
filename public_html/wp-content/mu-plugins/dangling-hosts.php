@@ -178,7 +178,7 @@ function add_reference( array &$references, $url, $kind ) {
 
 	$host = strtolower( $host );
 
-	if ( is_first_party_host( $host ) ) {
+	if ( ! is_scannable_host( $host ) || is_first_party_host( $host ) ) {
 		return;
 	}
 
@@ -191,6 +191,48 @@ function add_reference( array &$references, $url, $kind ) {
 			'url'  => $url,
 		);
 	}
+}
+
+/**
+ * Is this host a name somebody could have registered?
+ *
+ * Two decades of hand-written content contain hrefs that never described a real host: a comma or a closing
+ * parenthesis swept in from the surrounding prose, a stray space, an IP literal typed during a migration.
+ * None of those is a registration, so none of them can lapse. Reporting one as a lapsed domain states
+ * something untrue about it, and buries the references that do need attention.
+ *
+ * Checking the shape here also keeps the malformed ones out of the DNS and RDAP lookups behind the report,
+ * which is where the scan spends nearly all of its time.
+ *
+ * @param string $host
+ *
+ * @return bool
+ */
+function is_scannable_host( $host ) {
+	// The maximum length of a fully qualified name, per RFC 1035.
+	if ( strlen( $host ) > 253 ) {
+		return false;
+	}
+
+	$labels = explode( '.', $host );
+
+	// A single label is `localhost` or an intranet name, not something anybody registers.
+	if ( count( $labels ) < 2 ) {
+		return false;
+	}
+
+	foreach ( $labels as $label ) {
+		if ( ! preg_match( '#^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$#', $label ) ) {
+			return false;
+		}
+	}
+
+	/*
+	 * A last label that isn't alphabetic means an IP literal, which is an address rather than a registration.
+	 * `xn--` is spelled out because a punycode TLD carries digits and hyphens that a plain alphabetic test
+	 * would reject.
+	 */
+	return (bool) preg_match( '#^(?:[a-z]{2,}|xn--[a-z0-9-]+)$#', end( $labels ) );
 }
 
 /**

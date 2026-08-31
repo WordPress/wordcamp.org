@@ -5,7 +5,8 @@ use WP_UnitTest_Factory;
 use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Dangling_Hosts\{
-	check_host, extract_references, get_registrable_domain, is_first_party_host, scan_network, scan_site
+	check_host, extract_references, get_registrable_domain, is_first_party_host, is_scannable_host,
+	scan_network, scan_site
 };
 
 defined( 'WPINC' ) || die();
@@ -212,9 +213,71 @@ class Test_Dangling_Hosts extends Database_TestCase {
 				array( 'example.net|link' ),
 			),
 
+			/*
+			 * A URL that picked up the punctuation following it in the prose. The host it yields was never a
+			 * real one, so it shouldn't reach the report as a lapsed domain.
+			 */
+			'href with trailing punctuation' => array(
+				'<a href="https://example.net,/">Link</a>',
+				array(),
+			),
+
+			'href with an ip literal' => array(
+				'<a href="http://192.168.1.1/admin">Link</a>',
+				array(),
+			),
+
 			'empty content' => array( '', array() ),
 
 			'content with no references' => array( '<p>Just some words.</p>', array() ),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\is_scannable_host
+	 *
+	 * @dataProvider data_is_scannable_host
+	 *
+	 * @param string $host
+	 * @param bool   $expected
+	 */
+	public function test_is_scannable_host( $host, $expected ) {
+		$this->assertSame( $expected, is_scannable_host( $host ) );
+	}
+
+	/**
+	 * Test cases for `test_is_scannable_host()`.
+	 *
+	 * @return array
+	 */
+	public function data_is_scannable_host() {
+		return array(
+			'ordinary domain'         => array( 'example.net', true ),
+			'subdomain'               => array( 'cdn.example.net', true ),
+			'hyphenated label'        => array( 'my-site.example.net', true ),
+			'digits in label'         => array( 'web2.example.net', true ),
+			'long tld'                => array( 'example.photography', true ),
+			'punycode domain'         => array( 'xn--80ak6aa92e.com', true ),
+			'punycode tld'            => array( 'example.xn--p1ai', true ),
+
+			/*
+			 * The shapes that prompted this check. Each one is a typo in the content rather than a host, so
+			 * calling its domain lapsed would assert something untrue about a name nobody can register.
+			 */
+			'trailing comma'          => array( 'example.net,', false ),
+			'trailing paren'          => array( 'example.net)', false ),
+			'embedded space'          => array( 'example .net', false ),
+			'ipv4 literal'            => array( '192.168.1.1', false ),
+			'bracketed ipv6 literal'  => array( '[::1]', false ),
+
+			'single label'            => array( 'localhost', false ),
+			'empty label'             => array( 'example..net', false ),
+			'leading dot'             => array( '.example.net', false ),
+			'label starting a hyphen' => array( '-example.net', false ),
+			'label ending a hyphen'   => array( 'example-.net', false ),
+			'underscore'              => array( 'my_site.example.net', false ),
+			'single character tld'    => array( 'example.n', false ),
+			'over the length limit'   => array( str_repeat( 'a.', 130 ) . 'net', false ),
 		);
 	}
 

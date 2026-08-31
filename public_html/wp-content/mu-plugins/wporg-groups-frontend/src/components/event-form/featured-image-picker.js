@@ -65,12 +65,12 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 						{ className: `${ classPrefix }__featured-actions` },
 						h(
 							Button,
-							{ variant: 'secondary', onClick: openMediaFrame },
+							{ variant: 'secondary', isSmall: true, onClick: openMediaFrame },
 							__( 'Replace', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,
-							{ variant: 'tertiary', isDestructive: true, onClick: handleRemove },
+							{ variant: 'tertiary', isSmall: true, isDestructive: true, onClick: handleRemove },
 							__( 'Remove', 'wporg-groups-frontend' )
 						)
 					)

@@ -106,6 +106,7 @@ function EventForm(
 	const [ recurrence, setRecurrence ] = useState( null );
 	const [ venues, setVenues ] = useState( [] );
 	const descriptionRef = useRef( () => '' );
+	const cancelLoadRef = useRef( () => {} );
 
 	// Bumped whenever we load fresh data into the form.
 	const [ editorKey, setEditorKey ] = useState( 0 );
@@ -129,7 +130,11 @@ function EventForm(
 	};
 
 	const loadFormData = ( id ) => {
+		cancelLoadRef.current();
 		let cancelled = false;
+		cancelLoadRef.current = () => {
+			cancelled = true;
+		};
 		setLoading( true );
 		setError( '' );
 
@@ -172,16 +177,13 @@ function EventForm(
 				setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wporg-groups-frontend' ) );
 				setLoading( false );
 			} );
-
-		return () => {
-			cancelled = true;
-		};
 	};
 
 	// Initial mount: register core blocks + fetch the form data.
 	useEffect( () => {
 		ensureCoreBlocksRegistered();
-		return loadFormData( eventId );
+		loadFormData( eventId );
+		return () => cancelLoadRef.current();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ eventId ] );
 

@@ -14,7 +14,7 @@ import { __ } from '@wordpress/i18n';
 
 export default function VenueField( { venues, venueId, onSelect, onOpenVenueEditor, classPrefix } ) {
 	const options = [
-		{ label: __( '— Select a venue —', 'wporg-groups-frontend' ), value: '' },
+		{ label: __( '— No venue —', 'wporg-groups-frontend' ), value: '' },
 	].concat(
 		( venues || [] ).map( ( v ) => ( {
 			label: v.name,

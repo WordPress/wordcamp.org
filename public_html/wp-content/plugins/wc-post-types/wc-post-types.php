@@ -820,7 +820,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_avatar_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_speaker' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -854,7 +854,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_session_post_speaker_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session') ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -934,7 +934,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -985,7 +985,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -1023,7 +1023,7 @@ class WordCamp_Post_Types_Plugin {
 	public function add_session_categories_to_session_posts( $content ) {
 		global $post;
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -1082,7 +1082,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_session_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( ! $this->is_single_cpt_post( 'wcb_speaker' ) || site_supports_block_templates() ) {
 			return $content;
 		}
 
@@ -1955,6 +1955,9 @@ class WordCamp_Post_Types_Plugin {
 	 *
 	 * This generates the output to the extra columns added to the posts lists in the admin.
 	 *
+	 * Columns carrying private meta check the row, so the screen requires what
+	 * `meta_auth_callback()` already requires for the same keys over REST.
+	 *
 	 * @see manage_post_types_columns()
 	 */
 	public function manage_post_types_columns_output( $column, $post_id ) {
@@ -1968,7 +1971,9 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_speaker_email':
-				echo esc_html( get_post_meta( get_the_ID(), '_wcb_speaker_email', true ) );
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					echo esc_html( get_post_meta( $post_id, '_wcb_speaker_email', true ) );
+				}
 				break;
 
 			case 'wcb_speaker_wporg_username':
@@ -2001,13 +2006,20 @@ class WordCamp_Post_Types_Plugin {
 				$output = array();
 
 				foreach ( $speakers as $speaker ) {
+					// The Speakers screen withholds others' `private` rows and lists drafts to
+					// everyone, so match it.
+					if ( 'private' === $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
+					}
+
 					$status_label = ( 'publish' !== $speaker->post_status ) ? get_post_status_object( $speaker->post_status )->label . ': ' : '';
-					$output[] = sprintf(
-						'<a href="%1$s">%2$s%3$s</a>',
-						esc_url( get_edit_post_link( $speaker->ID ) ),
-						$status_label,
-						esc_html( apply_filters( 'the_title', $speaker->post_title ) )
-					);
+					$title        = $status_label . esc_html( apply_filters( 'the_title', $speaker->post_title ) );
+					$edit_link    = get_edit_post_link( $speaker->ID );
+
+					// Null for a viewer who cannot edit the speaker, which `esc_url()` does not accept.
+					$output[] = $edit_link
+						? sprintf( '<a href="%1$s">%2$s</a>', esc_url( $edit_link ), $title )
+						: $title;
 				}
 
 				// Output is escaped when the string is built, so we can ignore the PHPCS error.
@@ -2033,11 +2045,13 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_sponsor_amount':
-				echo sprintf(
-					'%1$s %2$s',
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_amount', true ) ),
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_currency', true ) )
-				);
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					printf(
+						'%1$s %2$s',
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_amount', true ) ),
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_currency', true ) )
+					);
+				}
 				break;
 			default:
 		}

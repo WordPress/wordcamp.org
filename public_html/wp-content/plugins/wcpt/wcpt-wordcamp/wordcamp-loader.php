@@ -6,6 +6,8 @@ define( 'WCPT_SLUG',           'wordcamps'          );
 define( 'WCPT_DEFAULT_STATUS', 'wcpt-needs-vetting' );
 define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
 
+require_once __DIR__ . '/class-wordcamp-status-guard.php';
+
 /**
  * WordCamp_Loader
  *
@@ -20,12 +22,17 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	function __construct() {
 		parent::__construct();
-		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date'                ) );
+		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date' ), 20 );
+		add_filter( 'posts_where',                     array( $this, 'hide_unscheduled_cancellations' ), 10, 2 );
 		add_filter( 'wordcamp_rewrite_rules',          array( $this, 'wordcamp_rewrite_rules'            ) );
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
+
+		// Registered here rather than from a loader method, because callers reach this file
+		// directly: the Jetpack form bridge requires it from a form handler.
+		WordCamp_Status_Guard::init();
 	}
 
 	/**
@@ -173,6 +180,9 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return array
 	 */
 	public function set_scheduled_date( $post_data ) {
+		// Priority 20, so both `WordCamp_Status_Guard::enforce_post_status()` and
+		// `WordCamp_Admin::require_complete_meta_to_publish_wordcamp()` have had their say.
+		// The stamp is written once and never revised, so a rejected write must not reach it.
 		if ( 'wcpt-scheduled' !== $post_data['post_status'] || WCPT_POST_TYPE_ID != $post_data['post_type'] ) {
 			return $post_data;
 		}
@@ -237,14 +247,11 @@ class WordCamp_Loader extends Event_Loader {
 	 * Wider than `get_public_post_statuses()` because two groups aren't listed on the
 	 * schedule but are still reached by URL:
 	 *
-	 * - `wcpt-cancelled` is served over the v2 REST API to unauthenticated clients, so
-	 *   Official WordPress Events can drop cancelled camps from the events widget. That
-	 *   works via the `public` flag, through the parent `check_read_permission()`.
+	 * - A camp cancelled after it reached the schedule is a public record. The ones
+	 *   cancelled while still an application are withheld by
+	 *   `hide_unscheduled_cancellations()`.
 	 * - Pre-planning camps usually have no site of their own yet, so the map markers link
 	 *   their Central permalink through `WordCamp_Central_Theme::get_best_wordcamp_url()`.
-	 *
-	 * Both are addressable, but each needs its own change first. Until then they keep
-	 * resolving.
 	 *
 	 * @return array Post status names.
 	 */
@@ -254,6 +261,222 @@ class WordCamp_Loader extends Event_Loader {
 			array( 'wcpt-cancelled' ),
 			self::get_pre_planning_post_statuses()
 		);
+	}
+
+	/**
+	 * Who may read a cancelled application that never reached the schedule.
+	 *
+	 * This method is the rule. A query cannot call it per row, so
+	 * `hide_unscheduled_cancellations()` mirrors it in SQL, and
+	 * `WordCamp_REST_WordCamps_Controller::check_read_permission()` calls it directly for
+	 * single-item reads. The permalink and the API have to describe the same set, so the two
+	 * move together or not at all.
+	 *
+	 * @param WP_Post $post
+	 *
+	 * @return bool
+	 */
+	public static function can_read_unscheduled_cancellation( $post ) {
+		// No user to hold the capability, and `wp post list` should report the real set.
+		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return true;
+		}
+
+		// Every exemption the clause below takes has to be taken here too. Where the clause is
+		// the more permissive of the two, it selects a row this then refuses, and the response
+		// comes back short under a total that was never reduced.
+		if ( is_admin() && current_user_can( 'edit_wordcamps' ) ) {
+			return true;
+		}
+
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return true;
+		}
+
+		$user = wp_get_current_user();
+
+		if ( ! $user->exists() ) {
+			return false;
+		}
+
+		/*
+		 * The applicant keeps their own record, matched on the author rather than `edit_post`.
+		 * `WordCamp_Admin::add_organizer_to_central()` runs on `wcpt_approved_for_pre_planning`,
+		 * so an application cancelled before it was accepted never added its author to Central
+		 * and that author usually holds no role here at all.
+		 */
+		if ( (int) $post->post_author === $user->ID ) {
+			return true;
+		}
+
+		return self::is_mentored_by( $post, $user );
+	}
+
+	/**
+	 * Whether a camp names this user as its mentor.
+	 *
+	 * Resolves the stored name through the database, as `map_subrole_caps()` and
+	 * `wordcamp-new-site.php` both already do, rather than comparing strings in PHP. A byte
+	 * comparison here disagrees with the SQL clause below, which runs under the column
+	 * collation and so ignores case and trailing space, and the more permissive side would
+	 * select rows the stricter side then refuses. That returns a short page under an
+	 * unreduced `X-WP-Total`, which is the failure filtering in the query exists to avoid.
+	 *
+	 * `Mentor WordPress.org User Name` is a free-text admin field, so `MentorJane` for
+	 * `mentorjane` is ordinary input rather than a corner case.
+	 *
+	 * @param WP_Post $post
+	 * @param WP_User $user
+	 *
+	 * @return bool
+	 */
+	protected static function is_mentored_by( $post, $user ) {
+		/*
+		 * Every row for the key, because the clause below matches any of them while
+		 * `get_post_meta( ..., true )` reads only the first. Nothing in the admin writes a
+		 * second row, but an import or WP-CLI can.
+		 *
+		 * Resolved canonically, which is how `map_subrole_caps()` decides who holds `edit_post`
+		 * on a camp and how the admin list table picks the camps it shows. A name that is one
+		 * account's login and another's nicename belongs to the login holder, and only they
+		 * hold anything over the camp. `mentor_names_for()` narrows the clause to suit, rather
+		 * than this widening to suit the clause.
+		 */
+		foreach ( get_post_meta( $post->ID, 'Mentor WordPress.org User Name' ) as $name ) {
+			$mentor = wcorg_get_user_by_canonical_names( $name );
+
+			if ( $mentor && $mentor->ID === $user->ID ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * The stored names that resolve back to this user.
+	 *
+	 * `wcorg_get_user_by_canonical_names()` tries `user_login` and falls back to
+	 * `user_nicename` only when the login lookup found nobody, so a login always belongs to
+	 * its owner while a nicename belongs to them only when no other account holds it as a
+	 * login. Stating that here lets the clause select exactly what `is_mentored_by()` allows,
+	 * without SQL having to resolve anything.
+	 *
+	 * @param WP_User $user
+	 *
+	 * @return string[]
+	 */
+	protected static function mentor_names_for( $user ) {
+		$names  = array( $user->user_login );
+		$holder = get_user_by( 'login', $user->user_nicename );
+
+		if ( ! $holder || $holder->ID === $user->ID ) {
+			$names[] = $user->user_nicename;
+		}
+
+		return array_unique( $names );
+	}
+
+	/**
+	 * Withhold camps cancelled before they ever reached the schedule.
+	 *
+	 * `public` is per status and this is per post, so the query decides. Filtering here
+	 * rather than per row keeps a collection's items, `X-WP-Total` and page count in
+	 * agreement.
+	 *
+	 * This is `can_read_unscheduled_cancellation()` written in SQL. It reaches only queries
+	 * that name the post type and do not suppress filters, so it is not a boundary that
+	 * catches every caller: `post_type => 'any'` and the `suppress_filters` default on
+	 * `get_posts()` both skip it.
+	 *
+	 * @param string   $where
+	 * @param WP_Query $query
+	 *
+	 * @return string
+	 */
+	public function hide_unscheduled_cancellations( $where, $query ) {
+		global $wpdb;
+
+		if ( ! in_array( WCPT_POST_TYPE_ID, (array) $query->get( 'post_type' ), true ) ) {
+			return $where;
+		}
+
+		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return $where;
+		}
+
+		/*
+		 * Opening a WordCamp screen needs `edit_wordcamps`, so name the capability rather than
+		 * the entry point. Every other application status stays in the list table, and deciding
+		 * who sees which camp there is #1943's subject, which does it for all of them rather
+		 * than singling this one out.
+		 *
+		 * `is_admin()` alone is wider than it reads: `admin-post.php` defines `WP_ADMIN` and
+		 * fires `admin_post_nopriv_{$action}` before any capability check, so it is true there
+		 * for a logged out request. The capability admits whoever can open the list table
+		 * through any of those doors and nobody else, which is why admin-ajax needs no separate
+		 * mention. `wp_doing_cron()` above covers cron.
+		 */
+		if ( is_admin() && current_user_can( 'edit_wordcamps' ) ) {
+			return $where;
+		}
+
+		// A personal data export has to be complete whoever is processing it, so it says so
+		// rather than resting on the exemption above, which turns on a capability the person
+		// running an export has no particular reason to hold.
+		if ( $query->get( 'wcpt_include_unscheduled_cancellations' ) ) {
+			return $where;
+		}
+
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return $where;
+		}
+
+		$user = wp_get_current_user();
+
+		// `-1` rather than the logged-out `0`, which is a real `post_author` value and would
+		// expose every unattributed camp.
+		$readable = $wpdb->prepare(
+			"{$wpdb->posts}.post_author = %d",
+			$user->exists() ? $user->ID : -1
+		);
+
+		if ( $user->exists() ) {
+			// Two placeholders always: `mentor_names_for()` returns the login and at most the
+			// nicename, and naming one of them twice in an `IN` selects the same rows.
+			$names = array_values( self::mentor_names_for( $user ) );
+
+			$readable .= $wpdb->prepare(
+				" OR {$wpdb->posts}.ID IN (
+					SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ( %s, %s )
+				)",
+				'Mentor WordPress.org User Name',
+				$names[0],
+				$names[1] ?? $names[0]
+			);
+		}
+
+		// `menu_order <= 0` rather than `= 0`, to agree with `was_ever_scheduled()`.
+		$hidden = $wpdb->prepare(
+			" AND NOT ( {$wpdb->posts}.post_status = %s AND {$wpdb->posts}.menu_order <= 0",
+			'wcpt-cancelled'
+		);
+
+		return $where . $hidden . " AND NOT ( {$readable} ) )";
+	}
+
+	/**
+	 * Whether a camp ever reached the official schedule.
+	 *
+	 * `menu_order` holds the date it was added, written once by `set_scheduled_date()`
+	 * below. Only written from 2016-06-23, so anything older reads as never scheduled.
+	 *
+	 * @param WP_Post $post
+	 *
+	 * @return bool
+	 */
+	public static function was_ever_scheduled( $post ) {
+		return $post->menu_order > 0;
 	}
 
 	/**

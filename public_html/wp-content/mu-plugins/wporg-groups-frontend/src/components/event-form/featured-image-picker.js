@@ -55,7 +55,7 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 		h(
 			'div',
 			{ className: `${ classPrefix }__featured` },
-			imageId
+			imageId && imageUrl
 				? h(
 					'div',
 					{ className: `${ classPrefix }__featured-preview` },

@@ -20,6 +20,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 	class WordCamp_Admin extends Event_Admin {
 
 		/**
+		 * Applications each user authored or mentors, once looked up.
+		 *
+		 * Keyed by user ID: the instance outlives a `wp_set_current_user()` switch.
+		 *
+		 * @var array<int, WP_Post[]>
+		 */
+		protected $own_wordcamps = array();
+
+		/**
 		 * Initialize WCPT Admin
 		 */
 		public function __construct() {
@@ -39,8 +48,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Priority 11 so the organizer email (sent by WCOR_Mailer at 10) goes out first.
 			add_action( 'wcpt_cc_needs_orientation', array( $this, 'handle_cc_needs_orientation' ), 11 );
 
-			add_filter( 'wp_insert_post_data', array( $this, 'enforce_post_status' ), 10, 2 );
-
 			add_filter(
 				'wp_insert_post_data',
 				array(
@@ -49,7 +56,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				),
 				11,
 				2
-			); // after enforce_post_status.
+			); // after WordCamp_Status_Guard::enforce_post_status().
 
 			// Filters - Subtype filtering on the WordCamp list table.
 			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
@@ -64,8 +71,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
 
-			// "Mine (Mentoring)" query filter on the WordCamp list table.
+			// WordCamp list table query filters: the "Mine (Mentoring)" view, and who sees what.
 			add_action( 'pre_get_posts', array( $this, 'filter_mentoring_view' ) );
+			add_action( 'pre_get_posts', array( $this, 'limit_list_to_editable_wordcamps' ) );
 		}
 
 		/**
@@ -993,20 +1001,17 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param WP_Post $post
 		 */
 		public function add_organizer_to_central( $post ) {
-			/*
-			 * The status can also reach pre-planning without an admin POST -- via
-			 * WP-CLI, an importer, or a test -- in which case there is no username
-			 * to read and nothing to do. Reading the key unguarded warned, then
-			 * passed null to get_user_by(), which is deprecated in PHP 8.
-			 */
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- WordCamp status can be moved to pre-planning status only from the admin edit screen where nonce is already verified.
-			$organizer_username = isset( $_POST['wcpt_wordpress_org_username'] ) ? sanitize_user( wp_unslash( $_POST['wcpt_wordpress_org_username'] ) ) : '';
 
-			if ( '' === $organizer_username ) {
+			// Only the admin edit screen posts this, and the same transition is reachable from
+			// the Jetpack application bridge, WP-CLI and cron, where there is no form at all.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The admin edit screen has already verified its nonce.
+			$username = $_POST['wcpt_wordpress_org_username'] ?? '';
+
+			if ( ! $username ) {
 				return;
 			}
 
-			$lead_organizer = get_user_by( 'login', $organizer_username );
+			$lead_organizer = get_user_by( 'login', $username );
 
 			if ( $lead_organizer && add_user_to_blog( get_current_blog_id(), $lead_organizer->ID, 'contributor' ) ) {
 				do_action( 'wcor_organizer_added_to_central', $post );
@@ -1058,7 +1063,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
-			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+			$start_date   = absint( get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true ) );
 			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
 			$is_event     = is_event_url( $wordcamp_url );
 			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
@@ -1072,7 +1077,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
 				$wordcamp->post_title,
-				gmdate( 'F j, Y', $start_date ),
+				$start_date ? gmdate( 'F j, Y', $start_date ) : '(not set)',
 				$wordcamp_url
 			);
 
@@ -1083,48 +1088,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				update_post_meta( $wordcamp->ID, $scheduled_notification_key, true );
 			}
 			return $notification_sent;
-		}
-
-		/**
-		 * Enforce a valid post status for WordCamps.
-		 *
-		 * @param array $post_data
-		 * @param array $post_data_raw
-		 * @return array
-		 */
-		public function enforce_post_status( $post_data, $post_data_raw ) {
-			if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) ) {
-				return $post_data;
-			}
-
-			$post = get_post( $post_data_raw['ID'] );
-			if ( ! $post ) {
-				return $post_data;
-			}
-
-			if ( ! empty( $post_data['post_status'] ) ) {
-				$wcpt = get_post_type_object( WCPT_POST_TYPE_ID );
-
-				// Only WordCamp Wranglers can change WordCamp statuses.
-				if ( is_user_logged_in() && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
-					$post_data['post_status'] = $post->post_status;
-				}
-
-				// Enforce a valid status. Include all global statuses plus CC-exclusive ones.
-				$statuses = array_keys( WordCamp_Loader::get_post_statuses() );
-				$statuses[] = 'trash';
-
-				if ( ! in_array( $post_data['post_status'], $statuses, true ) ) {
-					$post_data['post_status'] = $statuses[0];
-				}
-
-				// Block CC-exclusive statuses from being applied to non-Campus-Connect posts.
-				if ( 'wcpt-needs-action' === $post_data['post_status'] && ! self::is_campus_connect_post_for_save( $post_data_raw['ID'] ) ) {
-					$post_data['post_status'] = $post->post_status;
-				}
-			}
-
-			return $post_data;
 		}
 
 		/**
@@ -1169,7 +1132,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
-						$post_data['post_status']     = self::is_campus_connect_post_for_save( $post_data_raw['ID'] )
+						$post_data['post_status']     = WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_data_raw['ID'] )
 							? 'wcpt-approved-pre-pl'
 							: 'wcpt-needs-schedule';
 						$this->active_admin_notices[] = 3;
@@ -1458,22 +1421,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Check whether a post being saved is a Campus Connect event.
-		 *
-		 * Uses the submitted subtype when present so direct POSTs are validated
-		 * against the value being saved, then falls back to stored post meta.
-		 *
-		 * @param int $post_id Post ID.
-		 * @return bool
-		 */
-		protected static function is_campus_connect_post_for_save( $post_id ) {
-			$submitted_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ?? '' ) );
-			$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_id ), 'event_subtype', true );
-
-			return 'campusconnect' === $event_subtype;
-		}
-
-		/**
 		 * Capability required to edit wordcamp posts
 		 *
 		 * @return string
@@ -1592,8 +1539,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		public function alter_views( $views ) {
 			global $wp_list_table;
 
-			// For low-privilege users, return without extra views.
-			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			// Everyone else keeps the plain status links, counted over their own applications
+			// by `scope_status_counts()`. The views below are wrangler tools.
+			if ( ! current_user_can( self::get_edit_capability() ) ) {
 				return $views;
 			}
 
@@ -1731,11 +1679,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param WP_Query $query The query to filter.
 		 */
 		public function filter_mentoring_view( $query ) {
-			if ( ! is_admin() || ! $query->is_main_query() ) {
-				return;
-			}
-
-			if ( WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ) {
+			if ( ! $this->is_wordcamp_list_query( $query ) ) {
 				return;
 			}
 
@@ -1752,6 +1696,165 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'value' => $current_user->user_login,
 			);
 			$query->set( 'meta_query', $meta_query );
+		}
+
+		/**
+		 * Limit the WordCamp list table to the applications the current user can edit.
+		 *
+		 * `wp_edit_posts_query()` asks for `perm => 'readable'` when a status is filtered, and
+		 * `readable` author-restricts the literal `private` status only. This workflow is
+		 * expressed in custom statuses, so the scope belongs here.
+		 *
+		 * @param WP_Query $query The query to filter.
+		 */
+		public function limit_list_to_editable_wordcamps( $query ) {
+			if ( ! $this->is_wordcamp_list_query( $query ) ) {
+				return;
+			}
+
+			/*
+			 * `WP_Posts_List_Table::__construct()` sets `$_GET['author']` for a viewer who has
+			 * authored one of these and lacks the type's `edit_others_posts`, which is
+			 * `edit_others_wordcamps` and maps to the curating capability. That narrows the
+			 * default screen to their own rows, which is wrong for everyone here: it hides the
+			 * camps a scoped viewer only mentors while the status links still count them, and
+			 * it opens an exempt viewer on Mine when they are entitled to the whole list. Core
+			 * only injects when the request named no author, so choosing Mine survives it.
+			 */
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading which view was asked for, not acting on it.
+			if ( empty( $_REQUEST['author'] ) ) {
+				$query->set( 'author', '' );
+
+				// `get_views()` and `is_base_request()` read `$_GET` rather than the query, so
+				// leaving it there marks Mine active over a table showing more than that.
+				unset( $_GET['author'] );
+			}
+
+			// Wranglers curate the pipeline, and a Central administrator already administers
+			// everything on this site, so both keep the whole list.
+			if ( current_user_can( self::get_edit_capability() ) || current_user_can( 'manage_options' ) ) {
+				return;
+			}
+
+			$ids = wp_list_pluck( $this->get_authored_or_mentored_wordcamps(), 'ID' );
+
+			// An empty set has to be spelled out, or `post__in` is ignored and the
+			// unrestricted list comes back.
+			$query->set( 'post__in', $ids ?: array( 0 ) );
+
+			// The status links come from `wp_count_posts()`, which has the same blind spot.
+			add_filter( 'wp_count_posts', array( $this, 'scope_status_counts' ), 10, 2 );
+		}
+
+		/**
+		 * Count the statuses over the same applications the list table is showing.
+		 *
+		 * Only rewrites this post type, so anything else counting in the request is untouched.
+		 *
+		 * @param object $counts Status counts, keyed by status name.
+		 * @param string $type   The post type being counted.
+		 *
+		 * @return object
+		 */
+		public function scope_status_counts( $counts, $type ) {
+			if ( WCPT_POST_TYPE_ID !== $type ) {
+				return $counts;
+			}
+
+			$scoped = array_count_values(
+				wp_list_pluck( $this->get_authored_or_mentored_wordcamps(), 'post_status' )
+			);
+
+			// Keep core's keys, so a status with none left reads 0 rather than disappearing.
+			return (object) array_merge( array_fill_keys( array_keys( (array) $counts ), 0 ), $scoped );
+		}
+
+		/**
+		 * The WordCamp posts the current user authored or mentors.
+		 *
+		 * Wider than what they can edit: an author cannot edit their own camp once it is
+		 * scheduled, but should still see it listed. Matches a mentor by login or nicename,
+		 * the pair `map_subrole_caps()` resolves.
+		 *
+		 * @return WP_Post[]
+		 */
+		protected function get_authored_or_mentored_wordcamps() {
+			$user = wp_get_current_user();
+
+			if ( ! $user->exists() ) {
+				return array();
+			}
+
+			if ( isset( $this->own_wordcamps[ $user->ID ] ) ) {
+				return $this->own_wordcamps[ $user->ID ];
+			}
+
+			$common = array(
+				'post_type'              => WCPT_POST_TYPE_ID,
+				'post_status'            => 'any',
+				'posts_per_page'         => -1,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			);
+
+			$authored = get_posts( array( 'author' => $user->ID ) + $common );
+
+			$mentored = get_posts(
+				array(
+					'update_post_meta_cache' => true,
+					'meta_query'             => array(
+						array(
+							'key'     => 'Mentor WordPress.org User Name',
+							'value'   => array( $user->user_login, $user->user_nicename ),
+							'compare' => 'IN',
+						),
+					),
+				) + $common
+			);
+
+			/*
+			 * That compare is a prefilter, not the answer. It also matches a camp whose mentor
+			 * name is somebody else's login that happens to be this user's nicename, and
+			 * `map_subrole_caps()` resolves the stored name login-first, so the two would
+			 * name different mentors for the same camp. Resolve it the same way, so the list
+			 * and the capability system agree, and keep what comes back as this user.
+			 */
+			// Keyed by name, not by camp: `WP_User::get_data_by()` does not cache a miss, so a
+			// name stored as a nicename costs a failed `user_login` lookup every time it is
+			// resolved, and a mentor's camps normally carry one or two distinct spellings.
+			$resolved = array();
+
+			$mentored = array_filter(
+				$mentored,
+				function ( $camp ) use ( $user, &$resolved ) {
+					$name = get_post_meta( $camp->ID, 'Mentor WordPress.org User Name', true );
+
+					if ( ! isset( $resolved[ $name ] ) ) {
+						$mentor            = wcorg_get_user_by_canonical_names( $name );
+						$resolved[ $name ] = $mentor ? $mentor->ID : 0;
+					}
+
+					return $resolved[ $name ] === $user->ID;
+				}
+			);
+
+			// A user can both author and mentor the same camp.
+			$this->own_wordcamps[ $user->ID ] = array_values(
+				array_column( array_merge( $authored, $mentored ), null, 'ID' )
+			);
+
+			return $this->own_wordcamps[ $user->ID ];
+		}
+
+		/**
+		 * Whether a query is the one behind the WordCamp admin list table.
+		 *
+		 * @param WP_Query $query The query to test.
+		 *
+		 * @return bool
+		 */
+		protected function is_wordcamp_list_query( $query ) {
+			return is_admin() && $query->is_main_query() && self::get_event_type() === $query->get( 'post_type' );
 		}
 
 		/**

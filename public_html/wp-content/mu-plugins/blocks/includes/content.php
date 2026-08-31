@@ -21,6 +21,16 @@ defined( 'WPINC' ) || die();
 function get_all_the_content( $post ) {
 	$post = get_post( $post );
 
+	/*
+	 * `get_the_content()` holds the password check, and the `the_content`
+	 * filter runs after it, so reading the stored content directly has to
+	 * repeat the check. Return what `get_the_content()` returns here, so a
+	 * listing behaves the way one built on core's loop would.
+	 */
+	if ( post_password_required( $post ) ) {
+		return get_the_password_form( $post );
+	}
+
 	$content = wp_kses_post( $post->post_content );
 
 	/** This filter is documented in wp-includes/post-template.php */
@@ -40,6 +50,16 @@ function get_all_the_content( $post ) {
  */
 function get_trimmed_content( $post, $excerpt_length = 55 ) {
 	$post = get_post( $post );
+
+	/*
+	 * The fallback below reads `post_content` directly, so this needs the
+	 * same check as `get_all_the_content()`. `get_the_excerpt()` applies it
+	 * to both the manual excerpt and the fallback, and stands this sentence
+	 * in their place; the wording matches core's so the two read alike.
+	 */
+	if ( post_password_required( $post ) ) {
+		return esc_html__( 'There is no excerpt because this is a protected post.', 'wordcamporg' );
+	}
 
 	$post_excerpt = $post->post_excerpt;
 	if ( ! ( $post_excerpt ) ) {

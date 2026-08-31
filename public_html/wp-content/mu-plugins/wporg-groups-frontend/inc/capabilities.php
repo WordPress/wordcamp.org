@@ -111,3 +111,94 @@ function current_user_can_manage_group_settings(): bool {
 		current_user_can( 'edit_others_posts' )
 	);
 }
+
+/**
+ * Group sites where members may change their own role tier, keyed by the
+ * host the group lives on.
+ *
+ * Self-serve role switching is a beta-testing affordance, not a product
+ * feature: promoting yourself to `editor` grants the full "Organizer" tier
+ * (everyone's events, member roles, group info and design, ownership
+ * transfer), so on a real community group it would be a privilege
+ * escalation for any logged-in WordPress.org account that joined. The
+ * allow-list keeps it to the groups that exist to be poked at.
+ *
+ * Keyed by host rather than by slug alone so a real community group that
+ * happens to share a slug with a local fixture can't inherit it. Sites are
+ * added here by code change on purpose — there's no admin toggle, because
+ * nobody should be able to switch this on for a live group from the UI.
+ *
+ * @var array<string, string[]>
+ */
+const SELF_SERVE_ROLE_GROUPS = array(
+	// The beta's public testing group (see the "Call for testing" post).
+	'events.wordpress.org'  => array( 'internal-testing-group' ),
+
+	// Local development and the PHPUnit fixture site.
+	'events.wordpress.test' => array( 'sunshine-coast-qld' ),
+);
+
+/**
+ * The `/group/{slug}/` segment identifying the current group site.
+ *
+ * Returns an empty string off the groups network (or on its `/group/`
+ * root, which is the landing page rather than a group).
+ */
+function get_current_group_slug(): string {
+	$site = get_site();
+
+	if ( ! $site ) {
+		return '';
+	}
+
+	$segments = explode( '/', trim( (string) $site->path, '/' ) );
+	$slug     = (string) end( $segments );
+
+	return 'group' === $slug ? '' : $slug;
+}
+
+/**
+ * Whether this group site offers self-serve role switching.
+ *
+ * See `SELF_SERVE_ROLE_GROUPS` for why this is an allow-list.
+ */
+function self_serve_roles_enabled(): bool {
+	$site    = get_site();
+	$allowed = $site ? ( SELF_SERVE_ROLE_GROUPS[ $site->domain ] ?? array() ) : array();
+	$slug    = get_current_group_slug();
+	$enabled = '' !== $slug && in_array( $slug, $allowed, true );
+
+	/**
+	 * Filters whether members of this group can change their own role tier.
+	 *
+	 * Sandboxes and one-off testing sites can opt in through this filter
+	 * rather than by editing `SELF_SERVE_ROLE_GROUPS`.
+	 *
+	 * @param bool $enabled Whether self-serve role switching is available.
+	 */
+	return (bool) apply_filters( 'wporg_groups_frontend_self_serve_roles_enabled', $enabled );
+}
+
+/**
+ * Whether the current user may change their own role tier on this group.
+ *
+ * The authoritative check behind both the members-page UI and the
+ * `POST /members/me/role` endpoint, so the button and the request that
+ * button makes can't disagree about who's allowed.
+ *
+ * Administrators are excluded for the same reason `update_member_role()`
+ * refuses to touch them: the group's admin account is provisioned in
+ * wp-admin, and letting it demote itself from the front end could strand
+ * the site with no one able to restore it.
+ */
+function current_user_can_switch_own_role(): bool {
+	if ( ! is_user_logged_in() || ! self_serve_roles_enabled() ) {
+		return false;
+	}
+
+	if ( ! is_user_member_of_blog() ) {
+		return false;
+	}
+
+	return ! in_array( 'administrator', wp_get_current_user()->roles, true );
+}

@@ -497,16 +497,20 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	 * @param string $slug    Page slug, unique per test to dodge path caching.
 	 * @param string $content Block markup for the page content.
 	 * @param bool   $excerpt Whether to render the block in excerpt mode.
+	 * @param array  $args    Extra arguments for the target page.
 	 * @return string Rendered block output.
 	 */
-	private function render_page_content_block( string $slug, string $content, bool $excerpt = true ): string {
+	private function render_page_content_block( string $slug, string $content, bool $excerpt = true, array $args = array() ): string {
 		self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_name'    => $slug,
-				'post_title'   => 'About',
-				'post_content' => $content,
+			array_merge(
+				array(
+					'post_type'    => 'page',
+					'post_status'  => 'publish',
+					'post_name'    => $slug,
+					'post_title'   => 'About',
+					'post_content' => $content,
+				),
+				$args
 			)
 		);
 
@@ -664,6 +668,94 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( '<img', $output );
 		$this->assertStringContainsString( 'Full-page prose.', $output );
 		$this->assertStringNotContainsString( 'Read more', $output );
+	}
+
+	/**
+	 * A password-protected target page is not rendered by the block. The
+	 * password gate lives in `get_the_content()` rather than in the
+	 * `the_content` filter, so rendering the stored content has to repeat
+	 * the check.
+	 */
+	public function test_page_content_excerpt_hides_password_protected_page() {
+		$content = '<!-- wp:paragraph --><p>Staged copy that is not public yet.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block(
+			'about-protected-excerpt',
+			$content,
+			true,
+			array( 'post_password' => 'hunter2' )
+		);
+
+		$this->assertStringNotContainsString( 'Staged copy that is not public yet.', $output );
+		$this->assertSame( '', trim( $output ) );
+	}
+
+	/**
+	 * Full mode applies the same gate as excerpt mode.
+	 */
+	public function test_page_content_full_mode_hides_password_protected_page() {
+		$content = '<!-- wp:paragraph --><p>Staged copy that is not public yet.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block(
+			'about-protected-full',
+			$content,
+			false,
+			array( 'post_password' => 'hunter2' )
+		);
+
+		$this->assertStringNotContainsString( 'Staged copy that is not public yet.', $output );
+		$this->assertSame( '', trim( $output ) );
+	}
+
+	/**
+	 * Organizers keep the heading and the edit link for a password-protected
+	 * page, matching the missing- and draft-page states, with a notice in
+	 * place of the content. The body itself still stays hidden.
+	 */
+	public function test_page_content_password_protected_page_offers_edit_link_to_organizers() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$content = '<!-- wp:paragraph --><p>Staged copy that is not public yet.</p><!-- /wp:paragraph -->';
+
+		$output = $this->render_page_content_block(
+			'about-protected-organizer',
+			$content,
+			true,
+			array( 'post_password' => 'hunter2' )
+		);
+
+		wp_set_current_user( 0 );
+
+		$this->assertStringNotContainsString( 'Staged copy that is not public yet.', $output );
+		$this->assertStringContainsString( 'About this group', $output );
+		$this->assertStringContainsString( 'wporg-page-content__edit', $output );
+		$this->assertStringContainsString( 'This content is password-protected.', $output );
+	}
+
+	/**
+	 * A visitor who has entered the page's password still sees the content,
+	 * the same way they would on the page itself.
+	 */
+	public function test_page_content_renders_for_visitor_holding_the_password() {
+		$content = '<!-- wp:paragraph --><p>Staged copy that is not public yet.</p><!-- /wp:paragraph -->';
+
+		// Core matches the cookie against the password with phpass, the same
+		// way `wp-login.php?action=postpass` writes it.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher = new \PasswordHash( 8, true );
+
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'hunter2' );
+
+		$output = $this->render_page_content_block(
+			'about-protected-unlocked',
+			$content,
+			true,
+			array( 'post_password' => 'hunter2' )
+		);
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Staged copy that is not public yet.', $output );
 	}
 
 	/**

@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Admin as Recurring_Events_Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
@@ -235,6 +236,9 @@ class Test_Groups_REST extends Groups_TestCase {
 	 * endpoint's own schema.
 	 */
 	public function test_publish_draft_round_trips_default_recurrence(): void {
+		// The test framework unregisters all meta keys after each test.
+		Recurring_Events_Admin::register_meta();
+
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
 

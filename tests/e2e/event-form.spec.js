@@ -9,9 +9,10 @@ const { login } = require( './utils/login' );
  * regression class behind #1909, where an event could be published before its
  * datetimes were saved.
  *
- * Requires the `organiser2` / `password` editor-tier test user (editors can use
- * both surfaces). This environment only supports one active session per user,
- * and specs run concurrently under `fullyParallel` (see tests/e2e/utils/login.js).
+ * Requires the `organiser2`/`organiser3`/`organiser4` (`password`) editor-tier
+ * test users, one per test (editors can use both surfaces). This environment
+ * only supports one active session per user, and tests run concurrently under
+ * `fullyParallel` (see tests/e2e/utils/login.js).
  */
 test.describe( 'event form surfaces', () => {
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
@@ -34,8 +35,9 @@ test.describe( 'event form surfaces', () => {
 	}
 
 	/**
-	 * The publish response redirects to the new event, whose page renders
-	 * the saved datetimes.
+	 * The publish response redirects to the new event. The saved datetimes
+	 * are checked through REST rather than the rendered text, which depends
+	 * on the site locale.
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
@@ -43,8 +45,13 @@ test.describe( 'event form surfaces', () => {
 	async function expectPublishedWithDatetimes( page, title ) {
 		await page.waitForURL( /\/event\//, { timeout: 30000 } );
 		await expect( page.getByRole( 'heading', { name: title } ) ).toBeVisible();
-		await expect( page.locator( 'body' ) ).toContainText( 'Wednesday, March 4' );
-		await expect( page.locator( 'body' ) ).toContainText( '12:00 PM to 1:00 PM' );
+
+		const slug = new URL( page.url() ).pathname.split( '/' ).filter( Boolean ).pop();
+		const response = await page.request.get( `wp-json/wp/v2/gatherpress_events?slug=${ slug }&_fields=meta` );
+		expect( response.ok() ).toBe( true );
+		const [ event ] = await response.json();
+		expect( event.meta.gatherpress_datetime_start ).toBe( `${ DATE } ${ START }:00` );
+		expect( event.meta.gatherpress_datetime_end ).toBe( `${ DATE } 13:00:00` );
 	}
 
 	/**
@@ -86,7 +93,7 @@ test.describe( 'event form surfaces', () => {
 	test( 'publishes a draft continued from the modal picker', async ( { page } ) => {
 		test.slow();
 
-		await login( page, 'organiser2', 'password' );
+		await login( page, 'organiser3', 'password' );
 
 		const title = `Event form draft E2E ${ Date.now() }`;
 		await page.goto( '' );
@@ -119,7 +126,7 @@ test.describe( 'event form surfaces', () => {
 	test( 'keeps the description across the settings-tab venue editor', async ( { page } ) => {
 		test.slow();
 
-		await login( page, 'organiser2', 'password' );
+		await login( page, 'organiser4', 'password' );
 
 		const title = `Event form venue round-trip E2E ${ Date.now() }`;
 		const description = `Description kept ${ Date.now() }`;

@@ -490,13 +490,14 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 				),
 			),
 
-			// PayPal refused the argument, and a resend carries the same one.
+			// No error code earns its own answer, including the one PayPal documents.
 			'a transaction PayPal refuses the argument for' => array(
 				array(
 					'order'   => array( 'token' => 'tok_10004' ),
 					'details' => array(
 						'ACK' => 'Failure', 'L_ERRORCODE0' => '10004',
 					),
+					'code'    => '503',
 				),
 			),
 

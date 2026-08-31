@@ -328,14 +328,11 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$camptix->log( sprintf( 'Fetching transaction after IPN failed %s.', $txn_id ), $order['attendee_id'], $txn_details );
 
 			/*
-			 * 10004 is the only error PayPal documents for GetTransactionDetails, and it
-			 * means the argument was refused. A resend carries the same TRANSACTIONID, so
-			 * it earns the same answer. Everything else, 10001 and a credentials failure
-			 * somebody may fix inside the retry window included, is worth sending again.
+			 * Always ask for a resend. Every failure on record is the January 2020
+			 * credentials outage, error 10002 across thirteen camps over nine days, and
+			 * those transactions were all retrievable once it passed.
 			 */
-			$refused_argument = isset( $txn_details['L_ERRORCODE0'] ) && '10004' === (string) $txn_details['L_ERRORCODE0'];
-
-			$this->ipn_die( $refused_argument ? 200 : 503 );
+			$this->ipn_die( 503 );
 		}
 
 		$camptix->log( sprintf( 'Payment details for %s via IPN', $txn_id ), null, $txn_details );

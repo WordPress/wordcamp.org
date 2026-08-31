@@ -71,6 +71,40 @@ if ( ! $target_page || 'publish' !== $target_page->post_status ) {
 
 $can_edit = current_user_can( 'edit_page', $target_page->ID );
 
+/*
+ * Password protection lives in `get_the_content()`, not in the
+ * `the_content` filter, so rendering the stored content here has to
+ * repeat the check.
+ *
+ * Visitors get nothing rather than the password form: this block embeds one
+ * page inside another, where a prompt for a different page's password would
+ * be confusing in that position. Organizers keep the heading and the edit
+ * link, the way the missing- and draft-page states above do, with a notice
+ * standing in for the content so the front page doesn't look broken to the
+ * person who can change it.
+ */
+if ( post_password_required( $target_page ) ) {
+	if ( ! $can_edit ) {
+		return;
+	}
+
+	$edit_url = get_edit_post_link( $target_page->ID );
+
+	printf(
+		'<div %1$s><div class="wporg-page-content__header">%2$s%3$s</div><p class="wporg-page-content__notice">%4$s</p></div>',
+		get_block_wrapper_attributes(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core.
+		$wporg_get_heading( true ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in the callback.
+		$edit_url ? sprintf(
+			'<a class="wporg-page-content__edit" href="%1$s">&#9998; %2$s</a>',
+			esc_url( $edit_url ),
+			esc_html__( 'Edit this content', 'wporg-groups-frontend' )
+		) : '',
+		esc_html__( 'This content is password-protected.', 'wporg-groups-frontend' )
+	);
+
+	return;
+}
+
 if ( '' === trim( (string) $target_page->post_content ) && ! $can_edit ) {
 	return;
 }

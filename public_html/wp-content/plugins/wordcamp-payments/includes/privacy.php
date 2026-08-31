@@ -12,6 +12,7 @@ if ( ! is_cli_request() ) {
 	add_action( 'pre_get_posts',                  __NAMESPACE__ . '\unsuppress_attachment_query_filters', PHP_INT_MAX );
 	add_filter( 'posts_clauses',                  __NAMESPACE__ . '\exclude_others_payment_files', 10, 2 );
 	add_filter( 'the_posts',                      __NAMESPACE__ . '\hide_others_payment_files' );
+	add_filter( 'map_meta_cap',                   __NAMESPACE__ . '\restrict_others_payment_file_caps', 10, 4 );
 }
 
 add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
@@ -233,14 +234,16 @@ function get_attachments_from_results( $posts ) {
 }
 
 /**
- * Which of the given attachments are payment files the current user may not see.
+ * Which of the given attachments are payment files the given user may not see.
  *
  * @param WP_Post[] $attachments
+ * @param int|null  $user_id     Defaults to the current user. Named explicitly by callers that are asked about
+ *                               somebody else, like a `map_meta_cap` callback.
  *
  * @return int[]
  */
-function get_hidden_payment_file_ids( $attachments ) {
-	$user_id           = get_current_user_id();
+function get_hidden_payment_file_ids( $attachments, $user_id = null ) {
+	$user_id           = is_null( $user_id ) ? get_current_user_id() : (int) $user_id;
 	$payment_posts_ids = get_payment_file_parent_ids( $attachments );
 	$hidden            = array();
 
@@ -291,6 +294,85 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
 	}
 
 	return $media_item_struct;
+}
+
+/**
+ * Withhold editing rights over a payment file from everyone the rules above hide it from.
+ *
+ * Those rules read the attachment's parent, so whoever may edit an attachment decides who sees it. Core has no
+ * reason to treat that as sensitive -- `post_parent` is an ordinary field to it, and an organizer is an Editor
+ * here, so `edit_others_posts` already covers another organizer's uploads. Several routes reach the field: the
+ * media REST endpoints, the Media Library's Attach and Detach actions, XML-RPC. Declining the capability closes
+ * all of them at once, instead of each one separately.
+ *
+ * Note that `wp_update_post()` checks no capabilities at all, so anything that reparents through it needs its
+ * own check as well -- the Files metabox does that where it handles the field it posts.
+ *
+ * @param string[] $required_capabilities The primitive capabilities the requested one maps to.
+ * @param string   $requested_capability  The requested meta capability.
+ * @param int      $user_id               The user being asked about, who isn't always the current one.
+ * @param array    $args                  The context the capability was requested with, typically the post ID.
+ *
+ * @return string[]
+ */
+function restrict_others_payment_file_caps( $required_capabilities, $requested_capability, $user_id, $args ) {
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
+	$attachment = get_capability_subject( $args );
+
+	if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type ) {
+		return $required_capabilities;
+	}
+
+	/*
+	 * A file that isn't attached to anything can't be one of these, so say so before spending a query on it --
+	 * `get_payment_file_parent_ids()` drops unattached files for the same reason. This is the common case on the
+	 * Media Library screens, where `map_meta_cap` runs once per attachment in the list.
+	 */
+	if ( ! $attachment->post_parent ) {
+		return $required_capabilities;
+	}
+
+	// As in the rules above, don't run the lookup for someone it can't apply to.
+	if ( user_can( $user_id, 'manage_options' ) ) {
+		return $required_capabilities;
+	}
+
+	if ( get_hidden_payment_file_ids( array( $attachment ), $user_id ) ) {
+		return array( 'do_not_allow' );
+	}
+
+	return $required_capabilities;
+}
+
+/**
+ * Resolve the post a `map_meta_cap` callback is being asked about.
+ *
+ * `$args[0]` is whatever was handed to `current_user_can()`, so an ID can arrive as an int or as a string. The
+ * numeric check and the cast mirror `get_post()`'s own contract.
+ *
+ * Naming no post at all resolves to nothing, and needs no fallback to the global `$post`: Core's own
+ * `map_meta_cap()` denies `edit_post` and `delete_post` outright in that case, so there's nothing left to guard.
+ * The budget post types have their own copy of this, one that does carry that fallback, because it runs for
+ * screens that leave the post implicit. This file can't share it -- see `get_budget_request_post_types()`.
+ *
+ * @param array $args The $args that was passed to the `map_meta_cap` callback.
+ *
+ * @return WP_Post|null
+ */
+function get_capability_subject( $args ) {
+	if ( ! isset( $args[0] ) ) {
+		return null;
+	}
+
+	if ( $args[0] instanceof WP_Post ) {
+		return $args[0];
+	}
+
+	return is_numeric( $args[0] ) ? get_post( (int) $args[0] ) : null;
 }
 
 /**

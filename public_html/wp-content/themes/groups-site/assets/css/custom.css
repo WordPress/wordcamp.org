@@ -859,7 +859,7 @@ body.error404 .site-content-container h1 {
    so the leading stays in px like the hero's. The 20px margins collapse
    against each other, which is what makes the gap 20px and not 40px. */
 
-.groups-site-about > p:not(.wporg-page-content__more) {
+.groups-site-about > p:not(.wporg-page-content__more, .wporg-page-content__notice) {
 	line-height: 30px;
 	margin-block: 20px;
 }
@@ -889,6 +889,16 @@ body.error404 .site-content-container h1 {
 
 .wporg-page-content__edit {
 	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Stands in for the body of a password-protected page, and only organizers
+   ever see it. Quiet like the edit link it sits under: it explains a state,
+   it isn't the section's content. */
+
+.wporg-page-content__notice {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+	margin: 0;
 }
 
 /* ==========================================================================

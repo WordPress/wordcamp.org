@@ -373,7 +373,12 @@ class Test_Dangling_Hosts extends Database_TestCase {
 		add_filter( 'pre_http_request', $stub );
 
 		try {
-			return scan_network( array( 'blog_ids' => array( get_current_blog_id() ), 'verify' => true ) );
+			return scan_network(
+				array(
+					'blog_ids' => array( get_current_blog_id() ),
+					'verify'   => true,
+				)
+			);
 		} finally {
 			remove_filter( 'pre_http_request', $stub );
 		}

@@ -67,7 +67,6 @@ const EMPTY_FORM = {
  * @param {Function} props.onLoad            Optional; called once event data has been loaded into the form.
  * @param {*}        props.header            Rendered above the fields.
  * @param {*}        props.footerStart       Rendered at the start of the actions row.
- * @param {*}        props.venueEditor       When set, rendered in place of the fields; the field state is kept.
  * @param {*}        props.children          Rendered after the RSVP questions.
  * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
  */
@@ -85,7 +84,6 @@ function EventForm(
 		onLoad,
 		header,
 		footerStart,
-		venueEditor,
 		children,
 	},
 	ref
@@ -245,10 +243,6 @@ function EventForm(
 				<Spinner />
 			</div>
 		);
-	}
-
-	if ( venueEditor ) {
-		return venueEditor;
 	}
 
 	return (

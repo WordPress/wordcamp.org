@@ -9,6 +9,7 @@
 
 import {
 	createElement as h,
+	Fragment,
 	useState,
 	useEffect,
 	useRef,
@@ -80,19 +81,12 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 		}
 	};
 
-	return h( EventForm, {
-		ref: formRef,
-		mode: isEdit ? 'edit' : 'create',
-		eventId,
-		classPrefix: 'wporg-event-form',
-		className: 'wporg-event-form',
-		onSubmitPayload: submitPayload,
-		onCancel,
-		onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
-		header: h( 'div', { className: 'wporg-event-form__header' },
-			h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
-		),
-		venueEditor: venueEditorId !== null && h( 'div', { className: 'wporg-settings-tab' },
+	const venueEditorOpen = venueEditorId !== null;
+
+	// The venue editor is a sibling, not a replacement, so the form (and the
+	// description editor's block state) stays mounted while it's open.
+	return h( Fragment, {},
+		venueEditorOpen && h( 'div', { className: 'wporg-settings-tab' },
 			h( VenueEditor, {
 				venueId: venueEditorId, inline: true,
 				onSave: ( saved ) => {
@@ -102,25 +96,40 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 				onCancel: () => setVenueEditorId( null ),
 			} )
 		),
-	},
-		h( 'div', { className: 'wporg-event-form__field' },
-			h( FormTokenField, {
-				label: __( 'Speakers', 'wporg-groups-frontend' ),
-				value: speakers.map( ( id ) => {
-					const member = memberOptions.find( ( m ) => m.id === id );
-					return member ? member.name : String( id );
-				} ),
-				suggestions: memberOptions.map( ( m ) => m.name ),
-				onChange: ( tokens ) => {
-					const ids = tokens.map( ( token ) => {
-						const member = memberOptions.find( ( m ) => m.name === token );
-						return member ? member.id : null;
-					} ).filter( Boolean );
-					setSpeakers( ids );
-				},
-				__experimentalExpandOnFocus: true,
-				__nextHasNoMarginBottom: true,
-			} )
+		h( 'div', { hidden: venueEditorOpen },
+			h( EventForm, {
+				ref: formRef,
+				mode: isEdit ? 'edit' : 'create',
+				eventId,
+				classPrefix: 'wporg-event-form',
+				className: 'wporg-event-form',
+				onSubmitPayload: submitPayload,
+				onCancel,
+				onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
+				header: h( 'div', { className: 'wporg-event-form__header' },
+					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
+				),
+			},
+				h( 'div', { className: 'wporg-event-form__field' },
+					h( FormTokenField, {
+						label: __( 'Speakers', 'wporg-groups-frontend' ),
+						value: speakers.map( ( id ) => {
+							const member = memberOptions.find( ( m ) => m.id === id );
+							return member ? member.name : String( id );
+						} ),
+						suggestions: memberOptions.map( ( m ) => m.name ),
+						onChange: ( tokens ) => {
+							const ids = tokens.map( ( token ) => {
+								const member = memberOptions.find( ( m ) => m.name === token );
+								return member ? member.id : null;
+							} ).filter( Boolean );
+							setSpeakers( ids );
+						},
+						__experimentalExpandOnFocus: true,
+						__nextHasNoMarginBottom: true,
+					} )
+				)
+			)
 		)
 	);
 }

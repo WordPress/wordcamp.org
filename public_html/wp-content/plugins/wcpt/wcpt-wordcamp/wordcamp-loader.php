@@ -276,7 +276,7 @@ class WordCamp_Loader extends Event_Loader {
 		// Every exemption the clause below takes has to be taken here too. Where the clause is
 		// the more permissive of the two, it selects a row this then refuses, and the response
 		// comes back short under a total that was never reduced.
-		if ( is_admin() && ! wp_doing_ajax() ) {
+		if ( is_admin() && current_user_can( 'edit_wordcamps' ) ) {
 			return true;
 		}
 
@@ -397,20 +397,24 @@ class WordCamp_Loader extends Event_Loader {
 		}
 
 		/*
-		 * wp-admin is not a public surface and reaching a WordCamp screen already needs
-		 * `edit_wordcamps`. Every other application status stays in the list table, and
-		 * deciding who sees which camp there is #1943's subject, which does it for all of
-		 * them rather than singling this one out. `wp_doing_cron()` above covers cron;
-		 * admin-ajax is `is_admin()` too and is reachable by any logged-in user, so it is
-		 * excluded here and the export below names itself instead.
+		 * Opening a WordCamp screen needs `edit_wordcamps`, so name the capability rather than
+		 * the entry point. Every other application status stays in the list table, and deciding
+		 * who sees which camp there is #1943's subject, which does it for all of them rather
+		 * than singling this one out.
+		 *
+		 * `is_admin()` alone is wider than it reads: `admin-post.php` defines `WP_ADMIN` and
+		 * fires `admin_post_nopriv_{$action}` before any capability check, so it is true there
+		 * for a logged out request. The capability admits whoever can open the list table
+		 * through any of those doors and nobody else, which is why admin-ajax needs no separate
+		 * mention. `wp_doing_cron()` above covers cron.
 		 */
-		if ( is_admin() && ! wp_doing_ajax() ) {
+		if ( is_admin() && current_user_can( 'edit_wordcamps' ) ) {
 			return $where;
 		}
 
-		// A personal data export runs over admin-ajax, so the exemption above does not reach
-		// it. It has to be complete whoever is processing it, and a Central administrator
-		// without the subrole does not hold the capability below.
+		// A personal data export has to be complete whoever is processing it, so it says so
+		// rather than resting on the exemption above, which turns on a capability the person
+		// running an export has no particular reason to hold.
 		if ( $query->get( 'wcpt_include_unscheduled_cancellations' ) ) {
 			return $where;
 		}

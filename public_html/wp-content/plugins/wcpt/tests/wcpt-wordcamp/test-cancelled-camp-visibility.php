@@ -235,7 +235,11 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	 * @covers WordCamp_Loader::can_read_unscheduled_cancellation
 	 */
 	public function test_the_collection_agrees_with_its_count_inside_wp_admin() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		// A contributor, because the exemption turns on `edit_wordcamps` and that is who holds
+		// it: a subscriber in wp-admin is refused, which is a different test below.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'contributor' ) ) );
+
+		$this->assertTrue( current_user_can( 'edit_wordcamps' ) );
 
 		set_current_screen( 'edit-wordcamp' );
 
@@ -498,28 +502,37 @@ class Test_Cancelled_Camp_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Any logged-in user can reach admin-ajax, where `is_admin()` is true as well, so the
-	 * exemption for wp-admin must not carry to it.
+	 * The exemption follows the capability, not the entry point. `admin-post.php` defines
+	 * `WP_ADMIN` and fires `admin_post_nopriv_{$action}` before any capability check, so
+	 * `is_admin()` is true there for a request with no user at all.
 	 *
 	 * @covers WordCamp_Loader::hide_unscheduled_cancellations
 	 */
-	public function test_the_wp_admin_exemption_does_not_reach_admin_ajax() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-
-		set_current_screen( 'edit-wordcamp' );
-		add_filter( 'wp_doing_ajax', '__return_true' );
-
-		$query = new WP_Query(
-			array(
-				'post_type'   => WCPT_POST_TYPE_ID,
-				'post_status' => 'wcpt-cancelled',
-			)
+	public function test_the_wp_admin_exemption_follows_the_capability() {
+		$viewers = array(
+			'logged out' => 0,
+			'subscriber' => self::factory()->user->create( array( 'role' => 'subscriber' ) ),
 		);
 
-		remove_filter( 'wp_doing_ajax', '__return_true' );
-		set_current_screen( 'front' );
+		set_current_screen( 'edit-wordcamp' );
 
-		$this->assertNotContains( $this->application, wp_list_pluck( $query->posts, 'ID' ) );
+		foreach ( $viewers as $name => $viewer ) {
+			wp_set_current_user( 0 );
+			wp_set_current_user( $viewer );
+
+			$this->assertFalse( current_user_can( 'edit_wordcamps' ), "$name holds the capability." );
+
+			$query = new WP_Query(
+				array(
+					'post_type'   => WCPT_POST_TYPE_ID,
+					'post_status' => 'wcpt-cancelled',
+				)
+			);
+
+			$this->assertNotContains( $this->application, wp_list_pluck( $query->posts, 'ID' ), $name );
+		}
+
+		set_current_screen( 'front' );
 	}
 
 	/**

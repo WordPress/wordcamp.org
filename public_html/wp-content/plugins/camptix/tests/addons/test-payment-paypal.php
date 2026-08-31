@@ -359,6 +359,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 					'details' => array(
 						'CUSTOM' => '%blog%:tok_under', 'AMT' => '0.01',
 					),
+					'reason'  => 'paid 0.01 of 750',
 				),
 			),
 
@@ -368,6 +369,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 					'details' => array(
 						'CUSTOM' => '%blog%:tok_currency', 'CURRENCYCODE' => 'MXN',
 					),
+					'reason'  => 'paid in MXN, the order is in USD',
 				),
 			),
 
@@ -391,6 +393,7 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 					'details' => array(
 						'CUSTOM' => '%blog%:tok_free', 'AMT' => '0.01',
 					),
+					'reason'  => 'the order has nothing to pay',
 				),
 			),
 

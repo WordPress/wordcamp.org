@@ -360,8 +360,10 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 				$this->ignore_ipn( sprintf( 'transaction %1$s was not made for this order, %2$s', $txn_id, $refusal ), $order, compact( 'payment_token', 'txn_details' ) );
 			}
 
-			if ( ! $this->transaction_covers_order( $order, $txn_details ) ) {
-				$this->ignore_ipn( sprintf( 'transaction %s does not cover this order', $txn_id ), $order, compact( 'payment_token', 'txn_details' ) );
+			$shortfall = $this->reason_transaction_does_not_cover_order( $order, $txn_details );
+
+			if ( '' !== $shortfall ) {
+				$this->ignore_ipn( sprintf( 'transaction %1$s does not cover this order, %2$s', $txn_id, $shortfall ), $order, compact( 'payment_token', 'txn_details' ) );
 			}
 		}
 
@@ -472,37 +474,48 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Whether a PayPal transaction paid at least what the given order asks for.
+	 * Why a PayPal transaction does not pay what the given order asks for.
 	 *
 	 * The reference above is echoed faithfully but is not proof on its own, since a
 	 * payer outside Express Checkout sets `custom` themselves. The amount is what they
 	 * cannot set. "Covers" not "equals", because some sites charge a fee on top;
 	 * compared as integers because verify_order() accumulates the total in floats.
 	 *
+	 * A free order and a genuine underpayment are different things to find in the
+	 * log, so they are told apart here rather than sharing one message.
+	 *
 	 * @param array $order
 	 * @param array $txn_details
 	 *
-	 * @return bool
+	 * @return string Empty when the transaction covers the order.
 	 */
-	protected function transaction_covers_order( $order, $txn_details ) {
-		// A free order never went to PayPal, so no transaction was ever made for one.
+	protected function reason_transaction_does_not_cover_order( $order, $txn_details ) {
 		$due = isset( $order['total'] ) ? (float) $order['total'] : 0;
 
-		if ( $due <= 0 || ! isset( $txn_details['AMT'] ) ) {
-			return false;
+		// A free order never went to PayPal, so no transaction was ever made for one.
+		if ( $due <= 0 ) {
+			return 'the order has nothing to pay';
+		}
+
+		if ( ! isset( $txn_details['AMT'] ) ) {
+			return 'no amount came back';
 		}
 
 		$expected_currency = strtoupper( (string) $this->camptix_options['currency'] );
 		$paid_currency     = isset( $txn_details['CURRENCYCODE'] ) ? strtoupper( (string) $txn_details['CURRENCYCODE'] ) : '';
 
 		if ( '' === $paid_currency || $expected_currency !== $paid_currency ) {
-			return false;
+			return sprintf( 'paid in %1$s, the order is in %2$s', $paid_currency ? $paid_currency : '(none)', $expected_currency );
 		}
 
 		// NVP amounts document the thousands separator as an optional comma, and "1,234.56" casts to 1.0.
 		$paid = (float) str_replace( ',', '', (string) $txn_details['AMT'] );
 
-		return (int) round( $paid * 100 ) >= (int) round( $due * 100 );
+		if ( (int) round( $paid * 100 ) < (int) round( $due * 100 ) ) {
+			return sprintf( 'paid %1$s of %2$s', $paid, $due );
+		}
+
+		return '';
 	}
 
 	/**
@@ -687,9 +700,9 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$payment_token = isset( $_REQUEST['tix_payment_token'] ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		$paypal_token  = isset( $_REQUEST['token'] )             ? trim( $_REQUEST['token'] )             : '';
-		$payer_id      = isset( $_REQUEST['PayerID'] )           ? trim( $_REQUEST['PayerID'] )           : '';
+		$payment_token = isset( $_REQUEST['tix_payment_token'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['tix_payment_token'] ) ) : '';
+		$paypal_token  = isset( $_REQUEST['token'] )             ? sanitize_text_field( wp_unslash( $_REQUEST['token'] ) )             : '';
+		$payer_id      = isset( $_REQUEST['PayerID'] )           ? sanitize_text_field( wp_unslash( $_REQUEST['PayerID'] ) )           : '';
 
 		$camptix->log( 'User returning from PayPal', null, compact( 'payer_id', 'payment_token', 'paypal_token' ) );
 

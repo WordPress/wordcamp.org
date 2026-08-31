@@ -183,6 +183,35 @@ function wcorg_get_user_by_canonical_names( $name ) {
 }
 
 /**
+ * Resolve a submitted username to the account a user is allowed to link a participant record to.
+ *
+ * A user may name their own account; naming a different one is reserved for those who can edit other
+ * authors' posts. An unknown name, or one they may not claim, resolves to an empty string.
+ *
+ * @param string   $name    The submitted username (matched against login and nicename).
+ * @param int|null $user_id The user doing the linking. Defaults to the current user.
+ *
+ * @return string The canonical `user_login` the user may link, or an empty string.
+ */
+function wcorg_get_linkable_user_login( $name, $user_id = null ) {
+	if ( is_null( $user_id ) ) {
+		$user_id = get_current_user_id();
+	}
+
+	$wporg_user = wcorg_get_user_by_canonical_names( $name );
+
+	if ( ! $wporg_user ) {
+		return '';
+	}
+
+	if ( (int) $user_id === (int) $wporg_user->ID || user_can( $user_id, 'edit_others_posts' ) ) {
+		return $wporg_user->user_login;
+	}
+
+	return '';
+}
+
+/**
  * Get CLDR country names and codes.
  *
  * @param array $args
@@ -396,4 +425,42 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
 		'UTF-8',
 		true
 	);
+}
+
+/**
+ * Reduce a submitted value to text that stays text once WordPress saves it.
+ *
+ * `strip_tags()` wants a letter, `/`, `!` or `?` after a `<` before it counts as a tag, but `wp_kses()`
+ * also accepts whitespace. So `< code >` survives `sanitize_text_field()`, and the `wp_filter_kses()`
+ * core puts on `title_save_pre` then rebuilds it into a real element. Encoding the surviving `<` settles
+ * that, and still reads as `<` to a human.
+ *
+ * Two near-misses to avoid: `sanitize_text_field()` also deletes every `%[a-f0-9]{2}`, which breaks
+ * percent-encoded URLs; `wp_kses( $value, array() )` drops whole `<...>` spans, turning
+ * `Hall < 100 > seats` into `Hall  seats`.
+ *
+ * The result is HTML-encoded. Decode it for a plain-text medium -- the organizer reminder mails
+ * (`wcor-mailer.php`) are the case already in the tree.
+ *
+ * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
+ *                     scalar becomes `''`, as `sanitize_text_field()` does.
+ *
+ * @return string|array A string, or an array of strings when `$value` is an array.
+ */
+function wcorg_sanitize_plain_text( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wcorg_sanitize_plain_text', $value );
+	}
+
+	if ( ! is_scalar( $value ) ) {
+		return '';
+	}
+
+	// `strip_tags()` deletes from an unterminated `<` to the end of the string, so encode that
+	// case first -- `Rated <A best` should keep its text, not become `Rated`.
+	$value = wp_check_invalid_utf8( (string) $value );
+	$value = wp_pre_kses_less_than( $value );
+	$value = wp_strip_all_tags( $value, true );
+
+	return str_replace( '<', '&lt;', $value );
 }

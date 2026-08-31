@@ -69,6 +69,10 @@ class WCP_Payment_Request {
 			'show_in_nav_menus' => true,
 			'supports'          => array( 'title' ),
 			'has_archive'       => true,
+
+			// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+			'map_meta_cap'      => true,
+			'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 		);
 
 		return register_post_type( self::POST_TYPE, $args );
@@ -615,7 +619,22 @@ class WCP_Payment_Request {
 		// Submit for Review button was clicked.
 		if ( ! current_user_can( 'manage_network' ) ) {
 			$editable_statuses = self::get_editable_statuses();
-			if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses ) ) {
+			if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses, true ) ) {
+				$post_data['post_status'] = 'wcb-pending-approval';
+			}
+
+			/*
+			 * Statuses past pending approval (approval, payment, etc.) are reserved for network admins. For
+			 * everyone else, keep the status within the set a requester can set, defaulting to pending
+			 * approval.
+			 *
+			 * Keyed on the stored status, so this only applies while the request is still requester-editable
+			 * (draft/incomplete). Status changes made once it's further along, and the initial insert of a
+			 * new post, are left as-is.
+			 */
+			$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+			$requester_statuses = array_merge( $editable_statuses, array( 'wcb-pending-approval' ) );
+			if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 				$post_data['post_status'] = 'wcb-pending-approval';
 			}
 		}
@@ -965,6 +984,12 @@ Thanks for helping us with these details!",
 	 */
 	public function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
 		// todo maybe centralize this, since almost identical to counterparts in other modules
+
+		// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+		if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+			return $required_capabilities;
+		}
+
 		$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 		if ( is_a( $post, 'WP_Post' ) && self::POST_TYPE == $post->post_type ) {

@@ -22,10 +22,12 @@ import {
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 
+import OwnershipTransferPanel from './ownership-transfer-panel';
+
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
-	{ label: __( 'Event Organiser', 'wporg-groups-frontend' ), value: 'author' },
-	{ label: __( 'Organiser', 'wporg-groups-frontend' ), value: 'editor' },
+	{ label: __( 'Event Organizer', 'wporg-groups-frontend' ), value: 'author' },
+	{ label: __( 'Organizer', 'wporg-groups-frontend' ), value: 'editor' },
 ];
 
 const PER_PAGE = 20;
@@ -123,6 +125,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 		{ className: 'wporg-settings-tab' },
 		notice &&
 			h( Notice, { status: 'info', isDismissible: true, onDismiss: () => setNotice( '' ) }, notice ),
+		h( OwnershipTransferPanel ),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__controls' },
@@ -165,7 +168,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 							className: 'wporg-members-tab__role-select',
 						} )
 						: h( 'span', { className: 'wporg-members-tab__role-readonly' },
-							member.roleLabel || __( 'Organiser', 'wporg-groups-frontend' )
+							member.roleLabel || __( 'Organizer', 'wporg-groups-frontend' )
 						)
 				);
 			} )

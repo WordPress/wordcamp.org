@@ -182,8 +182,8 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
-	 * The organiser audience is the "Organiser" tier only — editors and
-	 * administrators. Authors ("Event Organisers") and members are excluded.
+	 * The organizer audience is the "Organizer" tier only — editors and
+	 * administrators. Authors ("Event Organizers") and members are excluded.
 	 */
 	public function test_organizer_audience_only_includes_editors_and_admins() {
 		$site_id = $this->group_sites['brisbane'];
@@ -246,7 +246,7 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
-	 * #1775: a broadcast reaches every organiser on every group, and nobody
+	 * #1775: a broadcast reaches every organizer on every group, and nobody
 	 * else.
 	 */
 	public function test_broadcast_reaches_every_organizer_on_the_network() {
@@ -619,7 +619,7 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
-	 * Group organisers — even administrators of their own group — can't reach
+	 * Group organizers — even administrators of their own group — can't reach
 	 * the whole network.
 	 */
 	public function test_group_administrators_cannot_send_messages() {

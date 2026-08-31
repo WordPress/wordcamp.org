@@ -4,11 +4,39 @@
  * @package WordCamp\Groups\Site
  */
 
-img,
-video,
-iframe {
+/* Keep authored media inside its column — an oversized image in a group's
+   page content would otherwise force the whole page to scroll sideways on a
+   phone. Scoped to the containers that render authored HTML rather than
+   applied to every `img` on the site: UI chrome (avatars, logos) sets its own
+   dimensions, and a global rule fights those instead of helping them.
+   Editor-inserted images and featured images are already handled by core. */
+
+:where(.wp-block-post-content, .wp-block-comment-content, .wp-block-wporg-page-content)
+	:where(img, video, iframe) {
 	max-width: 100%;
 	height: auto;
+}
+
+@media (max-width: 960px) {
+	.groups-site-home-layout {
+		flex-wrap: wrap !important;
+
+		/* Columns only carry `blockGap.left`, which becomes `column-gap` —
+		   once they wrap there is nothing holding the two apart vertically. */
+		row-gap: var(--wp--preset--spacing--60);
+	}
+
+	.groups-site-home-layout > .wp-block-column {
+		flex-basis: 100% !important;
+	}
+
+	/* The sidebar is second in the source, so wrapping puts it *below* the
+	   main column — its divider belongs on the leading edge. */
+
+	.groups-site-sidebar {
+		padding-left: 0;
+		padding-top: var(--wp--preset--spacing--40);
+	}
 }
 
 /* ==========================================================================
@@ -16,19 +44,41 @@ iframe {
    ========================================================================== */
 
 @media (max-width: 781px) {
-
-	/* Single event: collapse two-column layout to stacked. */
-	.groups-site-event-layout {
-		flex-direction: column !important;
+	.wp-block-columns.groups-site-event-layout {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		column-gap: 0;
+		row-gap: var(--wp--preset--spacing--20);
 	}
 
-	.groups-site-event-layout .wp-block-column {
-		flex-basis: 100% !important;
+	.groups-site-event-sidebar,
+	.groups-site-event-content {
+		grid-column: 1;
+		grid-row: auto;
+		max-width: 100%;
 	}
 
-	/* Date header: let text wrap. */
-	.groups-site-event-date-header {
-		gap: 12px !important;
+	.groups-site-event-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--wp--preset--spacing--20);
+		padding-top: var(--wp--preset--spacing--20);
+	}
+
+	/* Post hero: the columns stack here, so the featured image jumps from a
+	   side panel to the full width of the band. Left alone that renders a
+	   400px-tall billboard on tablets, pushing the title and the opening
+	   paragraph off the fold — the exact cost the side placement exists to
+	   avoid. Cap the height so it stays a banner strip. Phones are already
+	   under the cap at their natural 16/9, so nothing changes there.
+
+	   The crop is biased above centre because a centred one takes the middle
+	   band of the frame, which is where a photo of people has their necks.
+	   Faces sit in the upper third, so that is the part worth keeping. */
+
+	.groups-site-post-hero-media img {
+		max-height: 200px;
+		object-position: 50% 35%;
 	}
 
 	/* Query Loop event cards: single column. */
@@ -46,8 +96,11 @@ iframe {
 		grid-template-columns: 1fr !important;
 	}
 
-	/* Group membership block: wrap and center. */
-	.wporg-group-membership {
+	/* Group membership block: stack the sidebar variants. Scoped to the
+	   sidebar because the standalone count in the hero meta row stays
+	   inline next to the group location at every width. */
+
+	.groups-site-sidebar .wporg-group-membership {
 		flex-direction: column;
 		align-items: flex-start;
 	}
@@ -63,11 +116,6 @@ iframe {
 		max-height: none !important;
 		height: 100% !important;
 	}
-
-	/* Cover block hero: reduce padding. */
-	.wp-block-cover.alignfull {
-		min-height: auto !important;
-	}
 }
 
 /* ==========================================================================
@@ -75,12 +123,19 @@ iframe {
    ========================================================================== */
 
 @media (min-width: 481px) and (max-width: 781px) {
+
+	/* `minmax(0, 1fr)` rather than a bare `1fr` — a plain `1fr` track's
+	   implicit `min-width: auto` sizes it to its content's min-content
+	   width, which for a member/event card is wider than half the viewport
+	   at this breakpoint and forces the grid to overflow horizontally
+	   instead of letting the card's own content wrap. */
+
 	.wp-block-post-template.is-layout-grid {
-		grid-template-columns: 1fr 1fr !important;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 	}
 
 	.wporg-group-members__grid {
-		grid-template-columns: 1fr 1fr !important;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 	}
 }
 
@@ -89,6 +144,7 @@ iframe {
    ========================================================================== */
 
 @media (min-width: 1024px) {
+
 	/*
 	 * Stick the event sidebar to the top while scrolling.
 	 *
@@ -97,11 +153,18 @@ iframe {
 	 * with the sponsors block below it, the card would slide down and cover
 	 * it. `align-self` stops the column stretching to the row's full height,
 	 * which would leave `sticky` no room to travel in.
+	 *
+	 * The `z-index` has to clear the page content but stay under the local
+	 * navigation bar, which sticks at `z-index: 10`. It can't be dropped
+	 * altogether: the column needs a stacking context of its own to trap the
+	 * venue map, whose Leaflet panes and controls run up to `z-index: 1000`
+	 * and would otherwise paint over the header.
 	 */
+
 	.groups-site-event-sidebar {
 		position: sticky;
 		top: 96px;
-		z-index: 100;
+		z-index: 1;
 		align-self: flex-start;
 	}
 }

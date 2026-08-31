@@ -994,8 +994,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		public function add_organizer_to_central( $post ) {
 
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- WordCamp status can be moved to pre-planning status only from the admin edit screen where nonce is already verified.
-			$lead_organizer = get_user_by( 'login', $_POST['wcpt_wordpress_org_username'] );
+			// Only the admin edit screen posts this, and the same transition is reachable from
+			// the Jetpack application bridge, WP-CLI and cron, where there is no form at all.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The admin edit screen has already verified its nonce.
+			$username = $_POST['wcpt_wordpress_org_username'] ?? '';
+
+			if ( ! $username ) {
+				return;
+			}
+
+			$lead_organizer = get_user_by( 'login', $username );
 
 			if ( $lead_organizer && add_user_to_blog( get_current_blog_id(), $lead_organizer->ID, 'contributor' ) ) {
 				do_action( 'wcor_organizer_added_to_central', $post );
@@ -1052,6 +1060,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$is_event     = is_event_url( $wordcamp_url );
 			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
 
+			/*
+			 * `post_title` can hold `&lt;` for a `<` the applicant typed, see
+			 * `wcorg_sanitize_plain_text()`. Slack decodes that back to `<` in mrkdwn, so it reads
+			 * correctly here -- worth knowing before this string is reused somewhere that does not.
+			 */
 			$message = sprintf(
 				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
@@ -1482,6 +1495,27 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Return the Event Subtype the list table is filtered to, if it names a real one.
+		 *
+		 * `alter_views()` uses the value as an array key into `get_event_subtypes()` and
+		 * splices it into the view markup, and `filter_by_subtype()` puts it in a meta
+		 * query, so anything outside the list has to collapse to no filter rather than
+		 * travel on to either.
+		 *
+		 * `$_GET` because the only producer is a link, the subtype links below.
+		 * `edit.php`'s `posts-filter` form carries no `type` field, so searching or
+		 * date-filtering drops the subtype. That is how it behaved before too.
+		 *
+		 * @return string A key of `get_event_subtypes()`, or an empty string.
+		 */
+		public function get_requested_subtype() {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for the list table.
+			$subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
+
+			return array_key_exists( $subtype, $this->get_event_subtypes() ) ? $subtype : '';
+		}
+
+		/**
 		 * Schedule cron jobs
 		 */
 		public function schedule_cron_jobs() {
@@ -1607,7 +1641,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				}
 			}
 
-			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
+			$current_subtype = $this->get_requested_subtype();
 
 			// If we're currently filtering to a type, regenerate the Views, as the counts and available statii need updating.
 			if ( $current_subtype ) {
@@ -1677,7 +1711,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$html = str_replace( 'post_type=wordcamp', 'post_type=wordcamp&#038;type=' . $current_subtype, $html );
 
 					// Replace the Label too, e.g., "WordCamp (10)" becomes "DoAction (10)". Only applies to the views list.
-					$html = str_replace( 'WordCamp', $this->get_event_subtypes()[ $current_subtype ], $html );
+					// Core echoes these strings unescaped, so the label is escaped here like the one above.
+					$html = str_replace( 'WordCamp', esc_html( $this->get_event_subtypes()[ $current_subtype ] ), $html );
 				}
 
 				// Remove the "Mine" filter, as this isn't compatible with subtype filtering.. and isn't relevant usually for wranglers.
@@ -1722,13 +1757,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		public function filter_by_subtype( $query ) {
 			if (
 				! $query->is_main_query() ||
-				WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ||
-				empty( $_REQUEST['type'] )
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' )
 			) {
 				return;
 			}
 
-			$type = sanitize_text_field( wp_unslash( $_REQUEST['type'] ) );
+			$type = $this->get_requested_subtype();
+
+			if ( ! $type ) {
+				return;
+			}
 
 			$meta_query = $query->get( 'meta_query' ) ?: [];
 

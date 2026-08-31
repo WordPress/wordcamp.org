@@ -55,15 +55,442 @@ body.error404 .site-content-container h1 {
 	color: inherit;
 }
 
+/* ==========================================================================
+   Buttons
 
+   The parent theme drives every state from `--wp--custom--button--*` custom
+   properties; the values that differ are token overrides in `theme.json`
+   (`settings.custom.button`). What's left here is only what the token system
+   has no slot for.
+
+   The compact size — Inter 14px/600 in 10px 20px — is deliberately *not*
+   the parent's `is-small`: that variant is 7px/12px and only applies under a
+   `[class*="wp-block"]` wrapper, while both users here (the comment form's
+   submit and the RSVP answers fieldset's) are plain `.wp-element-button`s
+   with no block wrapper at all. Each carries its own rule.
+   ========================================================================== */
+
+.wp-block-button > .wp-block-button__link.wp-element-button {
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		color 0.15s ease;
+}
+
+/* ----------  Disabled  ---------- */
+
+/*
+ * The parent has no disabled token, so the treatment lives here. One rule
+ * for both variants, so a disabled outline button doesn't stay blue and read
+ * as still-actionable. Grey on the light surface rather than a faded blue:
+ * `opacity` on the live colours would drop the label to roughly 2:1, and
+ * while disabled controls are exempt from the contrast minimum,
+ * "unavailable" shouldn't also mean "unreadable".
+ *
+ * The outline selector is listed separately to outweigh the parent's
+ * `[class*="wp-block"].is-style-outline .wp-block-button__link:hover`, which
+ * would otherwise repaint a disabled button on hover from equal weight.
+ */
+
+.wp-block-button > .wp-block-button__link.wp-element-button:disabled,
+.wp-block-button.is-style-outline > .wp-block-button__link.wp-element-button:disabled {
+	background-color: var(--wp--preset--color--light-grey-2);
+	border-color: var(--wp--preset--color--light-grey-1);
+	color: var(--wp--preset--color--charcoal-4);
+	cursor: not-allowed;
+}
+
+/* ----------  Loading  ---------- */
+
+/*
+ * Draws the in-flight spinner for buttons the blocks mark `aria-busy` — see
+ * the note in `event-rsvp/render.php` for why they set it alongside
+ * `disabled`. The label stays put: replacing it with a spinner would reflow
+ * the row and drop the accessible name mid-action.
+ */
+
+/* Second selector only exists to outweigh the parent theme's
+   `[class*="wp-block"] .wp-block-button__link { cursor: pointer }`, which
+   ties with the first on specificity and wins on source order. */
+
+.wp-element-button[aria-busy="true"],
+.wp-block-button > .wp-block-button__link.wp-element-button[aria-busy="true"] {
+	cursor: progress;
+}
+
+.wp-element-button[aria-busy="true"]::after {
+	content: '';
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-left: 10px;
+	vertical-align: -1px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 9999px;
+	animation: groups-site-spin 0.7s linear infinite;
+}
+
+@keyframes groups-site-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/*
+ * The blanket reduced-motion rule below only shortens durations, which for
+ * an infinite animation means strobing rather than stopping. Close the ring
+ * and mute it instead: still legibly "working", with nothing moving.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.wp-element-button[aria-busy="true"]::after {
+		animation-name: none;
+		border-right-color: currentColor;
+		opacity: 0.5;
+	}
+}
+
+/* ==========================================================================
+   Local navigation breadcrumbs
+   ========================================================================== */
+
+/* The breadcrumb is a flex item in the bar's row, and a flex item's default
+   `min-width: auto` floors it at its own content width — so a long event
+   title pushed the whole row past the viewport, carrying the navigation off
+   the right edge and scrolling the page sideways, instead of the wrapper
+   below clipping and scrolling within the space the bar can spare. Let it
+   shrink; the wrapper's own overflow then does the rest. */
+
+.wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
+	min-width: 0;
+}
+
+/* The breadcrumb wrapper scrolls sideways when a long event title overflows
+   the bar. The block's own fade-out mask already signals the clipped text;
+   the scrollbar a classic-scrollbar OS would draw under it is just noise in
+   a 40px-tall bar. */
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper {
+	scrollbar-width: none;
+}
+
+.wp-block-wporg-site-breadcrumbs .wporg-site-breadcrumbs__wrapper::-webkit-scrollbar {
+	display: none;
+}
+
+/* ==========================================================================
+   Inner-page header band
+   ========================================================================== */
+
+/* Every inner page — news post, events archive, static page, venue, search —
+   opens with the same compact header on the plain page background. The
+   templates only supply the content; the spacing and the title size live here
+   so the pages can't drift apart. */
+
+.groups-site-page-header {
+	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--edge-space);
+}
+
+.groups-site-page-header h1 {
+	font-size: var(--wp--preset--font-size--heading-3);
+	line-height: 1.15;
+}
+
+/* ==========================================================================
+   Front-page hero
+   ========================================================================== */
+
+/* A split hero on the plain page background: group details on the left and,
+   on the right, a polaroid — a white card holding the 16:9 photo and a share
+   row, dropped low inside a rounded colour mat (generous air above, flush
+   with the bottom edge, centred horizontally). The mat's colour lives on
+   `groups-site-hero-frame` as a plain block `backgroundColor` rather than a
+   CSS rule, so a group owner can retint it from the Site Editor's colour
+   panel without touching code. */
+
+.groups-site-hero-content .wp-block-site-title {
+	text-wrap: balance;
+}
+
+/* The mat is specced at 640×440 in the design file: 640px is half of the
+   1280px content width (the media column's share), and the height comes from
+   holding that 640/440 ratio, so the mat renders at exactly the specced size
+   on a full-width desktop and scales in proportion below it. The card is
+   pinned to the mat's bottom edge and the leftover ratio height becomes the
+   air above the card — a fixed top padding would fight the ratio at narrow
+   widths. `aspect-ratio` is a preferred size, not a clamp, so if the card
+   ever outgrows the ratio the mat stretches rather than clips. */
+
+.groups-site-hero-frame {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	aspect-ratio: 640 / 440;
+}
+
+/* A photograph pinned to a mat, so it lifts a touch off it. */
+.groups-site-hero-card {
+	box-shadow: 0 2px 8px rgba(30, 30, 30, 0.08);
+}
+
+.groups-site-hero-share .wp-block-social-links {
+	gap: 16px;
+}
+
+/* Inside a phone-width card the seven icons at a 16px gap run 264px — past
+   the ~235px the card can give them, dropping the last icon to its own line.
+   10px brings the row to 228px, one line again down to ~375px viewports. */
+
+@media (max-width: 480px) {
+	.groups-site-hero-share .wp-block-social-links {
+		gap: 10px;
+	}
+}
+
+/* The block attribute already crops to 16:9; this pins the crop even for
+   markup core renders without the inline aspect-ratio (e.g. older saved
+   content), so the photo can never dictate the band's height. */
+
+.groups-site-hero-media .wp-block-post-featured-image {
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border-radius: 2px;
+}
+
+.groups-site-hero-media img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* Core's post-featured-image block outputs nothing when the Home page has no
+   featured image, which would leave this column as an empty colour mat —
+   drop the whole column, polaroid and all. The text column carries no width
+   of its own (core gives width-less columns `flex-grow: 1`), so it takes the
+   freed space with no further rule. */
+
+.groups-site-hero-media:not(:has(.wp-block-post-featured-image)) {
+	display: none;
+}
+
+/* ==========================================================================
+   Front-page content and sidebar
+   ========================================================================== */
+
+.groups-site-home-layout {
+	align-items: flex-start !important;
+}
+
+.groups-site-sidebar-column {
+	order: 2;
+}
+
+.groups-site-main-column-wrapper {
+	order: 1;
+}
+
+.groups-site-sidebar {
+	box-sizing: border-box;
+	width: 100%;
+	padding-left: var(--wp--preset--spacing--40);
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-settings-block,
+.groups-site-sidebar .wporg-group-membership {
+	width: 100%;
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-membership {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.groups-site-sidebar .wporg-event-manage {
+	gap: var(--wp--preset--spacing--10);
+}
+
+/* Create event and Settings are the group's two organizer actions, stacked
+   in a rail around 230px wide. At the global button size — 16px/600 in
+   14px 32px — they render as two mismatched slabs, each only as wide as its
+   own label, and the pair outweighs the page it sits beside. Stretch both to
+   the rail so their edges line up, and step them down to the compact 14px
+   size so they read as sidebar controls rather than the page's primary call
+   to action. Scoped to the sidebar: on a single event the same two blocks
+   sit side by side in the wide content column, where intrinsic width is
+   right. */
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-settings-block {
+	align-items: stretch;
+}
+
+.groups-site-sidebar .wporg-event-manage .wp-block-button,
+.groups-site-sidebar .wporg-group-settings-block .wp-block-button {
+	width: 100%;
+}
+
+.groups-site-sidebar .wporg-event-manage .wp-block-button__link.wp-element-button,
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button__link.wp-element-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+	max-width: 320px;
+
+	/*
+	 * Set the padding through the parent theme's own tokens rather than a
+	 * flat `padding`. Its outline `:focus` and `:active` rules recompute
+	 * padding from these — swapping the 1px border for an equal amount of
+	 * padding so the box stays put — and they restate the *global* 14px/32px
+	 * while doing it, which outranks a plain `padding` here and grows the
+	 * button by 8px the moment it takes focus.
+	 */
+
+	--wp--custom--button--spacing--padding--top: 10px;
+	--wp--custom--button--spacing--padding--bottom: 10px;
+	--wp--custom--button--spacing--padding--left: 16px;
+	--wp--custom--button--spacing--padding--right: 16px;
+	padding: var(--wp--custom--button--spacing--padding--top)
+		var(--wp--custom--button--spacing--padding--right);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* The outline variant carries a 1px border and the filled one doesn't, so
+   two buttons with identical padding sit 2px apart in height. A transparent
+   border on the filled variant squares them up. */
+
+.groups-site-sidebar
+	.wporg-event-manage
+	.wp-block-button:not(.is-style-outline)
+	> .wp-block-button__link.wp-element-button,
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button:not(.is-style-outline)
+	> .wp-block-button__link.wp-element-button {
+	border: 1px solid transparent;
+}
+
+/* Dashicons ship at 20px in a 20px box — a third taller than the label it
+   sits next to once the button drops to 14px. */
+
+.groups-site-sidebar
+	.wporg-group-settings-block
+	.wp-block-button__link
+	.dashicons {
+	width: auto;
+	height: auto;
+	font-size: 16px;
+	line-height: 1;
+}
+
+/*
+ * Sidebar headings are the one place that keeps the Inter 16px/600 utility
+ * treatment. Every heading in the main column — My upcoming events,
+ * About this group, Upcoming events, News, Sponsors — takes the Heading 3
+ * serif; a 36px serif in a 26%-wide rail would outrank the section it
+ * labels. Sponsors is listed because it renders in both places.
+ */
+
+.groups-site-sidebar .wporg-sponsors__heading,
+.groups-site-event-sidebar .wporg-sponsors__heading,
+.groups-site-sidebar .wporg-group-membership__heading,
+.groups-site-sidebar .wporg-group-membership__preference-heading {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0;
+	margin: 0 !important;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--wp--preset--color--charcoal-1);
+}
+
+/* Each direct child here is a distinct concern — membership status, event
+   management, settings, email preferences — not more lines in the same
+   list, so every one after the first gets its own hairline and padding on
+   top of the block gap, whichever combination a given visitor sees. */
+
+.groups-site-sidebar > *:not(:first-child) {
+	padding-top: var(--wp--preset--spacing--20);
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+/* Create event and Settings are the exception: both are organizer tools
+   that act on this group, so they read as one cluster of buttons rather
+   than two concerns. Drop the hairline between them and close the gap to
+   match — an organizer sees three rules in a short rail otherwise. */
+
+.groups-site-sidebar > .wporg-event-manage + .wporg-group-settings-block {
+	padding-top: 0;
+	margin-top: calc(
+		var(--wp--preset--spacing--10) - var(--wp--preset--spacing--30)
+	);
+	border-top: 0;
+}
+
+.groups-site-main-column {
+	min-width: 0;
+}
+
+/* The tagline is a description, not a subtitle, so it drops to 14px and
+   shouldn't compete with the site title above it. The design specs the
+   leading in pixels (14/24 and 14/26 below); neither divides into a tidy
+   ratio, so both stay in px — the sizes are fixed, so nothing scales out
+   from under them. */
+
+.groups-site-hero .wp-block-site-tagline {
+	max-width: 72ch;
+	line-height: 24px;
+	text-wrap: pretty;
+}
+
+/* Location and member count read as one meta line. The dot matches the
+   sidebar's divider; the slash syntax keeps it out of the accessibility
+   tree, with a plain fallback for engines that don't support it. */
+
+.groups-site-hero-meta .wporg-group-membership,
+.groups-site-hero-meta .wporg-group-membership__meta {
+	gap: 8px;
+	flex-wrap: nowrap;
+}
+
+/* Both halves of the meta line share one leading so the dot between them
+   sits on the same baseline as the text on either side. */
+
+.groups-site-hero-meta,
+.groups-site-hero-meta .wp-block-wporg-group-location,
+.groups-site-hero-meta .wporg-group-membership__count {
+	line-height: 26px;
+}
+
+/* `wporg/group-location` renders nothing at all when the group hasn't set a
+   location, so the separator is bound to the sibling it separates from —
+   otherwise the member count picks up a leading middle dot with nothing on
+   its left. */
+
+.groups-site-hero-meta
+	.wp-block-wporg-group-location
+	+ .wporg-group-membership::before {
+	content: "\00b7";
+	content: "\00b7" / "";
+	color: var(--wp--preset--color--charcoal-5);
+}
 
 /* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
    ========================================================================== */
 
+/* Card is clickable everywhere via the stretched title link below, so it
+   shows a pointer cursor everywhere too. */
+
 .wp-block-post-template .wp-block-group.has-border-color {
 	position: relative;
+	cursor: pointer;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
@@ -85,14 +512,13 @@ body.error404 .site-content-container h1 {
 	text-decoration: none;
 }
 
-
-/* Make the card show a pointer cursor everywhere. */
-.wp-block-post-template .wp-block-group.has-border-color {
-	cursor: pointer;
-}
+/* Full-height flex column so the meta cluster below can pin itself to the
+   card's bottom edge. */
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
 	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
 	height: 100%;
 }
 
@@ -109,9 +535,112 @@ body.error404 .site-content-container h1 {
 	object-fit: cover;
 }
 
+/*
+ * Core's featured-image block renders nothing at all when a post has no
+ * thumbnail, so in a row of three cards a single image-less event used to
+ * start its date 158px higher than its neighbours. `functions.php`
+ * substitutes this element instead, keeping the same 16:9 region and the
+ * same rounded top corners.
+ *
+ * The fill is the flat blueberry-4 surface the design guide specifies for
+ * missing imagery (docs/design/groups-site.md, "Missing imagery") — a
+ * consistent region, not invented artwork.
+ */
+
+.groups-site-featured-placeholder {
+	aspect-ratio: 16 / 9;
+	border-radius: 3px 3px 0 0;
+	background-color: var(--wp--preset--color--blueberry-4);
+}
+
 .wp-block-post-template .wp-block-post-title a:hover {
 	text-decoration: none;
 	color: var(--wp--preset--color--blueberry-1);
+}
+
+/* The pattern's 25-word excerpt still wraps to five or six lines in a narrow
+   column, which would stretch the whole grid row. */
+
+.gatherpress-event-query .wp-block-post-excerpt__excerpt {
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/*
+ * Cards in a grid row share a height, but their excerpts don't share a
+ * length — without this the venue lines end at three different heights across
+ * one row. The body becomes a flex column too, and the meta group takes the
+ * leftover space as top margin.
+ */
+
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
+/* The card group is `is-layout-constrained`, which puts
+   `margin-inline: auto !important` on every child. In block flow that's
+   inert, but flex/grid items with auto inline margins shrink to content
+   width and float to the middle — short lines like "2 attendees" drifted
+   off the left edge. An explicit full width zeroes the auto margins out. */
+
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > *,
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group > * {
+	width: 100%;
+}
+
+.gatherpress-event-query .groups-site-card-meta {
+	margin-block-start: auto;
+	padding-top: 16px;
+}
+
+/* GatherPress renders both the RSVP count and the venue as empty strings
+   when there's nothing to say, which leaves this wrapper as an empty div
+   with padding — an event with neither would get a mystery gap. */
+
+.gatherpress-event-query .groups-site-card-meta:not(:has(*)) {
+	display: none;
+}
+
+/*
+ * Past events (the `?event_time=past` view — class set in `functions.php`)
+ * drop the blue "coming up" date treatment and mute their photography a
+ * touch. Same grid, but the page no longer dresses history as future.
+ */
+
+.groups-site-events-view-past .gatherpress-event-query .wp-block-gatherpress-event-date.has-blueberry-1-color {
+	color: var(--wp--preset--color--charcoal-4) !important;
+}
+
+.groups-site-events-view-past .gatherpress-event-query .wp-block-post-featured-image img {
+	filter: saturate(0.7);
+	opacity: 0.92;
+}
+
+/* ==========================================================================
+   Events archive — hero intro and empty state
+   ========================================================================== */
+
+/* The measure cap only left-aligns because the hero's heading group sets
+   `justifyContent: left` — a plain constrained layout would recentre any
+   child narrower than the content width. */
+
+.groups-site-events-intro {
+	max-width: 56ch;
+	text-wrap: pretty;
+}
+
+.groups-site-events-empty {
+	max-width: 52ch;
+	padding: var(--wp--preset--spacing--40) 0 var(--wp--preset--spacing--30);
+}
+
+.groups-site-events-empty__title {
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-1);
 }
 
 /* Venue map: constrain to sidebar card width. */
@@ -127,17 +656,69 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Single event hero
+   ========================================================================== */
+
+/*
+ * The event hero borrows the front-page split hero's bones — the
+ * `groups-site-hero-*` column classes carry the 16:9 crop and the
+ * hide-the-column-when-there-is-no-photo fallbacks — but each singular
+ * view wears its own band so a visitor always knows which floor of the
+ * house they're on: the group home sits on the plain page background with
+ * its photo in a coloured mat, a news post gets the Blueberry 4 band, and
+ * an event gets Light Grey 2 with the photo hanging bare.
+ */
+
+.groups-site-event-hero .groups-site-hero-text .wp-block-post-title {
+	text-wrap: balance;
+}
+
+/* The host's name is a person, not an action — it keeps the text colour
+   and lets the underline mark it as a link, the way speaker and member
+   names render, rather than turning blue like a UI control. */
+
+.groups-site-event-hero-host .wp-block-post-author-name a {
+	color: inherit;
+}
+
+/* "Part of {group} · {count}". The separator binds to the count it
+   introduces, mirroring the location + count pair on the front page. */
+
+.groups-site-event-hero-meta
+	.wp-block-site-title
+	+ .wporg-group-membership::before {
+	content: "\00b7";
+	content: "\00b7" / "";
+	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* ==========================================================================
    Single event layout
    ========================================================================== */
 
-/* ----------  Date header row  ---------- */
+/* The info card leads in the source so that when the columns stack on
+   mobile, date + RSVP land right under the hero, before the description.
+   The grid swaps the pair on desktop: content left, card right. */
 
-.groups-site-event-date-header .wp-block-gatherpress-add-to-calendar .wp-block-gatherpress-dropdown__trigger {
-	font-size: var(--wp--preset--font-size--small);
+.wp-block-columns.groups-site-event-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
+	column-gap: var(--wp--preset--spacing--60);
+	align-items: start;
+}
+
+.groups-site-event-sidebar {
+	grid-column: 2;
+	grid-row: 1;
+}
+
+.groups-site-event-content {
+	display: block;
+	grid-column: 1;
+	grid-row: 1;
 }
 
 /* ----------  Venue extras (description + access) ---------- */
-
 .wporg-venue-extra {
 	margin-top: 12px;
 	font-size: var(--wp--preset--font-size--small);
@@ -149,163 +730,165 @@ body.error404 .site-content-container h1 {
 }
 
 /* ----------  Event info card  ---------- */
-
 .groups-site-event-info-card {
 	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.04),
 		0 2px 8px rgba(30, 30, 30, 0.04);
 }
 
-.groups-site-event-info-card hr.wp-block-separator {
-	border-color: var(--wp--preset--color--light-grey-1) !important;
-	opacity: 1;
-	margin: 0;
+/*
+ * The card reads as zones — When, Where, Add to calendar — rather than one
+ * flat stack, so each zone after the first opens with a divider.
+ *
+ * The divider is a border on the zone itself, not a `<hr>` sibling. Every
+ * zone below "When" is optional: GatherPress renders the venue, online-event
+ * and add-to-calendar blocks as an empty string when the event has no venue,
+ * isn't online, or has no calendar links. A separate `<hr>` outlives the zone
+ * it introduces in that case — with all three empty, the first divider was
+ * left hanging under the RSVP button with nothing beneath it. Carrying the
+ * border on the zone makes that unrepresentable: no zone, no divider.
+ *
+ * Generous, symmetric room (more than the 20px `blockGap` used *within* a
+ * zone) so it reads as a hard boundary rather than another item in the list.
+ */
+
+.groups-site-event-info-card > .groups-site-event-zone {
+	margin-top: 32px;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+	padding-top: 32px;
+}
+
+/* GatherPress's wrapper-`<div>` blocks seed their inner blocks in the editor,
+   so one rendered from a theme template can arrive as an empty wrapper rather
+   than as no element at all. Hiding the zone takes its border with it. */
+
+.groups-site-event-info-card > .groups-site-event-zone:empty {
+	display: none;
+}
+
+/*
+ * The info card is two label/value pairs, not a stack of headings: an
+ * eyebrow (12/600 uppercase, muted), the answer (Inter 16/1.4/600), and
+ * the supporting details (14/1.55/400). Both answers get the same size, so
+ * "when before where" comes from order and the eyebrow rather than from
+ * size — which also keeps the card off the serif scale reserved for the
+ * event title and the main-column card headings. The three sizes live on
+ * the blocks in single-event.html; only the label's tracking needs CSS.
+ */
+
+.groups-site-event-info-card .groups-site-event-label {
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+/*
+ * Address, phone, and website are three unlabelled values on consecutive
+ * lines, so the glyph identifies which is which. The date gets no icon: its
+ * eyebrow already reads "Date and time", and a calendar chip put a second
+ * blue block directly above the blue RSVP button.
+ *
+ * One muted tone for all of them, so they don't compete with the blue links
+ * beside them.
+ */
+
+.groups-site-event-info-card .gatherpress--has-venue-address .wp-block-icon,
+.groups-site-event-info-card .gatherpress--has-venue-phone .wp-block-icon,
+.groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
+.groups-site-event-info-card .groups-site-online-event .wp-block-icon {
+	color: var(--wp--preset--color--charcoal-4);
+	flex: 0 0 auto;
+}
+
+/* GatherPress renders the address in an <address>, which every browser
+   italicises by default — next to the upright phone and website lines it
+   read as a pull quote rather than the third fact in the list. */
+
+.groups-site-event-info-card .gatherpress-venue-detail__address {
+	font-style: normal;
+}
+
+/* A wrapping address puts the pin halfway down the block if it stays
+   centred, so anchor it to the first line instead. */
+
+.groups-site-event-info-card .gatherpress--has-venue-address {
+	align-items: flex-start;
+}
+
+.groups-site-event-info-card .gatherpress--has-venue-address .wp-block-icon {
+	margin-top: 2px;
+}
+
+/* Address, phone, and website are one list of three contact facts. The
+   block markup splits them across two groups, which lets the wrap push
+   phone flush under the address and leave the website adrift below —
+   force one rhythm over the three regardless of how they break. */
+
+.groups-site-event-info-card .groups-site-venue-contact {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10);
 }
 
 
 /* ==========================================================================
-   Event card grid — used by both the front-page upcoming list (compact)
-   and the events archive (expanded). The compact / expanded variants
-   share the same per-card markup; the differences are in column count,
-   gap, padding, and excerpt line-clamp.
+   About this group
+
+   Pulled from the group's own About page by `wporg/page-content`, so the
+   prose is edited in one place and this is only ever a view of it. It sits
+   between My upcoming events and Upcoming events: a member's own dates stay
+   first, and a newcomer gets the group's context before the event listings.
    ========================================================================== */
 
-.groups-site-event-cards {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 28px;
+.groups-site-about > :first-child {
+	margin-top: 0;
 }
 
-.groups-site-event-cards--past .groups-site-event-card {
-	opacity: 0.85;
+.groups-site-about > :last-child {
+	margin-bottom: 0;
 }
 
-.groups-site-event-cards--past .groups-site-event-card .groups-site-event-card__date {
-	color: var(--wp--preset--color--charcoal-4);
+/* An About page is prose, not a layout — hold it to a comfortable measure
+   rather than letting it run the full 860px of the main column. */
+
+.groups-site-about p {
+	max-width: 68ch;
+	text-wrap: pretty;
 }
 
-.groups-site-event-card {
+/* Long-form body copy: 16/30 with 20px between paragraphs. The excluded
+   "Read more" link is its own 14px style, not this one. 30/16 is 1.875,
+   so the leading stays in px like the hero's. The 20px margins collapse
+   against each other, which is what makes the gap 20px and not 40px. */
+
+.groups-site-about > p:not(.wporg-page-content__more) {
+	line-height: 30px;
+	margin-block: 20px;
+}
+
+/* "Read more →" follows the quiet link idiom of "View all events →" —
+   a continuation, not a call to action. */
+
+.wporg-page-content__more {
+	margin: var(--wp--preset--spacing--20) 0 0;
+}
+
+/* The organizer-only edit link sits inline right after the heading — on its
+   baseline, not pushed to the far edge like "View all events →": it belongs
+   to the heading, not to the section. The row carries the gap to the prose;
+   the heading inside it is flush. */
+
+.wporg-page-content__header {
 	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	background: var(--wp--preset--color--white);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
-	border-radius: 4px;
-	color: inherit;
-	text-decoration: none;
-	transition: border-color 0.18s ease, box-shadow 0.18s ease,
-		transform 0.18s ease;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--20);
+	align-items: baseline;
+	margin-bottom: var(--wp--preset--spacing--30);
 }
 
-.groups-site-event-card:hover,
-.groups-site-event-card:focus-visible {
-	border-color: var(--wp--preset--color--blueberry-1);
-	box-shadow: 0 18px 36px -16px rgba(56, 88, 233, 0.22),
-		0 4px 12px rgba(30, 30, 30, 0.04);
-	transform: translateY(-2px);
-}
+/* Organizer-only affordance. Deliberately quiet: it's a maintenance link on
+   someone else's reading experience, not a call to action. */
 
-.groups-site-event-card__media {
-	aspect-ratio: 16 / 9;
-	background-color: var(--wp--preset--color--blueberry-4);
-	background-position: center;
-	background-size: cover;
-	background-repeat: no-repeat;
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
-}
-
-.groups-site-event-card__media--placeholder {
-	background-image: linear-gradient(
-			135deg,
-			var(--wp--preset--color--blueberry-4),
-			var(--wp--preset--color--blueberry-3)
-		),
-		linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.4) 48% 52%, transparent 52%);
-	background-blend-mode: normal, overlay;
-	background-size: 100% 100%, 24px 24px;
-}
-
-.groups-site-event-card__body {
-	padding: 24px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	flex: 1;
-}
-
-.groups-site-event-cards--expanded .groups-site-event-card__body {
-	padding: 32px;
-	gap: 12px;
-}
-
-.groups-site-event-card__date {
-	margin: 0 0 4px;
-	font-family: var(--wp--preset--font-family--inter);
+.wporg-page-content__edit {
 	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	color: var(--wp--preset--color--blueberry-1);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-
-.groups-site-event-card__title {
-	margin: 0;
-	font-family: var(--wp--preset--font-family--eb-garamond);
-	font-size: var(--wp--preset--font-size--heading-5);
-	font-weight: 500;
-	line-height: 1.2;
-	color: var(--wp--preset--color--charcoal-1);
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-}
-
-.groups-site-event-card:hover .groups-site-event-card__title,
-.groups-site-event-card:focus-visible .groups-site-event-card__title {
-	color: var(--wp--preset--color--blueberry-1);
-}
-
-.groups-site-event-card__excerpt {
-	margin: 0;
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-3);
-	line-height: 1.55;
-	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-}
-
-.groups-site-event-cards--expanded .groups-site-event-card__excerpt {
-	font-size: var(--wp--preset--font-size--normal);
-	-webkit-line-clamp: 6;
-	line-height: 1.6;
-}
-
-.groups-site-event-card__rsvp {
-	margin: auto 0 0;
-	padding-top: 12px;
-	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	color: var(--wp--preset--color--charcoal-4);
-}
-
-.groups-site-event-card__venue {
-	margin: 0;
-	padding-top: 4px;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal-4);
-}
-
-.groups-site-event-card__icon {
-	flex-shrink: 0;
-	color: var(--wp--preset--color--blueberry-1);
-	font-size: 16px;
-	width: 16px;
-	height: 16px;
 }
 
 /* ==========================================================================
@@ -317,10 +900,16 @@ body.error404 .site-content-container h1 {
 	border-radius: 2px !important;
 }
 
+/*
+ * Border colour only. The old rule swapped the focus ring for a 3px
+ * Blueberry 3 glow — #c7d1ff against white is about 1.5:1, well under the
+ * 3:1 a focus indicator needs, and `outline: none` had already removed the
+ * one indicator that did pass. The global `:focus-visible` outline now
+ * does that job; this just confirms the field is the active one.
+ */
+
 .wp-block-search__input:focus {
 	border-color: var(--wp--preset--color--blueberry-1) !important;
-	outline: none;
-	box-shadow: 0 0 0 3px var(--wp--preset--color--blueberry-3);
 }
 
 .wp-block-search__button {
@@ -334,9 +923,45 @@ body.error404 .site-content-container h1 {
 	background: var(--wp--preset--color--deep-blueberry) !important;
 }
 
+/* An icon button is part of the field it sits against, not a call to
+   action: it wears the input's own grey fill so the pair reads as one
+   control. Only the labelled "Search" text button keeps the primary
+   blueberry. */
+
+.wp-block-search__button.has-icon {
+	background: var(--wp--preset--color--light-grey-2) !important;
+	color: var(--wp--preset--color--charcoal-1) !important;
+}
+
+.wp-block-search__button.has-icon:hover {
+	background: var(--wp--preset--color--light-grey-1) !important;
+}
+
 /* ==========================================================================
    Footer
    ========================================================================== */
+
+/* The callout's links render as a ruled list: a hairline above each row and
+   one closing the list, matching the global footer's palette. */
+
+.groups-site-callout-links p {
+	border-top: 1px solid var(--wp--preset--color--charcoal-4);
+	margin: 0;
+	padding: var(--wp--preset--spacing--20) 0;
+}
+
+.groups-site-callout-links p:last-child {
+	border-bottom: 1px solid var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-callout-links a {
+	display: block;
+	text-decoration: none;
+}
+
+.groups-site-callout-links a:hover {
+	text-decoration: underline;
+}
 
 .groups-site-footer a {
 	text-decoration: none;
@@ -347,7 +972,33 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
-   Single-event comment form — meetup-style "Leave a reply" composer
+   Single post (news)
+   ========================================================================== */
+
+/* `single.html` puts the featured image in a column beside the title. With
+   no featured image the block renders nothing, leaving a blank column and a
+   squeezed title — drop the column so the title takes the full width. */
+
+.groups-site-post-hero-media:not(:has(.wp-block-post-featured-image)) {
+	display: none;
+}
+
+/* ==========================================================================
+   Comments
+   ========================================================================== */
+
+/* Avatars are round everywhere on the site. Core's avatar block ships no
+   radius of its own — only the `is-style-rounded` variation adds one, and
+   that isn't registered here — so the comment avatars were the one square
+   set among the RSVP, speaker, and member stacks. */
+
+.wp-block-avatar img {
+	border-radius: 9999px;
+}
+
+/* ==========================================================================
+   Discussion composer — the compact "leave a reply" form shared by the
+   single-event and single-post views
    ========================================================================== */
 
 .wp-block-post-comments-form,
@@ -356,7 +1007,12 @@ body.error404 .site-content-container h1 {
 }
 
 /* Suppress the auto "Leave a Reply" heading and any logged-in-as boilerplate
-   that core might re-inject despite our comment_form_defaults filter. */
+   that core might re-inject despite our comment_form_defaults filter.
+
+   `#reply-title` also wraps the Cancel reply link;
+   `compact_comment_form_defaults()` empties it so the link is a sibling here
+   rather than a casualty of this rule. */
+
 .wp-block-post-comments-form .comment-reply-title,
 .wp-block-post-comments-form #reply-title,
 .wp-block-post-comments-form .logged-in-as,
@@ -365,13 +1021,30 @@ body.error404 .site-content-container h1 {
 	display: none !important;
 }
 
+/* Cancel reply. Core prints it inside `#respond` ahead of the form, carrying
+   an inline `display: none` that `comment-reply.js` clears when it moves the
+   form under a comment — so this styles the visible state only, and the
+   inline rule keeps winning while the form sits at the bottom of the page. */
+
+.wp-block-post-comments-form #cancel-comment-reply-link {
+	display: inline-block;
+	margin-bottom: 8px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wp-block-post-comments-form #cancel-comment-reply-link:hover,
+.wp-block-post-comments-form #cancel-comment-reply-link:focus-visible {
+	color: var(--wp--preset--color--blueberry-1);
+}
+
 .wp-block-post-comments-form .comment-form {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
 	padding: 16px;
 	background: var(--wp--preset--color--light-grey-2);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
 }
 
@@ -392,10 +1065,10 @@ body.error404 .site-content-container h1 {
 .wp-block-post-comments-form textarea#comment {
 	width: 100%;
 	min-height: 88px;
-	padding: 12px 14px;
+	padding: 8px 12px;
 	background: var(--wp--preset--color--white);
 	border: 1px solid var(--wp--preset--color--light-grey-1);
-	border-radius: 4px;
+	border-radius: 2px;
 	font-family: var(--wp--preset--font-family--inter);
 	font-size: var(--wp--preset--font-size--normal);
 	line-height: 1.5;
@@ -409,15 +1082,15 @@ body.error404 .site-content-container h1 {
 	color: var(--wp--preset--color--charcoal-4);
 }
 
+/* Border colour only — see the note on the search input above. */
 .wp-block-post-comments-form textarea#comment:focus {
-	outline: none;
 	border-color: var(--wp--preset--color--blueberry-1);
-	box-shadow: 0 0 0 3px var(--wp--preset--color--blueberry-3);
 }
 
 /* Hide the author/email/url fields that core injects for guests — keep the
    composer minimal. Logged-out users still see the "you must be logged in"
    notice from core in place of the textarea. */
+
 .wp-block-post-comments-form .comment-form-author,
 .wp-block-post-comments-form .comment-form-email,
 .wp-block-post-comments-form .comment-form-url,
@@ -431,39 +1104,119 @@ body.error404 .site-content-container h1 {
 	justify-content: flex-end;
 }
 
+/* Compact size — see the note in the Buttons section. The composer is a
+   16px textarea in a 16px-padded well; a 32px-padded submit under it would
+   outweigh the thing it submits. */
+
 .wp-block-post-comments-form .form-submit .submit {
+	padding: 10px 20px;
 	background: var(--wp--preset--color--blueberry-1);
 	color: var(--wp--preset--color--white);
-	border: none;
+	border: 1px solid transparent;
 	border-radius: 2px;
-	padding: 10px 22px;
 	font-family: var(--wp--preset--font-family--inter);
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
+	line-height: 1.3;
 	cursor: pointer;
-	transition: background-color 0.15s ease;
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		color 0.15s ease;
 }
 
 .wp-block-post-comments-form .form-submit .submit:hover,
 .wp-block-post-comments-form .form-submit .submit:focus-visible {
 	background: var(--wp--preset--color--deep-blueberry);
+	color: var(--wp--preset--color--white);
 }
 
-/* Comment list — read like a chat thread, not a blog comment list. */
+.wp-block-post-comments-form .form-submit .submit:disabled {
+	background: var(--wp--preset--color--light-grey-2);
+	border-color: var(--wp--preset--color--light-grey-1);
+	color: var(--wp--preset--color--charcoal-4);
+	cursor: not-allowed;
+}
+
+/* Comment list — read like a compact chat thread, not a blog comment list. */
 .wp-block-comments .wp-block-comment-template {
 	list-style: none;
 	padding: 0;
 	margin: 0 0 24px;
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: 16px;
 }
 
 .wp-block-comments .wp-block-comment-template > li {
 	padding: 16px;
 	background: var(--wp--preset--color--light-grey-2);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
+}
+
+.wp-block-comments .groups-site-comment {
+	align-items: flex-start !important;
+	margin: 0;
+}
+
+.wp-block-comments .groups-site-comment__meta {
+	align-items: baseline;
+	line-height: 1.35;
+}
+
+.wp-block-comments .groups-site-comment__meta .wp-block-comment-author-name,
+.wp-block-comments .groups-site-comment__meta .wp-block-comment-date {
+	margin: 0;
+}
+
+.wp-block-comments .wp-block-comment-content {
+	margin-top: 6px;
+}
+
+.wp-block-comments .wp-block-comment-content > :first-child {
+	margin-top: 0;
+}
+
+.wp-block-comments .wp-block-comment-content > :last-child {
+	margin-bottom: 0;
+}
+
+/* Reply, and — for anyone who can edit the comment — Edit, sit on one row
+   under the comment body. `single.html` wraps them in the actions group;
+   `single-event.html` still renders a bare reply link. */
+
+.wp-block-comments .wp-block-comment-reply-link,
+.wp-block-comments .groups-site-comment__actions {
+	margin-top: 6px;
+}
+
+.wp-block-comments .groups-site-comment__actions {
+	align-items: baseline;
+}
+
+.wp-block-comments .groups-site-comment__actions .wp-block-comment-reply-link {
+	margin-top: 0;
+}
+
+/* Reply threads — core renders children as a bare `ol` inside the parent
+   `li`, at any depth, so target descendant lists rather than only depth 2.
+   The rail sits under the centre of the parent's 40px avatar
+   (19px margin + 2px rail + 27px padding = the same 48px text indent the
+   replies had before), tying each reply visually to the comment above it.
+   The gap keeps consecutive replies from running together. */
+
+.wp-block-comments .wp-block-comment-template li ol {
+	list-style: none;
+	margin: 16px 0 0 19px;
+	padding: 0 0 0 27px;
+	border-left: 2px solid var(--wp--preset--color--light-grey-1);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+@media (max-width: 480px) {
+	.wp-block-comments .wp-block-comment-template li ol {
+		padding-left: 12px;
+	}
 }
 
 /* ==========================================================================
@@ -535,5 +1288,10 @@ body.error404 .site-content-container h1 {
 	*::after {
 		transition-duration: 0.01ms !important;
 		animation-duration: 0.01ms !important;
+
+		/* Without this, a looping animation doesn't stop — it just loops
+		   0.01ms at a time, which is worse than the motion it replaced. */
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
 	}
 }

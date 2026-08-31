@@ -39,30 +39,34 @@ $needs_setup          = '' === $description || in_array( $description, $default_
 $can_manage_roles = current_user_can_manage_group_settings();
 
 $wrapper_attributes = get_block_wrapper_attributes(
-	array( 'class' => 'wporg-group-settings-block' )
+	array( 'class' => 'wp-block-buttons wporg-group-settings-block' )
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php if ( $is_single_event ) : ?>
-		<button
-			type="button"
-			class="wporg-group-settings-block__edit wp-element-button"
-			data-wporg-settings-open="events"
-			data-wporg-settings-event-id="<?php echo (int) $event_post_id; ?>"
-		>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+		<div class="wp-block-button is-style-outline">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-settings-open="events"
+				data-wporg-settings-event-id="<?php echo (int) $event_post_id; ?>"
+			>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+		</div>
 	<?php else : ?>
-		<button
-			type="button"
-			class="wporg-group-settings-block__trigger<?php echo $needs_setup ? ' wporg-group-settings-block__trigger--setup' : ''; ?>"
-			data-wporg-settings-open="<?php echo $needs_setup ? 'about' : ''; ?>"
-		>
-			<?php if ( $needs_setup ) : ?>
-				<?php esc_html_e( 'Set up your group', 'wporg-groups-frontend' ); ?>
-			<?php else : ?>
-				<span class="dashicons dashicons-admin-generic"></span>
-				<?php esc_html_e( 'Settings', 'wporg-groups-frontend' ); ?>
-			<?php endif; ?>
-		</button>
+		<div class="wp-block-button<?php echo $needs_setup ? '' : ' is-style-outline'; ?>">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-settings-open="<?php echo $needs_setup ? 'about' : ''; ?>"
+			>
+				<?php if ( $needs_setup ) : ?>
+					<?php esc_html_e( 'Set up your group', 'wporg-groups-frontend' ); ?>
+				<?php else : ?>
+					<span class="dashicons dashicons-admin-generic"></span>
+					<?php esc_html_e( 'Settings', 'wporg-groups-frontend' ); ?>
+				<?php endif; ?>
+			</button>
+		</div>
 	<?php endif; ?>
 
 	<div

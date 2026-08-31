@@ -26,6 +26,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Indian Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/campt-indian-payment-gateway/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/
@@ -38,9 +44,21 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-payments/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Post Types">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wc-post-types/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Reports">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-reports/tests/
 			</directory>
 		</testsuite>
 
@@ -65,6 +83,12 @@
 		<testsuite name="WordCamp Coming Soon Page">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-coming-soon-page/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Forms to Drafts">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-forms-to-drafts/tests/
 			</directory>
 		</testsuite>
 
@@ -95,6 +119,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-reports</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
 			<file>./public_html/wp-content/sunrise-events.php</file>

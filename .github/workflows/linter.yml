@@ -85,6 +85,17 @@ jobs:
         npm run lint:js --workspaces --if-present
         npm run lint:css --workspaces --if-present
 
+    - name: Lint styles not covered by an npm workspace
+      # `groups-site` and `gatherpress-recurring-events` are plain CSS with
+      # no other build/lint tooling need, so they're not registered as npm
+      # workspaces — the step above never reaches them. `stylelint` itself
+      # is still available here, hoisted to the root node_modules by one of
+      # the actual workspaces' `@wordpress/scripts` dependency.
+      run: |
+        npx stylelint \
+          'public_html/wp-content/themes/groups-site/assets/css/*.css' \
+          'public_html/wp-content/mu-plugins/gatherpress-recurring-events/assets/*.css'
+
     - name: Lint PHP
       run: |
         BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php

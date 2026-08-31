@@ -23,9 +23,44 @@ import {
 	Notice,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
+import 'leaflet/dist/leaflet.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const PHOTON_API = 'https://photon.komoot.io/api/';
+
+let leafletPromise = null;
+
+/**
+ * Loads Leaflet once and points its default icon at the bundled images.
+ * Leaflet guesses its icon folder from the stylesheet's background-image
+ * URL, which the build has hashed.
+ */
+function loadLeaflet() {
+	if ( ! leafletPromise ) {
+		leafletPromise = import( 'leaflet' )
+			.then( ( module ) => {
+				const L = module.default || module;
+				delete L.Icon.Default.prototype._getIconUrl;
+
+				L.Icon.Default.mergeOptions( {
+					iconUrl: markerIcon,
+					iconRetinaUrl: markerIcon2x,
+					shadowUrl: markerShadow,
+				} );
+
+				return L;
+			} )
+			.catch( ( error ) => {
+				leafletPromise = null;
+				throw error;
+			} );
+	}
+
+	return leafletPromise;
+}
 
 export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHeader } ) {
 	const [ loading, setLoading ] = useState( !! venueId );
@@ -129,12 +164,10 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				return;
 			}
 
-			import( 'leaflet' ).then( ( module ) => {
+			loadLeaflet().then( ( L ) => {
 				if ( ! mapRef.current ) {
 					return;
 				}
-
-				const L = module.default || module;
 
 				if ( mapInstanceRef.current ) {
 					mapInstanceRef.current.setView( [ lat, lng ], 15 );
@@ -259,7 +292,9 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 			document.removeEventListener( 'keydown', onEscape, true );
 	}, [ onCancel ] );
 
-	const wrapperClass = inline ? 'wporg-groups-venue-editor--inline' : 'wporg-groups-venue-editor';
+	const wrapperClass = inline
+		? 'wporg-groups-venue-editor--inline'
+		: 'wporg-groups-modal-accent wporg-groups-venue-editor';
 
 	if ( loading ) {
 		return h(
@@ -414,7 +449,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 						onClick: onCancel,
 						disabled: saving,
 					},
-					__( 'Cancel', 'wporg-groups-frontend' )
+					_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
 				),
 				h(
 					Button,

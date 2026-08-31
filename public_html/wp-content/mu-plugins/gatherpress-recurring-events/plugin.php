@@ -5,7 +5,7 @@
  * Version: 0.1.0
  * Requires PHP: 8.1
  * Requires Plugins: gatherpress
- * Text Domain: gpre
+ * Text Domain: wordcamporg
  *
  * @package WordPressdotorg\GatherPress_Recurring_Events
  */

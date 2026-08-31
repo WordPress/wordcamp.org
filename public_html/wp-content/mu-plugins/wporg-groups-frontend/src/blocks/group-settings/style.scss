@@ -4,71 +4,26 @@
  * Uses SCSS for nesting and maintainability.
  */
 
-@import '../../components/recurrence-controls.css';
+@import "../../components/recurrence-controls.css";
+@import "../../components/component-accents.css";
 
 // === Trigger button ===
 
 .wporg-group-settings-block {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
 
-	&__trigger {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 14px;
-		background: none;
-		border: 1px solid #d9d9d9;
-		border-radius: 2px;
-		font-size: 13px;
-		color: #656a71;
-		cursor: pointer;
-
-		.dashicons {
-			font-size: 16px;
-			width: 16px;
-			height: 16px;
-		}
-
-		&:hover {
-			border-color: #3858e9;
-			color: #3858e9;
-		}
-
-		&--setup {
-			background: #3858e9;
-			border-color: #3858e9;
-			color: #fff;
-			font-weight: 600;
-			padding: 10px 20px;
-
-			&:hover {
-				background: #213fd4;
-				border-color: #213fd4;
-				color: #fff;
-			}
-		}
-	}
-
-	&__edit {
-		background: transparent !important;
-		border: 1px solid #d9d9d9 !important;
-		color: #40464d !important;
-		font-size: 14px;
-
-		&:hover {
-			border-color: #3858e9 !important;
-			color: #3858e9 !important;
-			background: #eff2ff !important;
-		}
+	.dashicons {
+		font-size: 16px;
+		width: 16px;
+		height: 16px;
 	}
 }
 
 // === Full-screen modal ===
 
 .wporg-group-settings-modal {
+	// Accent tokens and the header stacking fix come from
+	// `components/component-accents.css`.
+
 	.components-modal__content {
 		padding: 0;
 		display: flex;
@@ -135,6 +90,22 @@
 		font-style: italic;
 	}
 
+	&__location {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	&__location-fields {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+
+		@media (max-width: 600px) {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	&__section-title {
 		font-size: 14px;
 		font-weight: 600;
@@ -163,7 +134,7 @@
 		transition: border-color 0.12s ease;
 
 		&:hover {
-			border-color: #3858e9;
+			border-color: var(--wp--preset--color--blueberry-1);
 		}
 
 		&-info {
@@ -230,18 +201,31 @@
 		isolation: isolate;
 
 		&:focus-within {
-			border-color: #3858e9;
-			box-shadow: 0 0 0 1px #3858e9;
+			border-color: var(--wp--preset--color--blueberry-1);
+			box-shadow: 0 0 0 1px var(--wp--preset--color--blueberry-1);
 		}
 
 		.block-editor-block-list__layout {
 			padding: 12px 16px;
 		}
 
-		ul, ol { padding-inline-start: 1.5em; margin-block: 1em; }
-		ul { list-style: disc outside; }
-		ol { list-style: decimal outside; }
-		li { margin-block: 0.35em; }
+		ul,
+		ol {
+			padding-inline-start: 1.5em;
+			margin-block: 1em;
+		}
+
+		ul {
+			list-style: disc outside;
+		}
+
+		ol {
+			list-style: decimal outside;
+		}
+
+		li {
+			margin-block: 0.35em;
+		}
 	}
 
 	&__editor-toolbar {
@@ -324,6 +308,7 @@
 // === Inline venue editor (no overlay) ===
 
 .wporg-groups-venue-editor--inline {
+
 	.wporg-groups-venue-editor__inner {
 		max-width: 640px;
 	}
@@ -352,6 +337,7 @@
 		height: 250px;
 		border-radius: 4px;
 		border: 1px solid #d9d9d9;
+		isolation: isolate;
 	}
 
 	.wporg-groups-venue-editor__actions {
@@ -383,7 +369,8 @@
 			cursor: pointer;
 			font-size: 14px;
 
-			&:hover, &:focus {
+			&:hover,
+			&:focus {
 				background: #f0f0f0;
 			}
 		}
@@ -393,6 +380,7 @@
 // === Members tab ===
 
 .wporg-members-tab {
+
 	&__controls {
 		display: flex;
 		align-items: center;
@@ -460,6 +448,89 @@
 		margin-top: 16px;
 		font-size: 13px;
 		color: #656a71;
+	}
+}
+
+// === Ownership transfer panel (inside Members tab) ===
+
+.wporg-ownership-transfer {
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #e0e0e0;
+
+	&__status {
+		margin-bottom: 12px;
+	}
+
+	&__actions {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	&__form {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		max-width: 400px;
+	}
+
+	&__history {
+		margin-top: 12px;
+		font-size: 13px;
+		color: #656a71;
+
+		summary {
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		ul {
+			margin: 8px 0 0;
+			padding-left: 20px;
+		}
+
+		/*
+		 * stylelint can't resolve `&__history` back to a class, so it compares
+		 * this rule's bare `li` against the venue editor's
+		 * `.wporg-groups-venue-editor__suggestions li` and calls it descending
+		 * specificity. The two selectors can never match the same element --
+		 * different components, neither nested in the other -- so there is no
+		 * cascade to get wrong here.
+		 */
+		/* stylelint-disable-next-line no-descending-specificity */
+		li {
+			margin-bottom: 4px;
+		}
+	}
+}
+
+// === Export tab ===
+
+.wporg-export-tab {
+
+	&__field {
+		max-width: 480px;
+		margin-bottom: 20px;
+	}
+
+	&__dates {
+		display: flex;
+		gap: 16px;
+
+		> div {
+			flex: 1;
+		}
+
+		@media (max-width: 600px) {
+			flex-direction: column;
+		}
+	}
+
+	&__buttons {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 	}
 }
 

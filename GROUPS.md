@@ -80,8 +80,7 @@ Block theme (FSE) for group sites — the public-facing side of `events.wordpres
 
 - `templates/` — page templates: `front-page.html`, `single-event.html`, `single-venue.html`, `archive-gatherpress_event.html`, `page-members.html`, `search.html`, `404.html`, etc.
 - `parts/` — `header.html`, `footer.html`
-- `patterns/` — reusable block patterns for event cards/lists (`upcoming-events-cards.php`, `past-events-cards.php`, `manage-event-cta.php`, etc.)
-- `inc/event-cards.php` — PHP support for the event-card patterns
+- `patterns/` — reusable block patterns (`event-card.php`, `group-back-link.php`, `manage-event-cta.php`, etc.)
 - `assets/`, `theme.json`, `style.css`, `functions.php`
 
 ### Other related files
@@ -107,14 +106,9 @@ git checkout production -f
 ### Steps to deploy
 
 ```
-cd /home/wordcamp
-git pull origin production
-cd public_html
-svn up
-cd /home/wordcamp/public_html/wp-content/mu-plugins/wporg-groups-frontend
-npm install --loglevel=warn 2>&1 | tee /tmp/npm-install.log
-npm run build
 cd /home/wordcamp/public_html
+git pull origin production
+svnup-all.sh
 php bin/php/multiple-use/miscellaneous/sync-svn-with-git.php
 # Don't forget to press RETURN after it's committed, because it'll just stay
 ```

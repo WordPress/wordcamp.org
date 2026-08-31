@@ -8,8 +8,11 @@ use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Da
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 
+use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
 use function WordCamp\Groups\Frontend\REST\create_event;
 use function WordCamp\Groups\Frontend\REST\event_args_schema;
+use function WordCamp\Groups\Frontend\REST\get_group_info;
+use function WordCamp\Groups\Frontend\REST\update_group_info;
 use function WordCamp\Groups\Frontend\REST\get_event_form_data;
 use function WordCamp\Groups\Frontend\REST\update_event;
 use function WordCamp\Groups\Frontend\REST\save_draft;
@@ -51,7 +54,27 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
-	 * An editor (Organiser) can create and publish an event in one request.
+	 * Dispatches a JSON body through the full REST pipeline, the same way
+	 * the frontend's `apiFetch()` does.
+	 *
+	 * Unlike `event_request()` (which builds a `WP_REST_Request` via
+	 * `set_param()`), this goes through `rest_do_request()` /
+	 * `WP_REST_Server::dispatch()`, which is what actually runs
+	 * `sanitize_params()` / schema validation against the registered route
+	 * args. A request built with `set_param()` alone skips that step
+	 * entirely, so it can't catch a schema-validation bug like the one
+	 * these tests exist to cover.
+	 */
+	private function dispatch_json_request( string $method, string $route, array $body ) {
+		$request = new WP_REST_Request( $method, $route );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( wp_json_encode( $body ) );
+
+		return rest_do_request( $request );
+	}
+
+	/**
+	 * An editor (Organizer) can create and publish an event in one request.
 	 */
 	public function test_create_event_as_editor() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -328,6 +351,105 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * Regression test for a production incident: editing an existing,
+	 * non-recurring, published event failed with
+	 * "Invalid parameter(s): recurrence".
+	 *
+	 * The frontend's save payload always included a `recurrence` key, even
+	 * when its local state was still `null` (e.g. before the initial
+	 * `GET /event-form-data` fetch had populated it). `apiFetch()` then
+	 * serialized that as literal JSON `null`, but `recurrence`'s REST arg
+	 * is typed strictly as `object` (`recurring_event_args_schema()`), and
+	 * `object` schemas don't accept `null` — so the whole request was
+	 * rejected before `update_event()` ever ran, even though every other
+	 * field was valid and recurrence wasn't being changed at all. Fixed by
+	 * having the frontend omit `recurrence` entirely on edit (recurrence
+	 * is `required => false`, and is locked/uneditable after publish
+	 * anyway) instead of ever sending it as `null`.
+	 *
+	 * None of the other `create_event()`/`update_event()` tests in this
+	 * file would have caught this: they build requests with
+	 * `WP_REST_Request::set_param()`, which skips `sanitize_params()` /
+	 * schema validation entirely. This test dispatches through
+	 * `rest_do_request()` instead, exercising the same validation path a
+	 * real save from the browser hits.
+	 */
+	public function test_update_event_omitting_recurrence_succeeds(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $create );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Edited Without Recurrence' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Edited Without Recurrence', get_the_title( $event_id ) );
+	}
+
+	/**
+	 * Pins the exact failure mode from the incident above: a literal JSON
+	 * `null` for `recurrence` is rejected by schema validation, for the
+	 * whole request, with `rest_invalid_param` / `recurrence` — never
+	 * `wporg_groups_invalid_recurrence` (the app-level validator in
+	 * `mu-plugins/groups/gatherpress-recurring-events.php`, which never
+	 * even runs here). Frontend code must omit the key rather than send
+	 * `null`.
+	 */
+	public function test_update_event_rejects_null_recurrence(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $create );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'recurrence' => null ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertSame( 'rest_invalid_param', $data['code'] );
+		$this->assertArrayHasKey( 'recurrence', $data['data']['params'] );
+	}
+
+	/**
+	 * Creating an event is the other half of this "crucial functionality":
+	 * confirms the full REST pipeline (schema validation included) accepts
+	 * a real create payload with `recurrence` present, the way the
+	 * frontend's create flow sends it.
+	 */
+	public function test_create_event_via_rest_dispatch(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array(
+				'recurrence' => array(
+					'available' => true,
+					'locked'    => false,
+					'frequency' => '',
+				),
+			) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( 'gatherpress_event', get_post_type( $event_id ) );
+		$this->assertSame( 'publish', get_post_status( $event_id ) );
+	}
+
+	/**
 	 * A new venue's address is written to gatherpress_address meta, not
 	 * post_content, so GatherPress's own geocode handler can pick it up.
 	 */
@@ -426,5 +548,240 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertNotWPError( $publish_response );
 		$this->assertSame( 'publish', get_post_status( $draft_id ) );
+	}
+
+	/**
+	 * A country code that no longer resolves still reports the stored location.
+	 *
+	 * The settings form is built from this response, so collapsing it to `null`
+	 * would leave the location unselected and let the next save of any other
+	 * field wipe the city and country.
+	 */
+	public function test_group_info_reports_location_with_unrecognized_country() {
+		$site_id = get_current_blog_id();
+
+		update_site_meta( $site_id, 'wporg_group_location_type', 'physical' );
+		update_site_meta( $site_id, 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( $site_id, 'wporg_group_location_country', 'ZZ' );
+
+		$this->assertSame( '', wcorg_get_country_name_from_code( 'ZZ' ), 'ZZ is expected to be an unrecognized code.' );
+
+		$location = get_group_info()->get_data()['location'];
+
+		$this->assertSame(
+			array(
+				'type'        => 'physical',
+				'city'        => 'İstanbul',
+				'countryCode' => 'ZZ',
+			),
+			$location
+		);
+	}
+
+	/**
+	 * Saving an unrelated field leaves a location with a stale country intact.
+	 */
+	public function test_group_info_update_without_location_preserves_stale_country() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$site_id = get_current_blog_id();
+
+		update_site_meta( $site_id, 'wporg_group_location_type', 'physical' );
+		update_site_meta( $site_id, 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( $site_id, 'wporg_group_location_country', 'ZZ' );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+		$request->set_param( 'description', 'A new tagline.' );
+
+		$response = update_group_info( $request );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'physical', get_site_meta( $site_id, 'wporg_group_location_type', true ) );
+		$this->assertSame( 'İstanbul', get_site_meta( $site_id, 'wporg_group_location_city', true ) );
+		$this->assertSame( 'ZZ', get_site_meta( $site_id, 'wporg_group_location_country', true ) );
+	}
+
+	/**
+	 * A stale country code cannot be saved back; the write path still validates.
+	 */
+	public function test_group_info_update_rejects_unrecognized_country() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+		$request->set_param(
+			'location',
+			array(
+				'type'        => 'physical',
+				'city'        => 'İstanbul',
+				'countryCode' => 'ZZ',
+			)
+		);
+
+		$response = update_group_info( $request );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_invalid_country', $response->get_error_code() );
+	}
+
+	/**
+	 * A tag-shaped event title is stored as text, not as markup.
+	 *
+	 * The `sanitize_text_field()` on the `title` arg is not the last word — see
+	 * `wcorg_sanitize_plain_text()` for why. It matters for this field in particular because
+	 * `core/post-title` emits `get_the_title()` straight into element content without running
+	 * `wp_kses_post()` over it, so whatever is stored here is what renders.
+	 */
+	public function test_event_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Meetup< a href="https://example.org" >click here< /a >' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$stored = (string) get_post_field( 'post_title', $response->get_data()['id'], 'raw' );
+
+		$this->assertStringNotContainsString( '<a', $stored );
+		$this->assertStringNotContainsString( '<', $stored );
+		$this->assertStringContainsString( '&lt; a href=', $stored );
+	}
+
+	/**
+	 * Editing an existing event goes through the same write, so it gets the same treatment.
+	 */
+	public function test_event_update_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create   = $this->dispatch_json_request( 'POST', '/wporg-groups/v1/event', $this->base_event_params() );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Meetup< a href="https://example.org" >click here< /a >' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$this->assertStringNotContainsString( '<', (string) get_post_field( 'post_title', $event_id, 'raw' ) );
+	}
+
+	/**
+	 * `resolve_venue_id()` writes the submitted venue name to a venue's `post_title`, so it needs it too.
+	 */
+	public function test_new_venue_name_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array(
+				'new_venue_name' => 'Community Hall< a href="https://example.org" >click here< /a >',
+			) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$venue_id = get_event_venue_post_id( (int) $response->get_data()['id'] );
+		$this->assertGreaterThan( 0, $venue_id, 'A venue post should have been created.' );
+
+		$stored = (string) get_post_field( 'post_title', $venue_id, 'raw' );
+
+		$this->assertStringNotContainsString( '<', $stored );
+		$this->assertStringContainsString( '&lt; a href=', $stored );
+	}
+
+	/**
+	 * Autosaved drafts write a title too, so they get the same treatment.
+	 */
+	public function test_draft_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/draft',
+			array( 'title' => 'Draft< a href="https://example.org" >click here< /a >' )
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$draft_id = $response->get_data()['id'];
+		$this->assertStringNotContainsString( '<', (string) get_post_field( 'post_title', $draft_id, 'raw' ) );
+
+		// The draft picker reads this listing, and its `html_entity_decode()` is the one operation that could
+		// undo the encoding. That's fine — the value is only ever used as a React `<option>` label, i.e. as
+		// text — but the decoded value must still not be a real tag.
+		$listed  = wp_list_filter( list_drafts()->get_data(), array( 'id' => $draft_id ) );
+		$decoded = reset( $listed )['title'];
+
+		$this->assertStringNotContainsString( '<a', $decoded );
+		$this->assertStringContainsString( '< a href=', $decoded );
+	}
+
+	/**
+	 * A title that only looks tag-ish stays readable.
+	 *
+	 * Covered for the helper itself in `Test_Helpers_Misc`, but pinned here too because this is the
+	 * value an organizer actually types, and the whole write path runs between the two.
+	 */
+	public function test_event_title_keeps_angle_brackets_used_as_prose(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$stored = (string) get_post_field( 'post_title', $response->get_data()['id'], 'raw' );
+
+		$this->assertSame( 'Hall < 100 > seats', html_entity_decode( $stored ) );
+	}
+
+	/**
+	 * The form pre-fills with what the organizer typed, not with the stored encoding.
+	 *
+	 * `/event-form-data` feeds a text input, so it decodes like the other two read sites,
+	 * `list_drafts()` and the venue list. Without this, reopening an event shows
+	 * `Hall &lt; 100 &gt; seats` in the title field.
+	 */
+	public function test_event_form_data_title_is_decoded(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+		$event_id = (int) $response->get_data()['id'];
+
+		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$request->set_param( 'event_id', $event_id );
+
+		$this->assertSame( 'Hall < 100 > seats', get_event_form_data( $request )->get_data()['fields']['title'] );
+
+		// Round-tripping that value back through the write path must land on the same
+		// bytes — a decode that widened the input would show up here as double encoding.
+		$stored_before = (string) get_post_field( 'post_title', $event_id, 'raw' );
+
+		$this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
 	}
 }

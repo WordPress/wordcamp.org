@@ -35,7 +35,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 	<?php echo wp_interactivity_data_wp_context( array( 'isExpanded' => false ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 >
 	<div class="wporg-sponsors__header">
-		<<?php echo esc_html( $wporg_heading ); ?> class="wporg-sponsors__heading">
+		<<?php echo esc_html( $wporg_heading ); ?> class="wporg-section-heading wporg-sponsors__heading">
 			<?php esc_html_e( 'Sponsors', 'wporg-groups-frontend' ); ?>
 		</<?php echo esc_html( $wporg_heading ); ?>>
 

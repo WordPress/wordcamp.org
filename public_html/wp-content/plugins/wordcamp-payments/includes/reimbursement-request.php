@@ -66,6 +66,10 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 	);
 
 	return \register_post_type( POST_TYPE, $args );
@@ -502,7 +506,21 @@ function set_request_status( $post_data, $post_data_raw ) {
 	// Requesting to submit/update the post
 	if ( ! current_user_can( 'manage_network' ) ) {
 		$editable_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete' );
-		if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses ) ) {
+		if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses, true ) ) {
+			$post_data['post_status'] = 'wcb-pending-approval';
+		}
+
+		/*
+		 * Statuses past pending approval (approval, payment, etc.) are reserved for network admins. For
+		 * everyone else, keep the status within the set a requester can set, defaulting to pending approval.
+		 *
+		 * Keyed on the stored status, so this only applies while the request is still requester-editable
+		 * (draft/incomplete). Status changes made once it's further along, and the initial insert of a new
+		 * post, are left as-is.
+		 */
+		$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+		$requester_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete', 'wcb-pending-approval' );
+		if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 			$post_data['post_status'] = 'wcb-pending-approval';
 		}
 	}
@@ -901,6 +919,11 @@ function notify_organizer_request_updated( $new_status, $old_status, $request ) 
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'draft_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 	if ( ! is_a( $post, 'WP_Post' ) || POST_TYPE !== $post->post_type ) {
@@ -922,7 +945,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 
 		case 'draft_post':
 			if ( $draft_or_incomplete_status ) {
-				$required_capabilities = array( 'edit_posts' );
+				$required_capabilities = array( \WordCamp_Budgets::VIEWER_CAP );
 			} else {
 				$required_capabilities[] = 'manage_network';
 			}
@@ -1452,7 +1475,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 	$report = fopen( 'php://output', 'w' );
 
 	// JPM Header
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ) );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ), ',', '"', '\\', "\n" );
 
 	$total = 0;
 	$count = 0;

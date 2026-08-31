@@ -385,11 +385,19 @@ function dns_records( $host, $type ) {
  * that lapsed. RDAP is authoritative, and only ever runs against the handful of candidates that reached
  * 'dangling', so it costs almost nothing.
  *
+ * Expect no answer for a lapsed `.com` in particular. Verisign's RDAP server, which every `.com` resolves to,
+ * closes the connection without a TLS `close_notify` on its 404s, and OpenSSL 3 treats that as an error, so
+ * `wp_remote_get()` discards a response it did in fact receive. Registered domains answer 200 and are
+ * unaffected, which puts the failure squarely on the domains worth reporting. Those are left standing on their
+ * DNS evidence and flagged unconfirmed, for a human to settle with `whois`. Inferring a lapse from a failed
+ * request would assert the very thing that couldn't be checked.
+ *
  * @param string $domain
  *
- * @return bool True only when the registry positively reports no such registration. Anything ambiguous (a
- *              timeout, a rate limit, an unexpected status) returns false, so an inconclusive answer downgrades
- *              the finding rather than asserting something we haven't confirmed.
+ * @return bool|null True when the registry positively reports no such registration, false when it reports one,
+ *                   and null when it didn't answer the question -- an unreachable host, a rate limit, an
+ *                   unexpected status. Null is not evidence in either direction, and only a real answer is
+ *                   allowed to overturn what DNS found.
  */
 function verify_unregistered( $domain ) {
 	$response = wp_remote_get(

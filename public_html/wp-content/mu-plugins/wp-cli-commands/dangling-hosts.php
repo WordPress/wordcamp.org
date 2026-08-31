@@ -123,6 +123,10 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 
 		WP_CLI\Utils\format_items( $format, $references, $fields );
 
+		if ( ! WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-verify', false ) ) {
+			$this->warn_about_unconfirmed_findings( $references );
+		}
+
 		$dangling = array_filter(
 			$references,
 			function ( $reference ) {
@@ -153,6 +157,36 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	}
 
 	/**
+	 * Say so when the registry couldn't be reached.
+	 *
+	 * Only for a run that asked for verification -- `--skip-verify` opting out of it is not a surprise worth
+	 * a warning. Without this the run looks like a clean verified pass, when its findings are actually resting
+	 * on DNS alone, which hides a weaker result behind the appearance of a stronger one.
+	 *
+	 * @param array[] $references
+	 */
+	protected function warn_about_unconfirmed_findings( array $references ) {
+		$unconfirmed = array_filter(
+			$references,
+			function ( $reference ) {
+				return 'dangling' === $reference['status'] && true !== ( $reference['verified'] ?? null );
+			}
+		);
+
+		if ( empty( $unconfirmed ) ) {
+			return;
+		}
+
+		WP_CLI::warning(
+			sprintf(
+				'Could not reach the registry for %d domain(s), so they are reported on DNS evidence alone: %s.',
+				count( array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) ),
+				implode( ', ', array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) )
+			)
+		);
+	}
+
+	/**
 	 * Split a comma-separated option into a trimmed list.
 	 *
 	 * @param string $value
@@ -175,7 +209,7 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 * @return array
 	 */
 	protected function parse_fields( $value ) {
-		$available = array( 'status', 'kind', 'host', 'domain', 'site', 'blog_id', 'post_id', 'permalink', 'url' );
+		$available = array( 'status', 'kind', 'host', 'domain', 'verified', 'site', 'blog_id', 'post_id', 'permalink', 'url' );
 		$fields    = $this->parse_list( $value );
 
 		if ( empty( $fields ) ) {

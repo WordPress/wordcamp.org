@@ -401,11 +401,27 @@ function verify_unregistered( $domain ) {
 		)
 	);
 
+	/*
+	 * A registry that couldn't be reached hasn't said the domain is registered -- it hasn't said anything.
+	 * Reporting that as `false` would read an unreachable network as evidence of registration, and quietly
+	 * downgrade every genuine finding on a host with no outbound HTTPS.
+	 */
 	if ( is_wp_error( $response ) ) {
+		return null;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+
+	if ( 404 === $code ) {
+		return true;
+	}
+
+	if ( 200 === $code ) {
 		return false;
 	}
 
-	return 404 === wp_remote_retrieve_response_code( $response );
+	// Rate limiting, a 5xx, an unexpected redirect. The registry didn't answer the question either way.
+	return null;
 }
 
 /**
@@ -586,13 +602,21 @@ function scan_network( array $args = array() ) {
 
 			$domain = $result['domain'];
 
-			if ( ! isset( $verified[ $domain ] ) ) {
+			// `array_key_exists`, not `isset`, so a cached `null` isn't looked up again on every host.
+			if ( ! array_key_exists( $domain, $verified ) ) {
 				$verified[ $domain ] = verify_unregistered( $domain );
 			}
 
-			if ( ! $verified[ $domain ] ) {
+			/*
+			 * Only a registry that answered can overturn what DNS found. When it couldn't be asked, the DNS
+			 * evidence is all there is, so the finding stands -- flagged as unconfirmed rather than dropped,
+			 * which is what `verified` carries to the caller.
+			 */
+			if ( false === $verified[ $domain ] ) {
 				$checked[ $host ]['status'] = 'unresolved';
 			}
+
+			$checked[ $host ]['verified'] = $verified[ $domain ];
 		}
 	}
 
@@ -605,8 +629,9 @@ function scan_network( array $args = array() ) {
 			continue;
 		}
 
-		$reference['status'] = $result['status'];
-		$reference['domain'] = $result['domain'];
+		$reference['status']   = $result['status'];
+		$reference['domain']   = $result['domain'];
+		$reference['verified'] = $result['verified'] ?? null;
 
 		$results[] = $reference;
 	}

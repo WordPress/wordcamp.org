@@ -359,10 +359,98 @@ class Test_Dangling_Hosts extends Database_TestCase {
 	}
 
 	/**
-	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 * Run a scan of one site with the registry stubbed to a given response.
 	 *
-	 * A reference that only exists in the raw post content should be found.
+	 * @param array|WP_Error $response What `wp_remote_get()` should return for the RDAP request.
+	 *
+	 * @return array The references the scan reported.
 	 */
+	protected function scan_with_registry_response( $response ) {
+		$stub = function () use ( $response ) {
+			return $response;
+		};
+
+		add_filter( 'pre_http_request', $stub );
+
+		try {
+			return scan_network( array( 'blog_ids' => array( get_current_blog_id() ), 'verify' => true ) );
+		} finally {
+			remove_filter( 'pre_http_request', $stub );
+		}
+	}
+
+	/**
+	 * A registry that confirms the domain is gone leaves the finding standing.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_a_confirmed_lapsed_domain_stays_dangling() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 404 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertTrue( $references[0]['verified'] );
+	}
+
+	/**
+	 * A registry that says the domain is registered overturns what DNS found.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_a_registered_domain_is_downgraded() {
+		$this->stubbed_hosts['parked.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://parked.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 200 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'unresolved', $references[0]['status'] );
+		$this->assertFalse( $references[0]['verified'] );
+	}
+
+	/**
+	 * A registry that couldn't be reached is not evidence that the domain is registered.
+	 *
+	 * Reading a failed request as `registered` downgrades every genuine finding to `unresolved`, so a host
+	 * with no outbound HTTPS reports a clean run while suppressing exactly what the scan is looking for.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_an_unreachable_registry_does_not_downgrade_a_finding() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response(
+			new \WP_Error( 'http_request_failed', 'Could not resolve host.' )
+		);
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertNull( $references[0]['verified'], 'An unreachable registry must not read as confirmation.' );
+	}
+
+	/**
+	 * A registry that answers with neither a 200 nor a 404 hasn't answered the question.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_an_inconclusive_registry_response_does_not_downgrade_a_finding() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 429 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertNull( $references[0]['verified'] );
+	}
+
 	/**
 	 * The scan reports; it never writes.
 	 *
@@ -410,6 +498,11 @@ class Test_Dangling_Hosts extends Database_TestCase {
 		$this->assertSame( array(), $writes, 'The scan issued a statement that writes.' );
 	}
 
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * A reference that only exists in the raw post content should be found.
+	 */
 	public function test_scan_site_finds_references_in_post_content() {
 		$post_id = $this->create_published_post(
 			'<a href="https://example.net/article">Read more</a>'

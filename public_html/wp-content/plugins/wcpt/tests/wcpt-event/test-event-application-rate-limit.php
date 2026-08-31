@@ -116,9 +116,26 @@ class Test_Event_Application_Rate_Limit extends WP_UnitTestCase {
 	 * @covers WordPress_Community\Applications\Event_Application::is_rate_limited
 	 */
 	public function test_trashed_applications_still_count() {
-		foreach ( $this->create_applications( self::LIMIT ) as $id ) {
+		global $wcorg_subroles;
+
+		$applications = $this->create_applications( self::LIMIT );
+
+		/*
+		 * Trashing is a status change, and `WordCamp_Status_Guard` only lets a wrangler make
+		 * one. Asserted, because an untrashed application still counts and this test would
+		 * pass without ever trashing anything.
+		 */
+		$wrangler       = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$wcorg_subroles = array( $wrangler => array( 'wordcamp_wrangler' ) );
+		wp_set_current_user( $wrangler );
+
+		foreach ( $applications as $id ) {
 			wp_trash_post( $id );
+			$this->assertSame( 'trash', get_post_status( $id ), 'The fixture was not trashed.' );
 		}
+
+		$wcorg_subroles = array();
+		wp_set_current_user( 0 );
 
 		$this->assertTrue( $this->application->is_rate_limited() );
 	}

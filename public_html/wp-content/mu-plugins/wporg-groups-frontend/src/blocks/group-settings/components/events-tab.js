@@ -33,9 +33,9 @@ import EventForm, { NS } from '../../../components/event-form/event-form';
 
 function InlineEventForm( { eventId, onDone, onCancel } ) {
 	const isEdit = !! eventId;
-	const [ loading, setLoading ] = useState( true );
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
-	const [ speakers, setSpeakers ] = useState( [] );
+	// null until loaded, so a save can't overwrite speakers with an empty list.
+	const [ speakers, setSpeakers ] = useState( null );
 	const [ memberOptions, setMemberOptions ] = useState( [] );
 	const formRef = useRef( null );
 
@@ -52,11 +52,8 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 		] ).then( ( [ speakerIds, members ] ) => {
 			setSpeakers( speakerIds );
 			setMemberOptions( members );
-			setLoading( false );
 		} );
 	}, [ eventId ] );
-
-	if ( loading ) return h( 'div', { className: 'wporg-settings-tab__loading' }, h( Spinner ) );
 
 	const submitPayload = async ( payload ) => {
 		const result = await apiFetch( {
@@ -66,7 +63,7 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 		} );
 
 		// Save speakers meta.
-		if ( result.id ) {
+		if ( result.id && speakers ) {
 			await apiFetch( {
 				path: `/wp/v2/gatherpress_events/${ result.id }`,
 				method: 'POST',
@@ -113,7 +110,7 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 				h( 'div', { className: 'wporg-event-form__field' },
 					h( FormTokenField, {
 						label: __( 'Speakers', 'wporg-groups-frontend' ),
-						value: speakers.map( ( id ) => {
+						value: ( speakers || [] ).map( ( id ) => {
 							const member = memberOptions.find( ( m ) => m.id === id );
 							return member ? member.name : String( id );
 						} ),

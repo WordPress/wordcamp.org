@@ -52,18 +52,19 @@
 
 // === Shared tab styles ===
 
+.wporg-settings-tab__loading,
+.wporg-event-form__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px;
+}
+
 .wporg-settings-tab {
 	max-width: 640px;
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
-
-	&__loading {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 48px;
-	}
 
 	&__header {
 		display: flex;

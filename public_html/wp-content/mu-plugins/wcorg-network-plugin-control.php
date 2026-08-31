@@ -71,6 +71,7 @@ function _get_network_plugin_state_list( $state ) {
 			'camptix-payfast-gateway/camptix-payfast.php',
 			'camptix-trustcard/camptix-trustcard.php',
 			'camptix-trustpay/camptix-trustpay.php',
+			'camptix-visa-letters/camptix-visa-letters.php',
 			'liveblog/liveblog.php',
 			'multi-event-sponsors/bootstrap.php',
 			'supportflow/supportflow.php',

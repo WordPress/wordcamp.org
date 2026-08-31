@@ -44,6 +44,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Visa Letters">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-visa-letters/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="Multi-Event Sponsors">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/multi-event-sponsors/tests/

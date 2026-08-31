@@ -507,6 +507,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-payfast-gateway/camptix-payfast.php',
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
+		'camptix-visa-letters/camptix-visa-letters.php',
 		'edit-flow/edit_flow.php',
 		'knit-pay/knit-pay.php',
 		'lang-attribute-blocks/lang-attribute-blocks.php',

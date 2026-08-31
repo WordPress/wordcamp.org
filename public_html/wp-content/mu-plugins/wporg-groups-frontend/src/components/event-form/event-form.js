@@ -196,10 +196,10 @@ function EventForm(
 		is_online: form.is_online,
 		online_event_link: form.is_online ? form.online_event_link : '',
 		featured_image_id: featuredImage.id,
-		// Recurrence is locked (uneditable) once an event is published,
-		// so editing an existing event never needs to resend it — and
-		// must not send `null`, which fails the endpoint's object schema.
-		...( isEdit ? {} : { recurrence } ),
+		// Recurrence is locked once an event is published; drafts stay editable.
+		// Send it only while unlocked, and never as `null`, which fails the
+		// endpoint's object schema.
+		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),
 		// Blank-labelled rows are just an empty slot the organizer
 		// added and never filled in; the server drops them too.
 		rsvp_questions: ( form.rsvp_questions || [] ).filter(

@@ -137,7 +137,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	useEffect( () => {
 		if ( editingId !== null ) return;
 		setLoading( true );
-		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
+		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&status=publish,draft&_fields=id,title,meta,status&orderby=date&order=desc' } )
 			.then( ( data ) => {
 				setEvents( data.map( ( e ) => {
 					const dtStart = e.meta?.gatherpress_datetime_start || '';

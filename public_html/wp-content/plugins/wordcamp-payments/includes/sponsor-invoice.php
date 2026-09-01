@@ -700,7 +700,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 		 *
 		 * The organizer can still open the request (in order to view the status and details), but won't be allowed to make any changes to it.
 		 */
-		if ( ! in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) {
+		if ( ! in_array( \WordCamp_Budgets::get_status_for_edit_check( $post ), array( 'auto-draft', 'draft' ), true ) ) {
 			if ( 'edit_post' === $requested_capability ) {
 				$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' !== $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 				$is_bulk_edit   = isset( $_REQUEST['bulk_edit'] );

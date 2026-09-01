@@ -34,6 +34,18 @@ class WordCamp_Budgets {
 	);
 
 	/**
+	 * The status each budget request held before the save that is currently running, keyed by post ID.
+	 *
+	 * `save_post` runs after the new status is stored, so a requester submitting a draft would otherwise be
+	 * judged on the status the submission moved it to, and refused the save that writes the fields entered
+	 * alongside it. Populated on `post_updated` and dropped again on `wp_after_insert_post`, so it only
+	 * describes a save that is still in flight.
+	 *
+	 * @var array<int, string>
+	 */
+	protected static $status_before_save = array();
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -745,6 +757,56 @@ class WordCamp_Budgets {
 	}
 
 	/**
+	 * Record the status a budget request held before the save that is currently running.
+	 *
+	 * Runs on `post_updated`, which fires after the row is written but before `save_post`, and is the only
+	 * hook handed both the old post and the new one.
+	 *
+	 * @param int      $post_id
+	 * @param \WP_Post $post_after
+	 * @param \WP_Post $post_before
+	 */
+	public static function remember_status_before_save( $post_id, $post_after, $post_before ) {
+		if ( ! in_array( $post_after->post_type, self::PAYMENT_POST_TYPES, true ) ) {
+			return;
+		}
+
+		self::$status_before_save[ (int) $post_id ] = $post_before->post_status;
+	}
+
+	/**
+	 * Forget the status recorded above, once the save it describes has finished.
+	 *
+	 * Runs on `wp_after_insert_post`, at the lowest priority, so every `save_post` handler has already had its
+	 * answer. Leaving the entry in place would let the rest of the request judge the request on a status it no
+	 * longer holds.
+	 *
+	 * @param int $post_id
+	 */
+	public static function forget_status_before_save( $post_id ) {
+		unset( self::$status_before_save[ (int) $post_id ] );
+	}
+
+	/**
+	 * The status to judge a budget request's editability on.
+	 *
+	 * During a save that's the status the request held before it, so a draft being submitted is judged as the
+	 * draft it was rather than as the status the submission moved it to. Everywhere else it's simply the
+	 * stored status.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return string
+	 */
+	public static function get_status_for_edit_check( $post ) {
+		if ( isset( $post->ID ) && isset( self::$status_before_save[ (int) $post->ID ] ) ) {
+			return self::$status_before_save[ (int) $post->ID ];
+		}
+
+		return $post->post_status ?? '';
+	}
+
+	/**
 	 * Determines whether we want to perform actions on the given post based on the current context.
 	 *
 	 * Examples of actions we might perform are saving the meta fields during the `save_post` hook, or send out an
@@ -1185,3 +1247,10 @@ class WordCamp_Budgets {
 		return $dom->saveXML();
 	}
 }
+
+/*
+ * Registered at file scope rather than in the constructor: that only runs in the admin, while the
+ * `map_meta_cap` callbacks that read this also run on cron and Ajax.
+ */
+add_action( 'post_updated',         array( 'WordCamp_Budgets', 'remember_status_before_save' ), 10, 3 );
+add_action( 'wp_after_insert_post', array( 'WordCamp_Budgets', 'forget_status_before_save' ), PHP_INT_MAX );

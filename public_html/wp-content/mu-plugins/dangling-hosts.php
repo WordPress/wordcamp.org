@@ -121,9 +121,16 @@ function extract_references( $content ) {
 		}
 	}
 
-	if ( preg_match_all( '#"url"\s*:\s*"(https?://[^"\\\\]+)"#i', $content, $block_attrs ) ) {
-		foreach ( $block_attrs[1] as $url ) {
-			add_reference( $references, $url, 'url' );
+	/*
+	 * Scoped to the embed block rather than any block carrying a `url` attribute. A `wp:button` has one too,
+	 * and reporting that as a `url` would both duplicate the `link` its anchor already produces and rank it
+	 * above that link, as though a button were a thing the page loads on its own.
+	 */
+	if ( preg_match_all( '#<!--\s+wp:embed\s+(\{.*?\})\s*/?-->#is', $content, $embed_blocks ) ) {
+		foreach ( $embed_blocks[1] as $attributes ) {
+			if ( preg_match( '#"url"\s*:\s*"(https?://[^"\\\\]+)"#i', $attributes, $matched ) ) {
+				add_reference( $references, $matched[1], 'url' );
+			}
 		}
 	}
 
@@ -482,10 +489,22 @@ function scan_site( $blog_id, array $args = array() ) {
 			collect_references( $references, extract_references( $post->post_content ), (int) $post->ID, $blog_id );
 		}
 
-		// Cached oEmbed markup, which usually isn't present in `post_content`.
-		$oembed_meta = $wpdb->get_results(
-			"SELECT post_id, meta_value FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_oembed\_%'"
-		);
+		/*
+		 * Cached oEmbed markup, which usually isn't present in `post_content`.
+		 *
+		 * Joined to the posts table rather than read on its own: postmeta carries no status or type, so the
+		 * rows have to be qualified by the post they hang off, or a draft's cached embed gets reported the
+		 * same as a published one.
+		 */
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated list of %s, and the table names are not user input.
+		$oembed_sql = "SELECT meta.post_id, meta.meta_value
+			FROM {$wpdb->postmeta} AS meta
+			INNER JOIN {$wpdb->posts} AS post ON post.ID = meta.post_id
+			WHERE meta.meta_key LIKE '\_oembed\_%'
+			AND post.post_status = 'publish'
+			AND post.post_type IN ( $placeholders )";
+
+		$oembed_meta = $wpdb->get_results( $wpdb->prepare( $oembed_sql, $post_types ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared immediately above.
 
 		foreach ( $oembed_meta as $meta ) {
 			if ( ! is_string( $meta->meta_value ) ) {

@@ -166,6 +166,22 @@ class Test_Dangling_Hosts extends Database_TestCase {
 				array( 'blog.example.net|url' ),
 			),
 
+			/*
+			 * Other blocks carry a `url` attribute too. A button's is a link the visitor may follow, not
+			 * something the page loads, so it should be reported once as the link its anchor already is.
+			 */
+			'button block url is only a link' => array(
+				'<!-- wp:button {"url":"https://shop.example.net/buy"} -->' .
+				'<div class="wp-block-button"><a class="wp-block-button__link" href="https://shop.example.net/buy">Buy</a></div>' .
+				'<!-- /wp:button -->',
+				array( 'shop.example.net|link' ),
+			),
+
+			'multiline embed block attribute' => array(
+				"<!-- wp:embed {\n\t\"url\": \"https://blog.example.net/a-post/\",\n\t\"type\": \"rich\"\n} /-->",
+				array( 'blog.example.net|url' ),
+			),
+
 			'protocol relative urls are normalized' => array(
 				'<script src="//cdn.example.net/a.js"></script>',
 				array( 'cdn.example.net|script' ),
@@ -599,6 +615,56 @@ class Test_Dangling_Hosts extends Database_TestCase {
 		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
 
 		$this->assertNotContains( 'draft-only.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * The cached oEmbed markup is read from postmeta, which has no status of its own -- it belongs to whatever
+	 * post it hangs off. A draft keeps its `_oembed_` meta, so scanning the meta without consulting the post
+	 * reports content nobody is served, and a scheduled run fails over a page that isn't public.
+	 */
+	public function test_scan_site_ignores_cached_oembed_on_unpublished_posts() {
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_type'   => 'post',
+			)
+		);
+
+		add_post_meta(
+			$draft_id,
+			'_oembed_1234567890abcdef',
+			'<iframe src="https://draft-embed.example.net/embed/"></iframe>'
+		);
+
+		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
+
+		$this->assertNotContains( 'draft-embed.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * Same for a post type the caller didn't ask about.
+	 */
+	public function test_scan_site_ignores_cached_oembed_on_other_post_types() {
+		$other_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_type'   => 'attachment',
+			)
+		);
+
+		add_post_meta(
+			$other_id,
+			'_oembed_abcdef1234567890',
+			'<iframe src="https://other-type.example.net/embed/"></iframe>'
+		);
+
+		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
+
+		$this->assertNotContains( 'other-type.example.net', $hosts );
 	}
 
 	/**

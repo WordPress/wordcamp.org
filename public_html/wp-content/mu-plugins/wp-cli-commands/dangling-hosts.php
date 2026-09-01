@@ -1,6 +1,5 @@
 <?php
 
-use cli\progress\Bar;
 use function WordCamp\Dangling_Hosts\{ scan_network };
 use const WordCamp\Dangling_Hosts\REFERENCE_KINDS;
 
@@ -35,7 +34,8 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 	 * Defaults to all of them.
 	 *
 	 * [--fields=<fields>]
-	 * : Comma-separated columns to output: status, kind, host, domain, site, blog_id, post_id, permalink, url.
+	 * : Comma-separated columns to output: status, kind, host, domain, verified, site, blog_id, post_id,
+	 * permalink, url.
 	 * Pass `--fields=site` to get just the affected sites.
 	 *
 	 * [--include-ok]
@@ -88,13 +88,30 @@ class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
 		// Validated up front -- a bad column name shouldn't surface only after a full network scan.
 		$fields = $this->parse_fields( WP_CLI\Utils\get_flag_value( $assoc_args, 'fields', '' ) );
 
-		// A progress bar would interleave with the report itself in the machine-readable formats.
-		$show_progress = in_array( $format, array( 'table', 'count' ), true );
+		/*
+		 * A progress bar would interleave with the report itself in the machine-readable formats, and it has
+		 * nothing to show anyone when stdout is a pipe or a cron log -- where it would instead land in the
+		 * output the caller is trying to parse.
+		 */
+		$show_progress = in_array( $format, array( 'table', 'count' ), true ) && ! \cli\Shell::isPiped();
 		$notify        = null;
 
 		if ( $show_progress ) {
-			$site_count = $blog_ids ? count( $blog_ids ) : (int) get_sites( array( 'count' => true ) );
-			$notify     = new Bar( 'Scanning sites', $site_count );
+			/*
+			 * Counted the way `scan_network()` selects, so the bar doesn't stop short of its total on a
+			 * network run by including sites that are never scanned.
+			 */
+			$site_count = $blog_ids ? count( $blog_ids ) : (int) get_sites(
+				array(
+					'count'    => true,
+					'archived' => 0,
+					'deleted'  => 0,
+					'spam'     => 0,
+				)
+			);
+
+			// `make_progress_bar()` rather than a bare `Bar`, so it also no-ops in the cases the check above doesn't cover.
+			$notify = WP_CLI\Utils\make_progress_bar( 'Scanning sites', $site_count );
 		}
 
 		$references = scan_network(

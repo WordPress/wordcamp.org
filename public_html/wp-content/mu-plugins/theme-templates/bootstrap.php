@@ -136,7 +136,7 @@ function inject_templates( $query_result, $query, $template_type ) {
 
 	$existing_templates = wp_list_pluck( $query_result, 'slug' );
 
-	foreach ( array( 'wcb_organizer', 'wcb_session', 'wcb_speaker', 'wcb_sponsor' ) as $type ) {
+	foreach ( array( 'wcb_organizer', 'wcb_session', 'wcb_speaker', 'wcb_sponsor', 'wcb_volunteer' ) as $type ) {
 		if (
 			// If there are no existing (user-created) templates.
 			! in_array( 'single-' . $type, $existing_templates, true ) &&
@@ -183,7 +183,7 @@ function inject_template( $block_template, $id, $template_type ) {
 		return $block_template;
 	}
 
-	foreach ( array( 'wcb_organizer', 'wcb_session', 'wcb_speaker', 'wcb_sponsor' ) as $type ) {
+	foreach ( array( 'wcb_organizer', 'wcb_session', 'wcb_speaker', 'wcb_sponsor', 'wcb_volunteer' ) as $type ) {
 		// For example, this matches `twentytwentythree//single-wcb_organizer`.
 		if ( str_ends_with( $id, 'single-' . $type ) ) {
 			$template = get_wordcamp_block_template( $type );
@@ -210,6 +210,7 @@ function get_wordcamp_block_template( $post_type = '' ) {
 		'wcb_session' => __( 'Single item: Session', 'wordcamporg' ),
 		'wcb_speaker' => __( 'Single item: Speaker', 'wordcamporg' ),
 		'wcb_sponsor' => __( 'Single item: Sponsor', 'wordcamporg' ),
+		'wcb_volunteer' => __( 'Single item: Volunteer', 'wordcamporg' ),
 	);
 
 	$template_file = __DIR__ . "/block-templates/single-{$post_type}.php";

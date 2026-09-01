@@ -549,19 +549,17 @@ function save_request( $post_id, $post ) {
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
-	 * We need to determine if the user is allowed to modify the request -- in terms of this plugin's post_status
-	 * restrictions, not in terms of current_user_can( 'edit_post', N ) -- but at this point in the execution
-	 * the status has already changed from the original one to the new one, so user_can_edit_request() would often
-	 * return an incorrect result, because it would be evaluating the new status, when it should use the old one.
-	 * That would result in all the meta fields the user entered being ignored when going from `draft` to
-	 * `submitted`, `info_requested` to `submitted`, etc.
+	 * The status this reads is the stored one, which by now is the status the save just wrote. That used to be
+	 * worked around with a stub post built from `$_POST['original_post_status']`, so the check saw the status the
+	 * request had before the save -- otherwise a `draft` being submitted would be judged as `wcb-pending-approval`
+	 * and the fields entered alongside it dropped.
 	 *
-	 * To avoid that, we create a stub WP_Post with the original post status, and give that to
-	 * user_can_edit_request() instead.
+	 * That's no longer what decides it. `post_edit_is_actionable()` above asks `edit_post`, which this post type's
+	 * `map_meta_cap` callback refuses for a request past the editable statuses, so a save that would have needed
+	 * the stub has already returned. What's left here is a request still in those statuses, which reads the same
+	 * either way -- and reading the real post keeps the decision out of the request body.
 	 */
-	$original_post = new WP_Post( (object) array( 'post_status' => $_POST['original_post_status'] ) );
-
-	if ( user_can_edit_request( $original_post ) ) {
+	if ( user_can_edit_request( $post ) ) {
 		$text_fields = array( 'name_of_payer', 'currency', 'reason', 'reason_other' );
 		validate_and_save_text_fields( $post_id, $text_fields, $_POST );
 

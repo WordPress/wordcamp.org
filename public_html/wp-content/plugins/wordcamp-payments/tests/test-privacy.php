@@ -27,6 +27,14 @@ class Test_Privacy extends WP_UnitTestCase {
 	/** @var int A network admin, who reviews requests and so sees every file. */
 	protected static $network_admin;
 
+	/**
+	 * @var int A volunteer who can file a request but can't edit anybody else's posts.
+	 *
+	 * The budget post types gate creation on `publish_posts`, which an Author has, while `edit_others_posts`,
+	 * which decides who may edit somebody else's upload, is an Editor capability. This is the gap between them.
+	 */
+	protected static $volunteer;
+
 	/** @var int Organizer A's vendor payment request. */
 	protected static $payment_request_id;
 
@@ -51,6 +59,7 @@ class Test_Privacy extends WP_UnitTestCase {
 		self::$organizer_a   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$organizer_b   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$network_admin = $factory->user->create( array( 'role' => 'administrator' ) );
+		self::$volunteer     = $factory->user->create( array( 'role' => 'author' ) );
 
 		grant_super_admin( self::$network_admin );
 
@@ -586,5 +595,75 @@ class Test_Privacy extends WP_UnitTestCase {
 
 		$this->assertContains( self::$payment_file_id, $visible );
 		$this->assertContains( self::$reimbursement_file_id, $visible );
+	}
+
+	/**
+	 * Attaching a file writes its `post_parent`, which is the field the rules above read.
+	 *
+	 * So it takes the capability any other route to that field takes, and the guard on `edit_post` decides it
+	 * here as well -- rather than the field being a way around the guard.
+	 */
+	public function test_existing_files_field_leaves_a_file_the_caller_cant_edit_alone() {
+		wp_set_current_user( self::$volunteer );
+
+		$their_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$volunteer,
+			'post_status' => 'draft',
+		) );
+
+		$someone_elses = self::create_file( 'notes-9z8y7x6w5v4u3t2s.pdf', 0, self::$organizer_a );
+
+		$this->assertFalse( current_user_can( 'edit_post', $someone_elses ) );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$their_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $someone_elses ) ) )
+		);
+
+		$this->assertSame( 0, (int) get_post( $someone_elses )->post_parent );
+	}
+
+	/**
+	 * An organizer who may edit the file still attaches it, so the rule doesn't cost the shared-upload case.
+	 *
+	 * One organizer uploading the receipts and another filing the request is a supported way to work: the rules
+	 * above show the file to both of them.
+	 */
+	public function test_existing_files_field_attaches_a_co_organizers_unattached_file() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		$uploaded_by_a = self::create_file( 'receipt-2s3t4u5v6w7x8y9z.pdf', 0, self::$organizer_a );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$own_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $uploaded_by_a ) ) )
+		);
+
+		$this->assertSame( $own_request, (int) get_post( $uploaded_by_a )->post_parent );
+	}
+
+	/**
+	 * The helper is public and writes to whatever request it's handed, so it asks about that request too.
+	 */
+	public function test_existing_files_field_ignores_a_request_the_caller_cant_edit() {
+		wp_set_current_user( self::$volunteer );
+
+		$unattached = self::create_file( 'receipt-1a2b3c4d5e6f7g8h.pdf', 0, self::$volunteer );
+
+		$this->assertFalse( current_user_can( 'edit_post', self::$payment_request_id ) );
+
+		\WordCamp_Budgets::attach_existing_files(
+			self::$payment_request_id,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $unattached ) ) )
+		);
+
+		$this->assertSame( 0, (int) get_post( $unattached )->post_parent );
 	}
 }

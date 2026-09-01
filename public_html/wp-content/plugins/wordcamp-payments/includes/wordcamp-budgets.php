@@ -893,6 +893,15 @@ class WordCamp_Budgets {
 			return;
 		}
 
+		/*
+		 * Both callers reach this from `save_post`, behind `post_edit_is_actionable()`, which asks the same
+		 * question -- but this is a public helper that writes to whatever request it's handed, so it shouldn't
+		 * depend on a caller having asked.
+		 */
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
 		foreach ( $files as $file_id ) {
 			if ( ! self::is_file_attachable( $file_id, $post_id ) ) {
 				continue;
@@ -909,8 +918,12 @@ class WordCamp_Budgets {
 	 * Whether one of the files a request names may be attached to it.
 	 *
 	 * The Files metabox only offers files that are unattached, or already on this request, but it assembles that
-	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rule has to hold here for
-	 * whatever comes back in the field -- a file already sitting on another post keeps the post it has.
+	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rules have to hold here for
+	 * whatever comes back in the field.
+	 *
+	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is an edit
+	 * to it -- `post_parent` is the field `privacy.php` reads to decide who sees a payment file -- so it takes
+	 * the same capability any other route to that field would, which is where the guard in `privacy.php` applies.
 	 *
 	 * @param mixed $file_id An entry from the field, which is whatever JSON the browser sent.
 	 * @param int   $post_id The request the file would be attached to.
@@ -925,6 +938,10 @@ class WordCamp_Budgets {
 		$file = get_post( absint( $file_id ) );
 
 		if ( ! $file instanceof WP_Post || 'attachment' !== $file->post_type ) {
+			return false;
+		}
+
+		if ( ! current_user_can( 'edit_post', $file->ID ) ) {
 			return false;
 		}
 

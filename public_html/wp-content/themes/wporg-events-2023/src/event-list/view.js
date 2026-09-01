@@ -77,16 +77,48 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Encode any HTML in a string to prevent XSS.
+	 * Encode any HTML in a string.
+	 *
+	 * Quotes are encoded along with the tag delimiters, so the result can be used
+	 * both in element content and inside a quoted attribute value.
 	 *
 	 * @param {string} unsafe
 	 *
 	 * @return {string}
 	 */
 	function escapeHtml( unsafe ) {
-		const safe = document.createTextNode( unsafe ).textContent;
+		return String( unsafe ?? '' )
+			.replace( /&/g, '&amp;' )
+			.replace( /</g, '&lt;' )
+			.replace( />/g, '&gt;' )
+			.replace( /"/g, '&quot;' )
+			.replace( /'/g, '&#039;' );
+	}
 
-		return safe;
+	/**
+	 * Reduce a URL to one that is safe to place in an `href` attribute.
+	 *
+	 * Encoding alone isn't enough for a URL, since the scheme matters as much as
+	 * the characters. Anything that isn't HTTP(S) is dropped.
+	 *
+	 * @param {string} unsafe
+	 *
+	 * @return {string} The encoded URL, or an empty string if it isn't linkable.
+	 */
+	function escapeUrl( unsafe ) {
+		let parsed;
+
+		try {
+			parsed = new URL( String( unsafe ?? '' ), window.location.href );
+		} catch {
+			return '';
+		}
+
+		if ( 'http:' !== parsed.protocol && 'https:' !== parsed.protocol ) {
+			return '';
+		}
+
+		return escapeHtml( parsed.href );
 	}
 
 	/**
@@ -144,7 +176,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		const markup = `
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
-					<a class="external-link" href="${ escapeHtml( url ) }">
+					<a class="external-link" href="${ escapeUrl( url ) }">
 						${ escapeHtml( title ) }
 					</a>
 				</h3>

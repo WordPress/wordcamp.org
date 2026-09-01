@@ -572,6 +572,43 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The exporters stay out of every request that isn't running the personal data tools.
+	 *
+	 * WordPress.org's erasure preflight crawls the network over REST and runs whatever exporters each site
+	 * offers. Anything that answers with data stops the erasure with a `has_exportable` warning, and budget
+	 * requests are kept for accounting, so the eraser is a stub and that warning has nothing to clear it --
+	 * every former organizer's erasure request would sit in the DPO queue for good.
+	 *
+	 * @dataProvider data_screens_and_the_exporters_they_see
+	 *
+	 * @param string $screen    The screen to run the filter under. `front` is the shape the preflight
+	 *                          arrives in; `dashboard` is the personal data tools themselves.
+	 * @param array  $expected  The exporter keys the filter should add.
+	 */
+	public function test_exporters_are_offered_to_the_personal_data_tools_only( $screen, array $expected ) {
+		set_current_screen( $screen );
+
+		$exporters = \WordCamp\Budgets\Privacy\register_personal_data_exporters( array() );
+
+		set_current_screen( 'front' );
+
+		$this->assertSame( $expected, array_keys( $exporters ) );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_screens_and_the_exporters_they_see() {
+		return array(
+			'a front-end request, as the preflight arrives' => array( 'front', array() ),
+			'the admin, where the tools run'                => array(
+				'dashboard',
+				array( 'wcb-reimbursements', 'wcb-vendor-payments' ),
+			),
+		);
+	}
+
+	/**
 	 * The people who are supposed to see the files.
 	 *
 	 * @return array

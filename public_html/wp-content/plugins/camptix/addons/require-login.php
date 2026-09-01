@@ -1177,6 +1177,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 			}
 		}
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring the value saved above, the same restore CampTix_Plugin::restore_shortcodes() performs.
 		$shortcode_tags = $saved_shortcode_tags;
 
 		set_transient(

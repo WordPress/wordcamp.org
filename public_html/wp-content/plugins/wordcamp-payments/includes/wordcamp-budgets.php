@@ -887,16 +887,48 @@ class WordCamp_Budgets {
 			return;
 		}
 
-		if ( ! $files = json_decode( $request['wcb_existing_files_to_attach'] ) ) {
+		$files = json_decode( $request['wcb_existing_files_to_attach'] );
+
+		if ( ! is_array( $files ) ) {
 			return;
 		}
 
 		foreach ( $files as $file_id ) {
+			if ( ! self::is_file_attachable( $file_id, $post_id ) ) {
+				continue;
+			}
+
 			wp_update_post( array(
-				'ID'          => $file_id,
+				'ID'          => absint( $file_id ),
 				'post_parent' => $post_id,
 			) );
 		}
+	}
+
+	/**
+	 * Whether one of the files a request names may be attached to it.
+	 *
+	 * The Files metabox only offers files that are unattached, or already on this request, but it assembles that
+	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rule has to hold here for
+	 * whatever comes back in the field -- a file already sitting on another post keeps the post it has.
+	 *
+	 * @param mixed $file_id An entry from the field, which is whatever JSON the browser sent.
+	 * @param int   $post_id The request the file would be attached to.
+	 *
+	 * @return bool
+	 */
+	protected static function is_file_attachable( $file_id, $post_id ) {
+		if ( ! is_numeric( $file_id ) ) {
+			return false;
+		}
+
+		$file = get_post( absint( $file_id ) );
+
+		if ( ! $file instanceof WP_Post || 'attachment' !== $file->post_type ) {
+			return false;
+		}
+
+		return 0 === (int) $file->post_parent || (int) $file->post_parent === (int) $post_id;
 	}
 
 	/**

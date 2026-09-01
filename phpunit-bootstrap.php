@@ -112,6 +112,7 @@ require_once WP_PLUGIN_DIR . '/wordcamp-payments-network/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-payments/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-reports/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-attendance/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/camptix-companion-tickets/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/wporg-groups-frontend/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/gatherpress-recurring-events/tests/bootstrap.php';

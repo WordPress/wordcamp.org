@@ -410,6 +410,9 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 		return $post_data;
 	}
 
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 	$sponsor                 = prepare_sponsor_data( $post_data_raw['_wcbsi_sponsor_id'] ?? null );
 	$sponsor                 = array_pop( $sponsor );
 	$sponsor_fields_complete = 'true' === $sponsor['data_attributes']['required-fields-complete'];

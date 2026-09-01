@@ -497,6 +497,9 @@ function set_request_status( $post_data, $post_data_raw ) {
 		return $post_data;
 	}
 
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 	// Requesting to save draft
 	if ( isset( $post_data_raw['wcb-save-draft'] ) ) {
 		if ( current_user_can( 'draft_post', $post_data_raw['ID'] ) ) {

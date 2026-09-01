@@ -604,6 +604,9 @@ class WCP_Payment_Request {
 			return $post_data;
 		}
 
+		// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+		WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 		// Ensure that new posts have the `post_date_gmt` field populated.
 		if ( 'auto-draft' !== $post_data['post_status'] ) {
 			if ( '0000-00-00 00:00:00' === $post_data['post_date_gmt'] ) {

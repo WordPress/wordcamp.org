@@ -40,6 +40,20 @@ function is_cli_request() {
 
 
 /**
+ * Whether the request is one that runs WordPress' personal data tools.
+ *
+ * Matches the branch of `bootstrap.php` that used to load this whole file, before the attachment guards above
+ * needed it everywhere: the admin screens, the Ajax callbacks behind them, and cron. See
+ * `register_personal_data_exporters()` for what turns on it.
+ *
+ * @return bool
+ */
+function is_personal_data_tool_request() {
+	return is_admin() || wp_doing_cron() || wp_doing_ajax();
+}
+
+
+/**
  * The post types this file acts on.
  *
  * Duplicates the `POST_TYPE` constants in `reimbursement-request.php` and `payment-request.php` rather than
@@ -464,11 +478,23 @@ function register_personal_data_erasers( $erasers ) {
 /**
  * Registers the personal data exporter for each WordCamp post type.
  *
+ * Only offered to the requests that run WordPress' personal data tools, because a registered exporter is not
+ * free: WordPress.org's erasure preflight crawls the network over REST, runs every exporter each site offers,
+ * and stops the erasure with a `has_exportable` warning for any that answers with data. Budget requests are
+ * kept for accounting, so `register_personal_data_erasers()` is a deliberate stub and that warning has nothing
+ * to clear it -- an erasure request from anyone who ever filed a reimbursement or was paid as a vendor would
+ * sit in the DPO queue for good. This file loading on every request is what the attachment guards above need;
+ * it wasn't a decision to start declaring budget data to the network's privacy tooling.
+ *
  * @param array $exporters
  *
  * @return array
  */
 function register_personal_data_exporters( $exporters ) {
+	if ( ! is_personal_data_tool_request() ) {
+		return $exporters;
+	}
+
 	$exporters['wcb-reimbursements'] = array(
 		'exporter_friendly_name' => __( 'WordCamp Reimbursement Requests', 'wordcamporg' ),
 		'callback'               => __NAMESPACE__ . '\reimbursements_exporter',

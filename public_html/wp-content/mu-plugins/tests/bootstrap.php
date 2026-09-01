@@ -32,6 +32,7 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';
 	require_once dirname( __DIR__ ) . '/wordcamp/lets-encrypt-helper.php';
 	require_once dirname( __DIR__ ) . '/latest-site-hints.php';
+	require_once dirname( __DIR__ ) . '/wordcamp-schedule-meta.php';
 	require_once dirname( __DIR__ ) . '/trusted-deputy-capabilities.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 	require_once dirname( __DIR__ ) . '/wcorg-network-theme-control.php';

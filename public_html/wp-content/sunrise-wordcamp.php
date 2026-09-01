@@ -631,16 +631,62 @@ function get_canonical_year_url( $domain, $path ) {
 		return false;
 	}
 
-	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-	$flagship_url = get_flagship_canonical_url( $domain );
-
-	if ( $flagship_url ) {
-		return $flagship_url;
-	}
-
-	$latest = get_latest_site( $domain );
+	/*
+	 * While a city's current edition is upcoming or only recently finished, keep its bare domain pointing at
+	 * that edition -- even when a site for a later edition already exists but hasn't been scheduled yet.
+	 * Otherwise fall back to the newest site.
+	 *
+	 * This was previously a hardcoded per-flagship date guard, because sunrise runs before the `wordcamp`
+	 * post type is registered and so couldn't read each camp's schedule. The schedule is now mirrored to
+	 * blogmeta (see `WordCamp\Schedule_Meta`), which is queryable this early, so every city is handled
+	 * generically. See also `WordCamp\Latest_Site_Hints\get_latest_home_url()`.
+	 */
+	$latest = get_current_edition_site( $domain ) ?: get_latest_site( $domain );
 
 	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+}
+
+/**
+ * Get the site for a city's current edition, if one is upcoming or only recently finished.
+ *
+ * "Current" is the newest scheduled edition whose end date is in the future or within the last month. Sites
+ * for future editions are sometimes created before they're scheduled; this skips those empty placeholders so
+ * the bare domain keeps resolving to the real current edition until it's well over, at which point the caller
+ * falls back to the newest site.
+ *
+ * Reads the `_wc_event_end` blogmeta written by `WordCamp\Schedule_Meta`, which exists only for live,
+ * scheduled editions -- so this works during the `sunrise.php` bootstrap, before the `wordcamp` post type is
+ * registered. Timestamps are stored as digit strings; MySQL coerces them for the arithmetic below, so no
+ * CAST is needed.
+ *
+ * @param string $domain
+ *
+ * @return object|null Row with `blog_id`, `domain`, `path`, or null when there's no current edition.
+ */
+function get_current_edition_site( string $domain ) {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	return $wpdb->get_row( $wpdb->prepare( "
+		SELECT blog.blog_id, blog.domain, blog.path
+		FROM $wpdb->blogs AS blog
+		INNER JOIN $wpdb->blogmeta AS event_end
+			ON event_end.blog_id = blog.blog_id
+			AND event_end.meta_key = '_wc_event_end'
+		WHERE
+			( blog.public AND NOT blog.deleted ) AND
+			(
+				( blog.domain =    %s AND blog.path != '/' ) OR -- city/year, e.g. seattle.wordcamp.org/2020/
+				( blog.domain LIKE %s AND blog.path  = '/' )    -- year.city, e.g. 2020.seattle.wordcamp.org
+			) AND
+			event_end.meta_value + %d >= %d -- still upcoming, or finished within the last month
+		ORDER BY blog.path DESC, blog.domain DESC
+		LIMIT 1",
+		$domain,
+		"%.{$domain}",
+		MONTH_IN_SECONDS,
+		time()
+	) );
 }
 
 /**

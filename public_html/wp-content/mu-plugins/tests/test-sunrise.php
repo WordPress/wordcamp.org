@@ -503,6 +503,38 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
+	 * @covers WordCamp\Sunrise\get_current_edition_site
+	 * @covers WordCamp\Sunrise\get_canonical_year_url
+	 *
+	 * The bare city domain should resolve to the current edition while it's upcoming or recently finished --
+	 * skipping a newer, unscheduled placeholder -- and fall back to the newest site once it's well over.
+	 */
+	public function test_canonical_url_prefers_current_edition_over_placeholder() {
+		$placeholder = self::factory()->blog->create( array(
+			'domain'     => 'vancouver.wordcamp.test',
+			'path'       => '/2099/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+
+		// 2020 is current, 2099 is an empty placeholder: redirect to 2020.
+		update_site_meta( self::$slash_year_2020_site_id, '_wc_event_end', strtotime( '+2 weeks' ) );
+		$this->assertSame(
+			'https://vancouver.wordcamp.test/2020/',
+			get_canonical_year_url( 'vancouver.wordcamp.test', '/' )
+		);
+
+		// 2020 is well over and 2099 still isn't scheduled: fall back to the newest site.
+		update_site_meta( self::$slash_year_2020_site_id, '_wc_event_end', strtotime( '2020-08-01' ) );
+		$this->assertSame(
+			'https://vancouver.wordcamp.test/2099/',
+			get_canonical_year_url( 'vancouver.wordcamp.test', '/' )
+		);
+
+		delete_site_meta( self::$slash_year_2020_site_id, '_wc_event_end' );
+		wp_delete_site( $placeholder );
+	}
+
+	/**
 	 * Test cases for test_get_canonical_year_url().
 	 *
 	 * @return array

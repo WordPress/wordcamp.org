@@ -303,8 +303,9 @@ trait Visa_Letter_Fixtures {
 	protected function camptix_error_count() {
 		global $camptix;
 
+		// No setAccessible() call: it is a no-op as of PHP 8.1 and deprecated in 8.5,
+		// and this repo targets 8.3+, so reflection reads the private property directly.
 		$errors = new ReflectionProperty( 'CampTix_Plugin', 'errors' );
-		$errors->setAccessible( true );
 
 		return count( (array) $errors->getValue( $camptix ) );
 	}

@@ -257,6 +257,34 @@ class Test_Submit_Transition extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A handler on the type-specific `save_post_{$post_type}` sees the same answer as one on plain `save_post`.
+	 *
+	 * The typed hook fires first, so a window that only opened for the untyped one would drop the fields of any
+	 * handler that used it. Nothing in this plugin does today; this keeps that from becoming a trap.
+	 *
+	 * @dataProvider data_budget_post_types
+	 *
+	 * @param string $post_type
+	 */
+	public function test_a_typed_save_post_handler_sees_the_same_answer( $post_type ) {
+		$post_id    = $this->create_request( $post_type );
+		$actionable = null;
+
+		add_action(
+			"save_post_{$post_type}",
+			function ( $saved_id, $post ) use ( &$actionable, $post_type ) {
+				$actionable = WordCamp_Budgets::post_edit_is_actionable( $post, $post_type );
+			},
+			10,
+			2
+		);
+
+		$this->submit_request( $post_id, $post_type );
+
+		$this->assertTrue( $actionable );
+	}
+
+	/**
 	 * A request that was already past the editable statuses before the save stays closed to its requester.
 	 *
 	 * @dataProvider data_budget_post_types

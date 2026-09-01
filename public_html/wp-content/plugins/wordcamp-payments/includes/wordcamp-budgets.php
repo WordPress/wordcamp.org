@@ -813,8 +813,8 @@ class WordCamp_Budgets {
 	 * draft it was rather than as the status the submission moved it to. Everywhere else it's simply the
 	 * stored status.
 	 *
-	 * The recorded status is only honoured while a `save_post` is running, which is where every caller that
-	 * needs it sits. That bounds the answer to the handlers this exists for, rather than to whether the
+	 * The recorded status is only honoured while a save of this post is running, which is where every caller
+	 * that needs it sits. That bounds the answer to the handlers this exists for, rather than to whether the
 	 * cleanup below got a chance to run -- `wp_insert_post()` skips `wp_after_insert_post` when a caller
 	 * passes `$fire_after_hooks = false`, and an entry left behind must not widen anything.
 	 *
@@ -829,11 +829,33 @@ class WordCamp_Budgets {
 	public static function get_status_for_edit_check( $post ) {
 		$recorded = isset( $post->ID ) ? self::$status_before_save[ (int) $post->ID ] ?? null : null;
 
-		if ( ! is_null( $recorded ) && doing_action( 'save_post' ) ) {
+		if ( ! is_null( $recorded ) && self::is_inside_a_save( $post ) ) {
 			return $recorded;
 		}
 
 		return $post->post_status ?? '';
+	}
+
+	/**
+	 * Whether a `save_post` for the given post is running right now.
+	 *
+	 * Both forms count. `save_post_{$post_type}` fires before the untyped hook, so reading only the latter
+	 * would leave a handler on the typed one judging the request by the status the save had just written --
+	 * the same fields dropped, one hook earlier. Nothing here uses the typed hook today; this keeps it from
+	 * behaving differently if something does.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return bool
+	 */
+	protected static function is_inside_a_save( $post ) {
+		if ( doing_action( 'save_post' ) ) {
+			return true;
+		}
+
+		$post_type = $post->post_type ?? '';
+
+		return $post_type && doing_action( "save_post_{$post_type}" );
 	}
 
 	/**

@@ -604,8 +604,14 @@ class WCP_Payment_Request {
 			return $post_data;
 		}
 
-		// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
-		WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+		/*
+		 * The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+		 * Behind the same question the other two budget types ask, so none of them records on a trash, bulk or
+		 * autosave path that has no use for it.
+		 */
+		if ( WordCamp_Budgets::post_edit_is_actionable( $post_data, self::POST_TYPE ) ) {
+			WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+		}
 
 		// Ensure that new posts have the `post_date_gmt` field populated.
 		if ( 'auto-draft' !== $post_data['post_status'] ) {

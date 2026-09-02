@@ -126,22 +126,26 @@ function enqueue_customizer_scripts() {
 		return;
 	}
 
+	// Enqueue code editor for CSS syntax highlighting.
+	$editor_settings = wp_enqueue_code_editor( array( 'type' => 'text/css' ) );
+
 	// Enqueue our scripts.
 	wp_enqueue_script(
 		'camptix-html-badges-customizer',
 		plugins_url( 'javascript/html-badges-customizer.js', __DIR__ ),
-		array( 'jquery', 'jetpack-codemirror' ),
+		array( 'jquery', 'customize-controls' ),
 		1,
 		true
 	);
-
-	wp_enqueue_style( 'jetpack-codemirror' );
 
 	wp_localize_script(
 		'camptix-html-badges-customizer',
 		'cbgHtmlCustomizerData',
 		array(
-			'defaultCSS' => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'defaultCSS'     => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'siteURL'        => site_url(),
+			'badgesPageURL'  => add_query_arg( 'camptix-badges', '', site_url() ),
+			'editorSettings' => $editor_settings,
 		)
 	);
 }

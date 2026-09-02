@@ -19,6 +19,7 @@ html, body {
 
 .attendee:nth-of-type( even ) {
 	float: right;
+	break-after: page;
 	page-break-after: always;
 }
 
@@ -33,6 +34,8 @@ html, body {
 	box-sizing: border-box;
 	height: 50%;
 	position: relative;
+	break-inside: avoid;
+	page-break-inside: avoid;
 }
 
 .badge-back {

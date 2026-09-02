@@ -106,6 +106,19 @@ function get_attendees( $ticket_ids = 'all', $registered_after = '', $admin_flag
 
 	$attendees = get_posts( $params );
 
+	// Exclude placeholder and unconfirmed attendee records.
+	$attendees = array_filter( $attendees, function( $attendee ) {
+		if ( 'unknown.attendee@example.org' === $attendee->tix_email ) {
+			return false;
+		}
+
+		if ( '[[ unconfirmed ]]' === $attendee->tix_username ) {
+			return false;
+		}
+
+		return true;
+	} );
+
 	if ( '' !== $admin_flag ) {
 		$attendees = array_filter( $attendees, function( $attendee ) use ( $admin_flag ) {
 			$flags = get_post_meta( $attendee->ID, 'camptix-admin-flag' );
@@ -114,7 +127,7 @@ function get_attendees( $ticket_ids = 'all', $registered_after = '', $admin_flag
 		} );
 	}
 
-	return $attendees;
+	return array_values( $attendees );
 }
 
 /**

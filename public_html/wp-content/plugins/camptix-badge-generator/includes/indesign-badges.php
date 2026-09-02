@@ -56,7 +56,15 @@ function build_assets( $options ) {
 		generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_folder );
 		create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $gravatar_folder );
 	} finally {
-		// todo Delete contents of $assets_folder, then rmdir( $assets_folder );.
+		if ( isset( $assets_folder ) && is_dir( $assets_folder ) ) {
+			if ( is_dir( $gravatar_folder ) ) {
+				array_map( 'unlink', glob( "$gravatar_folder/*" ) ?: array() );
+				@rmdir( $gravatar_folder );
+			}
+			if ( is_file( $csv_filename ) ) {
+				@unlink( $csv_filename );
+			}
+		}
 	}
 }
 
@@ -178,7 +186,7 @@ function get_gravatar_filename( $attendee ) {
  * @return string
  */
 function get_zip_filename( $assets_folder ) {
-	return $zip_filename = sprintf(
+	return sprintf(
 		'%s/%s-badges.zip',
 		$assets_folder,
 		sanitize_file_name( sanitize_title( get_wordcamp_name() ) )
@@ -217,7 +225,7 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 		throw new Exception( __( "Couldn't open CSV file.", 'wordcamporg' ) );
 	}
 
-	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions ) ), ',', '"', '\\', "\n" );
+	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions ) ), ',', '"', '', "\n" );
 
 	foreach ( $attendees as $attendee ) {
 		$row = get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions );
@@ -226,7 +234,7 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 			continue;
 		}
 
-		fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\\', "\n" );
+		fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '', "\n" );
 	}
 
 	fclose( $csv_handle );

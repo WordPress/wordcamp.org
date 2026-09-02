@@ -27,6 +27,14 @@ class Test_Privacy extends WP_UnitTestCase {
 	/** @var int A network admin, who reviews requests and so sees every file. */
 	protected static $network_admin;
 
+	/**
+	 * @var int A volunteer who can file a request but can't edit anybody else's posts.
+	 *
+	 * The budget post types gate creation on `publish_posts`, which an Author has, while `edit_others_posts`,
+	 * which decides who may edit somebody else's upload, is an Editor capability. This is the gap between them.
+	 */
+	protected static $volunteer;
+
 	/** @var int Organizer A's vendor payment request. */
 	protected static $payment_request_id;
 
@@ -39,6 +47,9 @@ class Test_Privacy extends WP_UnitTestCase {
 	/** @var int An ordinary attachment, unrelated to any budget request. */
 	protected static $public_file_id;
 
+	/** @var int An ordinary attachment on an ordinary post, which is most of the media on the network. */
+	protected static $blog_post_file_id;
+
 	/**
 	 * Create the users and the posts they own.
 	 *
@@ -48,6 +59,7 @@ class Test_Privacy extends WP_UnitTestCase {
 		self::$organizer_a   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$organizer_b   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$network_admin = $factory->user->create( array( 'role' => 'administrator' ) );
+		self::$volunteer     = $factory->user->create( array( 'role' => 'author' ) );
 
 		grant_super_admin( self::$network_admin );
 
@@ -72,6 +84,9 @@ class Test_Privacy extends WP_UnitTestCase {
 		self::$payment_file_id       = self::create_file( 'invoice-a1b2c3d4e5f6g7h8.pdf', self::$payment_request_id, self::$organizer_a );
 		self::$reimbursement_file_id = self::create_file( 'receipt-h8g7f6e5d4c3b2a1.pdf', $reimbursement_id, self::$organizer_a );
 		self::$public_file_id        = self::create_file( 'sponsor-logo.png', 0, self::$organizer_a );
+
+		$blog_post               = $factory->post->create( array( 'post_author' => self::$organizer_a ) );
+		self::$blog_post_file_id = self::create_file( 'header.png', $blog_post, self::$organizer_a );
 
 		wp_set_current_user( 0 );
 	}
@@ -312,6 +327,213 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The rules read the attachment's parent, so nobody they hide a file from may edit it.
+	 *
+	 * That capability is what the media REST endpoints and the Media Library's Attach action check before they
+	 * write `post_parent`, and moving a file onto a request of your own is what would otherwise make it visible.
+	 */
+	public function test_others_payment_files_cannot_be_edited() {
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertFalse( current_user_can( 'edit_post', self::$payment_file_id ) );
+		$this->assertFalse( current_user_can( 'edit_post', self::$reimbursement_file_id ) );
+	}
+
+	/**
+	 * Deletion is left where it was. Withholding it isn't needed to keep the parent from being rewritten, and
+	 * the guard runs on every site on the network, so it takes no more than it has a reason to.
+	 */
+	public function test_deletion_rights_are_left_alone() {
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertTrue( current_user_can( 'delete_post', self::$payment_file_id ) );
+	}
+
+	/**
+	 * The guard is about payment files, so it has to leave the rest of the Media Library alone.
+	 *
+	 * An Editor edits other people's uploads as a matter of course, and an organizer is an Editor here. This is
+	 * every attachment on every site that has no budget requests at all, so it's the case that has to stay put.
+	 *
+	 * @dataProvider data_ordinary_attachments
+	 *
+	 * @param string $file_property
+	 */
+	public function test_ordinary_media_is_still_editable( $file_property ) {
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertTrue( current_user_can( 'edit_post', self::${$file_property} ) );
+	}
+
+	/**
+	 * Attachments that aren't payment files, in both the shapes the guard has to tell apart.
+	 *
+	 * @return array
+	 */
+	public function data_ordinary_attachments() {
+		return array(
+			'attached to nothing'            => array( 'public_file_id' ),
+			'attached to an ordinary post'   => array( 'blog_post_file_id' ),
+		);
+	}
+
+	/**
+	 * Ordinary media has to reach a "yes" without a lookup, because every attachment on the network goes through
+	 * this guard.
+	 *
+	 * `map_meta_cap` runs once per attachment on the Media Library screens. Letting ordinary media reach
+	 * `get_hidden_payment_file_ids()` would put a query behind every row of every list, on sites that have never
+	 * filed a budget request.
+	 */
+	public function test_ordinary_media_reaches_a_verdict_without_a_query() {
+		global $wpdb;
+
+		wp_set_current_user( self::$organizer_b );
+
+		/*
+		 * A fresh post and attachment, so the lookup can't be answered from the result `WP_Query` cached for an
+		 * earlier one -- measuring a repeat check would pass whether the guard ran the query or not.
+		 */
+		$ordinary_post = self::factory()->post->create( array( 'post_author' => self::$organizer_a ) );
+		$ordinary_file = self::create_file( 'diagram.png', $ordinary_post, self::$organizer_a );
+
+		// Warm everything the check reads that isn't the guard: the user and their roles, the post and its parent.
+		current_user_can( 'edit_post', self::$blog_post_file_id );
+		_prime_post_caches( array( $ordinary_file, $ordinary_post ), false, false );
+
+		$before = $wpdb->num_queries;
+
+		$this->assertTrue( current_user_can( 'edit_post', $ordinary_file ) );
+		$this->assertSame( $before, $wpdb->num_queries );
+	}
+
+	/**
+	 * The people the file isn't hidden from keep editing it.
+	 *
+	 * @dataProvider data_users_who_see_payment_files
+	 *
+	 * @param string $user_property
+	 */
+	public function test_payment_files_stay_editable_for_the_people_who_see_them( $user_property ) {
+		wp_set_current_user( self::${$user_property} );
+
+		$this->assertTrue( current_user_can( 'edit_post', self::$payment_file_id ) );
+	}
+
+	/**
+	 * The requester sees files other people uploaded onto their request, so they can edit those too.
+	 */
+	public function test_requester_can_edit_a_file_uploaded_onto_their_request() {
+		// Before the request is created: the budget CPTs log the save against the current user, and read its ID
+		// unconditionally, so every one of these has to be filed by somebody.
+		wp_set_current_user( self::$organizer_b );
+
+		$their_request = self::factory()->post->create( array(
+			'post_type'   => WCP_Payment_Request::POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		$uploaded_by_a = self::create_file( 'quote-2s3t4u5v6w7x8y9z.pdf', $their_request, self::$organizer_a );
+
+		$this->assertTrue( current_user_can( 'edit_post', $uploaded_by_a ) );
+	}
+
+	/**
+	 * `map_meta_cap` is asked about a named user as often as about the current one.
+	 */
+	public function test_guard_answers_for_the_named_user_not_the_current_one() {
+		wp_set_current_user( self::$organizer_a );
+
+		$this->assertFalse( user_can( self::$organizer_b, 'edit_post', self::$payment_file_id ) );
+		$this->assertTrue( user_can( self::$organizer_a, 'edit_post', self::$payment_file_id ) );
+	}
+
+	/**
+	 * `wp_update_post()` checks no capabilities, so the field the Files metabox posts is checked where it's read.
+	 *
+	 * The metabox only offers files that are unattached or already on this request, but it builds that list in
+	 * the browser, and the field arrives as whatever was submitted.
+	 */
+	public function test_existing_files_field_leaves_another_requests_file_alone() {
+		wp_set_current_user( self::$organizer_b );
+
+		$their_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$their_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( self::$payment_file_id ) ) )
+		);
+
+		$this->assertSame(
+			self::$payment_request_id,
+			(int) get_post( self::$payment_file_id )->post_parent
+		);
+	}
+
+	/**
+	 * The files the metabox really does offer still get attached.
+	 */
+	public function test_existing_files_field_attaches_an_unattached_file() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		$unattached = self::create_file( 'receipt-3t4u5v6w7x8y9z1a.pdf', 0, self::$organizer_b );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$own_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $unattached ) ) )
+		);
+
+		$this->assertSame( $own_request, (int) get_post( $unattached )->post_parent );
+	}
+
+	/**
+	 * The field holds whatever JSON the browser sent, which isn't always a list of IDs.
+	 *
+	 * @dataProvider data_malformed_existing_files_fields
+	 *
+	 * @param string $field
+	 */
+	public function test_existing_files_field_survives_malformed_input( $field ) {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		\WordCamp_Budgets::attach_existing_files( $own_request, array( 'wcb_existing_files_to_attach' => $field ) );
+
+		$this->assertSame( self::$payment_request_id, (int) get_post( self::$payment_file_id )->post_parent );
+	}
+
+	/**
+	 * Shapes `json_decode()` returns that aren't a list of attachment IDs.
+	 *
+	 * @return array
+	 */
+	public function data_malformed_existing_files_fields() {
+		return array(
+			'not JSON'          => array( 'not json at all' ),
+			'a bare number'     => array( '5' ),
+			'a string'          => array( '"5"' ),
+			'a list of objects' => array( '[{"ID":5}]' ),
+			'a list of strings' => array( '["not an id"]' ),
+		);
+	}
+
+	/**
 	 * `privacy.php` can't reference the `POST_TYPE` constants, because it loads on requests where the files that
 	 * define them don't. Fail loudly if a slug is ever renamed on one side only.
 	 */
@@ -350,6 +572,43 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The exporters stay out of every request that isn't running the personal data tools.
+	 *
+	 * WordPress.org's erasure preflight crawls the network over REST and runs whatever exporters each site
+	 * offers. Anything that answers with data stops the erasure with a `has_exportable` warning, and budget
+	 * requests are kept for accounting, so the eraser is a stub and that warning has nothing to clear it --
+	 * every former organizer's erasure request would sit in the DPO queue for good.
+	 *
+	 * @dataProvider data_screens_and_the_exporters_they_see
+	 *
+	 * @param string $screen    The screen to run the filter under. `front` is the shape the preflight
+	 *                          arrives in; `dashboard` is the personal data tools themselves.
+	 * @param array  $expected  The exporter keys the filter should add.
+	 */
+	public function test_exporters_are_offered_to_the_personal_data_tools_only( $screen, array $expected ) {
+		set_current_screen( $screen );
+
+		$exporters = \WordCamp\Budgets\Privacy\register_personal_data_exporters( array() );
+
+		set_current_screen( 'front' );
+
+		$this->assertSame( $expected, array_keys( $exporters ) );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_screens_and_the_exporters_they_see() {
+		return array(
+			'a front-end request, as the preflight arrives' => array( 'front', array() ),
+			'the admin, where the tools run'                => array(
+				'dashboard',
+				array( 'wcb-reimbursements', 'wcb-vendor-payments' ),
+			),
+		);
+	}
+
+	/**
 	 * The people who are supposed to see the files.
 	 *
 	 * @return array
@@ -373,5 +632,75 @@ class Test_Privacy extends WP_UnitTestCase {
 
 		$this->assertContains( self::$payment_file_id, $visible );
 		$this->assertContains( self::$reimbursement_file_id, $visible );
+	}
+
+	/**
+	 * Attaching a file writes its `post_parent`, which is the field the rules above read.
+	 *
+	 * So it takes the capability any other route to that field takes, and the guard on `edit_post` decides it
+	 * here as well -- rather than the field being a way around the guard.
+	 */
+	public function test_existing_files_field_leaves_a_file_the_caller_cant_edit_alone() {
+		wp_set_current_user( self::$volunteer );
+
+		$their_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$volunteer,
+			'post_status' => 'draft',
+		) );
+
+		$someone_elses = self::create_file( 'notes-9z8y7x6w5v4u3t2s.pdf', 0, self::$organizer_a );
+
+		$this->assertFalse( current_user_can( 'edit_post', $someone_elses ) );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$their_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $someone_elses ) ) )
+		);
+
+		$this->assertSame( 0, (int) get_post( $someone_elses )->post_parent );
+	}
+
+	/**
+	 * An organizer who may edit the file still attaches it, so the rule doesn't cost the shared-upload case.
+	 *
+	 * One organizer uploading the receipts and another filing the request is a supported way to work: the rules
+	 * above show the file to both of them.
+	 */
+	public function test_existing_files_field_attaches_a_co_organizers_unattached_file() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$organizer_b,
+			'post_status' => 'draft',
+		) );
+
+		$uploaded_by_a = self::create_file( 'receipt-2s3t4u5v6w7x8y9z.pdf', 0, self::$organizer_a );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$own_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $uploaded_by_a ) ) )
+		);
+
+		$this->assertSame( $own_request, (int) get_post( $uploaded_by_a )->post_parent );
+	}
+
+	/**
+	 * The helper is public and writes to whatever request it's handed, so it asks about that request too.
+	 */
+	public function test_existing_files_field_ignores_a_request_the_caller_cant_edit() {
+		wp_set_current_user( self::$volunteer );
+
+		$unattached = self::create_file( 'receipt-1a2b3c4d5e6f7g8h.pdf', 0, self::$volunteer );
+
+		$this->assertFalse( current_user_can( 'edit_post', self::$payment_request_id ) );
+
+		\WordCamp_Budgets::attach_existing_files(
+			self::$payment_request_id,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $unattached ) ) )
+		);
+
+		$this->assertSame( 0, (int) get_post( $unattached )->post_parent );
 	}
 }

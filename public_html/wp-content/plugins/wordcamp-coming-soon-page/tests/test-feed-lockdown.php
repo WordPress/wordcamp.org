@@ -20,6 +20,15 @@ class Test_Feed_Lockdown extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		/*
+		 * `go_to()` runs `WP->main()`, which fires the `wp` action after the query. There
+		 * `maybe_add_latest_site_hints()` switches to a central blog this test environment does
+		 * not provision, which writes DB errors to the log and trips the suite's error-log guard.
+		 * These tests exercise `disable_feeds()` directly and need nothing off `wp`, so drop that
+		 * callback. `WP_UnitTestCase` restores the hook registry after each test.
+		 */
+		remove_action( 'wp', 'WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints' );
+
 		wp_set_current_user( 0 );
 	}
 

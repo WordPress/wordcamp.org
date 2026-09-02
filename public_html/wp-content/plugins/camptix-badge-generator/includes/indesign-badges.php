@@ -38,6 +38,7 @@ function build_assets( $options ) {
 			'ticket_ids'       => 'all',
 			'registered_after' => '',
 			'admin_flag'       => '',
+			'qr_code_type'     => get_option( 'cbg_qr_code_type', 'none' ),
 		),
 		$options
 	);
@@ -46,6 +47,7 @@ function build_assets( $options ) {
 		// Security: assets are intentionally saved to a folder outside the web root. See serve_zip_file() for details.
 		$assets_folder    = sprintf( '%scamptix-badges-%d-%d', get_temp_dir(), get_current_blog_id(), time() );
 		$gravatar_folder  = $assets_folder . '/gravatars';
+		$qr_folder        = $assets_folder . '/qrcodes';
 		$csv_filename     = $assets_folder . '/attendees.csv';
 		$zip_filename     = get_zip_filename( $assets_folder );
 		$zip_local_folder = pathinfo( $zip_filename, PATHINFO_FILENAME );
@@ -53,13 +55,23 @@ function build_assets( $options ) {
 
 		wp_mkdir_p( $gravatar_folder );
 		download_gravatars( $attendees, $gravatar_folder );
-		generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_folder );
-		create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $gravatar_folder );
+
+		if ( 'none' !== $options['qr_code_type'] ) {
+			wp_mkdir_p( $qr_folder );
+			generate_qr_codes( $attendees, $qr_folder, $options['qr_code_type'] );
+		}
+
+		generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_folder, $qr_folder, $options['qr_code_type'] );
+		create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $gravatar_folder, $qr_folder );
 	} finally {
 		if ( isset( $assets_folder ) && is_dir( $assets_folder ) ) {
 			if ( is_dir( $gravatar_folder ) ) {
 				array_map( 'unlink', glob( "$gravatar_folder/*" ) ?: array() );
 				@rmdir( $gravatar_folder );
+			}
+			if ( is_dir( $qr_folder ) ) {
+				array_map( 'unlink', glob( "$qr_folder/*" ) ?: array() );
+				@rmdir( $qr_folder );
 			}
 			if ( is_file( $csv_filename ) ) {
 				@unlink( $csv_filename );
@@ -185,6 +197,63 @@ function get_gravatar_filename( $attendee ) {
  *
  * @return string
  */
+/**
+ * Generate QR code images for attendees
+ *
+ * @param array  $attendees
+ * @param string $qr_folder
+ * @param string $qr_code_type
+ */
+function generate_qr_codes( $attendees, $qr_folder, $qr_code_type = 'none' ) {
+	if ( 'none' === $qr_code_type ) {
+		return;
+	}
+
+	foreach ( $attendees as $attendee ) {
+		$target_url = '';
+		if ( 'gravatar' === $qr_code_type ) {
+			$target_url = $attendee->gravatar_profile_url;
+		} elseif ( 'wporg' === $qr_code_type ) {
+			$target_url = $attendee->wporg_profile_url;
+		}
+
+		if ( empty( $target_url ) ) {
+			continue;
+		}
+
+		$svg = Badge_Generator\QR_Code::get_svg( $target_url );
+		if ( empty( $svg ) ) {
+			continue;
+		}
+
+		$filename = get_qr_code_filename( $attendee );
+		file_put_contents( $qr_folder . '/' . $filename, $svg );
+	}
+}
+
+/**
+ * Get the filename of the saved QR code for the given attendee
+ *
+ * @param \WP_Post $attendee
+ *
+ * @return string
+ */
+function get_qr_code_filename( $attendee ) {
+	return sanitize_file_name( strtolower( sprintf(
+		'%d-%s-%s-qr.svg',
+		$attendee->ID,
+		remove_accents( $attendee->tix_first_name ),
+		remove_accents( $attendee->tix_last_name )
+	) ) );
+}
+
+/**
+ * Get the filename for the Zip file
+ *
+ * @param string $assets_folder
+ *
+ * @return string
+ */
 function get_zip_filename( $assets_folder ) {
 	return sprintf(
 		'%s/%s-badges.zip',
@@ -207,10 +276,12 @@ function get_zip_filename( $assets_folder ) {
  * @param string $zip_local_folder
  * @param array  $attendees
  * @param string $gravatar_folder
+ * @param string $qr_folder
+ * @param string $qr_code_type
  *
  * @throws Exception
  */
-function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_folder ) {
+function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_folder, $qr_folder = '', $qr_code_type = 'none' ) {
 	/** @var CampTix_Plugin $camptix */
 	global $camptix;
 
@@ -225,10 +296,10 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 		throw new Exception( __( "Couldn't open CSV file.", 'wordcamporg' ) );
 	}
 
-	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions ) ), ',', '"', '', "\n" );
+	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions, $qr_code_type ) ), ',', '"', '', "\n" );
 
 	foreach ( $attendees as $attendee ) {
-		$row = get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions );
+		$row = get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions, $qr_folder, $qr_code_type );
 
 		if ( empty( $row ) ) {
 			continue;
@@ -262,15 +333,21 @@ function get_admin_flags() {
 /**
  * Get the header row for the CSV
  *
- * @param array $admin_flags
- * @param array $questions
+ * @param array  $admin_flags
+ * @param array  $questions
+ * @param string $qr_code_type
  *
  * @return array
  */
-function get_header_row( $admin_flags, $questions ) {
+function get_header_row( $admin_flags, $questions, $qr_code_type = 'none' ) {
 	$header_row   = array( 'First Name', 'Last Name', 'Email Address', 'Ticket', 'Coupon', 'Twitter' );
 	$header_row   = array_merge( $header_row, array_values( $admin_flags ) );
 	$header_row   = array_merge( $header_row, wp_list_pluck( $questions, 'post_title' ) );
+
+	if ( 'none' !== $qr_code_type ) {
+		$header_row[] = '@QRCode';
+	}
+
 	$header_row[] = '@Gravatar'; // Prefixed with an @ to let InDesign know that it contains an image. Last because InDesign complains if it's not.
 
 	return $header_row;
@@ -285,10 +362,12 @@ function get_header_row( $admin_flags, $questions ) {
  * @param string   $empty_twitter
  * @param array    $admin_flags
  * @param array    $questions
+ * @param string   $qr_folder
+ * @param string   $qr_code_type
  *
  * @return array
  */
-function get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions ) {
+function get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions, $qr_folder = '', $qr_code_type = 'none' ) {
 	$row = array();
 
 	if ( 'unknown.attendee@example.org' === $attendee->tix_email ) {
@@ -296,13 +375,20 @@ function get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directo
 	}
 
 	$gravatar_path     = '';
+	$qr_code_path      = '';
 	$first_name        = ucwords( $attendee->tix_first_name );
 	$gravatar_filename = get_gravatar_filename( $attendee );
+	$qr_filename       = get_qr_code_filename( $attendee );
 	$attendee_flags    = (array) get_post_meta( $attendee->ID, 'camptix-admin-flag' );
 	$answers           = (array) $attendee->tix_questions;
 
 	if ( file_exists( $gravatar_folder .'/'. $gravatar_filename ) ) {
 		$gravatar_path = $destination_directory . $gravatar_filename;
+	}
+
+	if ( ! empty( $qr_folder ) && file_exists( $qr_folder . '/' . $qr_filename ) ) {
+		$qr_destination_dir = str_replace( ':gravatars:', ':qrcodes:', $destination_directory );
+		$qr_code_path       = $qr_destination_dir . $qr_filename;
 	}
 
 	$row = array(
@@ -320,6 +406,10 @@ function get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directo
 
 	foreach ( $questions as $question ) {
 		$row[ "question-{$question->ID}" ] = get_answer( $question, $answers );
+	}
+
+	if ( 'none' !== $qr_code_type ) {
+		$row['qr-code-path'] = $qr_code_path;
 	}
 
 	$row['gravatar-path'] = $gravatar_path;
@@ -421,7 +511,7 @@ function get_answer( $question, $answers ) {
  *
  * @throws Exception
  */
-function create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $gravatar_folder ) {
+function create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $gravatar_folder, $qr_folder = '' ) {
 	if ( ! class_exists( 'ZipArchive') ) {
 		Logger\log( 'zip_ext_not_installed' );
 		throw new Exception( __( 'The Zip extension for PHP is not installed.', 'wordcamporg' ) );
@@ -448,6 +538,17 @@ function create_zip_file( $zip_filename, $zip_local_folder, $csv_filename, $grav
 			'remove_all_path' => true,
 		)
 	);
+
+	if ( ! empty( $qr_folder ) && is_dir( $qr_folder ) ) {
+		$zip_file->addGlob(
+			$qr_folder . '/*',
+			0,
+			array(
+				'add_path'        => $zip_local_folder . '/qrcodes/',
+				'remove_all_path' => true,
+			)
+		);
+	}
 
 	$zip_file->close();
 }

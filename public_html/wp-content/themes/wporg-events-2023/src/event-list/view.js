@@ -1,5 +1,10 @@
 /* global globalEventsPayload */
 
+/**
+ * WordPress dependencies
+ */
+import { escapeAttribute, escapeHTML } from '@wordpress/escape-html';
+
 document.addEventListener( 'DOMContentLoaded', function () {
 	const speak = wp.a11y.speak;
 
@@ -77,29 +82,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	}
 
 	/**
-	 * Encode any HTML in a string.
-	 *
-	 * Quotes are encoded along with the tag delimiters, so the result can be used
-	 * both in element content and inside a quoted attribute value.
-	 *
-	 * @param {string} unsafe
-	 *
-	 * @return {string}
-	 */
-	function escapeHtml( unsafe ) {
-		return String( unsafe ?? '' )
-			.replace( /&/g, '&amp;' )
-			.replace( /</g, '&lt;' )
-			.replace( />/g, '&gt;' )
-			.replace( /"/g, '&quot;' )
-			.replace( /'/g, '&#039;' );
-	}
-
-	/**
 	 * Reduce a URL to one that is safe to place in an `href` attribute.
 	 *
 	 * Encoding alone isn't enough for a URL, since the scheme matters as much as
-	 * the characters. Anything that isn't HTTP(S) is dropped.
+	 * the characters. Anything that isn't HTTP(S) is dropped. Values arrive
+	 * absolute from `index.php`, so no base is passed -- that way a value which
+	 * isn't a whole URL fails the parse rather than resolving against this page.
 	 *
 	 * @param {string} unsafe
 	 *
@@ -109,7 +97,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 		let parsed;
 
 		try {
-			parsed = new URL( String( unsafe ?? '' ), window.location.href );
+			parsed = new URL( String( unsafe ?? '' ) );
 		} catch {
 			return '';
 		}
@@ -118,7 +106,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			return '';
 		}
 
-		return escapeHtml( parsed.href );
+		return escapeAttribute( parsed.href );
 	}
 
 	/**
@@ -134,7 +122,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			<h2
 				class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size"
 				style="margin-top:var(--wp--preset--spacing--40);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">
-				${ escapeHtml( month ) }
+				${ escapeHTML( month ) }
 			</h2>`;
 
 		markup += renderEventList( group );
@@ -177,12 +165,12 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
 					<a class="external-link" href="${ escapeUrl( url ) }">
-						${ escapeHtml( title ) }
+						${ escapeHTML( title ) }
 					</a>
 				</h3>
 
 				<div class="wporg-marker-list-item__location">
-					${ escapeHtml( location ) }
+					${ escapeHTML( location ) }
 				</div>
 
 				${ getEventDateTime( title, timestamp ) }
@@ -227,7 +215,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 			<time
 			    class="wporg-marker-list-item__date-time"
 			    datetime="${ eventDate.toISOString() }"
-			    title="${ escapeHtml( title ) }"
+			    title="${ escapeAttribute( title ) }"
 		    >
 				<span class="wporg-google-map__date">${ localeDate }</span>
 				<span class="wporg-google-map__time">${ localeTime }</span>

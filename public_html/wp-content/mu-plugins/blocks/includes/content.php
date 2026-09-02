@@ -24,8 +24,13 @@ function get_all_the_content( $post ) {
 	/*
 	 * `get_the_content()` holds the password check, and the `the_content`
 	 * filter runs after it, so reading the stored content directly has to
-	 * repeat the check. Return what `get_the_content()` returns here, so a
-	 * listing behaves the way one built on core's loop would.
+	 * repeat the check.
+	 *
+	 * This returns the form ahead of the filters below, where a core loop
+	 * would run them over it. That is deliberate: `wc-post-types` appends
+	 * speaker, slide, video and category markup on `the_content`, none of
+	 * which belongs on a password form. The cost is the paragraph wrapping
+	 * `wpautop()` would have added.
 	 */
 	if ( post_password_required( $post ) ) {
 		return get_the_password_form( $post );
@@ -55,10 +60,14 @@ function get_trimmed_content( $post, $excerpt_length = 55 ) {
 	 * The fallback below reads `post_content` directly, so this needs the
 	 * same check as `get_all_the_content()`. `get_the_excerpt()` applies it
 	 * to both the manual excerpt and the fallback, and stands this sentence
-	 * in their place; the wording matches core's so the two read alike.
+	 * in their place.
+	 *
+	 * Take it from core's catalogue rather than restating it under this
+	 * plugin's domain, so that a listing and the post's own page read alike
+	 * in every locale instead of only in English.
 	 */
 	if ( post_password_required( $post ) ) {
-		return esc_html__( 'There is no excerpt because this is a protected post.', 'wordcamporg' );
+		return esc_html__( 'There is no excerpt because this is a protected post.', 'default' );
 	}
 
 	$post_excerpt = $post->post_excerpt;

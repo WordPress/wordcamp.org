@@ -1,0 +1,152 @@
+<?php
+
+namespace WordCamp\Sponsor_Agreements\Backfill\Tests;
+
+use WP_UnitTestCase;
+
+use function WordCamp\Sponsor_Agreements\Backfill\get_public_agreement_ids;
+use function WordCamp\Sponsor_Agreements\Backfill\rename_agreement_file;
+use function WordCamp\Sponsor_Agreements\is_agreement;
+use function WordCamp\Sponsor_Agreements\make_agreement_private;
+
+defined( 'WPINC' ) || die();
+
+/**
+ * The one-time migration behind `wp wc-sponsor-agreements`.
+ *
+ * Goes when `wp-cli-commands/backfill-sponsor-agreements.php` does. `Test_Sponsor_Agreements` covers what
+ * stays.
+ *
+ * @group mu-plugins
+ * @group sponsor-agreements
+ */
+class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
+	/**
+	 * The command file only loads under WP-CLI, so pull in the part of it that isn't the command.
+	 */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
+		require_once dirname( __DIR__ ) . '/wp-cli-commands/backfill-sponsor-agreements.php';
+	}
+
+	/**
+	 * Register the sponsor post type, which lives in a plugin this suite doesn't load.
+	 *
+	 * No matching `tear_down()`: `WP_UnitTestCase` resets the registered post types itself before each
+	 * test, and unregistering by hand here takes rewrite rules and registered meta with it.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		register_post_type( 'wcb_sponsor', array( 'public' => true ) );
+	}
+
+	/**
+	 * Attach a file to a sponsor and name it as the agreement, without the meta hook seeing it.
+	 *
+	 * This is the shape of a row written before `sponsor-agreements.php` existed, and the only shape the
+	 * migration has to deal with.
+	 *
+	 * @param string $filename
+	 *
+	 * @return array The sponsor ID and the attachment ID.
+	 */
+	protected function create_legacy_agreement( $filename = 'sponsorship-agreement-acme-signed.pdf' ) {
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+		) );
+
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $filename,
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		add_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		wp_update_post( array(
+			'ID'          => $agreement_id,
+			'post_status' => 'inherit',
+		) );
+
+		return array( $sponsor_id, $agreement_id );
+	}
+
+	/**
+	 * The migration finds the files it's for, and nothing else.
+	 */
+	public function test_legacy_agreements_are_reported_and_migrated() {
+		list( $sponsor_id, $agreement_id ) = $this->create_legacy_agreement();
+
+		$logo_id = self::factory()->attachment->create_object( array(
+			'file'           => 'acme-logo.png',
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'image/png',
+		) );
+
+		$public = get_public_agreement_ids();
+
+		$this->assertContains( $agreement_id, $public );
+		$this->assertNotContains( $logo_id, $public, 'A sponsor logo is meant to be public.' );
+
+		$this->assertTrue( make_agreement_private( $agreement_id ) );
+		$this->assertSame( 'private', get_post_status( $agreement_id ) );
+		$this->assertTrue( is_agreement( $agreement_id ) );
+		$this->assertNotContains( $agreement_id, get_public_agreement_ids() );
+	}
+
+	/**
+	 * Naming a site explicitly is what lets `scan` ask this of a whole network from one process.
+	 */
+	public function test_the_query_can_be_asked_of_a_named_site() {
+		list( , $agreement_id ) = $this->create_legacy_agreement();
+
+		$this->assertContains( $agreement_id, get_public_agreement_ids( get_current_blog_id() ) );
+	}
+
+	/**
+	 * A file already on disk gets the name new uploads are given.
+	 */
+	public function test_an_existing_agreement_is_renamed() {
+		$uploads  = wp_upload_dir();
+		$old_path = trailingslashit( $uploads['path'] ) . 'sponsorship-agreement-acme-signed.pdf';
+
+		file_put_contents( $old_path, '%PDF-1.4' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		list( , $agreement_id ) = $this->create_legacy_agreement( $old_path );
+
+		try {
+			$this->assertTrue( rename_agreement_file( $agreement_id ) );
+
+			$new_path = get_attached_file( $agreement_id );
+
+			$this->assertFileDoesNotExist( $old_path );
+			$this->assertFileExists( $new_path );
+			$this->assertMatchesRegularExpression(
+				'/^sponsorship-agreement-acme-signed-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( $new_path )
+			);
+
+			// The metabox resolves the file through the attachment, so the link follows the rename.
+			$this->assertStringEndsWith( wp_basename( $new_path ), wp_get_attachment_url( $agreement_id ) );
+		} finally {
+			foreach ( array( $old_path, get_attached_file( $agreement_id ) ) as $path ) {
+				if ( $path && is_file( $path ) ) {
+					wp_delete_file( $path );
+				}
+			}
+		}
+	}
+
+	/**
+	 * An attachment whose file has already gone is reported rather than treated as renamed.
+	 */
+	public function test_renaming_a_missing_file_reports_failure() {
+		list( , $agreement_id ) = $this->create_legacy_agreement();
+
+		$this->assertFalse( rename_agreement_file( $agreement_id ) );
+	}
+}

@@ -192,6 +192,34 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 			);
 			break;
 
+		case 'gravatar_profile_url':
+			$email = strtolower( trim( (string) $attendee->tix_email ) );
+			$value = ! empty( $email ) ? 'https://gravatar.com/' . md5( $email ) : '';
+			break;
+
+		case 'wporg_username':
+			$value = get_wporg_username( $attendee );
+			break;
+
+		case 'wporg_profile_url':
+			$username = get_wporg_username( $attendee );
+			$value    = ! empty( $username ) ? 'https://w.org/@' . rawurlencode( $username ) : '';
+			break;
+
+		case 'qr_code_target_url':
+			$type = get_option( 'cbg_qr_code_type', 'none' );
+			if ( 'gravatar' === $type ) {
+				$value = $attendee->gravatar_profile_url;
+			} elseif ( 'wporg' === $type ) {
+				$value = $attendee->wporg_profile_url;
+			}
+			break;
+
+		case 'qr_code_svg':
+			$target_url = $attendee->qr_code_target_url;
+			$value      = ! empty( $target_url ) ? QR_Code::get_svg( $target_url ) : '';
+			break;
+
 		case 'ticket':
 			$ticket = get_post( $attendee->tix_ticket_id );
 			$value  = $ticket->post_name ?? '';
@@ -199,6 +227,37 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 	}
 
 	return $value;
+}
+
+/**
+ * Get an attendee's WordPress.org username
+ *
+ * @param \WP_Post $attendee
+ *
+ * @return string
+ */
+function get_wporg_username( $attendee ) {
+	/** @global CampTix_Plugin $camptix */
+	global $camptix;
+
+	$username = get_post_meta( $attendee->ID, 'tix_username', true );
+
+	if ( ! empty( $username ) && '[[ unconfirmed ]]' !== $username ) {
+		return trim( $username );
+	}
+
+	if ( isset( $camptix ) && is_object( $camptix ) && method_exists( $camptix, 'get_all_questions' ) ) {
+		foreach ( $camptix->get_all_questions() as $question ) {
+			if ( false !== stripos( $question->post_title, 'username' ) || false !== stripos( $question->post_title, 'WordPress.org' ) ) {
+				$answers = (array) $attendee->tix_questions;
+				if ( ! empty( $answers[ $question->ID ] ) ) {
+					return trim( (string) $answers[ $question->ID ] );
+				}
+			}
+		}
+	}
+
+	return '';
 }
 
 /**

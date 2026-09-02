@@ -343,16 +343,45 @@ function register_rest_endpoints() {
 
 	foreach ( $report_classes as $class ) {
 		if ( property_exists( $class, 'rest_base' ) && method_exists( $class, 'rest_callback' ) ) {
+			/*
+			 * Reports read private post meta and non-public post statuses, so a
+			 * route is restricted to users who may view reports unless the
+			 * report class opts into something else with its own
+			 * `rest_permission_callback()`.
+			 */
+			$permission_callback = method_exists( $class, 'rest_permission_callback' )
+				? array( $class, 'rest_permission_callback' )
+				: __NAMESPACE__ . '\default_rest_permission_callback';
+
 			register_rest_route(
 				$namespace,
 				'/' . $class::$rest_base,
 				array(
-					'methods'  => array( 'GET' ),
-					'callback' => array( $class, 'rest_callback' ),
+					'methods'             => array( 'GET' ),
+					'callback'            => array( $class, 'rest_callback' ),
+					'permission_callback' => $permission_callback,
 				)
 			);
 		}
 	}
+}
+
+/**
+ * Default permission callback for a report REST route.
+ *
+ * Applies to any report that declares `$rest_base` without supplying its own
+ * `rest_permission_callback()`. Reports read private post meta and non-public
+ * post statuses, so the default is deny-unless-capable; a report that wants to
+ * be readable publicly has to say so explicitly.
+ *
+ * A named function rather than a closure so it can be tested directly. No route
+ * uses it today -- every current report defines its own -- but it is the line
+ * protecting every report added later.
+ *
+ * @return bool
+ */
+function default_rest_permission_callback() {
+	return current_user_can( CAPABILITY );
 }
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_endpoints' );

@@ -11,6 +11,41 @@ class WordCamp_Budgets {
 	public const ADMIN_CAP  = 'manage_options';
 
 	/**
+	 * The post types that make up the budget workflow and live under the Budget menu.
+	 *
+	 * Literal slugs, not each type's `POST_TYPE` constant: this class loads on requests where those files don't.
+	 */
+	public const PAYMENT_POST_TYPES = array(
+		'wcb_reimbursement',
+		'wcp_payment_request',
+		'wcb_sponsor_invoice',
+	);
+
+	/**
+	 * Capability map shared by the payment post types.
+	 *
+	 * Routes the list, creation and delete capabilities through VIEWER_CAP so they match the Budget menu the
+	 * screens live under, instead of the generic post capabilities they would otherwise inherit.
+	 */
+	public const POST_TYPE_CAPABILITIES = array(
+		'edit_posts'   => self::VIEWER_CAP,
+		'create_posts' => self::VIEWER_CAP,
+		'delete_posts' => self::VIEWER_CAP,
+	);
+
+	/**
+	 * The status each budget request held before the save that is currently running, keyed by post ID.
+	 *
+	 * `save_post` runs after the new status is stored, so a requester submitting a draft would otherwise be
+	 * judged on the status the submission moved it to, and refused the save that writes the fields entered
+	 * alongside it. Written as each save begins and dropped as it ends, so it only ever describes a save that
+	 * is still in flight.
+	 *
+	 * @var array<int, string>
+	 */
+	protected static $status_before_save = array();
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -19,6 +54,36 @@ class WordCamp_Budgets {
 		add_action( 'admin_enqueue_scripts',  array( $this, 'enqueue_common_assets' ),             11    );
 		add_filter( 'user_has_cap',           array( __CLASS__, 'user_can_view_payment_details' ), 10, 4 );
 		add_filter( 'default_title',          array( $this, 'set_default_payments_title' ),        10, 2 );
+		add_action( 'pre_get_posts',          array( __CLASS__, 'restrict_payment_queries' )             );
+	}
+
+	/**
+	 * Confine budget list queries to users who can access the Budget screens.
+	 *
+	 * A second line of defence behind the post types' `edit_posts` capability: it enforces VIEWER_CAP on the
+	 * query itself, so the rows returned match the access the Budget screens grant even if the screen and the
+	 * query were to resolve their post type differently. Scoped to the admin main query, which is the list
+	 * table's query.
+	 *
+	 * @param WP_Query $query
+	 */
+	public static function restrict_payment_queries( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+
+		$queried_types = (array) $query->get( 'post_type' );
+
+		if ( ! array_intersect( $queried_types, self::PAYMENT_POST_TYPES ) ) {
+			return;
+		}
+
+		if ( current_user_can( self::VIEWER_CAP ) ) {
+			return;
+		}
+
+		// The caller cannot access the Budget screens, so this query must not return any budget records.
+		$query->set( 'post__in', array( 0 ) );
 	}
 
 	/**
@@ -692,6 +757,108 @@ class WordCamp_Budgets {
 	}
 
 	/**
+	 * Record the status a budget request holds, before the save that is currently running overwrites it.
+	 *
+	 * Called from each budget CPT's own `wp_insert_post_data` callback, past the post-type guard those already
+	 * carry. That hook runs before the row is written, so the stored status is still the one the request had
+	 * when the save began -- and it means this needs no hook of its own. `post_updated` would hand over the old
+	 * post directly, but it, like `wp_after_insert_post`, fires for every post on every site in the network,
+	 * and none of them but these three has any use for it.
+	 *
+	 * The cleanup is attached here rather than at file scope for the same reason: until a budget request is
+	 * actually saved there is nothing to clean up, so on the requests that save anything else the hook is
+	 * simply not there.
+	 *
+	 * @param int|string $post_id The request being saved. Absent for a request being created.
+	 */
+	public static function remember_status_before_save( $post_id ) {
+		if ( ! is_numeric( $post_id ) ) {
+			return;
+		}
+
+		$post_id = (int) $post_id;
+		$status  = get_post_status( $post_id );
+
+		if ( ! $status ) {
+			return;
+		}
+
+		if ( ! self::$status_before_save ) {
+			add_action( 'wp_after_insert_post', array( __CLASS__, 'forget_status_before_save' ), PHP_INT_MAX );
+		}
+
+		self::$status_before_save[ $post_id ] = $status;
+	}
+
+	/**
+	 * Forget the status recorded above, once the save it describes has finished.
+	 *
+	 * Runs on `wp_after_insert_post`, at the lowest priority, so every `save_post` handler has already had its
+	 * answer, and detaches itself once there is nothing left to forget.
+	 *
+	 * @param int $post_id
+	 */
+	public static function forget_status_before_save( $post_id ) {
+		unset( self::$status_before_save[ (int) $post_id ] );
+
+		if ( ! self::$status_before_save ) {
+			remove_action( 'wp_after_insert_post', array( __CLASS__, 'forget_status_before_save' ), PHP_INT_MAX );
+		}
+	}
+
+	/**
+	 * The status to judge a budget request's editability on.
+	 *
+	 * During a save that's the status the request held before it, so a draft being submitted is judged as the
+	 * draft it was rather than as the status the submission moved it to. Everywhere else it's simply the
+	 * stored status.
+	 *
+	 * The recorded status is only honoured while a save of this post is running, which is where every caller
+	 * that needs it sits. That bounds the answer to the handlers this exists for, rather than to whether the
+	 * cleanup below got a chance to run -- `wp_insert_post()` skips `wp_after_insert_post` when a caller
+	 * passes `$fire_after_hooks = false`, and an entry left behind must not widen anything.
+	 *
+	 * What it reports is read off the row itself, so it is always a status the request genuinely held moments
+	 * earlier -- there is no value a caller can put here that the request did not already have. It can widen
+	 * the answer only across the transition the request just made, and only for the request that made it.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return string
+	 */
+	public static function get_status_for_edit_check( $post ) {
+		$recorded = isset( $post->ID ) ? self::$status_before_save[ (int) $post->ID ] ?? null : null;
+
+		if ( ! is_null( $recorded ) && self::is_inside_a_save( $post ) ) {
+			return $recorded;
+		}
+
+		return $post->post_status ?? '';
+	}
+
+	/**
+	 * Whether a `save_post` for the given post is running right now.
+	 *
+	 * Both forms count. `save_post_{$post_type}` fires before the untyped hook, so reading only the latter
+	 * would leave a handler on the typed one judging the request by the status the save had just written --
+	 * the same fields dropped, one hook earlier. Nothing here uses the typed hook today; this keeps it from
+	 * behaving differently if something does.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return bool
+	 */
+	protected static function is_inside_a_save( $post ) {
+		if ( doing_action( 'save_post' ) ) {
+			return true;
+		}
+
+		$post_type = $post->post_type ?? '';
+
+		return $post_type && doing_action( "save_post_{$post_type}" );
+	}
+
+	/**
 	 * Determines whether we want to perform actions on the given post based on the current context.
 	 *
 	 * Examples of actions we might perform are saving the meta fields during the `save_post` hook, or send out an
@@ -834,16 +1001,65 @@ class WordCamp_Budgets {
 			return;
 		}
 
-		if ( ! $files = json_decode( $request['wcb_existing_files_to_attach'] ) ) {
+		$files = json_decode( $request['wcb_existing_files_to_attach'] );
+
+		if ( ! is_array( $files ) ) {
+			return;
+		}
+
+		/*
+		 * Both callers reach this from `save_post`, behind `post_edit_is_actionable()`, which asks the same
+		 * question -- but this is a public helper that writes to whatever request it's handed, so it shouldn't
+		 * depend on a caller having asked.
+		 */
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
 
 		foreach ( $files as $file_id ) {
+			if ( ! self::is_file_attachable( $file_id, $post_id ) ) {
+				continue;
+			}
+
 			wp_update_post( array(
-				'ID'          => $file_id,
+				'ID'          => absint( $file_id ),
 				'post_parent' => $post_id,
 			) );
 		}
+	}
+
+	/**
+	 * Whether one of the files a request names may be attached to it.
+	 *
+	 * The Files metabox only offers files that are unattached, or already on this request, but it assembles that
+	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rules have to hold here for
+	 * whatever comes back in the field.
+	 *
+	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is an edit
+	 * to it -- `post_parent` is the field `privacy.php` reads to decide who sees a payment file -- so it takes
+	 * the same capability any other route to that field would, which is where the guard in `privacy.php` applies.
+	 *
+	 * @param mixed $file_id An entry from the field, which is whatever JSON the browser sent.
+	 * @param int   $post_id The request the file would be attached to.
+	 *
+	 * @return bool
+	 */
+	protected static function is_file_attachable( $file_id, $post_id ) {
+		if ( ! is_numeric( $file_id ) ) {
+			return false;
+		}
+
+		$file = get_post( absint( $file_id ) );
+
+		if ( ! $file instanceof WP_Post || 'attachment' !== $file->post_type ) {
+			return false;
+		}
+
+		if ( ! current_user_can( 'edit_post', $file->ID ) ) {
+			return false;
+		}
+
+		return 0 === (int) $file->post_parent || (int) $file->post_parent === (int) $post_id;
 	}
 
 	/**
@@ -854,16 +1070,30 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get the current post when inside a `map_meta_cap` callback
+	 * Get the post that a `map_meta_cap` callback is being asked about
 	 *
-	 * Normally it's just the global $post, but sometimes you have to dig it out of $args (e.g., a bulk edit)
+	 * That's the object named in $args. The global $post is only a fallback for checks that don't name one,
+	 * because it's often a different post -- e.g., during a bulk edit, or while a list table builds the row
+	 * actions for a post other than the one in the loop.
 	 *
-	 * @param array $args The $args that was passed to the `map_meta_cap` callback
+	 * @param array $args The $args that was passed to the `map_meta_cap` callback.
 	 *
 	 * @return WP_Post|null
 	 */
 	public static function get_map_meta_cap_post( $args ) {
-		$post = null;
+		if ( isset( $args[0] ) ) {
+			if ( $args[0] instanceof WP_Post ) {
+				return $args[0];
+			}
+
+			/*
+			 * $args[0] is whatever was passed to `current_user_can()`, so an ID can arrive as an int or as a
+			 * string -- `wp_ajax_upload_attachment()`, for example, passes `$_REQUEST['post_id']` as-is. The
+			 * numeric check and the cast mirror `get_post()`'s own contract, so this resolves the post Core's
+			 * `map_meta_cap()` resolves, and resolves nothing where Core resolves nothing.
+			 */
+			return is_numeric( $args[0] ) ? get_post( (int) $args[0] ) : null;
+		}
 
 		/*
 		 * Use a reference to the global $post if it already exists, but don't create one otherwise
@@ -873,13 +1103,7 @@ class WordCamp_Budgets {
 		 * If $GLOBAL['post'] didn't already exist and then we created one, then that could have unintentional
 		 * side-effects outside of this function.
 		 */
-		if ( isset( $GLOBALS['post'] ) ) {
-			$post = $GLOBALS['post'];
-		} elseif ( isset( $args[0] ) && is_int( $args[0] ) ) {
-			$post = get_post( $args[0] );
-		}
-
-		return $post;
+		return isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
 	}
 
 	/**

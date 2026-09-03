@@ -69,6 +69,10 @@ class WCP_Payment_Request {
 			'show_in_nav_menus' => true,
 			'supports'          => array( 'title' ),
 			'has_archive'       => true,
+
+			// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+			'map_meta_cap'      => true,
+			'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 		);
 
 		return register_post_type( self::POST_TYPE, $args );
@@ -600,6 +604,15 @@ class WCP_Payment_Request {
 			return $post_data;
 		}
 
+		/*
+		 * The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+		 * Behind the same question the other two budget types ask, so none of them records on a trash, bulk or
+		 * autosave path that has no use for it.
+		 */
+		if ( WordCamp_Budgets::post_edit_is_actionable( $post_data, self::POST_TYPE ) ) {
+			WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+		}
+
 		// Ensure that new posts have the `post_date_gmt` field populated.
 		if ( 'auto-draft' !== $post_data['post_status'] ) {
 			if ( '0000-00-00 00:00:00' === $post_data['post_date_gmt'] ) {
@@ -980,6 +993,12 @@ Thanks for helping us with these details!",
 	 */
 	public function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
 		// todo maybe centralize this, since almost identical to counterparts in other modules
+
+		// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+		if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+			return $required_capabilities;
+		}
+
 		$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 		if ( is_a( $post, 'WP_Post' ) && self::POST_TYPE == $post->post_type ) {
@@ -989,8 +1008,10 @@ Thanks for helping us with these details!",
 			 * They can still open the request (in order to view the status and details), but won't be allowed to make any changes to it.
 			 * They can also edit and re-submit requests that were marked as incomplete.
 			 */
-			if ( ! in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) {
-				if ( 'edit_post' == $requested_capability && 'wcb-incomplete' != $post->post_status ) {
+			$status_for_edit_check = WordCamp_Budgets::get_status_for_edit_check( $post );
+
+			if ( ! in_array( $status_for_edit_check, array( 'auto-draft', 'draft' ), true ) ) {
+				if ( 'edit_post' == $requested_capability && 'wcb-incomplete' != $status_for_edit_check ) {
 					$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' != $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 					$is_bulk_edit   = isset( $_REQUEST['bulk_edit'] );
 

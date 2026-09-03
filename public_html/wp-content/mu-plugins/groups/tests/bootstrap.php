@@ -38,6 +38,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/network-messaging.php';
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer.php';
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
+	require_once dirname( __DIR__ ) . '/network-export.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

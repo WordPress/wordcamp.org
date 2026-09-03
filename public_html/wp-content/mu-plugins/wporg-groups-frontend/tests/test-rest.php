@@ -9,6 +9,7 @@ use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Da
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 
+use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
 use function WordCamp\Groups\Frontend\REST\create_event;
 use function WordCamp\Groups\Frontend\REST\event_args_schema;
 use function WordCamp\Groups\Frontend\REST\get_group_info;
@@ -655,5 +656,165 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertWPError( $response );
 		$this->assertSame( 'wporg_groups_invalid_country', $response->get_error_code() );
+	}
+
+	/**
+	 * A tag-shaped event title is stored as text, not as markup.
+	 *
+	 * The `sanitize_text_field()` on the `title` arg is not the last word — see
+	 * `wcorg_sanitize_plain_text()` for why. It matters for this field in particular because
+	 * `core/post-title` emits `get_the_title()` straight into element content without running
+	 * `wp_kses_post()` over it, so whatever is stored here is what renders.
+	 */
+	public function test_event_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Meetup< a href="https://example.org" >click here< /a >' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$stored = (string) get_post_field( 'post_title', $response->get_data()['id'], 'raw' );
+
+		$this->assertStringNotContainsString( '<a', $stored );
+		$this->assertStringNotContainsString( '<', $stored );
+		$this->assertStringContainsString( '&lt; a href=', $stored );
+	}
+
+	/**
+	 * Editing an existing event goes through the same write, so it gets the same treatment.
+	 */
+	public function test_event_update_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create   = $this->dispatch_json_request( 'POST', '/wporg-groups/v1/event', $this->base_event_params() );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Meetup< a href="https://example.org" >click here< /a >' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$this->assertStringNotContainsString( '<', (string) get_post_field( 'post_title', $event_id, 'raw' ) );
+	}
+
+	/**
+	 * `resolve_venue_id()` writes the submitted venue name to a venue's `post_title`, so it needs it too.
+	 */
+	public function test_new_venue_name_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array(
+				'new_venue_name' => 'Community Hall< a href="https://example.org" >click here< /a >',
+			) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$venue_id = get_event_venue_post_id( (int) $response->get_data()['id'] );
+		$this->assertGreaterThan( 0, $venue_id, 'A venue post should have been created.' );
+
+		$stored = (string) get_post_field( 'post_title', $venue_id, 'raw' );
+
+		$this->assertStringNotContainsString( '<', $stored );
+		$this->assertStringContainsString( '&lt; a href=', $stored );
+	}
+
+	/**
+	 * Autosaved drafts write a title too, so they get the same treatment.
+	 */
+	public function test_draft_title_is_stored_as_text(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/draft',
+			array( 'title' => 'Draft< a href="https://example.org" >click here< /a >' )
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$draft_id = $response->get_data()['id'];
+		$this->assertStringNotContainsString( '<', (string) get_post_field( 'post_title', $draft_id, 'raw' ) );
+
+		// The draft picker reads this listing, and its `html_entity_decode()` is the one operation that could
+		// undo the encoding. That's fine — the value is only ever used as a React `<option>` label, i.e. as
+		// text — but the decoded value must still not be a real tag.
+		$listed  = wp_list_filter( list_drafts()->get_data(), array( 'id' => $draft_id ) );
+		$decoded = reset( $listed )['title'];
+
+		$this->assertStringNotContainsString( '<a', $decoded );
+		$this->assertStringContainsString( '< a href=', $decoded );
+	}
+
+	/**
+	 * A title that only looks tag-ish stays readable.
+	 *
+	 * Covered for the helper itself in `Test_Helpers_Misc`, but pinned here too because this is the
+	 * value an organizer actually types, and the whole write path runs between the two.
+	 */
+	public function test_event_title_keeps_angle_brackets_used_as_prose(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$stored = (string) get_post_field( 'post_title', $response->get_data()['id'], 'raw' );
+
+		$this->assertSame( 'Hall < 100 > seats', html_entity_decode( $stored ) );
+	}
+
+	/**
+	 * The form pre-fills with what the organizer typed, not with the stored encoding.
+	 *
+	 * `/event-form-data` feeds a text input, so it decodes like the other two read sites,
+	 * `list_drafts()` and the venue list. Without this, reopening an event shows
+	 * `Hall &lt; 100 &gt; seats` in the title field.
+	 */
+	public function test_event_form_data_title_is_decoded(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+		$event_id = (int) $response->get_data()['id'];
+
+		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$request->set_param( 'event_id', $event_id );
+
+		$this->assertSame( 'Hall < 100 > seats', get_event_form_data( $request )->get_data()['fields']['title'] );
+
+		// Round-tripping that value back through the write path must land on the same
+		// bytes — a decode that widened the input would show up here as double encoding.
+		$stored_before = (string) get_post_field( 'post_title', $event_id, 'raw' );
+
+		$this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Hall < 100 > seats' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
 	}
 }

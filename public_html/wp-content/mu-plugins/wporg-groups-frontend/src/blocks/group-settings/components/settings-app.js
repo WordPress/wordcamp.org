@@ -21,6 +21,7 @@ import VenuesTab from './venues-tab';
 import MembersTab from './members-tab';
 import DesignTab from './design-tab';
 import AboutTab from './about-tab';
+import ExportTab from './export-tab';
 
 const TABS = [
 	{ name: 'events', title: __( 'Events', 'wporg-groups-frontend' ) },
@@ -28,6 +29,7 @@ const TABS = [
 	{ name: 'members', title: __( 'Members', 'wporg-groups-frontend' ) },
 	{ name: 'design', title: __( 'Design', 'wporg-groups-frontend' ) },
 	{ name: 'about', title: __( 'About', 'wporg-groups-frontend' ) },
+	{ name: 'export', title: __( 'Export', 'wporg-groups-frontend' ) },
 ];
 
 export default function SettingsApp( {
@@ -65,6 +67,8 @@ export default function SettingsApp( {
 					return h( DesignTab );
 				case 'about':
 					return h( AboutTab );
+				case 'export':
+					return h( ExportTab );
 				default:
 					return null;
 			}

@@ -58,8 +58,13 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	$date      = find_first_field_matching_label( $fields, 'Date' );
 	$attendees = find_first_field_matching_label( $fields, 'Number of Attendees' );
 
-	// Fetch the user by WP.org username or email.
-	$user      = $wporg && wcorg_get_user_by_canonical_names( $wporg ) ? wcorg_get_user_by_canonical_names( $wporg ) : ( $email ? get_user_by( 'email', $email ) : false );
+	/*
+	 * This form is a public, unauthenticated submission, so there is no signed-in
+	 * user to attribute the application to. Bridged applications are always owned by
+	 * the `wordcamp` service account, and the submitted username is retained only as
+	 * data for the Community Team to review rather than used to set the owner.
+	 */
+	$service_account = 7694169;
 
 	// Include the application processor, although we're not really using it here...
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-loader.php';
@@ -82,16 +87,21 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	 * registering the `wordcamp` statuses, so they have to be registered before the
 	 * check or the query filters on statuses that cannot match and the cap never trips.
 	 */
+	$viewable = \WordCamp_Loader::get_publicly_viewable_post_statuses();
+
 	foreach ( \WordCamp_Loader::get_post_statuses() as $status => $label ) {
 		if ( ! get_post_status_object( $status ) ) {
-			// `public` to match how `Event_Loader::register_post_statuses()` registers
-			// them on the central site. Left to the defaults these would come out
-			// `internal`, which is a different status on one network to the other.
+			// `public` / `protected` to match how `Event_Loader::register_post_statuses()`
+			// registers them on the central site. Left to the defaults these would come
+			// out `internal`, which is a different status on one network to the other.
+			$is_viewable = in_array( $status, $viewable, true );
+
 			register_post_status(
 				$status,
 				array(
-					'label'  => $label,
-					'public' => true,
+					'label'     => $label,
+					'public'    => $is_viewable,
+					'protected' => ! $is_viewable,
 				)
 			);
 		}
@@ -109,11 +119,13 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		return;
 	}
 
+	// `find_first_field_matching_label()` applies `sanitize_text_field()`, which is not enough on
+	// its own to keep the title text. See `wcorg_sanitize_plain_text()`.
 	$post = array(
 		'post_type'   => 'wordcamp',
-		'post_title'  => 'WordPress Campus Connect ' . ( $campus ?: trim( "$city, $country", ', ' ) ),
+		'post_title'  => 'WordPress Campus Connect ' . wcorg_sanitize_plain_text( $campus ?: trim( "$city, $country", ', ' ) ),
 		'post_status' => WCPT_DEFAULT_STATUS,
-		'post_author' => $user->ID ?? 7694169, // Set `wordcamp` as author if supplied username is not valid.
+		'post_author' => $service_account, // Public submission: owned by the service account.
 	);
 
 	$post_id = wp_insert_post( $post, true );
@@ -133,7 +145,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	add_post_meta( $post_id, 'Location', trim( "$city, $country", ', ' ) );
 	add_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', strtotime( $date ) );
 	add_post_meta( $post_id, 'Number of Anticipated Attendees', $attendees );
-	add_post_meta( $post_id, 'WordPress.org Username', $wporg ?: ( $user->user_login ?? '' ) );
+	add_post_meta( $post_id, 'WordPress.org Username', $wporg ?: '' );
 	add_post_meta( $post_id, 'Venue Name', $campus );
 	add_post_meta( $post_id, 'Physical Address', implode( "\n", array_filter( [ $campus, $city, $country ] ) ) );
 
@@ -142,7 +154,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		'_status_change',
 		array(
 			'timestamp' => time(),
-			'user_id'   => is_a( $user, 'WP_User' ) ? $user->ID : 0,
+			'user_id'   => 0, // Public submission: no signed-in user to attribute this to.
 			'message'   => sprintf( '%s &rarr; %s', 'Application', \WordCamp_Loader::get_post_statuses()[ WCPT_DEFAULT_STATUS ] ),
 		)
 	);

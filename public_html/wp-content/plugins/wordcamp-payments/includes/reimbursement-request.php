@@ -66,6 +66,10 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 	);
 
 	return \register_post_type( POST_TYPE, $args );
@@ -262,7 +266,8 @@ function enqueue_assets() {
  * @return bool
  */
 function user_can_edit_request( $post ) {
-	$editable_status = in_array( $post->post_status ?? '', array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	$status          = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$editable_status = in_array( $status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
 	return current_user_can( 'manage_network' ) || $editable_status;
 }
 
@@ -492,6 +497,9 @@ function set_request_status( $post_data, $post_data_raw ) {
 		return $post_data;
 	}
 
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 	// Requesting to save draft
 	if ( isset( $post_data_raw['wcb-save-draft'] ) ) {
 		if ( current_user_can( 'draft_post', $post_data_raw['ID'] ) ) {
@@ -545,19 +553,17 @@ function save_request( $post_id, $post ) {
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
-	 * We need to determine if the user is allowed to modify the request -- in terms of this plugin's post_status
-	 * restrictions, not in terms of current_user_can( 'edit_post', N ) -- but at this point in the execution
-	 * the status has already changed from the original one to the new one, so user_can_edit_request() would often
-	 * return an incorrect result, because it would be evaluating the new status, when it should use the old one.
-	 * That would result in all the meta fields the user entered being ignored when going from `draft` to
-	 * `submitted`, `info_requested` to `submitted`, etc.
+	 * The status this reads is the stored one, which by now is the status the save just wrote. That used to be
+	 * worked around with a stub post built from `$_POST['original_post_status']`, so the check saw the status the
+	 * request had before the save -- otherwise a `draft` being submitted would be judged as `wcb-pending-approval`
+	 * and the fields entered alongside it dropped.
 	 *
-	 * To avoid that, we create a stub WP_Post with the original post status, and give that to
-	 * user_can_edit_request() instead.
+	 * That's no longer what decides it. `post_edit_is_actionable()` above asks `edit_post`, which this post type's
+	 * `map_meta_cap` callback refuses for a request past the editable statuses, so a save that would have needed
+	 * the stub has already returned. What's left here is a request still in those statuses, which reads the same
+	 * either way -- and reading the real post keeps the decision out of the request body.
 	 */
-	$original_post = new WP_Post( (object) array( 'post_status' => $_POST['original_post_status'] ) );
-
-	if ( user_can_edit_request( $original_post ) ) {
+	if ( user_can_edit_request( $post ) ) {
 		$text_fields = array( 'name_of_payer', 'currency', 'reason', 'reason_other' );
 		validate_and_save_text_fields( $post_id, $text_fields, $_POST );
 
@@ -915,14 +921,20 @@ function notify_organizer_request_updated( $new_status, $old_status, $request ) 
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'draft_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 	if ( ! is_a( $post, 'WP_Post' ) || POST_TYPE !== $post->post_type ) {
 		return $required_capabilities;
 	}
 
-	$drafted_status             = in_array( $post->post_status, array( 'auto-draft', 'draft' ), true );
-	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $post->post_status;
+	$status_for_edit_check      = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$drafted_status             = in_array( $status_for_edit_check, array( 'auto-draft', 'draft' ), true );
+	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $status_for_edit_check;
 	$is_bulk_edit               = isset( $_REQUEST['bulk_edit'] );
 
 	switch ( $requested_capability ) {
@@ -936,7 +948,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 
 		case 'draft_post':
 			if ( $draft_or_incomplete_status ) {
-				$required_capabilities = array( 'edit_posts' );
+				$required_capabilities = array( \WordCamp_Budgets::VIEWER_CAP );
 			} else {
 				$required_capabilities[] = 'manage_network';
 			}

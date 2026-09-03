@@ -20,6 +20,8 @@ require_once __DIR__ . '/inc/group-location.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
 require_once __DIR__ . '/inc/rest.php';
+require_once __DIR__ . '/inc/post-titles.php';
+require_once __DIR__ . '/inc/export.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/my-events.php';
@@ -46,6 +48,8 @@ function bootstrap(): void {
 
 	Blocks\bootstrap();
 	REST\bootstrap();
+	Post_Titles\bootstrap();
+	Export\bootstrap();
 	RSVP_Questions\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();

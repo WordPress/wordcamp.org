@@ -37,6 +37,13 @@ class Test_Content_Appenders extends WP_UnitTestCase {
 
 		$this->plugin = new WordCamp_Post_Types_Plugin();
 
+		// `is_single_cpt_post()` reads the post type's own query var, which a
+		// plain permalink carries directly. Set the structure here rather than
+		// inheriting whatever an earlier test left behind -- a pretty one needs
+		// rewrite rules this run doesn't have, and `go_to()` would then match
+		// nothing. Core restores the original in `tear_down()`.
+		$this->set_permalink_structure( '' );
+
 		// `go_to()` fires `wp`, where this mu-plugin looks up the camp's other
 		// sites. Those don't exist in the test network, and the failed queries
 		// are only noise here.

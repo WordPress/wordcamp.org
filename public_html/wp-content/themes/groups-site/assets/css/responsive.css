@@ -167,4 +167,14 @@
 		z-index: 1;
 		align-self: flex-start;
 	}
+
+	/*
+	 * When the RSVP modal inside the sidebar opens, elevate the sidebar's
+	 * stacking context so the full-screen modal and backdrop appear above all
+	 * page content and sibling elements (such as the event-date navigation
+	 * arrows in the main content column and the sticky navigation bar).
+	 */
+	.groups-site-event-sidebar:has(.wporg-event-rsvp__modal.is-open) {
+		z-index: 100000;
+	}
 }

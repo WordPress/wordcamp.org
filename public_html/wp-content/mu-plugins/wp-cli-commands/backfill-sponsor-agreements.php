@@ -15,7 +15,8 @@
 namespace WordCamp\Sponsor_Agreements\Backfill;
 
 use WP_CLI, WP_CLI_Command;
-use cli\Table;
+
+use function WP_CLI\Utils\format_items;
 
 use function WordCamp\Sponsor_Agreements\add_csprn_to_filename;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
@@ -74,7 +75,13 @@ function get_public_agreement_ids( $blog_id = null ) {
  * Nothing links to an agreement by URL -- both plugins hold an attachment ID and resolve it through
  * `wp_get_attachment_url()` -- so the new name reaches every reader.
  *
- * The generated sizes move with it. They sit beside the original under names derived from it.
+ * Every file Core derives from the upload moves with it, under one new base name:
+ *
+ * - the generated sizes, which for a PDF are renderings of the first page and for an image are copies of
+ *   it at up to 2048px;
+ * - the full-size original, when Core scaled the upload down. `_wp_attached_file` then points at the
+ *   `-scaled` copy while `original_image` holds the name the sizes are derived from, so that -- not the
+ *   attached file -- is what the new base is built from.
  *
  * Only ever called for the site the process was started on, because `ms_upload_constants()` defines
  * `UPLOADS` for whichever site that was -- see `backfill()`.
@@ -84,59 +91,168 @@ function get_public_agreement_ids( $blog_id = null ) {
  *
  * @param int $attachment_id
  *
- * @return bool Whether the file was renamed.
+ * @return array {
+ *     What happened on disk. The metadata always names whatever each file ended up being called.
+ *
+ *     @type int $renamed     Files moved.
+ *     @type int $left_behind Files still under the name they had.
+ * }
  */
 function rename_agreement_file( $attachment_id ) {
-	$old_path = get_attached_file( $attachment_id );
+	$outcome       = array(
+		'renamed'     => 0,
+		'left_behind' => 0,
+	);
+	$attached_path = get_attached_file( $attachment_id );
 
-	if ( ! $old_path || ! is_file( $old_path ) ) {
-		return false;
+	if ( ! $attached_path || ! is_file( $attached_path ) ) {
+		return $outcome;
 	}
 
-	$directory = dirname( $old_path );
-	$old_name  = wp_basename( $old_path );
-	$extension = pathinfo( $old_name, PATHINFO_EXTENSION );
-	$extension = $extension ? '.' . $extension : '';
-	$new_name  = wp_unique_filename( $directory, add_csprn_to_filename( $old_name, $extension ) );
+	$directory = dirname( $attached_path );
+	$metadata  = wp_get_attachment_metadata( $attachment_id );
+	$metadata  = is_array( $metadata ) ? $metadata : array();
 
-	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- WP_Filesystem needs credentials this can't ask for, and a failure is reported rather than fatal.
-	if ( ! @rename( $old_path, $directory . '/' . $new_name ) ) {
-		return false;
+	$old_base     = empty( $metadata['original_image'] ) ? wp_basename( $attached_path ) : $metadata['original_image'];
+	$extension    = pathinfo( $old_base, PATHINFO_EXTENSION );
+	$extension    = $extension ? '.' . $extension : '';
+	$new_base     = wp_unique_filename( $directory, add_csprn_to_filename( $old_base, $extension ) );
+	$old_base     = substr( $old_base, 0, strlen( $old_base ) - strlen( $extension ) );
+	$new_base     = substr( $new_base, 0, strlen( $new_base ) - strlen( $extension ) );
+	$already_done = array();
+
+	/**
+	 * Move one of the attachment's files, and answer to what it's now called.
+	 *
+	 * Two sizes can name the same file -- a theme registering a size Core already generates -- so the
+	 * second time one comes round it has already been dealt with. The cache is what keeps its metadata in
+	 * step with the first one's, and what keeps one file from being counted twice.
+	 *
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	$move = function ( $name ) use ( $directory, $old_base, $new_base, $extension, &$already_done, &$outcome ) {
+		if ( isset( $already_done[ $name ] ) ) {
+			return $already_done[ $name ];
+		}
+
+		$source = $directory . '/' . $name;
+
+		/*
+		 * Core names a derivative `<base>-<width>x<height>.<ext>` or `<base>-scaled.<ext>`, so the
+		 * separator is what tells `photo-150x150.jpg` from `photobooth-150x150.jpg`. Without it the
+		 * second would be rebased into `photo-<random>booth-150x150.jpg`, splicing the name rather than
+		 * replacing what it starts with.
+		 */
+		$derived = $name === $old_base . $extension || str_starts_with( $name, $old_base . '-' );
+
+		if ( ! $derived ) {
+			// Not this attachment's to rename. Count it only if there's a file there to be concerned with.
+			$outcome['left_behind'] += is_file( $source ) ? 1 : 0;
+			$already_done[ $name ]   = $name;
+
+			return $name;
+		}
+
+		$new_name = $new_base . substr( $name, strlen( $old_base ) );
+
+		// A name in the metadata with no file behind it was already stale, and moves nothing either way.
+		if ( ! is_file( $source ) ) {
+			$already_done[ $name ] = $name;
+
+			return $name;
+		}
+
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- WP_Filesystem needs credentials this can't ask for, and a failure is reported rather than fatal.
+		if ( ! @rename( $source, $directory . '/' . $new_name ) ) {
+			++$outcome['left_behind'];
+			$already_done[ $name ] = $name;
+
+			return $name;
+		}
+
+		++$outcome['renamed'];
+		$already_done[ $name ] = $new_name;
+
+		return $new_name;
+	};
+
+	$attached_name = wp_basename( $attached_path );
+	$new_attached  = $move( $attached_name );
+
+	/*
+	 * Carry on when the attached file itself wouldn't move. Everything else is named from `$old_base`
+	 * rather than from it, so those can still go -- and whether they went or not is the whole of what the
+	 * count is for.
+	 */
+	if ( ! empty( $metadata['original_image'] ) ) {
+		$metadata['original_image'] = $move( $metadata['original_image'] );
 	}
 
-	$old_base = substr( $old_name, 0, strlen( $old_name ) - strlen( $extension ) );
-	$new_base = substr( $new_name, 0, strlen( $new_name ) - strlen( $extension ) );
-	$metadata = wp_get_attachment_metadata( $attachment_id );
-
-	if ( is_array( $metadata ) ) {
-		if ( ! empty( $metadata['file'] ) ) {
-			$metadata['file'] = dirname( $metadata['file'] ) . '/' . $new_name;
+	foreach ( $metadata['sizes'] ?? array() as $size => $details ) {
+		if ( empty( $details['file'] ) ) {
+			continue;
 		}
 
-		foreach ( $metadata['sizes'] ?? array() as $size => $details ) {
-			if ( empty( $details['file'] ) || ! str_starts_with( $details['file'], $old_base ) ) {
-				continue;
-			}
+		$metadata['sizes'][ $size ]['file'] = $move( $details['file'] );
+	}
 
-			$new_size_name = $new_base . substr( $details['file'], strlen( $old_base ) );
+	if ( ! empty( $metadata['file'] ) ) {
+		$path_prefix      = str_contains( $metadata['file'], '/' ) ? dirname( $metadata['file'] ) . '/' : '';
+		$metadata['file'] = $path_prefix . $new_attached;
+	}
 
-			if ( is_file( $directory . '/' . $details['file'] ) ) {
-				// A size that won't move is left where it is, so the metadata keeps naming the real file.
-				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- as above.
-				if ( ! @rename( $directory . '/' . $details['file'], $directory . '/' . $new_size_name ) ) {
-					continue;
-				}
-			}
-
-			$metadata['sizes'][ $size ]['file'] = $new_size_name;
-		}
-
+	if ( $metadata ) {
 		wp_update_attachment_metadata( $attachment_id, $metadata );
 	}
 
-	update_attached_file( $attachment_id, $directory . '/' . $new_name );
+	if ( $new_attached !== $attached_name ) {
+		update_attached_file( $attachment_id, $directory . '/' . $new_attached );
+	}
 
-	return true;
+	return $outcome;
+}
+
+
+/**
+ * Say how a rename went, for the report.
+ *
+ * An attachment is rarely one file: a scaled photo leaves the full-size original beside it, and every
+ * registered size is another copy. The count is what says whether they all moved, since the `File` column
+ * can only name one of them.
+ *
+ * @param array $outcome     As returned by `rename_agreement_file()`.
+ * @param bool  $dry_run
+ * @param bool  $skip_rename
+ *
+ * @return string
+ */
+function describe_rename( $outcome, $dry_run, $skip_rename ) {
+	$renamed     = $outcome['renamed'] ?? 0;
+	$left_behind = $outcome['left_behind'] ?? 0;
+
+	if ( $skip_rename ) {
+		return 'skipped';
+	}
+
+	if ( $dry_run ) {
+		return 'pending';
+	}
+
+	/*
+	 * Nothing either way means `rename_agreement_file()` returned before it started, which it only does
+	 * when `_wp_attached_file` names a file that isn't there.
+	 */
+	if ( ! $renamed && ! $left_behind ) {
+		return 'file missing';
+	}
+
+	if ( $left_behind ) {
+		return sprintf( '%d moved, %d left', $renamed, $left_behind );
+	}
+
+	return sprintf( '%d %s', $renamed, 1 === $renamed ? 'file' : 'files' );
 }
 
 
@@ -148,6 +264,13 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
  * WordCamp.org: bring existing sponsorship agreements into line with `sponsor-agreements.php`.
  */
 class Command extends WP_CLI_Command {
+	/**
+	 * The columns of the `backfill` report.
+	 *
+	 * Named in one place so that the rows, the rendered report and the empty-set report can't drift apart.
+	 */
+	const REPORT_COLUMNS = array( 'Attachment', 'File', 'Private', 'Renamed' );
+
 	/**
 	 * Report which sites have agreements left to migrate.
 	 *
@@ -236,6 +359,17 @@ class Command extends WP_CLI_Command {
 	 * [--skip-rename]
 	 * : Set the status, but leave the files under the names they have.
 	 *
+	 * [--format=<format>]
+	 * : Render the report in this format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 * ---
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp --url=seattle.wordcamp.org/2023 wc-sponsor-agreements backfill --dry-run
@@ -247,56 +381,108 @@ class Command extends WP_CLI_Command {
 	public function backfill( $args, $assoc_args ) {
 		$dry_run       = isset( $assoc_args['dry-run'] );
 		$skip_rename   = isset( $assoc_args['skip-rename'] );
+		$format        = $assoc_args['format'] ?? 'table';
 		$agreement_ids = get_public_agreement_ids();
 		$results       = array();
+		$unfinished    = array();
+		$untouched     = array(
+			'renamed'     => 0,
+			'left_behind' => 0,
+		);
 
 		foreach ( $agreement_ids as $agreement_id ) {
-			$file = wp_basename( (string) get_attached_file( $agreement_id ) );
-
 			if ( $dry_run ) {
 				$migrated = true;
-				$renamed  = ! $skip_rename;
+				$outcome  = $untouched;
 			} else {
 				$migrated = make_agreement_private( $agreement_id );
-				$renamed  = $skip_rename ? false : rename_agreement_file( $agreement_id );
+				$outcome  = $skip_rename ? $untouched : rename_agreement_file( $agreement_id );
+			}
+
+			/*
+			 * Anything short of "every file moved" needs saying, and that includes the attachment whose
+			 * file was already gone -- it moved nothing, but it also isn't finished.
+			 */
+			if ( ! $dry_run && ! $skip_rename && ( $outcome['left_behind'] || ! $outcome['renamed'] ) ) {
+				$unfinished[] = $agreement_id;
 			}
 
 			$results[] = array(
 				'Attachment' => $agreement_id,
-				'File'       => $file,
+
+				// Read after the fact, so that the column names the file as it now stands on disk.
+				'File'       => wp_basename( (string) get_attached_file( $agreement_id ) ),
 				'Private'    => $migrated ? 'yes' : 'no',
-				'Renamed'    => $renamed ? 'yes' : 'no',
+				'Renamed'    => describe_rename( $outcome, $dry_run, $skip_rename ),
 			);
 		}
 
 		if ( ! $results ) {
-			WP_CLI::success( 'No sponsor agreements left to migrate.' );
+			// A machine-readable run still has to answer with something its caller can parse.
+			if ( 'table' !== $format ) {
+				format_items( $format, array(), self::REPORT_COLUMNS );
+			}
+
+			$this->summarize( 'success', 'No sponsor agreements left to migrate.', $format );
 
 			return;
 		}
 
-		WP_CLI::line();
+		// Blank lines frame the table for a person, and corrupt every other format.
+		if ( 'table' === $format ) {
+			WP_CLI::line();
+		}
 
-		$table = new Table();
-		$table->setHeaders( array_keys( $results[0] ) );
-		$table->setRows( $results );
-		$table->display();
+		format_items( $format, $results, self::REPORT_COLUMNS );
 
-		WP_CLI::line();
-
-		$unfinished = wp_list_filter( $results, array( 'Renamed' => 'no' ) );
+		if ( 'table' === $format ) {
+			WP_CLI::line();
+		}
 
 		if ( $dry_run ) {
-			WP_CLI::success( sprintf( '%d agreements would be migrated. Run without --dry-run to apply.', count( $results ) ) );
-		} elseif ( $unfinished && ! $skip_rename ) {
-			WP_CLI::warning( sprintf(
-				'%d of %d agreements kept the file name they had.',
+			$this->summarize( 'success', sprintf( '%d agreements would be migrated. Run without --dry-run to apply.', count( $results ) ), $format );
+		} elseif ( $unfinished ) {
+			$message = sprintf(
+				'%d of %d agreements are unfinished; the Renamed column says what happened to each.',
 				count( $unfinished ),
 				count( $results )
-			) );
+			);
+
+			$this->summarize( 'warning', $message, $format );
 		} else {
-			WP_CLI::success( sprintf( '%d agreements processed.', count( $results ) ) );
+			$this->summarize( 'success', sprintf( '%d agreements processed.', count( $results ) ), $format );
 		}
+	}
+
+	/**
+	 * Report on the run as a whole, without writing over the report itself.
+	 *
+	 * `WP_CLI::success()` goes to STDOUT, which is where a machine-readable format has just been written,
+	 * so anything piped to `jq` would find a sentence after the array. Warnings are already on STDERR.
+	 *
+	 * @param string $level  `success` or `warning`.
+	 * @param string $message
+	 * @param string $format The format the report was rendered in.
+	 */
+	protected function summarize( $level, $message, $format ) {
+		if ( 'warning' === $level ) {
+			WP_CLI::warning( $message );
+
+			return;
+		}
+
+		if ( 'table' === $format ) {
+			WP_CLI::success( $message );
+
+			return;
+		}
+
+		// `WP_CLI::success()` would have gone through the logger, which is what `--quiet` silences.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			return;
+		}
+
+		fwrite( STDERR, 'Success: ' . $message . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- writing to the process's own STDERR.
 	}
 }
 

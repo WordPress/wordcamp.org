@@ -807,6 +807,19 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
+	 * Whether the callbacks below should add their markup to a post's content.
+	 *
+	 * @param string $post_type The post type the caller adds to.
+	 *
+	 * @return bool
+	 */
+	protected function should_add_to_content( $post_type ) {
+		return $this->is_single_cpt_post( $post_type )
+			&& ! site_supports_block_templates()
+			&& ! post_password_required( get_post() );
+	}
+
+	/**
 	 * Add the speaker's avatar to their post
 	 *
 	 * We don't enable it for sites that were created before it was committed, because it may need custom CSS
@@ -820,7 +833,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_avatar_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_speaker' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_speaker' ) ) {
 			return $content;
 		}
 
@@ -854,7 +867,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_session_post_speaker_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -934,7 +947,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -985,7 +998,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -1023,7 +1036,7 @@ class WordCamp_Post_Types_Plugin {
 	public function add_session_categories_to_session_posts( $content ) {
 		global $post;
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -1082,7 +1095,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_session_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_speaker' ) || site_supports_block_templates() ) {
+		if ( ! $this->should_add_to_content( 'wcb_speaker' ) ) {
 			return $content;
 		}
 

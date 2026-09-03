@@ -67,6 +67,11 @@ class Test_Blocks_Content extends WP_UnitTestCase {
 	public function tear_down() {
 		unset( $GLOBALS['post'] );
 
+		// Cleared here rather than inline, so a test that fails part way
+		// through cannot leave a later one thinking the visitor holds the
+		// password.
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
 		set_current_screen( 'dashboard' );
 
 		parent::tear_down();
@@ -166,8 +171,6 @@ class Test_Blocks_Content extends WP_UnitTestCase {
 
 		$content = get_all_the_content( $post_id );
 		$excerpt = get_trimmed_content( $post_id );
-
-		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
 
 		$this->assertStringContainsString( self::PROTECTED_BODY, $content );
 		$this->assertStringContainsString( self::PROTECTED_BODY, $excerpt );

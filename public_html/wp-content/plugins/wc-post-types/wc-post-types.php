@@ -890,6 +890,8 @@ class WordCamp_Post_Types_Plugin {
 		$speaker_args = array(
 			'post_type'      => 'wcb_speaker',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'post__in'       => $speaker_ids,
 			'orderby'        => 'title',
 			'order'          => 'asc',
@@ -1112,6 +1114,8 @@ class WordCamp_Post_Types_Plugin {
 		$session_args = array(
 			'post_type'      => 'wcb_session',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'meta_key'       => '_wcpt_speaker_id',
 			'meta_value'     => $post->ID,
 			'orderby'        => 'title',

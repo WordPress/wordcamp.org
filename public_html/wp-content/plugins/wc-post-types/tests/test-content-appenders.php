@@ -271,4 +271,48 @@ class Test_Content_Appenders extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'speaker-avatar', $output );
 		$this->assertStringContainsString( 'Unannounced Session', $output );
 	}
+
+	/**
+	 * The speakers named under a session are the published ones, whoever is
+	 * looking. The callback reads `global $post`, which a sidebar widget's loop
+	 * also sets, and the widgets cache what they render for every visitor.
+	 */
+	public function test_session_names_published_speakers_only_for_an_administrator() {
+		$session_id = $this->go_to_session();
+
+		$private_speaker_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'private',
+			'post_title'  => 'Private Speaker Name',
+		) );
+		add_post_meta( $session_id, '_wcpt_speaker_id', $private_speaker_id );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$output = $this->apply_session_appenders( $session_id, 'Session body.' );
+
+		$this->assertStringContainsString( 'Speaker Name', $output );
+		$this->assertStringNotContainsString( 'Private Speaker Name', $output );
+	}
+
+	/**
+	 * Same rule for the sessions listed under a speaker.
+	 */
+	public function test_speaker_lists_published_sessions_only_for_an_administrator() {
+		$speaker_id = $this->go_to_speaker();
+
+		$private_session_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_session',
+			'post_status' => 'private',
+			'post_title'  => 'Private Session',
+		) );
+		add_post_meta( $private_session_id, '_wcpt_speaker_id', $speaker_id );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$output = $this->apply_speaker_appenders( 'Speaker bio.' );
+
+		$this->assertStringContainsString( 'Unannounced Session', $output );
+		$this->assertStringNotContainsString( 'Private Session', $output );
+	}
 }

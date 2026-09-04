@@ -548,3 +548,26 @@ add_filter(
 		return $endpoints;
 	}
 );
+
+/**
+ * Generate venue static maps in the background instead of during the save.
+ *
+ * GatherPress renders a venue's static map from `wp_after_insert_post`, so
+ * every venue create/update pays for the OSM tile fetches and the GD
+ * composite inline — once for the 1x image and again for the 2x retina one.
+ * Each render is bounded by its own multi-second wall-clock budget, so a
+ * single save can sit there for a long time when the tile host is slow.
+ * Our front-end event form creates and updates venues over REST
+ * (`wporg-groups-frontend/inc/rest.php`), and bulk imports create many in a
+ * row, so that cost lands squarely on the organizer waiting for the form.
+ *
+ * Opting in here moves the render to a WP-Cron job a moment later and lets
+ * the save return immediately. The trade-off is that the map appears on the
+ * next cron tick rather than the instant the venue is saved, which is fine
+ * for an image nobody is looking at yet when the address is first entered.
+ *
+ * Needs GatherPress 0.36.0 or newer; on older versions the filter is simply
+ * never applied and generation stays synchronous. See
+ * https://github.com/WordPress/wordcamp.org/issues/1823.
+ */
+add_filter( 'gatherpress_static_map_generate_async', '__return_true' );

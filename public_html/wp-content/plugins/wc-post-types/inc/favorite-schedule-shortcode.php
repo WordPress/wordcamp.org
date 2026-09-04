@@ -190,6 +190,8 @@ function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $t
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'meta_query'     => array(
 			'relation' => 'AND',
 			array(

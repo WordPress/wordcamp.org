@@ -103,6 +103,11 @@ function render( $content ) {
 		return $content;
 	}
 
+	// Only the post being viewed gets the form, not every post whose content renders on the page.
+	if ( get_queried_object_id() !== $post->ID ) {
+		return $content;
+	}
+
 	$now = date_create( 'now', wp_timezone() );
 	$form_content = '';
 

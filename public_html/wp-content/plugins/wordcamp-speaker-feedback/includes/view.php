@@ -19,7 +19,8 @@ defined( 'WPINC' ) || die();
 
 const SPEAKER_VIEWED_KEY = 'sft-speaker-viewed-feedback';
 
-add_filter( 'the_content', __NAMESPACE__ . '\render' );
+// The appended view is not post content, so it runs after core's shortcode pass at 11.
+add_filter( 'the_content', __NAMESPACE__ . '\render', 12 );
 add_filter( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'sft_speaker_viewed_feedback', __NAMESPACE__ . '\mark_speaker_as_viewed', 10, 2 );
 
@@ -200,6 +201,24 @@ function render_feedback_view() {
 }
 
 /**
+ * Prepare an attendee-submitted answer for display.
+ *
+ * Answers are free-form text, so the syntax that later filters would act on is encoded along
+ * with the tags that `wp_kses_data()` handles.
+ *
+ * @param string $answer
+ *
+ * @return string
+ */
+function sanitize_answer_for_display( $answer ) {
+	return str_replace(
+		array( '[', ']' ),
+		array( '&#91;', '&#93;' ),
+		wp_kses_data( $answer )
+	);
+}
+
+/**
  * Render a single feedback comment to a human-readable HTML string.
  *
  * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
@@ -223,7 +242,7 @@ function render_feedback_comment( $comment, $echo = true ) {
 			$output .= sprintf(
 				'<p class="speaker-feedback__question">%s</p><p class="speaker-feedback__answer">%s</p>',
 				wp_kses_data( $question ),
-				wp_kses_data( $answer )
+				sanitize_answer_for_display( $answer )
 			);
 		}
 	}

@@ -371,7 +371,8 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 
 			$speakers_names = array();
 			foreach ( $speakers as $speaker ) {
-				$speaker_name     = apply_filters( 'the_title', $speaker->post_title );
+				// Decoded for the same reason the session title above is: this is a plain-text mail.
+				$speaker_name     = html_entity_decode( apply_filters( 'the_title', $speaker->post_title ) );
 				$speakers_names[] = $speaker_name;
 			}
 

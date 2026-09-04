@@ -381,10 +381,17 @@ class WordCamp_Participation_Notifier {
 			return false;
 		}
 
+		$event_start = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] )
+			? (int) $wordcamp->meta['Start Date (YYYY-mm-dd)'][0]
+			: strtotime( $post->post_date_gmt );
+
+		// Cap at current time so future events don't get a future activity timestamp.
+		$timestamp = min( $event_start, time() );
+
 		$activity = array(
 			'action'        => 'wporg_handle_activity',
 			'source'        => 'wordcamp',
-			'timestamp'     => strtotime( $post->post_modified_gmt ),
+			'timestamp'     => $timestamp,
 			'user'          => $user_id,
 			'wordcamp_id'   => get_current_blog_id(),
 			'wordcamp_name' => get_wordcamp_name(),

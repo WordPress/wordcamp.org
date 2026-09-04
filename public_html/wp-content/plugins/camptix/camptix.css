@@ -191,6 +191,13 @@ body.admin-bar #tix {
 	margin-right: 10px;
 }
 
+/* Claim-link recovery & buyer-facing status labels (issue #1721). */
+.tix-resend-claim-links { margin: 1em 0 1.5em; padding: 0.75em 1em; background: #f6f7f7; border-left: 4px solid #2271b1; }
+.tix-resend-claim-links__help { margin: 0 0 0.5em; }
+.tix-status-help { display: inline-block; margin-left: 0.25em; cursor: help; color: #2271b1; font-size: 0.85em; }
+.tix-copy-claim-link { margin-top: 0.25em; padding: 0.15em 0.6em; font-size: 0.85em; cursor: pointer; }
+.tix-copy-claim-link.is-copied { background: #d1e7d6; }
+
 /**
  * === RTL Styles ===
  * Should always be at the EOF, since they need to override
@@ -207,3 +214,6 @@ body.admin-bar #tix {
 .rtl #tix-attendees .avatar { float: right; }
 
 .rtl #tix-attendees .tix-field { margin-left: 0; margin-right: 70px; }
+
+.rtl .tix-resend-claim-links { border-left: 0; border-right: 4px solid #2271b1; }
+.rtl .tix-status-help { margin-left: 0; margin-right: 0.25em; }

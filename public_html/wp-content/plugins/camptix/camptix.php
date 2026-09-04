@@ -5568,6 +5568,9 @@ class CampTix_Plugin {
 			}
 		}
 
+		// Determine if this is a multi-ticket order that supports partial refunds.
+		$supports_partial = count( $attendees ) > 1;
+
 		// Has a refund request been submitted?
 		$reason = '';
 		if ( current_user_can( $this->caps['manage_attendees'] ) ) {
@@ -5587,47 +5590,110 @@ class CampTix_Plugin {
 			if ( ! $check ) {
 				$this->error( __( 'You have to agree to the terms to request a refund.', 'wordcamporg' ) );
 			} else {
-				// Allow organizers to refund tickets without transactions (i.e. free tickets)
-				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
-					$result = $this->payment_result(
-						$tix_payment_token,
-						CampTix_Plugin::PAYMENT_STATUS_REFUNDED,
-						array(
+				// Determine which attendees to refund.
+				$selected_ids = isset( $_POST['tix_refund_attendee_ids'] ) ? array_map( 'absint', (array) $_POST['tix_refund_attendee_ids'] ) : array();
+
+				// If no checkboxes submitted (single ticket order), refund all attendees.
+				if ( empty( $selected_ids ) || ! $supports_partial ) {
+					$attendees_to_refund = $attendees;
+				} else {
+					// Validate that selected IDs belong to this order.
+					$valid_ids = wp_list_pluck( $attendees, 'ID' );
+					$selected_ids = array_intersect( $selected_ids, $valid_ids );
+
+					if ( empty( $selected_ids ) ) {
+						$this->error( __( 'Please select at least one ticket to refund.', 'wordcamporg' ) );
+						$attendees_to_refund = array();
+					} else {
+						$attendees_to_refund = array_filter( $attendees, function( $a ) use ( $selected_ids ) {
+							return in_array( $a->ID, $selected_ids, true );
+						} );
+					}
+				}
+
+				$is_partial_refund = $supports_partial && count( $attendees_to_refund ) < count( $attendees );
+
+				if ( ! empty( $attendees_to_refund ) ) {
+					// Calculate the refund amount for partial refunds.
+					$refund_amount = 0;
+					if ( $is_partial_refund ) {
+						foreach ( $attendees_to_refund as $refund_attendee ) {
+							$refund_amount += (float) get_post_meta( $refund_attendee->ID, 'tix_ticket_discounted_price', true );
+						}
+					}
+
+					// Allow organizers to refund tickets without transactions (i.e. free tickets)
+					if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
+						$refund_data = array(
 							'refund_transaction_id'      => 'no-transaction',
 							'refund_transaction_details' => array(
 								'No payment transaction to refund.',
-							)
-						)
-					);
-				} else {
-					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
+							),
+						);
 
-					// Bail if a payment method does not exist, or doesn't support refunds.
-					if ( ! $payment_method_obj || empty( $payment_method_obj->supported_features['refund-single'] ) ) {
-						$this->error_flags['cannot_refund'] = true;
-						$this->redirect_with_error_flags();
-						die();
+						if ( $is_partial_refund ) {
+							$result = $this->process_partial_refund( $attendees_to_refund, $refund_data );
+						} else {
+							$result = $this->payment_result(
+								$tix_payment_token,
+								CampTix_Plugin::PAYMENT_STATUS_REFUNDED,
+								$refund_data
+							);
+						}
+					} else {
+						$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
+
+						// Bail if a payment method does not exist, or doesn't support refunds.
+						if ( ! $payment_method_obj || empty( $payment_method_obj->supported_features['refund-single'] ) ) {
+							$this->error_flags['cannot_refund'] = true;
+							$this->redirect_with_error_flags();
+							die();
+						}
+
+						// Attempt to process the refund transaction.
+						if ( $is_partial_refund ) {
+							$result = $payment_method_obj->payment_refund( $transaction['payment_token'], $refund_amount );
+
+							// If the payment gateway succeeded, mark only the selected attendees as refunded.
+							if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result ) {
+								$refund_transaction_id      = $this->tmp( 'refund_transaction_id' );
+								$refund_transaction_details = $this->tmp( 'refund_transaction_details' );
+
+								foreach ( $attendees_to_refund as $refund_attendee ) {
+									$refund_attendee->post_status = 'refund';
+									wp_update_post( $refund_attendee );
+									update_post_meta( $refund_attendee->ID, 'tix_refund_transaction_id', $refund_transaction_id );
+									update_post_meta( $refund_attendee->ID, 'tix_refund_transaction_details', $refund_transaction_details );
+									$this->log( sprintf( 'Partial refund: marked attendee as refunded.' ), $refund_attendee->ID, null, 'refund' );
+								}
+							}
+						} else {
+							$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
+						}
 					}
 
-					/**
-					 * @todo: Better error messaging for misconfigured payment methods
-					 */
+					$this->log( 'Individual refund request result.', $attendees[0]->ID, $result, 'refund' );
+					if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result ) {
+						foreach ( $attendees_to_refund as $refund_attendee ) {
+							update_post_meta( $refund_attendee->ID, 'tix_refund_reason', $reason );
+							$this->log( 'Refund reason attached with data.', $refund_attendee->ID, $reason, 'refund' );
+						}
 
-					// Attempt to process the refund transaction
-					$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
-				}
+						if ( $is_partial_refund ) {
+							$this->info( __( 'The selected tickets have been successfully refunded.', 'wordcamporg' ) );
 
-				$this->log( 'Individual refund request result.', $attendee->ID, $result, 'refund' );
-				if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result ) {
-					foreach ( $attendees as $attendee ) {
-						update_post_meta( $attendee->ID, 'tix_refund_reason', $reason );
-						$this->log( 'Refund reason attached with data.', $attendee->ID, $reason, 'refund' );
+							// Send refund notification emails for the refunded attendees.
+							// Full refunds are handled by payment_result() -> email_tickets().
+							$receipt_email = $transaction['receipt_email'] ?? $attendee_email;
+							$this->email_partial_refund( $attendees_to_refund, $receipt_email );
+						} else {
+							$this->info( __( 'Your tickets have been successfully refunded.', 'wordcamporg' ) );
+						}
+
+						return $this->form_refund_success();
+					} else {
+						$this->error( __( 'Can not refund the transaction at this time. Please try again later.', 'wordcamporg' ) );
 					}
-
-					$this->info( __( 'Your tickets have been successfully refunded.', 'wordcamporg' ) );
-					return $this->form_refund_success();
-				} else {
-					$this->error( __( 'Can not refund the transaction at this time. Please try again later.', 'wordcamporg' ) );
 				}
 			}
 		}
@@ -5655,6 +5721,29 @@ class CampTix_Plugin {
 							<td class="tix-left"><?php _e( 'Original Payment', 'wordcamporg' ); ?></td>
 							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ?? 0 ) ); ?></td>
 						</tr>
+						<?php if ( $supports_partial ) : ?>
+						<tr>
+							<td class="tix-left"><?php _e( 'Select Tickets to Refund', 'wordcamporg' ); ?></td>
+							<td class="tix-right">
+								<?php foreach ( $attendees as $attendee ) :
+									$ticket_id    = get_post_meta( $attendee->ID, 'tix_ticket_id', true );
+									$ticket_price = (float) get_post_meta( $attendee->ID, 'tix_ticket_discounted_price', true );
+								?>
+									<label>
+										<input type="checkbox" name="tix_refund_attendee_ids[]" value="<?php echo esc_attr( $attendee->ID ); ?>" checked="checked" />
+										<?php echo esc_html( sprintf(
+											'%s %s - %s (%s %s)',
+											$attendee->tix_first_name,
+											$attendee->tix_last_name,
+											$this->get_ticket_title( $ticket_id ),
+											$this->options['currency'],
+											$ticket_price
+										) ); ?>
+									</label><br />
+								<?php endforeach; ?>
+							</td>
+						</tr>
+						<?php else : ?>
 						<tr>
 							<td class="tix-left"><?php _e( 'Purchased Tickets', 'wordcamporg' ); ?></td>
 							<td class="tix-right">
@@ -5671,6 +5760,7 @@ class CampTix_Plugin {
 								<?php endforeach; ?>
 							</td>
 						</tr>
+						<?php endif; ?>
 						<tr>
 							<td class="tix-left"><?php _e( 'Refund Amount', 'wordcamporg' ); ?></td>
 							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ?? 0 ) ); ?></td>
@@ -5682,7 +5772,11 @@ class CampTix_Plugin {
 
 					</tbody>
 				</table>
+				<?php if ( $supports_partial ) : ?>
+				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. You may select individual tickets to refund, or refund all tickets in the order. Refunds can only be issued to the original payment method. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
+				<?php else : ?>
 				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be cancelled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
+				<?php endif; ?>
 				<p class="tix-submit">
 					<label><input type="checkbox" name="tix_refund_request_confirmed" value="1"> <?php _e( 'I agree to the above terms', 'wordcamporg' ); ?></label>
 					<input type="submit" value="<?php esc_attr_e( 'Send Request', 'wordcamporg' ); ?>" />
@@ -5711,6 +5805,61 @@ class CampTix_Plugin {
 		$contents = ob_get_contents();
 		ob_end_clean();
 		return $contents;
+	}
+
+	/**
+	 * Process a partial refund for free tickets (no payment transaction).
+	 *
+	 * @param array $attendees_to_refund Array of attendee post objects to refund.
+	 * @param array $refund_data         Refund transaction data.
+	 *
+	 * @return int Payment status constant.
+	 */
+	function process_partial_refund( $attendees_to_refund, $refund_data ) {
+		foreach ( $attendees_to_refund as $attendee ) {
+			$attendee->post_status = 'refund';
+			wp_update_post( $attendee );
+			update_post_meta( $attendee->ID, 'tix_refund_transaction_id', $refund_data['refund_transaction_id'] );
+			update_post_meta( $attendee->ID, 'tix_refund_transaction_details', $refund_data['refund_transaction_details'] );
+			$this->log( 'Partial refund: marked attendee as refunded.', $attendee->ID, $refund_data, 'refund' );
+		}
+
+		return self::PAYMENT_STATUS_REFUNDED;
+	}
+
+	/**
+	 * Send refund notification emails for partially refunded attendees.
+	 *
+	 * @param array  $refunded_attendees Array of attendee post objects that were refunded.
+	 * @param string $receipt_email      The receipt email address for the order.
+	 */
+	function email_partial_refund( $refunded_attendees, $receipt_email ) {
+		$this->remove_shortcodes();
+		$this->tmp( 'ticket_url', $this->get_tickets_url() );
+
+		foreach ( $refunded_attendees as $attendee ) {
+			$attendee_email = $this->get_attendee_email( $attendee->ID );
+
+			if ( $attendee_email && $attendee_email !== $receipt_email ) {
+				$subject        = sprintf( __( "Your Refund for %s", 'wordcamporg' ), $this->options['event_name'] );
+				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_refund', $attendee );
+				$content        = do_shortcode( $this->options[ $email_template ] );
+
+				$this->log( sprintf( 'Sending partial refund e-mail notification to %s.', $attendee_email ), $attendee->ID );
+				$this->wp_mail( $attendee_email, $subject, $content );
+			}
+		}
+
+		// Send the receipt email to the purchaser.
+		$subject        = sprintf( __( "Your Refund for %s", 'wordcamporg' ), $this->options['event_name'] );
+		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_single_refund', $refunded_attendees[0] );
+		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		$this->log( sprintf( 'Sending partial refund e-mail notification to %s.', $receipt_email ), $refunded_attendees[0]->ID );
+		$this->wp_mail( $receipt_email, $subject, $content );
+
+		$this->tmp( 'ticket_url', false );
+		$this->restore_shortcodes();
 	}
 
 	/**

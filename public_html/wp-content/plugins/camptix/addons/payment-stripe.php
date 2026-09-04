@@ -771,15 +771,17 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	/**
 	 * Submits a single, user-initiated refund request to Stripe and returns the result.
 	 *
-	 * @param string $payment_token
+	 * @param string    $payment_token
+	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
+	 *                                 If 0 or not provided, a full refund is issued.
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	public function payment_refund( $payment_token ) {
+	public function payment_refund( $payment_token, $refund_amount = 0 ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		$result = $this->send_refund_request( $payment_token );
+		$result = $this->send_refund_request( $payment_token, $refund_amount );
 
 		if ( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED === $result['status'] ) {
 			$order = $this->get_order( $payment_token );
@@ -793,17 +795,28 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			);
 		}
 
+		// For partial refunds, store result data so the caller can use it
+		// without payment_result marking all attendees as refunded.
+		if ( $refund_amount > 0 ) {
+			$camptix->tmp( 'refund_transaction_id', $result['refund_transaction_id'] );
+			$camptix->tmp( 'refund_transaction_details', $result['refund_transaction_details'] );
+
+			return CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		}
+
 		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result );
 	}
 
 	/**
 	 * Send a request to Stripe to refund a transaction.
 	 *
-	 * @param string $payment_token
+	 * @param string    $payment_token
+	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
+	 *                                 If 0 or not provided, a full refund is issued.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token ) {
+	public function send_refund_request( $payment_token, $refund_amount = 0 ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -827,13 +840,19 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
+		// Convert refund amount to fractional units (e.g. cents) for partial refunds.
+		$fractional_amount = 0;
+		if ( $refund_amount > 0 ) {
+			$fractional_amount = $this->get_fractional_unit_amount( $camptix->get_options()['currency'], $refund_amount );
+		}
+
 		// Create a new Idempotency token for the refund request.
 		// The same token can't be used for both a charge and a refund.
 		$idempotency_token = md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
 		$credentials       = $this->get_api_credentials();
 
 		$stripe = new CampTix_Stripe_API_Client( $idempotency_token, $credentials['api_secret_key'] );
-		$refund = $stripe->request_refund( $transaction_id, $metadata );
+		$refund = $stripe->request_refund( $transaction_id, $metadata, $fractional_amount );
 
 		if ( is_wp_error( $refund ) ) {
 			$result['refund_transaction_details'] = array(
@@ -1163,14 +1182,20 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @param string $transaction_id
 	 * @param array  $metadata       Associative array of extra data to store with the transaction.
+	 * @param int    $amount         Optional. The amount to refund in fractional currency units (e.g. cents).
+	 *                               If 0 or not provided, a full refund is issued.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function request_refund( $transaction_id, $metadata = array() ) {
+	public function request_refund( $transaction_id, $metadata = array(), $amount = 0 ) {
 		$args = array(
 			'charge' => $transaction_id,
 			'reason' => 'requested_by_customer',
 		);
+
+		if ( $amount > 0 ) {
+			$args['amount'] = $amount;
+		}
 
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
 			$args['metadata'] = $this->clean_metadata( $metadata );

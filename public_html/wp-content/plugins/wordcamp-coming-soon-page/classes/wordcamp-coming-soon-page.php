@@ -13,6 +13,7 @@ class WordCamp_Coming_Soon_Page {
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
+		add_action( 'template_redirect',          array( $this, 'disable_feeds' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
 		// Again after the callbacks, since `before_callbacks` only sets a response and a
 		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
@@ -130,6 +131,34 @@ class WordCamp_Coming_Soon_Page {
 		if ( $this->override_theme_template ) {
 			add_filter( 'jetpack_enable_open_graph', '__return_false' );
 		}
+	}
+
+	/**
+	 * Prevent feeds from leaking content while the Coming Soon page is active.
+	 *
+	 * Core dispatches feed requests in `wp-includes/template-loader.php` and returns before the
+	 * `template_include` filter runs, so `override_theme_template()` never fires for them and posts
+	 * stay readable at `/feed/`, `/comments/feed/`, etc. `template_redirect` does fire for feeds, so
+	 * refuse them here, and strip the feed discovery links from the Coming Soon page so the blocked
+	 * feeds aren't advertised. Gated like the page and REST locks, so logged-in editors keep access.
+	 *
+	 * @see https://github.com/WordPress/wordcamp.org/issues/600
+	 */
+	public function disable_feeds() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		if ( is_feed() ) {
+			wp_die(
+				esc_html__( 'Feeds are not available while the site is in Coming Soon mode.', 'wordcamporg' ),
+				'',
+				array( 'response' => 403 )
+			);
+		}
+
+		remove_action( 'wp_head', 'feed_links', 2 );
+		remove_action( 'wp_head', 'feed_links_extra', 3 );
 	}
 
 	/**

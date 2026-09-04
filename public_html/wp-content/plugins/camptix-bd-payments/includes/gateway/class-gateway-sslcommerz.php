@@ -266,13 +266,13 @@ class SSLCommerz extends Base_Gateway {
 		);
 
 		if ( 'SUCCESS' === $status && ! empty( $gateway_page_url ) ) {
-			$allowed_host = $this->options['sandbox'] ? 'sandbox.sslcommerz.com' : 'securepay.sslcommerz.com';
-			if ( ! $this->is_allowed_https_host( $gateway_page_url, array( $allowed_host ), false ) ) {
+			if ( ! $this->is_allowed_https_host( $gateway_page_url, array( 'sslcommerz.com' ) ) ) {
 				$camptix->log(
 					'SSLCommerz unexpected redirect host.',
 					$attendee->ID,
 					array( 'host' => wp_parse_url( $gateway_page_url, PHP_URL_HOST ) )
 				);
+				$camptix->error( __( 'A payment error has occurred. Please try again later.', 'bd-payments-camptix' ) );
 				return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 			}
 
@@ -286,6 +286,12 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		$camptix->log( 'SSLCommerz session initiation failed.', $attendee->ID, $response_log );
+
+		if ( ! empty( $response_data['failedreason'] ) ) {
+			$camptix->error( esc_html( $response_data['failedreason'] ) );
+		} else {
+			$camptix->error( __( 'A payment error has occurred, looks like chosen payment method is not responding. Please try again later.', 'bd-payments-camptix' ) );
+		}
 
 		return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 	}

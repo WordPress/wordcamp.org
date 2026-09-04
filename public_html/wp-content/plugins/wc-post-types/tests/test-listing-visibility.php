@@ -198,6 +198,9 @@ class Test_Listing_Visibility extends WP_UnitTestCase {
 		the_widget( $widget, $instance, $args );
 		$this->assert_published_only( ob_get_clean(), $label );
 
+		// Confirm the admin render filled the transient the anonymous one reads, so the second assertion cannot pass for the wrong reason.
+		$this->assertNotFalse( get_transient( 'wcpt-' . md5( "$id_base-2" ) ) );
+
 		wp_set_current_user( 0 );
 
 		ob_start();

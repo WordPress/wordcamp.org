@@ -544,6 +544,8 @@ class WordCamp_Post_Types_Plugin {
 					$speakers = get_posts( array(
 						'post_type'      => 'wcb_speaker',
 						'posts_per_page' => -1,
+						'post_status'    => 'publish',
+						'has_password'   => false,
 						'post__in'       => $speakers_ids,
 					) );
 				}
@@ -814,7 +816,13 @@ class WordCamp_Post_Types_Plugin {
 	 * @return bool
 	 */
 	protected function should_add_to_content( $post_type ) {
+		/*
+		 * The main query being a single CPT post is not enough: `the_content` also
+		 * runs for the entries a listing widget renders on that page, and those
+		 * widgets cache their markup. Add only to the post being viewed.
+		 */
 		return $this->is_single_cpt_post( $post_type )
+			&& get_the_ID() === get_queried_object_id()
 			&& ! site_supports_block_templates()
 			&& ! post_password_required( get_post() );
 	}

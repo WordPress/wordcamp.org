@@ -4,12 +4,11 @@
  * A one-time migration, to be deleted once it has been run across the network.
  *
  * `sponsor-agreements.php` handles agreements from the moment they're attached. Files attached before it
- * existed keep the status and the name they already had, because writing the same meta value back fires no
- * hook. This brings those into line, and then has no further purpose.
+ * existed keep the status they already had, because writing the same meta value back fires no hook. This
+ * gives them that status, and then has no further purpose.
  *
  * Self-contained on purpose: everything here goes when the file does, apart from the two lines that load it
- * in `bootstrap.php`. The pieces that outlive the migration -- `make_agreement_private()` and
- * `add_csprn_to_filename()` -- stay in `sponsor-agreements.php` and are called from here.
+ * in `bootstrap.php`. `make_agreement_private()` outlives it, in `sponsor-agreements.php`.
  */
 
 namespace WordCamp\Sponsor_Agreements\Backfill;
@@ -18,7 +17,6 @@ use WP_CLI, WP_CLI_Command;
 
 use function WP_CLI\Utils\format_items;
 
-use function WordCamp\Sponsor_Agreements\add_csprn_to_filename;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
 
 defined( 'WPINC' ) || die();
@@ -69,193 +67,6 @@ function get_public_agreement_ids( $blog_id = null ) {
 	return array_map( 'absint', $agreement_ids );
 }
 
-/**
- * Rename an agreement that's already on disk, so that it matches what new uploads get.
- *
- * Nothing links to an agreement by URL -- both plugins hold an attachment ID and resolve it through
- * `wp_get_attachment_url()` -- so the new name reaches every reader.
- *
- * Every file Core derives from the upload moves with it, under one new base name:
- *
- * - the generated sizes, which for a PDF are renderings of the first page and for an image are copies of
- *   it at up to 2048px;
- * - the full-size original, when Core scaled the upload down. `_wp_attached_file` then points at the
- *   `-scaled` copy while `original_image` holds the name the sizes are derived from, so that -- not the
- *   attached file -- is what the new base is built from.
- *
- * Only ever called for the site the process was started on, because `ms_upload_constants()` defines
- * `UPLOADS` for whichever site that was -- see `backfill()`.
- *
- * The `guid` is deliberately left alone. It's an identifier rather than the URL anything is served from,
- * and Core's rule is that it doesn't change once a post has one.
- *
- * @param int $attachment_id
- *
- * @return array {
- *     What happened on disk. The metadata always names whatever each file ended up being called.
- *
- *     @type int $renamed     Files moved.
- *     @type int $left_behind Files still under the name they had.
- * }
- */
-function rename_agreement_file( $attachment_id ) {
-	$outcome       = array(
-		'renamed'     => 0,
-		'left_behind' => 0,
-	);
-	$attached_path = get_attached_file( $attachment_id );
-
-	if ( ! $attached_path || ! is_file( $attached_path ) ) {
-		return $outcome;
-	}
-
-	$directory = dirname( $attached_path );
-	$metadata  = wp_get_attachment_metadata( $attachment_id );
-	$metadata  = is_array( $metadata ) ? $metadata : array();
-
-	$old_base     = empty( $metadata['original_image'] ) ? wp_basename( $attached_path ) : $metadata['original_image'];
-	$extension    = pathinfo( $old_base, PATHINFO_EXTENSION );
-	$extension    = $extension ? '.' . $extension : '';
-	$new_base     = wp_unique_filename( $directory, add_csprn_to_filename( $old_base, $extension ) );
-	$old_base     = substr( $old_base, 0, strlen( $old_base ) - strlen( $extension ) );
-	$new_base     = substr( $new_base, 0, strlen( $new_base ) - strlen( $extension ) );
-	$already_done = array();
-
-	/**
-	 * Move one of the attachment's files, and answer to what it's now called.
-	 *
-	 * Two sizes can name the same file -- a theme registering a size Core already generates -- so the
-	 * second time one comes round it has already been dealt with. The cache is what keeps its metadata in
-	 * step with the first one's, and what keeps one file from being counted twice.
-	 *
-	 * @param string $name
-	 *
-	 * @return string
-	 */
-	$move = function ( $name ) use ( $directory, $old_base, $new_base, $extension, &$already_done, &$outcome ) {
-		if ( isset( $already_done[ $name ] ) ) {
-			return $already_done[ $name ];
-		}
-
-		$source = $directory . '/' . $name;
-
-		/*
-		 * Core names a derivative `<base>-<width>x<height>.<ext>` or `<base>-scaled.<ext>`, so the
-		 * separator is what tells `photo-150x150.jpg` from `photobooth-150x150.jpg`. Without it the
-		 * second would be rebased into `photo-<random>booth-150x150.jpg`, splicing the name rather than
-		 * replacing what it starts with.
-		 */
-		$derived = $name === $old_base . $extension || str_starts_with( $name, $old_base . '-' );
-
-		if ( ! $derived ) {
-			// Not this attachment's to rename. Count it only if there's a file there to be concerned with.
-			$outcome['left_behind'] += is_file( $source ) ? 1 : 0;
-			$already_done[ $name ]   = $name;
-
-			return $name;
-		}
-
-		$new_name = $new_base . substr( $name, strlen( $old_base ) );
-
-		// A name in the metadata with no file behind it was already stale, and moves nothing either way.
-		if ( ! is_file( $source ) ) {
-			$already_done[ $name ] = $name;
-
-			return $name;
-		}
-
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- WP_Filesystem needs credentials this can't ask for, and a failure is reported rather than fatal.
-		if ( ! @rename( $source, $directory . '/' . $new_name ) ) {
-			++$outcome['left_behind'];
-			$already_done[ $name ] = $name;
-
-			return $name;
-		}
-
-		++$outcome['renamed'];
-		$already_done[ $name ] = $new_name;
-
-		return $new_name;
-	};
-
-	$attached_name = wp_basename( $attached_path );
-	$new_attached  = $move( $attached_name );
-
-	/*
-	 * Carry on when the attached file itself wouldn't move. Everything else is named from `$old_base`
-	 * rather than from it, so those can still go -- and whether they went or not is the whole of what the
-	 * count is for.
-	 */
-	if ( ! empty( $metadata['original_image'] ) ) {
-		$metadata['original_image'] = $move( $metadata['original_image'] );
-	}
-
-	foreach ( $metadata['sizes'] ?? array() as $size => $details ) {
-		if ( empty( $details['file'] ) ) {
-			continue;
-		}
-
-		$metadata['sizes'][ $size ]['file'] = $move( $details['file'] );
-	}
-
-	if ( ! empty( $metadata['file'] ) ) {
-		$path_prefix      = str_contains( $metadata['file'], '/' ) ? dirname( $metadata['file'] ) . '/' : '';
-		$metadata['file'] = $path_prefix . $new_attached;
-	}
-
-	if ( $metadata ) {
-		wp_update_attachment_metadata( $attachment_id, $metadata );
-	}
-
-	if ( $new_attached !== $attached_name ) {
-		update_attached_file( $attachment_id, $directory . '/' . $new_attached );
-	}
-
-	return $outcome;
-}
-
-
-/**
- * Say how a rename went, for the report.
- *
- * An attachment is rarely one file: a scaled photo leaves the full-size original beside it, and every
- * registered size is another copy. The count is what says whether they all moved, since the `File` column
- * can only name one of them.
- *
- * @param array $outcome     As returned by `rename_agreement_file()`.
- * @param bool  $dry_run
- * @param bool  $skip_rename
- *
- * @return string
- */
-function describe_rename( $outcome, $dry_run, $skip_rename ) {
-	$renamed     = $outcome['renamed'] ?? 0;
-	$left_behind = $outcome['left_behind'] ?? 0;
-
-	if ( $skip_rename ) {
-		return 'skipped';
-	}
-
-	if ( $dry_run ) {
-		return 'pending';
-	}
-
-	/*
-	 * Nothing either way means `rename_agreement_file()` returned before it started, which it only does
-	 * when `_wp_attached_file` names a file that isn't there.
-	 */
-	if ( ! $renamed && ! $left_behind ) {
-		return 'file missing';
-	}
-
-	if ( $left_behind ) {
-		return sprintf( '%d moved, %d left', $renamed, $left_behind );
-	}
-
-	return sprintf( '%d %s', $renamed, 1 === $renamed ? 'file' : 'files' );
-}
-
-
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	return;
 }
@@ -269,7 +80,7 @@ class Command extends WP_CLI_Command {
 	 *
 	 * Named in one place so that the rows, the rendered report and the empty-set report can't drift apart.
 	 */
-	const REPORT_COLUMNS = array( 'Attachment', 'File', 'Private', 'Renamed' );
+	const REPORT_COLUMNS = array( 'Attachment', 'File', 'Private' );
 
 	/**
 	 * Report which sites have agreements left to migrate.
@@ -302,15 +113,27 @@ class Command extends WP_CLI_Command {
 	public function scan( $args, $assoc_args ) {
 		global $wpdb;
 
-		$verbose = isset( $assoc_args['verbose'] );
-		$sites   = $wpdb->get_results( "SELECT blog_id, domain, path FROM {$wpdb->blogs} ORDER BY blog_id" );
-		$found   = 0;
+		$verbose  = isset( $assoc_args['verbose'] );
+		$sites    = $wpdb->get_results( "SELECT blog_id, domain, path FROM {$wpdb->blogs} ORDER BY blog_id" );
+		$found    = 0;
+		$unusable = array();
 
 		// A site whose tables have gone is a broken row, not a reason to stop part-way through a network.
-		$wpdb->suppress_errors( true );
+		$was_suppressing = $wpdb->suppress_errors( true );
 
 		foreach ( $sites as $site ) {
 			$agreement_ids = get_public_agreement_ids( $site->blog_id );
+
+			/*
+			 * `get_col()` answers an empty array whether the site has nothing or the query failed, so a
+			 * site whose tables are missing would otherwise be counted as clean and never reach the pipe.
+			 */
+			if ( $wpdb->last_error ) {
+				$unusable[]       = $site->domain . $site->path;
+				$wpdb->last_error = '';
+
+				continue;
+			}
 
 			if ( ! $agreement_ids ) {
 				continue;
@@ -331,7 +154,15 @@ class Command extends WP_CLI_Command {
 			}
 		}
 
-		$wpdb->suppress_errors( false );
+		$wpdb->suppress_errors( $was_suppressing );
+
+		if ( $unusable ) {
+			WP_CLI::warning( sprintf(
+				'%d sites could not be read, and are not in the list above: %s.',
+				count( $unusable ),
+				implode( ', ', array_slice( $unusable, 0, 10 ) ) . ( count( $unusable ) > 10 ? ', ...' : '' )
+			) );
+		}
 
 		if ( $verbose ) {
 			WP_CLI::warning( sprintf( '%d of %d sites have agreements to migrate.', $found, count( $sites ) ) );
@@ -341,13 +172,9 @@ class Command extends WP_CLI_Command {
 	/**
 	 * Migrate the agreements on one site.
 	 *
-	 * Gives them the `private` status and the file name that new agreements get as they're attached.
-	 * Nothing links to an agreement by URL -- both plugins hold an attachment ID and resolve it through
+	 * Gives them the `private` status that new agreements get as they're attached. Nothing links to an
+	 * agreement by URL -- both plugins hold an attachment ID and resolve it through
 	 * `wp_get_attachment_url()` -- so organizers keep the access they have.
-	 *
-	 * One site per run, and it has to be: `ms_upload_constants()` defines `UPLOADS` for whichever site was
-	 * current at bootstrap, so a `switch_to_blog()` loop would resolve every other site's files against
-	 * the wrong directory and silently rename nothing. Use `scan` to find the sites that need this.
 	 *
 	 * Safe to re-run: a site with nothing outstanding does one query and stops.
 	 *
@@ -355,9 +182,6 @@ class Command extends WP_CLI_Command {
 	 *
 	 * [--dry-run]
 	 * : Report what would change, without changing it.
-	 *
-	 * [--skip-rename]
-	 * : Set the status, but leave the files under the names they have.
 	 *
 	 * [--format=<format>]
 	 * : Render the report in this format.
@@ -380,40 +204,23 @@ class Command extends WP_CLI_Command {
 	 */
 	public function backfill( $args, $assoc_args ) {
 		$dry_run       = isset( $assoc_args['dry-run'] );
-		$skip_rename   = isset( $assoc_args['skip-rename'] );
 		$format        = $assoc_args['format'] ?? 'table';
 		$agreement_ids = get_public_agreement_ids();
 		$results       = array();
 		$unfinished    = array();
-		$untouched     = array(
-			'renamed'     => 0,
-			'left_behind' => 0,
-		);
 
 		foreach ( $agreement_ids as $agreement_id ) {
-			if ( $dry_run ) {
-				$migrated = true;
-				$outcome  = $untouched;
-			} else {
-				$migrated = make_agreement_private( $agreement_id );
-				$outcome  = $skip_rename ? $untouched : rename_agreement_file( $agreement_id );
-			}
+			// `get_public_agreement_ids()` only returns `inherit` rows, so a `false` here is a failed write.
+			$migrated = $dry_run ? true : make_agreement_private( $agreement_id );
 
-			/*
-			 * Anything short of "every file moved" needs saying, and that includes the attachment whose
-			 * file was already gone -- it moved nothing, but it also isn't finished.
-			 */
-			if ( ! $dry_run && ! $skip_rename && ( $outcome['left_behind'] || ! $outcome['renamed'] ) ) {
+			if ( ! $migrated ) {
 				$unfinished[] = $agreement_id;
 			}
 
 			$results[] = array(
 				'Attachment' => $agreement_id,
-
-				// Read after the fact, so that the column names the file as it now stands on disk.
 				'File'       => wp_basename( (string) get_attached_file( $agreement_id ) ),
 				'Private'    => $migrated ? 'yes' : 'no',
-				'Renamed'    => describe_rename( $outcome, $dry_run, $skip_rename ),
 			);
 		}
 
@@ -423,7 +230,7 @@ class Command extends WP_CLI_Command {
 				format_items( $format, array(), self::REPORT_COLUMNS );
 			}
 
-			$this->summarize( 'success', 'No sponsor agreements left to migrate.', $format );
+			$this->summarize( 'success', sprintf( 'No sponsor agreements left to migrate on %s.', home_url() ), $format );
 
 			return;
 		}
@@ -431,6 +238,7 @@ class Command extends WP_CLI_Command {
 		// Blank lines frame the table for a person, and corrupt every other format.
 		if ( 'table' === $format ) {
 			WP_CLI::line();
+			WP_CLI::line( home_url() );
 		}
 
 		format_items( $format, $results, self::REPORT_COLUMNS );
@@ -440,17 +248,20 @@ class Command extends WP_CLI_Command {
 		}
 
 		if ( $dry_run ) {
-			$this->summarize( 'success', sprintf( '%d agreements would be migrated. Run without --dry-run to apply.', count( $results ) ), $format );
+			$message = sprintf( '%d agreements would be migrated on %s. Run without --dry-run to apply.', count( $results ), home_url() );
+
+			$this->summarize( 'success', $message, $format );
 		} elseif ( $unfinished ) {
 			$message = sprintf(
-				'%d of %d agreements are unfinished; the Renamed column says what happened to each.',
+				'%d of %d agreements on %s could not be given the private status.',
 				count( $unfinished ),
-				count( $results )
+				count( $results ),
+				home_url()
 			);
 
 			$this->summarize( 'warning', $message, $format );
 		} else {
-			$this->summarize( 'success', sprintf( '%d agreements processed.', count( $results ) ), $format );
+			$this->summarize( 'success', sprintf( '%d agreements processed on %s.', count( $results ), home_url() ), $format );
 		}
 	}
 

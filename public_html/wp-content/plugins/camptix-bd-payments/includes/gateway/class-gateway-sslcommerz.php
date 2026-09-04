@@ -114,6 +114,9 @@ class SSLCommerz extends Base_Gateway {
 					'min_amount'  => $min_amount,
 				]
 			);
+			$camptix->error(
+				__( 'The total is below the minimum amount this payment method accepts.', 'bd-payments-camptix' )
+			);
 			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
@@ -374,12 +377,11 @@ class SSLCommerz extends Base_Gateway {
 		) {
 			// Retrieve the temporary cookie with the POST'd transaction data.
 			$transaction_data = json_decode( wp_unslash( $_COOKIE[ $this->id . '_postdata' ] ), true );
-			$attendee_id      = $this->get_attendee_id_for_log( $_REQUEST['tix_payment_token'] ?? '' );
 
 			if (
 				is_array( $transaction_data ) &&
 				'GET' === $_SERVER['REQUEST_METHOD'] &&
-				$this->ipn_hash_verify( $this->options['store_password'], $transaction_data, $attendee_id )
+				$this->ipn_hash_verify( $this->options['store_password'], $transaction_data )
 			) {
 				// Merge the POST data into the request so that payment_notify() can use it.
 				$_REQUEST = array_merge( $_REQUEST, $transaction_data );
@@ -405,8 +407,7 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		// Set a temporary cookie with the POST'd transaction data, which we'll use on the GET request.
-		$attendee_id = $this->get_attendee_id_for_log( $_REQUEST['tix_payment_token'] ?? '' );
-		if ( $this->ipn_hash_verify( $this->options['store_password'], $_POST, $attendee_id ) ) {
+		if ( $this->ipn_hash_verify( $this->options['store_password'], $_POST ) ) {
 			$cookie_data = wp_json_encode( $_POST );
 			setcookie( $this->id . '_postdata', $cookie_data, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 		}
@@ -489,7 +490,7 @@ class SSLCommerz extends Base_Gateway {
 			'transaction_details' => $this->prepare_sslcommerz_transaction_details( $transaction_data ),
 		];
 
-		if ( $this->ipn_hash_verify( $this->options['store_password'], $transaction_data, $attendee_id ) ) {
+		if ( $this->ipn_hash_verify( $this->options['store_password'], $transaction_data ) ) {
 
 			// Bind the signed POST body to the URL-supplied payment_token. The IPN signature
 			// only covers fields named in verify_key, which does not include tix_payment_token,
@@ -881,13 +882,12 @@ class SSLCommerz extends Base_Gateway {
 	/**
 	 * Verify IPN hash
 	 *
-	 * @param string   $store_passwd The store password.
-	 * @param array    $data         The data to validate.
-	 * @param int|null $post_id       Attendee post ID used as log context.
+	 * @param string $store_passwd The store password.
+	 * @param array  $data         The data to validate.
 	 *
 	 * @return boolean
 	 */
-	protected function ipn_hash_verify( $store_passwd, $data, $post_id = null ) {
+	protected function ipn_hash_verify( $store_passwd, $data ) {
 		if ( ! isset( $data['verify_sign'], $data['verify_key'] ) ) {
 			return false;
 		}
@@ -915,20 +915,7 @@ class SSLCommerz extends Base_Gateway {
 		$hash_string = rtrim( $hash_string, '&' );
 		$hash_string = md5( $hash_string );
 
-		$result = hash_equals( $hash_string, $data['verify_sign'] );
-
-		if ( ! $result ) {
-			global $camptix;
-			$camptix->log(
-				'SSLCommerz IPN hash mismatch.',
-				$post_id,
-				[
-					'keys_hashed' => array_values( array_diff( array_keys( $new_data ), [ 'store_passwd' ] ) ),
-				]
-			);
-		}
-
-		return $result;
+		return hash_equals( $hash_string, $data['verify_sign'] );
 	}
 
 	/**

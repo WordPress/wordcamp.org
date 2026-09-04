@@ -186,4 +186,34 @@ class Test_Schedule_Shortcode extends WP_UnitTestCase {
 			'unlinked names' => array( 'none' ),
 		);
 	}
+
+	/**
+	 * A private session is left out of the grid whoever renders it. `[schedule]`
+	 * is not cached itself, but authored into a widgetised bio it renders into a
+	 * fragment the listing widgets serve to every visitor.
+	 *
+	 * @covers WordCamp_Post_Types_Plugin::shortcode_schedule
+	 */
+	public function test_private_session_is_omitted_for_an_administrator(): void {
+		$private_id = self::factory()->post->create( array(
+			'post_type'  => 'wcb_session',
+			'post_status' => 'private',
+			'post_title' => 'Unannounced Keynote',
+			'meta_input' => array(
+				'_wcpt_session_time' => 1786788000,
+				'_wcpt_session_type' => 'session',
+			),
+		) );
+		wp_set_object_terms( $private_id, array( self::$track_id ), 'wcb_track' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$html = $this->render_schedule();
+
+		$this->assertStringContainsString( 'Opening', $html );
+		$this->assertStringNotContainsString( 'Unannounced Keynote', $html );
+
+		wp_set_current_user( 0 );
+		wp_delete_post( $private_id, true );
+	}
 }

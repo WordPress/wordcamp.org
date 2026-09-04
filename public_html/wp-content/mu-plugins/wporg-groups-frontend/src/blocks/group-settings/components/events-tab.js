@@ -9,6 +9,7 @@
 
 import {
 	createElement as h,
+	Fragment,
 	useState,
 	useEffect,
 	useRef,
@@ -16,398 +17,116 @@ import {
 import {
 	Button,
 	Spinner,
-	Notice,
-	TextControl,
 	FormTokenField,
-	SelectControl,
-	ToggleControl,
 } from '@wordpress/components';
-import {
-	BlockEditorProvider,
-	BlockList,
-	BlockToolbar,
-	WritingFlow,
-	ObserveTyping,
-	BlockTools,
-	store as blockEditorStore,
-} from '@wordpress/block-editor';
-import { useDispatch } from '@wordpress/data';
-import { registerCoreBlocks } from '@wordpress/block-library';
-import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
-import { __, _x } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
+
+/**
+ * Internal dependencies.
+ */
 import VenueEditor from '../../event-manage/venue-editor';
-import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
-import RsvpQuestionsEditor from '../../event-manage/rsvp-questions-editor';
+import EventForm, { NS } from '../../../components/event-form/event-form';
 
-const NS =
-	( window.wporgGroupsEventModal &&
-		window.wporgGroupsEventModal.restNamespace ) ||
-	'wporg-groups/v1';
-const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
-
-let coreBlocksRegistered = false;
-
-function ensureCoreBlocksRegistered() {
-	if ( ! coreBlocksRegistered ) {
-		registerCoreBlocks();
-		coreBlocksRegistered = true;
-	}
-}
-
-// === Duration helpers ===
-
-const DURATION_OPTIONS = [
-	{ label: __( '30 minutes', 'wporg-groups-frontend' ), value: '30' },
-	{ label: __( '1 hour', 'wporg-groups-frontend' ), value: '60' },
-	{ label: __( '1.5 hours', 'wporg-groups-frontend' ), value: '90' },
-	{ label: __( '2 hours', 'wporg-groups-frontend' ), value: '120' },
-	{ label: __( '2.5 hours', 'wporg-groups-frontend' ), value: '150' },
-	{ label: __( '3 hours', 'wporg-groups-frontend' ), value: '180' },
-	{ label: __( 'Custom', 'wporg-groups-frontend' ), value: 'custom' },
-];
-
-function addMinutesToTime( time, minutes ) {
-	if ( ! time ) return '';
-	const [ hr, min ] = time.split( ':' ).map( Number );
-	const total = hr * 60 + min + minutes;
-	return String( Math.floor( total / 60 ) % 24 ).padStart( 2, '0' ) + ':' + String( total % 60 ).padStart( 2, '0' );
-}
-
-function getMinutesBetween( start, end ) {
-	if ( ! start || ! end ) return 0;
-	const [ sh, sm ] = start.split( ':' ).map( Number );
-	const [ eh, em ] = end.split( ':' ).map( Number );
-	let diff = ( eh * 60 + em ) - ( sh * 60 + sm );
-	if ( diff < 0 ) diff += 24 * 60;
-	return diff;
-}
-
-// === Sub-components ===
-
-// `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
-// registry, so this dispatch only reaches it from a component rendered
-// *inside* the provider — a sibling effect would select a block in the
-// wrong (default) store and `BlockToolbar` would never see it.
-function SelectFirstBlockOnMount( { clientId } ) {
-	const { selectBlock } = useDispatch( blockEditorStore );
-
-	useEffect( () => {
-		if ( clientId ) {
-			// `null` (instead of the default `0`) selects the block
-			// without also moving real DOM focus into it — see
-			// `useFocusFirstElement` in `@wordpress/block-editor`. We only
-			// need the toolbar to appear, not to steal focus from the
-			// modal on open.
-			selectBlock( clientId, null );
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [] );
-
-	return null;
-}
-
-function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
-	// A description with no supported blocks (empty string, or markup that
-	// doesn't parse into anything) yields `[]`, leaving no block to select
-	// and the toolbar permanently empty — fall back to an empty paragraph
-	// so there's always a first block.
-	const [ blocks, setBlocks ] = useState( () => {
-		const parsed = parse( initialValue || '' );
-		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
-	} );
-	if ( getValueRef ) getValueRef.current = () => serialize( blocks );
-
-	const handleChange = ( newBlocks ) => {
-		setBlocks( newBlocks );
-		if ( onDirty ) onDirty();
-	};
-	return h( 'div', { className: 'wporg-event-form__editor' },
-		h( BlockEditorProvider, {
-			value: blocks, onInput: handleChange, onChange: handleChange,
-			settings: { hasFixedToolbar: true },
-		},
-			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),
-			h( 'div', { className: 'wporg-event-form__editor-toolbar' },
-				h( BlockToolbar, { hideDragHandle: true } ) ),
-			h( BlockTools, {},
-				h( WritingFlow, {},
-					h( ObserveTyping, {}, h( BlockList ) ) ) )
-		)
-	);
-}
-
-function FeaturedImagePicker( { imageId, imageUrl, onChange } ) {
-	const openPicker = () => {
-		const frame = wp.media( {
-			title: __( 'Choose featured image', 'wporg-groups-frontend' ),
-			button: { text: __( 'Set featured image', 'wporg-groups-frontend' ) },
-			multiple: false,
-		} );
-		frame.on( 'select', () => {
-			const att = frame.state().get( 'selection' ).first().toJSON();
-			onChange( att.id, att.sizes?.medium?.url || att.url );
-		} );
-		frame.open();
-	};
-	if ( imageUrl ) {
-		return h( 'div', { className: 'wporg-event-form__featured' },
-			h( 'div', { className: 'wporg-event-form__featured-preview' },
-				h( 'img', { src: imageUrl, alt: '' } ),
-				h( 'div', { className: 'wporg-event-form__featured-actions' },
-					h( Button, { variant: 'secondary', isSmall: true, onClick: openPicker }, __( 'Replace', 'wporg-groups-frontend' ) ),
-					h( Button, { variant: 'tertiary', isSmall: true, isDestructive: true, onClick: () => onChange( 0, '' ) }, __( 'Remove', 'wporg-groups-frontend' ) )
-				)
-			)
-		);
-	}
-	return h( Button, { variant: 'secondary', onClick: openPicker }, __( 'Choose featured image', 'wporg-groups-frontend' ) );
-}
-
-function DurationField( { timeStart, timeEnd, onChange } ) {
-	const minutes = getMinutesBetween( timeStart, timeEnd );
-	const known = DURATION_OPTIONS.find( ( o ) => o.value !== 'custom' && Number( o.value ) === minutes );
-	const [ isCustom, setIsCustom ] = useState( ! known && !! timeEnd );
-	const selected = isCustom ? 'custom' : ( known ? String( minutes ) : '' );
-	return h( 'div', { className: 'wporg-event-form__field' },
-		h( SelectControl, {
-			label: __( 'Duration', 'wporg-groups-frontend' ), value: selected,
-			options: [ { label: '—', value: '' } ].concat( DURATION_OPTIONS ),
-			onChange: ( v ) => {
-				if ( v === 'custom' ) setIsCustom( true );
-				else if ( v ) { setIsCustom( false ); onChange( addMinutesToTime( timeStart, Number( v ) ) ); }
-			},
-			__nextHasNoMarginBottom: true,
-		} ),
-		isCustom && h( TextControl, {
-			label: __( 'End time', 'wporg-groups-frontend' ), type: 'time',
-			value: timeEnd, onChange, required: true, __nextHasNoMarginBottom: true,
-		} )
-	);
-}
-
-function VenueField( { venues, venueId, onSelect, onOpenEditor } ) {
-	const options = [
-		{ label: __( '— No venue —', 'wporg-groups-frontend' ), value: '' },
-	].concat(
-		( venues || [] ).map( ( v ) => ( { label: v.name, value: String( v.id ) } ) )
-	).concat( [
-		{ label: __( '+ Add a new venue', 'wporg-groups-frontend' ), value: '__new__' },
-	] );
-	return h( 'div', { className: 'wporg-event-form__field' },
-		h( SelectControl, {
-			label: __( 'Venue', 'wporg-groups-frontend' ), value: venueId ? String( venueId ) : '',
-			options, onChange: ( v ) => v === '__new__' ? onOpenEditor( 0 ) : onSelect( v ),
-			__nextHasNoMarginBottom: true,
-		} ),
-		venueId && venueId !== '__new__' &&
-			h( Button, { variant: 'link', onClick: () => onOpenEditor( parseInt( venueId, 10 ) ), className: 'wporg-event-form__edit-venue' },
-				__( 'Edit venue', 'wporg-groups-frontend' ) )
-	);
-}
 
 // === Event Form (inline) ===
 
-function EventForm( { eventId, onDone, onCancel } ) {
+function InlineEventForm( { eventId, onDone, onCancel } ) {
 	const isEdit = !! eventId;
-	const [ loading, setLoading ] = useState( true );
-	const [ saving, setSaving ] = useState( false );
-	const [ error, setError ] = useState( '' );
-	const [ form, setForm ] = useState( {
-		title: '',
-		date: '',
-		time_start: '',
-		time_end: '',
-		venue_select: '',
-		is_online: false,
-		online_event_link: '',
-		rsvp_questions: [],
-	} );
-	const [ initialDescription, setInitialDescription ] = useState( '' );
-	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
-	const [ recurrence, setRecurrence ] = useState( null );
-	const [ venues, setVenues ] = useState( [] );
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
-	const [ speakers, setSpeakers ] = useState( [] );
+	// null until loaded, so a save can't overwrite speakers with an empty list.
+	const [ speakers, setSpeakers ] = useState( null );
 	const [ memberOptions, setMemberOptions ] = useState( [] );
-	const descRef = useRef( { current: () => '' } );
+	const formRef = useRef( null );
 
-	const updateField = ( field, value ) => setForm( ( prev ) => ( { ...prev, [ field ]: value } ) );
-
+	// Load speakers for this event and member list for autocomplete.
 	useEffect( () => {
-		ensureCoreBlocksRegistered();
-		const params = eventId ? `?event_id=${ eventId }` : '';
-		apiFetch( { path: `/${ NS }/event-form-data${ params }` } )
-			.then( ( res ) => {
-				setForm( {
-					title: res.fields.title || '',
-					date: res.fields.date || '',
-					time_start: res.fields.time_start || '',
-					time_end: res.fields.time_end || '',
-					venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
-					is_online: !! res.fields.is_online,
-					online_event_link: res.fields.online_event_link || '',
-					rsvp_questions: res.fields.rsvp_questions || [],
-				} );
-				setInitialDescription( res.fields.description || '' );
-				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
-				setRecurrence( normalizeRecurrence( res.fields.recurrence ) );
-				setVenues( res.venues || [] );
-
-				// Load speakers for this event and member list for autocomplete.
-				Promise.all( [
-					eventId
-						? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?_fields=meta` } )
-							.then( ( ev ) => ev.meta?._event_speakers || [] )
-							.catch( () => [] )
-						: Promise.resolve( [] ),
-					apiFetch( { path: '/wporg-groups/v1/members?per_page=200' } )
-						.catch( () => [] ),
-				] ).then( ( [ speakerIds, members ] ) => {
-					setSpeakers( speakerIds );
-					setMemberOptions( members );
-					setLoading( false );
-				} );
-			} )
-			.catch( () => { setError( __( 'Could not load form data.', 'wporg-groups-frontend' ) ); setLoading( false ); } );
+		Promise.all( [
+			eventId
+				? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?_fields=meta` } )
+					.then( ( ev ) => ev.meta?._event_speakers || [] )
+					.catch( () => [] )
+				: Promise.resolve( [] ),
+			apiFetch( { path: `/${ NS }/members?per_page=200` } )
+				.catch( () => [] ),
+		] ).then( ( [ speakerIds, members ] ) => {
+			setSpeakers( speakerIds );
+			setMemberOptions( members );
+		} );
 	}, [ eventId ] );
 
-	if ( loading ) return h( 'div', { className: 'wporg-settings-tab__loading' }, h( Spinner ) );
+	const submitPayload = async ( payload ) => {
+		const result = await apiFetch( {
+			path: isEdit ? `/${ NS }/event/${ eventId }` : `/${ NS }/event`,
+			method: 'POST',
+			data: payload,
+		} );
 
-	if ( venueEditorId !== null ) {
-		return h( 'div', { className: 'wporg-settings-tab' },
+		// Save speakers meta.
+		if ( result.id && speakers ) {
+			await apiFetch( {
+				path: `/wp/v2/gatherpress_events/${ result.id }`,
+				method: 'POST',
+				data: { meta: { _event_speakers: speakers } },
+			} ).catch( () => {} );
+		}
+
+		if ( result.permalink ) {
+			window.location.href = result.permalink;
+		} else {
+			onDone();
+		}
+	};
+
+	const venueEditorOpen = venueEditorId !== null;
+
+	// The venue editor is a sibling, not a replacement, so the form (and the
+	// description editor's block state) stays mounted while it's open.
+	return h( Fragment, {},
+		venueEditorOpen && h( 'div', { className: 'wporg-settings-tab' },
 			h( VenueEditor, {
 				venueId: venueEditorId, inline: true,
 				onSave: ( saved ) => {
 					setVenueEditorId( null );
-					updateField( 'venue_select', String( saved.id ) );
-					setVenues( ( prev ) => {
-						const exists = prev.find( ( v ) => v.id === saved.id );
-						if ( exists ) return prev.map( ( v ) => v.id === saved.id ? { ...v, name: saved.name } : v );
-						return [ ...prev, { id: saved.id, name: saved.name } ];
-					} );
+					formRef.current.selectVenue( saved );
 				},
 				onCancel: () => setVenueEditorId( null ),
 			} )
-		);
-	}
-
-	const onSubmit = async ( ev ) => {
-		ev.preventDefault();
-		setError( '' );
-		setSaving( true );
-		const description = descRef.current ? descRef.current() : '';
-		try {
-			const result = await apiFetch( {
-				path: isEdit ? `/${ NS }/event/${ eventId }` : `/${ NS }/event`,
-				method: 'POST',
-				data: {
-					title: form.title, description, date: form.date,
-					time_start: form.time_start, time_end: form.time_end,
-					venue_id: parseInt( form.venue_select, 10 ) || 0,
-					is_online: form.is_online,
-					online_event_link: form.is_online ? form.online_event_link : '',
-					featured_image_id: featuredImage.id,
-					// Recurrence is locked (uneditable) once an event is published,
-					// so editing an existing event never needs to resend it — and
-					// must not send `null`, which fails the endpoint's object schema.
-					...( isEdit ? {} : { recurrence } ),
-					// Blank-labelled rows are an empty slot the organizer added
-					// and never filled in; the server drops them too.
-					rsvp_questions: ( form.rsvp_questions || [] ).filter( ( question ) => question.label.trim() !== '' ),
-				},
-			} );
-
-			// Save speakers meta.
-			if ( result.id ) {
-				await apiFetch( {
-					path: `/wp/v2/gatherpress_events/${ result.id }`,
-					method: 'POST',
-					data: { meta: { _event_speakers: speakers } },
-				} ).catch( () => {} );
-			}
-
-			if ( result.permalink ) {
-				window.location.href = result.permalink;
-			} else {
-				onDone();
-			}
-		} catch ( err ) {
-			setError( err.message || __( 'Could not save event.', 'wporg-groups-frontend' ) );
-			setSaving( false );
-		}
-	};
-
-	return h( 'form', { onSubmit, className: 'wporg-event-form' },
-		h( 'div', { className: 'wporg-event-form__header' },
-			h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
 		),
-		error && h( Notice, { status: 'error', isDismissible: false }, error ),
-		h( TextControl, { label: __( 'Event title', 'wporg-groups-frontend' ), value: form.title, onChange: ( v ) => updateField( 'title', v ), required: true, __nextHasNoMarginBottom: true } ),
-		h( 'div', { className: 'wporg-event-form__field' },
-			h( 'label', { className: 'wporg-event-form__label' }, __( 'Description', 'wporg-groups-frontend' ) ),
-			h( DescriptionEditor, { initialValue: initialDescription, getValueRef: descRef } ) ),
-		h( 'div', { className: 'wporg-event-form__field' },
-			h( 'label', { className: 'wporg-event-form__label' }, __( 'Featured image', 'wporg-groups-frontend' ) ),
-			h( FeaturedImagePicker, { imageId: featuredImage.id, imageUrl: featuredImage.url, onChange: ( id, url ) => setFeaturedImage( { id, url } ) } ) ),
-		h( 'div', { className: 'wporg-event-form__row' },
-			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, min: isEdit ? undefined : MINIMUM_EVENT_DATE, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
-			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
-			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
-		h( RecurrenceControls, {
-			value: recurrence,
-			eventDate: form.date,
-			onChange: setRecurrence,
-		} ),
-		h( VenueField, {
-			venues, venueId: form.venue_select,
-			onSelect: ( v ) => updateField( 'venue_select', v ),
-			onOpenEditor: ( id ) => setVenueEditorId( id ),
-		} ),
-		h( 'div', { className: 'wporg-event-form__online-event' },
-			h( ToggleControl, {
-				label: __( 'This is an online event', 'wporg-groups-frontend' ),
-				checked: form.is_online,
-				onChange: ( value ) => updateField( 'is_online', value ),
-				__nextHasNoMarginBottom: true,
-			} ),
-			form.is_online && h( TextControl, {
-				label: __( 'Online event link', 'wporg-groups-frontend' ),
-				type: 'url',
-				value: form.online_event_link,
-				onChange: ( value ) => updateField( 'online_event_link', value ),
-				placeholder: 'https://',
-				required: true,
-				__nextHasNoMarginBottom: true,
-			} )
-		),
-		h( RsvpQuestionsEditor, {
-			questions: form.rsvp_questions,
-			onChange: ( value ) => updateField( 'rsvp_questions', value ),
-		} ),
-		h( 'div', { className: 'wporg-event-form__field' },
-			h( FormTokenField, {
-				label: __( 'Speakers', 'wporg-groups-frontend' ),
-				value: speakers.map( ( id ) => {
-					const member = memberOptions.find( ( m ) => m.id === id );
-					return member ? member.name : String( id );
-				} ),
-				suggestions: memberOptions.map( ( m ) => m.name ),
-				onChange: ( tokens ) => {
-					const ids = tokens.map( ( token ) => {
-						const member = memberOptions.find( ( m ) => m.name === token );
-						return member ? member.id : null;
-					} ).filter( Boolean );
-					setSpeakers( ids );
-				},
-				__experimentalExpandOnFocus: true,
-				__nextHasNoMarginBottom: true,
-			} )
-		),
-		h( 'div', { className: 'wporg-event-form__actions' },
-			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, _x( 'Cancel', 'abort current action', 'wporg-groups-frontend' ) ),
-			h( Button, { variant: 'primary', type: 'submit', isBusy: saving, disabled: saving },
-				isEdit ? __( 'Save changes', 'wporg-groups-frontend' ) : __( 'Create event', 'wporg-groups-frontend' ) )
+		h( 'div', { hidden: venueEditorOpen },
+			h( EventForm, {
+				ref: formRef,
+				mode: isEdit ? 'edit' : 'create',
+				eventId,
+				classPrefix: 'wporg-event-form',
+				className: 'wporg-event-form',
+				onSubmitPayload: submitPayload,
+				onCancel,
+				onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
+				header: h( 'div', { className: 'wporg-event-form__header' },
+					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
+				),
+			},
+				h( 'div', { className: 'wporg-event-form__field' },
+					h( FormTokenField, {
+						label: __( 'Speakers', 'wporg-groups-frontend' ),
+						value: ( speakers || [] ).map( ( id ) => {
+							const member = memberOptions.find( ( m ) => m.id === id );
+							return member ? member.name : String( id );
+						} ),
+						suggestions: memberOptions.map( ( m ) => m.name ),
+						onChange: ( tokens ) => {
+							const ids = tokens.map( ( token ) => {
+								const member = memberOptions.find( ( m ) => m.name === token );
+								return member ? member.id : null;
+							} ).filter( Boolean );
+							setSpeakers( ids );
+						},
+						__experimentalExpandOnFocus: true,
+						__nextHasNoMarginBottom: true,
+					} )
+				)
+			)
 		)
 	);
 }
@@ -424,7 +143,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	useEffect( () => {
 		if ( editingId !== null ) return;
 		setLoading( true );
-		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
+		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&status=publish,draft&_fields=id,title,meta,status&orderby=date&order=desc' } )
 			.then( ( data ) => {
 				setEvents( data.map( ( e ) => {
 					const dtStart = e.meta?.gatherpress_datetime_start || '';
@@ -447,7 +166,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	};
 
 	if ( editingId !== null ) {
-		return h( EventForm, {
+		return h( InlineEventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
 			onDone: backToList,
 			onCancel: backToList,

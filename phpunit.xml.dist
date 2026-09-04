@@ -26,6 +26,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Attendance">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-attendance/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="CampTix Indian Payments">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/campt-indian-payment-gateway/tests/

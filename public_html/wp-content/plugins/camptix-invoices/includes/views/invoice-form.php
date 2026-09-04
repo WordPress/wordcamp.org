@@ -50,7 +50,7 @@ $saved_vat       = sanitize_text_field( wp_unslash( $_POST['invoice-vat-number']
 			<tr>
 				<td class="tix-left">
 					<label for="invoice-address">
-						<?php echo esc_html__( 'Recipient street address', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+						<?php echo esc_html__( 'Recipient street address', 'wordcamporg' ); ?>
 					</label>
 				</td>
 				<td class="tix-right">
@@ -62,7 +62,7 @@ $saved_vat       = sanitize_text_field( wp_unslash( $_POST['invoice-vat-number']
 				<tr>
 					<td class="tix-left">
 						<label for="invoice-vat-number">
-							<?php echo esc_html__( 'VAT number', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+							<?php echo esc_html__( 'VAT number', 'wordcamporg' ); ?>
 						</label>
 					</td>
 					<td class="tix-right">

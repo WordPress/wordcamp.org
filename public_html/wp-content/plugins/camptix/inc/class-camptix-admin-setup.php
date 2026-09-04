@@ -56,7 +56,7 @@ class CampTix_Admin_Setup {
 				$this->add_settings_field_helper( 'currency', __( 'Currency', 'wordcamporg' ), 'field_currency' );
 
 				$this->add_settings_field_helper( 'refunds_enabled', __( 'Enable Refund Requests by Attendees', 'wordcamporg' ), 'field_enable_refunds', false,
-					__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form. Organizers are able to refund regardless of this setting.", 'wordcamporg' )
+					__( "This will allows your customers to refund their ticket purchase by filling out a simple refund form. Organizers are able to refund regardless of this setting.", 'wordcamporg' )
 				);
 
 				break;
@@ -95,12 +95,12 @@ class CampTix_Admin_Setup {
 				add_settings_section( 'general', __( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
 				$this->add_settings_field_helper( 'reservations_enabled', __( 'Enable Reservations', 'wordcamporg' ), 'field_yesno', false,
-					__( "Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.", 'wordcamporg' )
+					__( "Reservations is a way to make sure that a certain group of people can always purchase their tickets, even if you sell out fast.", 'wordcamporg' )
 				);
 
 				if ( current_user_can( $this->plugin->caps['refund_all'] ) ) {
 					$this->add_settings_field_helper( 'refund_all_enabled', __( 'Enable Refund All', 'wordcamporg' ), 'field_yesno', false,
-						__( "Allows to refund all purchased tickets by an admin via the Tools menu.", 'wordcamporg' )
+						__( "Allows an admin to refund all purchased tickets via the Tools menu.", 'wordcamporg' )
 					);
 				}
 

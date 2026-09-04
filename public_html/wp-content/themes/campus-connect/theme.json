@@ -17,7 +17,7 @@
 				},
 				{
 					"color": "#40464d",
-					"name": "charcoal-2 ",
+					"name": "charcoal-2",
 					"slug": "custom-charcoal-2"
 				},
 				{
@@ -47,7 +47,7 @@
 				},
 				{
 					"color": "#dee4ff",
-					"name": "blueberry-2 ",
+					"name": "blueberry-2",
 					"slug": "custom-blueberry-2"
 				},
 				{
@@ -137,7 +137,7 @@
 			"fontSizes": [
 				{
 					"fluid": true,
-					"name": "0,9 rem",
+					"name": "0.9 rem",
 					"size": "0.9rem",
 					"slug": "custom-1"
 				},
@@ -155,7 +155,7 @@
 				},
 				{
 					"fluid": true,
-					"name": "2,25",
+					"name": "2.25 rem",
 					"size": "2.25rem",
 					"slug": "custom-4"
 				}

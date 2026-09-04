@@ -2,7 +2,7 @@
 /**
  * Formal group-ownership transfer workflow.
  *
- * Ordinary co-organizer role changes (Member/Event Organiser/Organiser) are
+ * Ordinary co-organizer role changes (Member/Event Organizer/Organizer) are
  * handled entirely by `Members_Controller::update_member_role()` in the
  * `wporg-groups-frontend` mu-plugin. That endpoint explicitly refuses to
  * touch anyone who already holds the site's `administrator` role, so there
@@ -47,7 +47,7 @@ const STATUS_PENDING_ACCEPTANCE = 'pending_acceptance';
 const STATUS_PENDING_APPROVAL = 'pending_approval';
 
 /**
- * The only role a transfer target may hold. Mirrors "Organiser tier" from
+ * The only role a transfer target may hold. Mirrors "Organizer tier" from
  * `Members_Controller::ROLE_LABELS`, minus `administrator` itself — there's
  * nothing to transfer to someone who already holds it, so that case gets its
  * own validation error instead of being folded into this constant.
@@ -407,7 +407,7 @@ function validate_candidate( int $candidate_id, int $from_user_id, int $site_id 
 	if ( ! in_array( CANDIDATE_ROLE, $candidate->roles, true ) ) {
 		return new WP_Error(
 			'candidate_not_eligible',
-			__( 'Ownership can only be transferred to an existing Organiser (editor) of this group.', 'wordcamporg' ),
+			__( 'Ownership can only be transferred to an existing Organizer (editor) of this group.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -1184,7 +1184,7 @@ function get_group_sites_with_meta_key( string $meta_key ) {
 function get_final_status_label( string $status ): string {
 	$labels = array(
 		'declined'  => __( 'Declined', 'wordcamporg' ),
-		'cancelled' => __( 'Cancelled', 'wordcamporg' ),
+		'cancelled' => __( 'Canceled', 'wordcamporg' ),
 		'completed' => __( 'Completed', 'wordcamporg' ),
 		'rejected'  => __( 'Rejected', 'wordcamporg' ),
 	);

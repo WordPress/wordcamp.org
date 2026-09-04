@@ -21,6 +21,15 @@ use function WordCamp\Sponsor_Agreements\make_agreement_private;
 
 defined( 'WPINC' ) || die();
 
+/**
+ * Recorded on every attachment this migration gives the `private` status.
+ *
+ * `AGREEMENT_MARKER_META_KEY` says an attachment is an agreement; it doesn't say which ones were uploaded
+ * before `obscure_sponsor_file_names()` existed and so still carry the name they were given. Nothing else
+ * distinguishes them once the status is set, and this is the only moment the answer is known.
+ */
+const BACKFILLED_META_KEY = '_wcorg_sponsor_agreement_backfilled';
+
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO -- the command and the work it does are one unit here, so that removing the migration is removing one file.
 
 
@@ -215,6 +224,8 @@ class Command extends WP_CLI_Command {
 
 			if ( ! $migrated ) {
 				$unfinished[] = $agreement_id;
+			} elseif ( ! $dry_run ) {
+				update_post_meta( $agreement_id, BACKFILLED_META_KEY, 1 );
 			}
 
 			$results[] = array(

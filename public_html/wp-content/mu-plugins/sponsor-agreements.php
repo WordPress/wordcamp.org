@@ -10,7 +10,6 @@ add_action( 'added_post_meta',              __NAMESPACE__ . '\note_sponsor_agree
 add_action( 'updated_post_meta',            __NAMESPACE__ . '\note_sponsor_agreement',      10, 4 );
 add_filter( 'xmlrpc_prepare_media_item',    __NAMESPACE__ . '\redact_agreement',            10, 2 );
 add_filter( 'wp_prepare_attachment_for_js', __NAMESPACE__ . '\redact_agreement_for_js',     10, 2 );
-add_filter( 'wp_unique_filename',           __NAMESPACE__ . '\obscure_sponsor_file_names',  10, 2 );
 
 
 /**
@@ -76,7 +75,20 @@ function note_sponsor_agreement( $meta_id, $object_id, $meta_key, $meta_value ) 
 		return;
 	}
 
-	make_agreement_private( absint( $meta_value ) );
+	$attachment_id = absint( $meta_value );
+
+	// Asked before the mark is written, so the file is renamed once however many sponsors go on to name it.
+	$already_an_agreement = is_agreement( $attachment_id );
+
+	make_agreement_private( $attachment_id );
+
+	/*
+	 * After the status, and never fatal: the status is what closes the REST routes and the queries, so a
+	 * rename that doesn't happen leaves a marked, findable file rather than an unrecorded one.
+	 */
+	if ( ! $already_an_agreement && is_agreement( $attachment_id ) ) {
+		rename_agreement_file( $attachment_id );
+	}
 }
 
 /**
@@ -175,44 +187,6 @@ function redact_agreement_for_js( $response, $attachment ) {
 }
 
 /**
- * Add a CSPRN to the names of files uploaded to a sponsor, as `wordcamp-payments` does for its own files.
- *
- * Applies to every upload made against a sponsor, not just the agreement: the agreement is chosen from the
- * Media modal after the upload has already landed, so nothing at this point tells one file from the other.
- *
- * @param string $filename
- * @param string $extension
- *
- * @return string
- */
-function obscure_sponsor_file_names( $filename, $extension ) {
-	$attached_post = get_post( get_upload_parent_id() );
-
-	if ( ! $attached_post instanceof WP_Post ) {
-		return $filename;
-	}
-
-	if ( ! in_array( $attached_post->post_type, get_sponsor_post_types(), true ) ) {
-		return $filename;
-	}
-
-	return add_csprn_to_filename( $filename, $extension );
-}
-
-/**
- * The post an upload in progress is being attached to.
- *
- * `post_id` is what the Media modal and `async-upload.php` send; `post` is what the REST media route takes,
- * which is the block editor's path to the same place.
- *
- * @return int
- */
-function get_upload_parent_id() {
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading a name, deciding nothing.
-	return absint( $_REQUEST['post_id'] ?? $_REQUEST['post'] ?? 0 );
-}
-
-/**
  * Put a CSPRN between a file's name and its extension.
  *
  * A length of `16` was chosen because it keeps the name manageable. See
@@ -232,4 +206,153 @@ function add_csprn_to_filename( $filename, $extension ) {
 	}
 
 	return sprintf( '%s-%s%s', $name, wp_generate_password( 16, false, false ), $extension );
+}
+
+/**
+ * Give an agreement's file a name that isn't the one it was uploaded under.
+ *
+ * Runs when a file is named as an agreement rather than when it's uploaded, so that it covers one chosen
+ * from the Media Library as well as one uploaded from the Sponsor screen, and leaves a sponsor's other
+ * uploads alone.
+ *
+ * Nothing links to an agreement by URL -- both plugins hold an attachment ID and resolve it through
+ * `wp_get_attachment_url()` -- so the new name reaches every reader.
+ *
+ * Every file Core derives from the upload moves with it, under one new base name:
+ *
+ * - the generated sizes, which for a PDF are renderings of the first page and for an image are copies of
+ *   it at up to 2048px;
+ * - the full-size original, when Core scaled the upload down. `_wp_attached_file` then points at the
+ *   `-scaled` copy while `original_image` holds the name the sizes are derived from, so that -- not the
+ *   attached file -- is what the new base is built from.
+ *
+ * Acts on the current site. `ms_upload_constants()` defines `UPLOADS` for whichever site was current at
+ * bootstrap, so this can't be called inside a `switch_to_blog()`.
+ *
+ * The `guid` is deliberately left alone. It's an identifier rather than the URL anything is served from,
+ * and Core's rule is that it doesn't change once a post has one.
+ *
+ * @param int $attachment_id
+ *
+ * @return array {
+ *     What happened on disk. The metadata always names whatever each file ended up being called.
+ *
+ *     @type int $renamed     Files moved.
+ *     @type int $left_behind Files still under the name they had.
+ * }
+ */
+function rename_agreement_file( $attachment_id ) {
+	$outcome       = array(
+		'renamed'     => 0,
+		'left_behind' => 0,
+	);
+	$attached_path = get_attached_file( $attachment_id );
+
+	if ( ! $attached_path || ! is_file( $attached_path ) ) {
+		return $outcome;
+	}
+
+	$directory = dirname( $attached_path );
+	$metadata  = wp_get_attachment_metadata( $attachment_id );
+	$metadata  = is_array( $metadata ) ? $metadata : array();
+
+	$old_base     = empty( $metadata['original_image'] ) ? wp_basename( $attached_path ) : $metadata['original_image'];
+	$extension    = pathinfo( $old_base, PATHINFO_EXTENSION );
+	$extension    = $extension ? '.' . $extension : '';
+	$new_base     = wp_unique_filename( $directory, add_csprn_to_filename( $old_base, $extension ) );
+	$old_base     = substr( $old_base, 0, strlen( $old_base ) - strlen( $extension ) );
+	$new_base     = substr( $new_base, 0, strlen( $new_base ) - strlen( $extension ) );
+	$already_done = array();
+
+	/**
+	 * Move one of the attachment's files, and answer to what it's now called.
+	 *
+	 * Two sizes can name the same file -- a theme registering a size Core already generates -- so the
+	 * second time one comes round it has already been dealt with. The cache is what keeps its metadata in
+	 * step with the first one's, and what keeps one file from being counted twice.
+	 *
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	$move = function ( $name ) use ( $directory, $old_base, $new_base, $extension, &$already_done, &$outcome ) {
+		if ( isset( $already_done[ $name ] ) ) {
+			return $already_done[ $name ];
+		}
+
+		$source = $directory . '/' . $name;
+
+		/*
+		 * Core names a derivative `<base>-<width>x<height>.<ext>` or `<base>-scaled.<ext>`, so the
+		 * separator is what tells `photo-150x150.jpg` from `photobooth-150x150.jpg`. Without it the
+		 * second would be rebased into `photo-<random>booth-150x150.jpg`, splicing the name rather than
+		 * replacing what it starts with.
+		 */
+		$derived = $name === $old_base . $extension || str_starts_with( $name, $old_base . '-' );
+
+		if ( ! $derived ) {
+			// Not this attachment's to rename. Count it only if there's a file there to be concerned with.
+			$outcome['left_behind'] += is_file( $source ) ? 1 : 0;
+			$already_done[ $name ]   = $name;
+
+			return $name;
+		}
+
+		$new_name = $new_base . substr( $name, strlen( $old_base ) );
+
+		// A name in the metadata with no file behind it was already stale, and moves nothing either way.
+		if ( ! is_file( $source ) ) {
+			$already_done[ $name ] = $name;
+
+			return $name;
+		}
+
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- WP_Filesystem needs credentials this can't ask for, and a failure is reported rather than fatal.
+		if ( ! @rename( $source, $directory . '/' . $new_name ) ) {
+			++$outcome['left_behind'];
+			$already_done[ $name ] = $name;
+
+			return $name;
+		}
+
+		++$outcome['renamed'];
+		$already_done[ $name ] = $new_name;
+
+		return $new_name;
+	};
+
+	$attached_name = wp_basename( $attached_path );
+	$new_attached  = $move( $attached_name );
+
+	/*
+	 * Carry on when the attached file itself wouldn't move. Everything else is named from `$old_base`
+	 * rather than from it, so those can still go -- and whether they went or not is the whole of what the
+	 * count is for.
+	 */
+	if ( ! empty( $metadata['original_image'] ) ) {
+		$metadata['original_image'] = $move( $metadata['original_image'] );
+	}
+
+	foreach ( $metadata['sizes'] ?? array() as $size => $details ) {
+		if ( empty( $details['file'] ) ) {
+			continue;
+		}
+
+		$metadata['sizes'][ $size ]['file'] = $move( $details['file'] );
+	}
+
+	if ( ! empty( $metadata['file'] ) ) {
+		$path_prefix      = str_contains( $metadata['file'], '/' ) ? dirname( $metadata['file'] ) . '/' : '';
+		$metadata['file'] = $path_prefix . $new_attached;
+	}
+
+	if ( $metadata ) {
+		wp_update_attachment_metadata( $attachment_id, $metadata );
+	}
+
+	if ( $new_attached !== $attached_name ) {
+		update_attached_file( $attachment_id, $directory . '/' . $new_attached );
+	}
+
+	return $outcome;
 }

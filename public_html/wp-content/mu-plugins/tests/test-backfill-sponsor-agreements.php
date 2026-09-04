@@ -9,6 +9,7 @@ use function WordCamp\Sponsor_Agreements\is_agreement;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
 
 use const WordCamp\Sponsor_Agreements\AGREEMENT_MARKER_META_KEY;
+use const WordCamp\Sponsor_Agreements\Backfill\BACKFILLED_META_KEY;
 
 defined( 'WPINC' ) || die();
 
@@ -137,5 +138,42 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 		$this->assertSame( array(), get_public_agreement_ids() );
 		$this->assertFalse( make_agreement_private( $agreement_id ), 'A second pass reported a change it did not make.' );
 		$this->assertSame( 'private', get_post_status( $agreement_id ) );
+	}
+
+	/**
+	 * The migration records which attachments it acted on.
+	 *
+	 * Those are the ones uploaded before `obscure_sponsor_file_names()` existed, and nothing else says so
+	 * once they are no longer `inherit`.
+	 */
+	public function test_the_migration_records_what_it_acted_on() {
+		list( , $legacy_id ) = $this->create_legacy_agreement();
+
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+		) );
+		$recent_id  = self::factory()->attachment->create_object( array(
+			'file'           => 'agreement-aBcDeFgHiJkLmNoP.pdf',
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		// The hook covers this one as it's attached, so the migration never sees it.
+		update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $recent_id );
+
+		$this->assertContains( $legacy_id, get_public_agreement_ids() );
+		$this->assertNotContains( $recent_id, get_public_agreement_ids() );
+
+		// What `Command::backfill()` does for each ID the query returns.
+		make_agreement_private( $legacy_id );
+		update_post_meta( $legacy_id, BACKFILLED_META_KEY, 1 );
+
+		$this->assertTrue( is_agreement( $legacy_id ) );
+		$this->assertTrue( is_agreement( $recent_id ) );
+
+		$this->assertSame( '1', get_post_meta( $legacy_id, BACKFILLED_META_KEY, true ) );
+		$this->assertSame( '', get_post_meta( $recent_id, BACKFILLED_META_KEY, true ) );
 	}
 }

@@ -6,7 +6,8 @@ use WP_UnitTestCase, WP_UnitTest_Factory, WP_REST_Request, WP_REST_Server;
 
 use function WordCamp\Sponsor_Agreements\is_agreement;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
-use function WordCamp\Sponsor_Agreements\obscure_sponsor_file_names;
+use function WordCamp\Sponsor_Agreements\add_csprn_to_filename;
+use function WordCamp\Sponsor_Agreements\rename_agreement_file;
 
 defined( 'WPINC' ) || die();
 
@@ -265,30 +266,6 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Uploads to a sponsor get a random suffix in the file name.
-	 */
-	public function test_sponsor_uploads_get_a_random_suffix() {
-		$_REQUEST['post_id'] = $this->create_sponsor();
-
-		$filename = obscure_sponsor_file_names( 'sponsorship-agreement-acme-signed.pdf', '.pdf' );
-
-		$this->assertMatchesRegularExpression( '/^sponsorship-agreement-acme-signed-[A-Za-z0-9]{16}\.pdf$/', $filename );
-	}
-
-	/**
-	 * Every other upload on the site keeps the name it was given.
-	 */
-	public function test_other_uploads_keep_their_name() {
-		$_REQUEST['post_id'] = self::factory()->post->create();
-
-		$this->assertSame( 'header.png', obscure_sponsor_file_names( 'header.png', '.png' ) );
-
-		unset( $_REQUEST['post_id'] );
-
-		$this->assertSame( 'header.png', obscure_sponsor_file_names( 'header.png', '.png' ) );
-	}
-
-	/**
 	 * `mes_sponsor_agreement` isn't protected meta, so the Custom Fields box will write it to any post that
 	 * supports them. Only a sponsor names its own agreement.
 	 */
@@ -393,28 +370,230 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The block editor posts to the REST media route, which names the parent `post` rather than `post_id`.
+	 * Attach a real file to a sponsor and record it as the agreement.
+	 *
+	 * @param string   $filename
+	 * @param string[] $size_names
+	 * @param string   $original_name The full-size original, when Core scaled the upload down.
+	 *
+	 * @return array The attachment ID and the directory its files are in.
 	 */
-	public function test_rest_uploads_to_a_sponsor_are_named_the_same_way() {
-		$_REQUEST['post'] = $this->create_sponsor();
+	protected function attach_agreement_on_disk( $filename, $size_names = array(), $original_name = '' ) {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+		$metadata   = array( 'file' => _wp_relative_upload_path( $directory . $filename ) );
 
-		$filename = obscure_sponsor_file_names( 'sponsorship-agreement-acme-signed.pdf', '.pdf' );
+		foreach ( array_merge( array( $filename ), $size_names, array_filter( array( $original_name ) ) ) as $name ) {
+			file_put_contents( $directory . $name, 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- fixtures on the local disk.
+		}
 
-		unset( $_REQUEST['post'] );
+		foreach ( $size_names as $index => $name ) {
+			$metadata['sizes'][ 'size-' . $index ] = array( 'file' => $name );
+		}
 
-		$this->assertMatchesRegularExpression( '/^sponsorship-agreement-acme-signed-[A-Za-z0-9]{16}\.pdf$/', $filename );
+		if ( $original_name ) {
+			$metadata['original_image'] = $original_name;
+		}
+
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . $filename,
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		update_attached_file( $agreement_id, $directory . $filename );
+		wp_update_attachment_metadata( $agreement_id, $metadata );
+
+		// The hook runs here, so the file is named as it's recorded.
+		update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+
+		return array( $agreement_id, $directory );
+	}
+
+	/**
+	 * Remove whatever an attachment's files are called now.
+	 *
+	 * @param string $directory
+	 * @param string $pattern
+	 */
+	protected function delete_files_on_disk( $directory, $pattern ) {
+		foreach ( glob( $directory . $pattern ) as $path ) {
+			wp_delete_file( $path );
+		}
+	}
+
+	/**
+	 * Recording a file as an agreement gives it a name it wasn't uploaded under.
+	 */
+	public function test_an_agreement_is_renamed_when_it_is_recorded() {
+		list( $agreement_id, $directory ) = $this->attach_agreement_on_disk( 'sponsorship-agreement-acme-signed.pdf' );
+
+		try {
+			$this->assertMatchesRegularExpression(
+				'/^sponsorship-agreement-acme-signed-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+			$this->assertFileDoesNotExist( $directory . 'sponsorship-agreement-acme-signed.pdf' );
+
+			// The metabox resolves the file through the attachment, so the link follows the rename.
+			$this->assertStringEndsWith(
+				wp_basename( get_attached_file( $agreement_id ) ),
+				wp_get_attachment_url( $agreement_id )
+			);
+		} finally {
+			$this->delete_files_on_disk( $directory, 'sponsorship-agreement-acme-signed*' );
+		}
+	}
+
+	/**
+	 * A file uploaded elsewhere and then picked from the Media Library is covered too.
+	 */
+	public function test_an_agreement_picked_from_the_library_is_renamed() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		file_put_contents( $directory . 'library-agreement.pdf', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		// Uploaded through Media > Add New, so it has no parent and no suffix.
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'library-agreement.pdf',
+			'post_parent'    => 0,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+		update_attached_file( $agreement_id, $directory . 'library-agreement.pdf' );
+
+		update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+
+		try {
+			$this->assertSame( 'private', get_post_status( $agreement_id ) );
+			$this->assertMatchesRegularExpression(
+				'/^library-agreement-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+		} finally {
+			$this->delete_files_on_disk( $directory, 'library-agreement*' );
+		}
+	}
+
+	/**
+	 * A scaled photo of a signed page moves every file Core derived from it.
+	 */
+	public function test_a_scaled_image_moves_every_file_it_generated() {
+		$sizes = array(
+			'signed-photo-150x150.jpg',
+			'signed-photo-1024x1024.jpg',
+			'signed-photo-2048x2048.jpg',
+		);
+
+		list( $agreement_id, $directory ) = $this->attach_agreement_on_disk(
+			'signed-photo-scaled.jpg',
+			$sizes,
+			'signed-photo.jpg'
+		);
+
+		try {
+			$metadata = wp_get_attachment_metadata( $agreement_id );
+
+			$this->assertMatchesRegularExpression(
+				'/^signed-photo-[A-Za-z0-9]{16}-scaled\.jpg$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+			$this->assertMatchesRegularExpression( '/^signed-photo-[A-Za-z0-9]{16}\.jpg$/', $metadata['original_image'] );
+
+			foreach ( $metadata['sizes'] as $size => $details ) {
+				$this->assertMatchesRegularExpression(
+					'/^signed-photo-[A-Za-z0-9]{16}-\d+x\d+\.jpg$/',
+					$details['file'],
+					"Size {$size} kept the name it had."
+				);
+				$this->assertFileExists( $directory . $details['file'] );
+			}
+
+			foreach ( array_merge( $sizes, array( 'signed-photo.jpg', 'signed-photo-scaled.jpg' ) ) as $old_name ) {
+				$this->assertFileDoesNotExist( $directory . $old_name );
+			}
+		} finally {
+			$this->delete_files_on_disk( $directory, 'signed-photo*' );
+		}
+	}
+
+	/**
+	 * A name that merely starts with the base isn't one of this attachment's files.
+	 */
+	public function test_a_name_that_only_shares_a_prefix_is_left_alone() {
+		list( $agreement_id, $directory ) = $this->attach_agreement_on_disk(
+			'photo.jpg',
+			array( 'photo-150x150.jpg', 'photobooth-150x150.jpg' )
+		);
+
+		try {
+			$sizes = wp_list_pluck( wp_get_attachment_metadata( $agreement_id )['sizes'], 'file' );
+
+			$this->assertContains( 'photobooth-150x150.jpg', $sizes );
+			$this->assertFileExists( $directory . 'photobooth-150x150.jpg' );
+
+			foreach ( array_map( 'wp_basename', glob( $directory . 'photo*' ) ) as $name ) {
+				$this->assertDoesNotMatchRegularExpression( '/^photo-[A-Za-z0-9]{16}booth/', $name );
+			}
+		} finally {
+			$this->delete_files_on_disk( $directory, 'photo*' );
+		}
+	}
+
+	/**
+	 * A sponsor's other uploads keep the names they were given.
+	 */
+	public function test_a_sponsor_logo_is_not_renamed() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		file_put_contents( $directory . 'acme-logo.png', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		$logo_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'acme-logo.png',
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'image/png',
+		) );
+		update_attached_file( $logo_id, $directory . 'acme-logo.png' );
+
+		try {
+			$this->assertSame( 'acme-logo.png', wp_basename( get_attached_file( $logo_id ) ) );
+			$this->assertFileExists( $directory . 'acme-logo.png' );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'acme-logo*' );
+		}
+	}
+
+	/**
+	 * Naming the same file on a second sponsor doesn't suffix it twice.
+	 */
+	public function test_an_agreement_is_only_renamed_once() {
+		list( $agreement_id, $directory ) = $this->attach_agreement_on_disk( 'shared-agreement.pdf' );
+
+		try {
+			$renamed = wp_basename( get_attached_file( $agreement_id ) );
+
+			update_post_meta( $this->create_sponsor(), '_wcpt_sponsor_agreement', $agreement_id );
+
+			$this->assertSame( $renamed, wp_basename( get_attached_file( $agreement_id ) ) );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'shared-agreement*' );
+		}
 	}
 
 	/**
 	 * The extension is trimmed off the end, not wherever it happens to appear.
 	 */
 	public function test_a_name_that_repeats_its_extension_keeps_both_copies() {
-		$_REQUEST['post_id'] = $this->create_sponsor();
-
-		$filename = obscure_sponsor_file_names( 'agreement.pdf.pdf', '.pdf' );
-
-		unset( $_REQUEST['post_id'] );
-
-		$this->assertMatchesRegularExpression( '/^agreement\.pdf-[A-Za-z0-9]{16}\.pdf$/', $filename );
+		$this->assertMatchesRegularExpression(
+			'/^agreement\.pdf-[A-Za-z0-9]{16}\.pdf$/',
+			add_csprn_to_filename( 'agreement.pdf.pdf', '.pdf' )
+		);
 	}
 }

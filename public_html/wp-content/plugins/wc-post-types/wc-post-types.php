@@ -1722,15 +1722,16 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'volunteer',
 					'with_front' => false,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail', 'shortlinks' ),
 				'menu_position'   => 22,
-				'public'          => false,
+				'public'          => true,
 				'show_ui'         => true,
 				'can_export'      => true,
 				'capability_type' => 'post',
 				'hierarchical'    => false,
 				'query_var'       => true,
 				'show_in_rest'    => true,
+				'rest_base'       => 'volunteers',
 				'menu_icon'       => 'dashicons-hammer',
 			)
 		);

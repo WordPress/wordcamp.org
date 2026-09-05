@@ -527,8 +527,11 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		// The sponsor region is required so we can import the relevant sponsors and levels.
-		if ( ! get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true ) ) {
+		// A sponsor region or group membership is required so we can import the relevant sponsors and levels.
+		$has_region = (bool) get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+		$has_groups = class_exists( 'MES_Sponsor_Group' ) && MES_Sponsor_Group::get_camp_groups( $wordcamp_id );
+
+		if ( ! $has_region && ! $has_groups ) {
 			return;
 		}
 

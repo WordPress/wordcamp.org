@@ -6,7 +6,7 @@ use WP_UnitTestCase;
 
 use function WordCamp\Meetup_OAuth\{ create_oauth_state, delete_oauth_state, filter_authorize_url, get_page_url,
 	maybe_exchange_code_for_token, verify_oauth_state };
-use const WordCamp\Meetup_OAuth\STATE_META_KEY;
+use const WordCamp\Meetup_OAuth\{ AUTHORIZATION_SITE_OPTION, STATE_META_KEY };
 
 defined( 'WPINC' ) || die();
 
@@ -66,9 +66,20 @@ class Test_Meetup_OAuth_State extends WP_UnitTestCase {
 	public function tear_down() {
 		$_GET = array();
 
+		delete_site_option( AUTHORIZATION_SITE_OPTION );
+
 		unset( $GLOBALS['super_admins'] );
 
 		parent::tear_down();
+	}
+
+	/**
+	 * The code currently queued for the client, or `false` if there isn't one.
+	 *
+	 * @return string|bool
+	 */
+	protected function stored_auth_code() {
+		return get_site_option( AUTHORIZATION_SITE_OPTION, false );
 	}
 
 	/**
@@ -269,6 +280,7 @@ class Test_Meetup_OAuth_State extends WP_UnitTestCase {
 		$this->handle_callback( $query );
 
 		$this->assertTrue( verify_oauth_state( $state ) );
+		$this->assertFalse( $this->stored_auth_code() );
 	}
 
 	/**
@@ -306,6 +318,7 @@ class Test_Meetup_OAuth_State extends WP_UnitTestCase {
 
 		// The authorization that's actually in flight is untouched, so its callback can still complete.
 		$this->assertTrue( verify_oauth_state( $state ) );
+		$this->assertFalse( $this->stored_auth_code() );
 	}
 
 	/**
@@ -329,6 +342,7 @@ class Test_Meetup_OAuth_State extends WP_UnitTestCase {
 
 		// Nothing was spent, because nothing was attempted.
 		$this->assertTrue( verify_oauth_state( $state ) );
+		$this->assertFalse( $this->stored_auth_code() );
 	}
 
 	/**
@@ -352,6 +366,7 @@ class Test_Meetup_OAuth_State extends WP_UnitTestCase {
 		);
 
 		$this->assertTrue( verify_oauth_state( $state ) );
+		$this->assertFalse( $this->stored_auth_code() );
 	}
 
 	/**

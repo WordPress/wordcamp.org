@@ -30,6 +30,14 @@ const AUTHORIZE_URL  = 'https://secure.meetup.com/oauth2/authorize';
  */
 const TOKEN_SITE_OPTION = 'meetup_access_token';
 
+/**
+ * The site option the Meetup client reads a pending authorization code from.
+ *
+ * Mirrors `Meetup_OAuth2_Client::SITE_OPTION_KEY_AUTHORIZATION`, repeated for the same reason as
+ * `TOKEN_SITE_OPTION`.
+ */
+const AUTHORIZATION_SITE_OPTION = 'meetup_oauth_authorization';
+
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page' );
 add_action( 'admin_post_' . OAUTH_ACTION, __NAMESPACE__ . '\handle_authorize_request' );
 add_action( 'admin_init', __NAMESPACE__ . '\maybe_exchange_code_for_token' );
@@ -79,6 +87,7 @@ function filter_authorize_url() {
  */
 function has_credentials() {
 	return defined( 'MEETUP_OAUTH_CONSUMER_KEY' ) && MEETUP_OAUTH_CONSUMER_KEY
+		&& defined( 'MEETUP_OAUTH_CONSUMER_SECRET' ) && MEETUP_OAUTH_CONSUMER_SECRET
 		&& defined( 'MEETUP_OAUTH_CONSUMER_REDIRECT_URI' ) && MEETUP_OAUTH_CONSUMER_REDIRECT_URI;
 }
 
@@ -231,6 +240,14 @@ function maybe_exchange_code_for_token() {
 	if ( ! has_credentials() || ! class_exists( Meetup_OAuth2_Client::class ) ) {
 		return;
 	}
+
+	/*
+	 * The client pre-caches a token in its constructor, which runs before the argument below can reach it,
+	 * and that pre-cache falls back to whatever code is sitting in the site option. Putting the validated
+	 * code there first means the constructor spends this one rather than a leftover from an earlier attempt.
+	 * The client clears the option itself once the exchange succeeds.
+	 */
+	update_site_option( AUTHORIZATION_SITE_OPTION, $code );
 
 	if ( ( new Meetup_OAuth2_Client() )->get_oauth_token( $code ) ) {
 		// The code has been spent, so the value that vouched for it is done too.

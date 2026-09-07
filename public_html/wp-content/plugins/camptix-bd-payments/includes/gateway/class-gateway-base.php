@@ -120,6 +120,76 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Redact known values in free text without replacing short names inside words.
+	 *
+	 * @param mixed $message          Diagnostic message.
+	 * @param array $sensitive_values Known credentials and customer data.
+	 * @return string
+	 */
+	protected function prepare_gateway_message_for_log( $message, $sensitive_values ) {
+		if ( ! is_scalar( $message ) ) {
+			return '';
+		}
+
+		$patterns = [];
+		foreach ( $sensitive_values as $value ) {
+			if ( ! is_scalar( $value ) || '' === (string) $value ) {
+				continue;
+			}
+			$value      = (string) $value;
+			$pattern    = preg_quote( $value, '/' );
+			$patterns[] = strlen( $value ) < 6 ? '(?<![\\pL\\pN])' . $pattern . '(?![\\pL\\pN])' : $pattern;
+		}
+
+		// One replacement pass prevents replacements from altering [redacted] markers.
+		usort( $patterns, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+		$message = (string) $message;
+		if ( $patterns ) {
+			$message = preg_replace( '/(?:' . implode( '|', $patterns ) . ')/iu', '[redacted]', $message ) ?? '';
+		}
+		$message = preg_replace( '~https?://[^\s<>]+~i', '[redacted URL]', $message );
+		$message = preg_replace( '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[redacted email]', $message );
+
+		return CampTix_Plugin::substr_bytes( sanitize_text_field( $message ), 0, 255 );
+	}
+
+	/**
+	 * Retain API diagnostics while redacting fields and echoed request secrets.
+	 *
+	 * @param array $data    Decoded diagnostics.
+	 * @param array $request Request body and headers.
+	 * @return array
+	 */
+	protected function prepare_api_diagnostics( $data, $request ) {
+		$values  = [];
+		$collect = function ( $fields ) use ( &$collect, &$values ) {
+			foreach ( $fields as $key => $value ) {
+				if ( is_array( $value ) ) {
+					$collect( $value );
+				} elseif ( is_scalar( $value ) && $this->prepare_transaction_for_log( [ $key => $value ] ) !== [ $key => $value ] ) {
+					$values[] = $value;
+				}
+			}
+		};
+		$collect( $request );
+		$collect( $data );
+
+		$scrub = function ( $fields ) use ( &$scrub, $values ) {
+			$fields = $this->prepare_transaction_for_log( $fields );
+			foreach ( $fields as $key => $value ) {
+				if ( is_array( $value ) ) {
+					$fields[ $key ] = $scrub( $value );
+				} elseif ( is_string( $value ) && '[redacted]' !== $value ) {
+					$fields[ $key ] = $this->prepare_gateway_message_for_log( $value, $values );
+				}
+			}
+			return $fields;
+		};
+
+		return $scrub( $data );
+	}
+
+	/**
 	 * Check that a redirect URL uses HTTPS and belongs to an allowed host.
 	 *
 	 * @param string $url              Redirect URL.
@@ -252,7 +322,10 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 			$this->log(
 				'API request failed.',
 				null,
-				array( 'error_code' => $response->get_error_code() )
+				array(
+					'error_code' => $response->get_error_code(),
+					'details'    => $this->prepare_api_diagnostics( [ 'message' => $response->get_error_message() ], $args + $headers ),
+				)
 			);
 			return false;
 		}
@@ -261,10 +334,11 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 		$body = wp_remote_retrieve_body( $response );
 
 		if ( $code < 200 || $code >= 300 ) {
+			$decoded_body = json_decode( $body, true );
 			$this->log(
 				sprintf( 'API request returned HTTP %d', $code ),
 				null,
-				array( 'body_length' => strlen( $body ) )
+				is_array( $decoded_body ) ? $this->prepare_api_diagnostics( $decoded_body, $args + $headers ) : array( 'body_length' => strlen( $body ) )
 			);
 			return false;
 		}

@@ -23,9 +23,8 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		is_online: form.is_online,
 		online_event_link: form.is_online ? form.online_event_link : '',
 		featured_image_id: featuredImageId,
-		// Recurrence is locked once an event is published; drafts stay editable.
-		// Send it only while unlocked, and never as `null`, which fails the
-		// endpoint's object schema.
+		// Include recurrence while the schedule is editable, including for drafts.
+		// Published schedules are locked, so omit it from later updates.
 		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),
 		// Blank-labelled rows are just an empty slot the organizer
 		// added and never filled in; the server drops them too.

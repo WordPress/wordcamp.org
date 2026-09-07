@@ -446,6 +446,28 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A stored lowercase monthly weekday is normalized to the REST enum.
+	 */
+	public function test_rule_from_post_normalizes_stored_monthly_weekday(): void {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'gatherpress_event',
+			)
+		);
+
+		update_post_meta(
+			$post_id,
+			Rule::META_PREFIX . 'monthly_weekday',
+			'we'
+		);
+
+		$this->assertSame(
+			'WE',
+			Rule::from_post( $post_id )['monthly_weekday']
+		);
+	}
+
+	/**
 	 * Creates a published weekly event with locked recurrence metadata.
 	 *
 	 * @return int Event post ID.

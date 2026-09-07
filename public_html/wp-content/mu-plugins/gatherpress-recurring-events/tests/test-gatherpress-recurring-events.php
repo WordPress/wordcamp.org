@@ -92,6 +92,13 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		);
 	}
 
+	/** A post with no recurrence meta reads back a rule that passes the REST enum. */
+	public function test_rule_from_bare_post_uses_valid_weekday(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$this->assertContains( Rule::from_post( $post_id )['monthly_weekday'], Rule::weekdays() );
+	}
+
 	/** Published end conditions can only change through the dedicated mutation. */
 	public function test_published_end_condition_is_locked(): void {
 		global $wpdb;
@@ -436,6 +443,28 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		} finally {
 			restore_current_blog();
 		}
+	}
+
+	/**
+	 * A stored lowercase monthly weekday is normalized to the REST enum.
+	 */
+	public function test_rule_from_post_normalizes_stored_monthly_weekday(): void {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'gatherpress_event',
+			)
+		);
+
+		update_post_meta(
+			$post_id,
+			Rule::META_PREFIX . 'monthly_weekday',
+			'we'
+		);
+
+		$this->assertSame(
+			'WE',
+			Rule::from_post( $post_id )['monthly_weekday']
+		);
 	}
 
 	/**

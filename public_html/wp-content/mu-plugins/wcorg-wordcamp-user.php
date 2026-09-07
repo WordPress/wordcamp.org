@@ -29,11 +29,14 @@ add_filter( 'notify_post_author', __NAMESPACE__ . '\suppress_note_notifications_
  *
  * Returns 0 if the user doesn't exist (e.g. on a network where it hasn't been created),
  * so callers can short-circuit without breaking site creation or cap checks.
+ *
+ * @param bool $force Optional. Whether to force-refresh the cached ID. Default false.
+ * @return int User ID, or 0 if user does not exist.
  */
-function get_user_id(): int {
+function get_user_id( bool $force = false ): int {
 	static $user_id = null;
 
-	if ( null === $user_id ) {
+	if ( null === $user_id || 0 === $user_id || $force ) {
 		$user    = get_user_by( 'login', USER_LOGIN );
 		$user_id = $user ? (int) $user->ID : 0;
 	}
@@ -105,9 +108,9 @@ function protect_user( $required_caps, $cap, $acting_user, $args ) {
  *
  * @return bool
  */
-function suppress_note_notifications_for_system_user( $notify, $comment_id ): bool {
-	if ( ! $notify ) {
-		return false;
+function suppress_note_notifications_for_system_user( $notify, $comment_id = 0 ): bool {
+	if ( ! $notify || empty( $comment_id ) ) {
+		return (bool) $notify;
 	}
 
 	$comment = get_comment( $comment_id );

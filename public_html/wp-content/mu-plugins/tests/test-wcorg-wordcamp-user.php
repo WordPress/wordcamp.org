@@ -3,6 +3,7 @@
 namespace WordCamp\WordCampUser\Tests;
 
 use WP_UnitTestCase;
+use WP_UnitTest_Factory;
 use function WordCamp\WordCampUser\{
 	get_user_id,
 	protect_user,
@@ -21,7 +22,14 @@ class Test_WordCamp_User extends WP_UnitTestCase {
 	protected static $admin_user_id;
 	protected static $super_admin_id;
 
-	public static function wpSetUpBeforeClass( $factory ): void {
+	/**
+	 * Setup shared fixtures before any tests are run.
+	 *
+	 * @param WP_UnitTest_Factory $factory Unit test factory.
+	 */
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ): void {
+		parent::wpSetUpBeforeClass( $factory );
+
 		self::$wordcamp_user_id = $factory->user->create(
 			array(
 				'user_login' => USER_LOGIN,
@@ -41,32 +49,74 @@ class Test_WordCamp_User extends WP_UnitTestCase {
 				'role' => 'administrator',
 			)
 		);
-		grant_super_admin( self::$super_admin_id );
+
+		get_user_id( true );
+	}
+
+	/**
+	 * Clean up persistent fixtures after all tests run.
+	 */
+	public static function wpTearDownAfterClass(): void {
+		wp_delete_user( self::$wordcamp_user_id );
+		wp_delete_user( self::$admin_user_id );
+		wp_delete_user( self::$super_admin_id );
+		get_user_id( true );
+
+		parent::wpTearDownAfterClass();
+	}
+
+	/**
+	 * @covers \WordCamp\WordCampUser\get_user_id()
+	 */
+	public function test_get_user_id() {
+		$this->assertSame( self::$wordcamp_user_id, get_user_id() );
 	}
 
 	/**
 	 * @covers \WordCamp\WordCampUser\protect_user()
 	 */
 	public function test_protect_user_blocks_non_super_admin() {
-		$this->assertSame(
-			array( 'do_not_allow' ),
-			protect_user( array(), 'remove_user', self::$admin_user_id, array( self::$wordcamp_user_id ) )
-		);
+		$original_super_admins   = $GLOBALS['super_admins'] ?? null;
+		$GLOBALS['super_admins'] = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 
-		$this->assertSame(
-			array( 'do_not_allow' ),
-			protect_user( array(), 'promote_user', self::$admin_user_id, array( self::$wordcamp_user_id ) )
-		);
+		try {
+			$this->assertSame(
+				array( 'do_not_allow' ),
+				protect_user( array(), 'remove_user', self::$admin_user_id, array( self::$wordcamp_user_id ) )
+			);
+
+			$this->assertSame(
+				array( 'do_not_allow' ),
+				protect_user( array(), 'promote_user', self::$admin_user_id, array( self::$wordcamp_user_id ) )
+			);
+		} finally {
+			if ( null === $original_super_admins ) {
+				unset( $GLOBALS['super_admins'] );
+			} else {
+				$GLOBALS['super_admins'] = $original_super_admins; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
+		}
 	}
 
 	/**
 	 * @covers \WordCamp\WordCampUser\protect_user()
 	 */
 	public function test_protect_user_allows_super_admin() {
-		$this->assertSame(
-			array( 'remove_users' ),
-			protect_user( array( 'remove_users' ), 'remove_user', self::$super_admin_id, array( self::$wordcamp_user_id ) )
-		);
+		$original_super_admins   = $GLOBALS['super_admins'] ?? null;
+		$GLOBALS['super_admins'] = array( get_userdata( self::$super_admin_id )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		try {
+			$this->assertSame(
+				array( 'remove_users' ),
+				protect_user( array( 'remove_users' ), 'remove_user', self::$super_admin_id, array( self::$wordcamp_user_id ) )
+			);
+		} finally {
+			if ( null === $original_super_admins ) {
+				unset( $GLOBALS['super_admins'] );
+			} else {
+				$GLOBALS['super_admins'] = $original_super_admins; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
+		}
 	}
 
 	/**

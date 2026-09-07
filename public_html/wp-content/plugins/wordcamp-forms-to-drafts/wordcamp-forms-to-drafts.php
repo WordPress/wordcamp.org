@@ -443,7 +443,7 @@ class WordCamp_Forms_To_Drafts {
 		// Create the post.
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
-			'post_title'   => wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ),
+			'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ) ),
 			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -525,7 +525,7 @@ class WordCamp_Forms_To_Drafts {
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => wcorg_sanitize_plain_text( $all_values['Name'] ?? '' ),
+			'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Name'] ?? '' ) ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -660,20 +660,21 @@ class WordCamp_Forms_To_Drafts {
 	/**
 	 * Escape shortcode delimiters in submitted content.
 	 *
-	 * Submitted free-text is placed into draft post content that organizers later
-	 * render (e.g. when previewing the draft). Encoding the `[` and `]` delimiters
-	 * keeps that text as literal characters instead of letting it run as shortcodes,
-	 * so a submission is shown as written rather than executed.
+	 * Submitted free-text is placed into draft posts that organizers later publish and
+	 * render. Encoding the `[` and `]` delimiters keeps that text as literal characters
+	 * instead of letting it run as shortcodes, so a submission is shown as written rather
+	 * than executed. Titles need this as much as bodies do -- the WordCamp blocks and
+	 * `wc-post-types` both concatenate a title into post content.
 	 *
 	 * Tags are not a concern here: Jetpack has already run these values through `wp_kses_post()`,
 	 * and `content_save_pre` runs them through it again on the way into the database.
 	 *
-	 * @param string $content Submitted content.
+	 * @param string $content Submitted title or body.
 	 *
 	 * @return string Content with shortcode delimiters encoded.
 	 */
 	protected function escape_shortcodes( $content ) {
-		return str_replace( array( '[', ']' ), array( '&#91;', '&#93;' ), (string) $content );
+		return wcorg_escape_shortcodes( $content );
 	}
 
 	/**
@@ -699,7 +700,7 @@ class WordCamp_Forms_To_Drafts {
 		$speaker_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_speaker',
-				'post_title'   => wcorg_sanitize_plain_text( $speaker['Name'] ?? 'Untitled' ),
+				'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $speaker['Name'] ?? 'Untitled' ) ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -749,7 +750,7 @@ class WordCamp_Forms_To_Drafts {
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => wcorg_sanitize_plain_text( $session['Topic Title'] ?? '' ),
+				'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $session['Topic Title'] ?? '' ) ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),

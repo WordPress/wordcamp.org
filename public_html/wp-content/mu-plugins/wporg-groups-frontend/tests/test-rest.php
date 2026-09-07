@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Admin as Recurring_Events_Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
@@ -228,6 +229,38 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'monthly', $fields['recurrence']['frequency'] );
 		$this->assertSame( 4, $fields['recurrence']['count'] );
 		$this->assertFalse( $fields['recurrence']['locked'] );
+	}
+
+	/**
+	 * A bare draft gets its recurrence from the registered meta defaults.
+	 * The modal sends that back unchanged on publish, so it has to pass the
+	 * endpoint's own schema.
+	 */
+	public function test_publish_draft_round_trips_default_recurrence(): void {
+		// The test framework unregisters all meta keys after each test.
+		Recurring_Events_Admin::register_meta();
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$save = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$save->set_param( 'title', 'Bare draft' );
+		$draft_id = save_draft( $save )->get_data()['id'];
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $draft_id );
+		$recurrence = get_event_form_data( $load )->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( rest_validate_value_from_schema( $recurrence, event_args_schema()['recurrence'], 'recurrence' ) );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/draft/{$draft_id}/publish",
+			array( 'recurrence' => $recurrence ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'publish', get_post_status( $draft_id ) );
 	}
 
 	/**

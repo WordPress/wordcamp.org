@@ -1,0 +1,814 @@
+<?php
+
+namespace WordCamp\Dangling_Hosts\Tests;
+use WP_UnitTest_Factory;
+use WordCamp\Tests\Database_TestCase;
+
+use function WordCamp\Dangling_Hosts\{
+	check_host, extract_references, get_registrable_domain, is_first_party_host, is_scannable_host,
+	scan_network, scan_site
+};
+
+defined( 'WPINC' ) || die();
+
+/*
+ * The `WordPress.WP.EnqueuedResources` sniff fires on the `<script src=...>` samples below. They're strings of
+ * content being fed to the parser, not scripts this file outputs, so there's nothing to enqueue.
+ *
+ * phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript
+ */
+
+/**
+ * @group mu-plugins
+ * @group dangling-hosts
+ */
+class Test_Dangling_Hosts extends Database_TestCase {
+	/**
+	 * DNS answers to hand back instead of making real lookups, keyed by host.
+	 *
+	 * @var array
+	 */
+	protected $stubbed_hosts = array();
+
+	/**
+	 * Replace the DNS lookups for the duration of each test.
+	 *
+	 * Every test in here would otherwise be at the mercy of whatever the resolver says today, and asserting on
+	 * a real domain's registration status would make the suite fail the moment somebody registered it.
+	 */
+	public function setUp(): void {
+		parent::setUp();
+
+		$this->stubbed_hosts = array();
+
+		add_filter( 'wcorg_dangling_hosts_pre_check_host', array( $this, 'stub_check_host' ), 10, 3 );
+	}
+
+	/**
+	 * Remove the DNS stub.
+	 */
+	public function tearDown(): void {
+		remove_filter( 'wcorg_dangling_hosts_pre_check_host', array( $this, 'stub_check_host' ), 10 );
+
+		parent::tearDown();
+	}
+
+	/**
+	 * Return the canned status for a host, if the test registered one.
+	 *
+	 * @param array|null $result
+	 * @param string     $host
+	 * @param string     $domain
+	 *
+	 * @return array|null
+	 */
+	public function stub_check_host( $result, $host, $domain ) {
+		if ( ! isset( $this->stubbed_hosts[ $host ] ) ) {
+			return $result;
+		}
+
+		return array(
+			'host'   => $host,
+			'domain' => $domain,
+			'status' => $this->stubbed_hosts[ $host ],
+		);
+	}
+
+	/**
+	 * Create a published post whose content reaches the database verbatim.
+	 *
+	 * The suite defines `DISALLOW_UNFILTERED_HTML`, so `wp_insert_post()` runs the content through kses and
+	 * strips tags like `<script>`. Old imported content can still contain them, and the scanner needs to
+	 * report them, so the fixture writes the column directly rather than going through the editor's
+	 * sanitization.
+	 *
+	 * @param string $content
+	 *
+	 * @return int Post ID.
+	 */
+	protected function create_published_post( $content ) {
+		global $wpdb;
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_type'   => 'post',
+			)
+		);
+
+		$wpdb->update( $wpdb->posts, array( 'post_content' => $content ), array( 'ID' => $post_id ) );
+		clean_post_cache( $post_id );
+
+		return $post_id;
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\extract_references
+	 *
+	 * @dataProvider data_extract_references
+	 *
+	 * @param string $content
+	 * @param array  $expected List of `host|kind` pairs.
+	 */
+	public function test_extract_references( $content, $expected ) {
+		$actual = array_map(
+			function ( $reference ) {
+				return $reference['host'] . '|' . $reference['kind'];
+			},
+			extract_references( $content )
+		);
+
+		sort( $actual );
+		sort( $expected );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for `test_extract_references()`.
+	 *
+	 * @return array
+	 */
+	public function data_extract_references() {
+		return array(
+			'script source' => array(
+				'<script src="https://cdn.example.net/player.js"></script>',
+				array( 'cdn.example.net|script' ),
+			),
+
+			'core oembed iframe is distinguished from a plain one' => array(
+				'<iframe class="wp-embedded-content" src="https://blog.example.net/post/embed/#?secret=abc"></iframe>',
+				array( 'blog.example.net|embed' ),
+			),
+
+			'plain iframe' => array(
+				'<iframe src="https://video.example.net/watch/123"></iframe>',
+				array( 'video.example.net|iframe' ),
+			),
+
+			'image' => array(
+				'<img src="https://images.example.net/photo.jpg" alt="" />',
+				array( 'images.example.net|img' ),
+			),
+
+			'anchor' => array(
+				'<a href="https://example.net/article">Read more</a>',
+				array( 'example.net|link' ),
+			),
+
+			'bare url on its own line is what autoembed acts on' => array(
+				"Some text\n\nhttps://blog.example.net/a-post/\n\nMore text",
+				array( 'blog.example.net|url' ),
+			),
+
+			'embed block attribute' => array(
+				'<!-- wp:embed {"url":"https://blog.example.net/a-post/","type":"rich"} /-->',
+				array( 'blog.example.net|url' ),
+			),
+
+			/*
+			 * Other blocks carry a `url` attribute too. A button's is a link the visitor may follow, not
+			 * something the page loads, so it should be reported once as the link its anchor already is.
+			 */
+			'button block url is only a link' => array(
+				'<!-- wp:button {"url":"https://shop.example.net/buy"} -->' .
+				'<div class="wp-block-button"><a class="wp-block-button__link" href="https://shop.example.net/buy">Buy</a></div>' .
+				'<!-- /wp:button -->',
+				array( 'shop.example.net|link' ),
+			),
+
+			'multiline embed block attribute' => array(
+				"<!-- wp:embed {\n\t\"url\": \"https://blog.example.net/a-post/\",\n\t\"type\": \"rich\"\n} /-->",
+				array( 'blog.example.net|url' ),
+			),
+
+			'protocol relative urls are normalized' => array(
+				'<script src="//cdn.example.net/a.js"></script>',
+				array( 'cdn.example.net|script' ),
+			),
+
+			'relative urls have no host to check' => array(
+				'<a href="/local/page">Local</a><img src="../uploads/a.png" />',
+				array(),
+			),
+
+			'non http schemes are ignored' => array(
+				'<a href="mailto:someone@example.net">Mail</a><a href="#section">Jump</a>',
+				array(),
+			),
+
+			'first party hosts are skipped' => array(
+				'<a href="https://central.wordcamp.org/">Central</a>
+				 <img src="https://secure.gravatar.com/avatar/abc" />
+				 <script src="https://s0.wp.com/a.js"></script>',
+				array(),
+			),
+
+			'a host repeated in the same kind is only reported once' => array(
+				'<a href="https://example.net/one">One</a><a href="https://example.net/two">Two</a>',
+				array( 'example.net|link' ),
+			),
+
+			'the same host in different kinds is reported per kind' => array(
+				'<a href="https://example.net/a">A</a><img src="https://example.net/b.png" />',
+				array( 'example.net|link', 'example.net|img' ),
+			),
+
+			'single quoted attributes' => array(
+				"<img src='https://images.example.net/photo.jpg' />",
+				array( 'images.example.net|img' ),
+			),
+
+			'entity encoded attribute values' => array(
+				'<a href="https://example.net/a?x=1&amp;y=2">Link</a>',
+				array( 'example.net|link' ),
+			),
+
+			'uppercase host is normalized' => array(
+				'<a href="https://EXAMPLE.NET/a">Link</a>',
+				array( 'example.net|link' ),
+			),
+
+			/*
+			 * A URL that picked up the punctuation following it in the prose. The host it yields was never a
+			 * real one, so it shouldn't reach the report as a lapsed domain.
+			 */
+			'href with trailing punctuation' => array(
+				'<a href="https://example.net,/">Link</a>',
+				array(),
+			),
+
+			'href with an ip literal' => array(
+				'<a href="http://192.168.1.1/admin">Link</a>',
+				array(),
+			),
+
+			'empty content' => array( '', array() ),
+
+			'content with no references' => array( '<p>Just some words.</p>', array() ),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\is_scannable_host
+	 *
+	 * @dataProvider data_is_scannable_host
+	 *
+	 * @param string $host
+	 * @param bool   $expected
+	 */
+	public function test_is_scannable_host( $host, $expected ) {
+		$this->assertSame( $expected, is_scannable_host( $host ) );
+	}
+
+	/**
+	 * Test cases for `test_is_scannable_host()`.
+	 *
+	 * @return array
+	 */
+	public function data_is_scannable_host() {
+		return array(
+			'ordinary domain'         => array( 'example.net', true ),
+			'subdomain'               => array( 'cdn.example.net', true ),
+			'hyphenated label'        => array( 'my-site.example.net', true ),
+			'digits in label'         => array( 'web2.example.net', true ),
+			'long tld'                => array( 'example.photography', true ),
+			'punycode domain'         => array( 'xn--80ak6aa92e.com', true ),
+			'punycode tld'            => array( 'example.xn--p1ai', true ),
+
+			/*
+			 * The shapes that prompted this check. Each one is a typo in the content rather than a host, so
+			 * calling its domain lapsed would assert something untrue about a name nobody can register.
+			 */
+			'trailing comma'          => array( 'example.net,', false ),
+			'trailing paren'          => array( 'example.net)', false ),
+			'embedded space'          => array( 'example .net', false ),
+			'ipv4 literal'            => array( '192.168.1.1', false ),
+			'bracketed ipv6 literal'  => array( '[::1]', false ),
+
+			'single label'            => array( 'localhost', false ),
+			'empty label'             => array( 'example..net', false ),
+			'leading dot'             => array( '.example.net', false ),
+			'label starting a hyphen' => array( '-example.net', false ),
+			'label ending a hyphen'   => array( 'example-.net', false ),
+			'underscore'              => array( 'my_site.example.net', false ),
+			'single character tld'    => array( 'example.n', false ),
+			'over the length limit'   => array( str_repeat( 'a.', 130 ) . 'net', false ),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\is_first_party_host
+	 *
+	 * @dataProvider data_is_first_party_host
+	 *
+	 * @param string $host
+	 * @param bool   $expected
+	 */
+	public function test_is_first_party_host( $host, $expected ) {
+		$this->assertSame( $expected, is_first_party_host( $host ) );
+	}
+
+	/**
+	 * Test cases for `test_is_first_party_host()`.
+	 *
+	 * @return array
+	 */
+	public function data_is_first_party_host() {
+		return array(
+			'apex'                     => array( 'wordcamp.org', true ),
+			'subdomain'                => array( 'seattle.wordcamp.org', true ),
+			'deep subdomain'           => array( '2020.seattle.wordcamp.org', true ),
+			'sibling org'              => array( 'make.wordpress.org', true ),
+			'third party'              => array( 'example.net', false ),
+
+			/*
+			 * The suffix has to match on a label boundary. A domain someone else registered that merely ends
+			 * in our name is not ours.
+			 */
+			'lookalike is not matched' => array( 'notwordcamp.org', false ),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\get_registrable_domain
+	 *
+	 * @dataProvider data_get_registrable_domain
+	 *
+	 * @param string $host
+	 * @param string $expected
+	 */
+	public function test_get_registrable_domain( $host, $expected ) {
+		$this->assertSame( $expected, get_registrable_domain( $host ) );
+	}
+
+	/**
+	 * Test cases for `test_get_registrable_domain()`.
+	 *
+	 * @return array
+	 */
+	public function data_get_registrable_domain() {
+		return array(
+			'apex'                    => array( 'example.net', 'example.net' ),
+			'subdomain'               => array( 'www.example.net', 'example.net' ),
+			'deep subdomain'          => array( 'a.b.c.example.net', 'example.net' ),
+			'multi label suffix'      => array( 'www.example.co.uk', 'example.co.uk' ),
+			'multi label suffix apex' => array( 'example.com.au', 'example.com.au' ),
+			'uppercase'               => array( 'WWW.EXAMPLE.NET', 'example.net' ),
+			'trailing dot'            => array( 'www.example.net.', 'example.net' ),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\check_host
+	 *
+	 * Verify the stub short-circuits the real lookups, so the rest of the suite can rely on it.
+	 */
+	public function test_check_host_uses_injected_result() {
+		$this->stubbed_hosts = array( 'cdn.example.net' => 'dangling' );
+
+		$actual = check_host( 'cdn.example.net' );
+
+		$this->assertSame( 'dangling', $actual['status'] );
+		$this->assertSame( 'example.net', $actual['domain'] );
+		$this->assertSame( 'cdn.example.net', $actual['host'] );
+	}
+
+	/**
+	 * Run a scan of one site with the registry stubbed to a given response.
+	 *
+	 * @param array|WP_Error $response What `wp_remote_get()` should return for the RDAP request.
+	 *
+	 * @return array The references the scan reported.
+	 */
+	protected function scan_with_registry_response( $response ) {
+		$stub = function () use ( $response ) {
+			return $response;
+		};
+
+		add_filter( 'pre_http_request', $stub );
+
+		try {
+			return scan_network(
+				array(
+					'blog_ids' => array( get_current_blog_id() ),
+					'verify'   => true,
+				)
+			);
+		} finally {
+			remove_filter( 'pre_http_request', $stub );
+		}
+	}
+
+	/**
+	 * A registry that confirms the domain is gone leaves the finding standing.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_a_confirmed_lapsed_domain_stays_dangling() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 404 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertTrue( $references[0]['verified'] );
+	}
+
+	/**
+	 * A registry that says the domain is registered overturns what DNS found.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_a_registered_domain_is_downgraded() {
+		$this->stubbed_hosts['parked.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://parked.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 200 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'unresolved', $references[0]['status'] );
+		$this->assertFalse( $references[0]['verified'] );
+	}
+
+	/**
+	 * A registry that couldn't be reached is not evidence that the domain is registered.
+	 *
+	 * Reading a failed request as `registered` downgrades every genuine finding to `unresolved`, so a host
+	 * with no outbound HTTPS reports a clean run while suppressing exactly what the scan is looking for.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_an_unreachable_registry_does_not_downgrade_a_finding() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response(
+			new \WP_Error( 'http_request_failed', 'Could not resolve host.' )
+		);
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertNull( $references[0]['verified'], 'An unreachable registry must not read as confirmation.' );
+	}
+
+	/**
+	 * A registry that answers with neither a 200 nor a 404 hasn't answered the question.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\verify_unregistered
+	 */
+	public function test_an_inconclusive_registry_response_does_not_downgrade_a_finding() {
+		$this->stubbed_hosts['gone.example'] = 'dangling';
+		$this->create_published_post( '<a href="https://gone.example/a">Link</a>' );
+
+		$references = $this->scan_with_registry_response( array( 'response' => array( 'code' => 429 ) ) );
+
+		$this->assertCount( 1, $references );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertNull( $references[0]['verified'] );
+	}
+
+	/**
+	 * The scan reports; it never writes.
+	 *
+	 * That's what makes it safe to point at a production database, and it's a property worth failing a build
+	 * over rather than re-deriving by reading the code. Every `wpdb` query passes through the `query` filter,
+	 * so watching that catches a write wherever somebody later adds one.
+	 *
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 */
+	public function test_the_scan_issues_no_write_statements() {
+		$this->create_published_post(
+			'<a href="https://example.net/article">Read more</a>'
+		);
+
+		$writes = array();
+
+		$watch = function ( $query ) use ( &$writes ) {
+			$normalized = ltrim( $query, "( \t\n\r" );
+			$reads      = array(
+				'SELECT', 'SHOW', 'DESCRIBE', 'DESC', 'EXPLAIN',
+				'SET', 'USE', 'START TRANSACTION', 'BEGIN', 'COMMIT', 'ROLLBACK', 'UNLOCK',
+			);
+
+			foreach ( $reads as $prefix ) {
+				if ( 0 === stripos( $normalized, $prefix ) ) {
+					return $query;
+				}
+			}
+
+			$writes[] = $normalized;
+
+			return $query;
+		};
+
+		add_filter( 'query', $watch );
+
+		try {
+			scan_site( get_current_blog_id() );
+			scan_network( array( 'blog_ids' => array( get_current_blog_id() ) ) );
+		} finally {
+			remove_filter( 'query', $watch );
+		}
+
+		$this->assertSame( array(), $writes, 'The scan issued a statement that writes.' );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * A reference that only exists in the raw post content should be found.
+	 */
+	public function test_scan_site_finds_references_in_post_content() {
+		$post_id = $this->create_published_post(
+			'<a href="https://example.net/article">Read more</a>'
+		);
+
+		$references = scan_site( get_current_blog_id() );
+		$hosts      = wp_list_pluck( $references, 'host' );
+
+		$this->assertContains( 'example.net', $hosts );
+
+		foreach ( $references as $reference ) {
+			if ( 'example.net' === $reference['host'] ) {
+				$this->assertSame( $post_id, $reference['post_id'] );
+				$this->assertSame( 'link', $reference['kind'] );
+			}
+		}
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * The iframe for a classic-editor embed lives in the oEmbed cache rather than in the post, so scanning
+	 * `post_content` alone would miss the host it points at.
+	 */
+	public function test_scan_site_finds_references_in_cached_oembed_markup() {
+		$post_id = $this->create_published_post(
+			'No links here.'
+		);
+
+		add_post_meta(
+			$post_id,
+			'_oembed_1234567890abcdef',
+			'<blockquote class="wp-embedded-content"><a href="https://blog.example.net/a-post/">A post</a></blockquote>' .
+			'<iframe class="wp-embedded-content" src="https://blog.example.net/a-post/embed/#?secret=abc"></iframe>'
+		);
+
+		$references = scan_site( get_current_blog_id() );
+		$found      = array();
+
+		foreach ( $references as $reference ) {
+			if ( 'blog.example.net' === $reference['host'] ) {
+				$found[] = $reference['kind'];
+			}
+		}
+
+		$this->assertContains( 'embed', $found );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * Each finding has to name the site it came from, so a network-wide report can be grouped by site without
+	 * anyone having to parse it back out of the permalink.
+	 */
+	public function test_scan_site_records_the_site_each_reference_came_from() {
+		$this->create_published_post( '<a href="https://example.net/article">Read more</a>' );
+
+		$references = scan_site( get_current_blog_id() );
+		$matched    = false;
+
+		foreach ( $references as $reference ) {
+			if ( 'example.net' !== $reference['host'] ) {
+				continue;
+			}
+
+			$matched = true;
+
+			$this->assertSame( get_current_blog_id(), $reference['blog_id'] );
+			$this->assertSame( home_url(), $reference['site'] );
+		}
+
+		$this->assertTrue( $matched, 'The seeded reference was not found.' );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * Unpublished content isn't served to anyone, so it shouldn't generate findings.
+	 */
+	public function test_scan_site_ignores_unpublished_posts() {
+		self::factory()->post->create(
+			array(
+				'post_status'  => 'draft',
+				'post_type'    => 'post',
+				'post_content' => '<a href="https://draft-only.example.net/x">Link</a>',
+			)
+		);
+
+		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
+
+		$this->assertNotContains( 'draft-only.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * The cached oEmbed markup is read from postmeta, which has no status of its own -- it belongs to whatever
+	 * post it hangs off. A draft keeps its `_oembed_` meta, so scanning the meta without consulting the post
+	 * reports content nobody is served, and a scheduled run fails over a page that isn't public.
+	 */
+	public function test_scan_site_ignores_cached_oembed_on_unpublished_posts() {
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_status' => 'draft',
+				'post_type'   => 'post',
+			)
+		);
+
+		add_post_meta(
+			$draft_id,
+			'_oembed_1234567890abcdef',
+			'<iframe src="https://draft-embed.example.net/embed/"></iframe>'
+		);
+
+		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
+
+		$this->assertNotContains( 'draft-embed.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_site
+	 *
+	 * Same for a post type the caller didn't ask about.
+	 */
+	public function test_scan_site_ignores_cached_oembed_on_other_post_types() {
+		$other_id = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'post_type'   => 'attachment',
+			)
+		);
+
+		add_post_meta(
+			$other_id,
+			'_oembed_abcdef1234567890',
+			'<iframe src="https://other-type.example.net/embed/"></iframe>'
+		);
+
+		$hosts = wp_list_pluck( scan_site( get_current_blog_id() ), 'host' );
+
+		$this->assertNotContains( 'other-type.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 *
+	 * Only lapsed and unresolvable hosts are reported by default; a host that resolves is noise.
+	 */
+	public function test_scan_network_reports_only_problem_hosts_by_default() {
+		$this->create_published_post(
+			'<a href="https://gone.example.net/a">Gone</a>' .
+					'<a href="https://live.example.net/b">Live</a>'
+		);
+
+		$this->stubbed_hosts = array(
+			'gone.example.net' => 'dangling',
+			'live.example.net' => 'ok',
+		);
+
+		$hosts = wp_list_pluck(
+			scan_network(
+				array(
+					'blog_ids' => array( get_current_blog_id() ),
+					'verify'   => false,
+				)
+			),
+			'host'
+		);
+
+		$this->assertContains( 'gone.example.net', $hosts );
+		$this->assertNotContains( 'live.example.net', $hosts );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 *
+	 * `--include-ok` is how someone reviews the whole external surface, not just the broken parts.
+	 */
+	public function test_scan_network_can_include_healthy_hosts() {
+		$this->create_published_post(
+			'<a href="https://live.example.net/b">Live</a>'
+		);
+
+		$this->stubbed_hosts = array( 'live.example.net' => 'ok' );
+
+		$references = scan_network(
+			array(
+				'blog_ids'   => array( get_current_blog_id() ),
+				'verify'     => false,
+				'include_ok' => true,
+			)
+		);
+
+		$this->assertContains( 'live.example.net', wp_list_pluck( $references, 'host' ) );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 *
+	 * A subdomain that stopped resolving under a domain that's still registered needs different follow-up
+	 * than a lapsed registration, so the two must not be conflated.
+	 */
+	public function test_scan_network_separates_unresolved_from_dangling() {
+		$this->create_published_post(
+			'<a href="https://gone.example.net/a">Lapsed</a>' .
+					'<a href="https://missing.example.org/b">Missing subdomain</a>'
+		);
+
+		$this->stubbed_hosts = array(
+			'gone.example.net'    => 'dangling',
+			'missing.example.org' => 'unresolved',
+		);
+
+		$statuses = array();
+
+		$references = scan_network(
+			array(
+				'blog_ids' => array( get_current_blog_id() ),
+				'verify'   => false,
+			)
+		);
+
+		foreach ( $references as $reference ) {
+			$statuses[ $reference['host'] ] = $reference['status'];
+		}
+
+		$this->assertSame( 'dangling', $statuses['gone.example.net'] );
+		$this->assertSame( 'unresolved', $statuses['missing.example.org'] );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 *
+	 * The riskiest findings have to be at the top, because that's the order somebody triages them in.
+	 */
+	public function test_scan_network_sorts_worst_findings_first() {
+		$this->create_published_post(
+			'<a href="https://gone.example.net/a">Link</a>' .
+					'<script src="https://gone.example.net/a.js"></script>' .
+					'<a href="https://missing.example.org/b">Missing</a>'
+		);
+
+		$this->stubbed_hosts = array(
+			'gone.example.net'    => 'dangling',
+			'missing.example.org' => 'unresolved',
+		);
+
+		$references = scan_network(
+			array(
+				'blog_ids' => array( get_current_blog_id() ),
+				'verify'   => false,
+			)
+		);
+
+		$this->assertSame( 'script', $references[0]['kind'] );
+		$this->assertSame( 'dangling', $references[0]['status'] );
+		$this->assertSame( 'unresolved', end( $references )['status'] );
+	}
+
+	/**
+	 * @covers WordCamp\Dangling_Hosts\scan_network
+	 *
+	 * `--kinds` narrows the report to the reference types worth acting on.
+	 */
+	public function test_scan_network_filters_by_kind() {
+		$this->create_published_post(
+			'<a href="https://gone.example.net/a">Link</a>' .
+					'<script src="https://gone.example.net/a.js"></script>'
+		);
+
+		$this->stubbed_hosts = array( 'gone.example.net' => 'dangling' );
+
+		$kinds = wp_list_pluck(
+			scan_network(
+				array(
+					'blog_ids' => array( get_current_blog_id() ),
+					'kinds'    => array( 'script' ),
+					'verify'   => false,
+				)
+			),
+			'kind'
+		);
+
+		$this->assertSame( array( 'script' ), $kinds );
+	}
+}
+
+// phpcs:enable

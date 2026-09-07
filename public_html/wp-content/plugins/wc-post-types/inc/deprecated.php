@@ -53,6 +53,8 @@ function shortcode_speakers( $attr, $content ) {
 	$session_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => -1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 	);
 
 	if ( ! empty( $attr['track'] ) ) {
@@ -92,10 +94,17 @@ function shortcode_speakers( $attr, $content ) {
 		$speakers_tracks[ $speaker_id ] = array_unique( $tracks );
 	}
 
+	// An empty `post__in` is ignored by `WP_Query`, which would list every speaker.
+	if ( ! empty( $attr['track'] ) && empty( $speaker_ids ) ) {
+		return '';
+	}
+
 	// Fetch all specified speakers.
 	$speaker_args = array(
 		'post_type'      => 'wcb_speaker',
 		'posts_per_page' => intval( $attr['posts_per_page'] ),
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'orderby'        => $attr['orderby'],
 		'order'          => $attr['order'],
 	);
@@ -196,6 +205,8 @@ function shortcode_organizers( $attr, $content ) {
 	$query_args = array(
 		'post_type'      => 'wcb_organizer',
 		'posts_per_page' => intval( $attr['posts_per_page'] ),
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'orderby'        => $attr['orderby'],
 		'order'          => $attr['order'],
 	);
@@ -289,6 +300,8 @@ function shortcode_sessions( $attr, $content ) {
 	$args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => intval( $attr['posts_per_page'] ),
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'tax_query'      => array(),
 		'orderby'        => $attr['orderby'],
 		'order'          => $attr['order'],
@@ -369,6 +382,8 @@ function shortcode_sessions( $attr, $content ) {
 				$speakers = get_posts( array(
 					'post_type'      => 'wcb_speaker',
 					'posts_per_page' => -1,
+					'post_status'    => 'publish',
+					'has_password'   => false,
 					'post__in'       => $speakers_ids,
 				) );
 			}
@@ -510,6 +525,8 @@ function shortcode_sponsors( $attr, $content ) {
 		<?php foreach ( $terms as $term ) :
 			$sponsors = new WP_Query( array(
 				'post_type'      => 'wcb_sponsor',
+				'post_status'    => 'publish',
+				'has_password'   => false,
 				'order'          => 'ASC',
 				'posts_per_page' => -1,
 				'taxonomy'       => $term->taxonomy,

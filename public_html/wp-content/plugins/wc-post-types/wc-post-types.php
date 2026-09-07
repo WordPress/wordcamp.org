@@ -924,7 +924,11 @@ class WordCamp_Post_Types_Plugin {
 		$speakers_html .= '<ul id="session-speaker-names">';
 		while ( $speakers->have_posts() ) {
 			$speakers->the_post();
-			$speakers_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$speakers_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$speakers_html .= '</ul>';
 
@@ -1149,7 +1153,11 @@ class WordCamp_Post_Types_Plugin {
 		$sessions_html .= '<ul id="speaker-session-names">';
 		while ( $sessions->have_posts() ) {
 			$sessions->the_post();
-			$sessions_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$sessions_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$sessions_html .= '</ul>';
 

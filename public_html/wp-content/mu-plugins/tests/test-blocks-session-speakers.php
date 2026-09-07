@@ -121,6 +121,24 @@ class Test_Session_Speakers_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A speaker title is listed as text, not run through the shortcode parser.
+	 *
+	 * The block's output is concatenated into post content, which core parses at
+	 * `the_content` priority 11.
+	 */
+	public function test_speaker_title_is_listed_as_text() {
+		wp_set_current_user( 0 );
+
+		$this->attach_speaker( 'Escaped [caption width=1]x[/caption] speaker', 'publish', 0 );
+
+		$output = $this->render_block();
+
+		$this->assertStringContainsString( 'Escaped', $output );
+		$this->assertStringNotContainsString( '[caption', $output );
+		$this->assertSame( $output, do_shortcode( $output ) );
+	}
+
+	/**
 	 * Test that draft speakers are not listed for a logged out visitor.
 	 */
 	public function test_logged_out_does_not_see_draft_speaker() {

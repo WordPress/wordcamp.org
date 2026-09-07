@@ -95,6 +95,9 @@ function EventForm(
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
 
+	// The browser-side minimum date only applies to a brand-new event; the server validates a loaded post's date.
+	const [ isExistingPost, setIsExistingPost ] = useState( false );
+
 	/**
 	 * Description is intentionally NOT in form state - the inline block editor
 	 * owns it. We grab the current value via `descriptionRef` only at
@@ -148,6 +151,7 @@ function EventForm(
 					return;
 				}
 				setVenues( res.venues || [] );
+				setIsExistingPost( !! res.is_editing );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
 					id: res.fields.featured_image_id || 0,
@@ -280,7 +284,7 @@ function EventForm(
 					label={ __( 'Date', 'wporg-groups-frontend' ) }
 					type="date"
 					value={ form.date }
-					min={ isEdit ? undefined : MINIMUM_EVENT_DATE }
+					min={ isExistingPost ? undefined : MINIMUM_EVENT_DATE }
 					onChange={ ( v ) => updateField( 'date', v ) }
 					required
 					__nextHasNoMarginBottom

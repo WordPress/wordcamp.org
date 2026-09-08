@@ -817,4 +817,21 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
 	}
+
+	/**
+	 * The form marks a published event's recurrence as locked. The frontend relies on this flag to leave
+	 * recurrence out of the edit payload.
+	 */
+	public function test_event_form_locks_recurrence_for_published_event(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$event_id = create_event( $this->event_request( $this->base_event_params() ) )->get_data()['id'];
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $event_id );
+		$recurrence = get_event_form_data( $load )->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( $recurrence['locked'] );
+	}
 }

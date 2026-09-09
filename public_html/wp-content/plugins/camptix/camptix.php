@@ -2846,8 +2846,8 @@ class CampTix_Plugin {
 							delete_post_meta( $rel_attendee->ID, 'tix_pending_refund' );
 							$rel_attendee->post_status = 'refund';
 							wp_update_post( $rel_attendee );
-							update_post_meta( $attendee->ID, 'tix_refund_transaction_id', $result['refund_transaction_id'] );
-							update_post_meta( $attendee->ID, 'tix_refund_transaction_details', $result['refund_transaction_details'] );
+							update_post_meta( $rel_attendee->ID, 'tix_refund_transaction_id', $result['refund_transaction_id'] );
+							update_post_meta( $rel_attendee->ID, 'tix_refund_transaction_details', $result['refund_transaction_details'] );
 							clean_post_cache( $rel_attendee->ID );
 						}
 					}
@@ -6771,16 +6771,15 @@ class CampTix_Plugin {
 				}
 			}
 
-			if ( self::PAYMENT_STATUS_FAILED == $result ) {
+			// A refund reverses the charge, so a later completed, pending or failed result for
+			// the same order leaves the attendee refunded. Gateways keep reporting the session as
+			// paid after a refund (Stripe records the refund on the charge, not the session), and a
+			// gateway error on a repeated return would otherwise drop the refund marker.
+			if ( 'refund' === $attendee->post_status && in_array( $result, array( self::PAYMENT_STATUS_COMPLETED, self::PAYMENT_STATUS_PENDING, self::PAYMENT_STATUS_FAILED ), true ) ) {
+				$this->log( 'Refusing to change a refunded attendee; a later payment result does not undo a refund.', $attendee->ID, $data );
+			} elseif ( self::PAYMENT_STATUS_FAILED == $result ) {
 				$attendee->post_status = 'failed';
 				wp_update_post( $attendee );
-			}
-
-			// A refund reverses the charge, so a later completed or pending result for the
-			// same order must not re-seat the attendee. Gateways keep reporting the session
-			// as paid after a refund (Stripe records the refund on the charge, not the session).
-			if ( 'refund' === $attendee->post_status && in_array( $result, array( self::PAYMENT_STATUS_COMPLETED, self::PAYMENT_STATUS_PENDING ), true ) ) {
-				$this->log( 'Refusing to re-seat a refunded attendee; a later payment result does not undo a refund.', $attendee->ID, $data );
 			} elseif ( self::PAYMENT_STATUS_COMPLETED == $result ) {
 				$attendee->post_status = 'publish';
 				wp_update_post( $attendee );

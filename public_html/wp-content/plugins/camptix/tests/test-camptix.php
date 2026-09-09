@@ -248,12 +248,14 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * A refund reverses the charge, so a later completed result for the same order
-	 * (a replayed return URL, a repeated webhook) must not re-seat the attendee.
+	 * A refund reverses the charge, so a later completed, pending or failed result
+	 * for the same order (a replayed return URL, a repeated webhook) leaves the
+	 * attendee refunded.
 	 *
 	 * @covers CampTix_Plugin::payment_result
 	 * @testWith [2]
 	 *           [3]
+	 *           [4]
 	 */
 	public function test_payment_result_does_not_reseat_refunded_attendee( $result ) {
 		/** @var CampTix_Plugin $camptix */

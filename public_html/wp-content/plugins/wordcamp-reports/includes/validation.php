@@ -105,7 +105,7 @@ function validate_date_range( $start_date, $end_date, array $config = [] ) {
 
 	// If the end date doesn't have a specific time, make sure the entire day is included.
 	if ( $config['include_end_date'] && '00:00:00' === $end_date->format( 'H:i:s' ) ) {
-		$end_date->setTime( 23, 59, 59 );
+		$end_date = $end_date->setTime( 23, 59, 59 );
 	}
 
 	return new Date_Range( $start_date, $end_date );

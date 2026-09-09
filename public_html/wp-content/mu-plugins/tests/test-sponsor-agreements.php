@@ -8,6 +8,9 @@ use function WordCamp\Sponsor_Agreements\is_agreement;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
 use function WordCamp\Sponsor_Agreements\add_csprn_to_filename;
 use function WordCamp\Sponsor_Agreements\rename_agreement_file;
+use function WordCamp\Sponsor_Agreements\secure_agreement;
+
+use const WordCamp\Sponsor_Agreements\UPLOAD_PARAM;
 
 defined( 'WPINC' ) || die();
 
@@ -100,6 +103,64 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 		update_post_meta( $sponsor_id, $meta_key, $agreement_id );
 
 		return $agreement_id;
+	}
+
+	/**
+	 * Run something with the error log pointed at a file this test can read.
+	 *
+	 * Written into the uploads directory the test environment already owns, rather than the system's
+	 * temporary directory.
+	 *
+	 * @param callable $callback
+	 *
+	 * @return string Whatever was logged.
+	 */
+	protected function capture_log( $callback ) {
+		$uploads = wp_upload_dir();
+		wp_mkdir_p( $uploads['basedir'] );
+		$log      = trailingslashit( $uploads['basedir'] ) . 'agreement-log-' . wp_generate_password( 8, false, false ) . '.log';
+		$previous = ini_set( 'error_log', $log ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- scoped to this test.
+
+		try {
+			$callback();
+		} finally {
+			ini_set( 'error_log', $previous ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- restoring what was there.
+		}
+
+		// Nothing logged means the file was never created.
+		if ( ! is_file( $log ) ) {
+			return '';
+		}
+
+		$contents = (string) file_get_contents( $log ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file this test wrote.
+
+		wp_delete_file( $log );
+
+		return $contents;
+	}
+
+	/**
+	 * Put a file on disk and attach it to a sponsor, as an upload from that sponsor's screen.
+	 *
+	 * @param string   $filename
+	 * @param string   $directory
+	 * @param int|null $sponsor_id Defaults to a new sponsor, for the tests that don't need to name it.
+	 *
+	 * @return int The attachment ID.
+	 */
+	protected function create_upload_on_disk( $filename, $directory, $sponsor_id = null ) {
+		file_put_contents( $directory . $filename, 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		$attachment_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . $filename,
+			'post_parent'    => $sponsor_id ?? $this->create_sponsor(),
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		update_attached_file( $attachment_id, $directory . $filename );
+
+		return $attachment_id;
 	}
 
 	/**
@@ -594,6 +655,310 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression(
 			'/^agreement\.pdf-[A-Za-z0-9]{16}\.pdf$/',
 			add_csprn_to_filename( 'agreement.pdf.pdf', '.pdf' )
+		);
+	}
+
+	/**
+	 * An upload marked before the sponsor is saved is covered from the moment it lands.
+	 *
+	 * The Sponsor Agreement modal marks its own uploads, so a file that is uploaded and then abandoned --
+	 * the organizer removes it again, or never presses Update -- doesn't sit on a published sponsor as an
+	 * ordinary attachment.
+	 */
+	public function test_an_upload_is_secured_before_the_sponsor_is_saved() {
+		$uploads      = wp_upload_dir();
+		$directory    = trailingslashit( $uploads['path'] );
+		$agreement_id = $this->create_upload_on_disk( 'just-uploaded.pdf', $directory );
+
+		try {
+			// No sponsor meta is written: this is the upload being marked, not the sponsor being saved.
+			secure_agreement( $agreement_id );
+
+			$this->assertSame( 'private', get_post_status( $agreement_id ) );
+			$this->assertTrue( is_agreement( $agreement_id ) );
+			$this->assertMatchesRegularExpression(
+				'/^just-uploaded-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+
+			wp_set_current_user( 0 );
+
+			$this->assertSame( 401, $this->request_media_item( $agreement_id ) );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'just-uploaded*' );
+		}
+	}
+
+	/**
+	 * Saving the sponsor afterwards doesn't suffix the file a second time.
+	 */
+	public function test_saving_the_sponsor_after_an_upload_changes_nothing() {
+		$sponsor_id   = $this->create_sponsor();
+		$uploads      = wp_upload_dir();
+		$directory    = trailingslashit( $uploads['path'] );
+		$agreement_id = $this->create_upload_on_disk( 'marked-first.pdf', $directory, $sponsor_id );
+
+		try {
+			secure_agreement( $agreement_id );
+
+			$marked = wp_basename( get_attached_file( $agreement_id ) );
+
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+
+			$this->assertSame( $marked, wp_basename( get_attached_file( $agreement_id ) ) );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'marked-first*' );
+		}
+	}
+
+	/**
+	 * An upload the modal never marked is noted, because saving the sponsor otherwise hides that.
+	 */
+	public function test_an_unmarked_upload_is_logged() {
+		$sponsor_id   = $this->create_sponsor();
+		$agreement_id = $this->create_file( 'unmarked.pdf', $sponsor_id );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		$this->assertStringContainsString( 'sponsor_agreement_upload_not_marked', $logged );
+		$this->assertSame( 'private', get_post_status( $agreement_id ), 'The file was left unsecured.' );
+	}
+
+	/**
+	 * A file chosen from the Media Library had no upload to mark, so it says nothing.
+	 */
+	public function test_a_library_choice_is_not_logged() {
+		$sponsor_id   = $this->create_sponsor();
+		$agreement_id = $this->create_file( 'from-the-library.pdf', 0 );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		$this->assertStringNotContainsString( 'sponsor_agreement_upload_not_marked', $logged );
+	}
+
+	/**
+	 * An upload the modal did mark is already an agreement, so saving the sponsor says nothing either.
+	 */
+	public function test_a_marked_upload_is_not_logged() {
+		$sponsor_id   = $this->create_sponsor();
+		$agreement_id = $this->create_file( 'marked.pdf', $sponsor_id );
+
+		secure_agreement( $agreement_id );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		$this->assertStringNotContainsString( 'sponsor_agreement_upload_not_marked', $logged );
+	}
+
+	/**
+	 * Put the request into the shape `wp_ajax_upload_attachment()` gives it.
+	 *
+	 * @param int  $sponsor_id The parent the upload names.
+	 * @param bool $marked     Whether the modal marked this upload as an agreement.
+	 */
+	protected function start_upload_request( $sponsor_id, $marked = true ) {
+		$_REQUEST['action']  = 'upload-attachment';
+		$_REQUEST['post_id'] = $sponsor_id;
+
+		if ( $marked ) {
+			$_POST[ UPLOAD_PARAM ] = 1;
+		}
+	}
+
+	/**
+	 * Leave the superglobals as they were found.
+	 */
+	protected function end_upload_request() {
+		unset( $_REQUEST['action'], $_REQUEST['post_id'], $_POST[ UPLOAD_PARAM ] );
+	}
+
+	/**
+	 * Create an attachment the way `media_handle_upload()` does, so the upload hooks really run.
+	 *
+	 * @param string $filename
+	 * @param int    $sponsor_id
+	 * @param string $mime_type
+	 *
+	 * @return int
+	 */
+	protected function upload_attachment( $filename, $sponsor_id, $mime_type = 'application/pdf' ) {
+		$uploads   = wp_upload_dir();
+		$directory = trailingslashit( $uploads['path'] );
+		$name      = wp_unique_filename( $directory, $filename );
+
+		file_put_contents( $directory . $name, 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		return wp_insert_attachment(
+			array(
+				'post_title'     => $filename,
+				'post_parent'    => $sponsor_id,
+				'post_mime_type' => $mime_type,
+				'post_status'    => 'inherit',
+			),
+			$directory . $name,
+			$sponsor_id
+		);
+	}
+
+	/**
+	 * A marked upload is named, hidden and marked without anything having to move afterwards.
+	 */
+	public function test_a_marked_upload_is_secured_as_it_arrives() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		wp_set_current_user( self::$organizer );
+		$this->start_upload_request( $sponsor_id );
+
+		try {
+			$agreement_id = $this->upload_attachment( 'signed-agreement.pdf', $sponsor_id );
+
+			$this->assertMatchesRegularExpression(
+				'/^signed-agreement-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+			$this->assertSame( 'private', get_post( $agreement_id )->post_status );
+			$this->assertTrue( is_agreement( $agreement_id ) );
+
+			// It was never written under the name it arrived with.
+			$this->assertFileDoesNotExist( $directory . 'signed-agreement.pdf' );
+		} finally {
+			$this->end_upload_request();
+			$this->delete_files_on_disk( $directory, 'signed-agreement*' );
+		}
+	}
+
+	/**
+	 * A PDF is an agreement whether or not the modal marked it.
+	 *
+	 * This is what stands between an organizer and an exposed contract when the marking fails, which is
+	 * otherwise silent for an upload that is then abandoned.
+	 */
+	public function test_an_unmarked_pdf_on_a_sponsor_is_still_an_agreement() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		wp_set_current_user( self::$organizer );
+		$this->start_upload_request( $sponsor_id, false );
+
+		try {
+			$agreement_id = $this->upload_attachment( 'unmarked-contract.pdf', $sponsor_id );
+
+			$this->assertSame( 'private', get_post( $agreement_id )->post_status );
+			$this->assertTrue( is_agreement( $agreement_id ) );
+			$this->assertMatchesRegularExpression(
+				'/^unmarked-contract-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+		} finally {
+			$this->end_upload_request();
+			$this->delete_files_on_disk( $directory, 'unmarked-contract*' );
+		}
+	}
+
+	/**
+	 * An unmarked image is a logo, and is left as one.
+	 *
+	 * The gap this leaves -- an image agreement whose marking failed -- is what
+	 * `report_unmarked_upload()` is for.
+	 */
+	public function test_an_unmarked_image_on_a_sponsor_is_left_alone() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		wp_set_current_user( self::$organizer );
+		$this->start_upload_request( $sponsor_id, false );
+
+		try {
+			$logo_id = $this->upload_attachment( 'acme-logo.png', $sponsor_id, 'image/png' );
+
+			$this->assertSame( 'inherit', get_post( $logo_id )->post_status );
+			$this->assertFalse( is_agreement( $logo_id ) );
+			$this->assertSame( 'acme-logo.png', wp_basename( get_attached_file( $logo_id ) ) );
+		} finally {
+			$this->end_upload_request();
+			$this->delete_files_on_disk( $directory, 'acme-logo*' );
+		}
+	}
+
+	/**
+	 * A marked image is an agreement, which is the whole of what the field is for.
+	 */
+	public function test_a_marked_image_on_a_sponsor_is_an_agreement() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		wp_set_current_user( self::$organizer );
+		$this->start_upload_request( $sponsor_id );
+
+		try {
+			$agreement_id = $this->upload_attachment( 'signed-page.jpg', $sponsor_id, 'image/jpeg' );
+
+			$this->assertSame( 'private', get_post( $agreement_id )->post_status );
+			$this->assertTrue( is_agreement( $agreement_id ) );
+		} finally {
+			$this->end_upload_request();
+			$this->delete_files_on_disk( $directory, 'signed-page*' );
+		}
+	}
+
+	/**
+	 * The requests this has to stay out of, and why each one is here.
+	 *
+	 * @dataProvider data_requests_the_upload_hooks_decline
+	 *
+	 * @param string $action      The action Core dispatched on.
+	 * @param string $parent_type The post type the upload names as its parent.
+	 * @param string $role        The role of the user uploading.
+	 */
+	public function test_the_upload_hooks_decline_other_requests( $action, $parent_type, $role ) {
+		$parent_id = 'wcb_sponsor' === $parent_type
+			? $this->create_sponsor()
+			: self::factory()->post->create();
+
+		$uploads   = wp_upload_dir();
+		$directory = trailingslashit( $uploads['path'] );
+
+		wp_set_current_user( 'editor' === $role ? self::$organizer : self::$volunteer );
+
+		$this->start_upload_request( $parent_id );
+		$_REQUEST['action'] = $action;
+
+		try {
+			$attachment_id = $this->upload_attachment( 'untouched.pdf', $parent_id );
+
+			$this->assertSame( 'inherit', get_post( $attachment_id )->post_status );
+			$this->assertFalse( is_agreement( $attachment_id ) );
+			$this->assertSame( 'untouched.pdf', wp_basename( get_attached_file( $attachment_id ) ) );
+		} finally {
+			$this->end_upload_request();
+			$this->delete_files_on_disk( $directory, 'untouched*' );
+		}
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_requests_the_upload_hooks_decline() {
+		return array(
+			// The field only means anything in the request that creates the attachment.
+			'not an upload' => array( 'query-attachments', 'wcb_sponsor', 'editor' ),
+
+			// A PDF on anything else is somebody's ordinary media.
+			'not a sponsor' => array( 'upload-attachment', 'post', 'editor' ),
+
+			// `upload_files` is an Author capability; editing somebody else's sponsor is not.
+			'cannot edit the sponsor' => array( 'upload-attachment', 'wcb_sponsor', 'volunteer' ),
 		);
 	}
 }

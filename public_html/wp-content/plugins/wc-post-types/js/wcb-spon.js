@@ -42,7 +42,40 @@
 				self.toggleElements();
 			} );
 
+			this.markOwnUploads();
 			this.toggleElements();
+
+			return this;
+		},
+
+		/**
+		 * Mark this modal's uploads as agreements while they are on their way to the server.
+		 *
+		 * A file uploaded here is an agreement whether or not the organizer goes on to select it and save
+		 * the sponsor, and until something says so it is an ordinary attachment on a public post. Sending
+		 * the answer with the file means it never has to be chased afterwards.
+		 *
+		 * The uploader is built when the modal first opens, so the field can only be set from here. A PDF
+		 * is taken as an agreement without it, so this failing quietly costs the images only.
+		 *
+		 * @returns {wcbSponsors.view.Agreement}
+		 */
+		markOwnUploads: function() {
+			var self = this;
+
+			if ( 'undefined' === typeof wcbSponsorAgreement ) {
+				return this;
+			}
+
+			this.frame.on( 'open', function() {
+				// Core leaves the frame without an uploader when uploading is unavailable, and there is
+				// then nothing arriving to mark.
+				var uploader = self.frame.uploader && self.frame.uploader.uploader;
+
+				if ( uploader && 'function' === typeof uploader.param ) {
+					uploader.param( wcbSponsorAgreement.param, 1 );
+				}
+			} );
 
 			return this;
 		},

@@ -17,7 +17,7 @@ export default function DesignTab() {
 		'div',
 		{ className: 'wporg-settings-tab' },
 		h( 'p', {},
-			__( 'Use the WordPress Site Editor to customise your group site — change colors, fonts, the hero image, page layouts, and more.', 'wporg-groups-frontend' )
+			__( 'Use the WordPress Site Editor to customize your group site — change colors, fonts, the hero image, page layouts, and more.', 'wporg-groups-frontend' )
 		),
 		h(
 			Button,

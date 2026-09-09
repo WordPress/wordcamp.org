@@ -52,7 +52,7 @@ function render( $attributes, $content, $block ) {
 						<?php
 
 						if ( 'wcpt-cancelled' === $event->post_status ) {
-							esc_html_e( 'Cancelled', 'wordcamporg' );
+							esc_html_e( 'Canceled', 'wordcamporg' );
 						} else {
 							echo esc_html( get_date_range( $event ) );
 						}

@@ -246,4 +246,67 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 
 		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
 	}
+
+	/**
+	 * A refund reverses the charge, so a later completed result for the same order
+	 * (a replayed return URL, a repeated webhook) must not re-seat the attendee.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 * @testWith [2]
+	 *           [3]
+	 */
+	public function test_payment_result_does_not_reseat_refunded_attendee( $result ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_refunded_' . $result;
+		$attendee_id   = $this->create_attendee( $payment_token, 'refund' );
+		update_post_meta( $attendee_id, 'tix_refund_transaction_id', 're_test' );
+
+		$camptix->payment_result( $payment_token, $result, array( 'transaction_id' => 'ch_test' ), false );
+
+		$this->assertSame( 'refund', get_post_status( $attendee_id ) );
+		$this->assertSame( 're_test', get_post_meta( $attendee_id, 'tix_refund_transaction_id', true ) );
+	}
+
+	/**
+	 * Every attendee on the order is resolved together, so a refunded multi-seat
+	 * order stays refunded as a whole.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_does_not_reseat_refunded_order() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_refunded_order';
+		$first         = $this->create_attendee( $payment_token, 'refund' );
+		$second        = $this->create_attendee( $payment_token, 'refund' );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$this->assertSame( 'refund', get_post_status( $first ) );
+		$this->assertSame( 'refund', get_post_status( $second ) );
+	}
+
+	/**
+	 * The late-webhook recovery paths still work: a pending or cancelled attendee
+	 * is published when the gateway confirms the payment.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 * @testWith ["draft"]
+	 *           ["pending"]
+	 *           ["cancel"]
+	 */
+	public function test_payment_result_publishes_unpaid_attendee( $status ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_publish_' . $status;
+		$attendee_id   = $this->create_attendee( $payment_token, $status );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+	}
 }

@@ -6776,12 +6776,15 @@ class CampTix_Plugin {
 				wp_update_post( $attendee );
 			}
 
-			if ( self::PAYMENT_STATUS_COMPLETED == $result ) {
+			// A refund reverses the charge, so a later completed or pending result for the
+			// same order must not re-seat the attendee. Gateways keep reporting the session
+			// as paid after a refund (Stripe records the refund on the charge, not the session).
+			if ( 'refund' === $attendee->post_status && in_array( $result, array( self::PAYMENT_STATUS_COMPLETED, self::PAYMENT_STATUS_PENDING ), true ) ) {
+				$this->log( 'Refusing to re-seat a refunded attendee; a later payment result does not undo a refund.', $attendee->ID, $data );
+			} elseif ( self::PAYMENT_STATUS_COMPLETED == $result ) {
 				$attendee->post_status = 'publish';
 				wp_update_post( $attendee );
-			}
-
-			if ( self::PAYMENT_STATUS_PENDING == $result ) {
+			} elseif ( self::PAYMENT_STATUS_PENDING == $result ) {
 				$attendee->post_status = 'pending';
 				wp_update_post( $attendee );
 			}

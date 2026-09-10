@@ -142,7 +142,12 @@ function secure_agreement( $attachment_id ) {
 	 * rename that doesn't happen leaves a marked, findable file rather than an unrecorded one.
 	 */
 	if ( ! $already_an_agreement && is_agreement( $attachment_id ) ) {
-		rename_agreement_file( $attachment_id );
+		$outcome = rename_agreement_file( $attachment_id );
+
+		// A file left under the name it had is a URL that may already be out there.
+		if ( $outcome['left_behind'] ) {
+			log( 'sponsor_agreement_files_not_renamed', array_merge( compact( 'attachment_id' ), $outcome ) );
+		}
 	}
 }
 
@@ -393,8 +398,9 @@ function add_csprn_to_filename( $filename, $extension ) {
  * from the Media Library as well as one uploaded from the Sponsor screen, and leaves a sponsor's other
  * uploads alone.
  *
- * Nothing links to an agreement by URL -- both plugins hold an attachment ID and resolve it through
- * `wp_get_attachment_url()` -- so the new name reaches every reader.
+ * Both plugins resolve an agreement through `wp_get_attachment_url()`, so the new name reaches them.
+ * Content that embeds a file by URL doesn't follow it, and the rename stays anyway: it is what retires
+ * the URL the file had while it sat in the Library.
  *
  * Every file Core derives from the upload moves with it, under one new base name:
  *

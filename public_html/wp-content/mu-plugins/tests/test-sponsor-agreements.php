@@ -961,4 +961,81 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 			'cannot edit the sponsor' => array( 'upload-attachment', 'wcb_sponsor', 'volunteer' ),
 		);
 	}
+
+	/**
+	 * A rename that leaves a file behind says so, since the name it kept may already be out there.
+	 */
+	public function test_a_rename_that_leaves_a_file_behind_is_logged() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		file_put_contents( $directory . 'stubborn.pdf', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+		file_put_contents( $directory . 'unrelated-150x150.jpg', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'stubborn.pdf',
+			'post_parent'    => 0,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		update_attached_file( $agreement_id, $directory . 'stubborn.pdf' );
+
+		// A size Core would never have named this way, standing in for one that can't be derived.
+		$metadata = array(
+			'file'  => _wp_relative_upload_path( $directory . 'stubborn.pdf' ),
+			'sizes' => array( 'thumbnail' => array( 'file' => 'unrelated-150x150.jpg' ) ),
+		);
+
+		wp_update_attachment_metadata( $agreement_id, $metadata );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		try {
+			$this->assertStringContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+
+			// What could move still moved.
+			$this->assertMatchesRegularExpression(
+				'/^stubborn-[A-Za-z0-9]{16}\.pdf$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+			$this->assertFileExists( $directory . 'unrelated-150x150.jpg' );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'stubborn*' );
+			$this->delete_files_on_disk( $directory, 'unrelated-*' );
+		}
+	}
+
+	/**
+	 * A rename that moves everything says nothing.
+	 */
+	public function test_a_clean_rename_is_not_logged() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		file_put_contents( $directory . 'quiet.pdf', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'quiet.pdf',
+			'post_parent'    => 0,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		update_attached_file( $agreement_id, $directory . 'quiet.pdf' );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		try {
+			$this->assertStringNotContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'quiet*' );
+		}
+	}
 }

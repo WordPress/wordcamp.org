@@ -264,11 +264,13 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		$payment_token = 'tok_refunded_' . $result;
 		$attendee_id   = $this->create_attendee( $payment_token, 'refund' );
 		update_post_meta( $attendee_id, 'tix_refund_transaction_id', 're_test' );
+		update_post_meta( $attendee_id, 'tix_transaction_id', 'ch_original' );
 
 		$camptix->payment_result( $payment_token, $result, array( 'transaction_id' => 'ch_test' ), false );
 
 		$this->assertSame( 'refund', get_post_status( $attendee_id ) );
 		$this->assertSame( 're_test', get_post_meta( $attendee_id, 'tix_refund_transaction_id', true ) );
+		$this->assertSame( 'ch_original', get_post_meta( $attendee_id, 'tix_transaction_id', true ) );
 	}
 
 	/**
@@ -310,5 +312,70 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
 
 		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * The refund-all batch refunds every attendee sharing a transaction and records
+	 * the refund transaction on each of them, not only on the first one.
+	 *
+	 * @covers CampTix_Plugin::process_refund_all
+	 */
+	public function test_process_refund_all_records_refund_on_related_attendees() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$stub = new class() {
+			/**
+			 * Answer every refund request as refunded.
+			 *
+			 * @param string $payment_token Payment token.
+			 *
+			 * @return array
+			 */
+			public function send_refund_request( $payment_token ) {
+				return array(
+					'token'                      => $payment_token,
+					'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUNDED,
+					'refund_transaction_id'      => 're_batch',
+					'refund_transaction_details' => array( 'stub' => true ),
+				);
+			}
+		};
+
+		$resolve = function ( $method, $id ) use ( $stub ) {
+			return 'stub' === $id ? $stub : $method;
+		};
+		add_filter( 'camptix_get_payment_method_by_id', $resolve, 10, 2 );
+
+		$payment_token = 'tok_refund_all';
+		$attendees     = array(
+			$this->create_attendee( $payment_token, 'publish' ),
+			$this->create_attendee( $payment_token, 'publish' ),
+		);
+		foreach ( $attendees as $attendee_id ) {
+			update_post_meta( $attendee_id, 'tix_transaction_id', 'ch_batch' );
+			update_post_meta( $attendee_id, 'tix_payment_method', 'stub' );
+			update_post_meta( $attendee_id, 'tix_pending_refund', 1 );
+		}
+		update_option( 'camptix_doing_refunds', 1 );
+		update_option(
+			'camptix_refund_all_results',
+			array(
+				'status'    => 'running',
+				'succeeded' => 0,
+				'failed'    => 0,
+			)
+		);
+
+		$camptix->process_refund_all();
+
+		remove_filter( 'camptix_get_payment_method_by_id', $resolve, 10 );
+		delete_option( 'camptix_doing_refunds' );
+		delete_option( 'camptix_refund_all_results' );
+
+		foreach ( $attendees as $attendee_id ) {
+			$this->assertSame( 'refund', get_post_status( $attendee_id ) );
+			$this->assertSame( 're_batch', get_post_meta( $attendee_id, 'tix_refund_transaction_id', true ) );
+		}
 	}
 }

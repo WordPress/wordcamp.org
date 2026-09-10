@@ -6749,6 +6749,16 @@ class CampTix_Plugin {
 
 			$old_post_status = $attendee->post_status;
 
+			// A refund reverses the charge, so a later completed, pending or failed result for
+			// the same order leaves the attendee and its transaction record untouched. Gateways
+			// keep reporting the session as paid after a refund (Stripe records the refund on the
+			// charge, not the session), and a gateway error on a repeated return would otherwise
+			// drop the refund marker.
+			if ( 'refund' === $attendee->post_status && in_array( $result, array( self::PAYMENT_STATUS_COMPLETED, self::PAYMENT_STATUS_PENDING, self::PAYMENT_STATUS_FAILED ), true ) ) {
+				$this->log( 'Refusing to change a refunded attendee; a later payment result does not undo a refund.', $attendee->ID, $data );
+				continue;
+			}
+
 			update_post_meta( $attendee->ID, 'tix_transaction_id', $transaction_id );
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
@@ -6771,19 +6781,17 @@ class CampTix_Plugin {
 				}
 			}
 
-			// A refund reverses the charge, so a later completed, pending or failed result for
-			// the same order leaves the attendee refunded. Gateways keep reporting the session as
-			// paid after a refund (Stripe records the refund on the charge, not the session), and a
-			// gateway error on a repeated return would otherwise drop the refund marker.
-			if ( 'refund' === $attendee->post_status && in_array( $result, array( self::PAYMENT_STATUS_COMPLETED, self::PAYMENT_STATUS_PENDING, self::PAYMENT_STATUS_FAILED ), true ) ) {
-				$this->log( 'Refusing to change a refunded attendee; a later payment result does not undo a refund.', $attendee->ID, $data );
-			} elseif ( self::PAYMENT_STATUS_FAILED == $result ) {
+			if ( self::PAYMENT_STATUS_FAILED == $result ) {
 				$attendee->post_status = 'failed';
 				wp_update_post( $attendee );
-			} elseif ( self::PAYMENT_STATUS_COMPLETED == $result ) {
+			}
+
+			if ( self::PAYMENT_STATUS_COMPLETED == $result ) {
 				$attendee->post_status = 'publish';
 				wp_update_post( $attendee );
-			} elseif ( self::PAYMENT_STATUS_PENDING == $result ) {
+			}
+
+			if ( self::PAYMENT_STATUS_PENDING == $result ) {
 				$attendee->post_status = 'pending';
 				wp_update_post( $attendee );
 			}

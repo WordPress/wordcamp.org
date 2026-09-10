@@ -18,6 +18,7 @@ use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_Comment_Query;
+use WP_Query;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -465,6 +466,74 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			'WE',
 			Rule::from_post( $post_id )['monthly_weekday']
 		);
+	}
+
+	/**
+	 * Archive queries bucket a series by each occurrence's date, not the master date.
+	 *
+	 * GatherPress builds the WHERE comparison with `$wpdb->prepare( '%i.%i' )`,
+	 * which backtick-quotes the identifiers. The extension's clause rewrite
+	 * used to match only the unquoted form, so once a series' first occurrence
+	 * had ended the whole series fell out of Upcoming and every future
+	 * occurrence was listed under Past.
+	 */
+	public function test_archive_queries_use_occurrence_dates(): void {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+
+		$start = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-8 days' )->setTime( 10, 0 );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => $start->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 4 );
+
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Occurrences at -8d, -1d, +6d and +13d relative to now.
+		$upcoming = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'post__in'                => array( $post_id ),
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+			)
+		);
+		$past     = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'post__in'                => array( $post_id ),
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+			)
+		);
+
+		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_end_gmt', $upcoming->request );
+		$this->assertCount( 2, $upcoming->posts, 'Upcoming should list the two future occurrences.' );
+		$this->assertCount( 2, $past->posts, 'Past should list only the two finished occurrences.' );
 	}
 
 	/**

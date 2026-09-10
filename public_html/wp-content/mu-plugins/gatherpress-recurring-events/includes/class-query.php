@@ -42,11 +42,16 @@ final class Query {
 			);
 		}
 
-		$start_expression   = "COALESCE(gpre_occ_query.datetime_start_gmt, {$core_table}.datetime_start_gmt)";
-		$end_expression     = "COALESCE(gpre_occ_query.datetime_end_gmt, {$core_table}.datetime_end_gmt)";
-		$clauses['where']   = str_replace( "{$core_table}.datetime_start_gmt", $start_expression, $clauses['where'] );
-		$clauses['where']   = str_replace( "{$core_table}.datetime_end_gmt", $end_expression, $clauses['where'] );
-		$clauses['orderby'] = str_replace( "{$core_table}.datetime_start_gmt", $start_expression, $clauses['orderby'] );
+		/**
+		 * GatherPress writes the WHERE comparison through `$wpdb->prepare( '%i.%i' )`, which backtick-quotes both
+		 * identifiers, but builds ORDER BY by plain concatenation. Accept either form so both clauses get the
+		 * occurrence date.
+		 */
+		$pattern = '/(?<!\w)`?' . preg_quote( $core_table, '/' ) . '`?\.`?(datetime_(?:start|end)_gmt)`?(?!\w)/';
+		$replace = static fn( array $matches ): string => "COALESCE(gpre_occ_query.{$matches[1]}, {$core_table}.{$matches[1]})";
+
+		$clauses['where']   = preg_replace_callback( $pattern, $replace, $clauses['where'] );
+		$clauses['orderby'] = preg_replace_callback( $pattern, $replace, $clauses['orderby'] );
 
 		$query->set( 'gpre_occurrence_query', $type );
 		return $clauses;

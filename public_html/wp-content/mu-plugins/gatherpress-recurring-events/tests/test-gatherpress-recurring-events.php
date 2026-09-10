@@ -28,6 +28,13 @@ defined( 'WPINC' ) || die();
  */
 final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
+	/** Leave the screen global as we found it for whatever runs next. */
+	public function tear_down() {
+		unset( $GLOBALS['current_screen'] );
+
+		parent::tear_down();
+	}
+
 	/** Weekly expansion keeps local wall time across DST. */
 	public function test_weekly_recurrence_preserves_wall_time_across_dst(): void {
 		$start = new DateTimeImmutable( '2026-10-26 18:00:00', new DateTimeZone( 'America/Los_Angeles' ) );
@@ -478,6 +485,13 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	 * occurrence was listed under Past.
 	 */
 	public function test_archive_queries_use_occurrence_dates(): void {
+		/*
+		 * `wordcamp-remote-css/tests/bootstrap.php` defines `WP_ADMIN` for the
+		 * whole run, so `is_admin()` is true unless a screen says otherwise, and
+		 * `Query::clauses()` exempts wp-admin. This is a front-end archive query.
+		 */
+		set_current_screen( 'front' );
+
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',

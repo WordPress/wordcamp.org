@@ -546,6 +546,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		);
 
 		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_end_gmt', $upcoming->request );
+		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_start_gmt', $upcoming->request );
 		$this->assertCount( 2, $upcoming->posts, 'Upcoming should list the two future occurrences.' );
 		$this->assertCount( 2, $past->posts, 'Past should list only the two finished occurrences.' );
 	}

@@ -9,7 +9,7 @@ use function WordCamp\Sponsor_Agreements\is_agreement;
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
 
 use const WordCamp\Sponsor_Agreements\AGREEMENT_MARKER_META_KEY;
-use const WordCamp\Sponsor_Agreements\Backfill\BACKFILLED_META_KEY;
+use const WordCamp\Sponsor_Agreements\NEEDS_RENAME_META_KEY;
 
 defined( 'WPINC' ) || die();
 
@@ -141,12 +141,11 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The migration records which attachments it acted on.
+	 * The migration records that the files it acted on still need renaming.
 	 *
-	 * Those are the ones uploaded before `obscure_sponsor_file_names()` existed, and nothing else says so
-	 * once they are no longer `inherit`.
+	 * Nothing else says so once they are no longer `inherit`, and it is what a later rename pass reads.
 	 */
-	public function test_the_migration_records_what_it_acted_on() {
+	public function test_the_migration_records_what_still_needs_renaming() {
 		list( , $legacy_id ) = $this->create_legacy_agreement();
 
 		$sponsor_id = self::factory()->post->create( array(
@@ -168,12 +167,12 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 
 		// What `Command::backfill()` does for each ID the query returns.
 		make_agreement_private( $legacy_id );
-		update_post_meta( $legacy_id, BACKFILLED_META_KEY, 1 );
+		update_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, 1 );
 
 		$this->assertTrue( is_agreement( $legacy_id ) );
 		$this->assertTrue( is_agreement( $recent_id ) );
 
-		$this->assertSame( '1', get_post_meta( $legacy_id, BACKFILLED_META_KEY, true ) );
-		$this->assertSame( '', get_post_meta( $recent_id, BACKFILLED_META_KEY, true ) );
+		$this->assertSame( '1', get_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, true ) );
+		$this->assertSame( '', get_post_meta( $recent_id, NEEDS_RENAME_META_KEY, true ) );
 	}
 }

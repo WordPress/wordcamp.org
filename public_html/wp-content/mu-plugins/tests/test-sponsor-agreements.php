@@ -10,6 +10,7 @@ use function WordCamp\Sponsor_Agreements\add_csprn_to_filename;
 use function WordCamp\Sponsor_Agreements\rename_agreement_file;
 use function WordCamp\Sponsor_Agreements\secure_agreement;
 
+use const WordCamp\Sponsor_Agreements\NEEDS_RENAME_META_KEY;
 use const WordCamp\Sponsor_Agreements\UPLOAD_PARAM;
 
 defined( 'WPINC' ) || die();
@@ -997,6 +998,12 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 		try {
 			$this->assertStringContainsString( 'sponsor_agreement_files_not_renamed', $logged );
 
+			/*
+			 * The migration can't see this one -- it is already `private`, which is the only thing that
+			 * query looks for -- so joining the rename work list is what keeps it findable.
+			 */
+			$this->assertSame( '1', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
+
 			// What could move still moved.
 			$this->assertMatchesRegularExpression(
 				'/^stubborn-[A-Za-z0-9]{16}\.pdf$/',
@@ -1034,6 +1041,7 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 
 		try {
 			$this->assertStringNotContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+			$this->assertSame( '', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
 		} finally {
 			$this->delete_files_on_disk( $directory, 'quiet*' );
 		}

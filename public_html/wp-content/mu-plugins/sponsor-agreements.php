@@ -17,6 +17,16 @@ defined( 'WPINC' ) || die();
 const AGREEMENT_MARKER_META_KEY = '_wcorg_sponsor_agreement';
 
 /**
+ * The meta key that marks an agreement whose file still carries the name it was uploaded under.
+ *
+ * `AGREEMENT_MARKER_META_KEY` says an attachment is an agreement; this says its file has yet to be
+ * renamed. Two things write it: the one-time migration, which sets the status and leaves renaming to a
+ * later pass, and `secure_agreement()`, when a rename it attempted couldn't move every file. Whatever
+ * runs that later pass reads this, so it lives here rather than with the migration that is deleted.
+ */
+const NEEDS_RENAME_META_KEY = '_wcorg_sponsor_agreement_needs_rename';
+
+/**
  * The upload field the Sponsor Agreement modal marks its own uploads with.
  *
  * A file is recorded as the agreement when the sponsor is saved, which can be a while after it lands and
@@ -146,6 +156,8 @@ function secure_agreement( $attachment_id ) {
 
 		// A file left under the name it had is a URL that may already be out there.
 		if ( $outcome['left_behind'] ) {
+			update_post_meta( $attachment_id, NEEDS_RENAME_META_KEY, 1 );
+
 			log( 'sponsor_agreement_files_not_renamed', array_merge( compact( 'attachment_id' ), $outcome ) );
 		}
 	}

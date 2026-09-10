@@ -5,7 +5,7 @@
  *
  * `sponsor-agreements.php` handles agreements from the moment they're attached. Files attached before it
  * existed keep the status they already had, because writing the same meta value back fires no hook. This
- * gives them that status, and then has no further purpose.
+ * gives them that status, marks each one with `NEEDS_RENAME_META_KEY`, and then has no further purpose.
  *
  * Self-contained on purpose: everything here goes when the file does, apart from the two lines that load it
  * in `bootstrap.php`. `make_agreement_private()` outlives it, in `sponsor-agreements.php`.
@@ -19,16 +19,9 @@ use function WP_CLI\Utils\format_items;
 
 use function WordCamp\Sponsor_Agreements\make_agreement_private;
 
-defined( 'WPINC' ) || die();
+use const WordCamp\Sponsor_Agreements\NEEDS_RENAME_META_KEY;
 
-/**
- * Recorded on every attachment this migration gives the `private` status.
- *
- * `AGREEMENT_MARKER_META_KEY` says an attachment is an agreement; it doesn't say which ones were uploaded
- * before `obscure_sponsor_file_names()` existed and so still carry the name they were given. Nothing else
- * distinguishes them once the status is set, and this is the only moment the answer is known.
- */
-const BACKFILLED_META_KEY = '_wcorg_sponsor_agreement_backfilled';
+defined( 'WPINC' ) || die();
 
 // phpcs:disable Universal.Files.SeparateFunctionsFromOO -- the command and the work it does are one unit here, so that removing the migration is removing one file.
 
@@ -225,7 +218,8 @@ class Command extends WP_CLI_Command {
 			if ( ! $migrated ) {
 				$unfinished[] = $agreement_id;
 			} elseif ( ! $dry_run ) {
-				update_post_meta( $agreement_id, BACKFILLED_META_KEY, 1 );
+				// This sets the status only; the file keeps its name until a later pass renames it.
+				update_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, 1 );
 			}
 
 			$results[] = array(

@@ -87,6 +87,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$coupons   = array();
 		self::$attendees = array();
 
+		remove_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
 		unset(
 			$_GET['post_type'],
 			$_GET['s'],
@@ -186,6 +189,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'coupon_id'        => '',
 			'payment_method'   => '',
 			'reservation'      => '',
+			'timestamp'        => 0,
 		);
 		$args     = wp_parse_args( $args, $defaults );
 
@@ -216,6 +220,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		}
 		if ( ! empty( $args['reservation'] ) ) {
 			update_post_meta( $post_id, 'tix_reservation_token', $args['reservation'] );
+		}
+		if ( ! empty( $args['timestamp'] ) ) {
+			update_post_meta( $post_id, 'tix_timestamp', $args['timestamp'] );
 		}
 
 		self::$attendees[] = $post_id;
@@ -299,13 +306,68 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify draft attendees do not count toward purchased tickets.
+	 * A draft attendee is a checkout waiting on the payment gateway. It holds its
+	 * seat, so the ticket cannot be sold again underneath it.
 	 */
-	public function test_remaining_tickets_ignores_draft_attendees() {
+	public function test_remaining_tickets_counts_draft_attendees() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
 
+		$this->assertSame( 9, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout that ended without a sale releases its seat.
+	 *
+	 * @testWith ["cancel"]
+	 *           ["failed"]
+	 *           ["timeout"]
+	 *           ["refund"]
+	 */
+	public function test_remaining_tickets_ignores_finished_checkouts( $status ) {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
+		$this->create_attendee( $ticket_id, array( 'status' => $status ) );
+
 		$this->assertSame( 10, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout abandoned more than 24 hours ago is timed out by the sweep and
+	 * its seat goes back on sale. A younger one is left alone.
+	 */
+	public function test_timeout_sweep_releases_abandoned_checkout() {
+		$ticket_id   = $this->create_ticket( array( 'quantity' => 2 ) );
+		$abandoned   = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'timestamp' => time() - 25 * HOUR_IN_SECONDS,
+			)
+		);
+		$in_progress = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'timestamp' => time() - HOUR_IN_SECONDS,
+			)
+		);
+
+		$this->assertSame( 0, self::$camptix->get_remaining_tickets( $ticket_id ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( 'timeout', get_post_status( $abandoned ) );
+		$this->assertSame( 'draft', get_post_status( $in_progress ) );
+		$this->assertSame( 1, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * The sweep runs on the ten-minute schedule, so an abandoned checkout holds
+	 * its seat for about 24 hours rather than anywhere up to 48.
+	 */
+	public function test_timeout_sweep_runs_every_ten_minutes() {
+		$this->assertNotFalse( has_action( 'tix_scheduled_every_ten_minutes', array( self::$camptix, 'review_timeout_payments' ) ) );
+		$this->assertFalse( has_action( 'tix_scheduled_daily', array( self::$camptix, 'review_timeout_payments' ) ) );
 	}
 
 	/**
@@ -317,16 +379,65 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify only publish and pending attendees count as purchased.
+	 * Verify publish, pending and draft attendees count as purchased, and the
+	 * statuses a checkout ends in without a sale do not.
 	 */
 	public function test_purchased_tickets_count_with_mixed_statuses() {
 		$ticket_id = $this->create_ticket();
 		$this->create_attendee( $ticket_id, array( 'status' => 'publish' ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'pending' ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'cancel' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'failed' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'timeout' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'refund' ) );
 
-		// Only publish + pending count as purchased.
-		$this->assertSame( 2, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
+		$this->assertSame( 3, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout in progress against a reservation uses up one of its seats.
+	 */
+	public function test_reservation_counts_draft_attendees() {
+		add_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+		add_post_meta(
+			$ticket_id,
+			'tix_reservation',
+			array(
+				'id'        => 'speakers',
+				'token'     => 'speakertoken',
+				'quantity'  => 1,
+				'name'      => 'Speakers',
+				'ticket_id' => $ticket_id,
+			)
+		);
+
+		$this->assertTrue( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'status'      => 'draft',
+				'reservation' => 'speakertoken',
+			)
+		);
+
+		$this->assertFalse( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+	}
+
+	/**
+	 * Filter callback for camptix_options: turn reservations on for a test.
+	 *
+	 * @param array $options CampTix options.
+	 * @return array
+	 */
+	public function enable_reservations( $options ) {
+		$options['reservations_enabled'] = true;
+
+		return $options;
 	}
 
 	/**
@@ -613,7 +724,8 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify used coupons count excludes draft attendees.
+	 * Verify used coupons count includes draft attendees (a checkout in progress)
+	 * and excludes ones whose checkout ended without a sale.
 	 */
 	public function test_used_coupons_count() {
 		$ticket_id = $this->create_ticket();
@@ -622,24 +734,125 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'discount_price' => 5.00,
 		) );
 
-		$this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
-		$this->create_attendee(
+		foreach ( array( 'publish', 'pending', 'draft', 'cancel', 'failed', 'timeout', 'refund' ) as $status ) {
+			$this->create_attendee(
+				$ticket_id,
+				array(
+					'coupon_id' => $coupon_id,
+					'status'    => $status,
+				)
+			);
+		}
+
+		$this->assertSame( 3, self::$camptix->get_used_coupons_count( $coupon_id ) );
+	}
+
+	/**
+	 * An order re-checking its own availability (the gateway's final verify_order()
+	 * before charging) must not count its own in-progress drafts against it, or buying
+	 * the last remaining seat would fail.
+	 */
+	public function test_remaining_tickets_excludes_the_orders_own_drafts() {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 1 ) );
+		$own       = $this->create_attendee(
 			$ticket_id,
 			array(
-				'coupon_id' => $coupon_id,
-				'status'    => 'pending',
-			)
-		);
-		// Draft attendee should not count.
-		$this->create_attendee(
-			$ticket_id,
-			array(
-				'coupon_id' => $coupon_id,
 				'status'    => 'draft',
+				'timestamp' => time(),
 			)
 		);
 
-		$this->assertSame( 2, self::$camptix->get_used_coupons_count( $coupon_id ) );
+		// The seat is taken for everyone else.
+		$this->assertSame( 0, self::$camptix->get_remaining_tickets( $ticket_id ) );
+
+		// But the order that owns that draft still sees its seat as available to it.
+		$this->assertSame( 1, self::$camptix->get_remaining_tickets( $ticket_id, false, array( $own ) ) );
+	}
+
+	/**
+	 * The same exclusion applies to the coupon and reservation checks.
+	 */
+	public function test_coupon_and_reservation_exclude_the_orders_own_drafts() {
+		add_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+		add_post_meta(
+			$ticket_id,
+			'tix_reservation',
+			array(
+				'id'        => 'speakers',
+				'token'     => 'speakertoken',
+				'quantity'  => 1,
+				'name'      => 'Speakers',
+				'ticket_id' => $ticket_id,
+			)
+		);
+		$coupon_id = $this->create_coupon(
+			array(
+				'quantity'     => 1,
+				'discount_pct' => 100,
+			)
+		);
+
+		$reservation_draft = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'      => 'draft',
+				'reservation' => 'speakertoken',
+			)
+		);
+		$coupon_draft = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'coupon_id' => $coupon_id,
+			)
+		);
+
+		$this->assertFalse( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+		$this->assertTrue( self::$camptix->is_reservation_valid_for_use( 'speakertoken', array( $reservation_draft ) ) );
+
+		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id, array( $coupon_draft ) ) );
+	}
+
+	/**
+	 * A checkout in progress against a single-use coupon uses it up, and a coupon
+	 * with redemptions to spare stays valid.
+	 */
+	public function test_coupon_valid_for_use_counts_draft_attendees() {
+		$ticket_id  = $this->create_ticket();
+		$single_use = $this->create_coupon(
+			array(
+				'code'         => 'ONCE',
+				'quantity'     => 1,
+				'discount_pct' => 100,
+			)
+		);
+		$two_uses   = $this->create_coupon(
+			array(
+				'code'         => 'TWICE',
+				'quantity'     => 2,
+				'discount_pct' => 100,
+			)
+		);
+
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $single_use ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $two_uses ) );
+
+		foreach ( array( $single_use, $two_uses ) as $coupon_id ) {
+			$this->create_attendee(
+				$ticket_id,
+				array(
+					'coupon_id' => $coupon_id,
+					'status'    => 'draft',
+				)
+			);
+		}
+
+		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $single_use ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $two_uses ) );
 	}
 
 	/**

@@ -219,8 +219,9 @@ class CampTix_Plugin {
 
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'send_emails_batch' ) );
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'process_refund_all' ) );
+		// A draft attendee holds its seat until it times out, so sweep often enough that an abandoned checkout releases it at 24 hours, not up to 48.
+		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'review_timeout_payments' ) );
 
-		add_action( 'tix_scheduled_daily', array( $this, 'review_timeout_payments' ) );
 		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
 		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) )
@@ -3189,12 +3190,12 @@ class CampTix_Plugin {
 	/**
 	 * Returns true, if a reservation is valid, and can be used to purchase a ticket.
 	 */
-	function is_reservation_valid_for_use( $token ) {
+	function is_reservation_valid_for_use( $token, $exclude_attendee_ids = array() ) {
 		$reservation = $this->get_reservation( $token );
 		if ( ! $reservation )
 			return false;
 
-		$count = $this->get_purchased_tickets_count( $reservation['ticket_id'], $reservation['token'] );
+		$count = $this->get_purchased_tickets_count( $reservation['ticket_id'], $reservation['token'], $exclude_attendee_ids );
 		if ( $count < $reservation['quantity'] )
 			return true;
 
@@ -5976,14 +5977,14 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Returns the number of remaining tickets according to number of published attendees.
+	 * Returns the number of remaining tickets according to the number of sold and in-progress attendees.
 	 * @todo maybe cache values and bust in purchase process.
 	 */
-	function get_remaining_tickets( $post_id, $via_reservation = false ) {
+	function get_remaining_tickets( $post_id, $via_reservation = false, $exclude_attendee_ids = array() ) {
 		$remaining = 0;
 		if ( $this->is_ticket_valid_for_display( $post_id ) ) {
 			$quantity = intval( get_post_meta( $post_id, 'tix_quantity', true ) );
-			$remaining = $quantity - $this->get_purchased_tickets_count( $post_id );
+			$remaining = $quantity - $this->get_purchased_tickets_count( $post_id, false, $exclude_attendee_ids );
 		}
 
 		// Look for reservations
@@ -5995,14 +5996,14 @@ class CampTix_Plugin {
 				continue;
 
 			// Subtract ones already purchased
-			$reserved_tickets = $reservation['quantity'] - $this->get_purchased_tickets_count( $post_id, $reservation['token'] );
+			$reserved_tickets = $reservation['quantity'] - $this->get_purchased_tickets_count( $post_id, $reservation['token'], $exclude_attendee_ids );
 			$remaining -= $reserved_tickets;
 		}
 
 		return apply_filters( 'camptix_get_remaining_tickets', $remaining, $post_id, $via_reservation, $quantity, $reservations );
 	}
 
-	function get_purchased_tickets_count( $post_id, $via_reservation = false ) {
+	function get_purchased_tickets_count( $post_id, $via_reservation = false, $exclude_attendee_ids = array() ) {
 		$purchased = 0;
 
 		$meta_query = array( array(
@@ -6021,10 +6022,15 @@ class CampTix_Plugin {
 			);
 		}
 
+		// A draft is a checkout waiting on the payment gateway. It keeps its seat until it
+		// completes or review_timeout_payments() times it out, so it is not offered again.
+		// $exclude_attendee_ids lets an order in progress re-check availability without its
+		// own drafts counting against it (the gateway's final verify_order()).
 		$attendees = new WP_Query( array(
 			'post_type' => 'tix_attendee',
 			'posts_per_page' => 1,
-			'post_status' => array( 'publish', 'pending' ),
+			'post_status' => array( 'publish', 'pending', 'draft' ),
+			'post__not_in' => $exclude_attendee_ids,
 			'meta_query' => $meta_query,
 		) );
 
@@ -6058,11 +6064,11 @@ class CampTix_Plugin {
 	/**
 	 * Returns true if one con use a coupon.
 	 */
-	function is_coupon_valid_for_use( $coupon_id ) {
+	function is_coupon_valid_for_use( $coupon_id, $exclude_attendee_ids = array() ) {
 		$coupon = get_post( $coupon_id );
 		if ( $coupon->post_type != 'tix_coupon' ) return false;
 		if ( $coupon->post_status != 'publish' ) return false;
-		if ( $this->get_remaining_coupons( $coupon->ID ) < 1 ) return false;
+		if ( $this->get_remaining_coupons( $coupon->ID, $exclude_attendee_ids ) < 1 ) return false;
 
 		$start = get_post_meta( $coupon->ID, 'tix_coupon_start', true );
 		$end = get_post_meta( $coupon->ID, 'tix_coupon_end', true );
@@ -6104,27 +6110,29 @@ class CampTix_Plugin {
 	/**
 	 * Returns the number of available coupons by coupon_id
 	 */
-	function get_remaining_coupons( $coupon_id ) {
+	function get_remaining_coupons( $coupon_id, $exclude_attendee_ids = array() ) {
 		$remaining = 0;
 		$coupon = get_post( $coupon_id );
 		if ( $coupon && $coupon->post_type == 'tix_coupon' ) {
 			$quantity = intval( get_post_meta( $coupon->ID, 'tix_coupon_quantity', true ) );
 			$remaining = $quantity;
 
-			$used = $this->get_used_coupons_count( $coupon_id );
+			$used = $this->get_used_coupons_count( $coupon_id, $exclude_attendee_ids );
 			$remaining -= $used;
 		}
 		return $remaining;
 	}
 
-	function get_used_coupons_count( $coupon_id ) {
+	function get_used_coupons_count( $coupon_id, $exclude_attendee_ids = array() ) {
 		$used = 0;
 		$coupon = get_post( $coupon_id );
 		if ( $coupon && $coupon->post_type == 'tix_coupon' ) {
+			// Drafts count, as in get_purchased_tickets_count().
 			$attendees = new WP_Query( array(
 				'post_type' => 'tix_attendee',
 				'posts_per_page' => 1,
-				'post_status' => array( 'publish', 'pending' ),
+				'post_status' => array( 'publish', 'pending', 'draft' ),
+				'post__not_in' => $exclude_attendee_ids,
 				'meta_query' => array(
 					array(
 						'key' => 'tix_coupon_id',
@@ -6451,11 +6459,33 @@ class CampTix_Plugin {
 		$via_reservation = false;
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
 
+		// An order already in progress owns draft attendees that hold its seats. When it
+		// re-checks availability (the gateway's final verify_order() before charging), don't
+		// count its own drafts against it, or buying the last remaining seat would fail.
+		$exclude_attendee_ids = array();
+		if ( ! empty( $order['attendee_id'] ) ) {
+			$payment_token = get_post_meta( $order['attendee_id'], 'tix_payment_token', true );
+			if ( $payment_token ) {
+				$exclude_attendee_ids = get_posts( array(
+					'fields'         => 'ids',
+					'post_type'      => 'tix_attendee',
+					'post_status'    => array( 'draft', 'pending', 'publish' ),
+					'posts_per_page' => -1,
+					'meta_query'     => array(
+						array(
+							'key'   => 'tix_payment_token',
+							'value' => $payment_token,
+						),
+					),
+				) );
+			}
+		}
+
 		// Let's check the coupon first.
 		if ( ! empty( $order['coupon'] ) ) {
 			$coupon = $this->get_coupon_by_code( $order['coupon'] );
-			if ( $coupon && $this->is_coupon_valid_for_use( $coupon->ID ) ) {
-				$coupon->tix_coupon_remaining = $this->get_remaining_coupons( $coupon->ID );
+			if ( $coupon && $this->is_coupon_valid_for_use( $coupon->ID, $exclude_attendee_ids ) ) {
+				$coupon->tix_coupon_remaining = $this->get_remaining_coupons( $coupon->ID, $exclude_attendee_ids );
 				$coupon->tix_discount_price = (float) get_post_meta( $coupon->ID, 'tix_discount_price', true );
 				$coupon->tix_discount_percent = (int) get_post_meta( $coupon->ID, 'tix_discount_percent', true );
 				$coupon->tix_applies_to = (array) get_post_meta( $coupon->ID, 'tix_applies_to' );
@@ -6478,7 +6508,7 @@ class CampTix_Plugin {
 		if ( isset( $order['reservation_id'], $order['reservation_token'] ) ) {
 			$reservation = $this->get_reservation( $order['reservation_token'] );
 
-			if ( $reservation && $reservation['id'] == strtolower( $order['reservation_id'] ) && $this->is_reservation_valid_for_use( $reservation['token'] ) ) {
+			if ( $reservation && $reservation['id'] == strtolower( $order['reservation_id'] ) && $this->is_reservation_valid_for_use( $reservation['token'], $exclude_attendee_ids ) ) {
 				$via_reservation = $reservation['token'];
 			} else {
 				$this->error_flags['invalid_reservation'] = true;
@@ -6490,7 +6520,7 @@ class CampTix_Plugin {
 		$tickets = array();
 		foreach ( $tickets_objects as $ticket ) {
 			$ticket->tix_price = (float) get_post_meta( $ticket->ID, 'tix_price', true );
-			$ticket->tix_remaining = $this->get_remaining_tickets( $ticket->ID, $via_reservation );
+			$ticket->tix_remaining = $this->get_remaining_tickets( $ticket->ID, $via_reservation, $exclude_attendee_ids );
 			$ticket->tix_coupon_applied = false;
 			$ticket->tix_discounted_price = $ticket->tix_price;
 

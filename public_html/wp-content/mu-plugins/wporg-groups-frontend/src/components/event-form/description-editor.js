@@ -20,6 +20,7 @@ import {
 } from '@wordpress/block-editor';
 import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
+import { registerCoreFormatTypes } from '@wordpress/format-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
 
 let coreBlocksRegistered = false;
@@ -32,7 +33,12 @@ export function ensureCoreBlocksRegistered() {
 		registerCoreBlocks();
 	} catch ( e ) {
 		// `registerCoreBlocks` complains if called twice, but in some
-		// page contexts the editor isn't loaded yet — swallow.
+		// page contexts the editor isn't loaded yet - swallow.
+	}
+	try {
+		registerCoreFormatTypes();
+	} catch ( e ) {
+		// `registerCoreFormatTypes` may throw if called twice - swallow.
 	}
 	coreBlocksRegistered = true;
 }

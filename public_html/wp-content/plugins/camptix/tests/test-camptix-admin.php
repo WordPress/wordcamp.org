@@ -88,7 +88,10 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$attendees = array();
 
 		remove_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		remove_filter( 'query', array( $this, 'record_query' ) );
 		self::$camptix->load_options();
+		self::$camptix->release_checkout_rows();
+		$this->seen_queries = array();
 
 		unset(
 			$_GET['post_type'],
@@ -815,6 +818,196 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id, array( $coupon_draft ) ) );
+	}
+
+	/**
+	 * SQL statements seen by the checkout-lock tests, in order.
+	 *
+	 * @var string[]
+	 */
+	protected $seen_queries = array();
+
+	/**
+	 * Record each statement. The named locks run for real on the test connection and are
+	 * released again, so nothing needs neutralising.
+	 *
+	 * @param string $query SQL about to run.
+	 * @return string
+	 */
+	public function record_query( $query ) {
+		$this->seen_queries[] = trim( $query );
+
+		return $query;
+	}
+
+	/**
+	 * Return the recorded statements that match a pattern.
+	 *
+	 * @param string $pattern Regex.
+	 * @return string[]
+	 */
+	protected function seen( $pattern ) {
+		return array_values( preg_grep( $pattern, $this->seen_queries ) );
+	}
+
+	/**
+	 * Locking a checkout takes one named lock per ticket and coupon, in ID order (so two
+	 * orders sharing rows cannot deadlock), and releasing lets them all go.
+	 */
+	public function test_lock_checkout_rows_locks_in_id_order_and_releases() {
+		$ticket_a = $this->create_ticket();
+		$ticket_b = $this->create_ticket();
+		$coupon   = $this->create_coupon();
+		$blog_id  = get_current_blog_id();
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+		$locked = self::$camptix->lock_checkout_rows( array( $ticket_b, $coupon, $ticket_a, $ticket_a ) );
+		self::$camptix->release_checkout_rows();
+		self::$camptix->release_checkout_rows(); // A second release is a no-op.
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertTrue( $locked );
+
+		$expected_ids = array( $ticket_a, $ticket_b, $coupon );
+		sort( $expected_ids );
+		$expected_names = array();
+		foreach ( $expected_ids as $id ) {
+			$expected_names[] = "camptix_checkout_{$blog_id}_{$id}";
+		}
+
+		$locks = $this->seen( '/GET_LOCK/' );
+		$this->assertCount( 3, $locks );
+		foreach ( $expected_names as $i => $name ) {
+			$this->assertStringContainsString( "'{$name}'", $locks[ $i ] );
+		}
+
+		$this->assertCount( 3, $this->seen( '/RELEASE_LOCK/' ) );
+	}
+
+	/**
+	 * Nothing to lock means no lock statements at all.
+	 */
+	public function test_lock_checkout_rows_with_no_ids_does_nothing() {
+		add_filter( 'query', array( $this, 'record_query' ) );
+		$locked = self::$camptix->lock_checkout_rows( array( 0, '', null ) );
+		self::$camptix->release_checkout_rows();
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertFalse( $locked );
+		$this->assertCount( 0, $this->seen( '/GET_LOCK|RELEASE_LOCK/' ) );
+	}
+
+	/**
+	 * Under the checkout lock the count query must run every call, not be served from the
+	 * query cache: the order is counted before checkout and again under the lock, and the
+	 * second read has to be live. Outside the lock (ticket form, admin columns) the cached
+	 * count is fine. Asserting values would pass either way, because wp_insert_post()
+	 * invalidates the posts cache; assert how often the SQL runs instead.
+	 */
+	public function test_purchased_count_query_is_live_only_under_the_lock() {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		$outside = count( $this->seen( '/FROM.+posts.+tix_ticket_id/is' ) );
+
+		self::$camptix->lock_checkout_rows( array( $ticket_id ) );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->release_checkout_rows();
+		$inside = count( $this->seen( '/FROM.+posts.+tix_ticket_id/is' ) ) - $outside;
+
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertSame( 1, $outside, 'outside the lock the second call is served from the query cache' );
+		$this->assertSame( 2, $inside, 'under the lock every call hits the database' );
+	}
+
+	/**
+	 * The same, for the coupon count.
+	 */
+	public function test_used_coupons_count_query_is_live_only_under_the_lock() {
+		$coupon_id = $this->create_coupon();
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		$outside = count( $this->seen( '/FROM.+posts.+tix_coupon_id/is' ) );
+
+		self::$camptix->lock_checkout_rows( array( $coupon_id ) );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->release_checkout_rows();
+		$inside = count( $this->seen( '/FROM.+posts.+tix_coupon_id/is' ) ) - $outside;
+
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertSame( 1, $outside );
+		$this->assertSame( 2, $inside );
+	}
+
+	/**
+	 * Fail the Nth wp_insert_post() call, to test a draft that cannot be written.
+	 *
+	 * @var int
+	 */
+	protected $fail_insert_at = 0;
+
+	/**
+	 * New-post inserts seen by fail_nth_insert() in the current test.
+	 *
+	 * @var int
+	 */
+	protected $inserts_seen = 0;
+
+	/**
+	 * Callback for wp_insert_post_empty_content: fail the Nth new-post insert. Counts only
+	 * inserts (empty ID), because wp_update_post() runs the same filter for existing posts.
+	 *
+	 * @param bool  $maybe_empty Whether the post is considered empty.
+	 * @param array $postarr     Post data.
+	 * @return bool
+	 */
+	public function fail_nth_insert( $maybe_empty, $postarr ) {
+		if ( ! empty( $postarr['ID'] ) ) {
+			return $maybe_empty;
+		}
+
+		$this->inserts_seen++;
+
+		return $this->inserts_seen === $this->fail_insert_at ? true : $maybe_empty;
+	}
+
+	/**
+	 * A draft that cannot be written aborts the order and removes the drafts already written,
+	 * so a partial order never holds seats and the buyer is not sent to the gateway with no
+	 * attendee rows behind the order.
+	 */
+	public function test_insert_attendee_drafts_aborts_and_cleans_up_when_a_draft_cannot_be_written() {
+		$ticket_id = $this->create_ticket();
+
+		$attendees = array();
+		foreach ( array( 'One', 'Two' ) as $name ) {
+			$attendee             = new stdClass();
+			$attendee->ticket_id  = $ticket_id;
+			$attendee->first_name = $name;
+			$attendee->last_name  = 'Row';
+			$attendee->email      = strtolower( $name ) . '@example.test';
+			$attendee->answers    = array();
+			$attendees[]          = $attendee;
+		}
+
+		// The first attendee's draft is written normally; the second insert fails.
+		$this->fail_insert_at = 2;
+		add_filter( 'wp_insert_post_empty_content', array( $this, 'fail_nth_insert' ), 10, 2 );
+		$result = self::$camptix->insert_attendee_drafts( $attendees, 'stripe', 'r@example.test', 'acc', 'pay' );
+		remove_filter( 'wp_insert_post_empty_content', array( $this, 'fail_nth_insert' ), 10 );
+
+		$this->assertFalse( $result );
+		$this->assertSame( 0, self::$camptix->get_purchased_tickets_count( $ticket_id ), 'the first draft was removed again' );
 	}
 
 	/**

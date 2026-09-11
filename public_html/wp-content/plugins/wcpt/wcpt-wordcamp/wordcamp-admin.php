@@ -984,7 +984,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				array(
 					'timestamp' => time(),
 					'user_id'   => get_current_user_id(),
-					'message'   => __( 'Application moved to Needs Orientation. Organizer notification email triggered.', 'wordcamporg' ),
+					'message'   => __( 'Application moved to Needs Orientation. Organizer notification email trigger fired.', 'wordcamporg' ),
 				)
 			);
 
@@ -1323,7 +1323,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				5 => array(
 					'type'   => 'updated',
-					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation. The organizer notification email has been triggered and a note has been added to the log.', 'wordcamporg' ),
+					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation and a note has been added to the log. The organizer notification email is sent by the Automated Reminder assigned to the "Campus Connect application needs orientation" trigger — if no reminder is assigned, no email goes out.', 'wordcamporg' ),
 				),
 			);
 

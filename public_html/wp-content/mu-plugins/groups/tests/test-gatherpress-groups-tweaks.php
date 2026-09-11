@@ -2,6 +2,8 @@
 
 namespace WordCamp\Groups\Tests;
 
+use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
+
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-testcase.php';
@@ -212,5 +214,103 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertFalse( $post_type_object->public );
 		$this->assertFalse( $post_type_object->publicly_queryable );
 		$this->assertFalse( $post_type_object->has_archive );
+	}
+
+	/**
+	 * Search block on the events archive rewrites form action, removes required,
+	 * adds the event_time hidden input, and marks the form for events search clear.
+	 */
+	public function test_search_block_removes_required_and_handles_clearing() {
+		global $wp_query;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited, WordPress.NamingConventions.ValidHookName.UseUnderscores
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$input_html = '<form role="search" method="get" action="https://example.org">'
+			. '<input type="search" name="s" required />'
+			. '</form>';
+
+		$output = apply_filters( 'render_block_core/search', $input_html );
+
+		$archive_url = get_post_type_archive_link( 'gatherpress_event' );
+		$this->assertStringContainsString( 'action="' . esc_url( $archive_url ) . '"', $output );
+		$this->assertStringContainsString( 'data-events-search-form="1"', $output );
+		$this->assertStringNotContainsString( 'required', $output );
+		$this->assertStringContainsString( '<input type="hidden" name="event_time" value="all" />', $output );
+		$this->assertStringNotContainsString( '<script', $output );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $processor->next_tag( 'form' ) );
+		$this->assertSame( '1', $processor->get_attribute( 'data-events-search-form' ) );
+		$this->assertTrue( $processor->next_tag( 'input' ) );
+		$this->assertNull( $processor->get_attribute( 'required' ) );
+
+		$wp_query = $original_query;
+		// phpcs:enable
+	}
+
+	/**
+	 * Search block on other pages remains untouched.
+	 */
+	public function test_search_block_untouched_outside_event_archive() {
+		global $wp_query;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited, WordPress.NamingConventions.ValidHookName.UseUnderscores
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = false;
+
+		$input_html = '<form role="search" method="get" action="https://example.org">'
+			. '<input type="search" name="s" required />'
+			. '</form>';
+
+		$output = apply_filters( 'render_block_core/search', $input_html );
+
+		$this->assertSame( $input_html, $output );
+
+		$wp_query = $original_query;
+		// phpcs:enable
+	}
+
+	/**
+	 * Empty search query parameter reverts the default all-time view back to upcoming.
+	 */
+	public function test_event_time_filter_reverts_to_upcoming_on_empty_search() {
+		$_GET['s'] = '';
+		$filter    = $this->get_event_time_filter( 'all' );
+		unset( $_GET['s'] );
+
+		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+	}
+
+	/**
+	 * Normalizing event time filter reverts 'all' to 'upcoming' on empty search query.
+	 */
+	public function test_normalize_event_time_filter() {
+		// When search query is empty string or whitespace and time is 'all'.
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '' ) );
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '   ' ) );
+
+		// When search query has text, 'all' is preserved.
+		$this->assertSame( 'all', normalize_event_time_filter( 'all', 'wordcamp' ) );
+
+		// When search is not set (null), 'all' is preserved.
+		unset( $_GET['s'] );
+		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
+
+		// When reading from $_GET['s'].
+		$_GET['s'] = '';
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all' ) );
+		$_GET['s'] = 'community';
+		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
+		unset( $_GET['s'] );
+
+		// When time is not 'all', it is preserved.
+		$this->assertSame( 'past', normalize_event_time_filter( 'past', '' ) );
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'upcoming', '' ) );
 	}
 }

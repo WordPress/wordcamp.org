@@ -1,6 +1,6 @@
 <?php
 /**
- * Title: Archive — events empty state
+ * Title: Archive - events empty state
  * Slug: groups-site/archive-events-empty
  * Categories: groups-site
  * Inserter: no
@@ -20,6 +20,11 @@ defined( 'ABSPATH' ) || exit;
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
 $search_term = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 $time_filter = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+if ( function_exists( '\WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter' ) ) {
+	$time_filter = \WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter( $time_filter, $search_term );
+} elseif ( '' === $search_term && 'all' === $time_filter ) {
+	$time_filter = 'upcoming';
+}
 // phpcs:enable
 
 $archive_url = get_post_type_archive_link( 'gatherpress_event' );

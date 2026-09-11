@@ -47,7 +47,18 @@ function enqueue_assets() {
 		array( 'groups-site-custom' ),
 		filemtime( get_theme_file_path( 'assets/css/responsive.css' ) )
 	);
+
+	if ( is_post_type_archive( 'gatherpress_event' ) ) {
+		wp_enqueue_script(
+			'groups-site-events-search',
+			get_theme_file_uri( 'assets/js/events-search.js' ),
+			array(),
+			filemtime( get_theme_file_path( 'assets/js/events-search.js' ) ),
+			true
+		);
+	}
 }
+
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
@@ -168,6 +179,11 @@ function event_archive_body_classes( array $classes ): array {
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
 	$time = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+	if ( function_exists( '\WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter' ) ) {
+		$time = \WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter( $time );
+	} elseif ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time ) {
+		$time = 'upcoming';
+	}
 	if ( ! in_array( $time, array( 'upcoming', 'past', 'all' ), true ) ) {
 		$time = 'upcoming';
 	}

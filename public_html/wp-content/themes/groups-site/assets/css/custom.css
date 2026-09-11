@@ -606,10 +606,57 @@ body.error404 .site-content-container h1 {
 }
 
 /*
- * Past events (the `?event_time=past` view — class set in `functions.php`)
+ * Event card format badge (in person, online, hybrid).
+ *
+ * Shows the attendance format at a glance so members do not have to open each
+ * card to discover whether an event is in person, virtual, or both (#2031).
+ */
+
+.groups-site-event-format {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.groups-site-event-format__badge {
+	display: inline-block;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 2px 8px;
+	border-radius: 2px;
+	line-height: 1.4;
+}
+
+.groups-site-event-format.is-format-online .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--blueberry-4);
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+.groups-site-event-format.is-format-hybrid .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-1);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-event-format.is-format-in-person .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-events-view-past .gatherpress-event-query .groups-site-event-format.is-format-online .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+
+/*
+ * Past events (the `?event_time=past` view - class set in `functions.php`)
  * drop the blue "coming up" date treatment and mute their photography a
  * touch. Same grid, but the page no longer dresses history as future.
  */
+
 
 .groups-site-events-view-past .gatherpress-event-query .wp-block-gatherpress-event-date.has-blueberry-1-color {
 	color: var(--wp--preset--color--charcoal-4) !important;

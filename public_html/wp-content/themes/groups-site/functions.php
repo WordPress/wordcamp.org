@@ -149,6 +149,10 @@ function prime_event_card_thumbnails( $query ) {
 	}
 
 	update_post_thumbnail_cache( $query );
+
+	if ( ! empty( $query->posts ) ) {
+		update_object_term_cache( wp_list_pluck( $query->posts, 'ID' ), 'gatherpress_event' );
+	}
 }
 add_action( 'loop_start', __NAMESPACE__ . '\prime_event_card_thumbnails' );
 
@@ -503,3 +507,138 @@ function compact_comment_reply_link_args( $args ) {
 	return $args;
 }
 add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );
+
+/**
+ * Determine the event format: 'hybrid', 'online', or 'in-person'.
+ *
+ * GatherPress assigns the `online-event` sentinel term to `_gatherpress_venue`
+ * for online and hybrid events. A hybrid event has both `online-event` and
+ * a physical venue term; an online event has only `online-event`; and an
+ * in-person event has no `online-event` term.
+ *
+ * @param int $event_id Event post ID.
+ * @return string 'hybrid', 'online', or 'in-person'.
+ */
+function get_event_format( int $event_id ): string {
+	$terms = get_the_terms( $event_id, '_gatherpress_venue' );
+
+	$has_online   = false;
+	$has_physical = false;
+
+	if ( is_array( $terms ) && ! empty( $terms ) ) {
+		foreach ( $terms as $term ) {
+			if ( 'online-event' === $term->slug ) {
+				$has_online = true;
+			} else {
+				$has_physical = true;
+			}
+		}
+	}
+
+	if ( ! $has_online ) {
+		$online_link = get_post_meta( $event_id, 'gatherpress_online_event_link', true );
+		if ( ! empty( $online_link ) ) {
+			$has_online = true;
+		}
+	}
+
+	if ( $has_online && $has_physical ) {
+		return 'hybrid';
+	}
+
+	if ( $has_online ) {
+		return 'online';
+	}
+
+	return 'in-person';
+}
+
+/**
+ * Retrieve human-readable label for an event format.
+ *
+ * @param string $format Event format slug ('hybrid', 'online', or 'in-person').
+ * @return string Localized label.
+ */
+function get_event_format_label( string $format ): string {
+	switch ( $format ) {
+		case 'hybrid':
+			return __( 'Hybrid', 'groups-site' );
+		case 'online':
+			return __( 'Online', 'groups-site' );
+		case 'in-person':
+		default:
+			return __( 'In person', 'groups-site' );
+	}
+}
+
+/**
+ * Render callback for the `groups-site/event-format` block.
+ *
+ * @param array          $attributes Block attributes.
+ * @param string         $content    Block inner content.
+ * @param \WP_Block|null $block      Block instance.
+ * @return string Rendered HTML.
+ */
+function render_event_format_block( array $attributes, string $content = '', ?\WP_Block $block = null ): string {
+	$post_id = ( $block instanceof \WP_Block && isset( $block->context['postId'] ) )
+		? (int) $block->context['postId']
+		: (int) get_the_ID();
+	if ( ! $post_id ) {
+		return '';
+	}
+
+	$post_type = ( $block instanceof \WP_Block && isset( $block->context['postType'] ) )
+		? (string) $block->context['postType']
+		: (string) get_post_type( $post_id );
+	if ( 'gatherpress_event' !== $post_type ) {
+		return '';
+	}
+
+	$format = get_event_format( (int) $post_id );
+	$label  = get_event_format_label( $format );
+
+	$wrapper_classes = array(
+		'wp-block-groups-site-event-format',
+		'groups-site-event-format',
+		'is-format-' . sanitize_html_class( $format ),
+	);
+
+	if ( ! empty( $attributes['className'] ) ) {
+		$wrapper_classes[] = $attributes['className'];
+	}
+
+	return sprintf(
+		'<div class="%1$s"><span class="groups-site-event-format__badge">%2$s</span></div>',
+		esc_attr( implode( ' ', $wrapper_classes ) ),
+		esc_html( $label )
+	);
+}
+
+/**
+ * Register the event-format block for event card grids.
+ */
+function register_event_format_block(): void {
+	if ( \WP_Block_Type_Registry::get_instance()->is_registered( 'groups-site/event-format' ) ) {
+		return;
+	}
+
+	register_block_type(
+		'groups-site/event-format',
+		array(
+			'api_version'     => 3,
+			'title'           => __( 'Event Format', 'groups-site' ),
+			'category'        => 'groups-site',
+			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'groups-site' ),
+			'uses_context'    => array( 'postId', 'postType' ),
+			'supports'        => array(
+				'html' => false,
+			),
+			'render_callback' => __NAMESPACE__ . '\render_event_format_block',
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_format_block' );
+
+if ( did_action( 'init' ) ) {
+	register_event_format_block();
+}

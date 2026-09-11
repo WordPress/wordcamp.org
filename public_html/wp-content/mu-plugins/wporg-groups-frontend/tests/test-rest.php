@@ -280,6 +280,29 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A draft whose date has passed cannot be published, and stays a draft
+	 * so the organiser can correct the date and try again.
+	 */
+	public function test_publish_draft_rejects_past_date() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$save = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$save->set_param( 'title', 'Stale draft' );
+		$draft_id = save_draft( $save )->get_data()['id'];
+
+		$params         = $this->base_event_params();
+		$params['id']   = $draft_id;
+		$params['date'] = current_datetime()->modify( '-1 day' )->format( 'Y-m-d' );
+
+		$response = publish_draft( $this->event_request( $params ) );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
+		$this->assertSame( 'draft', get_post_status( $draft_id ) );
+	}
+
+	/**
 	 * An event whose end time equals its start time is rejected.
 	 */
 	public function test_zero_length_event_rejected() {

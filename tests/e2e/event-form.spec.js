@@ -41,17 +41,21 @@ test.describe( 'event form surfaces', () => {
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
+	 * @return {Promise<Object>} The published event as the REST API reports it.
 	 */
 	async function expectPublishedWithDatetimes( page, title ) {
 		await page.waitForURL( /\/event\//, { timeout: 30000 } );
 		await expect( page.getByRole( 'heading', { name: title } ) ).toBeVisible();
 
 		const slug = new URL( page.url() ).pathname.split( '/' ).filter( Boolean ).pop();
-		const response = await page.request.get( `wp-json/wp/v2/gatherpress_events?slug=${ slug }&_fields=meta` );
+		const response = await page.request.get(
+			`wp-json/wp/v2/gatherpress_events?slug=${ slug }&_fields=id,meta`
+		);
 		expect( response.ok() ).toBe( true );
 		const [ event ] = await response.json();
 		expect( event.meta.gatherpress_datetime_start ).toBe( `${ DATE } ${ START }:00` );
 		expect( event.meta.gatherpress_datetime_end ).toBe( `${ DATE } 13:00:00` );
+		return event;
 	}
 
 	/**
@@ -89,6 +93,11 @@ test.describe( 'event form surfaces', () => {
 	 * The modal autosaves a draft, and reopening it lists that draft in the
 	 * picker. Publishing from there goes through `/draft/{id}/publish` with
 	 * the recurrence the form-data endpoint handed back.
+	 *
+	 * The draft is saved with a past date. A fresh form blocks that through
+	 * the browser's minimum-date check, but a loaded draft must not (#1978):
+	 * the request reaches the server, its "Event date cannot be in the past."
+	 * error shows in the form, and correcting the date publishes the same draft.
 	 */
 	test( 'publishes a draft continued from the modal picker', async ( { page } ) => {
 		test.slow();
@@ -96,13 +105,22 @@ test.describe( 'event form surfaces', () => {
 		await login( page, 'organiser3', 'password' );
 
 		const title = `Event form draft E2E ${ Date.now() }`;
+		const pastDate = '2020-01-01';
 		await page.goto( '' );
 		await page.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
 		const modal = page.locator( '.wporg-groups-event-modal' );
+		const date = modal.getByLabel( 'Date', { exact: true } );
 		await modal.getByLabel( 'Event title' ).fill( title );
-		await modal.getByLabel( 'Date', { exact: true } ).fill( DATE );
+		await date.fill( pastDate );
 		await modal.getByLabel( 'Start time' ).fill( START );
 		await modal.getByLabel( 'Duration' ).selectOption( { label: '1 hour' } );
+
+		// A fresh form keeps the minimum date. Checked through the constraint
+		// state rather than the attribute: a broken localisation still renders
+		// `min=""`, which would pass an attribute check while enforcing nothing.
+		expect( await date.evaluate( ( input ) => input.validity.rangeUnderflow ) ).toBe( true );
+
+		// `fill()` bypasses that check, so the past date autosaves.
 		await expect( modal ).toContainText( 'Draft saved at', { timeout: 15000 } );
 
 		// Closing a modal with a draft asks for confirmation.
@@ -111,11 +129,22 @@ test.describe( 'event form surfaces', () => {
 		await expect( modal ).toBeHidden();
 
 		await page.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
-		await modal.getByLabel( 'Continue from a draft' ).selectOption( { label: `${ title } — ${ DATE }` } );
+		const picker = modal.getByLabel( 'Continue from a draft' );
+		await picker.selectOption( { label: `${ title } — ${ pastDate }` } );
+		const draftId = Number( await picker.inputValue() );
 		await expect( modal.getByLabel( 'Event title' ) ).toHaveValue( title );
-		await modal.getByRole( 'button', { name: 'Create event' } ).click();
+		await expect( date ).toHaveValue( pastDate );
+		await expect( date ).not.toHaveAttribute( 'min' );
 
-		await expectPublishedWithDatetimes( page, title );
+		await modal.getByRole( 'button', { name: 'Create event' } ).click();
+		const notice = modal.locator( '.components-notice' );
+		await expect( notice ).toBeVisible();
+		await expect( notice ).toContainText( 'Event date cannot be in the past.' );
+
+		await date.fill( DATE );
+		await modal.getByRole( 'button', { name: 'Create event' } ).click();
+		const event = await expectPublishedWithDatetimes( page, title );
+		expect( event.id ).toBe( draftId );
 	} );
 
 	/**

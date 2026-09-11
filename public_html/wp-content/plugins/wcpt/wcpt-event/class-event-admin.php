@@ -848,6 +848,9 @@ abstract class Event_Admin {
 						<?php if ( in_array( $key, $required_fields, true ) ) : ?>
 							<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 						<?php endif; ?>
+						<?php if ( ! empty( $messages[ $key ] ) ) : ?>
+							<span class="description"><?php echo esc_html( $messages[ $key ] ); ?></span>
+						<?php endif; ?>
 					</p>
 
 					<p>

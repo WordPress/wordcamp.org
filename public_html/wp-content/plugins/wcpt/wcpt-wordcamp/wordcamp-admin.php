@@ -1178,6 +1178,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'Budget Wrangler E-mail Address',
 			);
 
+			// Venue Contact Information is required for Campus Connect events.
+			if ( 'campusconnect' === get_post_meta( $post_id, 'event_subtype', true ) ) {
+				$scheduled[] = 'Contact Information';
+			}
+
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
 
@@ -1943,6 +1948,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Global Sponsorship Grant'        => 'Deprecated.',
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
+		'Contact Information'             => 'Please provide a contact email address for the venue.',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

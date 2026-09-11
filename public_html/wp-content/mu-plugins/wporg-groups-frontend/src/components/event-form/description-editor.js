@@ -22,6 +22,9 @@ import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { registerCoreFormatTypes } from '@wordpress/format-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
+import { ALLOWED_BLOCK_TYPES } from './constants';
+
+export { ALLOWED_BLOCK_TYPES };
 
 let coreBlocksRegistered = false;
 
@@ -45,7 +48,7 @@ export function ensureCoreBlocksRegistered() {
 
 // `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
 // registry, so this dispatch only reaches it from a component rendered
-// *inside* the provider — a sibling effect would select a block in the
+// *inside* the provider - a sibling effect would select a block in the
 // wrong (default) store and `BlockToolbar` would never see it.
 function SelectFirstBlockOnMount( { clientId } ) {
 	const { selectBlock } = useDispatch( blockEditorStore );
@@ -53,7 +56,7 @@ function SelectFirstBlockOnMount( { clientId } ) {
 	useEffect( () => {
 		if ( clientId ) {
 			// `null` (instead of the default `0`) selects the block
-			// without also moving real DOM focus into it — see
+			// without also moving real DOM focus into it - see
 			// `useFocusFirstElement` in `@wordpress/block-editor`. We
 			// only need the toolbar to appear, not to steal focus from
 			// the modal on open.
@@ -75,7 +78,7 @@ function SelectFirstBlockOnMount( { clientId } ) {
  *     values back into the editor (no `value` prop, no `useEffect` on
  *     value, no setState ping-pong).
  *   - When the parent needs the serialised markup at submit time it
- *     calls `getValueRef.current()` — the editor exposes an imperative
+ *     calls `getValueRef.current()` - the editor exposes an imperative
  *     getter via the supplied ref instead of pushing every keystroke
  *     up the tree.
  *
@@ -92,10 +95,12 @@ function SelectFirstBlockOnMount( { clientId } ) {
 export default function DescriptionEditor( { initialValue, getValueRef, onDirty, classPrefix } ) {
 	// A description with no supported blocks (empty string, or markup
 	// that doesn't parse into anything) yields `[]`, leaving no block to
-	// select and the toolbar permanently empty — fall back to an empty
+	// select and the toolbar permanently empty - fall back to an empty
 	// paragraph so there's always a first block.
 	const [ blocks, setBlocks ] = useState( () => {
-		const parsed = parse( initialValue || '' );
+		const parsed = parse( initialValue || '' ).filter( ( block ) =>
+			ALLOWED_BLOCK_TYPES.includes( block.name )
+		);
 		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
 	} );
 
@@ -121,6 +126,7 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 				onChange: handleChange,
 				settings: {
 					hasFixedToolbar: true,
+					allowedBlockTypes: ALLOWED_BLOCK_TYPES,
 				},
 			},
 			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),

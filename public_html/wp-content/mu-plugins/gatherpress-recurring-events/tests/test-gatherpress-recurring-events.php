@@ -28,6 +28,15 @@ defined( 'WPINC' ) || die();
  */
 final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
+	/** Ensure GatherPress tables exist for this suite. */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
+		if ( class_exists( 'GatherPress\Core\Setup' ) ) {
+			\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+		}
+	}
+
 	/** Leave the screen global as we found it for whatever runs next. */
 	public function tear_down() {
 		unset( $GLOBALS['current_screen'] );
@@ -549,6 +558,330 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_start_gmt', $upcoming->request );
 		$this->assertCount( 2, $upcoming->posts, 'Upcoming should list the two future occurrences.' );
 		$this->assertCount( 2, $past->posts, 'Past should list only the two finished occurrences.' );
+	}
+
+	/** Reproduce archive loop occurrence date behavior. */
+	public function test_archive_loop_renders_occurrence_dates_in_order(): void {
+		set_current_screen( 'front' );
+
+		// Event A: started 28 days ago, 20 occurrences (4 in past, 16 in future).
+		$post_id_a             = self::factory()->post->create(
+			array(
+				'post_title'  => 'Recurring Weekly A',
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		$start_a               = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-28 days' )->setTime( 10, 0 );
+		$master_date_formatted = $start_a->format( 'M j, Y' );
+		( new Event( $post_id_a ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id_a,
+				'datetime_start' => $start_a->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start_a->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start_a->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'count', 20 );
+		wp_update_post( array(
+			'ID' => $post_id_a, 'post_status' => 'publish',
+		) );
+
+		// Several single events interleaved.
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$post_id_single = self::factory()->post->create(
+				array(
+					'post_title'  => "Single Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+			$start_single   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '+' . ( $i * 5 ) . ' days' )->setTime( 14, 0 );
+			( new Event( $post_id_single ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id_single,
+					'datetime_start' => $start_single->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $start_single->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id_single, 'post_status' => 'publish',
+			) );
+		}
+
+		$page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 1,
+			)
+		);
+
+		$this->assertCount( 12, $page1->posts, 'Page 1 should contain exactly 12 events/occurrences.' );
+		$this->assertSame( 20, $page1->found_posts, 'Total found posts should be 15 upcoming occurrences + 5 single events = 20.' );
+		$this->assertSame( 2, $page1->max_num_pages, 'Total pages should be 2.' );
+
+		$page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 8, $page2->posts, 'Page 2 should contain the remaining 8 events/occurrences.' );
+
+		// Register pattern and render the actual query block.
+		$theme_dir = dirname( dirname( dirname( __DIR__ ) ) ) . '/themes/groups-site/';
+		if ( ! \WP_Block_Patterns_Registry::get_instance()->is_registered( 'groups-site/event-card' ) && file_exists( $theme_dir . 'patterns/event-card.php' ) ) {
+			ob_start();
+			include $theme_dir . 'patterns/event-card.php';
+			$card_content = ob_get_clean();
+			register_block_pattern(
+				'groups-site/event-card',
+				array(
+					'title'   => 'Event card',
+					'content' => $card_content,
+				)
+			);
+		}
+
+		$query_block_markup = '<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":12,"offset":0,"order":"asc","orderBy":"datetime","gatherpress_event_query":"upcoming","include_unfinished":1,"inherit":false},"namespace":"gatherpress-event-query","className":"gatherpress-event-query","align":"wide"} -->
+<div class="wp-block-query alignwide gatherpress-event-query">
+	<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+		<!-- wp:pattern {"slug":"groups-site/event-card"} /-->
+	<!-- /wp:post-template -->
+	<!-- wp:query-pagination -->
+		<!-- wp:query-pagination-numbers /-->
+	<!-- /wp:query-pagination -->
+</div>
+<!-- /wp:query -->';
+
+		// Render Page 1.
+		$_GET           = array();
+		$rendered_page1 = do_blocks( $query_block_markup );
+		preg_match_all( '/<div[^>]*class="[^"]*wp-block-gatherpress-event-date[^"]*"[^>]*>(.*?)<\/div>/s', $rendered_page1, $dates_p1 );
+		preg_match_all( '/<h3[^>]*class="[^"]*wp-block-post-title[^"]*"[^>]*><a[^>]+href="([^"]+)"[^>]*>(.*?)<\/a><\/h3>/s', $rendered_page1, $titles_p1 );
+
+		$this->assertCount( 12, $titles_p1[2], 'Rendered page 1 should have 12 cards.' );
+
+		$all_rendered_urls = array();
+
+		foreach ( $titles_p1[2] as $idx => $title ) {
+			$date_str = trim( wp_strip_all_tags( $dates_p1[1][ $idx ] ?? '' ) );
+			$url      = $titles_p1[1][ $idx ];
+
+			// Crucial CFT assertion: Master creation date from 28 days ago must NEVER render on upcoming cards.
+			$this->assertNotSame(
+				$master_date_formatted,
+				$date_str,
+				sprintf( 'Card %d (%s) must not render past master creation date (%s).', $idx + 1, $title, $master_date_formatted )
+			);
+
+			// Occurrence links must include recurrence timestamp.
+			if ( str_contains( $title, 'Recurring' ) ) {
+				$this->assertMatchesRegularExpression(
+					'#/\d{8}T\d{6}/#',
+					$url,
+					sprintf( 'Card %d (%s) must link to its specific occurrence URL.', $idx + 1, $title )
+				);
+			}
+
+			$all_rendered_urls[] = $url;
+		}
+
+		// Render Page 2.
+		$_GET           = array( 'query-page' => 2 );
+		$rendered_page2 = do_blocks( $query_block_markup );
+		preg_match_all( '/<div[^>]*class="[^"]*wp-block-gatherpress-event-date[^"]*"[^>]*>(.*?)<\/div>/s', $rendered_page2, $dates_p2 );
+		preg_match_all( '/<h3[^>]*class="[^"]*wp-block-post-title[^"]*"[^>]*><a[^>]+href="([^"]+)"[^>]*>(.*?)<\/a><\/h3>/s', $rendered_page2, $titles_p2 );
+
+		$this->assertCount( 8, $titles_p2[2], 'Rendered page 2 should have 8 cards.' );
+
+		$page2_urls = array();
+		foreach ( $titles_p2[2] as $idx => $title ) {
+			$date_str = trim( wp_strip_all_tags( $dates_p2[1][ $idx ] ?? '' ) );
+			$url      = $titles_p2[1][ $idx ];
+
+			$this->assertNotSame(
+				$master_date_formatted,
+				$date_str,
+				sprintf( 'Page 2 card %d (%s) must not render past master creation date (%s).', $idx + 1, $title, $master_date_formatted )
+			);
+
+			$page2_urls[] = $url;
+		}
+
+		// Pagination stability: Zero duplicate URLs between Page 1 and Page 2.
+		$intersection = array_intersect( $all_rendered_urls, $page2_urls );
+		$this->assertEmpty(
+			$intersection,
+			'Pagination instability detected: events repeated across page 1 and page 2: ' . implode( ', ', $intersection )
+		);
+
+		// Total distinct items rendered across page 1 and page 2 must equal 20.
+		$total_unique_rendered = count( array_unique( array_merge( $all_rendered_urls, $page2_urls ) ) );
+		$this->assertSame( 20, $total_unique_rendered, 'All 20 events should be rendered exactly once across pages 1 and 2.' );
+
+		$_GET = array();
+	}
+
+	/**
+	 * Verify pagination stability when multiple events or occurrences tie on start datetime.
+	 */
+	public function test_pagination_stability_with_tied_timestamps(): void {
+		$base_time     = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '+10 days' )->setTime( 18, 0 );
+		$created_posts = array();
+
+		// Create 15 events where items 10, 11, 12, 13 share the exact same start datetime.
+		for ( $i = 1; $i <= 15; $i++ ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_title'  => "Tied Test Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+
+			// Items 10, 11, 12, 13 all have the same start datetime.
+			$offset_days = ( $i >= 10 && $i <= 13 ) ? 10 : $i;
+			$event_start = $base_time->modify( '+' . $offset_days . ' days' );
+
+			( new Event( $post_id ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id,
+					'datetime_start' => $event_start->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $event_start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id, 'post_status' => 'publish',
+			) );
+			$created_posts[ $post_id ] = $event_start->format( 'Y-m-d H:i:s' );
+		}
+
+		$page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 1,
+			)
+		);
+
+		$page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 12, $page1->posts, 'Page 1 should have 12 items.' );
+		$this->assertCount( 3, $page2->posts, 'Page 2 should have 3 items.' );
+		$this->assertSame( 15, $page1->found_posts, 'Total found posts should be 15.' );
+
+		$page1_ids = wp_list_pluck( $page1->posts, 'ID' );
+		$page2_ids = wp_list_pluck( $page2->posts, 'ID' );
+
+		// Enforce pagination stability: No row should appear on both Page 1 and Page 2.
+		$intersection = array_intersect( $page1_ids, $page2_ids );
+		$this->assertEmpty(
+			$intersection,
+			'Tied timestamps caused pagination instability: post IDs repeated across pages 1 and 2: ' . implode( ', ', $intersection )
+		);
+
+		// Combined items must contain all 15 unique post IDs.
+		$all_ids = array_merge( $page1_ids, $page2_ids );
+		$this->assertSame( 15, count( array_unique( $all_ids ) ), 'All 15 events must be accounted for across pages 1 and 2.' );
+	}
+
+	/**
+	 * Verify past events archive ordering and pagination stability with DESC order.
+	 */
+	public function test_past_events_archive_ordering_and_pagination(): void {
+		$now = new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) );
+
+		// Create 15 past events.
+		for ( $i = 1; $i <= 15; $i++ ) {
+			$post_id    = self::factory()->post->create(
+				array(
+					'post_title'  => "Past Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+			$past_start = $now->modify( '-' . ( 20 - $i ) . ' days' )->setTime( 10, 0 );
+
+			( new Event( $post_id ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id,
+					'datetime_start' => $past_start->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $past_start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id, 'post_status' => 'publish',
+			) );
+		}
+
+		$past_page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+				'posts_per_page'          => 10,
+				'paged'                   => 1,
+			)
+		);
+
+		$past_page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+				'posts_per_page'          => 10,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 10, $past_page1->posts, 'Past Page 1 should contain 10 items.' );
+		$this->assertCount( 5, $past_page2->posts, 'Past Page 2 should contain 5 items.' );
+
+		$p1_ids = wp_list_pluck( $past_page1->posts, 'ID' );
+		$p2_ids = wp_list_pluck( $past_page2->posts, 'ID' );
+
+		$intersection = array_intersect( $p1_ids, $p2_ids );
+		$this->assertEmpty(
+			$intersection,
+			'Past events pagination instability: post IDs repeated across pages 1 and 2: ' . implode( ', ', $intersection )
+		);
 	}
 
 	/**

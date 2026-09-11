@@ -554,7 +554,7 @@ add_filter(
  *
  * GatherPress renders a venue's static map from `wp_after_insert_post`, so
  * every venue create/update pays for the OSM tile fetches and the GD
- * composite inline — once for the 1x image and again for the 2x retina one.
+ * composite inline - once for the 1x image and again for the 2x retina one.
  * Each render is bounded by its own multi-second wall-clock budget, so a
  * single save can sit there for a long time when the tile host is slow.
  * Our front-end event form creates and updates venues over REST
@@ -571,3 +571,90 @@ add_filter(
  * https://github.com/WordPress/wordcamp.org/issues/1823.
  */
 add_filter( 'gatherpress_static_map_generate_async', '__return_true' );
+
+/**
+ * Record whether a comment query explicitly requested GatherPress RSVPs.
+ *
+ * GatherPress's own exclusion filter runs at priority 10 and rewrites an
+ * explicit RSVP type query var to an empty string. Capturing the caller's
+ * original intent before priority 10 allows both GatherPress's exclusion
+ * opt-out filter and our own fallback exclusion to preserve legitimate RSVP
+ * queries (such as attendee exports).
+ *
+ * @param \WP_Comment_Query $query The comment query instance.
+ */
+function capture_explicit_rsvp_query( \WP_Comment_Query $query ): void {
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		$query->query_vars['_gatherpress_rsvp_explicit'] = true;
+	}
+}
+add_action( 'pre_get_comments', __NAMESPACE__ . '\capture_explicit_rsvp_query', 5 );
+
+/**
+ * Opt out of GatherPress's RSVP comment exclusion when RSVPs were explicitly requested.
+ *
+ * @param bool              $exclude Whether GatherPress should exclude RSVPs.
+ * @param \WP_Comment_Query $query   The comment query instance.
+ * @return bool False to skip GatherPress's exclusion, or original value.
+ */
+function skip_rsvp_exclusion_for_explicit_queries( bool $exclude, \WP_Comment_Query $query ): bool {
+	if ( ! empty( $query->query_vars['_gatherpress_rsvp_explicit'] ) ) {
+		return false;
+	}
+
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		return false;
+	}
+
+	return $exclude;
+}
+add_filter( 'gatherpress_rsvp_comment_query_exclusion', __NAMESPACE__ . '\skip_rsvp_exclusion_for_explicit_queries', 10, 2 );
+
+/**
+ * Ensure GatherPress RSVP comments never leak into discussion comment queries.
+ *
+ * When a group site has RSVPs but no regular comments yet, GatherPress's
+ * comment type exclusion leaves an empty array, which WP_Comment_Query
+ * interprets as "no type filter", leaking RSVPs into the Discussion section.
+ *
+ * @param \WP_Comment_Query $query The comment query instance.
+ */
+function exclude_rsvps_from_general_comment_queries( \WP_Comment_Query $query ): void {
+	if ( ! empty( $query->query_vars['_gatherpress_rsvp_explicit'] ) ) {
+		return;
+	}
+
+	if ( ! apply_filters( 'gatherpress_rsvp_comment_query_exclusion', true, $query ) ) {
+		return;
+	}
+
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	// If the query specifically requests RSVPs, don't modify it.
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		return;
+	}
+
+	$not_in = (array) ( $query->query_vars['type__not_in'] ?? array() );
+	if ( ! in_array( 'gatherpress_rsvp', $not_in, true ) ) {
+		$not_in[]                          = 'gatherpress_rsvp';
+		$query->query_vars['type__not_in'] = $not_in;
+	}
+}
+add_action( 'pre_get_comments', __NAMESPACE__ . '\exclude_rsvps_from_general_comment_queries', 20 );

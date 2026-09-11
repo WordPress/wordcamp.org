@@ -332,7 +332,6 @@ function EventForm(
 						value={ form.online_event_link }
 						onChange={ ( value ) => updateField( 'online_event_link', value ) }
 						placeholder="https://"
-						required
 						__nextHasNoMarginBottom
 					/>
 				) }

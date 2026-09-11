@@ -834,4 +834,26 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertTrue( $recurrence['locked'] );
 	}
+
+	/**
+	 * An online event can be created without an online event link.
+	 */
+	public function test_create_online_event_without_link(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$params = array_merge(
+			$this->base_event_params(),
+			array(
+				'is_online'         => true,
+				'online_event_link' => '',
+			)
+		);
+
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
+	}
 }

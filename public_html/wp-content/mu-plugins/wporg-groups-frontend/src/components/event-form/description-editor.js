@@ -8,7 +8,13 @@
 /**
  * WordPress dependencies.
  */
-import { createElement as h, useState, useEffect } from '@wordpress/element';
+import {
+	createElement as h,
+	useState,
+	useEffect,
+	useRef,
+	useCallback,
+} from '@wordpress/element';
 import {
 	BlockEditorProvider,
 	BlockList,
@@ -22,7 +28,22 @@ import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { registerCoreFormatTypes } from '@wordpress/format-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
+import { __ } from '@wordpress/i18n';
+import { isAppleOS } from '@wordpress/keycodes';
+import {
+	ShortcutProvider,
+	store as keyboardShortcutsStore,
+} from '@wordpress/keyboard-shortcuts';
 import { ALLOWED_BLOCK_TYPES } from './constants';
+import {
+	MAX_HISTORY_LENGTH,
+	createHistoryManager,
+	recordInput,
+	recordChange,
+	stepUndo,
+	stepRedo,
+	handleEditorKeyDown,
+} from './description-editor-history';
 
 export { ALLOWED_BLOCK_TYPES };
 
@@ -81,6 +102,7 @@ function SelectFirstBlockOnMount( { clientId } ) {
  *     calls `getValueRef.current()` - the editor exposes an imperative
  *     getter via the supplied ref instead of pushing every keystroke
  *     up the tree.
+ *   - Maintains an undo/redo stack for block edits and keyboard shortcuts.
  *
  * This avoids the feedback loop that was causing per-keystroke lag and
  * breaking the slash inserter (parent re-renders were tearing down the
@@ -104,25 +126,117 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
 	} );
 
-	if ( getValueRef ) {
-		getValueRef.current = () => serialize( blocks );
+	const historyRef = useRef( null );
+	if ( ! historyRef.current ) {
+		historyRef.current = createHistoryManager( blocks );
 	}
 
-	const handleChange = ( newBlocks ) => {
-		setBlocks( newBlocks );
-		if ( onDirty ) {
-			onDirty();
+	const keyboardShortcutsDispatch = useDispatch( keyboardShortcutsStore );
+
+	useEffect( () => {
+		if ( keyboardShortcutsDispatch?.registerShortcut ) {
+			keyboardShortcutsDispatch.registerShortcut( {
+				name: 'wporg-groups/description-undo',
+				category: 'global',
+				description: __( 'Undo the last change.', 'wporg-groups-frontend' ),
+				keyCombination: {
+					modifier: 'primary',
+					character: 'z',
+				},
+			} );
+			keyboardShortcutsDispatch.registerShortcut( {
+				name: 'wporg-groups/description-redo',
+				category: 'global',
+				description: __( 'Redo the last undone change.', 'wporg-groups-frontend' ),
+				keyCombination: {
+					modifier: 'primaryShift',
+					character: 'z',
+				},
+				aliases: [
+					{
+						modifier: 'primary',
+						character: 'y',
+					},
+				],
+			} );
 		}
-	};
+
+		return () => {
+			if ( keyboardShortcutsDispatch?.unregisterShortcut ) {
+				keyboardShortcutsDispatch.unregisterShortcut( 'wporg-groups/description-undo' );
+				keyboardShortcutsDispatch.unregisterShortcut( 'wporg-groups/description-redo' );
+			}
+		};
+	}, [ keyboardShortcutsDispatch ] );
+
+	if ( getValueRef ) {
+		getValueRef.current = () => serialize( historyRef.current.present );
+	}
+
+	const handleInput = useCallback(
+		( newBlocks ) => {
+			recordInput( historyRef.current, newBlocks );
+			setBlocks( newBlocks );
+			if ( onDirty ) {
+				onDirty();
+			}
+		},
+		[ onDirty ]
+	);
+
+	const handleChange = useCallback(
+		( newBlocks ) => {
+			recordChange( historyRef.current, newBlocks, serialize, MAX_HISTORY_LENGTH );
+			setBlocks( newBlocks );
+			if ( onDirty ) {
+				onDirty();
+			}
+		},
+		[ onDirty ]
+	);
+
+	const undo = useCallback( () => {
+		const target = stepUndo( historyRef.current, serialize );
+		if ( target ) {
+			setBlocks( target );
+			if ( onDirty ) {
+				onDirty();
+			}
+		}
+	}, [ onDirty ] );
+
+	const redo = useCallback( () => {
+		const target = stepRedo( historyRef.current, MAX_HISTORY_LENGTH );
+		if ( target ) {
+			setBlocks( target );
+			if ( onDirty ) {
+				onDirty();
+			}
+		}
+	}, [ onDirty ] );
+
+	const handleKeyDown = useCallback(
+		( event ) => {
+			handleEditorKeyDown(
+				event,
+				{ onUndo: undo, onRedo: redo },
+				isAppleOS()
+			);
+		},
+		[ undo, redo ]
+	);
 
 	return h(
-		'div',
-		{ className: `${ classPrefix }__editor` },
+		ShortcutProvider,
+		{
+			className: `${ classPrefix }__editor`,
+			onKeyDown: handleKeyDown,
+		},
 		h(
 			BlockEditorProvider,
 			{
 				value: blocks,
-				onInput: handleChange,
+				onInput: handleInput,
 				onChange: handleChange,
 				settings: {
 					hasFixedToolbar: true,

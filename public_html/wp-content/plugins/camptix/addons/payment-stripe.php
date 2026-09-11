@@ -1096,7 +1096,8 @@ class CampTix_Stripe_API_Client {
 				'quantity'     => $item['quantity'],
 				'price_data'   => array(
 					'product_data' => array(
-						'name'        => $item['name'],
+						'name'       => $item['name'],
+						'unit_label' => 'Ticket',
 					),
 					'unit_amount' => $item['fractional_price'],
 					'currency'    => $this->currency,

@@ -994,15 +994,17 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	/**
 	 * Submits a single, user-initiated refund request to PayPal and returns the result
 	 *
-	 * @param string $payment_token
+	 * @param string    $payment_token
+	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
+	 *                                 If 0 or not provided, a full refund is issued.
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	function payment_refund( $payment_token ) {
+	public function payment_refund( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$result = $this->send_refund_request( $payment_token );
+		$result = $this->send_refund_request( $payment_token, $refund_amount );
 
 		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED != $result['status'] ) {
 			$error_code    = isset( $result['refund_transaction_details']['L_ERRORCODE0'] )   ? $result['refund_transaction_details']['L_ERRORCODE0']   : 0;
@@ -1025,17 +1027,28 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			),
 		);
 
+		// For partial refunds, store result data so the caller can use it
+		// without payment_result marking all attendees as refunded.
+		if ( $refund_amount > 0 && CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result['status'] ) {
+			$camptix->tmp( 'refund_transaction_id', $refund_data['refund_transaction_id'] );
+			$camptix->tmp( 'refund_transaction_details', $refund_data['refund_transaction_details'] );
+
+			return CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		}
+
 		return $camptix->payment_result( $payment_token, $result['status'], $refund_data );
 	}
 
-	/*
+	/**
 	 * Sends a request to PayPal to refund a transaction
 	 *
-	 * @param string $payment_token
+	 * @param string    $payment_token
+	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
+	 *                                 If 0 or not provided, a full refund is issued.
 	 *
 	 * @return array
 	 */
-	function send_refund_request( $payment_token ) {
+	public function send_refund_request( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -1045,11 +1058,17 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		);
 
 		// Craft and submit the request
-		$payload  = array(
+		$payload = array(
 			'METHOD'        => 'RefundTransaction',
 			'TRANSACTIONID' => $result['transaction_id'],
-			'REFUNDTYPE'    => 'Full',
+			'REFUNDTYPE'    => ( $refund_amount > 0 ) ? 'Partial' : 'Full',
 		);
+
+		if ( $refund_amount > 0 ) {
+			$payload['AMT']       = number_format( $refund_amount, 2, '.', '' );
+			$payload['CURRENCYCODE'] = $camptix->get_options()['currency'];
+		}
+
 		$response = $this->request( $payload );
 
 		// Process PayPal's response

@@ -7,6 +7,7 @@ use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLA
 defined( 'WPINC' ) || die();
 
 add_action( 'wp', __NAMESPACE__ . '\maybe_add_latest_site_hints' );
+add_filter( 'jetpack_contact_form_html', __NAMESPACE__ . '\maybe_disable_contact_form' );
 
 /**
  * If user or bot visits WordCamp site that has newer site for the same city,
@@ -140,13 +141,92 @@ function show_notification_about_latest_site() {
 }
 
 /**
+ * Check if contact forms should be disabled on this site.
+ *
+ * Forms are disabled when:
+ * 1. There's a newer event site for this city, OR
+ * 2. The event ended more than 18 months ago.
+ *
+ * This reduces spam sent to organizers of past events.
+ *
+ * See https://github.com/WordPress/wordcamp.org/issues/1468
+ *
+ * @param string $html The contact form HTML.
+ *
+ * @return string The original form HTML or a replacement message.
+ */
+function maybe_disable_contact_form( $html ) {
+	global $current_blog;
+
+	$wordcamp = get_wordcamp_post();
+
+	// Fail open on sites without an associated WordCamp post (e.g. Central), since this filter runs on every form render.
+	if ( ! $wordcamp ) {
+		return $html;
+	}
+
+	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
+
+	// Check if the event is still ongoing.
+	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
+		return $html;
+	}
+
+	$has_newer_site  = false;
+	$expired_by_time = false;
+
+	// Check if the event ended more than 18 months ago.
+	if ( $end_date && time() > ( (int) $end_date + 18 * MONTH_IN_SECONDS ) ) {
+		$expired_by_time = true;
+	}
+
+	// Check if there's a newer site for this city. The result is cached, so this is cheap on repeat requests.
+	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
+	if ( $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain ) {
+		$has_newer_site = true;
+	}
+
+	if ( ! $has_newer_site && ! $expired_by_time ) {
+		return $html;
+	}
+
+	$event_name = '<strong>' . esc_html( get_blog_details( $current_blog->blog_id )->blogname ) . '</strong>';
+
+	if ( $has_newer_site ) {
+		$message = wp_kses_post( sprintf(
+			// translators: %1$s is the event name, %2$s is the URL of the latest edition.
+			__( '%1$s is over. Please visit <a href="%2$s">the next edition</a> for more details and to get in touch.', 'wordcamporg' ),
+			$event_name,
+			esc_url( $latest_domain )
+		) );
+	} else {
+		$message = wp_kses_post( sprintf(
+			// translators: %1$s is the event name, %2$s is the URL to contact WordCamp Central.
+			__( '%1$s has concluded, so this contact form is no longer monitored. If you need to get in touch, please <a href="%2$s">contact WordCamp Central</a>.', 'wordcamporg' ),
+			$event_name,
+			esc_url( 'https://central.wordcamp.org/contact-us/' )
+		) );
+	}
+
+	$coc_message = wp_kses_post( sprintf(
+		// translators: %s is the mailto link for incident reports.
+		__( 'If you have a <a href="https://make.wordpress.org/handbook/community-code-of-conduct/">Code of Conduct</a> concern, you can report it to the <a href="mailto:%s">WordPress Incident Response Team</a>.', 'wordcamporg' ),
+		'reports@wordpress.org'
+	) );
+
+	return sprintf(
+		'<div class="wordcamp-contact-form-disabled"><p>%s</p><p>%s</p></div>',
+		$message,
+		$coc_message
+	);
+}
+
+/**
  * Get the home URL of the most recent event in a given city.
  *
- * For WordCamps, this is just the most recent WordCamp in the city. For NextGen events, it's the most recent event in that city with the same type.
- *
- * For example:
- * - `narnia.wordcamp.org/2023/` -> `narnia.wordcamp.org/2024/`
- * - `events.wordpress.org/narnia/2023/training/` -> `events.wordpress.org/narnia/2024/training/`
+ * This is a cached wrapper around `query_latest_home_url()`. The result is stored in a per-site transient for an
+ * hour, since the underlying queries run on most front-end requests but the answer only changes when a new edition's
+ * site is created.
  *
  * @param string $current_domain
  * @param string $current_path
@@ -154,6 +234,38 @@ function show_notification_about_latest_site() {
  * @return bool|string
  */
 function get_latest_home_url( $current_domain, $current_path ) {
+	$cache_key = 'latest_home_url_' . md5( $current_domain . $current_path );
+	$cached    = get_transient( $cache_key );
+
+	// Transients can't distinguish a cached `false` from a cache miss, so a negative result is stored as 'none'.
+	if ( false !== $cached ) {
+		return 'none' === $cached ? false : $cached;
+	}
+
+	$latest_home_url = query_latest_home_url( $current_domain, $current_path );
+
+	set_transient( $cache_key, $latest_home_url ?: 'none', HOUR_IN_SECONDS );
+
+	return $latest_home_url;
+}
+
+/**
+ * Query the home URL of the most recent event in a given city.
+ *
+ * For WordCamps, this is just the most recent WordCamp in the city. For NextGen events, it's the most recent event in that city with the same type.
+ *
+ * For example:
+ * - `narnia.wordcamp.org/2023/` -> `narnia.wordcamp.org/2024/`
+ * - `events.wordpress.org/narnia/2023/training/` -> `events.wordpress.org/narnia/2024/training/`
+ *
+ * Use the cached `get_latest_home_url()` wrapper instead of calling this directly.
+ *
+ * @param string $current_domain
+ * @param string $current_path
+ *
+ * @return bool|string
+ */
+function query_latest_home_url( $current_domain, $current_path ) {
 	global $wpdb;
 
 	$wordcamp = get_wordcamp_post();

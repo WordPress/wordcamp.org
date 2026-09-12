@@ -36,7 +36,7 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Strip sensitive fields from transaction data before logging
+	 * Redact sensitive fields from transaction data before logging.
 	 *
 	 * @param array $data Transaction data.
 	 *
@@ -45,22 +45,69 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	protected function prepare_transaction_for_log( $data ) {
 		$sensitive_keys = [
 			'authorization',
+			'api_key',
+			'access_token',
+			'refresh_token',
 			'store_passwd',
 			'store_password',
+			'store_id',
 			'password',
+			'username',
+			'payment_token',
+			'tran_id',
+			'transaction_id',
+			'bank_tran_id',
 			'card_number',
+			'card_no',
 			'card_exp',
 			'card_cvv',
 			'pin',
 			'token',
 			'sp_token',
+			'sessionkey',
+			'session_key',
+			'val_id',
+			'verify_sign',
+			'verify_sign_sha2',
+			'verify_key',
+			'name',
+			'first_name',
+			'last_name',
+			'email',
+			'phone',
+			'address',
+			'city',
+			'state',
+			'postcode',
+			'post_code',
+			'country',
 			'cus_phone',
+			'cus_name',
+			'cus_email',
+			'customer_name',
 			'customer_phone',
+			'customer_email',
+			'customer_address',
+			'received_person_name',
 			'shipping_phone_number',
+			'shipping_address',
 		];
 
 		foreach ( $data as $key => $value ) {
-			if ( in_array( strtolower( (string) $key ), $sensitive_keys, true ) ) {
+			$normalized_key = strtolower( (string) $key );
+
+			if (
+				in_array( $normalized_key, $sensitive_keys, true ) ||
+				str_contains( $normalized_key, 'password' ) ||
+				str_contains( $normalized_key, 'passwd' ) ||
+				str_contains( $normalized_key, 'secret' ) ||
+				str_contains( $normalized_key, 'signature' ) ||
+				str_contains( $normalized_key, 'token' ) ||
+				str_contains( $normalized_key, 'url' ) ||
+				str_contains( $normalized_key, 'phone' ) ||
+				str_contains( $normalized_key, 'email' ) ||
+				str_contains( $normalized_key, 'address' )
+			) {
 				$data[ $key ] = '[redacted]';
 			} elseif ( is_array( $value ) ) {
 				$data[ $key ] = $this->prepare_transaction_for_log( $value );
@@ -73,14 +120,85 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Redact known values in free text without replacing short names inside words.
+	 *
+	 * @param mixed $message          Diagnostic message.
+	 * @param array $sensitive_values Known credentials and customer data.
+	 * @return string
+	 */
+	protected function prepare_gateway_message_for_log( $message, $sensitive_values ) {
+		if ( ! is_scalar( $message ) ) {
+			return '';
+		}
+
+		$patterns = [];
+		foreach ( $sensitive_values as $value ) {
+			if ( ! is_scalar( $value ) || '' === (string) $value ) {
+				continue;
+			}
+			$value      = (string) $value;
+			$pattern    = preg_quote( $value, '/' );
+			$patterns[] = strlen( $value ) < 6 ? '(?<![\\pL\\pN])' . $pattern . '(?![\\pL\\pN])' : $pattern;
+		}
+
+		// One replacement pass prevents replacements from altering [redacted] markers.
+		usort( $patterns, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+		$message = (string) $message;
+		if ( $patterns ) {
+			$message = preg_replace( '/(?:' . implode( '|', $patterns ) . ')/iu', '[redacted]', $message ) ?? '';
+		}
+		$message = preg_replace( '~https?://[^\s<>]+~i', '[redacted URL]', $message );
+		$message = preg_replace( '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[redacted email]', $message );
+
+		return CampTix_Plugin::substr_bytes( sanitize_text_field( $message ), 0, 255 );
+	}
+
+	/**
+	 * Retain API diagnostics while redacting fields and echoed request secrets.
+	 *
+	 * @param array $data    Decoded diagnostics.
+	 * @param array $request Request body and headers.
+	 * @return array
+	 */
+	protected function prepare_api_diagnostics( $data, $request ) {
+		$values  = [];
+		$collect = function ( $fields ) use ( &$collect, &$values ) {
+			foreach ( $fields as $key => $value ) {
+				if ( is_array( $value ) ) {
+					$collect( $value );
+				} elseif ( is_scalar( $value ) && $this->prepare_transaction_for_log( [ $key => $value ] ) !== [ $key => $value ] ) {
+					$values[] = $value;
+				}
+			}
+		};
+		$collect( $request );
+		$collect( $data );
+
+		$scrub = function ( $fields ) use ( &$scrub, $values ) {
+			$fields = $this->prepare_transaction_for_log( $fields );
+			foreach ( $fields as $key => $value ) {
+				if ( is_array( $value ) ) {
+					$fields[ $key ] = $scrub( $value );
+				} elseif ( is_string( $value ) && '[redacted]' !== $value ) {
+					$fields[ $key ] = $this->prepare_gateway_message_for_log( $value, $values );
+				}
+			}
+			return $fields;
+		};
+
+		return $scrub( $data );
+	}
+
+	/**
 	 * Check that a redirect URL uses HTTPS and belongs to an allowed host.
 	 *
-	 * @param string $url           Redirect URL.
-	 * @param array  $allowed_hosts Exact hostnames whose subdomains are also allowed.
+	 * @param string $url              Redirect URL.
+	 * @param array  $allowed_hosts    Allowed hostnames.
+	 * @param bool   $allow_subdomains Whether subdomains of allowed hosts are accepted.
 	 *
 	 * @return bool
 	 */
-	protected function is_allowed_https_host( $url, $allowed_hosts ) {
+	protected function is_allowed_https_host( $url, $allowed_hosts, $allow_subdomains = true ) {
 		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
 		$host   = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
 
@@ -91,7 +209,10 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 		foreach ( $allowed_hosts as $allowed_host ) {
 			$allowed_host = strtolower( $allowed_host );
 
-			if ( $allowed_host === $host || str_ends_with( $host, '.' . $allowed_host ) ) {
+			if (
+				$allowed_host === $host ||
+				( $allow_subdomains && str_ends_with( $host, '.' . $allowed_host ) )
+			) {
 				return true;
 			}
 		}
@@ -198,7 +319,14 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 		$response = wp_remote_request( $url, $defaults );
 
 		if ( is_wp_error( $response ) ) {
-			$this->log( sprintf( 'API request failed: %s', $response->get_error_message() ) );
+			$this->log(
+				'API request failed.',
+				null,
+				array(
+					'error_code' => $response->get_error_code(),
+					'details'    => $this->prepare_api_diagnostics( [ 'message' => $response->get_error_message() ], $args + $headers ),
+				)
+			);
 			return false;
 		}
 
@@ -207,9 +335,11 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 
 		if ( $code < 200 || $code >= 300 ) {
 			$decoded_body = json_decode( $body, true );
-			$log_body     = is_array( $decoded_body ) ? $this->prepare_transaction_for_log( $decoded_body ) : array( 'body_length' => strlen( $body ) );
-
-			$this->log( sprintf( 'API request returned HTTP %d', $code ), null, $log_body );
+			$this->log(
+				sprintf( 'API request returned HTTP %d', $code ),
+				null,
+				is_array( $decoded_body ) ? $this->prepare_api_diagnostics( $decoded_body, $args + $headers ) : array( 'body_length' => strlen( $body ) )
+			);
 			return false;
 		}
 

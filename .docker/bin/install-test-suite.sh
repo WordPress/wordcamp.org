@@ -21,9 +21,9 @@ GATHERPRESS_DIR="/app/public_html/wp-content/plugins/gatherpress"
 
 db_ready() {
 	if command -v mariadb-admin >/dev/null 2>&1; then
-		mariadb-admin ping -h "$DB_HOST" -u "$DB_USER" --skip-ssl --silent >/dev/null 2>&1
+		mariadb-admin ping -h "$DB_HOST" --silent >/dev/null 2>&1
 	else
-		mysqladmin ping -h "$DB_HOST" -u "$DB_USER" --skip-ssl --silent >/dev/null 2>&1
+		mysqladmin ping -h "$DB_HOST" --silent >/dev/null 2>&1
 	fi
 }
 

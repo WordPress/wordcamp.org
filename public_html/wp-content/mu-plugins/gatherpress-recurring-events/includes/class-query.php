@@ -54,6 +54,7 @@ final class Query {
 		$clauses['orderby'] = preg_replace_callback( $pattern, $replace, $clauses['orderby'] );
 
 		// Disable post-queries caching so occurrence queries never serve stale or mismatched post ID lists.
+		// Occurrence rows carry per-row recurrence data that a cached post ID list cannot represent.
 		$query->set( 'cache_results', false );
 
 		$order = strtoupper( (string) ( $query->get( 'order' ) ?: 'ASC' ) );

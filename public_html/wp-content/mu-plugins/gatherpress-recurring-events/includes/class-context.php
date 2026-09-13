@@ -197,7 +197,7 @@ final class Context {
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );
 			$label    = wp_date( 'M j @ g:i A T', $date->getTimestamp(), $timezone );
 			if ( 'cancelled' === $occurrence->status ) {
-				$label .= ' - ' . __( 'Cancelled', 'wordcamporg' );
+				$label .= ' — ' . __( 'Cancelled', 'wordcamporg' );
 			}
 
 			$items .= sprintf(

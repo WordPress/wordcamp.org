@@ -15,6 +15,19 @@ class MES_Sponsor {
 	public const POST_TYPE_SLUG = 'mes';
 
 	/**
+	 * Get a sponsor's group → sponsorship-level map.
+	 *
+	 * @param int $sponsor_id
+	 *
+	 * @return array { group_term_id (int) => sponsorship_level_post_id (int) }
+	 */
+	public static function get_group_sponsorships( $sponsor_id ) {
+		$map = get_post_meta( $sponsor_id, 'mes_group_sponsorships', true );
+
+		return is_array( $map ) ? $map : array();
+	}
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -203,6 +216,21 @@ class MES_Sponsor {
 			'default'
 		);
 
+		/*
+		 * Offered only once the group UI is switched on, so merging the model
+		 * adds nothing to this screen. See MES_Sponsor_Group::is_enabled().
+		 */
+		if ( MES_Sponsor_Group::is_enabled() ) {
+			add_meta_box(
+				'mes_group_sponsorships',
+				__( 'Group Sponsorships', 'wordcamporg' ),
+				array( $this, 'markup_meta_boxes' ),
+				self::POST_TYPE_SLUG,
+				'normal',
+				'default'
+			);
+		}
+
 		add_meta_box(
 			'mes_contact_information',
 			__( 'Contact Information', 'wordcamporg' ),
@@ -239,6 +267,21 @@ class MES_Sponsor {
 				) );
 				$regional_sponsorships = $this->populate_default_regional_sponsorships( get_post_meta( $post->ID, 'mes_regional_sponsorships', true ), $regions );
 				$view                  = 'metabox-regional-sponsorships.php';
+				break;
+
+			case 'mes_group_sponsorships':
+				$groups             = get_terms(
+					array(
+						'taxonomy'   => MES_Sponsor_Group::TAXONOMY_SLUG,
+						'hide_empty' => false,
+					)
+				);
+				$sponsorship_levels = get_posts( array(
+					'post_type'   => MES_Sponsorship_Level::POST_TYPE_SLUG,
+					'numberposts' => - 1,
+				) );
+				$group_sponsorships = self::get_group_sponsorships( $post->ID );
+				$view               = 'metabox-group-sponsorships.php';
 				break;
 
 			case 'mes_contact_information':
@@ -383,6 +426,21 @@ class MES_Sponsor {
 		if ( isset( $new_values['mes_regional_sponsorships'] ) ) {
 			array_walk( $new_values['mes_regional_sponsorships'], 'absint' );
 			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values['mes_regional_sponsorships'] );
+		}
+
+		if ( isset( $new_values['mes_group_sponsorships'] ) && is_array( $new_values['mes_group_sponsorships'] ) ) {
+			$clean = array();
+
+			foreach ( $new_values['mes_group_sponsorships'] as $group_id => $level_id ) {
+				$group_id = absint( $group_id );
+				$level_id = absint( $level_id );
+
+				if ( $group_id && $level_id ) {
+					$clean[ $group_id ] = $level_id;
+				}
+			}
+
+			update_post_meta( $post_id, 'mes_group_sponsorships', $clean );
 		}
 
 		if ( isset( $new_values['mes_email_address'] ) ) {

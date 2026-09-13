@@ -1,0 +1,13 @@
+.camptix-visa-letter-details{
+	display:none;
+}
+
+.camptix-visa-letter-toggle-wrapper {
+	display: inline-block;
+}
+
+.camptix-visa-letter-toggle-wrapper .camptix-need-visa-letter,
+.camptix-visa-letter-toggle-wrapper label[for="camptix-need-visa-letter"] {
+	display: inline-block;
+	margin-left: 5px;
+}

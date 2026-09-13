@@ -564,7 +564,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	public function test_archive_loop_renders_occurrence_dates_in_order(): void {
 		set_current_screen( 'front' );
 
-		// Event A: started 28 days ago, 20 occurrences (4 in past, 16 in future).
+		// Event A: started 32 days ago, 20 occurrences (5 in past, 15 in future).
 		$post_id_a             = self::factory()->post->create(
 			array(
 				'post_title'  => 'Recurring Weekly A',
@@ -572,7 +572,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 				'post_status' => 'draft',
 			)
 		);
-		$start_a               = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-28 days' )->setTime( 10, 0 );
+		$start_a               = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-32 days' )->setTime( 10, 0 );
 		$master_date_formatted = $start_a->format( 'M j, Y' );
 		( new Event( $post_id_a ) )->save_datetimes(
 			array(
@@ -684,7 +684,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			$date_str = trim( wp_strip_all_tags( $dates_p1[1][ $idx ] ?? '' ) );
 			$url      = $titles_p1[1][ $idx ];
 
-			// Crucial CFT assertion: Master creation date from 28 days ago must NEVER render on upcoming cards.
+			// Crucial CFT assertion: Master creation date from 32 days ago must NEVER render on upcoming cards.
 			$this->assertNotSame(
 				$master_date_formatted,
 				$date_str,

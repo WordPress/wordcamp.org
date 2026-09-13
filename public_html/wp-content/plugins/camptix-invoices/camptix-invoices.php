@@ -98,11 +98,11 @@ function register_tix_invoice() {
 
 	register_post_status( 'cancelled',
 		array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
 
@@ -193,9 +193,9 @@ function ctx_append_post_status_list() {
 	$cancelled_selected = '';
 	$status             = '';
 	$refunded           = __( 'refunded', 'wordcamporg' );
-	$cancelled          = __( 'cancelled', 'wordcamporg' );
+	$cancelled          = __( 'canceled', 'wordcamporg' );
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
-	$cancelled_status   = _x( 'Cancelled', 'post', 'wordcamporg' );
+	$cancelled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -238,7 +238,7 @@ function ctx_display_custom_statuses( $states, $post ) {
 
 	if ( 'cancelled' !== $arg ) {
 		if ( 'cancelled' === $post->post_status ) {
-			return array( _x( 'Cancelled', 'post', 'wordcamporg' ) );
+			return array( _x( 'Canceled', 'post', 'wordcamporg' ) );
 		}
 	}
 
@@ -259,7 +259,7 @@ function ctx_append_post_status_bulk_edit() {
 	<script>
 		jQuery( document ).ready( function($) {
 			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'canceled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php

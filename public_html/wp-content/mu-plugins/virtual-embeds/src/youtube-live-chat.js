@@ -136,7 +136,7 @@ function InvalidUrl( { error } ) {
 			<p>
 				{ createInterpolateElement(
 					__(
-						'Please delete this, and create new a block with valid a URL. The URL must be in a form similar to <code>https://www.youtube.com/watch?v=pXPtCVMDzBA</code>.',
+						'Please delete this, and create a new block with valid a URL. The URL must be in a form similar to <code>https://www.youtube.com/watch?v=pXPtCVMDzBA</code>.',
 						'wordcamporg'
 					),
 					{

@@ -216,22 +216,34 @@ class CampTix_Require_Login extends CampTix_Addon {
 	/**
 	 * Get the URL to return to after logging in or creating an account.
 	 *
+	 * The buyer's ticket selection only exists in the current request, so it has to be carried
+	 * across the round trip to WordPress.org. Leaving it behind returns them to an empty form
+	 * with a total of 0, and they have to start the order again.
+	 *
 	 * @return string
 	 */
 	public function get_redirect_return_url() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$camptix_url = $camptix->get_tickets_url();
-		$url_params  = array( 'tix_coupon', 'tix_reservation_id', 'tix_reservation_token' );
+		/*
+		 * Only what describes the order the buyer was in the middle of. Error states and the
+		 * attendee-editing tokens deliberately stay behind.
+		 */
+		$carried_parameters = array(
+			'tix_action',
+			'tix_tickets_selected',
+			'tix_coupon',
+			'tix_reservation_id',
+			'tix_reservation_token',
+		);
 
-		foreach ( $url_params as $param ) {
-			if ( isset( $_REQUEST[ $param ] ) ) {
-				$camptix_url = add_query_arg( $param, $_REQUEST[ $param ], $camptix_url );
-			}
-		}
+		$args = array_intersect_key(
+			$this->get_sanitized_tix_parameters( $_REQUEST ),
+			array_flip( $carried_parameters )
+		);
 
-		return $camptix_url;
+		return add_query_arg( urlencode_deep( $args ), $camptix->get_tickets_url() );
 	}
 
 	/**

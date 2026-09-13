@@ -5,7 +5,7 @@
  * Categories: groups-site
  * Inserter: no
  *
- * The single event card used inside `gatherpress-event-query` query loops —
+ * The single event card used inside `gatherpress-event-query` query loops -
  * the front page's "Upcoming events" section and the events archive both
  * reference this pattern from their `wp:post-template`, so the card is
  * defined once. Card-level polish (equal heights, bottom-pinned meta,
@@ -30,6 +30,7 @@ defined( 'ABSPATH' ) || exit;
 		<!-- wp:group {"className":"groups-site-card-meta","style":{"spacing":{"blockGap":"4px"}},"layout":{"type":"constrained"}} -->
 		<div class="wp-block-group groups-site-card-meta">
 			<!-- wp:gatherpress/rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
+			<!-- wp:groups-site/event-format /-->
 			<!-- wp:gatherpress/venue -->
 				<!-- wp:post-title {"level":4,"fontSize":"small","fontFamily":"inter","textColor":"charcoal-4","style":{"spacing":{"margin":{"top":"0","bottom":"0"}},"typography":{"fontWeight":"400","lineHeight":"1.55"}}} /-->
 			<!-- /wp:gatherpress/venue -->

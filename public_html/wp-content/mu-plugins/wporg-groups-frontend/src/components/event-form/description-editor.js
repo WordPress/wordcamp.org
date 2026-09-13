@@ -22,6 +22,8 @@ import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { registerCoreFormatTypes } from '@wordpress/format-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
+import { addFilter } from '@wordpress/hooks';
+import { uploadMedia, MediaUpload } from '@wordpress/media-utils';
 import { ALLOWED_BLOCK_TYPES } from './constants';
 
 export { ALLOWED_BLOCK_TYPES };
@@ -45,6 +47,14 @@ export function ensureCoreBlocksRegistered() {
 	}
 	coreBlocksRegistered = true;
 }
+
+// Hook MediaUpload into the block editor's media upload filter so image
+// blocks render the "Media Library" option in their placeholder and toolbar.
+addFilter(
+	'editor.MediaUpload',
+	'wporg-groups/media-upload',
+	() => MediaUpload
+);
 
 // `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
 // registry, so this dispatch only reaches it from a component rendered
@@ -115,6 +125,17 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 		}
 	};
 
+	const handleMediaUpload = ( { onError, ...rest } ) => {
+		uploadMedia( {
+			onError: ( error ) => {
+				if ( onError ) {
+					onError( typeof error === 'string' ? error : error?.message );
+				}
+			},
+			...rest,
+		} );
+	};
+
 	return h(
 		'div',
 		{ className: `${ classPrefix }__editor` },
@@ -127,6 +148,8 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 				settings: {
 					hasFixedToolbar: true,
 					allowedBlockTypes: ALLOWED_BLOCK_TYPES,
+					mediaUpload: handleMediaUpload,
+					MediaUpload,
 				},
 			},
 			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),

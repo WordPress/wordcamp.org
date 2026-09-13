@@ -137,7 +137,7 @@ final class Context {
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular() ) ) {
+		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) ) ) {
 			return self::occurrence_url( (int) $post->ID, self::recurrence_id() );
 		}
 

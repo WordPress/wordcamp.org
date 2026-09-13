@@ -459,3 +459,11 @@ li.item {
     transform: rotate(360deg);
   }
 }
+/* Bulk (organizers) section in the filter panel. */
+.attendee-filter-view ul.camptix-attendance-bulk {
+	margin-bottom: 30px;
+}
+
+.attendee-filter-view ul.camptix-attendance-bulk li[data-attending="false"] {
+	color: #ff6b6b;
+}

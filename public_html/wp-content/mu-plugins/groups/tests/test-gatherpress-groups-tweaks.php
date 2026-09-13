@@ -201,7 +201,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Venues are metadata on events, not their own front-end destination —
+	 * Venues are metadata on events, not their own front-end destination -
 	 * confirm the post type stays non-public even though GatherPress itself
 	 * registers it.
 	 */
@@ -212,5 +212,68 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertFalse( $post_type_object->public );
 		$this->assertFalse( $post_type_object->publicly_queryable );
 		$this->assertFalse( $post_type_object->has_archive );
+	}
+
+	/**
+	 * RSVPs should never leak into general comment queries, even when
+	 * no standard comments exist yet on the site.
+	 */
+	public function test_rsvps_excluded_from_general_comment_query() {
+		$query                     = new \WP_Comment_Query();
+		$query->query_vars['type'] = array();
+
+		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
+
+		$this->assertContains( 'gatherpress_rsvp', (array) ( $query->query_vars['type__not_in'] ?? array() ) );
+	}
+
+	/**
+	 * Queries specifically requesting RSVPs should not have them excluded.
+	 */
+	public function test_rsvps_not_excluded_when_explicitly_requested() {
+		$query                     = new \WP_Comment_Query();
+		$query->query_vars['type'] = 'gatherpress_rsvp';
+
+		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
+
+		$this->assertEmpty( $query->query_vars['type__not_in'] ?? array() );
+	}
+
+	/**
+	 * Caller's explicit RSVP intent should be captured before GatherPress priority 10 filter runs.
+	 */
+	public function test_capture_explicit_rsvp_query_records_intent() {
+		$query_single                     = new \WP_Comment_Query();
+		$query_single->query_vars['type'] = 'gatherpress_rsvp';
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_single );
+		$this->assertTrue( $query_single->query_vars['_gatherpress_rsvp_explicit'] );
+
+		$query_in                         = new \WP_Comment_Query();
+		$query_in->query_vars['type__in'] = array( 'gatherpress_rsvp' );
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_in );
+		$this->assertTrue( $query_in->query_vars['_gatherpress_rsvp_explicit'] );
+
+		$query_general                     = new \WP_Comment_Query();
+		$query_general->query_vars['type'] = '';
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_general );
+		$this->assertArrayNotHasKey( '_gatherpress_rsvp_explicit', $query_general->query_vars );
+	}
+
+	/**
+	 * GatherPress RSVP exclusion filter should opt out when query explicitly asks for RSVPs.
+	 */
+	public function test_skip_rsvp_exclusion_for_explicit_queries() {
+		$query_explicit = new \WP_Comment_Query();
+		$query_explicit->query_vars['_gatherpress_rsvp_explicit'] = true;
+
+		$should_exclude = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_explicit );
+		$this->assertFalse( $should_exclude );
+
+		$query_general          = new \WP_Comment_Query();
+		$should_exclude_general = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_general );
+		$this->assertTrue( $should_exclude_general );
 	}
 }

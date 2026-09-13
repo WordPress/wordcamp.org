@@ -226,7 +226,8 @@ add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 /**
  * Rewrite the search block form action on the events archive to submit
  * to the archive URL instead of the default search URL, so search results
- * stay scoped to events.
+ * stay scoped to events. Also remove the required attribute and handle clearing
+ * the search field to restore the full list of upcoming events.
  */
 add_filter(
 	'render_block_core/search',
@@ -242,6 +243,17 @@ add_filter(
 			$content
 		);
 
+		// Remove required attribute safely and mark the events search form for the clear script.
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		while ( $processor->next_tag() ) {
+			if ( 'FORM' === $processor->get_tag() ) {
+				$processor->set_attribute( 'data-events-search-form', '1' );
+			} elseif ( 'INPUT' === $processor->get_tag() ) {
+				$processor->remove_attribute( 'required' );
+			}
+		}
+		$content = $processor->get_updated_html();
+
 		// Add hidden field to default to "all" time when searching.
 		$content = str_replace(
 			'</form>',
@@ -254,17 +266,41 @@ add_filter(
 );
 
 /**
+ * Normalize the event time filter ('upcoming', 'past', 'all').
+ *
+ * An empty search query should not force the "all" time view. Reverts to "upcoming"
+ * when search query is empty and time is "all".
+ *
+ * @param string      $time   The event time filter slug.
+ * @param string|null $search The search query string. If null, reads from $_GET['s'].
+ * @return string Normalized time filter.
+ */
+function normalize_event_time_filter( string $time, ?string $search = null ): string {
+	if ( null === $search ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : null;
+	}
+
+	if ( null !== $search && '' === trim( $search ) && 'all' === $time ) {
+		return 'upcoming';
+	}
+
+	return $time;
+}
+
+/**
  * Register query filter options for event archive filtering.
  */
 add_filter(
 	'wporg_query_filter_options_event_time',
 	static function (): array {
 		$current = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+		$current = normalize_event_time_filter( $current );
 
 		$options = array(
 			'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
 			'past'     => __( 'Past', 'wporg-groups-frontend' ),
-			'all'      => __( 'All events', 'wporg-groups-frontend' ),
+			'all'      => __( 'All', 'wporg-groups-frontend' ),
 		);
 
 		if ( ! isset( $options[ $current ] ) ) {
@@ -274,7 +310,6 @@ add_filter(
 		$selected = array( $current );
 		$label    = __( 'Time', 'wporg-groups-frontend' );
 		if ( 'upcoming' !== $current ) {
-
 			// Single-select filters hide the wporg count badge, so carry the
 			// applied choice in the toggle text itself.
 			$label = sprintf(
@@ -347,6 +382,11 @@ add_filter(
 		}
 
 		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+
+		// An empty search query should not force the "all" time view.
+		if ( isset( $_GET['s'] ) && '' === trim( (string) $_GET['s'] ) && 'all' === $time_filter ) {
+			$time_filter = 'upcoming';
+		}
 
 		if ( 'past' === $time_filter ) {
 			$query_vars['gatherpress_event_query'] = 'past';

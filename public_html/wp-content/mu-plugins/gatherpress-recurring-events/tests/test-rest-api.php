@@ -33,6 +33,15 @@ defined( 'WPINC' ) || die();
  */
 final class Test_Rest_Api extends WP_UnitTestCase {
 
+	/** Ensure GatherPress tables exist for this suite. */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
+		if ( class_exists( 'GatherPress\Core\Setup' ) ) {
+			\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+		}
+	}
+
 	/** Spins up a fresh REST server and registers routes for each test. */
 	protected function setUp(): void {
 		parent::setUp();

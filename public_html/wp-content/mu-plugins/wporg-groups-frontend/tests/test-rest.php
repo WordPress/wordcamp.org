@@ -280,6 +280,29 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A draft whose date has passed cannot be published, and stays a draft
+	 * so the organiser can correct the date and try again.
+	 */
+	public function test_publish_draft_rejects_past_date() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$save = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$save->set_param( 'title', 'Stale draft' );
+		$draft_id = save_draft( $save )->get_data()['id'];
+
+		$params         = $this->base_event_params();
+		$params['id']   = $draft_id;
+		$params['date'] = current_datetime()->modify( '-1 day' )->format( 'Y-m-d' );
+
+		$response = publish_draft( $this->event_request( $params ) );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
+		$this->assertSame( 'draft', get_post_status( $draft_id ) );
+	}
+
+	/**
 	 * An event whose end time equals its start time is rejected.
 	 */
 	public function test_zero_length_event_rejected() {
@@ -816,5 +839,44 @@ class Test_Groups_REST extends Groups_TestCase {
 		);
 
 		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
+	}
+
+	/**
+	 * The form marks a published event's recurrence as locked. The frontend relies on this flag to leave
+	 * recurrence out of the edit payload.
+	 */
+	public function test_event_form_locks_recurrence_for_published_event(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$event_id = create_event( $this->event_request( $this->base_event_params() ) )->get_data()['id'];
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $event_id );
+		$recurrence = get_event_form_data( $load )->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( $recurrence['locked'] );
+	}
+
+	/**
+	 * An online event can be created without an online event link.
+	 */
+	public function test_create_online_event_without_link(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$params = array_merge(
+			$this->base_event_params(),
+			array(
+				'is_online'         => true,
+				'online_event_link' => '',
+			)
+		);
+
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
 	}
 }

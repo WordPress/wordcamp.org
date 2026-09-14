@@ -8,7 +8,13 @@
 /**
  * WordPress dependencies.
  */
-import { createElement as h, useState, useEffect } from '@wordpress/element';
+import {
+	createElement as h,
+	useState,
+	useEffect,
+	useRef,
+	useCallback,
+} from '@wordpress/element';
 import {
 	BlockEditorProvider,
 	BlockList,
@@ -20,7 +26,28 @@ import {
 } from '@wordpress/block-editor';
 import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
+import { registerCoreFormatTypes } from '@wordpress/format-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
+import { __ } from '@wordpress/i18n';
+import { isAppleOS } from '@wordpress/keycodes';
+import {
+	ShortcutProvider,
+	store as keyboardShortcutsStore,
+} from '@wordpress/keyboard-shortcuts';
+import { addFilter } from '@wordpress/hooks';
+import { uploadMedia, MediaUpload } from '@wordpress/media-utils';
+import { ALLOWED_BLOCK_TYPES } from './constants';
+import {
+	MAX_HISTORY_LENGTH,
+	createHistoryManager,
+	recordInput,
+	recordChange,
+	stepUndo,
+	stepRedo,
+	handleEditorKeyDown,
+} from './description-editor-history';
+
+export { ALLOWED_BLOCK_TYPES };
 
 let coreBlocksRegistered = false;
 
@@ -32,14 +59,27 @@ export function ensureCoreBlocksRegistered() {
 		registerCoreBlocks();
 	} catch ( e ) {
 		// `registerCoreBlocks` complains if called twice, but in some
-		// page contexts the editor isn't loaded yet — swallow.
+		// page contexts the editor isn't loaded yet - swallow.
+	}
+	try {
+		registerCoreFormatTypes();
+	} catch ( e ) {
+		// `registerCoreFormatTypes` may throw if called twice - swallow.
 	}
 	coreBlocksRegistered = true;
 }
 
+// Hook MediaUpload into the block editor's media upload filter so image
+// blocks render the "Media Library" option in their placeholder and toolbar.
+addFilter(
+	'editor.MediaUpload',
+	'wporg-groups/media-upload',
+	() => MediaUpload
+);
+
 // `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
 // registry, so this dispatch only reaches it from a component rendered
-// *inside* the provider — a sibling effect would select a block in the
+// *inside* the provider - a sibling effect would select a block in the
 // wrong (default) store and `BlockToolbar` would never see it.
 function SelectFirstBlockOnMount( { clientId } ) {
 	const { selectBlock } = useDispatch( blockEditorStore );
@@ -47,7 +87,7 @@ function SelectFirstBlockOnMount( { clientId } ) {
 	useEffect( () => {
 		if ( clientId ) {
 			// `null` (instead of the default `0`) selects the block
-			// without also moving real DOM focus into it — see
+			// without also moving real DOM focus into it - see
 			// `useFocusFirstElement` in `@wordpress/block-editor`. We
 			// only need the toolbar to appear, not to steal focus from
 			// the modal on open.
@@ -69,9 +109,10 @@ function SelectFirstBlockOnMount( { clientId } ) {
  *     values back into the editor (no `value` prop, no `useEffect` on
  *     value, no setState ping-pong).
  *   - When the parent needs the serialised markup at submit time it
- *     calls `getValueRef.current()` — the editor exposes an imperative
+ *     calls `getValueRef.current()` - the editor exposes an imperative
  *     getter via the supplied ref instead of pushing every keystroke
  *     up the tree.
+ *   - Maintains an undo/redo stack for block edits and keyboard shortcuts.
  *
  * This avoids the feedback loop that was causing per-keystroke lag and
  * breaking the slash inserter (parent re-renders were tearing down the
@@ -86,35 +127,143 @@ function SelectFirstBlockOnMount( { clientId } ) {
 export default function DescriptionEditor( { initialValue, getValueRef, onDirty, classPrefix } ) {
 	// A description with no supported blocks (empty string, or markup
 	// that doesn't parse into anything) yields `[]`, leaving no block to
-	// select and the toolbar permanently empty — fall back to an empty
+	// select and the toolbar permanently empty - fall back to an empty
 	// paragraph so there's always a first block.
 	const [ blocks, setBlocks ] = useState( () => {
-		const parsed = parse( initialValue || '' );
+		const parsed = parse( initialValue || '' ).filter( ( block ) =>
+			ALLOWED_BLOCK_TYPES.includes( block.name )
+		);
 		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
 	} );
 
-	if ( getValueRef ) {
-		getValueRef.current = () => serialize( blocks );
+	const historyRef = useRef( null );
+	if ( ! historyRef.current ) {
+		historyRef.current = createHistoryManager( blocks );
 	}
 
-	const handleChange = ( newBlocks ) => {
-		setBlocks( newBlocks );
-		if ( onDirty ) {
-			onDirty();
+	const keyboardShortcutsDispatch = useDispatch( keyboardShortcutsStore );
+
+	useEffect( () => {
+		if ( keyboardShortcutsDispatch?.registerShortcut ) {
+			keyboardShortcutsDispatch.registerShortcut( {
+				name: 'wporg-groups/description-undo',
+				category: 'global',
+				description: __( 'Undo the last change.', 'wporg-groups-frontend' ),
+				keyCombination: {
+					modifier: 'primary',
+					character: 'z',
+				},
+			} );
+			keyboardShortcutsDispatch.registerShortcut( {
+				name: 'wporg-groups/description-redo',
+				category: 'global',
+				description: __( 'Redo the last undone change.', 'wporg-groups-frontend' ),
+				keyCombination: {
+					modifier: 'primaryShift',
+					character: 'z',
+				},
+				aliases: [
+					{
+						modifier: 'primary',
+						character: 'y',
+					},
+				],
+			} );
 		}
+
+		return () => {
+			if ( keyboardShortcutsDispatch?.unregisterShortcut ) {
+				keyboardShortcutsDispatch.unregisterShortcut( 'wporg-groups/description-undo' );
+				keyboardShortcutsDispatch.unregisterShortcut( 'wporg-groups/description-redo' );
+			}
+		};
+	}, [ keyboardShortcutsDispatch ] );
+
+	if ( getValueRef ) {
+		getValueRef.current = () => serialize( historyRef.current.present );
+	}
+
+	const handleInput = useCallback(
+		( newBlocks ) => {
+			recordInput( historyRef.current, newBlocks );
+			setBlocks( newBlocks );
+			if ( onDirty ) {
+				onDirty();
+			}
+		},
+		[ onDirty ]
+	);
+
+	const handleChange = useCallback(
+		( newBlocks ) => {
+			recordChange( historyRef.current, newBlocks, serialize, MAX_HISTORY_LENGTH );
+			setBlocks( newBlocks );
+			if ( onDirty ) {
+				onDirty();
+			}
+		},
+		[ onDirty ]
+	);
+
+	const undo = useCallback( () => {
+		const target = stepUndo( historyRef.current, serialize );
+		if ( target ) {
+			setBlocks( target );
+			if ( onDirty ) {
+				onDirty();
+			}
+		}
+	}, [ onDirty ] );
+
+	const redo = useCallback( () => {
+		const target = stepRedo( historyRef.current, MAX_HISTORY_LENGTH );
+		if ( target ) {
+			setBlocks( target );
+			if ( onDirty ) {
+				onDirty();
+			}
+		}
+	}, [ onDirty ] );
+
+	const handleKeyDown = useCallback(
+		( event ) => {
+			handleEditorKeyDown(
+				event,
+				{ onUndo: undo, onRedo: redo },
+				isAppleOS()
+			);
+		},
+		[ undo, redo ]
+	);
+
+	const handleMediaUpload = ( { onError, ...rest } ) => {
+		uploadMedia( {
+			onError: ( error ) => {
+				if ( onError ) {
+					onError( typeof error === 'string' ? error : error?.message );
+				}
+			},
+			...rest,
+		} );
 	};
 
 	return h(
-		'div',
-		{ className: `${ classPrefix }__editor` },
+		ShortcutProvider,
+		{
+			className: `${ classPrefix }__editor`,
+			onKeyDown: handleKeyDown,
+		},
 		h(
 			BlockEditorProvider,
 			{
 				value: blocks,
-				onInput: handleChange,
+				onInput: handleInput,
 				onChange: handleChange,
 				settings: {
 					hasFixedToolbar: true,
+					allowedBlockTypes: ALLOWED_BLOCK_TYPES,
+					mediaUpload: handleMediaUpload,
+					MediaUpload,
 				},
 			},
 			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),

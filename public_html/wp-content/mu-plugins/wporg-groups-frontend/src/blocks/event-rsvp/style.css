@@ -125,6 +125,43 @@
 /* A past event's button is `disabled`, so the theme's disabled treatment
    already greys it out — the class is left as a styling hook only. */
 
+/* === RSVP status notice === */
+.wporg-event-rsvp__notice:not(.screen-reader-text) {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10, 10px);
+	margin-top: 12px;
+	padding: 10px 16px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.5;
+}
+
+.wporg-event-rsvp__notice.is-success {
+	border-color: #007a2f;
+	background: var(--wp--preset--color--acid-green-3, #e2ffed);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
+
+.wporg-event-rsvp__notice.is-success::before {
+	content: "\2713";
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+.wporg-event-rsvp__notice.is-error {
+	border-color: #b32d0f;
+	background: var(--wp--preset--color--pomegranate-3, #fbeae5);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
+
+.wporg-event-rsvp__notice.is-error::before {
+	content: "!";
+	font-weight: 600;
+	line-height: 1.5;
+}
+
 /* === Full-screen modal === */
 .wporg-event-rsvp__modal {
 	display: none;
@@ -221,28 +258,6 @@
 	display: none;
 }
 
-/* Compact button size — matches the comment composer's submit. */
-.wporg-event-rsvp__save-answers {
-	align-self: flex-start;
-	padding: 10px 20px;
-	font-size: var(--wp--preset--font-size--small, 14px);
-	font-weight: 600;
-	line-height: 1.3;
-	border: 1px solid transparent;
-	border-radius: 2px;
-}
-
-.wporg-event-rsvp__save-answers:disabled {
-	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
-	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
-	color: var(--wp--preset--color--charcoal-4, #656a71);
-	cursor: not-allowed;
-}
-
-.wporg-event-rsvp__save-answers.is-hidden {
-	display: none;
-}
-
 .wporg-event-rsvp__question {
 	display: flex;
 	flex-direction: column;
@@ -287,9 +302,46 @@
 	color: var(--wp--preset--color--blueberry-1);
 }
 
+.wporg-event-rsvp__modal-buttons {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.wporg-event-rsvp__questions ~ .wporg-event-rsvp__modal-buttons {
+	width: 100%;
+	margin-top: 4px;
+}
+
+/* Compact button size - matches the comment composer's submit. */
+.wporg-event-rsvp__save-answers {
+	padding: 8px 16px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	font-weight: 600;
+	line-height: 1.4;
+	border: 1px solid transparent;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__save-answers:disabled {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
+	color: var(--wp--preset--color--charcoal-4, #656a71);
+	cursor: not-allowed;
+}
+
+.wporg-event-rsvp__save-answers.is-hidden {
+	display: none;
+}
+
 .wporg-event-rsvp__modal-rsvp-btn {
 	white-space: nowrap;
 	flex-shrink: 0;
+	padding: 8px 16px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	font-weight: 600;
+	line-height: 1.4;
 }
 
 .wporg-event-rsvp__modal-rsvp-btn.is-attending {
@@ -384,5 +436,15 @@
 		max-width: none;
 		max-height: none;
 		height: 100%;
+	}
+
+	.wporg-event-rsvp__modal-buttons {
+		width: 100%;
+	}
+
+	.wporg-event-rsvp__modal-buttons button {
+		flex: 1 1 auto;
+		text-align: center;
+		justify-content: center;
 	}
 }

@@ -157,6 +157,8 @@ $context = array(
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
+	'rsvpNoticeSuccess' => false,
+	'rsvpNoticeError'   => false,
 	'questionsError'    => '',
 	'labels'            => $rsvp_labels,
 );
@@ -267,6 +269,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		aria-live="polite"
 		aria-atomic="true"
 		data-wp-text="context.rsvpNotice"
+		data-wp-class--screen-reader-text="!context.rsvpNotice"
+		data-wp-class--is-success="context.rsvpNoticeSuccess"
+		data-wp-class--is-error="context.rsvpNoticeError"
 	></p>
 
 	<div
@@ -340,6 +345,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									id="<?php echo esc_attr( $error_id ); ?>"
 									data-wp-text="context.questionsError"
 								></p>
+							</fieldset>
+						<?php endif; ?>
+
+						<div class="wporg-event-rsvp__modal-buttons">
+							<?php if ( $questions ) : ?>
 								<button
 									type="button"
 									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $is_attending ? '' : ' is-hidden'; ?>"
@@ -350,26 +360,26 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								>
 									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
 								</button>
-							</fieldset>
-						<?php endif; ?>
+							<?php endif; ?>
 
-						<button
-							type="button"
-							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
-							data-wp-on--click="actions.toggleRsvp"
-							data-wp-text="state.modalRsvpLabel"
-							data-wp-class--is-attending="state.isAttending"
-							data-wp-bind--disabled="context.rsvpLoading"
-							data-wp-bind--aria-busy="context.rsvpLoading"
-						>
-							<?php
-							if ( $is_attending ) {
-								echo esc_html( $cancel_rsvp );
-							} else {
-								esc_html_e( 'Attend', 'wporg-groups-frontend' );
-							}
-							?>
-						</button>
+							<button
+								type="button"
+								class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
+								data-wp-on--click="actions.toggleRsvp"
+								data-wp-text="state.modalRsvpLabel"
+								data-wp-class--is-attending="state.isAttending"
+								data-wp-bind--disabled="context.rsvpLoading"
+								data-wp-bind--aria-busy="context.rsvpLoading"
+							>
+								<?php
+								if ( $is_attending ) {
+									echo esc_html( $cancel_rsvp );
+								} else {
+									esc_html_e( 'Attend', 'wporg-groups-frontend' );
+								}
+								?>
+							</button>
+						</div>
 					<?php else : ?>
 						<p class="wporg-event-rsvp__modal-status">
 							<?php

@@ -39,6 +39,8 @@ function createContext() {
 		modalOpen: false,
 		rsvpLoading: false,
 		rsvpNotice: '',
+		rsvpNoticeSuccess: false,
+		rsvpNoticeError: false,
 	};
 }
 
@@ -462,6 +464,8 @@ describe( 'event RSVP custom registration questions', () => {
 			answers: { company: 'Automattic', diet: 'Vegetarian' },
 		} );
 		expect( mockContext.currentUserStatus ).toBe( 'attending' );
+		expect( mockContext.rsvpNoticeSuccess ).toBe( true );
+		expect( mockContext.modalOpen ).toBe( false );
 	} );
 
 	test( 'sends blank optional answers so the server can tell cleared from absent', async () => {
@@ -480,10 +484,11 @@ describe( 'event RSVP custom registration questions', () => {
 		} );
 	} );
 
-	test( 'saves edited answers without changing attendance', async () => {
+	test( 'saves edited answers without changing attendance and closes modal', async () => {
 		const { actions } = loadStore();
 		const { diet, rsvp } = renderModalWithQuestions();
 		mockElement = rsvp;
+		mockContext.modalOpen = true;
 		mockContext.currentUserStatus = 'attending';
 		mockContext.attendingCount = 1;
 		mockContext.labels.answersSaved = 'Your answers have been saved.';
@@ -497,6 +502,8 @@ describe( 'event RSVP custom registration questions', () => {
 		expect( mockContext.currentUserStatus ).toBe( 'attending' );
 		expect( mockContext.attendingCount ).toBe( 1 );
 		expect( mockContext.rsvpNotice ).toBe( 'Your answers have been saved.' );
+		expect( mockContext.rsvpNoticeSuccess ).toBe( true );
+		expect( mockContext.modalOpen ).toBe( false );
 	} );
 
 	test( 'surfaces the server validation message instead of the generic error', async () => {

@@ -1044,13 +1044,6 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	if ( $fields['time_start'] === $fields['time_end'] ) {
 		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
 	}
-	if ( $fields['is_online'] && '' === $fields['online_event_link'] ) {
-		return new WP_Error(
-			'wporg_groups_missing_online_event_link',
-			'Online event link is required for online events.',
-			array( 'status' => 400 )
-		);
-	}
 
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,

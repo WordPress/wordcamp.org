@@ -4,6 +4,50 @@
  * @package WordCamp\Groups\Frontend
  */
 
+/* === Cancel RSVP ===
+   Sits under the "Attending" button and only while that is what the button
+   says. Deliberately quiet — a text button rather than a second filled one,
+   so the card still reads as one primary action with a way out beneath it,
+   not as two competing choices. */
+.wporg-event-rsvp__cancel {
+
+	/* Its own line — the attendee summary next to it is `inline-flex`, so an
+	   inline cancel sits down beside the avatars and reads as part of that
+	   row. `fit-content` keeps the click target the width of the words
+	   rather than the width of the card. */
+	display: block;
+	width: fit-content;
+	margin: 8px 0 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--wp--preset--color--charcoal-4, #646970);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.5;
+	text-decoration: underline;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__cancel:hover {
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e);
+}
+
+.wporg-event-rsvp__cancel:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1, #3858e9);
+	outline-offset: 2px;
+}
+
+.wporg-event-rsvp__cancel[disabled] {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.wporg-event-rsvp__cancel.is-hidden {
+	display: none;
+}
+
 /* === Summary (avatar stack + count) ===
    The button under the RSVP button that opens the attendee modal.
    `inline-flex` keeps the avatars and the "N attending" label on a single

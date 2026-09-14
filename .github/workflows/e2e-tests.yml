@@ -217,6 +217,10 @@ jobs:
         # events are seeded here, and the specs that create them run
         # concurrently with it.
         create_user organiser5 editor & pids+=( "$!" )
+        # event-rsvp-cancel.spec.js publishes its own event through the
+        # front-end modal and then RSVPs to it, so it needs the editor tier
+        # and an account no concurrent spec is logged into.
+        create_user organiser6 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

@@ -31,6 +31,7 @@ function manually_load_plugin() {
 	// autoloaded in the test environment the way it is on a real request.
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
+	require_once dirname( __DIR__ ) . '/gatherpress-event-email.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';
 	require_once dirname( __DIR__ ) . '/wporg-groups-archive.php';

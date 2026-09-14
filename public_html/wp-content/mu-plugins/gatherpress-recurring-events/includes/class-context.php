@@ -169,6 +169,18 @@ final class Context {
 			return $redirect_url;
 		}
 
+		/*
+		 * The calendar endpoints hang off an occurrence rather than being one:
+		 * `…/{occurrence}/ical` is a download, not a page. Rewriting the
+		 * redirect below would send it to `…/{occurrence}/` and drop the
+		 * endpoint, so the visitor lands on the event instead of getting the
+		 * file (#2010). Query var name matches the one our own rewrite rules
+		 * in `Plugin::init()` set.
+		 */
+		if ( get_query_var( 'gatherpress_calendar' ) ) {
+			return false;
+		}
+
 		if ( $redirect_url && self::$occurrence ) {
 			return self::occurrence_url( (int) self::$occurrence->series_post_id, self::recurrence_id() );
 		}

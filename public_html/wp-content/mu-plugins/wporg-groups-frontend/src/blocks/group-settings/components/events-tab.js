@@ -143,18 +143,39 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	useEffect( () => {
 		if ( editingId !== null ) return;
 		setLoading( true );
-		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
-			.then( ( data ) => {
-				setEvents( data.map( ( e ) => {
-					const dtStart = e.meta?.gatherpress_datetime_start || '';
-					return {
-						id: e.id,
-						title: e.title.rendered,
-						status: e.status,
-						dateStart: dtStart,
-						isPast: dtStart ? new Date( dtStart ) < new Date() : false,
-					};
-				} ) );
+		/*
+		 * One request per section rather than one list sliced client-side.
+		 * Two reasons. The collection defaults to published only, so the
+		 * Drafts section could never populate without asking for them. And
+		 * the collection inherits GatherPress's upcoming-only clause, which
+		 * left Past permanently empty and hid past-dated drafts (#1977);
+		 * `wporg_groups_event_list` is this plugin's own parameter, read in
+		 * inc/rest.php, and selects the slice.
+		 *
+		 * Splitting also keeps `per_page` honest. A single capped request
+		 * ordered by post date spends its 100 rows on whatever was created
+		 * most recently, so on a group with a long history the other two
+		 * sections come back empty no matter what the clause does.
+		 */
+		const fields = '_fields=id,title,meta,status&per_page=100';
+		Promise.all( [
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=draft&wporg_groups_event_list=all&orderby=date&order=desc` } ),
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=publish&wporg_groups_event_list=upcoming` } ),
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=publish&wporg_groups_event_list=past` } ),
+		] )
+			.then( ( [ draftRows, upcomingRows, pastRows ] ) => {
+				const toEvent = ( e, section ) => ( {
+					id: e.id,
+					title: e.title.rendered,
+					status: e.status,
+					dateStart: e.meta?.gatherpress_datetime_start || '',
+					section,
+				} );
+				setEvents( [
+					...draftRows.map( ( e ) => toEvent( e, 'draft' ) ),
+					...upcomingRows.map( ( e ) => toEvent( e, 'upcoming' ) ),
+					...pastRows.map( ( e ) => toEvent( e, 'past' ) ),
+				] );
 				setLoading( false );
 			} )
 			.catch( () => setLoading( false ) );
@@ -208,9 +229,9 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 		}
 	};
 
-	const drafts = events.filter( ( e ) => e.status === 'draft' );
-	const upcoming = events.filter( ( e ) => ! e.isPast && e.status !== 'draft' );
-	const past = events.filter( ( e ) => e.isPast && e.status !== 'draft' );
+	const drafts = events.filter( ( e ) => e.section === 'draft' );
+	const upcoming = events.filter( ( e ) => e.section === 'upcoming' );
+	const past = events.filter( ( e ) => e.section === 'past' );
 
 	const renderEventItem = ( event, showClone ) =>
 		h( 'div', {

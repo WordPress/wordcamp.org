@@ -534,6 +534,73 @@ function compact_comment_reply_link_args( $args ) {
 add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );
 
 /**
+ * Say "Join event" once the online-event link is one.
+ *
+ * GatherPress renders the online-event label in a `<span>` until the viewer
+ * is attending an event that hasn't happened yet, and in an `<a>` to the
+ * meeting URL after that. Both states carried the same words, which
+ * `single-event.html` supplies: "Online event", wrapped in a tooltip saying
+ * the link is for attendees only. That describes the event's format rather
+ * than offering an action — right while there is nothing to click, wrong
+ * once there is, and the attendees-only tooltip is stale by then too
+ * (#2057).
+ *
+ * Chosen here rather than in the template because the template holds one
+ * string and the right one depends on the viewer. Server-side is enough:
+ * GatherPress swaps the span for a link client-side off its own
+ * interactivity store, which the theme's `wporg/event-rsvp` block doesn't
+ * feed, so on these sites the element is only ever decided on a page load —
+ * the same request that picks these words.
+ *
+ * @param array          $parsed_block The block about to render.
+ * @param array          $source_block The block as it was parsed.
+ * @param \WP_Block|null $parent_block The parent block, if any.
+ *
+ * @return array The block, with the label replaced where it links.
+ */
+function name_the_online_event_link_action( $parsed_block, $source_block, $parent_block ) {
+	if ( 'gatherpress/online-event-link' !== ( $parsed_block['blockName'] ?? '' ) ) {
+		return $parsed_block;
+	}
+
+	// The theme is expected to survive GatherPress being deactivated.
+	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
+		return $parsed_block;
+	}
+
+	// Resolve the event the same way the block's own render does: its
+	// explicit override first, then the context its `online-event` parent
+	// provides, then the post in the loop.
+	$post_id = (int) ( $parsed_block['attrs']['postId'] ?? 0 );
+
+	if ( ! $post_id && $parent_block instanceof \WP_Block ) {
+		$post_id = (int) ( $parent_block->context['postId'] ?? 0 );
+	}
+
+	if ( ! $post_id ) {
+		$post_id = (int) get_the_ID();
+	}
+
+	if ( 'gatherpress_event' !== get_post_type( $post_id ) ) {
+		return $parsed_block;
+	}
+
+	$event = new \GatherPress\Core\Event\Event( $post_id );
+
+	// Empty for everyone the link isn't for: non-attendees, and attendees of
+	// an event that has already happened. Those keep the description and its
+	// tooltip, because there is still nothing to click.
+	if ( '' === $event->maybe_get_online_event_link() ) {
+		return $parsed_block;
+	}
+
+	$parsed_block['attrs']['linkText'] = __( 'Join event', 'groups-site' );
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', __NAMESPACE__ . '\name_the_online_event_link_action', 10, 3 );
+
+/**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.
  *
  * GatherPress assigns the `online-event` sentinel term to `_gatherpress_venue`

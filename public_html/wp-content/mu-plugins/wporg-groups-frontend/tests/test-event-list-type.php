@@ -24,6 +24,30 @@ require_once __DIR__ . '/class-groups-testcase.php';
 class Test_Groups_Event_List_Type extends \WordCamp\Groups\Tests\Groups_TestCase {
 
 	/**
+	 * Restores GatherPress's post types and rebuilds the REST route map.
+	 *
+	 * `mu-plugins/tests/test-groups-my-events.php` re-registers
+	 * `gatherpress_event` as `array( 'public' => true )`, which drops
+	 * `show_in_rest` for the rest of the run, and that suite runs before this
+	 * one. In a full-suite run `/wp/v2/gatherpress_events` is then simply
+	 * absent and these tests 404 instead of testing anything. Same fix as
+	 * `test-post-titles.php`: re-run GatherPress's own registration, which
+	 * restores exactly the production args, then rebuild the route map
+	 * because the REST server caches it on first use.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		\GatherPress\Core\Venue\Setup::get_instance()->register_post_type();
+		\GatherPress\Core\Event\Setup::get_instance()->register_post_type();
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Rebuilding the cached route map, as test-post-titles.php does.
+		$GLOBALS['wp_rest_server'] = new \WP_REST_Server();
+
+		do_action( 'rest_api_init', $GLOBALS['wp_rest_server'] );
+	}
+
+	/**
 	 * Create a published event at a fixed offset from now.
 	 *
 	 * @param string $title  Event title.
@@ -81,12 +105,6 @@ class Test_Groups_Event_List_Type extends \WordCamp\Groups\Tests\Groups_TestCase
 		$request->set_query_params( array_merge( $defaults, $params ) );
 
 		$data = rest_do_request( $request )->get_data();
-
-		remove_filter(
-			'posts_clauses',
-			array( GatherPress_Query::get_instance(), 'adjust_sorting_for_upcoming_events' ),
-			10
-		);
 
 		return wp_list_pluck( (array) $data, 'id' );
 	}

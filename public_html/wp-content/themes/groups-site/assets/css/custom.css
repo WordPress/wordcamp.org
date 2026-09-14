@@ -500,7 +500,22 @@ body.error404 .site-content-container h1 {
 	transform: translateY(-2px);
 }
 
-/* Stretch the post-title link over the entire card. */
+/* Stretch the post-title link over the entire card.
+
+   The card's inner group holds the title, and core gives every constrained
+   group `position: relative` — so the stretch resolved against that group
+   and stopped at the top of the text, leaving the image region above it
+   uncovered. Cards with a thumbnail hid that: core's own `isLink` anchor
+   round the image happened to cover the gap. Cards without one had a dead
+   top third. Taking the inner group out of the way puts the card itself
+   back in the containing-block role the stretch was written for. Nothing
+   inside the card is absolutely positioned, so it has nothing else to
+   anchor. */
+
+.wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
+	position: static;
+}
+
 .wp-block-post-template .wp-block-post-title a::after {
 	content: '';
 	position: absolute;
@@ -551,6 +566,15 @@ body.error404 .site-content-container h1 {
 	aspect-ratio: 16 / 9;
 	border-radius: 3px 3px 0 0;
 	background-color: var(--wp--preset--color--blueberry-4);
+}
+
+/* The placeholder's link stands in for the anchor core wraps a real
+   thumbnail in, so the region opens the event on its own even where the
+   stretched title link above doesn't reach. */
+
+.groups-site-featured-placeholder a {
+	display: block;
+	height: 100%;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {

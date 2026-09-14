@@ -308,16 +308,20 @@ add_filter(
 		}
 
 		$selected = array( $current );
-		$label    = __( 'Time', 'wporg-groups-frontend' );
-		if ( 'upcoming' !== $current ) {
-			// Single-select filters hide the wporg count badge, so carry the
-			// applied choice in the toggle text itself.
-			$label = sprintf(
-				/* translators: %s: the selected time filter, e.g. "Past". */
-				__( 'Time: %s', 'wporg-groups-frontend' ),
-				$options[ $current ]
-			);
-		}
+
+		/*
+		 * Name the applied view in the toggle, on the default view too. Single-
+		 * select filters get no count badge from the wporg block, so a bare
+		 * "Time" says only which axis the control filters on, not what picking
+		 * it will offer or what is already applied (#2059). "Time: Upcoming"
+		 * reads like the select it behaves as, and the reader can infer the
+		 * rest of the set from the value in front of them.
+		 */
+		$label = sprintf(
+			/* translators: %s: the selected time filter, e.g. "Past". */
+			__( 'Time: %s', 'wporg-groups-frontend' ),
+			$options[ $current ]
+		);
 
 		return array(
 			'label'    => $label,

@@ -212,6 +212,11 @@ jobs:
         create_user organiser2 editor & pids+=( "$!" )
         create_user organiser3 editor & pids+=( "$!" )
         create_user organiser4 editor & pids+=( "$!" )
+        # event-card-clickability.spec.js publishes its own event through the
+        # front-end modal rather than reading whatever the archive holds: no
+        # events are seeded here, and the specs that create them run
+        # concurrently with it.
+        create_user organiser5 editor & pids+=( "$!" )
         # event-rsvp-cancel.spec.js publishes its own event through the
         # front-end modal and then RSVPs to it, so it needs the editor tier
         # and an account no concurrent spec is logged into.

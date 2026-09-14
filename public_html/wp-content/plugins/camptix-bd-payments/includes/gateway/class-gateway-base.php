@@ -36,13 +36,17 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Redact sensitive fields from transaction data before logging.
+	 * Check whether a field key is considered sensitive and should be redacted.
 	 *
-	 * @param array $data Transaction data.
+	 * Extracted so that prepare_api_diagnostics() can probe key sensitivity
+	 * without comparing array outputs — which breaks when a subclass applies
+	 * array_filter() and strips falsey values like 0.
 	 *
-	 * @return array Sanitized data safe for logging.
+	 * @param string $key Field key to test.
+	 *
+	 * @return bool
 	 */
-	protected function prepare_transaction_for_log( $data ) {
+	protected function is_sensitive_key( $key ) {
 		$sensitive_keys = [
 			'authorization',
 			'api_key',
@@ -93,21 +97,30 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 			'shipping_address',
 		];
 
-		foreach ( $data as $key => $value ) {
-			$normalized_key = strtolower( (string) $key );
+		$normalized_key = strtolower( (string) $key );
 
-			if (
-				in_array( $normalized_key, $sensitive_keys, true ) ||
-				str_contains( $normalized_key, 'password' ) ||
-				str_contains( $normalized_key, 'passwd' ) ||
-				str_contains( $normalized_key, 'secret' ) ||
-				str_contains( $normalized_key, 'signature' ) ||
-				str_contains( $normalized_key, 'token' ) ||
-				str_contains( $normalized_key, 'url' ) ||
-				str_contains( $normalized_key, 'phone' ) ||
-				str_contains( $normalized_key, 'email' ) ||
-				str_contains( $normalized_key, 'address' )
-			) {
+		return in_array( $normalized_key, $sensitive_keys, true ) ||
+			str_contains( $normalized_key, 'password' ) ||
+			str_contains( $normalized_key, 'passwd' ) ||
+			str_contains( $normalized_key, 'secret' ) ||
+			str_contains( $normalized_key, 'signature' ) ||
+			str_contains( $normalized_key, 'token' ) ||
+			str_contains( $normalized_key, 'url' ) ||
+			str_contains( $normalized_key, 'phone' ) ||
+			str_contains( $normalized_key, 'email' ) ||
+			str_contains( $normalized_key, 'address' );
+	}
+
+	/**
+	 * Redact sensitive fields from transaction data before logging.
+	 *
+	 * @param array $data Transaction data.
+	 *
+	 * @return array Sanitized data safe for logging.
+	 */
+	protected function prepare_transaction_for_log( $data ) {
+		foreach ( $data as $key => $value ) {
+			if ( $this->is_sensitive_key( $key ) ) {
 				$data[ $key ] = '[redacted]';
 			} elseif ( is_array( $value ) ) {
 				$data[ $key ] = $this->prepare_transaction_for_log( $value );
@@ -131,24 +144,32 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 			return '';
 		}
 
-		$patterns = [];
+		// Deduplicate and sort by original value length (longest first) before
+		// wrapping short values in boundary assertions — the wrapper inflates
+		// pattern length, which previously inverted the intended order.
+		$unique_values = [];
 		foreach ( $sensitive_values as $value ) {
 			if ( ! is_scalar( $value ) || '' === (string) $value ) {
 				continue;
 			}
-			$value      = (string) $value;
+			$unique_values[] = (string) $value;
+		}
+		$unique_values = array_unique( $unique_values );
+		usort( $unique_values, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+
+		$patterns = [];
+		foreach ( $unique_values as $value ) {
 			$pattern    = preg_quote( $value, '/' );
-			$patterns[] = strlen( $value ) < 6 ? '(?<![\\pL\\pN])' . $pattern . '(?![\\pL\\pN])' : $pattern;
+			$patterns[] = strlen( $value ) < 6 ? '(?<![\pL\pN])' . $pattern . '(?![\pL\pN])' : $pattern;
 		}
 
 		// One replacement pass prevents replacements from altering [redacted] markers.
-		usort( $patterns, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
 		$message = (string) $message;
 		if ( $patterns ) {
 			$message = preg_replace( '/(?:' . implode( '|', $patterns ) . ')/iu', '[redacted]', $message ) ?? '';
 		}
-		$message = preg_replace( '~https?://[^\s<>]+~i', '[redacted URL]', $message );
-		$message = preg_replace( '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[redacted email]', $message );
+		$message = preg_replace( '~https?://[^\s<>]+~i', '[redacted URL]', $message ) ?? '';
+		$message = preg_replace( '/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[redacted email]', $message ) ?? '';
 
 		return CampTix_Plugin::substr_bytes( sanitize_text_field( $message ), 0, 255 );
 	}
@@ -166,7 +187,7 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 			foreach ( $fields as $key => $value ) {
 				if ( is_array( $value ) ) {
 					$collect( $value );
-				} elseif ( is_scalar( $value ) && $this->prepare_transaction_for_log( [ $key => $value ] ) !== [ $key => $value ] ) {
+				} elseif ( is_scalar( $value ) && $this->is_sensitive_key( $key ) ) {
 					$values[] = $value;
 				}
 			}

@@ -39,7 +39,7 @@ class SSLCommerz extends Base_Gateway {
 				'merchant_id'    => '',
 				'store_password' => '',
 				'sandbox'        => true,
-				'min_amount'     => 10.0,
+				'min_amount'     => 0.0,
 			],
 			$this->get_payment_options()
 		);
@@ -320,7 +320,7 @@ class SSLCommerz extends Base_Gateway {
 			'min_amount',
 			__( 'Minimum Transaction Amount', 'bd-payments-camptix' ),
 			[ $this, 'field_min_amount' ],
-			__( 'The minimum transaction amount configured for this SSLCommerz store, in BDT. Defaults to 10 BDT, including existing stores, in both modes. Clear this field or enter 0 to disable the local minimum check; the gateway may still enforce its own minimum.', 'bd-payments-camptix' )
+			__( 'The minimum transaction amount configured for this SSLCommerz store, in BDT. Defaults to 0 (disabled). Set a positive value to reject orders below that amount before starting a gateway session; the gateway may still enforce its own minimum.', 'bd-payments-camptix' )
 		);
 	}
 
@@ -351,14 +351,20 @@ class SSLCommerz extends Base_Gateway {
 		$output = $this->options;
 
 		if ( isset( $input['merchant_id'] ) ) {
-			$output['merchant_id'] = sanitize_text_field( $input['merchant_id'] );
+			// CampTix reads input directly from $_POST, so it arrives slashed.
+			$output['merchant_id'] = sanitize_text_field( wp_unslash( $input['merchant_id'] ) );
 		}
 
 		if ( isset( $input['store_password'] ) ) {
-			// The WordPress Settings API has already unslashed this value.
-			// Validate without rewriting secrets containing spaces, markup or backslashes.
-			if ( is_string( $input['store_password'] ) && ! preg_match( '/[\x00-\x1F\x7F]/', $input['store_password'] ) && wp_check_invalid_utf8( $input['store_password'] ) === $input['store_password'] ) {
-				$output['store_password'] = $input['store_password'];
+			// CampTix reads input directly from $_POST (see
+			// CampTix_Payment_Method::_camptix_validate_options), so it
+			// arrives slashed by wp_magic_quotes(). Unslash before validation
+			// to preserve the exact bytes of secrets containing quotes or
+			// backslashes — without this, md5( store_password ) drifts after
+			// each save and IPN verification silently fails.
+			$store_password = wp_unslash( $input['store_password'] );
+			if ( is_string( $store_password ) && ! preg_match( '/[\x00-\x1F\x7F]/', $store_password ) && wp_check_invalid_utf8( $store_password ) === $store_password ) {
+				$output['store_password'] = $store_password;
 			} else {
 				add_settings_error( 'camptix_options', 'sslcommerz_store_password', __( 'The SSLCommerz store password must be valid UTF-8 without control characters. The previous password has been retained.', 'bd-payments-camptix' ) );
 			}
@@ -510,8 +516,8 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		$payment_token  = sanitize_text_field( trim( $_REQUEST['tix_payment_token'] ?? '' ) );
-		$transaction_id = sanitize_text_field( $_REQUEST['tran_id'] ?? '' );
-		$val_id         = sanitize_text_field( $_REQUEST['val_id'] ?? '' );
+		$transaction_id = sanitize_text_field( $_POST['tran_id'] ?? '' );
+		$val_id         = sanitize_text_field( $_POST['val_id'] ?? '' );
 		$attendee_id    = $this->get_attendee_id_for_log( $payment_token );
 
 		if ( ! $attendee_id ) {
@@ -570,10 +576,15 @@ class SSLCommerz extends Base_Gateway {
 		$transaction_id = sanitize_text_field( $_POST['tran_id'] ?? '' );
 		$attendee_id    = $this->get_attendee_id_for_log( $payment_token );
 
-		if ( ! $attendee_id || ! hash_equals( (string) $payment_token, (string) $transaction_id ) ) {
-			// A signed payload still must identify this order before changing it.
-			$camptix->log( 'SSLCommerz browser callback rejected: no eligible attendee or transaction ID mismatch; order status unchanged.', $attendee_id );
+		if ( ! hash_equals( (string) $payment_token, (string) $transaction_id ) ) {
+			$camptix->log( 'SSLCommerz browser callback rejected: transaction ID mismatch; order status unchanged.', $attendee_id );
 			$camptix->error( __( 'We could not verify this payment callback. Please contact the event organizers before trying another payment.', 'bd-payments-camptix' ) );
+			return;
+		}
+
+		if ( ! $attendee_id ) {
+			$camptix->log( 'SSLCommerz browser callback: no active attendee found; the reservation may have expired.' );
+			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
 			return;
 		}
 
@@ -602,10 +613,15 @@ class SSLCommerz extends Base_Gateway {
 		$transaction_id = sanitize_text_field( $_POST['tran_id'] ?? '' );
 		$attendee_id    = $this->get_attendee_id_for_log( $payment_token );
 
-		if ( ! $attendee_id || ! hash_equals( (string) $payment_token, (string) $transaction_id ) ) {
-			// A signed payload still must identify this order before changing it.
-			$camptix->log( 'SSLCommerz browser callback rejected: no eligible attendee or transaction ID mismatch; order status unchanged.', $attendee_id );
+		if ( ! hash_equals( (string) $payment_token, (string) $transaction_id ) ) {
+			$camptix->log( 'SSLCommerz browser callback rejected: transaction ID mismatch; order status unchanged.', $attendee_id );
 			$camptix->error( __( 'We could not verify this payment callback. Please contact the event organizers before trying another payment.', 'bd-payments-camptix' ) );
+			return;
+		}
+
+		if ( ! $attendee_id ) {
+			$camptix->log( 'SSLCommerz browser callback: no active attendee found; the reservation may have expired.' );
+			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
 			return;
 		}
 
@@ -645,6 +661,9 @@ class SSLCommerz extends Base_Gateway {
 			'bank_tran_id',
 			'tran_id',
 			'status',
+			'error',
+			'failedreason',
+			'error_reason',
 			'tran_date',
 			'amount',
 			'store_amount',

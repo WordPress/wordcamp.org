@@ -3,9 +3,9 @@
  * Regression coverage for SSLCommerz callback handling and diagnostics.
  */
 
-require_once dirname( __DIR__, 3 ) . '/camptix-bd-payments/includes/gateway/class-gateway-base.php';
-require_once dirname( __DIR__, 3 ) . '/camptix-bd-payments/includes/gateway/class-gateway-sslcommerz.php';
-require_once dirname( __DIR__, 3 ) . '/camptix-bd-payments/includes/gateway/class-gateway-surjopay.php';
+require_once dirname( __DIR__ ) . '/includes/gateway/class-gateway-base.php';
+require_once dirname( __DIR__ ) . '/includes/gateway/class-gateway-sslcommerz.php';
+require_once dirname( __DIR__ ) . '/includes/gateway/class-gateway-surjopay.php';
 
 /**
  * @covers \CamptixBD\Gateway\SSLCommerz

@@ -107,7 +107,11 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  *     row of three used to start its date where its neighbours started their
  *     image — the cards shared a grid row but no baseline. The placeholder
  *     holds the same 16:9 region; `custom.css` fills it with flat
- *     Blueberry 4 rather than invented artwork.
+ *     Blueberry 4 rather than invented artwork. It carries the same link
+ *     core gives a real thumbnail, so the region opens the event whether or
+ *     not the event has an image. The link is decorative — it duplicates the
+ *     title link, so it stays out of the tab order and inside the
+ *     `aria-hidden` wrapper rather than announcing itself twice.
  *
  * @param string $content The rendered featured-image block.
  * @param array  $block   The parsed block, including its context.
@@ -120,7 +124,12 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 	}
 
 	if ( '' === trim( $content ) ) {
-		return '<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"></div>';
+		$permalink = get_permalink( $block['context']['postId'] ?? get_the_ID() );
+
+		return sprintf(
+			'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true">%s</div>',
+			$permalink ? sprintf( '<a tabindex="-1" href="%s"></a>', esc_url( $permalink ) ) : ''
+		);
 	}
 
 	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );

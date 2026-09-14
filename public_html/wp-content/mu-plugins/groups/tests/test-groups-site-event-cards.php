@@ -235,6 +235,41 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The placeholder links to its event, the way core links a real
+	 * thumbnail. Without it the media region of an image-less card opened
+	 * nothing while its neighbours' did (#2055).
+	 *
+	 * The link is decorative — it repeats the title link right below it — so
+	 * it stays out of the tab order and inside the `aria-hidden` wrapper.
+	 * `custom.css` also stretches the title link across the whole card, which
+	 * is what actually receives the click; this anchor is what makes the
+	 * markup say so. The stretch is hit-tested in
+	 * `tests/e2e/event-card-clickability.spec.js`, which is the only place a
+	 * layout regression can be caught.
+	 */
+	public function test_placeholder_links_to_its_event() {
+		$this->create_event( 'Imageless Meetup', false );
+
+		$event_ids = get_posts(
+			array(
+				'post_type' => 'gatherpress_event',
+				'fields'    => 'ids',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString(
+			sprintf(
+				'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"><a tabindex="-1" href="%s"></a></div>',
+				esc_url( get_permalink( $event_ids[0] ) )
+			),
+			$output,
+			'The placeholder no longer carries a decorative, non-tabbable link to its event.'
+		);
+	}
+
+	/**
 	 * The card's date line carries the start time as well as the date, so a
 	 * member can tell whether an event is viable without opening it (#2063).
 	 *

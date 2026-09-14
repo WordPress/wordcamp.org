@@ -145,7 +145,7 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 		$password = ' <secret>%41\\\\" pass ';
 		$options  = $this->gateway->validate_options(
 			[
-				'store_password' => $password, 'min_amount' => '',
+				'store_password' => wp_slash( $password ), 'min_amount' => '',
 			]
 		);
 		$this->assertSame( $password, $options['store_password'] );

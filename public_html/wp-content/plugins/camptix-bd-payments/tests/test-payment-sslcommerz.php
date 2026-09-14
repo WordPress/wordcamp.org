@@ -205,15 +205,15 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 			$this->assertStringNotContainsString( 'token=hidden', wp_json_encode( $result ) );
 			$this->assertSame( 'invalid credentials', $result['nested']['error'] );
 		}
-		$this->assertArrayNotHasKey(
-			'tran_id',
-			$this->invoke(
-				'prepare_transaction_for_log',
-				[
-					'tran_id' => 'order-a', 'bank_tran_id' => 'bank-reference',
-				]
-			)
+		$transaction_log = $this->invoke(
+			'prepare_transaction_for_log',
+			[
+				'tran_id'      => 'order-a',
+				'bank_tran_id' => 'bank-reference',
+			]
 		);
+		$this->assertSame( '[redacted]', $transaction_log['tran_id'] );
+		$this->assertSame( '[redacted]', $transaction_log['bank_tran_id'] );
 
 		$sslcommerz_diagnostics = $this->invoke(
 			'prepare_api_diagnostics',

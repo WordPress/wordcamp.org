@@ -77,6 +77,24 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 		$this->gateway->payment_notify();
 	}
 
+	/** Test a mismatched signed notification is reported before an expired reservation. */
+	public function test_signed_mismatch_is_logged_before_missing_attendee() {
+		$_POST = $this->sign(
+			[
+				'tran_id' => 'order-b',
+				'status'  => 'VALID',
+			]
+		);
+		$GLOBALS['camptix']->method( 'get_attendees_from_payment_token' )->willReturn( [] );
+		$GLOBALS['camptix']->expects( $this->once() )->method( 'log' )->with(
+			$this->stringContains( 'transaction ID mismatch' ),
+			null,
+			$this->anything()
+		);
+		$GLOBALS['camptix']->expects( $this->never() )->method( 'payment_result' );
+		$this->gateway->payment_notify();
+	}
+
 	/** Test late signed notification is logged. */
 	public function test_late_signed_notification_is_logged() {
 		$_POST = $this->sign( [ 'tran_id' => 'order-a' ] );
@@ -196,6 +214,17 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 				]
 			)
 		);
+
+		$sslcommerz_diagnostics = $this->invoke(
+			'prepare_api_diagnostics',
+			[
+				'message' => 'Gateway echoed private-reference',
+				'value_a' => 'private-reference',
+			],
+			[ 'value_a' => 'private-reference' ]
+		);
+		$this->assertSame( 'Gateway echoed [redacted]', $sslcommerz_diagnostics['message'] );
+		$this->assertSame( '[redacted]', $sslcommerz_diagnostics['value_a'] );
 	}
 	/** Session-key queries return a flat transaction and retain reconciliation data. */
 	public function test_timeout_recovery_stores_references_but_redacts_its_log() {

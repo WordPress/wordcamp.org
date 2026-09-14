@@ -520,11 +520,6 @@ class SSLCommerz extends Base_Gateway {
 		$val_id         = sanitize_text_field( $_POST['val_id'] ?? '' );
 		$attendee_id    = $this->get_attendee_id_for_log( $payment_token );
 
-		if ( ! $attendee_id ) {
-			$camptix->log( 'SSLCommerz callback has no eligible attendee; the reservation may have timed out.' );
-			return;
-		}
-
 		// The payment transaction data is always in the POST data.
 		$transaction_data = $_POST;
 
@@ -547,6 +542,11 @@ class SSLCommerz extends Base_Gateway {
 				$this->prepare_transaction_for_log( $payment_data )
 			);
 			// The signed transaction does not authorize changing the URL's order.
+			return;
+		}
+
+		if ( ! $attendee_id ) {
+			$camptix->log( 'SSLCommerz callback has no eligible attendee; the reservation may have timed out.' );
 			return;
 		}
 
@@ -584,7 +584,7 @@ class SSLCommerz extends Base_Gateway {
 
 		if ( ! $attendee_id ) {
 			$camptix->log( 'SSLCommerz browser callback: no active attendee found; the reservation may have expired.' );
-			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
+			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'bd-payments-camptix' ) );
 			return;
 		}
 
@@ -621,7 +621,7 @@ class SSLCommerz extends Base_Gateway {
 
 		if ( ! $attendee_id ) {
 			$camptix->log( 'SSLCommerz browser callback: no active attendee found; the reservation may have expired.' );
-			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
+			$camptix->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'bd-payments-camptix' ) );
 			return;
 		}
 
@@ -959,54 +959,21 @@ class SSLCommerz extends Base_Gateway {
 	}
 
 	/**
-	 * Prepare transaction data for logging.
+	 * Check whether an SSLCommerz field needs redaction.
 	 *
-	 * @param array $data The transaction data.
-	 * @return array The sanitized transaction data for logging.
+	 * @param string $key Field key to test.
+	 * @return bool
 	 */
-	protected function prepare_transaction_for_log( $data ) {
-		$data = parent::prepare_transaction_for_log( $data );
+	protected function is_sensitive_key( $key ) {
+		$normalized_key = strtolower( (string) $key );
 
-		// Remove falsey stuff.
-		$data = array_filter( $data );
-
-		$sensitive_keys = [
-			'pass',
-			'key',
-			'store_id',
-			'store_passwd',
-			'store_password',
-			'tran_id',
-			'transaction_id',
-			'payment_token',
-			'card_no',
-			'card_number',
-			'sessionkey',
-			'session_key',
-			'val_id',
-			'validation_id',
-			'value_a',
-			'value_b',
-			'value_c',
-			'value_d',
-			'verify_sign',
-			'verify_sign_sha2',
-			'verify_key',
-		];
-
-		foreach ( array_keys( $data ) as $key ) {
-			$normalized_key = strtolower( (string) $key );
-
-			if (
-				in_array( $normalized_key, $sensitive_keys, true ) ||
-				str_starts_with( $normalized_key, 'cus_' ) ||
-				str_starts_with( $normalized_key, 'ship_' ) ||
-				str_contains( $normalized_key, 'url' )
-			) {
-				unset( $data[ $key ] );
-			}
-		}
-
-		return $data;
+		return parent::is_sensitive_key( $key ) ||
+			in_array(
+				$normalized_key,
+				[ 'pass', 'key', 'validation_id', 'value_a', 'value_b', 'value_c', 'value_d' ],
+				true
+			) ||
+			str_starts_with( $normalized_key, 'cus_' ) ||
+			str_starts_with( $normalized_key, 'ship_' );
 	}
 }

@@ -38,7 +38,7 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 1. Get your store ID and password from [SSLCommerz](https://developer.sslcommerz.com/registration/)
 2. Enable SSLCommerz in Tickets > Setup > Payment
 3. Enter your store ID and password
-4. Set the minimum transaction amount configured for your SSLCommerz store
+4. Optionally set a minimum transaction amount, if your SSLCommerz store enforces one
 5. Toggle sandbox mode for testing
 
 ### Surjo Pay

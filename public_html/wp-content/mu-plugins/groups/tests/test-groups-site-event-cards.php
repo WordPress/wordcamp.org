@@ -2,6 +2,8 @@
 
 namespace WordCamp\Groups\Tests;
 
+use GatherPress\Core\Event\Event;
+
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
@@ -230,6 +232,81 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 		$this->assertStringContainsString( 'groups-site-featured-placeholder', $output );
 		$this->assertStringContainsString( 'aria-hidden="true"', $output );
 		$this->assertStringNotContainsString( 'wp-post-image', $output );
+	}
+
+	/**
+	 * The placeholder links to its event, the way core links a real
+	 * thumbnail. Without it the media region of an image-less card opened
+	 * nothing while its neighbours' did (#2055).
+	 *
+	 * The link is decorative — it repeats the title link right below it — so
+	 * it stays out of the tab order and inside the `aria-hidden` wrapper.
+	 * `custom.css` also stretches the title link across the whole card, which
+	 * is what actually receives the click; this anchor is what makes the
+	 * markup say so. The stretch is hit-tested in
+	 * `tests/e2e/event-card-clickability.spec.js`, which is the only place a
+	 * layout regression can be caught.
+	 */
+	public function test_placeholder_links_to_its_event() {
+		$this->create_event( 'Imageless Meetup', false );
+
+		$event_ids = get_posts(
+			array(
+				'post_type' => 'gatherpress_event',
+				'fields'    => 'ids',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString(
+			sprintf(
+				'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"><a tabindex="-1" href="%s"></a></div>',
+				esc_url( get_permalink( $event_ids[0] ) )
+			),
+			$output,
+			'The placeholder no longer carries a decorative, non-tabbable link to its event.'
+		);
+	}
+
+	/**
+	 * The card's date line carries the start time as well as the date, so a
+	 * member can tell whether an event is viable without opening it (#2063).
+	 *
+	 * The format matches the one the "My upcoming events" cards already use
+	 * (`inc/../src/blocks/my-events/render.php`) — the design guide calls
+	 * that block the compact variant of this card and asks the two to share
+	 * their date typography, and they disagreed until now.
+	 *
+	 * The time is the event's own, not the viewer's: rendering in the
+	 * viewer's timezone is #2021's and its follow-up's scope.
+	 */
+	public function test_card_shows_the_start_time_beside_the_date() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Timed Meetup',
+			)
+		);
+
+		( new Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2030-05-20 18:30:00',
+				'datetime_end'   => '2030-05-20 20:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'Timed Meetup', $output );
+		$this->assertStringContainsString(
+			'May 20, 2030 · 6:30 PM',
+			$output,
+			"The card's date line no longer shows the event's start time."
+		);
 	}
 
 	/**

@@ -12,10 +12,11 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  * Regression coverage for the single-event details card's zone dividers.
  *
  * The card stacks up to four zones — the date, the RSVP control, the venue
- * (or the online-event line), and "Add to calendar". Everything below the
- * RSVP is optional: GatherPress renders `gatherpress/venue`,
- * `gatherpress/online-event` and `gatherpress/add-to-calendar` as an empty
- * string when the event has no venue, isn't online, or has no calendar links.
+ * (or the online-event line), and "Add to calendar". The venue and
+ * online-event zones are optional: GatherPress renders them as an empty
+ * string when the event has no venue or isn't online. "Add to calendar" is
+ * not, despite reading like it: it renders for any event the visitor can
+ * view, since a published event always has calendar links (#2028).
  *
  * The card used to separate those zones with standalone `core/separator`
  * blocks and hide the stragglers from CSS (`hr:last-child`, and an
@@ -114,11 +115,11 @@ class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
 	}
 
 	/**
-	 * The dangling-divider regression: an event with no venue, no online
-	 * link and no calendar output renders a card with no zones — and so no
-	 * divider stranded under the RSVP button.
+	 * The dangling-divider regression: an event with no venue and no online
+	 * link draws a divider only for the zone that actually rendered, and
+	 * none stranded under the RSVP button.
 	 */
-	public function test_info_card_renders_no_zone_divider_when_all_optional_zones_are_empty() {
+	public function test_info_card_draws_a_divider_only_for_the_zones_that_render() {
 		$event_id = $this->create_event_without_details();
 
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
@@ -130,7 +131,20 @@ class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
 		$this->assertStringContainsString( 'groups-site-event-info-card', $output );
 		$this->assertStringContainsString( 'Date and time', $output );
 
-		$this->assertStringNotContainsString( 'groups-site-event-zone', $output );
+		// The two genuinely optional zones rendered nothing at all, so
+		// neither drew a divider.
+		$this->assertStringNotContainsString( 'wp-block-gatherpress-venue', $output );
+		$this->assertStringNotContainsString( 'wp-block-gatherpress-online-event', $output );
+
+		// Leaving "Add to calendar" as the one zone in the card, carrying
+		// the single divider that separates it from the RSVP control.
+		$this->assertSame(
+			1,
+			substr_count( $output, 'groups-site-event-zone' ),
+			'The card drew a divider for a zone that rendered nothing.'
+		);
+		$this->assertStringContainsString( 'wp-block-gatherpress-add-to-calendar groups-site-event-zone', $output );
+
 		$this->assertStringNotContainsString( '<hr', $output );
 	}
 

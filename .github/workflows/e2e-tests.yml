@@ -221,6 +221,10 @@ jobs:
         # front-end modal and then RSVPs to it, so it needs the editor tier
         # and an account no concurrent spec is logged into.
         create_user organiser6 editor & pids+=( "$!" )
+        # event-edit-surface.spec.js publishes its own event through the
+        # front-end modal and then opens it from the event page, so it needs
+        # the editor tier and an account of its own.
+        create_user organiser8 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

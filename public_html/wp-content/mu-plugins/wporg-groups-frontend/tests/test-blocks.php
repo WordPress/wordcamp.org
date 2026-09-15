@@ -110,6 +110,82 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The speaker list should stay behind an event's password gate.
+	 */
+	public function test_event_speakers_hides_speakers_behind_the_password_gate() {
+		$speaker_id = self::factory()->user->create(
+			array(
+				'display_name' => 'Speaker Behind The Gate',
+				'description'  => 'Bio that should not leak.',
+			)
+		);
+		$event_id   = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked Speaker Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		update_post_meta( $event_id, '_event_speakers', array( $speaker_id ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $locked );
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Speaker Behind The Gate', $unlocked );
+	}
+
+	/**
+	 * The attendee roster should stay behind an event's password gate.
+	 */
+	public function test_event_rsvp_hides_attendees_behind_the_password_gate() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked RSVP Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+		$user_id  = self::factory()->user->create(
+			array(
+				'display_name' => 'Attendee Behind The Gate',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $locked );
+
+		// The same viewer sees the roster once the password has been entered.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Attendee Behind The Gate', $unlocked );
+	}
+
+	/**
 	 * The RSVP action should precede the attendee summary in the rendered block.
 	 */
 	public function test_event_rsvp_action_precedes_attendee_summary() {

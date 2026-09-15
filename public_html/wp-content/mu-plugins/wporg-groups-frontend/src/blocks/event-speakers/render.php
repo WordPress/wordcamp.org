@@ -13,6 +13,11 @@ if ( ! $event_post_id ) {
 	$event_post_id = get_queried_object_id();
 }
 
+// The speaker list follows the event's password gate.
+if ( ! is_preview() && post_password_required( $event_post_id ) ) {
+	return;
+}
+
 $speaker_ids = get_post_meta( $event_post_id, '_event_speakers', true );
 
 if ( empty( $speaker_ids ) || ! is_array( $speaker_ids ) ) {

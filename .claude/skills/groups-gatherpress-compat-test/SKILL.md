@@ -1,6 +1,6 @@
 ---
 name: groups-gatherpress-compat-test
-description: Run the Groups/GatherPress front-end integration compatibility checklist — per-role browser pass, direct REST pass, GatherPress-off pass, and security/perf sanity checks. Use after any GatherPress version bump, or any change to mu-plugins/wporg-groups-frontend, mu-plugins/groups, or the groups-site theme.
+description: Run the Groups/GatherPress front-end integration compatibility checklist — per-role browser pass, direct REST pass, GatherPress-off pass, a post-visibility/password-gate security sweep, and perf sanity checks. Use after any GatherPress version bump, or any change to mu-plugins/wporg-groups-frontend, mu-plugins/groups, mu-plugins/gatherpress-recurring-events, or the groups-site theme.
 ---
 
 # Groups / GatherPress compatibility checklist
@@ -8,9 +8,11 @@ description: Run the Groups/GatherPress front-end integration compatibility chec
 This checklist exists because GatherPress updates fairly often and its
 changes can silently break backwards compatibility with our Groups
 integration. It is self-contained — follow it with no other context. It
-covers three plugins: `mu-plugins/wporg-groups-frontend` (front-end
+covers four components: `mu-plugins/wporg-groups-frontend` (front-end
 event/member management), `mu-plugins/groups/gatherpress-groups-tweaks.php`
-(settings/capability/query overrides), and the `groups-site` block theme.
+(settings/capability/query overrides),
+`mu-plugins/gatherpress-recurring-events` (the occurrence-aware `gpre/v1`
+REST wrapper and query layer), and the `groups-site` block theme.
 
 **Keep this skill current.** This file is a living record, not a one-time
 checklist — whenever a session working on this integration (a version bump,
@@ -420,6 +422,105 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
 
 ## 5. Security-focused pass
 
+### 5a. Post-visibility sweep (mandatory)
+
+This is the pass that would have caught H1 #4029867 and the three sibling
+leaks found alongside it. Every one of them was the same mistake: code that
+reads post-scoped data and checks `post_status === 'publish'` but never asks
+whether the *current viewer* is allowed to see that post.
+
+`'publish'` is not a visibility check. A published post can still be behind
+a post password, and WordPress enforces that password in exactly one place —
+by swapping the post body for the password form inside `the_content`. Any
+code that reads the post some other way (a REST route, a block that renders
+outside `the_content`) bypasses that enforcement entirely and has to gate
+itself.
+
+- [ ] **Census every REST permission callback** across all three plugins:
+  ```bash
+  grep -rn "permission_callback" \
+    public_html/wp-content/mu-plugins/gatherpress-recurring-events \
+    public_html/wp-content/mu-plugins/wporg-groups-frontend \
+    public_html/wp-content/mu-plugins/groups \
+    --include="*.php" | grep -v "/tests/\|/build/"
+  ```
+  Treat `'__return_true'`, `'is_user_logged_in'`, and any bare
+  `is_user_logged_in()` closure as **unreviewed until proven safe**. For
+  each, ask what post the callback's route reads and whether the caller is
+  allowed to read *that post*. A route taking a `post_id`/`id` parameter and
+  returning anything derived from it needs a per-post gate, not a
+  logged-in check. Two of the four fixed leaks were routes whose callback
+  was `__return_true`; a third was `is_user_logged_in()` only.
+
+- [ ] **Check every block that renders post-scoped data.** Blocks render
+  outside `the_content`, so the password form does not gate them:
+  ```bash
+  for f in public_html/wp-content/mu-plugins/wporg-groups-frontend/src/blocks/*/render.php; do
+    printf '\n### %s\n' "$f"
+    grep -n "post_password_required\|get_post_status\|current_user_can\|is_user_member_of_blog" "$f" || echo "  NO VISIBILITY GUARD"
+  done
+  ```
+  A block that reads `$block->context['postId']` (or `get_the_ID()`) and
+  renders anything derived from that post must early-return on
+  `post_password_required()`. Blocks that only read site- or network-scoped
+  data (`sponsors`, `group-location`) legitimately have no guard — confirm
+  that's why, don't just tick the box.
+
+- [ ] **Which gate to use.** They are not interchangeable:
+  - RSVP roster reads/writes → `Event::can_read_rsvps( $post_id )`, so the
+    wrapper tracks whatever core decides. (It is also in the API-contract
+    test in section 9 — if GatherPress renames it, that test fails.)
+  - Anything else post-scoped → `post_password_required( $post )` directly.
+  - Do **not** gate non-RSVP data on `Event::can_read_rsvps()`:
+    it begins with `post_type_supports( $post_type, 'gatherpress-rsvp' )`,
+    and GatherPress strips that support from every post type when the
+    site-wide `rsvp_mode` setting is `disabled`. Gating e.g. a schedule
+    route on it silently 401s the whole route on any site with RSVPs
+    switched off.
+  - In a **block**, prefer raw `post_password_required()` over
+    `can_read_rsvps()`: the latter exempts users with `edit_post`, and
+    WordPress shows an editor the password form for their own locked post,
+    so exempting them renders data next to a password prompt.
+
+- [ ] **Verify it end to end, not by reading the code.** Every one of these
+  was confirmed with a real request before and after the fix:
+  ```bash
+  # Create a published, password-protected event with at least one RSVP,
+  # then, with no cookies at all:
+  curl -sk "$BASE/wp-json/gatherpress/v1/event/rsvp-responses?post_id=$EVENT"   # expect 401
+  curl -sk "$BASE/wp-json/gpre/v1/event/$RECURRENCE/rsvp-responses?post_id=$EVENT" # expect 401
+  curl -sk "$BASE/wp-json/gpre/v1/occurrences/$EVENT"                          # expect 401
+
+  # And the rendered page — the leak that REST checks alone will not find:
+  curl -sk "$EVENT_URL" -o /tmp/page.html
+  grep -c "post-password-form" /tmp/page.html   # expect 1
+  grep -c "$ATTENDEE_DISPLAY_NAME" /tmp/page.html  # expect 0
+  grep -c "$SPEAKER_DISPLAY_NAME"  /tmp/page.html  # expect 0
+  ```
+  Then unlock it through the real flow and confirm the data comes back, so
+  the gate isn't just breaking the feature:
+  ```bash
+  curl -sk -c /tmp/cj.txt -o /dev/null -X POST "$BASE/wp-login.php?action=postpass" \
+    --data-urlencode "post_password=secret-pass"
+  curl -sk -b /tmp/cj.txt "$EVENT_URL" | grep -c "$ATTENDEE_DISPLAY_NAME"  # expect >= 1
+  ```
+  Also send a **wrong** password and confirm it still denies — a gate that
+  accepts any non-empty cookie is worse than none.
+
+- [ ] **Check the write side too, not just reads.** The RSVP write routes
+  (`POST wporg-groups/v1/event/{id}/rsvp`, `POST gpre/v1/event/{rid}/rsvp`)
+  return the full roster in their response body *and* auto-join the caller
+  to the group. An ungated write route is therefore also a read leak and a
+  membership-forcing bug. Confirm as a logged-in non-member who has not
+  entered the password: expect `403`, and confirm
+  `is_user_member_of_blog()` is still false afterwards.
+
+- [ ] Every fix here gets a regression test that is **confirmed to fail
+  against the unfixed code** (stash the fix, run the test, restore). A
+  password-gate test that passes both ways is testing nothing.
+
+### 5b. Capabilities and privilege boundaries
+
 - [ ] Enumerate every `user_has_cap`/`map_meta_cap` filter across both
   plugins:
   ```bash
@@ -435,11 +536,48 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   `promote_users`, which worked correctly through this plugin's own REST
   route but also silently unlocked stock wp-admin's user-role screen).
   Regression-check it explicitly: `wp eval 'var_dump( user_can( <editor_id>, "promote_users" ) );' --url=$BASE` → must be `false`.
+- [ ] Self-serve role switching (`POST /members/me/role`) can assign
+  `editor`, which *is* the organizer tier — so on any group where it is
+  live it is a deliberate self-promotion path, not a bug. Confirm
+  `SELF_SERVE_ROLE_GROUPS` in `inc/capabilities.php` still lists only the
+  designated testing group and local dev, keyed by host, and that no
+  filter turns `wporg_groups_frontend_self_serve_roles_enabled` on
+  anywhere in production code:
+  ```bash
+  grep -rn "wporg_groups_frontend_self_serve_roles_enabled" \
+    public_html/wp-content --include="*.php" | grep -v "/tests/"
+  ```
+- [ ] `register_post_meta()` `auth_callback`s take
+  `( $allowed, $meta_key, $object_id, ... )` — confirm each one uses the
+  `$object_id` (`current_user_can( 'edit_post', $object_id )`) rather than
+  a blanket `current_user_can( 'edit_posts' )`, which grants meta writes
+  per-role instead of per-post:
+  ```bash
+  grep -rn "auth_callback" public_html/wp-content/mu-plugins/groups \
+    public_html/wp-content/mu-plugins/wporg-groups-frontend --include="*.php"
+  ```
+
+### 5c. Data exposure and input handling
+
 - [ ] `GET /members` is intentionally public (no auth) — this is a known,
   tracked product/privacy question (see the repo's open issue tracker for
   the current decision), not an oversight. Confirm the fields returned
   match whatever the current decision is (as of writing: name, avatar,
-  profile link, bio, role — no email, no `registered` date).
+  profile link, bio, role — no email, no `registered` date). Confirm
+  `GET /members/{id}` still scopes to `is_user_member_of_blog()` so it
+  can't be walked to enumerate the whole network's users.
+- [ ] RSVP answers (dietary needs, accessibility requirements) are the most
+  sensitive data the feature stores. Confirm `current_user_can_view_answers()`
+  is still `current_user_can( 'edit_post', $event_id )`, that no answer
+  column has been added to the CSV export, and that the answers comment meta
+  is still **not** registered with `show_in_rest`.
+- [ ] Confirm core's comment endpoint still refuses RSVP comments and
+  password-protected posts (it does this for us — verify it hasn't been
+  filtered open):
+  ```bash
+  curl -sk "$BASE/wp-json/wp/v2/comments?type=gatherpress_rsvp"  # expect 401
+  curl -sk "$BASE/wp-json/wp/v2/comments?post=$LOCKED_EVENT"     # expect 401
+  ```
 - [ ] Spot-check sanitization/escaping on user-controlled data that reaches
   storage or output: event title/description (`persist_event()`/
   `build_post_content()` in `inc/rest.php`), venue address
@@ -450,6 +588,37 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   the current user can't read (`current_user_can_use_attachment()` in
   `inc/rest.php`) — try passing another user's private attachment ID as a
   lower-privileged role and confirm rejection.
+- [ ] CSV export still routes every cell through `esc_csv_cell()`
+  (formula-injection neutralisation) and `csv_line()` (RFC 4180 quoting).
+  A new column added to `CSV_COLUMNS` that bypasses either is a
+  spreadsheet-injection regression.
+- [ ] Broadcast email still passes `wp_mail()` an **array** recipient, not a
+  string — a string is split on commas, and display names are
+  user-controlled, so a string lets one user smuggle extra recipients into
+  a whole broadcast (`send_message()` in `groups/network-messaging.php`).
+- [ ] Confirm no unprepared SQL has crept in. Every `$wpdb` call in these
+  plugins should be `prepare()`d or documented as already-prepared:
+  ```bash
+  grep -rn "\$wpdb->\(query\|get_results\|get_var\|get_row\|get_col\)(" \
+    public_html/wp-content/mu-plugins/gatherpress-recurring-events \
+    public_html/wp-content/mu-plugins/wporg-groups-frontend \
+    public_html/wp-content/mu-plugins/groups \
+    --include="*.php" | grep -v "/tests/\|/build/" | grep -v "prepare"
+  ```
+  The one legitimate exception is `Query::posts()`, which re-`SELECT`s
+  WP_Query's own already-prepared `$query->request`. Any *new* hit needs
+  justifying at that same standard. Interpolated `ORDER BY` direction must
+  come from an `in_array( $order, array( 'ASC', 'DESC' ), true )`
+  allow-list, never straight from a query var.
+
+### 5d. Reporting
+
+- [ ] Anything found here follows the split-disclosure workflow: the public
+  wordcamp.org PR carries near-zero detail (no repro steps, no endpoint
+  names, no "leaks X" phrasing in code comments), and the full write-up —
+  root cause, payloads, before/after evidence — goes in a private issue on
+  the security repo. Never name or link that repo from the public PR,
+  commit message, or code comment.
 
 ## 6. Performance sanity check
 
@@ -662,4 +831,6 @@ current status before treating any of these as new bugs:
 | `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organisers manage events fine via wp-admin. |
 | `/members` fully public with no membership/auth requirement | Section 5 | Open product/privacy question, not a bug in itself — confirm current decision, don't assume it's wrong. |
 | `my-events` block empty for a user who created events but never RSVP'd | Section 3, per-role browser pass as an event creator | RSVP-attendance based by design — confirm this still matches the current product decision. |
+| RSVP roster / speaker list / occurrence schedule readable on a **password-protected** event | Section 5a | Fixed (H1 #4029867 plus three siblings found during that audit). Four call sites checked `post_status === 'publish'` but never `post_password_required()`: the `gpre/v1` roster, occurrences and RSVP-write routes, `wporg-groups/v1/event/{id}/rsvp`, and the `event-rsvp` and `event-speakers` blocks. Regression tests exist for all of them — if one starts failing, the gate has been removed, not the test. |
+| `gpre/v1/occurrences` 401s on a site with RSVPs switched off | Section 5a | Symptom of gating a non-RSVP route on `Event::can_read_rsvps()`, which requires `post_type_supports( 'gatherpress-rsvp' )`. Use `post_password_required()` for non-roster data. |
 | `groups-site` theme activatable on non-groups-network sites | Not covered by this checklist (network-admin action, not a groups-site page) | If auditing this, attempt `wp theme activate groups-site --url=<non-groups-network-site>` and confirm it's blocked. |

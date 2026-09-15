@@ -295,6 +295,45 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ) );
 	}
 
+	/**
+	 * A calendar endpoint on an occurrence is left alone by the canonical
+	 * redirect.
+	 *
+	 * `…/{occurrence}/ical` is a download hanging off the occurrence, not the
+	 * occurrence page. Rewriting it to the page drops the endpoint and the
+	 * visitor lands on the event instead of getting the file (#2010).
+	 */
+	public function test_canonical_redirect_leaves_calendar_endpoints_alone(): void {
+		$post_id    = $this->create_published_recurring_event();
+		$occurrence = (object) array(
+			'series_post_id' => $post_id,
+			'recurrence_id'  => '20260810T100000',
+		);
+		Context::set( $occurrence );
+		set_query_var( 'gpre_occurrence', '20260810T100000' );
+
+		try {
+			// Without an endpoint the redirect is still corrected to the
+			// occurrence's own URL, which is what this filter exists for.
+			set_query_var( 'gatherpress_calendar', '' );
+			$this->assertStringContainsString(
+				'20260810T100000',
+				(string) Context::canonical_redirect( get_permalink( $post_id ) )
+			);
+
+			// With one, no redirect at all.
+			set_query_var( 'gatherpress_calendar', 'ical' );
+			$this->assertFalse(
+				Context::canonical_redirect( get_permalink( $post_id ) ),
+				'A calendar endpoint was redirected, which drops the endpoint and cancels the download.'
+			);
+		} finally {
+			set_query_var( 'gatherpress_calendar', '' );
+			set_query_var( 'gpre_occurrence', '' );
+			Context::set( null );
+		}
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();

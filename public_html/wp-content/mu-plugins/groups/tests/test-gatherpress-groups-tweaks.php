@@ -181,24 +181,36 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * "Upcoming" is the default view, so the toggle stays unannotated — but its
-	 * radio remains selected so the filter exposes the view currently on screen.
+	 * The default view names itself too. A bare "Time" told the reader which
+	 * axis the control filters on but nothing about what picking it would
+	 * offer, or that a view was already applied (#2059).
 	 */
-	public function test_event_time_filter_marks_upcoming_selected_on_the_default_view() {
+	public function test_event_time_filter_names_the_default_view_as_well() {
 		$filter = $this->get_event_time_filter( null );
 
-		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
 		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 
 	/**
+	 * Every view names itself, so the toggle reads the same way whichever one
+	 * is applied. "All" had no coverage at all before this.
+	 */
+	public function test_event_time_filter_names_every_view() {
+		$this->assertSame( 'Time: Upcoming', $this->get_event_time_filter( 'upcoming' )['label'] );
+		$this->assertSame( 'Time: Past', $this->get_event_time_filter( 'past' )['label'] );
+		$this->assertSame( 'Time: All', $this->get_event_time_filter( 'all' )['label'] );
+	}
+
+	/**
 	 * A hand-typed `event_time` that isn't one of the three views falls back
-	 * to the default rather than naming itself in the toggle.
+	 * to the default, and the toggle names that fallback rather than the
+	 * value the reader typed.
 	 */
 	public function test_event_time_filter_ignores_an_unknown_value() {
 		$filter = $this->get_event_time_filter( 'whenever' );
 
-		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
 		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 
@@ -283,7 +295,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$filter    = $this->get_event_time_filter( 'all' );
 		unset( $_GET['s'] );
 
-		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
 		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 

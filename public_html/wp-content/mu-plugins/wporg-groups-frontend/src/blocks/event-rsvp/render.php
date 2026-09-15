@@ -235,6 +235,34 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		</div>
 	<?php endif; ?>
 
+	<?php if ( ! $is_past && $is_login ) : ?>
+		<?php
+		/*
+		 * Cancelling used to be reachable only by clicking the "Attending"
+		 * button, which says what your status is rather than what pressing it
+		 * will do, and then finding the action inside the modal it opens
+		 * (#2058). Say it on the page instead. Same `toggleRsvp` action the
+		 * modal's button calls, so there is one way to withdraw and both
+		 * doors lead to it.
+		 *
+		 * Rendered for every signed-in visitor and hidden until they are
+		 * attending, rather than rendered on demand: the button above changes
+		 * status without a reload, so the control has to already be in the
+		 * DOM for `state.isNotAttending` to reveal it.
+		 */
+		?>
+		<button
+			type="button"
+			class="wporg-event-rsvp__cancel<?php echo $is_attending ? '' : ' is-hidden'; ?>"
+			data-wp-on--click="actions.toggleRsvp"
+			data-wp-class--is-hidden="state.isNotAttending"
+			data-wp-bind--disabled="context.rsvpLoading"
+			data-wp-bind--aria-busy="context.rsvpLoading"
+		>
+			<?php echo esc_html( $cancel_rsvp ); ?>
+		</button>
+	<?php endif; ?>
+
 	<button
 		type="button"
 		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"

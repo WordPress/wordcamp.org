@@ -128,6 +128,27 @@ class WCCSP_Customizer {
 		);
 
 		$wp_customize->add_setting(
+			'wccsp_settings[contact_form_page_id]',
+			array(
+				'default'           => 0,
+				'type'              => 'option',
+				'capability'        => $GLOBALS['WCCSP_Settings']::REQUIRED_CAPABILITY,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		$wp_customize->add_control(
+			'wccsp_settings[contact_form_page_id]',
+			array(
+				'label'       => __( 'Contact Form Page', 'wordcamporg' ),
+				'description' => __( 'The page whose contact form is shown on the Coming Soon page. When no page is selected, the form on the oldest page that has one is used.', 'wordcamporg' ),
+				'section'     => 'wccsp_live_preview',
+				'type'        => 'dropdown-pages',
+				'capability'  => $GLOBALS['WCCSP_Settings']::REQUIRED_CAPABILITY,
+			)
+		);
+
+		$wp_customize->add_setting(
 			'wccsp_settings[introduction]',
 			array(
 				'default'           => '',

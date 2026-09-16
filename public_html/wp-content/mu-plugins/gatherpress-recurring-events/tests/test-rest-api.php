@@ -57,6 +57,7 @@ final class Test_Rest_Api extends WP_UnitTestCase {
 		$wp_rest_server = null;
 
 		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+		unset( $_SERVER['HTTP_ORIGIN'] );
 
 		parent::tearDown();
 	}
@@ -275,6 +276,73 @@ final class Test_Rest_Api extends WP_UnitTestCase {
 		add_post_type_support( 'gatherpress_event', 'gatherpress-rsvp' );
 
 		$this->assertSame( 200, $response->get_status() );
+	}
+
+	/** Answers a request that carries no origin, as a same-site fetch does. */
+	public function test_nonce_answers_a_request_without_an_origin(): void {
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertNotEmpty( $response->get_data()['nonce'] );
+	}
+
+	/** Answers a request from the site's own origin. */
+	public function test_nonce_answers_the_sites_own_origin(): void {
+		$_SERVER['HTTP_ORIGIN'] = untrailingslashit( home_url() );
+
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertNotEmpty( $response->get_data()['nonce'] );
+		$this->assertSame( 'Origin', $response->get_headers()['Vary'] ?? null );
+	}
+
+	/** Refuses a logged-out request from another origin. */
+	public function test_nonce_denies_a_foreign_origin(): void {
+		$_SERVER['HTTP_ORIGIN'] = 'https://evil.example';
+
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertSame( 401, $response->get_status() );
+		$this->assertArrayNotHasKey( 'nonce', (array) $response->get_data() );
+	}
+
+	/**
+	 * Refuses a request from another origin even when the caller's cookie is
+	 * present, so no page elsewhere can read a nonce bound to that session.
+	 */
+	public function test_nonce_denies_a_foreign_origin_for_a_logged_in_user(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$_SERVER['HTTP_ORIGIN'] = 'https://evil.example';
+
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertArrayNotHasKey( 'nonce', (array) $response->get_data() );
+	}
+
+	/** A different port is a different origin, whatever core's CORS list says. */
+	public function test_nonce_denies_the_same_host_on_another_port(): void {
+		$parts = wp_parse_url( home_url() );
+
+		$_SERVER['HTTP_ORIGIN'] = sprintf( '%s://%s:8888', $parts['scheme'], $parts['host'] );
+
+		$response = rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertSame( 401, $response->get_status() );
+	}
+
+	/** Serves the nonce without the permissive CORS header core would send. */
+	public function test_nonce_sends_no_cors_headers(): void {
+		$this->assertNotFalse(
+			has_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' ),
+			'Expected core to have hooked its CORS headers before the request.'
+		);
+
+		rest_do_request( new WP_REST_Request( 'GET', '/gpre/v1/event/20260101/nonce' ) );
+
+		$this->assertFalse( has_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' ) );
 	}
 
 	/**

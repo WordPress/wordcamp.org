@@ -13,8 +13,9 @@ if ( ! $event_post_id ) {
 	$event_post_id = get_queried_object_id();
 }
 
-// The speaker list follows the event's password gate.
-if ( ! is_preview() && post_password_required( $event_post_id ) ) {
+// The speaker list follows the event's password gate. Unconditional: `preview`
+// is a plain query var any visitor can set, so it must not relax this.
+if ( post_password_required( $event_post_id ) ) {
 	return;
 }
 

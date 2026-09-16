@@ -136,6 +136,18 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $locked );
 		$this->assertStringNotContainsString( 'Bio that should not leak.', $locked );
 
+		// `preview` is a plain query var with no capability check behind it
+		// (`WP_Query::parse_query()` sets `is_preview` for any non-empty
+		// value), so it must not reopen the gate for an anonymous visitor.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
 		require_once ABSPATH . WPINC . '/class-phpass.php';
 		$hasher                                 = new \PasswordHash( 8, true );
 		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
@@ -172,6 +184,17 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $locked );
 		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $locked );
+
+		// Same for the roster: `preview` is visitor-settable, so the gate has
+		// to hold with it set.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 
 		// The same viewer sees the roster once the password has been entered.
 		require_once ABSPATH . WPINC . '/class-phpass.php';

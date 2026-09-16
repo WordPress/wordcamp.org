@@ -810,13 +810,13 @@ body.error404 .site-content-container h1 {
  * The card reads as zones — When, Where, Add to calendar — rather than one
  * flat stack, so each zone after the first opens with a divider.
  *
- * The divider is a border on the zone itself, not a `<hr>` sibling. Every
- * zone below "When" is optional: GatherPress renders the venue, online-event
- * and add-to-calendar blocks as an empty string when the event has no venue,
- * isn't online, or has no calendar links. A separate `<hr>` outlives the zone
- * it introduces in that case — with all three empty, the first divider was
- * left hanging under the RSVP button with nothing beneath it. Carrying the
- * border on the zone makes that unrepresentable: no zone, no divider.
+ * The divider is a border on the zone itself, not a `<hr>` sibling. The
+ * venue and online-event zones are optional: GatherPress renders them as an
+ * empty string when the event has no venue or isn't online. A separate
+ * `<hr>` outlives the zone it introduces in that case — with both empty, a
+ * divider was left hanging under the RSVP button with nothing beneath it.
+ * Carrying the border on the zone makes that unrepresentable: no zone, no
+ * divider.
  *
  * Generous, symmetric room (more than the 20px `blockGap` used *within* a
  * zone) so it reads as a hard boundary rather than another item in the list.
@@ -864,9 +864,28 @@ body.error404 .site-content-container h1 {
 .groups-site-event-info-card .gatherpress--has-venue-address .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-phone .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
-.groups-site-event-info-card .groups-site-online-event .wp-block-icon {
+.groups-site-event-info-card .groups-site-online-event .wp-block-icon,
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-icon {
 	color: var(--wp--preset--color--charcoal-4);
 	flex: 0 0 auto;
+}
+
+/*
+ * GatherPress positions the calendar menu at its trigger's left edge and
+ * gives it a fixed pixel width (`dropdownWidth`, written inline at render).
+ * In a sidebar card narrower than the menu that ran off the right of the
+ * page, scrollbar and all. Growing the trigger to fill the row puts its
+ * right edge on the card's content edge, and hanging the menu off that edge
+ * keeps the whole menu inside the card.
+ */
+
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-gatherpress-dropdown {
+	flex: 1 1 auto;
+}
+
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-gatherpress-dropdown__menu {
+	right: 0;
+	left: auto;
 }
 
 /* GatherPress renders the address in an <address>, which every browser

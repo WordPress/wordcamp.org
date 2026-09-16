@@ -41,6 +41,13 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	protected $options = array();
 
 	/**
+	 * Orders whose Checkout Session the timeout sweep has already looked up this pass, by
+	 * payment token, and whether a lookup has already failed to reach Stripe this pass.
+	 */
+	protected $sessions_looked_up = array();
+	protected $stripe_unreachable = false;
+
+	/**
 	 * Runs during camptix_init, loads our options and sets some actions.
 	 *
 	 * @see CampTix_Addon
@@ -49,6 +56,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$this->load_options();
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+		add_action( 'camptix_timeout_sweep_start', array( $this, 'reset_timeout_sweep_state' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
@@ -82,6 +90,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			),
 			$this->get_payment_options()
 		);
+	}
+
+	/**
+	 * How long a Checkout Session stays payable. Stripe allows 30 minutes to 24 hours and
+	 * defaults to 24; 30 minutes is plenty for a ticket and keeps an abandoned draft's seat
+	 * held for the shortest time. A filtered value is clamped to Stripe's range. Sent as the
+	 * session's expires_at and recorded on the order, so the draft dies when the session does.
+	 *
+	 * @return int Seconds.
+	 */
+	public function get_checkout_session_lifetime() {
+		$lifetime = (int) apply_filters( 'camptix_stripe_checkout_session_lifetime', 30 * MINUTE_IN_SECONDS );
+
+		return max( 30 * MINUTE_IN_SECONDS, min( DAY_IN_SECONDS, $lifetime ) );
 	}
 
 	/**
@@ -734,8 +756,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			$receipt_email = end( $_REQUEST['tix_attendee_info'] )['email'];
 		}
 
-		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->create_session( $this->camptix_options['event_name'], $order_items, $receipt_email, $return_url, $cancel_url, $metadata );
+		$stripe     = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$expires_at = time() + $this->get_checkout_session_lifetime();
+		$session    = $stripe->create_session( $this->camptix_options['event_name'], $order_items, $receipt_email, $return_url, $cancel_url, $metadata, $expires_at );
 
 		if ( ! is_wp_error( $session ) && ! empty( $session['url'] ) ) {
 			$camptix->log(
@@ -749,7 +772,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				)
 			);
 
-			update_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', wp_slash( $session['id'] ) );
+			$this->record_checkout_session( $payment_token, $session['id'], $expires_at );
 
 			wp_redirect( esc_url_raw( $session['url'] ) );
 			die();
@@ -858,7 +881,51 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Check if a stripe session timed out.
+	 * Record the Checkout Session on every attendee of the order: its id, so the timeout
+	 * backstop can look it up from whichever attendee the sweep reaches first, and its expiry.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 * @param string $session_id    Stripe Checkout Session id.
+	 * @param int    $expires_at    Unix timestamp the session expires at.
+	 */
+	public function record_checkout_session( $payment_token, $session_id, $expires_at ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			update_post_meta( $attendee_id, '_stripe_checkout_session_id', wp_slash( $session_id ) );
+			update_post_meta( $attendee_id, 'tix_session_expires_at', (int) $expires_at );
+		}
+	}
+
+	/**
+	 * A new sweep pass: forget which orders were looked up and whether Stripe was reachable.
+	 */
+	public function reset_timeout_sweep_state() {
+		$this->sessions_looked_up = array();
+		$this->stripe_unreachable = false;
+	}
+
+	/**
+	 * Before the sweep times a draft out, ask Stripe what became of its Checkout Session.
+	 *
+	 * Only an expired session is left for the sweep. Anything else goes through the normal
+	 * return handling: a paid session completes the order (the buyer paid in the session's last
+	 * moments and neither the return nor the webhook reached us), a complete-but-unpaid one is
+	 * a delayed payment still in flight and goes pending, a failed one fails. A session Stripe
+	 * still reports open has its expiry re-recorded from Stripe and the sweep checks the release
+	 * time again, so it keeps its seat until then (Stripe expires sessions a little after the
+	 * timestamp, so an open session past it is timed out in the same pass). If Stripe can't be
+	 * asked, or answers with an error, the draft is kept for the next sweep to try again, for
+	 * up to 24 hours: not knowing is not evidence the session died, and a timed-out order can't
+	 * be revived. That includes a 404, which only says the session isn't on the account and
+	 * mode of the key asking; after a credentials edit every in-flight session 404s while
+	 * still payable on the other key.
+	 *
+	 * One lookup per order per pass: the attendees of an order share the session and settling
+	 * it settles them all. And once a lookup has failed to reach Stripe at all (a transport
+	 * error or an unreadable response, as opposed to Stripe answering with an error), the rest
+	 * of the pass keeps its drafts without waiting on a lookup each.
 	 */
 	public function pre_attendee_timeout( $attendee_id ) {
 		/** @var CampTix_Plugin $camptix */
@@ -875,27 +942,75 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return;
 		}
 
-		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session_id );
+		if ( isset( $this->sessions_looked_up[ $payment_token ] ) ) {
+			return;
+		}
+		$this->sessions_looked_up[ $payment_token ] = true;
 
-		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
+		if ( $this->stripe_unreachable ) {
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe was unreachable earlier this sweep, not asking', null );
 			return;
 		}
 
-		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
-		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
-			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
+		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$session = $stripe->get_session( $stripe_session_id );
 
-			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-			$payment_data   = array(
-				'transaction_id'      => $transaction_id,
-				'transaction_details' => array(
-					'raw' => $session,
-				),
-			);
+		if ( is_wp_error( $session ) ) {
+			if ( 0 !== strpos( $session->get_error_code(), 'camptix_stripe_request_error_' ) ) {
+				$this->stripe_unreachable = true;
+				$this->keep_for_next_sweep( $attendee_id, $payment_token, 'could not reach Stripe', $session );
+				return;
+			}
 
-			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered with an error', $session );
+			return;
 		}
+
+		if ( empty( $session['status'] ) ) {
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered without a session status', $session );
+			return;
+		}
+
+		if ( 'expired' === $session['status'] ) {
+			return;
+		}
+
+		if ( 'open' === $session['status'] ) {
+			$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
+			if ( ! empty( $session['expires_at'] ) ) {
+				$camptix->set_order_session_expiry( $payment_token, (int) $session['expires_at'] );
+			}
+			return;
+		}
+
+		$camptix->log( 'Stripe checkout timed out, but the session settled; processing it.', $attendee_id, $session );
+
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return;
+		}
+
+		$this->process_payment_return_session( $payment_token, $session, $order, false /* non-interactive */ );
+	}
+
+	/**
+	 * The session couldn't be looked up: keep the order's drafts for the next sweep, unless the
+	 * order is already past the 24 hours (plus grace) a draft with no recorded expiry gets, so a
+	 * broken lookup can't hold seats forever. The checkout time is tix_timestamp, or the post
+	 * date if that is missing, so the cap always has a floor.
+	 */
+	protected function keep_for_next_sweep( $attendee_id, $payment_token, $why, $data ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$checked_out = (int) get_post_meta( $attendee_id, 'tix_timestamp', true ) ?: (int) get_post_timestamp( $attendee_id );
+		if ( $checked_out + DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE <= time() ) {
+			$camptix->log( sprintf( 'At timeout, %s; giving up after 24 hours.', $why ), $attendee_id, $data );
+			return;
+		}
+
+		$camptix->log( sprintf( 'At timeout, %s; keeping the draft for the next sweep.', $why ), $attendee_id, $data );
+		$camptix->set_order_session_expiry( $payment_token, time() );
 	}
 }
 
@@ -1089,7 +1204,7 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @return array|WP_Error
 	 */
-	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
+	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata, $expires_at = 0 ) {
 		$line_items = array();
 		foreach ( $items as $item ) {
 			$line_item = array(
@@ -1129,6 +1244,11 @@ class CampTix_Stripe_API_Client {
 
 		if ( ! empty( $receipt_email ) && is_email( $receipt_email ) ) {
 			$args['customer_email'] = $receipt_email;
+		}
+
+		// When the session stops being payable; CampTix holds the draft's seat until then.
+		if ( $expires_at > 0 ) {
+			$args['expires_at'] = (int) $expires_at;
 		}
 
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {

@@ -31,6 +31,12 @@ if ( ! is_preview() && 'publish' !== get_post_status( $event_post_id ) ) {
 	return;
 }
 
+// The roster follows the event's password gate. Unconditional: `preview` is
+// a plain query var any visitor can set, so it must not relax this.
+if ( post_password_required( $event_post_id ) ) {
+	return;
+}
+
 $event    = new Event( $event_post_id );
 $rsvp     = new Rsvp( $event_post_id );
 $is_past   = $event->has_event_past();

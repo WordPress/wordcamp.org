@@ -215,8 +215,8 @@ function register_event_speakers_meta(): void {
 					'items' => array( 'type' => 'integer' ),
 				),
 			),
-			'auth_callback' => static function () {
-				return current_user_can( 'edit_posts' );
+			'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
+				return current_user_can( 'edit_post', (int) $post_id );
 			},
 		)
 	);

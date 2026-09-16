@@ -12,6 +12,7 @@ use GatherPress\Core\Rsvp\Cache;
 use GatherPress\Core\Rsvp\Response\Status;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Utility;
+use WP_Post;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -28,7 +29,7 @@ final class Rest_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( self::class, 'occurrences' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( self::class, 'can_read_occurrences' ),
 				'args'                => array(
 					'post_id' => array(
 						'sanitize_callback' => 'absint',
@@ -56,7 +57,7 @@ final class Rest_API {
 			array(
 				'methods'             => WP_REST_Server::EDITABLE,
 				'callback'            => array( self::class, 'update_rsvp' ),
-				'permission_callback' => static fn() => is_user_logged_in(),
+				'permission_callback' => static fn( WP_REST_Request $request ) => is_user_logged_in() && self::can_read( $request ),
 			)
 		);
 
@@ -66,7 +67,7 @@ final class Rest_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( self::class, 'responses' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( self::class, 'can_read' ),
 			)
 		);
 
@@ -211,6 +212,44 @@ final class Rest_API {
 				'success' => Occurrences::end_after( (int) $request['post_id'], (string) $request['recurrence_id'] ),
 			)
 		);
+	}
+
+	/**
+	 * Whether the caller may read an event's RSVP data.
+	 *
+	 * Defers to GatherPress so these routes stay in step with the visibility
+	 * its own RSVP routes apply.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool Whether the read is allowed.
+	 */
+	public static function can_read( WP_REST_Request $request ): bool {
+		return Event::can_read_rsvps( (int) $request->get_param( 'post_id' ) );
+	}
+
+	/**
+	 * Whether the caller may read a series' projected occurrences.
+	 *
+	 * The schedule follows the series post itself rather than its RSVP data,
+	 * so it stays readable on a site that has RSVPs switched off.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool Whether the read is allowed.
+	 */
+	public static function can_read_occurrences( WP_REST_Request $request ): bool {
+		$post = get_post( (int) $request->get_param( 'post_id' ) );
+
+		if ( ! $post instanceof WP_Post ) {
+			return false;
+		}
+
+		if ( current_user_can( 'edit_post', $post->ID ) ) {
+			return true;
+		}
+
+		return 'publish' === $post->post_status
+			? ! post_password_required( $post )
+			: current_user_can( 'read_post', $post->ID );
 	}
 
 	/**

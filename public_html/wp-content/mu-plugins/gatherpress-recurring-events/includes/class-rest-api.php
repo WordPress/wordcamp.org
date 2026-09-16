@@ -44,10 +44,22 @@ final class Rest_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => static function (): WP_REST_Response {
+					// Our own pages need no CORS headers to read the nonce, and
+					// the nonce is user-bound, so no foreign origin gets to see
+					// one minted from the caller's cookie.
+					remove_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' );
+
 					Utility::ensure_user_authentication();
-					return new WP_REST_Response( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
+
+					$response = new WP_REST_Response( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
+
+					// The answer depends on the origin, so nothing in front of
+					// us may serve one origin's response to another.
+					$response->header( 'Vary', 'Origin' );
+
+					return $response;
 				},
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( self::class, 'is_same_origin_request' ),
 			)
 		);
 
@@ -250,6 +262,63 @@ final class Rest_API {
 		return 'publish' === $post->post_status
 			? ! post_password_required( $post )
 			: current_user_can( 'read_post', $post->ID );
+	}
+
+	/**
+	 * Whether the request comes from this site rather than another origin.
+	 *
+	 * Browsers send an `Origin` header with every cross-origin request, so a
+	 * request without one, or with the exact origin of the site's home, site
+	 * or admin URL, is our own. Core's CORS allow-list is not used: it drops
+	 * the port and can be widened by filters.
+	 *
+	 * Mirrors `Utility::is_same_origin_request()` upstream. Drop this in
+	 * favour of that once the GatherPress release carrying it is pinned.
+	 *
+	 * @return bool Whether the request has no origin or this site's own.
+	 */
+	public static function is_same_origin_request(): bool {
+		$origin = get_http_origin();
+
+		if ( '' === $origin ) {
+			return true;
+		}
+
+		$origin       = self::url_origin( $origin );
+		$site_origins = array_map(
+			array( self::class, 'url_origin' ),
+			array( home_url(), site_url(), admin_url() )
+		);
+
+		return '' !== $origin && in_array( $origin, $site_origins, true );
+	}
+
+	/**
+	 * The normalized origin of a URL.
+	 *
+	 * Lowercases the scheme and host and keeps the port only when it is not
+	 * the scheme's default, so equal origins compare equal as strings.
+	 *
+	 * @param string $url URL or origin.
+	 * @return string Origin, or an empty string when the URL has no scheme or host.
+	 */
+	private static function url_origin( string $url ): string {
+		$parts = wp_parse_url( $url );
+
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+
+		$scheme        = strtolower( $parts['scheme'] );
+		$default_ports = array(
+			'http'  => 80,
+			'https' => 443,
+		);
+		$port          = isset( $parts['port'] ) && ( $default_ports[ $scheme ] ?? null ) !== $parts['port']
+			? ':' . $parts['port']
+			: '';
+
+		return $scheme . '://' . strtolower( $parts['host'] ) . $port;
 	}
 
 	/**

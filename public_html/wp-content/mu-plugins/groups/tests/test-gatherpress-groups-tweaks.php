@@ -215,6 +215,227 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Read the archive's Format filter options as the query-filter block would.
+	 *
+	 * @param string|null $event_format The `event_format` query arg to simulate.
+	 */
+	private function get_event_format_filter( ?string $event_format ): array {
+		if ( null === $event_format ) {
+			unset( $_GET['event_format'] );
+		} else {
+			$_GET['event_format'] = $event_format;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_format', array() );
+
+		unset( $_GET['event_format'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The Format toggle names its applied choice, exactly as Time does — same
+	 * control, same reason (#2059).
+	 */
+	public function test_event_format_filter_names_every_view() {
+		$this->assertSame( 'Format: All', $this->get_event_format_filter( null )['label'] );
+		$this->assertSame( 'Format: All', $this->get_event_format_filter( 'all' )['label'] );
+		$this->assertSame( 'Format: In person', $this->get_event_format_filter( 'in-person' )['label'] );
+		$this->assertSame( 'Format: Online', $this->get_event_format_filter( 'online' )['label'] );
+	}
+
+	/**
+	 * A hand-typed value that isn't one of the three widens the view back to
+	 * "All" rather than emptying the archive.
+	 */
+	public function test_event_format_filter_ignores_an_unknown_value() {
+		$filter = $this->get_event_format_filter( 'hybrid' );
+
+		$this->assertSame( 'Format: All', $filter['label'] );
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * Build the tax query the archive's Query Loop would run.
+	 *
+	 * @param string|null $event_format The `event_format` query arg to simulate.
+	 */
+	private function get_archive_query_vars( ?string $event_format ): array {
+		if ( null === $event_format ) {
+			unset( $_GET['event_format'] );
+		} else {
+			$_GET['event_format'] = $event_format;
+		}
+
+		$block = new \WP_Block(
+			array(
+				'blockName'   => 'core/query',
+				'attrs'       => array(),
+				'innerBlocks' => array(),
+			)
+		);
+
+		$block->context = array(
+			'query' => array(
+				'postType'                => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+			),
+		);
+
+		$query_vars = apply_filters(
+			'query_loop_block_query_vars',
+			array( 'post_type' => 'gatherpress_event' ),
+			$block
+		);
+
+		unset( $_GET['event_format'] );
+
+		return $query_vars;
+	}
+
+	/**
+	 * Create a published event, optionally marked online.
+	 *
+	 * @param string $title     Event title.
+	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_format_event( string $title, bool $is_online ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+
+		if ( $is_online ) {
+			$taxonomy = \GatherPress\Core\Venue\Setup::get_instance()->taxonomy_for_event_post_type(
+				\GatherPress\Core\Event\Event::POST_TYPE
+			);
+
+			wp_set_object_terms( $event_id, 'online-event', $taxonomy );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * "Online" narrows to the events carrying GatherPress's `online-event`
+	 * venue term.
+	 */
+	public function test_event_format_filter_narrows_to_online_events() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query_vars = $this->get_archive_query_vars( 'online' );
+
+		$this->assertSame( array( $online ), $query_vars['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
+	}
+
+	/**
+	 * "In person" is the absence of that term, so an event with no venue at
+	 * all counts as in person — it is certainly not online.
+	 */
+	public function test_event_format_filter_treats_a_venueless_event_as_in_person() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Event with no venue', false );
+
+		$query_vars = $this->get_archive_query_vars( 'in-person' );
+
+		$this->assertSame( array( $online ), $query_vars['post__not_in'] );
+		$this->assertArrayNotHasKey( 'post__in', $query_vars );
+	}
+
+	/**
+	 * A group that runs nothing online should show an empty "Online" view, not
+	 * its whole archive. WP_Query ignores an empty `post__in`, so the filter
+	 * has to say "no posts" explicitly.
+	 */
+	public function test_event_format_filter_shows_nothing_when_no_events_are_online() {
+		$this->make_format_event( 'Hall meetup', false );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online' )['post__in'] );
+	}
+
+	/**
+	 * The filter must never put a tax query on the archive's own query.
+	 *
+	 * A tax query joins `term_relationships`, which makes WP_Query select
+	 * `DISTINCT` — and that collapses the duplicate rows
+	 * `gatherpress-recurring-events` adds in `Query::clauses()` to turn a
+	 * series into one row per date. Filtering by format would then show a
+	 * weekly series once instead of on each of its dates, silently and only
+	 * while a filter is applied.
+	 */
+	public function test_event_format_filter_keeps_a_tax_query_off_the_archive_query() {
+		$this->make_format_event( 'Online office hours', true );
+
+		foreach ( array( 'online', 'in-person' ) as $format ) {
+			$this->assertArrayNotHasKey(
+				'tax_query',
+				$this->get_archive_query_vars( $format ),
+				"A tax query on the {$format} view would collapse recurring occurrences."
+			);
+		}
+	}
+
+	/**
+	 * "All" is the absence of a constraint, not a third thing to match.
+	 */
+	public function test_event_format_filter_constrains_nothing_when_showing_all() {
+		foreach ( array( null, 'all' ) as $format ) {
+			$query_vars = $this->get_archive_query_vars( $format );
+
+			$this->assertArrayNotHasKey( 'post__in', $query_vars );
+			$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
+			$this->assertArrayNotHasKey( 'tax_query', $query_vars );
+		}
+	}
+
+	/**
+	 * Each filter's form holds only its own control, so without this the two
+	 * filters would reset each other and the search term on every submit.
+	 */
+	public function test_filter_forms_carry_the_other_view_state() {
+		$_GET['event_time']   = 'past';
+		$_GET['event_format'] = 'online';
+		$_GET['s']            = 'meetup';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_format' );
+		$format_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		unset( $_GET['event_time'], $_GET['event_format'], $_GET['s'] );
+
+		// Each form carries the sibling filter and the search, never its own
+		// key -- the control itself already submits that.
+		$this->assertStringContainsString( 'name="event_time" value="past"', $format_form );
+		$this->assertStringContainsString( 'name="s" value="meetup"', $format_form );
+		$this->assertStringNotContainsString( 'name="event_format"', $format_form );
+
+		$this->assertStringContainsString( 'name="event_format" value="online"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_time"', $time_form );
+	}
+
+	/**
+	 * Nothing applied, nothing carried: a default view should not litter the
+	 * form with hidden inputs restating the default.
+	 */
+	public function test_filter_forms_carry_nothing_on_the_default_view() {
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+
+		$this->assertSame( '', ob_get_clean() );
+	}
+
+	/**
 	 * Venues are metadata on events, not their own front-end destination -
 	 * confirm the post type stays non-public even though GatherPress itself
 	 * registers it.

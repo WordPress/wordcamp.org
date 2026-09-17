@@ -61,8 +61,18 @@ foreach ( $wporg_event_posts as $wporg_event_post ) {
 	$wporg_events_by_id[ $wporg_event_post->ID ] = $wporg_event_post;
 }
 
+/*
+ * The `id` is the header's "My events" link target (#2060): the section only
+ * exists on the group's front page, so the link is an anchor into it rather
+ * than a route of its own. A member with nothing upcoming has no section to
+ * jump to and lands at the top of the front page, which is the same trade the
+ * block already makes by rendering nothing.
+ */
 $wporg_wrapper_attributes = get_block_wrapper_attributes(
-	array( 'class' => 'wporg-my-events' )
+	array(
+		'class' => 'wporg-my-events',
+		'id'    => 'my-events',
+	)
 );
 ?>
 <section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>

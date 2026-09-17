@@ -638,6 +638,40 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The section the block does render carries the `my-events` anchor the
+	 * header's "My events" link points at (#2060). The link is an anchor into
+	 * the group's front page rather than a route of its own, so the id is the
+	 * whole contract between the two.
+	 */
+	public function test_my_events_block_renders_the_header_link_anchor() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup worth finding',
+				'post_author' => $member_id,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString( 'A meetup worth finding', $output );
+		$this->assertStringContainsString( 'id="my-events"', $output );
+	}
+
+	/**
 	 * Empty news blocks leave no heading or wrapper markup.
 	 */
 	public function test_group_news_block_is_hidden_without_posts() {

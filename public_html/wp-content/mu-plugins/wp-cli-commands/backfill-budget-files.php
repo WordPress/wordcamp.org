@@ -241,9 +241,12 @@ class Command extends WP_CLI_Command {
 				$attached[ $this->file_key( $candidate ) ][] = (int) $site->blog_id;
 			}
 
-			$unmarked = array_filter( $attached_candidates, fn( $candidate ) => ! $candidate->marked );
+			// Only what a `backfill` would still change, so a site drops out of the report once it has been done.
+			$is_unmarked = fn( $candidate ) => ! $candidate->marked;
+			$unmarked    = array_filter( $attached_candidates, $is_unmarked );
+			$unattached  = array_values( array_filter( $unattached_candidates, $is_unmarked ) );
 
-			if ( ! $unmarked && ! $unattached_candidates ) {
+			if ( ! $unmarked && ! $unattached ) {
 				continue;
 			}
 
@@ -251,7 +254,7 @@ class Command extends WP_CLI_Command {
 				'blog_id'    => (int) $site->blog_id,
 				'url'        => $site->domain . $site->path,
 				'attached'   => count( $unmarked ),
-				'unattached' => $unattached_candidates,
+				'unattached' => $unattached,
 			);
 		}
 

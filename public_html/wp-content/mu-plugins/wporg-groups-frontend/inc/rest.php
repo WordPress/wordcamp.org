@@ -71,6 +71,7 @@ const NAMESPACE_V1 = 'wporg-groups/v1';
  */
 function bootstrap(): void {
 	add_action( 'rest_api_init', __NAMESPACE__ . '\register_routes' );
+	add_filter( 'rest_gatherpress_event_query', __NAMESPACE__ . '\apply_requested_event_list_type', 20, 2 );
 }
 
 /**
@@ -409,11 +410,11 @@ function publish_existing_event_permissions_check( WP_REST_Request $request ): b
 }
 
 /**
- * Capability check for the RSVP route — any logged-in visitor may RSVP to a
- * published event, exactly as with GatherPress's own RSVP endpoint.
+ * Capability check for the RSVP route — mirrors the gate GatherPress's own
+ * RSVP endpoint applies.
  */
-function rsvp_permissions_check(): bool {
-	return is_user_logged_in();
+function rsvp_permissions_check( WP_REST_Request $request ): bool {
+	return is_user_logged_in() && Event::can_read_rsvps( (int) $request->get_param( 'id' ) );
 }
 
 /**
@@ -1044,13 +1045,6 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	if ( $fields['time_start'] === $fields['time_end'] ) {
 		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
 	}
-	if ( $fields['is_online'] && '' === $fields['online_event_link'] ) {
-		return new WP_Error(
-			'wporg_groups_missing_online_event_link',
-			'Online event link is required for online events.',
-			array( 'status' => 400 )
-		);
-	}
 
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
@@ -1243,4 +1237,43 @@ function sync_online_event_link( int $event_id, bool $is_online, string $online_
 	}
 
 	delete_post_meta( $event_id, 'gatherpress_online_event_link' );
+}
+
+/**
+ * Let the settings tab choose which slice of the event list it is asking for.
+ *
+ * GatherPress scopes an events query to upcoming dates by attaching
+ * `Event\Query::adjust_sorting_for_upcoming_events()` to `posts_clauses`, and
+ * the core REST collection this tab reads inherits it. That left the tab
+ * permanently reporting "No past events." and hiding every draft whose date
+ * had passed (#1977). The clause is real:
+ *
+ *     AND COALESCE( gpre_occ_query.datetime_end_gmt, …datetime_end_gmt ) >= NOW()
+ *
+ * Detaching the filter here would not hold, because GatherPress reattaches it
+ * from `pre_get_posts`, which runs later. Set the list type its switch reads
+ * instead: 'past' flips the comparison, and anything outside 'upcoming' and
+ * 'past' takes the `default:` branch where GatherPress detaches both clause
+ * filters itself.
+ *
+ * Opt-in, so nothing else querying this collection changes. Registered at
+ * priority 20, not the default 10: GatherPress sets this same arg from its own
+ * callback on this filter, and at equal priority it is registered later and
+ * would overwrite this.
+ *
+ * @param array            $args    Query args destined for WP_Query.
+ * @param \WP_REST_Request $request The REST request being served.
+ *
+ * @return array The args, with the list type applied when one was asked for.
+ */
+function apply_requested_event_list_type( array $args, $request ): array {
+	$requested = (string) $request->get_param( 'wporg_groups_event_list' );
+
+	if ( ! in_array( $requested, array( 'all', 'upcoming', 'past' ), true ) ) {
+		return $args;
+	}
+
+	$args['gatherpress_event_query'] = $requested;
+
+	return $args;
 }

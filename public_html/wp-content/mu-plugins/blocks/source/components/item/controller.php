@@ -8,6 +8,10 @@ defined( 'WPINC' ) || die();
 /**
  * Render HTML for a title with specified heading level and optionally a link.
  *
+ * The title is concatenated into post content, which core parses for shortcodes, so its
+ * delimiters are encoded. `esc_html()` would double-encode the entities a stored title
+ * already carries, see `wcorg_sanitize_plain_text()`.
+ *
  * @param string $title
  * @param string $link
  * @param int    $heading_level
@@ -45,7 +49,7 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
 	if ( $link ) {
 		$output .= '<a href="' . esc_url( $link ) . '">';
 	}
-	$output .= $title;
+	$output .= wcorg_escape_shortcodes( $title );
 	if ( $link ) {
 		$output .= '</a>';
 	}

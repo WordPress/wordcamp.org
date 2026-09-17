@@ -187,7 +187,7 @@ jobs:
     - name: Install GatherPress on the groups site
       run: |
         docker compose exec -T wordcamp.test wp plugin install \
-          https://github.com/GatherPress/gatherpress/releases/download/0.35.2/gatherpress.0.35.2.zip \
+          https://github.com/GatherPress/gatherpress/releases/download/0.35.4/gatherpress.0.35.4.zip \
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
@@ -206,6 +206,29 @@ jobs:
         }
         pids=()
         create_user organiser1 editor & pids+=( "$!" )
+        # event-form.spec.js exercises both event-form surfaces, which
+        # needs the editor tier; one account per test for the same reason
+        # as the per-spec author accounts below.
+        create_user organiser2 editor & pids+=( "$!" )
+        create_user organiser3 editor & pids+=( "$!" )
+        create_user organiser4 editor & pids+=( "$!" )
+        # event-card-clickability.spec.js publishes its own event through the
+        # front-end modal rather than reading whatever the archive holds: no
+        # events are seeded here, and the specs that create them run
+        # concurrently with it.
+        create_user organiser5 editor & pids+=( "$!" )
+        # event-rsvp-cancel.spec.js publishes its own event through the
+        # front-end modal and then RSVPs to it, so it needs the editor tier
+        # and an account no concurrent spec is logged into.
+        create_user organiser6 editor & pids+=( "$!" )
+        # add-to-calendar.spec.js publishes its own event through the
+        # front-end modal, for the same reason as organiser5's spec: no
+        # events are seeded here.
+        create_user organiser7 editor & pids+=( "$!" )
+        # event-edit-surface.spec.js publishes its own event through the
+        # front-end modal and then opens it from the event page, so it needs
+        # the editor tier and an account of its own.
+        create_user organiser8 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

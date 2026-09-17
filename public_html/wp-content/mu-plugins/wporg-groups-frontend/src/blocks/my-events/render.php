@@ -8,6 +8,10 @@
  * rather than written into the RSVP data, so "attending" keeps meaning that the
  * person said they are coming (#1810).
  *
+ * A recurring series is one post with many dates, so the list is of dates
+ * rather than events (#2056): a member sees the occurrence they RSVP'd to,
+ * and its card links to that occurrence rather than to the series.
+ *
  * Renders nothing when the member has no upcoming events, so the surrounding
  * page content gets the visibility instead of a permanent empty-state message.
  * Safe because authored events are part of the query (#1810): an empty result
@@ -17,34 +21,44 @@
  * @package WordCamp\Groups\Frontend
  */
 
-use function WordCamp\Groups\Frontend\My_Events\get_upcoming_event_ids;
+use function WordCamp\Groups\Frontend\My_Events\get_entry_url;
+use function WordCamp\Groups\Frontend\My_Events\get_upcoming_events;
 
 if ( ! is_user_logged_in() || ! is_user_member_of_blog() ) {
 	return;
 }
 
-$wporg_upcoming_ids = get_upcoming_event_ids( get_current_user_id() );
+$wporg_upcoming = get_upcoming_events( get_current_user_id() );
 
-if ( empty( $wporg_upcoming_ids ) ) {
+if ( empty( $wporg_upcoming ) ) {
 	return;
 }
 
 /*
  * Uncapped on purpose: the block exists so a member can confirm their event is
  * listed (#1810), and truncating could hide the one they came to check.
+ *
+ * One query for the posts behind the dates, rather than one per card: a
+ * recurring series is several dates on the same post (#2056).
  */
-$wporg_upcoming_events = get_posts(
+$wporg_event_ids = array_values( array_unique( array_column( $wporg_upcoming, 'event_id' ) ) );
+
+$wporg_event_posts = get_posts(
 	array(
 		'post_type'      => 'gatherpress_event',
 		'post_status'    => 'publish',
-		'post__in'       => $wporg_upcoming_ids,
-		'orderby'        => 'post__in',
-		'posts_per_page' => count( $wporg_upcoming_ids ),
+		'post__in'       => $wporg_event_ids,
+		'posts_per_page' => count( $wporg_event_ids ),
 	)
 );
 
-if ( empty( $wporg_upcoming_events ) ) {
+if ( empty( $wporg_event_posts ) ) {
 	return;
+}
+
+$wporg_events_by_id = array();
+foreach ( $wporg_event_posts as $wporg_event_post ) {
+	$wporg_events_by_id[ $wporg_event_post->ID ] = $wporg_event_post;
 }
 
 $wporg_wrapper_attributes = get_block_wrapper_attributes(
@@ -57,8 +71,13 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 	</h2>
 	<div class="wporg-my-events__list">
 		<?php
-		foreach ( $wporg_upcoming_events as $wporg_event_post ) :
-			$wporg_start      = get_post_meta( $wporg_event_post->ID, 'gatherpress_datetime_start', true );
+		foreach ( $wporg_upcoming as $wporg_entry ) :
+			if ( ! isset( $wporg_events_by_id[ $wporg_entry['event_id'] ] ) ) {
+				continue;
+			}
+
+			$wporg_event_post = $wporg_events_by_id[ $wporg_entry['event_id'] ];
+			$wporg_start      = $wporg_entry['start'];
 			$wporg_date_label = '';
 			$wporg_date_attr  = '';
 
@@ -90,7 +109,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 					</p>
 				<?php endif; ?>
 				<h3 class="wporg-my-events__title">
-					<a href="<?php echo esc_url( get_permalink( $wporg_event_post->ID ) ); ?>">
+					<a href="<?php echo esc_url( get_entry_url( $wporg_entry['event_id'], $wporg_entry['recurrence_id'] ) ); ?>">
 						<?php echo esc_html( get_the_title( $wporg_event_post->ID ) ); ?>
 					</a>
 				</h3>

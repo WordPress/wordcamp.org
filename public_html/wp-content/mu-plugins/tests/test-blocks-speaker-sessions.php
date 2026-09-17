@@ -106,6 +106,24 @@ class Test_Speaker_Sessions_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A session title is listed as text, not run through the shortcode parser.
+	 *
+	 * The block's output is concatenated into post content, which core parses at
+	 * `the_content` priority 11.
+	 */
+	public function test_session_title_is_listed_as_text() {
+		wp_set_current_user( 0 );
+
+		$this->add_session( 'Escaped [caption width=1]x[/caption] session', 'publish', 0 );
+
+		$output = $this->render_block();
+
+		$this->assertStringContainsString( 'Escaped', $output );
+		$this->assertStringNotContainsString( '[caption', $output );
+		$this->assertSame( $output, do_shortcode( $output ) );
+	}
+
+	/**
 	 * Test that a logged out visitor is only asked about published sessions.
 	 */
 	public function test_logged_out_gets_published_status_only() {

@@ -110,6 +110,105 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The speaker list should stay behind an event's password gate.
+	 */
+	public function test_event_speakers_hides_speakers_behind_the_password_gate() {
+		$speaker_id = self::factory()->user->create(
+			array(
+				'display_name' => 'Speaker Behind The Gate',
+				'description'  => 'Bio that should not leak.',
+			)
+		);
+		$event_id   = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked Speaker Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		update_post_meta( $event_id, '_event_speakers', array( $speaker_id ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $locked );
+
+		// `preview` is a plain query var with no capability check behind it
+		// (`WP_Query::parse_query()` sets `is_preview` for any non-empty
+		// value), so it must not reopen the gate for an anonymous visitor.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Speaker Behind The Gate', $unlocked );
+	}
+
+	/**
+	 * The attendee roster should stay behind an event's password gate.
+	 */
+	public function test_event_rsvp_hides_attendees_behind_the_password_gate() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked RSVP Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+		$user_id  = self::factory()->user->create(
+			array(
+				'display_name' => 'Attendee Behind The Gate',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $locked );
+
+		// Same for the roster: `preview` is visitor-settable, so the gate has
+		// to hold with it set.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		// The same viewer sees the roster once the password has been entered.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Attendee Behind The Gate', $unlocked );
+	}
+
+	/**
 	 * The RSVP action should precede the attendee summary in the rendered block.
 	 */
 	public function test_event_rsvp_action_precedes_attendee_summary() {
@@ -157,6 +256,92 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'aria-live="polite"', $output );
 		$this->assertStringContainsString( 'aria-atomic="true"', $output );
 		$this->assertStringContainsString( 'data-wp-text="context.rsvpNotice"', $output );
+	}
+
+	/**
+	 * An attendee can withdraw from the event page itself.
+	 *
+	 * Cancelling used to be reachable only by pressing the "Attending"
+	 * button — which reports status rather than offering an action — and
+	 * finding "Cancel RSVP" in the modal it opens (#2058).
+	 */
+	public function test_event_rsvp_offers_cancelling_on_the_page_while_attending() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Cancellable RSVP Event',
+			)
+		);
+		$user_id  = self::factory()->user->create();
+
+		wp_set_current_user( $user_id );
+
+		$response = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$this->assertSame( 'attending', $response['status'] );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$cancel_position = strpos( $output, 'class="wporg-event-rsvp__cancel"' );
+		$modal_position  = strpos( $output, 'class="wporg-event-rsvp__modal"' );
+
+		$this->assertNotFalse( $cancel_position, 'No cancel control on the page for somebody who is attending.' );
+		$this->assertLessThan(
+			$modal_position,
+			$cancel_position,
+			'The cancel control is inside the modal again, which is what put it out of reach.'
+		);
+
+		// The same action the modal's own button calls, so there is one way
+		// to withdraw rather than two implementations of it.
+		$this->assertStringContainsString( 'data-wp-on--click="actions.toggleRsvp"', $output );
+	}
+
+	/**
+	 * Somebody who isn't attending has nothing to cancel, so the control ships
+	 * hidden rather than absent: the RSVP button changes status without a
+	 * reload, and `state.isNotAttending` can only reveal an element that is
+	 * already in the DOM.
+	 */
+	public function test_event_rsvp_cancel_ships_hidden_for_a_non_attendee() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Uncancelled RSVP Event',
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create() );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__cancel is-hidden"', $output );
+		$this->assertStringContainsString( 'data-wp-class--is-hidden="state.isNotAttending"', $output );
+	}
+
+	/**
+	 * A logged-out visitor has no RSVP to cancel and no way to make one
+	 * without leaving the page, so the control isn't rendered at all.
+	 */
+	public function test_event_rsvp_cancel_is_absent_for_a_logged_out_visitor() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Logged Out RSVP Event',
+			)
+		);
+
+		wp_set_current_user( 0 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__cancel', $output );
 	}
 
 	/**

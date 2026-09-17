@@ -430,6 +430,34 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
 }
 
 /**
+ * Encode the shortcode delimiters in submitted text.
+ *
+ * Submitted free-text is stored and later rendered inside post content, where core parses shortcodes.
+ * Encoding the `[` and `]` delimiters keeps that text as literal characters, so a submission is shown
+ * as written rather than run. The result reads as `[` and `]` to a human.
+ *
+ * Applying this twice is a no-op: `&#91;` and `&#93;` contain no delimiter of their own. The result is
+ * HTML-encoded, so decode it for a plain-text medium the same way `wcorg_sanitize_plain_text()` output
+ * is decoded.
+ *
+ * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
+ *                     scalar becomes `''`.
+ *
+ * @return string|array A string, or an array of strings when `$value` is an array.
+ */
+function wcorg_escape_shortcodes( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wcorg_escape_shortcodes', $value );
+	}
+
+	if ( ! is_scalar( $value ) ) {
+		return '';
+	}
+
+	return str_replace( array( '[', ']' ), array( '&#91;', '&#93;' ), (string) $value );
+}
+
+/**
  * Reduce a submitted value to text that stays text once WordPress saves it.
  *
  * `strip_tags()` wants a letter, `/`, `!` or `?` after a `<` before it counts as a tag, but `wp_kses()`

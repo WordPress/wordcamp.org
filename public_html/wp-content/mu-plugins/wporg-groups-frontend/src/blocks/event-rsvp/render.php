@@ -31,6 +31,12 @@ if ( ! is_preview() && 'publish' !== get_post_status( $event_post_id ) ) {
 	return;
 }
 
+// The roster follows the event's password gate. Unconditional: `preview` is
+// a plain query var any visitor can set, so it must not relax this.
+if ( post_password_required( $event_post_id ) ) {
+	return;
+}
+
 $event    = new Event( $event_post_id );
 $rsvp     = new Rsvp( $event_post_id );
 $is_past   = $event->has_event_past();
@@ -157,6 +163,8 @@ $context = array(
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
+	'rsvpNoticeSuccess' => false,
+	'rsvpNoticeError'   => false,
 	'questionsError'    => '',
 	'labels'            => $rsvp_labels,
 );
@@ -233,6 +241,34 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		</div>
 	<?php endif; ?>
 
+	<?php if ( ! $is_past && $is_login ) : ?>
+		<?php
+		/*
+		 * Cancelling used to be reachable only by clicking the "Attending"
+		 * button, which says what your status is rather than what pressing it
+		 * will do, and then finding the action inside the modal it opens
+		 * (#2058). Say it on the page instead. Same `toggleRsvp` action the
+		 * modal's button calls, so there is one way to withdraw and both
+		 * doors lead to it.
+		 *
+		 * Rendered for every signed-in visitor and hidden until they are
+		 * attending, rather than rendered on demand: the button above changes
+		 * status without a reload, so the control has to already be in the
+		 * DOM for `state.isNotAttending` to reveal it.
+		 */
+		?>
+		<button
+			type="button"
+			class="wporg-event-rsvp__cancel<?php echo $is_attending ? '' : ' is-hidden'; ?>"
+			data-wp-on--click="actions.toggleRsvp"
+			data-wp-class--is-hidden="state.isNotAttending"
+			data-wp-bind--disabled="context.rsvpLoading"
+			data-wp-bind--aria-busy="context.rsvpLoading"
+		>
+			<?php echo esc_html( $cancel_rsvp ); ?>
+		</button>
+	<?php endif; ?>
+
 	<button
 		type="button"
 		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
@@ -267,6 +303,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		aria-live="polite"
 		aria-atomic="true"
 		data-wp-text="context.rsvpNotice"
+		data-wp-class--screen-reader-text="!context.rsvpNotice"
+		data-wp-class--is-success="context.rsvpNoticeSuccess"
+		data-wp-class--is-error="context.rsvpNoticeError"
 	></p>
 
 	<div
@@ -340,6 +379,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									id="<?php echo esc_attr( $error_id ); ?>"
 									data-wp-text="context.questionsError"
 								></p>
+							</fieldset>
+						<?php endif; ?>
+
+						<div class="wporg-event-rsvp__modal-buttons">
+							<?php if ( $questions ) : ?>
 								<button
 									type="button"
 									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $is_attending ? '' : ' is-hidden'; ?>"
@@ -350,26 +394,26 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								>
 									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
 								</button>
-							</fieldset>
-						<?php endif; ?>
+							<?php endif; ?>
 
-						<button
-							type="button"
-							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
-							data-wp-on--click="actions.toggleRsvp"
-							data-wp-text="state.modalRsvpLabel"
-							data-wp-class--is-attending="state.isAttending"
-							data-wp-bind--disabled="context.rsvpLoading"
-							data-wp-bind--aria-busy="context.rsvpLoading"
-						>
-							<?php
-							if ( $is_attending ) {
-								echo esc_html( $cancel_rsvp );
-							} else {
-								esc_html_e( 'Attend', 'wporg-groups-frontend' );
-							}
-							?>
-						</button>
+							<button
+								type="button"
+								class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
+								data-wp-on--click="actions.toggleRsvp"
+								data-wp-text="state.modalRsvpLabel"
+								data-wp-class--is-attending="state.isAttending"
+								data-wp-bind--disabled="context.rsvpLoading"
+								data-wp-bind--aria-busy="context.rsvpLoading"
+							>
+								<?php
+								if ( $is_attending ) {
+									echo esc_html( $cancel_rsvp );
+								} else {
+									esc_html_e( 'Attend', 'wporg-groups-frontend' );
+								}
+								?>
+							</button>
+						</div>
 					<?php else : ?>
 						<p class="wporg-event-rsvp__modal-status">
 							<?php

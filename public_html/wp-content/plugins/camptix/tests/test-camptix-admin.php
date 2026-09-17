@@ -87,6 +87,14 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$coupons   = array();
 		self::$attendees = array();
 
+		remove_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		remove_filter( 'query', array( $this, 'record_query' ) );
+		remove_filter( 'camptix_stripe_checkout_session_lifetime', array( $this, 'one_hour' ) );
+		self::$camptix->load_options();
+		self::$camptix->release_checkout_rows();
+		$this->seen_queries = array();
+		wp_set_current_user( 0 );
+
 		unset(
 			$_GET['post_type'],
 			$_GET['s'],
@@ -129,6 +137,28 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$tickets[] = $post_id;
 
 		return $post_id;
+	}
+
+	/**
+	 * Enable reservations and attach a quantity-1 'speakertoken' reservation to a ticket.
+	 *
+	 * @param int $ticket_id Ticket post ID.
+	 */
+	protected function create_reservation( $ticket_id ) {
+		add_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
+		add_post_meta(
+			$ticket_id,
+			'tix_reservation',
+			array(
+				'id'        => 'speakers',
+				'token'     => 'speakertoken',
+				'quantity'  => 1,
+				'name'      => 'Speakers',
+				'ticket_id' => $ticket_id,
+			)
+		);
 	}
 
 	/**
@@ -186,6 +216,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'coupon_id'        => '',
 			'payment_method'   => '',
 			'reservation'      => '',
+			'timestamp'        => 0,
+			'username'         => '',
+			'payment_token'    => '',
 		);
 		$args     = wp_parse_args( $args, $defaults );
 
@@ -216,6 +249,24 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		}
 		if ( ! empty( $args['reservation'] ) ) {
 			update_post_meta( $post_id, 'tix_reservation_token', $args['reservation'] );
+		}
+		if ( ! empty( $args['timestamp'] ) ) {
+			update_post_meta( $post_id, 'tix_timestamp', $args['timestamp'] );
+		}
+		if ( ! empty( $args['username'] ) ) {
+			update_post_meta( $post_id, 'tix_username', $args['username'] );
+		}
+		if ( ! empty( $args['payment_token'] ) ) {
+			update_post_meta( $post_id, 'tix_payment_token', $args['payment_token'] );
+			// payment_result() reads the order off the attendee; give it a valid empty one.
+			update_post_meta(
+				$post_id,
+				'tix_order',
+				array(
+					'items' => array(),
+					'total' => 0,
+				)
+			);
 		}
 
 		self::$attendees[] = $post_id;
@@ -299,13 +350,68 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify draft attendees do not count toward purchased tickets.
+	 * A draft attendee is a checkout waiting on the payment gateway. It holds its
+	 * seat, so the ticket cannot be sold again underneath it.
 	 */
-	public function test_remaining_tickets_ignores_draft_attendees() {
+	public function test_remaining_tickets_counts_draft_attendees() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
 
+		$this->assertSame( 9, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout that ended without a sale releases its seat.
+	 *
+	 * @testWith ["cancel"]
+	 *           ["failed"]
+	 *           ["timeout"]
+	 *           ["refund"]
+	 */
+	public function test_remaining_tickets_ignores_finished_checkouts( $status ) {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
+		$this->create_attendee( $ticket_id, array( 'status' => $status ) );
+
 		$this->assertSame( 10, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout abandoned more than 24 hours ago is timed out by the sweep and
+	 * its seat goes back on sale. A younger one is left alone.
+	 */
+	public function test_timeout_sweep_releases_abandoned_checkout() {
+		$ticket_id   = $this->create_ticket( array( 'quantity' => 2 ) );
+		$abandoned   = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'timestamp' => time() - 25 * HOUR_IN_SECONDS,
+			)
+		);
+		$in_progress = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'timestamp' => time() - HOUR_IN_SECONDS,
+			)
+		);
+
+		$this->assertSame( 0, self::$camptix->get_remaining_tickets( $ticket_id ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( 'timeout', get_post_status( $abandoned ) );
+		$this->assertSame( 'draft', get_post_status( $in_progress ) );
+		$this->assertSame( 1, self::$camptix->get_remaining_tickets( $ticket_id ) );
+	}
+
+	/**
+	 * The sweep runs on the ten-minute schedule, so an abandoned checkout holds
+	 * its seat for about 24 hours rather than anywhere up to 48.
+	 */
+	public function test_timeout_sweep_runs_every_ten_minutes() {
+		$this->assertNotFalse( has_action( 'tix_scheduled_every_ten_minutes', array( self::$camptix, 'review_timeout_payments' ) ) );
+		$this->assertFalse( has_action( 'tix_scheduled_daily', array( self::$camptix, 'review_timeout_payments' ) ) );
 	}
 
 	/**
@@ -317,16 +423,65 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify only publish and pending attendees count as purchased.
+	 * Verify publish, pending and draft attendees count as purchased, and the
+	 * statuses a checkout ends in without a sale do not.
 	 */
 	public function test_purchased_tickets_count_with_mixed_statuses() {
 		$ticket_id = $this->create_ticket();
 		$this->create_attendee( $ticket_id, array( 'status' => 'publish' ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'pending' ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'cancel' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'failed' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'timeout' ) );
+		$this->create_attendee( $ticket_id, array( 'status' => 'refund' ) );
 
-		// Only publish + pending count as purchased.
-		$this->assertSame( 2, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
+		$this->assertSame( 3, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
+	}
+
+	/**
+	 * A checkout in progress against a reservation uses up one of its seats.
+	 */
+	public function test_reservation_counts_draft_attendees() {
+		add_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+		add_post_meta(
+			$ticket_id,
+			'tix_reservation',
+			array(
+				'id'        => 'speakers',
+				'token'     => 'speakertoken',
+				'quantity'  => 1,
+				'name'      => 'Speakers',
+				'ticket_id' => $ticket_id,
+			)
+		);
+
+		$this->assertTrue( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'status'      => 'draft',
+				'reservation' => 'speakertoken',
+			)
+		);
+
+		$this->assertFalse( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+	}
+
+	/**
+	 * Filter callback for camptix_options: turn reservations on for a test.
+	 *
+	 * @param array $options CampTix options.
+	 * @return array
+	 */
+	public function enable_reservations( $options ) {
+		$options['reservations_enabled'] = true;
+
+		return $options;
 	}
 
 	/**
@@ -613,7 +768,8 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify used coupons count excludes draft attendees.
+	 * Verify used coupons count includes draft attendees (a checkout in progress)
+	 * and excludes ones whose checkout ended without a sale.
 	 */
 	public function test_used_coupons_count() {
 		$ticket_id = $this->create_ticket();
@@ -622,24 +778,568 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'discount_price' => 5.00,
 		) );
 
-		$this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
-		$this->create_attendee(
+		foreach ( array( 'publish', 'pending', 'draft', 'cancel', 'failed', 'timeout', 'refund' ) as $status ) {
+			$this->create_attendee(
+				$ticket_id,
+				array(
+					'coupon_id' => $coupon_id,
+					'status'    => $status,
+				)
+			);
+		}
+
+		$this->assertSame( 3, self::$camptix->get_used_coupons_count( $coupon_id ) );
+	}
+
+	/**
+	 * An order re-checking its own availability (the gateway's final verify_order()
+	 * before charging) must not count its own in-progress drafts against it, or buying
+	 * the last remaining seat would fail.
+	 */
+	public function test_remaining_tickets_excludes_the_orders_own_drafts() {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 1 ) );
+		$own       = $this->create_attendee(
 			$ticket_id,
 			array(
-				'coupon_id' => $coupon_id,
-				'status'    => 'pending',
-			)
-		);
-		// Draft attendee should not count.
-		$this->create_attendee(
-			$ticket_id,
-			array(
-				'coupon_id' => $coupon_id,
 				'status'    => 'draft',
+				'timestamp' => time(),
 			)
 		);
 
-		$this->assertSame( 2, self::$camptix->get_used_coupons_count( $coupon_id ) );
+		// The seat is taken for everyone else.
+		$this->assertSame( 0, self::$camptix->get_remaining_tickets( $ticket_id ) );
+
+		// But the order that owns that draft still sees its seat as available to it.
+		$this->assertSame( 1, self::$camptix->get_remaining_tickets( $ticket_id, false, array( $own ) ) );
+	}
+
+	/**
+	 * The same exclusion applies to the coupon and reservation checks.
+	 */
+	public function test_coupon_and_reservation_exclude_the_orders_own_drafts() {
+		add_filter( 'camptix_options', array( $this, 'enable_reservations' ) );
+		self::$camptix->load_options();
+
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+		add_post_meta(
+			$ticket_id,
+			'tix_reservation',
+			array(
+				'id'        => 'speakers',
+				'token'     => 'speakertoken',
+				'quantity'  => 1,
+				'name'      => 'Speakers',
+				'ticket_id' => $ticket_id,
+			)
+		);
+		$coupon_id = $this->create_coupon(
+			array(
+				'quantity'     => 1,
+				'discount_pct' => 100,
+			)
+		);
+
+		$reservation_draft = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'      => 'draft',
+				'reservation' => 'speakertoken',
+			)
+		);
+		$coupon_draft = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'    => 'draft',
+				'coupon_id' => $coupon_id,
+			)
+		);
+
+		$this->assertFalse( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+		$this->assertTrue( self::$camptix->is_reservation_valid_for_use( 'speakertoken', array( $reservation_draft ) ) );
+
+		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id, array( $coupon_draft ) ) );
+	}
+
+	/**
+	 * SQL statements seen by the checkout-lock tests, in order.
+	 *
+	 * @var string[]
+	 */
+	protected $seen_queries = array();
+
+	/**
+	 * Record each statement. The named locks run for real on the test connection and are
+	 * released again, so nothing needs neutralising.
+	 *
+	 * @param string $query SQL about to run.
+	 * @return string
+	 */
+	public function record_query( $query ) {
+		$this->seen_queries[] = trim( $query );
+
+		return $query;
+	}
+
+	/**
+	 * Return the recorded statements that match a pattern.
+	 *
+	 * @param string $pattern Regex.
+	 * @return string[]
+	 */
+	protected function seen( $pattern ) {
+		return array_values( preg_grep( $pattern, $this->seen_queries ) );
+	}
+
+	/**
+	 * Locking a checkout takes one named lock per ticket and coupon, in ID order (so two
+	 * orders sharing rows cannot deadlock), and releasing lets them all go.
+	 */
+	public function test_lock_checkout_rows_locks_in_id_order_and_releases() {
+		$ticket_a = $this->create_ticket();
+		$ticket_b = $this->create_ticket();
+		$coupon   = $this->create_coupon();
+		$blog_id  = get_current_blog_id();
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+		$locked = self::$camptix->lock_checkout_rows( array( $ticket_b, $coupon, $ticket_a, $ticket_a ) );
+		self::$camptix->release_checkout_rows();
+		self::$camptix->release_checkout_rows(); // A second release is a no-op.
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertTrue( $locked );
+
+		$expected_ids = array( $ticket_a, $ticket_b, $coupon );
+		sort( $expected_ids );
+		$expected_names = array();
+		foreach ( $expected_ids as $id ) {
+			$expected_names[] = "camptix_checkout_{$blog_id}_{$id}";
+		}
+
+		$locks = $this->seen( '/GET_LOCK/' );
+		$this->assertCount( 3, $locks );
+		foreach ( $expected_names as $i => $name ) {
+			$this->assertStringContainsString( "'{$name}'", $locks[ $i ] );
+		}
+
+		$this->assertCount( 3, $this->seen( '/RELEASE_LOCK/' ) );
+	}
+
+	/**
+	 * Nothing to lock means no lock statements at all.
+	 */
+	public function test_lock_checkout_rows_with_no_ids_does_nothing() {
+		add_filter( 'query', array( $this, 'record_query' ) );
+		$locked = self::$camptix->lock_checkout_rows( array( 0, '', null ) );
+		self::$camptix->release_checkout_rows();
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertFalse( $locked );
+		$this->assertCount( 0, $this->seen( '/GET_LOCK|RELEASE_LOCK/' ) );
+	}
+
+	/**
+	 * Under the checkout lock the count query must run every call, not be served from the
+	 * query cache: the order is counted before checkout and again under the lock, and the
+	 * second read has to be live. Outside the lock (ticket form, admin columns) the cached
+	 * count is fine. Asserting values would pass either way, because wp_insert_post()
+	 * invalidates the posts cache; assert how often the SQL runs instead.
+	 */
+	public function test_purchased_count_query_is_live_only_under_the_lock() {
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		$outside = count( $this->seen( '/FROM.+posts.+tix_ticket_id/is' ) );
+
+		self::$camptix->lock_checkout_rows( array( $ticket_id ) );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->get_purchased_tickets_count( $ticket_id );
+		self::$camptix->release_checkout_rows();
+		$inside = count( $this->seen( '/FROM.+posts.+tix_ticket_id/is' ) ) - $outside;
+
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertSame( 1, $outside, 'outside the lock the second call is served from the query cache' );
+		$this->assertSame( 2, $inside, 'under the lock every call hits the database' );
+	}
+
+	/**
+	 * The same, for the coupon count.
+	 */
+	public function test_used_coupons_count_query_is_live_only_under_the_lock() {
+		$coupon_id = $this->create_coupon();
+
+		add_filter( 'query', array( $this, 'record_query' ) );
+
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		$outside = count( $this->seen( '/FROM.+posts.+tix_coupon_id/is' ) );
+
+		self::$camptix->lock_checkout_rows( array( $coupon_id ) );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->get_used_coupons_count( $coupon_id );
+		self::$camptix->release_checkout_rows();
+		$inside = count( $this->seen( '/FROM.+posts.+tix_coupon_id/is' ) ) - $outside;
+
+		remove_filter( 'query', array( $this, 'record_query' ) );
+
+		$this->assertSame( 1, $outside );
+		$this->assertSame( 2, $inside );
+	}
+
+	/**
+	 * Fail the Nth wp_insert_post() call, to test a draft that cannot be written.
+	 *
+	 * @var int
+	 */
+	protected $fail_insert_at = 0;
+
+	/**
+	 * New-post inserts seen by fail_nth_insert() in the current test.
+	 *
+	 * @var int
+	 */
+	protected $inserts_seen = 0;
+
+	/**
+	 * Callback for wp_insert_post_empty_content: fail the Nth new-post insert. Counts only
+	 * inserts (empty ID), because wp_update_post() runs the same filter for existing posts.
+	 *
+	 * @param bool  $maybe_empty Whether the post is considered empty.
+	 * @param array $postarr     Post data.
+	 * @return bool
+	 */
+	public function fail_nth_insert( $maybe_empty, $postarr ) {
+		if ( ! empty( $postarr['ID'] ) ) {
+			return $maybe_empty;
+		}
+
+		$this->inserts_seen++;
+
+		return $this->inserts_seen === $this->fail_insert_at ? true : $maybe_empty;
+	}
+
+	/**
+	 * A draft that cannot be written aborts the order and removes the drafts already written,
+	 * so a partial order never holds seats and the buyer is not sent to the gateway with no
+	 * attendee rows behind the order.
+	 */
+	public function test_insert_attendee_drafts_aborts_and_cleans_up_when_a_draft_cannot_be_written() {
+		$ticket_id = $this->create_ticket();
+
+		$attendees = array();
+		foreach ( array( 'One', 'Two' ) as $name ) {
+			$attendee             = new stdClass();
+			$attendee->ticket_id  = $ticket_id;
+			$attendee->first_name = $name;
+			$attendee->last_name  = 'Row';
+			$attendee->email      = strtolower( $name ) . '@example.test';
+			$attendee->answers    = array();
+			$attendees[]          = $attendee;
+		}
+
+		// The first attendee's draft is written normally; the second insert fails.
+		$this->fail_insert_at = 2;
+		add_filter( 'wp_insert_post_empty_content', array( $this, 'fail_nth_insert' ), 10, 2 );
+		$result = self::$camptix->insert_attendee_drafts( $attendees, 'stripe', 'r@example.test', 'acc', 'pay' );
+		remove_filter( 'wp_insert_post_empty_content', array( $this, 'fail_nth_insert' ), 10 );
+
+		$this->assertFalse( $result );
+		$this->assertSame( 0, self::$camptix->get_purchased_tickets_count( $ticket_id ), 'the first draft was removed again' );
+	}
+
+	/**
+	 * Log a fresh user in and return their login, for the abandoned-draft tests.
+	 */
+	protected function log_in_a_buyer() {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $user_id );
+
+		return get_userdata( $user_id )->user_login;
+	}
+
+	/**
+	 * Create one of the buyer's own draft attendees.
+	 *
+	 * @param int      $ticket_id  Ticket.
+	 * @param string   $login      Buyer's login (tix_username on the buyer row).
+	 * @param string   $token      Payment token of the order.
+	 * @param int      $age        Seconds since checkout.
+	 * @param int|null $expires_in Seconds until the gateway session dies (negative = already dead); null = none recorded.
+	 * @param array    $extra      More create_attendee() args.
+	 * @return int
+	 */
+	protected function create_own_draft( $ticket_id, $login, $token, $age, $expires_in = null, $extra = array() ) {
+		$id = $this->create_attendee(
+			$ticket_id,
+			array_merge(
+				array(
+					'status'        => 'draft',
+					'username'      => $login,
+					'payment_token' => $token,
+					'timestamp'     => time() - $age,
+				),
+				$extra
+			)
+		);
+
+		if ( null !== $expires_in ) {
+			update_post_meta( $id, 'tix_session_expires_at', time() + $expires_in );
+		}
+
+		return $id;
+	}
+
+	/**
+	 * A draft releases its seat a grace after its recorded session expiry, or 24 hours after
+	 * checkout when no expiry was recorded (drafts from before this, gateways that can't say).
+	 */
+	public function test_draft_release_at_uses_the_recorded_session_expiry_else_24_hours() {
+		$ticket_id = $this->create_ticket();
+		$grace     = CampTix_Plugin::DRAFT_LIFETIME_GRACE;
+		$now       = time();
+
+		$with_expiry = $this->create_own_draft( $ticket_id, 'a', 'tok_a', 10 * MINUTE_IN_SECONDS, 20 * MINUTE_IN_SECONDS );
+		$without     = $this->create_own_draft( $ticket_id, 'b', 'tok_b', 10 * MINUTE_IN_SECONDS, null );
+
+		$this->assertEqualsWithDelta( $now + 20 * MINUTE_IN_SECONDS + $grace, self::$camptix->get_draft_release_at( $with_expiry ), 2 );
+		$this->assertEqualsWithDelta( $now - 10 * MINUTE_IN_SECONDS + DAY_IN_SECONDS + $grace, self::$camptix->get_draft_release_at( $without ), 2 );
+	}
+
+	/**
+	 * Recording an order's session expiry stamps every attendee on the payment token.
+	 */
+	public function test_set_order_session_expiry_stamps_the_whole_order() {
+		$ticket_id = $this->create_ticket();
+		$first     = $this->create_own_draft( $ticket_id, 'a', 'tok_order', 0 );
+		$second    = $this->create_own_draft( $ticket_id, 'unconfirmed', 'tok_order', 0 );
+		$other     = $this->create_own_draft( $ticket_id, 'c', 'tok_other', 0 );
+
+		self::$camptix->set_order_session_expiry( 'tok_order', 1800000000 );
+
+		$this->assertSame( '1800000000', get_post_meta( $first, 'tix_session_expires_at', true ) );
+		$this->assertSame( '1800000000', get_post_meta( $second, 'tix_session_expires_at', true ) );
+		$this->assertSame( '', get_post_meta( $other, 'tix_session_expires_at', true ) );
+	}
+
+	/**
+	 * The Stripe addon's session lifetime is 30 minutes, filterable within Stripe's range.
+	 */
+	public function test_stripe_session_lifetime_is_filterable_within_stripes_range() {
+		$stripe = self::$camptix->get_payment_method_by_id( 'stripe' );
+
+		$this->assertSame( 30 * MINUTE_IN_SECONDS, $stripe->get_checkout_session_lifetime() );
+
+		add_filter( 'camptix_stripe_checkout_session_lifetime', array( $this, 'one_hour' ) );
+		$this->assertSame( HOUR_IN_SECONDS, $stripe->get_checkout_session_lifetime() );
+		remove_filter( 'camptix_stripe_checkout_session_lifetime', array( $this, 'one_hour' ) );
+
+		add_filter( 'camptix_stripe_checkout_session_lifetime', '__return_zero' );
+		$this->assertSame( 30 * MINUTE_IN_SECONDS, $stripe->get_checkout_session_lifetime(), 'clamped up to 30 minutes' );
+		remove_filter( 'camptix_stripe_checkout_session_lifetime', '__return_zero' );
+	}
+
+	/**
+	 * Filter callback: one hour.
+	 *
+	 * @return int
+	 */
+	public function one_hour() {
+		return HOUR_IN_SECONDS;
+	}
+
+	/**
+	 * An expired gateway session times a draft out at once, and nothing else.
+	 */
+	public function test_payment_result_timeout_moves_a_draft_to_timeout_and_nothing_else() {
+		$ticket_id = $this->create_ticket();
+		$draft     = $this->create_own_draft( $ticket_id, 'buyer', 'tok_draft', 0, 30 * MINUTE_IN_SECONDS );
+		$paid      = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'        => 'publish',
+				'payment_token' => 'tok_paid',
+			)
+		);
+
+		self::$camptix->payment_result( 'tok_draft', CampTix_Plugin::PAYMENT_STATUS_TIMEOUT, array(), false );
+		self::$camptix->payment_result( 'tok_paid', CampTix_Plugin::PAYMENT_STATUS_TIMEOUT, array(), false );
+
+		$this->assertSame( 'timeout', get_post_status( $draft ) );
+		$this->assertSame( 'publish', get_post_status( $paid ) );
+	}
+
+	/**
+	 * The sweep times a draft out once its recorded session expiry plus the grace has passed,
+	 * not before; a draft with no recorded expiry keeps the old 24 hours.
+	 */
+	public function test_timeout_sweep_uses_each_drafts_recorded_expiry() {
+		$ticket_id     = $this->create_ticket();
+		$dead          = $this->create_own_draft( $ticket_id, 'a', 'tok_1', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		$in_grace      = $this->create_own_draft( $ticket_id, 'b', 'tok_2', 40 * MINUTE_IN_SECONDS, -2 * MINUTE_IN_SECONDS );
+		$live          = $this->create_own_draft( $ticket_id, 'c', 'tok_3', 40 * MINUTE_IN_SECONDS, 20 * MINUTE_IN_SECONDS );
+		$no_expiry_mid = $this->create_own_draft( $ticket_id, 'd', 'tok_4', 4 * HOUR_IN_SECONDS, null );
+		$no_expiry_old = $this->create_own_draft( $ticket_id, 'e', 'tok_5', 25 * HOUR_IN_SECONDS, null );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( 'timeout', get_post_status( $dead ) );
+		$this->assertSame( 'draft', get_post_status( $in_grace ), 'still within the grace after expiry' );
+		$this->assertSame( 'draft', get_post_status( $live ) );
+		$this->assertSame( 'draft', get_post_status( $no_expiry_mid ), 'no recorded expiry: 24 hours as before' );
+		$this->assertSame( 'timeout', get_post_status( $no_expiry_old ) );
+	}
+
+	/**
+	 * A buyer's own draft order counts as abandoned only once its recorded session expiry
+	 * plus the grace has passed. The whole order is included, a sibling's is not.
+	 */
+	public function test_abandoned_drafts_are_own_orders_past_their_recorded_expiry() {
+		$me        = $this->log_in_a_buyer();
+		$ticket_id = $this->create_ticket();
+
+		$dead_buyer   = $this->create_own_draft( $ticket_id, $me, 'tok_dead', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		$dead_sibling = $this->create_own_draft( $ticket_id, 'unconfirmed', 'tok_dead', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		$live         = $this->create_own_draft( $ticket_id, $me, 'tok_live', 10 * MINUTE_IN_SECONDS, 20 * MINUTE_IN_SECONDS );
+		$no_expiry    = $this->create_own_draft( $ticket_id, $me, 'tok_old', 40 * MINUTE_IN_SECONDS, null );
+		$this->create_own_draft( $ticket_id, 'someone_else', 'tok_theirs', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+
+		$abandoned = self::$camptix->get_abandoned_draft_attendee_ids();
+		sort( $abandoned );
+		$expected = array( $dead_buyer, $dead_sibling );
+		sort( $expected );
+		$this->assertSame( $expected, $abandoned );
+
+		$this->assertSame( 'draft', get_post_status( $live ) );
+		$this->assertSame( 'draft', get_post_status( $no_expiry ) );
+	}
+
+	/**
+	 * The form's memoised set is not reused under the checkout lock: a draft that got
+	 * published in between must count there, so the lock looks again, live.
+	 */
+	public function test_abandoned_drafts_are_looked_up_again_under_the_checkout_lock() {
+		$me        = $this->log_in_a_buyer();
+		$ticket_id = $this->create_ticket();
+		$dead      = $this->create_own_draft( $ticket_id, $me, 'tok_dead', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+
+		$this->assertSame( array( $dead ), self::$camptix->get_abandoned_draft_attendee_ids() );
+
+		wp_update_post(
+			array(
+				'ID'          => $dead,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame( array( $dead ), self::$camptix->get_abandoned_draft_attendee_ids(), 'memoised for the form' );
+
+		self::$camptix->lock_checkout_rows( array( $ticket_id ) );
+		$this->assertSame( array(), self::$camptix->get_abandoned_draft_attendee_ids(), 'live under the lock' );
+		self::$camptix->release_checkout_rows();
+	}
+
+	/**
+	 * A gateway's timeout backstop can find the session still open and push the recorded
+	 * expiry out; the sweep then leaves the draft alone.
+	 */
+	public function test_timeout_sweep_keeps_a_draft_whose_backstop_extended_its_session() {
+		$ticket_id = $this->create_ticket();
+		$draft     = $this->create_own_draft( $ticket_id, 'a', 'tok_1', 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		$extend    = function ( $attendee_id ) {
+			update_post_meta( $attendee_id, 'tix_session_expires_at', time() + 20 * MINUTE_IN_SECONDS );
+		};
+
+		add_action( 'camptix_pre_attendee_timeout', $extend );
+		self::$camptix->review_timeout_payments();
+		remove_action( 'camptix_pre_attendee_timeout', $extend );
+
+		$this->assertSame( 'draft', get_post_status( $draft ) );
+	}
+
+	/**
+	 * Logged out, nothing is the buyer's own.
+	 */
+	public function test_abandoned_drafts_is_empty_when_logged_out() {
+		$ticket_id = $this->create_ticket();
+		$this->create_own_draft( $ticket_id, 'anyone', 'tok', DAY_IN_SECONDS, -HOUR_IN_SECONDS );
+
+		$this->assertSame( array(), self::$camptix->get_abandoned_draft_attendee_ids() );
+	}
+
+	/**
+	 * An abandoned draft no longer locks the same buyer out of a single-use coupon or a
+	 * quantity-1 reservation, while still counting against everyone else.
+	 */
+	public function test_abandoned_draft_does_not_lock_the_buyer_out_of_their_coupon_or_reservation() {
+		$me        = $this->log_in_a_buyer();
+		$ticket_id = $this->create_ticket( array( 'quantity' => 5 ) );
+		$this->create_reservation( $ticket_id );
+		$coupon_id = $this->create_coupon(
+			array(
+				'quantity'     => 1,
+				'discount_pct' => 100,
+			)
+		);
+
+		$this->create_own_draft(
+			$ticket_id,
+			$me,
+			'tok_abandoned',
+			40 * MINUTE_IN_SECONDS,
+			-10 * MINUTE_IN_SECONDS,
+			array(
+				'coupon_id'   => $coupon_id,
+				'reservation' => 'speakertoken',
+			)
+		);
+
+		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
+		$this->assertFalse( self::$camptix->is_reservation_valid_for_use( 'speakertoken' ) );
+
+		$abandoned = self::$camptix->get_abandoned_draft_attendee_ids();
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id, $abandoned ) );
+		$this->assertTrue( self::$camptix->is_reservation_valid_for_use( 'speakertoken', $abandoned ) );
+	}
+
+	/**
+	 * A checkout in progress against a single-use coupon uses it up, and a coupon
+	 * with redemptions to spare stays valid.
+	 */
+	public function test_coupon_valid_for_use_counts_draft_attendees() {
+		$ticket_id  = $this->create_ticket();
+		$single_use = $this->create_coupon(
+			array(
+				'code'         => 'ONCE',
+				'quantity'     => 1,
+				'discount_pct' => 100,
+			)
+		);
+		$two_uses   = $this->create_coupon(
+			array(
+				'code'         => 'TWICE',
+				'quantity'     => 2,
+				'discount_pct' => 100,
+			)
+		);
+
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $single_use ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $two_uses ) );
+
+		foreach ( array( $single_use, $two_uses ) as $coupon_id ) {
+			$this->create_attendee(
+				$ticket_id,
+				array(
+					'coupon_id' => $coupon_id,
+					'status'    => 'draft',
+				)
+			);
+		}
+
+		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $single_use ) );
+		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $two_uses ) );
 	}
 
 	/**

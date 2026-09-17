@@ -500,7 +500,22 @@ body.error404 .site-content-container h1 {
 	transform: translateY(-2px);
 }
 
-/* Stretch the post-title link over the entire card. */
+/* Stretch the post-title link over the entire card.
+
+   The card's inner group holds the title, and core gives every constrained
+   group `position: relative` — so the stretch resolved against that group
+   and stopped at the top of the text, leaving the image region above it
+   uncovered. Cards with a thumbnail hid that: core's own `isLink` anchor
+   round the image happened to cover the gap. Cards without one had a dead
+   top third. Taking the inner group out of the way puts the card itself
+   back in the containing-block role the stretch was written for. Nothing
+   inside the card is absolutely positioned, so it has nothing else to
+   anchor. */
+
+.wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
+	position: static;
+}
+
 .wp-block-post-template .wp-block-post-title a::after {
 	content: '';
 	position: absolute;
@@ -551,6 +566,15 @@ body.error404 .site-content-container h1 {
 	aspect-ratio: 16 / 9;
 	border-radius: 3px 3px 0 0;
 	background-color: var(--wp--preset--color--blueberry-4);
+}
+
+/* The placeholder's link stands in for the anchor core wraps a real
+   thumbnail in, so the region opens the event on its own even where the
+   stretched title link above doesn't reach. */
+
+.groups-site-featured-placeholder a {
+	display: block;
+	height: 100%;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {
@@ -606,10 +630,57 @@ body.error404 .site-content-container h1 {
 }
 
 /*
- * Past events (the `?event_time=past` view — class set in `functions.php`)
+ * Event card format badge (in person, online, hybrid).
+ *
+ * Shows the attendance format at a glance so members do not have to open each
+ * card to discover whether an event is in person, virtual, or both (#2031).
+ */
+
+.groups-site-event-format {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.groups-site-event-format__badge {
+	display: inline-block;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 2px 8px;
+	border-radius: 2px;
+	line-height: 1.4;
+}
+
+.groups-site-event-format.is-format-online .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--blueberry-4);
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+.groups-site-event-format.is-format-hybrid .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-1);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-event-format.is-format-in-person .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-events-view-past .gatherpress-event-query .groups-site-event-format.is-format-online .groups-site-event-format__badge {
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+
+/*
+ * Past events (the `?event_time=past` view - class set in `functions.php`)
  * drop the blue "coming up" date treatment and mute their photography a
  * touch. Same grid, but the page no longer dresses history as future.
  */
+
 
 .groups-site-events-view-past .gatherpress-event-query .wp-block-gatherpress-event-date.has-blueberry-1-color {
 	color: var(--wp--preset--color--charcoal-4) !important;
@@ -739,13 +810,13 @@ body.error404 .site-content-container h1 {
  * The card reads as zones — When, Where, Add to calendar — rather than one
  * flat stack, so each zone after the first opens with a divider.
  *
- * The divider is a border on the zone itself, not a `<hr>` sibling. Every
- * zone below "When" is optional: GatherPress renders the venue, online-event
- * and add-to-calendar blocks as an empty string when the event has no venue,
- * isn't online, or has no calendar links. A separate `<hr>` outlives the zone
- * it introduces in that case — with all three empty, the first divider was
- * left hanging under the RSVP button with nothing beneath it. Carrying the
- * border on the zone makes that unrepresentable: no zone, no divider.
+ * The divider is a border on the zone itself, not a `<hr>` sibling. The
+ * venue and online-event zones are optional: GatherPress renders them as an
+ * empty string when the event has no venue or isn't online. A separate
+ * `<hr>` outlives the zone it introduces in that case — with both empty, a
+ * divider was left hanging under the RSVP button with nothing beneath it.
+ * Carrying the border on the zone makes that unrepresentable: no zone, no
+ * divider.
  *
  * Generous, symmetric room (more than the 20px `blockGap` used *within* a
  * zone) so it reads as a hard boundary rather than another item in the list.
@@ -793,9 +864,28 @@ body.error404 .site-content-container h1 {
 .groups-site-event-info-card .gatherpress--has-venue-address .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-phone .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
-.groups-site-event-info-card .groups-site-online-event .wp-block-icon {
+.groups-site-event-info-card .groups-site-online-event .wp-block-icon,
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-icon {
 	color: var(--wp--preset--color--charcoal-4);
 	flex: 0 0 auto;
+}
+
+/*
+ * GatherPress positions the calendar menu at its trigger's left edge and
+ * gives it a fixed pixel width (`dropdownWidth`, written inline at render).
+ * In a sidebar card narrower than the menu that ran off the right of the
+ * page, scrollbar and all. Growing the trigger to fill the row puts its
+ * right edge on the card's content edge, and hanging the menu off that edge
+ * keeps the whole menu inside the card.
+ */
+
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-gatherpress-dropdown {
+	flex: 1 1 auto;
+}
+
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-gatherpress-dropdown__menu {
+	right: 0;
+	left: auto;
 }
 
 /* GatherPress renders the address in an <address>, which every browser

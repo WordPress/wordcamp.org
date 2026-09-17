@@ -544,6 +544,8 @@ class WordCamp_Post_Types_Plugin {
 					$speakers = get_posts( array(
 						'post_type'      => 'wcb_speaker',
 						'posts_per_page' => -1,
+						'post_status'    => 'publish',
+						'has_password'   => false,
 						'post__in'       => $speakers_ids,
 					) );
 				}
@@ -814,7 +816,13 @@ class WordCamp_Post_Types_Plugin {
 	 * @return bool
 	 */
 	protected function should_add_to_content( $post_type ) {
+		/*
+		 * The main query being a single CPT post is not enough: `the_content` also
+		 * runs for the entries a listing widget renders on that page, and those
+		 * widgets cache their markup. Add only to the post being viewed.
+		 */
 		return $this->is_single_cpt_post( $post_type )
+			&& get_the_ID() === get_queried_object_id()
 			&& ! site_supports_block_templates()
 			&& ! post_password_required( get_post() );
 	}
@@ -890,6 +898,8 @@ class WordCamp_Post_Types_Plugin {
 		$speaker_args = array(
 			'post_type'      => 'wcb_speaker',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'post__in'       => $speaker_ids,
 			'orderby'        => 'title',
 			'order'          => 'asc',
@@ -914,7 +924,11 @@ class WordCamp_Post_Types_Plugin {
 		$speakers_html .= '<ul id="session-speaker-names">';
 		while ( $speakers->have_posts() ) {
 			$speakers->the_post();
-			$speakers_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$speakers_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$speakers_html .= '</ul>';
 
@@ -1112,6 +1126,8 @@ class WordCamp_Post_Types_Plugin {
 		$session_args = array(
 			'post_type'      => 'wcb_session',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'meta_key'       => '_wcpt_speaker_id',
 			'meta_value'     => $post->ID,
 			'orderby'        => 'title',
@@ -1137,7 +1153,11 @@ class WordCamp_Post_Types_Plugin {
 		$sessions_html .= '<ul id="speaker-session-names">';
 		while ( $sessions->have_posts() ) {
 			$sessions->the_post();
-			$sessions_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$sessions_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$sessions_html .= '</ul>';
 

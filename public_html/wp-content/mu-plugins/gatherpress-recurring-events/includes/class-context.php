@@ -137,7 +137,7 @@ final class Context {
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular() ) ) {
+		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) ) ) {
 			return self::occurrence_url( (int) $post->ID, self::recurrence_id() );
 		}
 
@@ -167,6 +167,18 @@ final class Context {
 	public static function canonical_redirect( $redirect_url ) {
 		if ( ! get_query_var( 'gpre_occurrence' ) ) {
 			return $redirect_url;
+		}
+
+		/*
+		 * The calendar endpoints hang off an occurrence rather than being one:
+		 * `…/{occurrence}/ical` is a download, not a page. Rewriting the
+		 * redirect below would send it to `…/{occurrence}/` and drop the
+		 * endpoint, so the visitor lands on the event instead of getting the
+		 * file (#2010). Query var name matches the one our own rewrite rules
+		 * in `Plugin::init()` set.
+		 */
+		if ( get_query_var( 'gatherpress_calendar' ) ) {
+			return false;
 		}
 
 		if ( $redirect_url && self::$occurrence ) {

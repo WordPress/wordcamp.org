@@ -42,7 +42,7 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 	 */
 	const CONTRACT = array(
 		'GatherPress\Core\Event\Event'          => array(
-			'methods'    => array( 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
+			'methods'    => array( 'can_read_rsvps', 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
 			'properties' => array( 'rsvp' ),
 		),
 		'GatherPress\Core\Rsvp\Rsvp'            => array(

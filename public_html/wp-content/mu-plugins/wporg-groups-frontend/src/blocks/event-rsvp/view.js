@@ -303,6 +303,8 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 	}
 
 	ctx.rsvpNotice = '';
+	ctx.rsvpNoticeSuccess = false;
+	ctx.rsvpNoticeError = false;
 	ctx.questionsError = '';
 
 	// Join group first if not a member.
@@ -323,6 +325,10 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		} catch {
 			ctx.rsvpLoading = false;
 			ctx.rsvpNotice = labelFromContext( ctx, 'rsvpError' );
+			ctx.rsvpNoticeError = true;
+			if ( ctx.modalOpen ) {
+				ctx.questionsError = ctx.rsvpNotice;
+			}
 			return;
 		}
 	}
@@ -338,6 +344,7 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		const message = labelFromContext( ctx, 'missingAnswers' );
 		ctx.questionsError = message;
 		ctx.rsvpNotice = message;
+		ctx.rsvpNoticeError = true;
 		openRsvpModal( ctx, actionElement );
 		flagMissingAnswers( block, missingInputs );
 		return;
@@ -364,6 +371,8 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		ctx.rsvpNotice = statusChanged
 			? getRsvpSuccessNotice( ctx, data.status )
 			: labelFromContext( ctx, 'answersSaved' );
+		ctx.rsvpNoticeSuccess = true;
+		ctx.rsvpNoticeError = false;
 
 		// Organizers see the answers inline in the attendee list, which the
 		// client-side refresh can't rebuild — reload so their view stays
@@ -374,18 +383,22 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		}
 
 		refreshAttendees( ctx, actionElement );
+		closeRsvpModal( ctx );
 	} catch ( error ) {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
 
 		// Our own validation failures carry a message the attendee can act on
-		// ("Please answer: Dietary requirements"). Anything else — a network
-		// blip, a 500 — gets the generic retry wording.
+		// ("Please answer: Dietary requirements"). Anything else - a network
+		// blip, a 500 - gets the generic retry wording.
 		const ours = error?.code?.startsWith?.( 'wporg_groups_' ) && error.message;
 		ctx.rsvpNotice = ours ? error.message : labelFromContext( ctx, 'rsvpError' );
+		ctx.rsvpNoticeError = true;
 		if ( ours ) {
 			ctx.questionsError = error.message;
 			openRsvpModal( ctx, actionElement );
+		} else if ( ctx.modalOpen ) {
+			ctx.questionsError = ctx.rsvpNotice;
 		}
 	} finally {
 		ctx.rsvpLoading = false;

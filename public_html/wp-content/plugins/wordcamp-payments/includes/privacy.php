@@ -4,6 +4,8 @@ namespace WordCamp\Budgets\Privacy;
 
 use WP_Query, WP_Post;
 
+use function WordCamp\Logger\log;
+
 defined( 'WPINC' ) || die();
 
 
@@ -484,8 +486,15 @@ function delete_budget_request_files( $post_id, $post ) {
 	}
 
 	foreach ( get_budget_request_file_ids( $post_id ) as $file_id ) {
+		$path = get_attached_file( $file_id );
+
 		// `true` so the file on disk goes with the row, whatever `MEDIA_TRASH` is set to.
 		wp_delete_attachment( $file_id, true );
+
+		// Core unlinks with `@unlink()` and reports nothing, and WP-CLI on the sandbox can't write to uploads.
+		if ( $path && is_file( $path ) ) {
+			log( 'budget_file_not_deleted', compact( 'post_id', 'file_id', 'path' ) );
+		}
 	}
 }
 

@@ -810,6 +810,58 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A file that survives its deletion is logged, since Core unlinks silently and a WP-CLI run can lack write
+	 * access to uploads. Simulated through the `wp_delete_file` filter, which skips the unlink when it returns ''.
+	 */
+	public function test_a_file_left_behind_by_a_deletion_is_logged() {
+		list( $request_id, $file_id, $path ) = self::create_request_with_file( self::$organizer_a, self::$organizer_a );
+
+		$keep_files = '__return_empty_string';
+		add_filter( 'wp_delete_file', $keep_files );
+
+		try {
+			$logged = self::capture_log( fn() => wp_delete_post( $request_id, true ) );
+		} finally {
+			remove_filter( 'wp_delete_file', $keep_files );
+		}
+
+		$this->assertNull( get_post( $file_id ) );
+		$this->assertFileExists( $path );
+		$this->assertStringContainsString( 'budget_file_not_deleted', $logged );
+		$this->assertStringContainsString( (string) $file_id, $logged );
+
+		wp_delete_file( $path );
+	}
+
+	/**
+	 * Run something with the error log pointed at a file this test can read.
+	 *
+	 * @param callable $callback
+	 *
+	 * @return string Whatever was logged.
+	 */
+	protected static function capture_log( $callback ) {
+		$log      = get_temp_dir() . 'budget-log-' . wp_generate_password( 8, false, false ) . '.log';
+		$previous = ini_set( 'error_log', $log ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- scoped to this test.
+
+		try {
+			$callback();
+		} finally {
+			ini_set( 'error_log', $previous ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- restoring what was there.
+		}
+
+		if ( ! is_file( $log ) ) {
+			return '';
+		}
+
+		$contents = (string) file_get_contents( $log ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a local file this test wrote.
+
+		wp_delete_file( $log );
+
+		return $contents;
+	}
+
+	/**
 	 * Trashing isn't deleting: the files stay attached, so restoring the request brings them back with it.
 	 */
 	public function test_trashing_a_request_keeps_its_files_attached() {

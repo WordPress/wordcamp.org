@@ -216,7 +216,7 @@ class Command extends WP_CLI_Command {
 	public function scan( $args, $assoc_args ) {
 		global $wpdb;
 
-		$sites    = $wpdb->get_results( "SELECT blog_id, domain, path FROM {$wpdb->blogs} ORDER BY blog_id" );
+		$sites    = $wpdb->get_results( "SELECT blog_id, domain, path FROM {$wpdb->blogs} WHERE deleted = 0 AND archived = 0 ORDER BY blog_id" );
 		$reports  = array();
 		$attached = array();
 		$unusable = array();
@@ -226,10 +226,11 @@ class Command extends WP_CLI_Command {
 
 		foreach ( $sites as $site ) {
 			$attached_candidates   = get_attached_candidates( $site->blog_id );
+			$attached_error        = $wpdb->last_error;
 			$unattached_candidates = get_unattached_candidates( $site->blog_id );
 
 			// `get_results()` returns an empty array on failure too, and a broken site must not read as clean.
-			if ( $wpdb->last_error ) {
+			if ( $attached_error || $wpdb->last_error ) {
 				$unusable[]       = $site->domain . $site->path;
 				$wpdb->last_error = '';
 

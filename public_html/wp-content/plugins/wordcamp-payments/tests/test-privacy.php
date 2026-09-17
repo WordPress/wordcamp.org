@@ -25,6 +25,9 @@ class Test_Privacy extends WP_UnitTestCase {
 	/** @var int Another organizer on the same site: `upload_files`, but not `manage_options`. */
 	protected static $organizer_b;
 
+	/** @var int A third organizer, who neither filed the request under test nor uploaded onto it. */
+	protected static $organizer_c;
+
 	/** @var int A network admin, who reviews requests and so sees every file. */
 	protected static $network_admin;
 
@@ -59,6 +62,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::$organizer_a   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$organizer_b   = $factory->user->create( array( 'role' => 'editor' ) );
+		self::$organizer_c   = $factory->user->create( array( 'role' => 'editor' ) );
 		self::$network_admin = $factory->user->create( array( 'role' => 'administrator' ) );
 		self::$volunteer     = $factory->user->create( array( 'role' => 'author' ) );
 
@@ -398,9 +402,13 @@ class Test_Privacy extends WP_UnitTestCase {
 		$ordinary_post = self::factory()->post->create( array( 'post_author' => self::$organizer_a ) );
 		$ordinary_file = self::create_file( 'diagram.png', $ordinary_post, self::$organizer_a );
 
-		// Warm everything the check reads that isn't the guard: the user and their roles, the post and its parent.
+		/*
+		 * Warm everything the check reads that isn't the guard: the user and their roles, the post and its
+		 * parent, and the meta the marker lives in. The Media Library screens prime all of it for their own
+		 * results, so this is the state the guard really runs in.
+		 */
 		current_user_can( 'edit_post', self::$blog_post_file_id );
-		_prime_post_caches( array( $ordinary_file, $ordinary_post ), false, false );
+		_prime_post_caches( array( $ordinary_file, $ordinary_post ), false, true );
 
 		$before = $wpdb->num_queries;
 
@@ -719,19 +727,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	 * @return array The request ID, the attachment ID, and the path of the file on disk.
 	 */
 	protected static function create_request_with_file( $author_id, $uploader_id, $post_status = 'draft', $post_date = '' ) {
-		wp_set_current_user( $author_id );
-
-		$request_args = array(
-			'post_type'   => Reimbursement_Requests\POST_TYPE,
-			'post_author' => $author_id,
-			'post_status' => $post_status,
-		);
-
-		if ( $post_date ) {
-			$request_args['post_date'] = $post_date;
-		}
-
-		$request_id = self::factory()->post->create( $request_args );
+		$request_id = self::create_request( $author_id, $post_status, $post_date );
 
 		$upload = wp_upload_bits( 'receipt-' . wp_generate_password( 16, false, false ) . '.pdf', null, 'receipt' );
 
@@ -858,5 +854,273 @@ class Test_Privacy extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( 'WP_Post', get_post( $file_id ) );
 		$this->assertFileExists( $path );
+	}
+
+	/**
+	 * Upload a file the way `wp_ajax_upload_attachment()` does, against the post the request names.
+	 *
+	 * `post_id` is the field that route sends, and both the naming and the status are decided from it, so the
+	 * superglobal is what has to be in place rather than anything about the file.
+	 *
+	 * @param int    $parent_id The post the upload names.
+	 * @param string $filename
+	 *
+	 * @return array The attachment ID and the name its file ended up with.
+	 */
+	protected static function upload_file_against( $parent_id, $filename = 'receipt.pdf' ) {
+		$_REQUEST['post_id'] = $parent_id;
+
+		try {
+			$upload = wp_upload_bits( $filename, null, 'receipt' );
+
+			$file_id = wp_insert_attachment(
+				array(
+					'post_mime_type' => 'application/pdf',
+					'post_title'     => 'receipt',
+					'post_parent'    => $parent_id,
+				),
+				$upload['file']
+			);
+		} finally {
+			unset( $_REQUEST['post_id'] );
+		}
+
+		return array( $file_id, wp_basename( $upload['file'] ) );
+	}
+
+	/**
+	 * File a budget request.
+	 *
+	 * @param int    $author_id
+	 * @param string $post_status
+	 * @param string $post_date
+	 *
+	 * @return int
+	 */
+	protected static function create_request( $author_id, $post_status = 'draft', $post_date = '' ) {
+		wp_set_current_user( $author_id );
+
+		return self::factory()->post->create( array_filter( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => $author_id,
+			'post_status' => $post_status,
+			'post_date'   => $post_date,
+		) ) );
+	}
+
+	/**
+	 * A file uploaded onto a request is stored as the request's own, whatever happens to the request later.
+	 *
+	 * @dataProvider data_request_statuses_files_are_uploaded_against
+	 *
+	 * @param string $request_status
+	 */
+	public function test_upload_onto_a_request_is_marked_and_private( $request_status ) {
+		$request_id = self::create_request( self::$organizer_a, $request_status );
+
+		list( $file_id, $filename ) = self::upload_file_against( $request_id );
+
+		$this->assertSame( 'private', get_post( $file_id )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
+		$this->assertMatchesRegularExpression( '/^receipt-[A-Za-z0-9]{16}\.pdf$/', $filename );
+	}
+
+	/**
+	 * The statuses a request has while files are being uploaded onto it.
+	 *
+	 * The Files metabox uploads against the `auto-draft` the editor opens with, before the request has ever
+	 * been saved, so that shape carries files as often as a saved draft does.
+	 *
+	 * @return array
+	 */
+	public function data_request_statuses_files_are_uploaded_against() {
+		return array(
+			'a saved draft'          => array( 'draft' ),
+			'an unsaved auto-draft'  => array( 'auto-draft' ),
+		);
+	}
+
+	/**
+	 * Uploading onto anything else is left exactly as Core does it.
+	 */
+	public function test_upload_onto_an_ordinary_post_is_untouched() {
+		wp_set_current_user( self::$organizer_a );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$organizer_a ) );
+
+		list( $file_id, $filename ) = self::upload_file_against( $post_id, 'header.pdf' );
+
+		// Read off the row: `get_post_status()` resolves `inherit` to whatever status the parent has.
+		$this->assertSame( 'inherit', get_post( $file_id )->post_status );
+		$this->assertFalse( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
+		// Not an exact name: Core still deduplicates against whatever is already in the uploads directory.
+		$this->assertDoesNotMatchRegularExpression( '/-[A-Za-z0-9]{16}\.pdf$/', $filename );
+	}
+
+	/**
+	 * The Files metabox attaches a file that was uploaded to the Media Library instead, and that makes it the
+	 * request's own too.
+	 */
+	public function test_attaching_an_existing_file_marks_it() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::create_request( self::$organizer_b );
+		$unattached  = self::create_file( 'receipt-4u5v6w7x8y9z1a2b.pdf', 0, self::$organizer_b );
+
+		\WordCamp_Budgets::attach_existing_files(
+			$own_request,
+			array( 'wcb_existing_files_to_attach' => wp_json_encode( array( $unattached ) ) )
+		);
+
+		$this->assertSame( $own_request, (int) get_post( $unattached )->post_parent );
+		$this->assertSame( 'private', get_post( $unattached )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $unattached ) );
+	}
+
+	/**
+	 * The Media Library's Attach action writes `post_parent` with a direct `UPDATE`, so none of the post hooks
+	 * fire for it and the row it leaves behind in the cache still says the file is unattached.
+	 */
+	public function test_the_media_library_attach_action_marks_a_file() {
+		global $wpdb;
+
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::create_request( self::$organizer_b );
+		$unattached  = self::create_file( 'receipt-5v6w7x8y9z1a2b3c.pdf', 0, self::$organizer_b );
+
+		// What `wp_media_attach_action()` does, in the order it does it.
+		$wpdb->update( $wpdb->posts, array( 'post_parent' => $own_request ), array( 'ID' => $unattached ) );
+		do_action( 'wp_media_attach_action', 'attach', $unattached, $own_request );
+		clean_attachment_cache( $unattached );
+
+		$this->assertSame( $own_request, (int) get_post( $unattached )->post_parent );
+		$this->assertSame( 'private', get_post( $unattached )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $unattached ) );
+	}
+
+	/**
+	 * A marked file with no request left to sit on keeps its readers: whoever uploaded it, and network admins.
+	 *
+	 * This is the case the marker is for. The rules used to read the parent, so a file that had been detached
+	 * or left behind by a deleted request was ordinary media to them.
+	 */
+	public function test_a_marked_file_with_no_parent_is_still_scoped_to_its_uploader() {
+		$detached = self::create_file( 'receipt-6w7x8y9z1a2b3c4d.pdf', 0, self::$organizer_a );
+
+		\WordCamp\Budgets\Privacy\mark_budget_file( $detached );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertNotContains( $detached, $this->get_visible_attachment_ids( self::any_status() ) );
+		$this->assertFalse( current_user_can( 'read_post', $detached ) );
+		$this->assertEmpty( self::prepare_for_js( $detached ) );
+
+		wp_set_current_user( self::$organizer_a );
+
+		$this->assertContains( $detached, $this->get_visible_attachment_ids( self::any_status() ) );
+		$this->assertTrue( current_user_can( 'read_post', $detached ) );
+
+		wp_set_current_user( self::$network_admin );
+
+		$this->assertTrue( current_user_can( 'read_post', $detached ) );
+	}
+
+	/**
+	 * `private` maps `read_post` to `read_private_posts`, which every organizer has, so the rules decide that
+	 * capability as well -- and they have to leave the requester holding it.
+	 */
+	public function test_a_marked_file_on_a_request_is_readable_by_the_requester() {
+		$their_request = self::create_request( self::$organizer_b );
+
+		list( $file_id ) = self::upload_file_against( $their_request );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertTrue( current_user_can( 'read_post', $file_id ) );
+
+		wp_set_current_user( self::$organizer_c );
+
+		$this->assertFalse( current_user_can( 'read_post', $file_id ) );
+	}
+
+	/**
+	 * A file uploaded before any of this still has nothing but its parent to say what it is, so the rules go
+	 * on reading that. Drop this once every file carries the marker.
+	 */
+	public function test_an_unmarked_file_on_a_request_is_still_scoped_by_its_parent() {
+		$request_id = self::create_request( self::$organizer_a );
+		$file_id    = self::create_file( 'receipt-7x8y9z1a2b3c4d5e.pdf', $request_id, self::$organizer_a );
+
+		$this->assertSame( 'inherit', get_post( $file_id )->post_status );
+		$this->assertFalse( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertNotContains( $file_id, $this->get_visible_attachment_ids( self::any_status() ) );
+		$this->assertFalse( current_user_can( 'read_post', $file_id ) );
+	}
+
+	/**
+	 * The Files metabox shows a requester every file on their request, whatever role they hold.
+	 *
+	 * `WP_Query` only returns another user's `private` post to someone with `read_private_posts`, which an
+	 * Author doesn't have, so the metabox names the statuses it wants and leaves the decision to the rules above.
+	 */
+	public function test_files_metabox_shows_a_volunteer_requester_a_co_organizers_upload() {
+		wp_set_current_user( self::$volunteer );
+
+		$request_id = self::factory()->post->create( array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => self::$volunteer,
+			'post_status' => 'draft',
+		) );
+
+		$uploaded_by_a = self::create_file( 'receipt-5k6l7m8n9o0p1q2r.pdf', $request_id, self::$organizer_a );
+		\WordCamp\Budgets\Privacy\mark_budget_file( $uploaded_by_a );
+
+		$this->assertSame( 'private', get_post( $uploaded_by_a )->post_status );
+		$this->assertFalse( current_user_can( 'read_private_posts' ) );
+
+		$listed = wp_list_pluck( \WordCamp_Budgets::get_attached_files( get_post( $request_id ) ), 'ID' );
+
+		$this->assertContains( $uploaded_by_a, $listed );
+		$this->assertTrue( \WordCamp_Budgets::can_submit_request( get_post( $request_id ) ) );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertNotContains( $uploaded_by_a, wp_list_pluck( \WordCamp_Budgets::get_attached_files( get_post( $request_id ) ), 'ID' ) );
+	}
+
+	/**
+	 * Ask for both statuses an attachment on this site can have, so a query result says who sees a file rather
+	 * than which status it carries.
+	 *
+	 * @return array
+	 */
+	protected static function any_status() {
+		return array( 'post_status' => array( 'inherit', 'private' ) );
+	}
+
+	/**
+	 * Run the media details the admin hands to JavaScript through the filter that redacts them.
+	 *
+	 * `wp_ajax_get_attachment()` resolves an attachment by ID and checks `upload_files` alone, so this is the
+	 * whole of what stands between it and the file's URL.
+	 *
+	 * @param int $attachment_id
+	 *
+	 * @return array
+	 */
+	protected static function prepare_for_js( $attachment_id ) {
+		return apply_filters(
+			'wp_prepare_attachment_for_js',
+			array(
+				'id'  => $attachment_id,
+				'url' => wp_get_attachment_url( $attachment_id ),
+			),
+			get_post( $attachment_id ),
+			false
+		);
 	}
 }

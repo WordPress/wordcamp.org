@@ -152,27 +152,41 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 			'post_type'   => 'wcb_sponsor',
 			'post_status' => 'publish',
 		) );
-		$recent_id  = self::factory()->attachment->create_object( array(
-			'file'           => 'agreement-aBcDeFgHiJkLmNoP.pdf',
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		// A real file: the hook renames on record, and an attachment with no file is itself recorded.
+		file_put_contents( $directory . 'recent-agreement.pdf', 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- a fixture on the local disk.
+
+		$recent_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'recent-agreement.pdf',
 			'post_parent'    => $sponsor_id,
 			'post_status'    => 'inherit',
 			'post_mime_type' => 'application/pdf',
 		) );
 
-		// The hook covers this one as it's attached, so the migration never sees it.
-		update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $recent_id );
+		update_attached_file( $recent_id, $directory . 'recent-agreement.pdf' );
 
-		$this->assertContains( $legacy_id, get_public_agreement_ids() );
-		$this->assertNotContains( $recent_id, get_public_agreement_ids() );
+		try {
+			// The hook covers this one as it's attached, so the migration never sees it.
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $recent_id );
 
-		// What `Command::backfill()` does for each ID the query returns.
-		make_agreement_private( $legacy_id );
-		update_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, 1 );
+			$this->assertContains( $legacy_id, get_public_agreement_ids() );
+			$this->assertNotContains( $recent_id, get_public_agreement_ids() );
 
-		$this->assertTrue( is_agreement( $legacy_id ) );
-		$this->assertTrue( is_agreement( $recent_id ) );
+			// What `Command::backfill()` does for each ID the query returns.
+			make_agreement_private( $legacy_id );
+			update_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, 1 );
 
-		$this->assertSame( '1', get_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, true ) );
-		$this->assertSame( '', get_post_meta( $recent_id, NEEDS_RENAME_META_KEY, true ) );
+			$this->assertTrue( is_agreement( $legacy_id ) );
+			$this->assertTrue( is_agreement( $recent_id ) );
+
+			$this->assertSame( '1', get_post_meta( $legacy_id, NEEDS_RENAME_META_KEY, true ) );
+			$this->assertSame( '', get_post_meta( $recent_id, NEEDS_RENAME_META_KEY, true ) );
+		} finally {
+			foreach ( glob( $directory . 'recent-agreement*' ) as $path ) {
+				wp_delete_file( $path );
+			}
+		}
 	}
 }

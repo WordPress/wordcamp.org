@@ -964,9 +964,12 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A rename that leaves a file behind says so, since the name it kept may already be out there.
+	 * A file the metadata names that isn't this attachment's doesn't hold it on the work list.
+	 *
+	 * It is correctly not renamed, so a later pass would never find anything of its own to move, and the
+	 * row could never come off. It's counted apart instead.
 	 */
-	public function test_a_rename_that_leaves_a_file_behind_is_logged() {
+	public function test_a_file_that_is_not_the_agreements_does_not_hold_it_on_the_work_list() {
 		$sponsor_id = $this->create_sponsor();
 		$uploads    = wp_upload_dir();
 		$directory  = trailingslashit( $uploads['path'] );
@@ -996,15 +999,10 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 		} );
 
 		try {
-			$this->assertStringContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+			$this->assertStringNotContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+			$this->assertSame( '', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
 
-			/*
-			 * The migration can't see this one -- it is already `private`, which is the only thing that
-			 * query looks for -- so joining the rename work list is what keeps it findable.
-			 */
-			$this->assertSame( '1', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
-
-			// What could move still moved.
+			// Everything of its own moved; the other file was left where it was.
 			$this->assertMatchesRegularExpression(
 				'/^stubborn-[A-Za-z0-9]{16}\.pdf$/',
 				wp_basename( get_attached_file( $agreement_id ) )
@@ -1014,6 +1012,88 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 			$this->delete_files_on_disk( $directory, 'stubborn*' );
 			$this->delete_files_on_disk( $directory, 'unrelated-*' );
 		}
+	}
+
+	/**
+	 * An image edited in the Media editor leaves its pre-edit files under the names they had.
+	 *
+	 * Those are recorded only in `_wp_attachment_backup_sizes`, which is also what Restore Original
+	 * reads -- so they're counted as left behind and the attachment joins the work list, but nothing is
+	 * moved and that meta is left exactly as it was.
+	 */
+	public function test_the_pre_edit_files_of_an_edited_image_are_recorded() {
+		$sponsor_id = $this->create_sponsor();
+		$uploads    = wp_upload_dir();
+		$directory  = trailingslashit( $uploads['path'] );
+
+		// What an edit leaves: the edited copy and its size, and the untouched originals beside them.
+		foreach ( array( 'photo-e1700000000.jpg', 'photo-e1700000000-300x300.jpg', 'photo.jpg', 'photo-300x300.jpg' ) as $name ) {
+			file_put_contents( $directory . $name, 'x' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- fixtures on the local disk.
+		}
+
+		$agreement_id = self::factory()->attachment->create_object( array(
+			'file'           => $directory . 'photo-e1700000000.jpg',
+			'post_parent'    => 0,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'image/jpeg',
+		) );
+
+		$metadata = array(
+			'file'  => _wp_relative_upload_path( $directory . 'photo-e1700000000.jpg' ),
+			'sizes' => array( 'medium' => array( 'file' => 'photo-e1700000000-300x300.jpg' ) ),
+		);
+
+		update_attached_file( $agreement_id, $directory . 'photo-e1700000000.jpg' );
+		wp_update_attachment_metadata( $agreement_id, $metadata );
+
+		$backup_sizes = array(
+			'full-orig'   => array( 'file' => 'photo.jpg' ),
+			'medium-orig' => array( 'file' => 'photo-300x300.jpg' ),
+		);
+
+		update_post_meta( $agreement_id, '_wp_attachment_backup_sizes', $backup_sizes );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		try {
+			$this->assertStringContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+			$this->assertSame( '1', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
+
+			// The edited copy and its size moved.
+			$this->assertMatchesRegularExpression(
+				'/^photo-e1700000000-[A-Za-z0-9]{16}\.jpg$/',
+				wp_basename( get_attached_file( $agreement_id ) )
+			);
+
+			// The pre-edit files did not, and neither did the record of them.
+			$this->assertFileExists( $directory . 'photo.jpg' );
+			$this->assertFileExists( $directory . 'photo-300x300.jpg' );
+			$this->assertSame( $backup_sizes, get_post_meta( $agreement_id, '_wp_attachment_backup_sizes', true ) );
+		} finally {
+			$this->delete_files_on_disk( $directory, 'photo*' );
+		}
+	}
+
+	/**
+	 * An attachment whose file isn't on disk is recorded, not treated as finished.
+	 *
+	 * "Nothing to do" and "nothing could be found" have to come out differently, or the one row a later
+	 * pass most needs is the one that never gets written.
+	 */
+	public function test_a_missing_file_is_recorded() {
+		$sponsor_id   = $this->create_sponsor();
+		$agreement_id = $this->create_file( 'gone.pdf', 0 );
+
+		$this->assertSame( 1, rename_agreement_file( $agreement_id )['missing'] );
+
+		$logged = $this->capture_log( function () use ( $sponsor_id, $agreement_id ) {
+			update_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		} );
+
+		$this->assertStringContainsString( 'sponsor_agreement_files_not_renamed', $logged );
+		$this->assertSame( '1', get_post_meta( $agreement_id, NEEDS_RENAME_META_KEY, true ) );
 	}
 
 	/**

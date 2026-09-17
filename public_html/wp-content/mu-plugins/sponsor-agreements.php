@@ -79,6 +79,11 @@ function get_sponsor_post_types() {
  * Hooked to the meta write rather than to `save_post`, so that both plugins that store an agreement are
  * covered from one place, whichever route wrote it.
  *
+ * The attachment ID is taken to belong to the current site. The routines that copy central sponsor
+ * meta onto event sites from inside `switch_to_blog()` leave the agreement key out of what they copy,
+ * and it has to stay out: `rename_agreement_file()` works on the current site's uploads, so a central
+ * attachment ID arriving here would name an unrelated file on the event site.
+ *
  * @param int    $meta_id
  * @param int    $object_id
  * @param string $meta_key
@@ -154,8 +159,8 @@ function secure_agreement( $attachment_id ) {
 	if ( ! $already_an_agreement && is_agreement( $attachment_id ) ) {
 		$outcome = rename_agreement_file( $attachment_id );
 
-		// A file left under the name it had is a URL that may already be out there.
-		if ( $outcome['left_behind'] ) {
+		// A file left under the name it had, or one that couldn't be found at all, is still to be dealt with.
+		if ( $outcome['left_behind'] || $outcome['missing'] ) {
 			update_post_meta( $attachment_id, NEEDS_RENAME_META_KEY, 1 );
 
 			log( 'sponsor_agreement_files_not_renamed', array_merge( compact( 'attachment_id' ), $outcome ) );
@@ -433,18 +438,25 @@ function add_csprn_to_filename( $filename, $extension ) {
  * @return array {
  *     What happened on disk. The metadata always names whatever each file ended up being called.
  *
- *     @type int $renamed     Files moved.
- *     @type int $left_behind Files still under the name they had.
+ *     @type int $renamed     This attachment's files that moved.
+ *     @type int $left_behind This attachment's files still under the name they had.
+ *     @type int $foreign     Files the metadata names that aren't this attachment's to rename.
+ *     @type int $missing     Whether the attached file itself was not on disk to begin with.
  * }
  */
 function rename_agreement_file( $attachment_id ) {
 	$outcome       = array(
 		'renamed'     => 0,
 		'left_behind' => 0,
+		'foreign'     => 0,
+		'missing'     => 0,
 	);
 	$attached_path = get_attached_file( $attachment_id );
 
+	// Nothing to do and nothing could be found are different answers, so say which this was.
 	if ( ! $attached_path || ! is_file( $attached_path ) ) {
+		$outcome['missing'] = 1;
+
 		return $outcome;
 	}
 
@@ -487,9 +499,9 @@ function rename_agreement_file( $attachment_id ) {
 		$derived = $name === $old_base . $extension || str_starts_with( $name, $old_base . '-' );
 
 		if ( ! $derived ) {
-			// Not this attachment's to rename. Count it only if there's a file there to be concerned with.
-			$outcome['left_behind'] += is_file( $source ) ? 1 : 0;
-			$already_done[ $name ]   = $name;
+			// Not this attachment's to rename, so counted apart. Only if there's a file there at all.
+			$outcome['foreign']   += is_file( $source ) ? 1 : 0;
+			$already_done[ $name ] = $name;
 
 			return $name;
 		}
@@ -535,6 +547,22 @@ function rename_agreement_file( $attachment_id ) {
 		}
 
 		$metadata['sizes'][ $size ]['file'] = $move( $details['file'] );
+	}
+
+	/*
+	 * Editing an image in the Media editor leaves the pre-edit files on disk under the names they had, and
+	 * records them only in `_wp_attachment_backup_sizes`. They are this attachment's, so they count as
+	 * left behind -- but they are not moved: that meta is what Restore Original reads, so rewriting it is
+	 * left to the pass that deals with the files.
+	 */
+	$backup_sizes = get_post_meta( $attachment_id, '_wp_attachment_backup_sizes', true );
+
+	foreach ( is_array( $backup_sizes ) ? $backup_sizes : array() as $backup ) {
+		$name = $backup['file'] ?? '';
+
+		if ( $name && ! isset( $already_done[ $name ] ) && is_file( $directory . '/' . $name ) ) {
+			++$outcome['left_behind'];
+		}
 	}
 
 	if ( ! empty( $metadata['file'] ) ) {

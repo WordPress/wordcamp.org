@@ -23,6 +23,10 @@ const AGREEMENT_MARKER_META_KEY = '_wcorg_sponsor_agreement';
  * renamed. Two things write it: the one-time migration, which sets the status and leaves renaming to a
  * later pass, and `secure_agreement()`, when a rename it attempted couldn't move every file. Whatever
  * runs that later pass reads this, so it lives here rather than with the migration that is deleted.
+ *
+ * A row says what was true when it was written, and the attachment can change afterwards -- Restore
+ * Original on an edited image puts `_wp_attached_file` back on the pre-edit name. The pass that reads
+ * this has to work from the attachment's current state, not from what the row implies about it.
  */
 const NEEDS_RENAME_META_KEY = '_wcorg_sponsor_agreement_needs_rename';
 
@@ -433,6 +437,11 @@ function add_csprn_to_filename( $filename, $extension ) {
  * The `guid` is deliberately left alone. It's an identifier rather than the URL anything is served from,
  * and Core's rule is that it doesn't change once a post has one.
  *
+ * Once per attachment, on the record path: `secure_agreement()` calls this only for a file that wasn't
+ * already an agreement. A second call suffixes the attached file again and counts the pre-edit files
+ * again, so this isn't a worker for a pass that re-runs over `NEEDS_RENAME_META_KEY`. That pass needs
+ * its own.
+ *
  * @param int $attachment_id
  *
  * @return array {
@@ -558,7 +567,8 @@ function rename_agreement_file( $attachment_id ) {
 	$backup_sizes = get_post_meta( $attachment_id, '_wp_attachment_backup_sizes', true );
 
 	foreach ( is_array( $backup_sizes ) ? $backup_sizes : array() as $backup ) {
-		$name = $backup['file'] ?? '';
+		// Each entry is an array from Core; anything else is imported or damaged meta, and is skipped.
+		$name = is_array( $backup ) ? ( $backup['file'] ?? '' ) : '';
 
 		if ( $name && ! isset( $already_done[ $name ] ) && is_file( $directory . '/' . $name ) ) {
 			++$outcome['left_behind'];

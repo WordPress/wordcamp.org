@@ -9,6 +9,9 @@
 
 namespace WordCamp\Groups\GatherPress_Tweaks;
 
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Setup as Venue_Setup;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -255,11 +258,20 @@ add_filter(
 		$content = $processor->get_updated_html();
 
 		// Add hidden field to default to "all" time when searching.
-		$content = str_replace(
-			'</form>',
-			'<input type="hidden" name="event_time" value="all" /></form>',
-			$content
-		);
+		$hidden = '<input type="hidden" name="event_time" value="all" />';
+
+		// Keep the applied format, so searching narrows the current view
+		// rather than resetting it back to every format (#2035).
+		$format = get_event_format_filter();
+
+		if ( 'all' !== $format ) {
+			$hidden .= sprintf(
+				'<input type="hidden" name="event_format" value="%s" />',
+				esc_attr( $format )
+			);
+		}
+
+		$content = str_replace( '</form>', $hidden . '</form>', $content );
 
 		return $content;
 	}
@@ -335,6 +347,151 @@ add_filter(
 );
 
 /**
+ * The archive's format filter values, in the order they are offered.
+ *
+ * Keyed by the value that travels in the URL. "Format" rather than "Location"
+ * because the axis is how you take part, not where the group is: a group's
+ * country is site meta and identical for every event on its archive (#2035).
+ *
+ * @return array<string, string> Value => label.
+ */
+function get_event_format_filter_options(): array {
+	return array(
+		'all'       => __( 'All', 'wporg-groups-frontend' ),
+		'in-person' => __( 'In person', 'wporg-groups-frontend' ),
+		'online'    => __( 'Online', 'wporg-groups-frontend' ),
+	);
+}
+
+/**
+ * The format filter the current request asks for.
+ *
+ * Anything unrecognized falls back to `all`, which is also the default: the
+ * archive's job is to list the group's events, so an unreadable filter should
+ * widen the view rather than empty it.
+ *
+ * @return string One of the keys of `get_event_format_filter_options()`.
+ */
+function get_event_format_filter(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$format = isset( $_GET['event_format'] ) ? sanitize_text_field( wp_unslash( $_GET['event_format'] ) ) : 'all';
+
+	return isset( get_event_format_filter_options()[ $format ] ) ? $format : 'all';
+}
+
+/**
+ * The published events carrying GatherPress's `online-event` venue term.
+ *
+ * Both directions of the format filter are answered from this one list:
+ * "Online" is `post__in` it, "In person" is `post__not_in` it. An event with
+ * no venue at all is therefore in person, which is the right answer — it is
+ * certainly not online.
+ *
+ * Deliberately *not* a `tax_query` on the archive's own query. A tax query
+ * joins `term_relationships`, which makes WP_Query select `DISTINCT` — and
+ * that collapses the duplicate rows `gatherpress-recurring-events` adds
+ * through its `posts_clauses` LEFT JOIN to turn a series into one row per
+ * date. Filtering by format would then silently show a weekly series once
+ * instead of on each of its dates. Resolving the IDs in a separate query
+ * keeps the join off the archive's SQL.
+ *
+ * The separate query asks for `fields => ids`, which is also what makes it
+ * safe: `Query::clauses()` bails on ID queries, so it does not expand into
+ * occurrences itself.
+ *
+ * @return int[] Event post IDs, empty when the group runs nothing online.
+ */
+function get_online_event_ids(): array {
+	$online_ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see the docblock for why it cannot ride on the main query.
+				array(
+					'taxonomy' => Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE ),
+					'field'    => 'slug',
+					'terms'    => array( 'online-event' ),
+					'operator' => 'IN',
+				),
+			),
+		)
+	);
+
+	return array_map( 'intval', $online_ids );
+}
+
+/**
+ * Register the archive's format filter options.
+ */
+add_filter(
+	'wporg_query_filter_options_event_format',
+	static function (): array {
+		$options = get_event_format_filter_options();
+		$current = get_event_format_filter();
+
+		return array(
+			// Named the same way the Time filter is, and for the same reason
+			// (#2059): a single-select filter gets no count badge, so a bare
+			// "Format" would say which axis the control filters on but not
+			// what is already applied.
+			'label'    => sprintf(
+				/* translators: %s: the selected format filter, e.g. "Online". */
+				__( 'Format: %s', 'wporg-groups-frontend' ),
+				$options[ $current ]
+			),
+			'title'    => __( 'Filter by format', 'wporg-groups-frontend' ),
+			'key'      => 'event_format',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => $options,
+			'selected' => array( $current ),
+		);
+	}
+);
+
+/**
+ * Carry the archive's other view state through each filter's form.
+ *
+ * Every `wporg/query-filter` renders a form holding only its own control, so
+ * submitting one would otherwise drop every other parameter in the URL and
+ * silently reset the sibling filter and the search term. With one filter on
+ * the archive that only cost the search term; with two it would make them
+ * mutually exclusive, which is the whole point of having both.
+ */
+add_action(
+	'wporg_query_filter_in_form',
+	static function ( string $key ): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+		$carried = array();
+
+		if ( 'event_time' !== $key && isset( $_GET['event_time'] ) ) {
+			$carried['event_time'] = normalize_event_time_filter(
+				sanitize_text_field( wp_unslash( $_GET['event_time'] ) )
+			);
+		}
+
+		if ( 'event_format' !== $key && 'all' !== get_event_format_filter() ) {
+			$carried['event_format'] = get_event_format_filter();
+		}
+
+		if ( isset( $_GET['s'] ) && '' !== trim( (string) wp_unslash( $_GET['s'] ) ) ) {
+			$carried['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		foreach ( $carried as $name => $value ) {
+			printf(
+				'<input type="hidden" name="%s" value="%s" />',
+				esc_attr( $name ),
+				esc_attr( $value )
+			);
+		}
+	}
+);
+
+/**
  * Label the archive's result count in the query's own terms.
  *
  * The wporg/query-total block defaults to "N items"; on a page whose only
@@ -361,6 +518,7 @@ add_filter(
 	'query_vars',
 	static function ( array $vars ): array {
 		$vars[] = 'event_time';
+		$vars[] = 'event_format';
 		return $vars;
 	}
 );
@@ -403,6 +561,21 @@ add_filter(
 			// filters, so use a stable core ordering when showing both.
 			$query_vars['orderby'] = 'date';
 			$query_vars['order']   = 'DESC';
+		}
+
+		$format_filter = get_event_format_filter();
+
+		if ( 'all' !== $format_filter ) {
+			$online_ids = get_online_event_ids();
+
+			if ( 'online' === $format_filter ) {
+				// `array( 0 )` rather than an empty array: an empty `post__in`
+				// is ignored by WP_Query, which would show every event under a
+				// filter that matched none.
+				$query_vars['post__in'] = $online_ids ? $online_ids : array( 0 );
+			} else {
+				$query_vars['post__not_in'] = $online_ids;
+			}
 		}
 
 		// Pass through search if present.
@@ -478,8 +651,8 @@ add_filter(
 			return $content;
 		}
 
-		$venue_desc  = get_post_field( 'post_content', $venue_id );
-		$access      = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
+		$venue_desc = get_post_field( 'post_content', $venue_id );
+		$access     = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
 
 		$extra = '';
 

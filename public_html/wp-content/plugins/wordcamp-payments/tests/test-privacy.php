@@ -2,6 +2,7 @@
 
 namespace WordCamp\Budgets\Tests;
 
+use PHPUnit\Framework\Assert;
 use WP_UnitTestCase, WP_Query;
 use WCP_Payment_Request;
 use WordCamp\Budgets\Reimbursement_Requests;
@@ -702,5 +703,160 @@ class Test_Privacy extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 0, (int) get_post( $unattached )->post_parent );
+	}
+
+	/**
+	 * File a request with a real file on disk attached to it.
+	 *
+	 * The cascade tests below assert the file itself is gone, not just the row, so these need an upload that
+	 * exists rather than the bare rows `create_file()` makes.
+	 *
+	 * @param int    $author_id   The organizer filing the request.
+	 * @param int    $uploader_id The organizer whose upload sits on it.
+	 * @param string $post_status
+	 * @param string $post_date
+	 *
+	 * @return array The request ID, the attachment ID, and the path of the file on disk.
+	 */
+	protected static function create_request_with_file( $author_id, $uploader_id, $post_status = 'draft', $post_date = '' ) {
+		wp_set_current_user( $author_id );
+
+		$request_args = array(
+			'post_type'   => Reimbursement_Requests\POST_TYPE,
+			'post_author' => $author_id,
+			'post_status' => $post_status,
+		);
+
+		if ( $post_date ) {
+			$request_args['post_date'] = $post_date;
+		}
+
+		$request_id = self::factory()->post->create( $request_args );
+
+		$upload = wp_upload_bits( 'receipt-' . wp_generate_password( 16, false, false ) . '.pdf', null, 'receipt' );
+
+		$file_id = self::factory()->attachment->create_object( array(
+			'file'           => $upload['file'],
+			'post_parent'    => $request_id,
+			'post_author'    => $uploader_id,
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		return array( $request_id, $file_id, get_attached_file( $file_id ) );
+	}
+
+	/**
+	 * Move a request to the trash.
+	 *
+	 * As a network admin, because `set_request_status()` holds a requester-editable request within the statuses
+	 * a requester may set, and `trash` isn't one of them.
+	 *
+	 * @param int $request_id
+	 */
+	protected static function trash_request( $request_id ) {
+		wp_set_current_user( self::$network_admin );
+
+		wp_trash_post( $request_id );
+
+		Assert::assertSame( 'trash', get_post_status( $request_id ), 'The request under test was never trashed.' );
+	}
+
+	/**
+	 * Deleting a request takes its files with it, including the ones its deleter can't see.
+	 *
+	 * One organizer uploading the receipts and another filing the request is a supported way to work, and the
+	 * rules above hide that upload from a third organizer. Deleting has to reach it anyway, because the file
+	 * has no reader left once the request is gone.
+	 */
+	public function test_deleting_a_request_deletes_its_files() {
+		list( $request_id, $file_id, $path ) = self::create_request_with_file( self::$organizer_a, self::$organizer_a );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertTrue( current_user_can( 'delete_post', $request_id ) );
+		$this->assertNotContains( $file_id, $this->get_visible_attachment_ids() );
+
+		wp_delete_post( $request_id, true );
+
+		$this->assertNull( get_post( $file_id ) );
+		$this->assertFileDoesNotExist( $path );
+	}
+
+	/**
+	 * Trashing isn't deleting: the files stay attached, so restoring the request brings them back with it.
+	 */
+	public function test_trashing_a_request_keeps_its_files_attached() {
+		list( $request_id, $file_id, $path ) = self::create_request_with_file( self::$organizer_a, self::$organizer_a );
+
+		self::trash_request( $request_id );
+
+		$this->assertSame( $request_id, (int) get_post( $file_id )->post_parent );
+		$this->assertFileExists( $path );
+
+		wp_untrash_post( $request_id );
+
+		$this->assertSame( $request_id, (int) get_post( $file_id )->post_parent );
+		$this->assertFileExists( $path );
+	}
+
+	/**
+	 * Cron empties the trash once `EMPTY_TRASH_DAYS` has passed, with nobody logged in.
+	 */
+	public function test_emptying_the_trash_deletes_a_requests_files() {
+		list( $request_id, $file_id, $path ) = self::create_request_with_file( self::$organizer_a, self::$organizer_a );
+
+		self::trash_request( $request_id );
+		update_post_meta( $request_id, '_wp_trash_meta_time', time() - ( ( EMPTY_TRASH_DAYS + 1 ) * DAY_IN_SECONDS ) );
+
+		wp_set_current_user( 0 );
+		wp_scheduled_delete();
+
+		$this->assertNull( get_post( $file_id ) );
+		$this->assertFileDoesNotExist( $path );
+	}
+
+	/**
+	 * The Files metabox uploads against the auto-draft, so a request opened and abandoned can carry files that
+	 * only the weekly auto-draft purge ever reaches.
+	 */
+	public function test_purging_auto_drafts_deletes_a_requests_files() {
+		list( , $file_id, $path ) = self::create_request_with_file(
+			self::$organizer_a,
+			self::$organizer_a,
+			'auto-draft',
+			gmdate( 'Y-m-d H:i:s', time() - ( 8 * DAY_IN_SECONDS ) )
+		);
+
+		wp_set_current_user( 0 );
+		wp_delete_auto_drafts();
+
+		$this->assertNull( get_post( $file_id ) );
+		$this->assertFileDoesNotExist( $path );
+	}
+
+	/**
+	 * Only the budget post types cascade. `before_delete_post` fires for every post on the network, and Core
+	 * reparents an ordinary post's attachments rather than deleting them.
+	 */
+	public function test_deleting_an_ordinary_post_leaves_its_files_alone() {
+		wp_set_current_user( self::$organizer_a );
+
+		$post_id = self::factory()->post->create( array( 'post_author' => self::$organizer_a ) );
+
+		$upload = wp_upload_bits( 'header-' . wp_generate_password( 16, false, false ) . '.png', null, 'image' );
+
+		$file_id = self::factory()->attachment->create_object( array(
+			'file'           => $upload['file'],
+			'post_parent'    => $post_id,
+			'post_author'    => self::$organizer_a,
+			'post_mime_type' => 'image/png',
+		) );
+
+		$path = get_attached_file( $file_id );
+
+		wp_delete_post( $post_id, true );
+
+		$this->assertInstanceOf( 'WP_Post', get_post( $file_id ) );
+		$this->assertFileExists( $path );
 	}
 }

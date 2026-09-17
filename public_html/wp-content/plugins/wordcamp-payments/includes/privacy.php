@@ -15,6 +15,7 @@ if ( ! is_cli_request() ) {
 	add_filter( 'map_meta_cap',                   __NAMESPACE__ . '\restrict_others_payment_file_caps', 10, 4 );
 }
 
+add_action( 'before_delete_post',                 __NAMESPACE__ . '\delete_budget_request_files', 10, 2 );
 add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_personal_data_exporters' );
@@ -429,6 +430,47 @@ function get_payment_file_parent_ids( $attachments ) {
 	) );
 
 	return wp_list_pluck( $payment_posts_with_attachments, 'ID' );
+}
+
+/**
+ * Delete a budget request's files with the request.
+ *
+ * `wp_delete_post()` would reparent them to `0` instead, and nothing but the request's Files metabox reads them.
+ * `before_delete_post` covers Delete Permanently and both cron purges (trash, auto-drafts); trashing keeps them.
+ *
+ * @param int     $post_id
+ * @param WP_Post $post
+ */
+function delete_budget_request_files( $post_id, $post ) {
+	if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, get_budget_request_post_types(), true ) ) {
+		return;
+	}
+
+	foreach ( get_budget_request_file_ids( $post_id ) as $file_id ) {
+		// `true` so the file on disk goes with the row, whatever `MEDIA_TRASH` is set to.
+		wp_delete_attachment( $file_id, true );
+	}
+}
+
+/**
+ * The IDs of every attachment on a budget request.
+ *
+ * Straight from the table: the guards above hide other organizers' files from `WP_Query`, and a deletion has to
+ * take those too.
+ *
+ * @param int $post_id
+ *
+ * @return int[]
+ */
+function get_budget_request_file_ids( $post_id ) {
+	global $wpdb;
+
+	$file_ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT ID FROM {$wpdb->posts} WHERE post_parent = %d AND post_type = 'attachment'",
+		$post_id
+	) );
+
+	return array_map( 'intval', $file_ids );
 }
 
 /**

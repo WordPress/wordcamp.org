@@ -714,6 +714,37 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Write a file to the uploads directory.
+	 *
+	 * `Database_TestCase` truncates `sitemeta`, so `check_upload_mimes()` has no `upload_filetypes` to read and
+	 * falls back to its image-only default, which the network doesn't run with in production.
+	 *
+	 * @param string $filename
+	 * @param string $bits
+	 *
+	 * @return array The `wp_upload_bits()` result.
+	 */
+	protected static function upload_bits( $filename, $bits ) {
+		$allow_pdfs = static function ( $mimes ) {
+			$mimes['pdf'] = 'application/pdf';
+
+			return $mimes;
+		};
+
+		add_filter( 'upload_mimes', $allow_pdfs );
+
+		try {
+			$upload = wp_upload_bits( $filename, null, $bits );
+		} finally {
+			remove_filter( 'upload_mimes', $allow_pdfs );
+		}
+
+		Assert::assertEmpty( $upload['error'], 'The fixture upload failed: ' . $upload['error'] );
+
+		return $upload;
+	}
+
+	/**
 	 * File a request with a real file on disk attached to it.
 	 *
 	 * The cascade tests below assert the file itself is gone, not just the row, so these need an upload that
@@ -729,7 +760,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	protected static function create_request_with_file( $author_id, $uploader_id, $post_status = 'draft', $post_date = '' ) {
 		$request_id = self::create_request( $author_id, $post_status, $post_date );
 
-		$upload = wp_upload_bits( 'receipt-' . wp_generate_password( 16, false, false ) . '.pdf', null, 'receipt' );
+		$upload = self::upload_bits( 'receipt-' . wp_generate_password( 16, false, false ) . '.pdf', 'receipt' );
 
 		$file_id = self::factory()->attachment->create_object( array(
 			'file'           => $upload['file'],
@@ -839,7 +870,7 @@ class Test_Privacy extends WP_UnitTestCase {
 
 		$post_id = self::factory()->post->create( array( 'post_author' => self::$organizer_a ) );
 
-		$upload = wp_upload_bits( 'header-' . wp_generate_password( 16, false, false ) . '.png', null, 'image' );
+		$upload = self::upload_bits( 'header-' . wp_generate_password( 16, false, false ) . '.png', 'image' );
 
 		$file_id = self::factory()->attachment->create_object( array(
 			'file'           => $upload['file'],
@@ -871,7 +902,7 @@ class Test_Privacy extends WP_UnitTestCase {
 		$_REQUEST['post_id'] = $parent_id;
 
 		try {
-			$upload = wp_upload_bits( $filename, null, 'receipt' );
+			$upload = self::upload_bits( $filename, 'receipt' );
 
 			$file_id = wp_insert_attachment(
 				array(

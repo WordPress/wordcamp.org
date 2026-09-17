@@ -21,7 +21,7 @@ add_action( 'before_delete_post',                 __NAMESPACE__ . '\delete_budge
 add_action( 'add_attachment',                     __NAMESPACE__ . '\mark_budget_file_upload' );
 add_action( 'attachment_updated',                 __NAMESPACE__ . '\mark_reparented_budget_file', 10, 2 );
 add_action( 'wp_media_attach_action',             __NAMESPACE__ . '\mark_attached_budget_file', 10, 3 );
-add_filter( 'wp_insert_attachment_data',          __NAMESPACE__ . '\hide_budget_file_upload' );
+add_filter( 'wp_insert_attachment_data',          __NAMESPACE__ . '\hide_budget_file_upload', 10, 4 );
 add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_prepare_attachment_for_js',       __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
@@ -263,7 +263,7 @@ function get_attachments_from_results( $posts ) {
 	}
 
 	if ( $ids_to_prime ) {
-		_prime_post_caches( $ids_to_prime, false, false );
+		_prime_post_caches( $ids_to_prime, false, true );
 	}
 
 	$attachments = array();
@@ -556,21 +556,28 @@ function obscure_payment_file_names( $filename, $extension ) {
  */
 function is_budget_request_upload() {
 	// phpcs:ignore WordPress.Security.NonceVerification -- the upload routes checked it.
-	$parent_id = absint( $_REQUEST['post_id'] ?? $_REQUEST['post'] ?? 0 );
+	$parent_id = $_REQUEST['post_id'] ?? $_REQUEST['post'] ?? 0;
 
-	return in_array( get_post_type( $parent_id ), get_budget_request_post_types(), true );
+	if ( ! is_scalar( $parent_id ) ) {
+		return false;
+	}
+
+	return in_array( get_post_type( absint( $parent_id ) ), get_budget_request_post_types(), true );
 }
 
 /**
  * Give a budget request's file the `private` status before its row is written, so it is never stored as
- * `inherit`.
+ * `inherit`. Inserts only: an update during a request's edit screen may be to an unrelated attachment.
  *
- * @param array $data The attachment's post fields.
+ * @param array $data              The attachment's post fields.
+ * @param array $postarr           Unused.
+ * @param array $unsanitized       Unused.
+ * @param bool  $update            Whether an existing row is being written.
  *
  * @return array
  */
-function hide_budget_file_upload( $data ) {
-	if ( 'attachment' !== ( $data['post_type'] ?? '' ) || ! is_budget_request_upload() ) {
+function hide_budget_file_upload( $data, $postarr = array(), $unsanitized = array(), $update = false ) {
+	if ( $update || 'attachment' !== ( $data['post_type'] ?? '' ) || ! is_budget_request_upload() ) {
 		return $data;
 	}
 
@@ -664,7 +671,8 @@ function mark_budget_file( $attachment_id ) {
  * @return bool
  */
 function is_budget_file( $attachment_id ) {
-	return (bool) get_post_meta( $attachment_id, BUDGET_FILE_META_KEY, true );
+	// Existence, to match the SQL guard's `meta_id IS NULL` test.
+	return metadata_exists( 'post', $attachment_id, BUDGET_FILE_META_KEY );
 }
 
 /**

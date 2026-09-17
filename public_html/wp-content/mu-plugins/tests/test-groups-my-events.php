@@ -8,7 +8,10 @@ use WordPressdotorg\GatherPress_Recurring_Events\Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_UnitTestCase;
 
+use function WordCamp\Groups\Frontend\My_Events\get_past_events;
 use function WordCamp\Groups\Frontend\My_Events\get_upcoming_events;
+
+use const WordCamp\Groups\Frontend\My_Events\PAST_EVENTS_LIMIT;
 
 defined( 'WPINC' ) || die();
 
@@ -594,5 +597,164 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 			$this->event_ids( get_upcoming_events( $member ) ),
 			'A series date should be ordered among plain events by when it starts.'
 		);
+	}
+
+	/**
+	 * The point of the past list: a member sees what they went to (#2061).
+	 */
+	public function test_past_attended_event_is_listed() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+		$event_id  = $this->make_event( $organiser, '-2 days' );
+
+		$this->rsvp( $member, $event_id );
+
+		$this->assertSame(
+			array( $this->plain_entry( $event_id, '-2 days' ) ),
+			get_past_events( $member ),
+			"An event the member RSVP'd to and that has finished should be listed."
+		);
+	}
+
+	/**
+	 * The two lists are disjoint: an event still to come belongs to the
+	 * upcoming one, not this.
+	 */
+	public function test_upcoming_event_is_not_listed_as_past() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+		$event_id  = $this->make_event( $organiser, '+2 days' );
+
+		$this->rsvp( $member, $event_id );
+
+		$this->assertSame( array(), get_past_events( $member ) );
+	}
+
+	/**
+	 * Authorship is not attendance. The upcoming list unions authored events
+	 * in so an organizer can confirm theirs is listed (#1810); "attended" is
+	 * a claim about where the member actually was, so it stays RSVP-only.
+	 */
+	public function test_authored_past_event_is_not_listed_without_an_rsvp() {
+		$organiser = self::factory()->user->create();
+
+		$this->make_event( $organiser, '-2 days' );
+
+		$this->assertSame(
+			array(),
+			get_past_events( $organiser ),
+			'Creating an event is not the same as going to it.'
+		);
+	}
+
+	/**
+	 * Most recent first, the opposite of the upcoming list.
+	 */
+	public function test_past_events_are_ordered_most_recent_first() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+
+		$older  = $this->make_event( $organiser, '-10 days' );
+		$newer  = $this->make_event( $organiser, '-2 days' );
+		$middle = $this->make_event( $organiser, '-5 days' );
+
+		foreach ( array( $older, $newer, $middle ) as $event_id ) {
+			$this->rsvp( $member, $event_id );
+		}
+
+		$this->assertSame(
+			array( $newer, $middle, $older ),
+			$this->event_ids( get_past_events( $member ) ),
+			'The most recently attended event should come first.'
+		);
+	}
+
+	/**
+	 * The list stops at its cap, keeping the most recent dates.
+	 */
+	public function test_past_events_are_capped() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+
+		$expected = array();
+		for ( $days = 1; $days <= PAST_EVENTS_LIMIT + 2; $days++ ) {
+			$event_id = $this->make_event( $organiser, sprintf( '-%d days', $days ) );
+			$this->rsvp( $member, $event_id );
+
+			if ( $days <= PAST_EVENTS_LIMIT ) {
+				$expected[] = $event_id;
+			}
+		}
+
+		$this->assertSame(
+			$expected,
+			$this->event_ids( get_past_events( $member ) ),
+			'The cap should drop the oldest dates, not the newest.'
+		);
+	}
+
+	/**
+	 * A smaller cap is honored, and an impossible one returns nothing rather
+	 * than falling through to the default.
+	 */
+	public function test_past_events_honors_an_explicit_limit() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+
+		$newer = $this->make_event( $organiser, '-1 day' );
+		$this->rsvp( $member, $newer );
+		$this->rsvp( $member, $this->make_event( $organiser, '-3 days' ) );
+
+		$this->assertSame( array( $newer ), $this->event_ids( get_past_events( $member, 1 ) ) );
+		$this->assertSame( array(), get_past_events( $member, 0 ) );
+	}
+
+	/**
+	 * A member sees the date of the series they actually RSVP'd to, not the
+	 * series' stored first date (#2056).
+	 */
+	public function test_past_series_date_is_the_one_rsvped_to() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+
+		$series_id = $this->make_series( $organiser, '-6 weeks' );
+		$attended  = $this->add_occurrence( $series_id, '-1 week' );
+		$this->add_occurrence( $series_id, '-3 weeks' );
+
+		$this->rsvp_to_occurrence( $member, $series_id, $attended['recurrence_id'] );
+
+		$this->assertSame(
+			array(
+				array(
+					'event_id'      => $series_id,
+					'recurrence_id' => $attended['recurrence_id'],
+					'start'         => $attended['start'],
+				),
+			),
+			get_past_events( $member ),
+			'Only the date the member RSVP\'d to should be listed.'
+		);
+	}
+
+	/**
+	 * A date that was called off was not attended, however long ago it was.
+	 */
+	public function test_cancelled_past_occurrence_is_not_listed() {
+		$organiser = self::factory()->user->create();
+		$member    = self::factory()->user->create();
+
+		$series_id  = $this->make_series( $organiser, '-6 weeks' );
+		$occurrence = $this->add_occurrence( $series_id, '-1 week', 'cancelled' );
+
+		$this->rsvp_to_occurrence( $member, $series_id, $occurrence['recurrence_id'] );
+
+		$this->assertSame( array(), get_past_events( $member ) );
+	}
+
+	/**
+	 * A logged-out visitor resolves to user 0 and gets nothing.
+	 */
+	public function test_past_events_is_empty_without_a_user() {
+		$this->assertSame( array(), get_past_events( 0 ) );
 	}
 }

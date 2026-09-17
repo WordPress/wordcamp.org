@@ -672,6 +672,133 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Past attendance gets its own list in the same section (#2061). The
+	 * heading is what distinguishes it — both lists draw the same card.
+	 */
+	public function test_my_events_block_lists_events_the_member_attended() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup already had',
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		wp_set_current_user( $member_id );
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString( 'Events I attended', $output );
+		$this->assertStringContainsString( 'A meetup already had', $output );
+
+		// The section exists on the strength of the past list alone, so the
+		// header's anchor still has somewhere to land.
+		$this->assertStringContainsString( 'id="my-events"', $output );
+		$this->assertStringNotContainsString( 'My upcoming events', $output );
+	}
+
+	/**
+	 * With both lists populated, upcoming comes first: what the member has to
+	 * turn up to outranks what they have already done.
+	 */
+	public function test_my_events_block_puts_upcoming_before_attended() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $member_id );
+
+		foreach ( array(
+			'+7 days' => 'Still to come', '-7 days' => 'Already had',
+		) as $offset => $title ) {
+			$event_id = self::factory()->post->create(
+				array(
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'publish',
+					'post_title'  => $title,
+					'post_author' => self::factory()->user->create(),
+				)
+			);
+
+			( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+				array(
+					'post_id'        => $event_id,
+					'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $offset ) ),
+					'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $offset . ' +2 hours' ) ),
+					'timezone'       => 'UTC',
+				)
+			);
+
+			( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+		}
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertLessThan(
+			strpos( $output, 'Events I attended' ),
+			strpos( $output, 'My upcoming events' ),
+			'The upcoming list should render above the attended one.'
+		);
+		$this->assertLessThan(
+			strpos( $output, 'Already had' ),
+			strpos( $output, 'Still to come' ),
+			'Each event should sit under its own heading.'
+		);
+	}
+
+	/**
+	 * An RSVP outlives the event's published status — unpublish an event and
+	 * the member still has a row pointing at it. The date drops out, and so
+	 * does the heading it was the only entry under: a heading standing over
+	 * an empty list reads as a rendering fault.
+	 */
+	public function test_my_events_block_drops_a_heading_left_with_no_events() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Withdrawn from view',
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/my-events /-->' ) ) );
+	}
+
+	/**
 	 * Empty news blocks leave no heading or wrapper markup.
 	 */
 	public function test_group_news_block_is_hidden_without_posts() {

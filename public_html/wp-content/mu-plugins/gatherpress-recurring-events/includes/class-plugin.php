@@ -233,6 +233,19 @@ final class Plugin {
 	/**
 	 * Projects occurrence rows after saving an event.
 	 *
+	 * The series data is dropped when the event stops being a recurring one,
+	 * because its occurrences and the RSVPs mapped onto them then point at
+	 * dates that no longer exist. Losing its published status is not that:
+	 * an unpublished or trashed series is hidden, not gone, and its rows are
+	 * the only record of which date each RSVP was made on. Deleting them
+	 * there took a member's attendance history with them and republishing
+	 * could not bring it back, since projection only ever rebuilds future
+	 * dates. Permanent deletion still clears everything, through
+	 * `delete_event()`.
+	 *
+	 * `Occurrences::project()` is a no-op unless the event is published, so
+	 * a recurring series can be handed to it whatever its status.
+	 *
 	 * @param int    $post_id Event post ID.
 	 * @param object $post    Event post.
 	 */
@@ -241,7 +254,7 @@ final class Plugin {
 			return;
 		}
 
-		if ( 'publish' === $post->post_status && Rule::is_recurring( $post_id ) ) {
+		if ( Rule::is_recurring( $post_id ) ) {
 			Occurrences::project( $post_id );
 		} else {
 			Database::delete_series( $post_id );

@@ -13,6 +13,16 @@ namespace WordCamp\Groups\Frontend\My_Events;
 defined( 'WPINC' ) || die();
 
 /**
+ * How many past dates the block lists.
+ *
+ * The upcoming list is uncapped on purpose (#1810) — a member goes to it to
+ * confirm something specific is there. Past attendance is browsing rather
+ * than checking, and a member of several years would otherwise push the rest
+ * of the group's front page off the screen, so this one stops at a handful.
+ */
+const PAST_EVENTS_LIMIT = 5;
+
+/**
  * Upcoming dates for a member, soonest first.
  *
  * "Mine" means either of two things, and an organizer is usually both:
@@ -54,6 +64,118 @@ function get_upcoming_events( int $user_id ): array {
 	}
 
 	return filter_to_upcoming( $candidates );
+}
+
+/**
+ * Dates the member has already been to, most recent first.
+ *
+ * "Attended" means they RSVP'd as attending and the date has since finished,
+ * so — unlike `get_upcoming_events()` — authored events are not unioned in:
+ * creating an event is not the same as going to it, and an organizer who
+ * wants the full history of what they ran has the events archive for that.
+ *
+ * Cancelled dates are left out for the same reason (see
+ * `get_past_occurrences()`): a date that did not happen was not attended.
+ *
+ * @param int $user_id Member to resolve dates for.
+ * @param int $limit   Most recent dates to return.
+ *
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ *         Past dates ordered by start time descending. `start` is local to
+ *         the event, matching what GatherPress stores.
+ */
+function get_past_events( int $user_id, int $limit = PAST_EVENTS_LIMIT ): array {
+	if ( ! $user_id || $limit < 1 ) {
+		return array();
+	}
+
+	$candidates = get_attending_candidates( $user_id );
+
+	if ( empty( $candidates ) ) {
+		return array();
+	}
+
+	return filter_to_past( $candidates, $limit );
+}
+
+/**
+ * Reduce candidates to the dates that have finished, most recent first.
+ *
+ * The mirror of `filter_to_upcoming()`, and simpler for it: every candidate
+ * here came from an RSVP, so there is no series without a date of its own to
+ * stand in for, and nothing to deduplicate between an RSVP'd date and an
+ * authored series.
+ *
+ * @param array<int, array{event_id: int, recurrence_id: string}> $candidates Candidate dates.
+ * @param int                                                     $limit      Most recent dates to return.
+ *
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ *         Past dates ordered by start time descending.
+ */
+function filter_to_past( array $candidates, int $limit ): array {
+	$unique = array();
+	foreach ( $candidates as $candidate ) {
+		$unique[ $candidate['event_id'] . '|' . $candidate['recurrence_id'] ] = $candidate;
+	}
+
+	$event_ids   = array_values( array_unique( array_column( $unique, 'event_id' ) ) );
+	$series      = get_series_datetimes( $event_ids );
+	$occurrences = get_past_occurrences( $event_ids );
+	$now         = current_time( 'mysql', true );
+
+	$entries = array();
+
+	foreach ( $unique as $candidate ) {
+		if ( '' !== $candidate['recurrence_id'] ) {
+			$occurrence = $occurrences[ $candidate['event_id'] ][ $candidate['recurrence_id'] ] ?? null;
+
+			// Absent means still to come, or cancelled. Either way it is
+			// not something the member has been to.
+			if ( $occurrence ) {
+				$entries[] = array(
+					'event_id'      => $candidate['event_id'],
+					'recurrence_id' => $candidate['recurrence_id'],
+					'start'         => $occurrence->datetime_start,
+					'start_gmt'     => $occurrence->datetime_start_gmt,
+				);
+			}
+
+			continue;
+		}
+
+		/*
+		 * No recurrence id means a plain event — or an RSVP older than the
+		 * recurring-events extension, in which case GatherPress's row is the
+		 * series' first date and that is the best the data supports, the same
+		 * guess `filter_to_upcoming()` makes in the other direction.
+		 */
+		$row = $series[ $candidate['event_id'] ] ?? null;
+
+		if ( $row && $row->datetime_end_gmt < $now ) {
+			$entries[] = array(
+				'event_id'      => $candidate['event_id'],
+				'recurrence_id' => '',
+				'start'         => $row->datetime_start,
+				'start_gmt'     => $row->datetime_start_gmt,
+			);
+		}
+	}
+
+	usort(
+		$entries,
+		static function ( array $a, array $b ): int {
+			return array( $b['start_gmt'], $b['event_id'] ) <=> array( $a['start_gmt'], $a['event_id'] );
+		}
+	);
+
+	return array_map(
+		static function ( array $entry ): array {
+			unset( $entry['start_gmt'] );
+
+			return $entry;
+		},
+		array_slice( $entries, 0, $limit )
+	);
 }
 
 /**
@@ -358,6 +480,46 @@ function get_upcoming_occurrences( array $event_ids ): array {
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
 			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s AND status <> 'cancelled' ORDER BY datetime_start_gmt ASC",
+			$query_args
+		)
+	);
+
+	$occurrences = array();
+	foreach ( (array) $rows as $row ) {
+		$occurrences[ (int) $row->series_post_id ][ (string) $row->recurrence_id ] = $row;
+	}
+
+	return $occurrences;
+}
+
+/**
+ * Every projected date of these events that has finished, most recent first.
+ *
+ * Cancelled dates are left out, as in `get_upcoming_occurrences()`: "Past
+ * events" is a list of what the member went to, and a cancelled date is not
+ * that even once its time has passed.
+ *
+ * @param int[] $event_ids Event post IDs.
+ *
+ * @return array<int, array<string, object>> Rows keyed by event ID, then by
+ *         recurrence ID, each event's dates in descending order.
+ */
+function get_past_occurrences( array $event_ids ): array {
+	global $wpdb;
+
+	if ( empty( $event_ids ) || ! class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+		return array();
+	}
+
+	$table        = \WordPressdotorg\GatherPress_Recurring_Events\Database::occurrences_table();
+	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
+	$query_args   = array_merge( $event_ids, array( current_time( 'mysql', true ) ) );
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and placeholders are generated locally.
+	$rows = $wpdb->get_results(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
+			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt < %s AND status <> 'cancelled' ORDER BY datetime_start_gmt DESC",
 			$query_args
 		)
 	);

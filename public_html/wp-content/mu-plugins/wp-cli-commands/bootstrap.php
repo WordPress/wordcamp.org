@@ -4,6 +4,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	return;
 }
 
+// A one-time migration; remove this line and the file once it has been run across the network.
+require_once __DIR__ . '/backfill-budget-files.php';
+
 require_once __DIR__ . '/dangling-hosts.php';
 require_once __DIR__ . '/miscellaneous.php';
 require_once __DIR__ . '/rest-api.php';

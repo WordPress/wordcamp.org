@@ -77,6 +77,20 @@ const BUDGET_FILE_META_KEY = '_wcorg_budget_file';
 
 
 /**
+ * Set by `wp-cli-commands/backfill-budget-files.php` on each file it marks. Lives here because that command is
+ * deleted after its run.
+ */
+const BUDGET_FILE_BACKFILLED_META_KEY = '_wcorg_budget_file_backfilled';
+
+
+/**
+ * Set by the backfill on a file that is a copy of one still on a request elsewhere. Work list for a later pass;
+ * nothing here deletes.
+ */
+const BUDGET_FILE_DELETE_META_KEY = '_wcorg_budget_file_delete';
+
+
+/**
  * The post types whose attachments carry financial details.
  *
  * @return string[]

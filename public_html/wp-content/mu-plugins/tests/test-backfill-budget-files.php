@@ -165,6 +165,25 @@ class Test_Backfill_Budget_Files extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A copy that an earlier run marked is still recorded, because `scan` works the network out one site at a
+	 * time and the copy can be marked before its original is found.
+	 */
+	public function test_a_copy_is_recorded_on_a_later_run_too() {
+		$copy_id = $this->create_unattached_file( 'invoice-zZ9yYxXwWvVuUtT1.pdf' );
+
+		backfill_files();
+
+		$this->assertTrue( is_budget_file( $copy_id ) );
+		$this->assertSame( '', get_post_meta( $copy_id, BUDGET_FILE_DELETE_META_KEY, true ) );
+
+		$rows = backfill_files( array( $copy_id ) );
+
+		$this->assertSame( 'skipped', $this->row_for( $rows, $copy_id )['Marked'] );
+		$this->assertSame( 'yes', $this->row_for( $rows, $copy_id )['Copy'] );
+		$this->assertSame( '1', get_post_meta( $copy_id, BUDGET_FILE_DELETE_META_KEY, true ) );
+	}
+
+	/**
 	 * A dry run reports what a real one would do, and touches nothing.
 	 */
 	public function test_a_dry_run_writes_nothing() {

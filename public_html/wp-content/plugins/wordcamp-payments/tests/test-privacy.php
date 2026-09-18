@@ -1065,21 +1065,92 @@ class Test_Privacy extends WP_UnitTestCase {
 	 * fire for it and the row it leaves behind in the cache still says the file is unattached.
 	 */
 	public function test_the_media_library_attach_action_marks_a_file() {
-		global $wpdb;
-
 		wp_set_current_user( self::$organizer_b );
 
 		$own_request = self::create_request( self::$organizer_b );
 		$unattached  = self::create_file( 'receipt-5v6w7x8y9z1a2b3c.pdf', 0, self::$organizer_b );
 
-		// What `wp_media_attach_action()` does, in the order it does it.
-		$wpdb->update( $wpdb->posts, array( 'post_parent' => $own_request ), array( 'ID' => $unattached ) );
-		do_action( 'wp_media_attach_action', 'attach', $unattached, $own_request );
-		clean_attachment_cache( $unattached );
+		self::media_library_attach_action( $unattached, $own_request );
 
 		$this->assertSame( $own_request, (int) get_post( $unattached )->post_parent );
 		$this->assertSame( 'private', get_post( $unattached )->post_status );
 		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $unattached ) );
+	}
+
+	/**
+	 * Move a file the way the Media Library's Attach and Detach actions do: a direct `UPDATE`, then the hook,
+	 * then the cache.
+	 *
+	 * @param int    $attachment_id
+	 * @param int    $parent_id
+	 * @param string $action        Either `attach` or `detach`.
+	 */
+	protected static function media_library_attach_action( $attachment_id, $parent_id, $action = 'attach' ) {
+		global $wpdb;
+
+		$wpdb->update( $wpdb->posts, array( 'post_parent' => $parent_id ), array( 'ID' => $attachment_id ) );
+		do_action( 'wp_media_attach_action', $action, $attachment_id, $parent_id );
+		clean_attachment_cache( $attachment_id );
+	}
+
+	/**
+	 * A file that already sits on another post is left as it is, whichever route writes the new parent.
+	 *
+	 * Correcting an ordinary attachment's parent shouldn't take it out of the posts it is already used in,
+	 * which the `private` status would.
+	 *
+	 * @dataProvider data_reparenting_routes
+	 *
+	 * @param string $route
+	 */
+	public function test_attaching_a_file_from_another_post_leaves_it_unmarked( $route ) {
+		wp_set_current_user( self::$organizer_b );
+
+		$blog_post   = self::factory()->post->create( array( 'post_author' => self::$organizer_b ) );
+		$file_id     = self::create_file( 'diagram-1q2r3s4t5u6v7w8x.png', $blog_post, self::$organizer_b );
+		$own_request = self::create_request( self::$organizer_b );
+
+		if ( 'update' === $route ) {
+			wp_update_post( array(
+				'ID'          => $file_id,
+				'post_parent' => $own_request,
+			) );
+		} else {
+			self::media_library_attach_action( $file_id, $own_request );
+		}
+
+		$this->assertSame( $own_request, (int) get_post( $file_id )->post_parent );
+		$this->assertSame( 'inherit', get_post( $file_id )->post_status );
+		$this->assertFalse( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
+	}
+
+	/**
+	 * The two ways an attachment's parent is written.
+	 *
+	 * @return array
+	 */
+	public function data_reparenting_routes() {
+		return array(
+			'through `wp_update_post()`'               => array( 'update' ),
+			'through the Media Library Attach action'  => array( 'attach_action' ),
+		);
+	}
+
+	/**
+	 * Detaching keeps both the marker and the status. A marked file with no parent and `inherit` reads as
+	 * ordinary public media to Core.
+	 */
+	public function test_detaching_a_marked_file_keeps_it_marked_and_private() {
+		$own_request = self::create_request( self::$organizer_b );
+		$file_id     = self::create_file( 'receipt-9o0p1q2r3s4t5u6v.pdf', $own_request, self::$organizer_b );
+
+		\WordCamp\Budgets\Privacy\mark_budget_file( $file_id );
+
+		self::media_library_attach_action( $file_id, 0, 'detach' );
+
+		$this->assertSame( 0, (int) get_post( $file_id )->post_parent );
+		$this->assertSame( 'private', get_post( $file_id )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
 	}
 
 	/**
@@ -1145,6 +1216,28 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A trashed request is still a request, so the files on it stay scoped to it.
+	 *
+	 * Trashing is how a request is taken back, and the files come back with it, so the parent lookup asks what
+	 * type a post is rather than which status it holds.
+	 */
+	public function test_an_unmarked_file_on_a_trashed_request_is_still_scoped_by_its_parent() {
+		$request_id = self::create_request( self::$organizer_a );
+		$file_id    = self::create_file( 'receipt-8y9z1a2b3c4d5e6f.pdf', $request_id, self::$organizer_a );
+
+		self::trash_request( $request_id );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertNotContains( $file_id, $this->get_visible_attachment_ids( self::any_status() ) );
+		$this->assertFalse( current_user_can( 'read_post', $file_id ) );
+
+		wp_set_current_user( self::$organizer_a );
+
+		$this->assertTrue( current_user_can( 'read_post', $file_id ) );
+	}
+
+	/**
 	 * The Files metabox shows a requester every file on their request, whatever role they hold.
 	 *
 	 * `WP_Query` only returns another user's `private` post to someone with `read_private_posts`, which an
@@ -1183,6 +1276,62 @@ class Test_Privacy extends WP_UnitTestCase {
 	 */
 	protected static function any_status() {
 		return array( 'post_status' => array( 'inherit', 'private' ) );
+	}
+
+	/**
+	 * The query vars the Media Library grid and the media modal run, once the filters have had them.
+	 *
+	 * Both go through `wp_ajax_query_attachments()`, which asks for `inherit` and adds `private` only for
+	 * `read_private_posts` -- so on its own it shows an Author none of their own payment files.
+	 *
+	 * @return array
+	 */
+	protected static function media_library_query_args() {
+		return apply_filters(
+			'ajax_query_attachments_args',
+			array(
+				'post_type'   => 'attachment',
+				'post_status' => 'inherit',
+			)
+		);
+	}
+
+	/**
+	 * A requester who is only an Author sees the files on their own request in the Media Library, and no more
+	 * `private` media than they could see before.
+	 */
+	public function test_media_library_shows_a_volunteer_requester_the_files_on_their_request() {
+		$request_id = self::create_request( self::$volunteer );
+
+		$their_own     = self::create_file( 'receipt-6l7m8n9o0p1q2r3s.pdf', $request_id, self::$volunteer );
+		$uploaded_by_a = self::create_file( 'receipt-7m8n9o0p1q2r3s4t.pdf', $request_id, self::$organizer_a );
+
+		foreach ( array( $their_own, $uploaded_by_a ) as $file_id ) {
+			\WordCamp\Budgets\Privacy\mark_budget_file( $file_id );
+		}
+
+		// A `private` attachment that is nobody's payment file: sponsorship agreements are stored this way.
+		$someone_elses = self::create_file( 'agreement-8n9o0p1q2r3s4t5u.pdf', 0, self::$organizer_a );
+		wp_update_post( array(
+			'ID'          => $someone_elses,
+			'post_status' => 'private',
+		) );
+
+		wp_set_current_user( self::$volunteer );
+
+		$visible = $this->get_visible_attachment_ids( self::media_library_query_args() );
+
+		$this->assertFalse( current_user_can( 'read_private_posts' ) );
+		$this->assertContains( $their_own, $visible );
+		$this->assertContains( $uploaded_by_a, $visible );
+		$this->assertNotContains( $someone_elses, $visible );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertContains(
+			$someone_elses,
+			$this->get_visible_attachment_ids( self::media_library_query_args() )
+		);
 	}
 
 	/**

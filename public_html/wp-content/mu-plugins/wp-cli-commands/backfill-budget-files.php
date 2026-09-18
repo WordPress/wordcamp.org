@@ -139,10 +139,11 @@ function has_random_suffix( $file ) {
 
 /**
  * Give the files on the current site the marker and the status `privacy.php` would have given them. Safe to
- * re-run: a marked file is reported and left alone.
+ * re-run: a marked file keeps the marker and status it has.
  *
- * @param int[] $copy_ids IDs that `scan` matched to a file still on a request on another site. Each one also
- *                        gets `BUDGET_FILE_DELETE_META_KEY`, for a later pass to act on.
+ * @param int[] $copy_ids IDs that `scan` matched to a file still on a request on another site. Each one gets
+ *                        `BUDGET_FILE_DELETE_META_KEY` on every run it is named in, marked or not, for a later
+ *                        pass to act on.
  * @param bool  $dry_run  Report what would change, without changing it.
  *
  * @return array[] One report row per file, in `Command::REPORT_COLUMNS` order.
@@ -163,10 +164,13 @@ function backfill_files( $copy_ids = array(), $dry_run = false ) {
 			// Only an unattached file can be a copy: an attached one is the original a copy is matched to.
 			$is_copy = 'unattached' === $arm && in_array( $attachment_id, $copy_ids, true );
 
-			if ( ! $candidate->marked && ! $dry_run ) {
-				mark_budget_file( $attachment_id );
-				update_post_meta( $attachment_id, BUDGET_FILE_BACKFILLED_META_KEY, 1 );
+			if ( ! $dry_run ) {
+				if ( ! $candidate->marked ) {
+					mark_budget_file( $attachment_id );
+					update_post_meta( $attachment_id, BUDGET_FILE_BACKFILLED_META_KEY, 1 );
+				}
 
+				// Outside the branch above, so naming a file that an earlier run marked still records it.
 				if ( $is_copy ) {
 					update_post_meta( $attachment_id, BUDGET_FILE_DELETE_META_KEY, 1 );
 				}
@@ -177,7 +181,7 @@ function backfill_files( $copy_ids = array(), $dry_run = false ) {
 				'File'       => wp_basename( (string) $candidate->file ),
 				'Was'        => $candidate->post_status,
 				'Marked'     => $candidate->marked ? 'skipped' : 'yes',
-				'Copy'       => $is_copy && ! $candidate->marked ? 'yes' : 'no',
+				'Copy'       => $is_copy ? 'yes' : 'no',
 			);
 		}
 	}

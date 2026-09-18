@@ -259,11 +259,15 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'weekly', get_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', true ) );
 	}
 
-	/** Unpublishing a recurring series removes its projected occurrence data. */
-	public function test_unpublishing_recurring_event_removes_series_data(): void {
+	/**
+	 * Seeds one occurrence and an RSVP mapped onto it.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return int The mapped comment ID.
+	 */
+	private function seed_occurrence_with_rsvp( int $post_id ): int {
 		global $wpdb;
 
-		$post_id    = $this->create_published_recurring_event();
 		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID' => $post_id,
@@ -273,26 +277,179 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$wpdb->insert(
 			Database::occurrences_table(),
 			array(
-				'series_post_id'    => $post_id,
-				'recurrence_id'     => '20260810T100000',
-				'datetime_start'    => '2026-08-10 10:00:00',
+				'series_post_id'     => $post_id,
+				'recurrence_id'      => '20260810T100000',
+				'datetime_start'     => '2026-08-10 10:00:00',
 				'datetime_start_gmt' => '2026-08-10 10:00:00',
-				'datetime_end'      => '2026-08-10 11:00:00',
-				'datetime_end_gmt'  => '2026-08-10 11:00:00',
-				'timezone'          => 'UTC',
-				'status'            => 'scheduled',
-				'created_gmt'       => $now,
-				'updated_gmt'       => $now,
+				'datetime_end'       => '2026-08-10 11:00:00',
+				'datetime_end_gmt'   => '2026-08-10 11:00:00',
+				'timezone'           => 'UTC',
+				'status'             => 'scheduled',
+				'created_gmt'        => $now,
+				'updated_gmt'        => $now,
 			)
 		);
 		Database::map_comment( $comment_id, $post_id, '20260810T100000' );
 
-		$post              = get_post( $post_id );
-		$post->post_status = 'draft';
+		return $comment_id;
+	}
+
+	/**
+	 * Writes a post status straight to the database.
+	 *
+	 * `wp_update_post()` would fire `save_post_gatherpress_event` itself,
+	 * which is the thing under test here; the schedule meta lock reads the
+	 * stored status, so mutating the object alone is not enough.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $status  Status to store.
+	 * @return \WP_Post The refreshed post.
+	 */
+	private function set_post_status( int $post_id, string $status ): \WP_Post {
+		global $wpdb;
+
+		$wpdb->update(
+			$wpdb->posts,
+			array( 'post_status' => $status ),
+			array( 'ID' => $post_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		clean_post_cache( $post_id );
+
+		return get_post( $post_id );
+	}
+
+	/**
+	 * Counts this series' rows in both of the extension's tables.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return array{occurrences: int, mappings: int}
+	 */
+	private function count_series_rows( int $post_id ): array {
+		global $wpdb;
+
+		return array(
+			'occurrences' => (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id ) ),
+			'mappings'    => (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ),
+		);
+	}
+
+	/**
+	 * Unpublishing a series hides it; it does not discard its dates.
+	 *
+	 * The mapping rows are the only record of which date each RSVP was made
+	 * on, so dropping them here erased a member's attendance history for good
+	 * — projection only ever rebuilds future dates, so republishing could not
+	 * restore it.
+	 */
+	public function test_unpublishing_recurring_event_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'draft' ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id ),
+			'An unpublished series keeps its dates and the RSVPs mapped onto them.'
+		);
+	}
+
+	/**
+	 * Trashing is reversible too, so it keeps the series data for the same
+	 * reason unpublishing does.
+	 */
+	public function test_trashing_recurring_event_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'trash' ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * Republishing restores the series, history included.
+	 */
+	public function test_republishing_recurring_event_restores_the_series(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		$comment_id = $this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'draft' ) );
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'publish' ) );
+
+		$this->assertSame(
+			'20260810T100000',
+			$wpdb->get_var( $wpdb->prepare( 'SELECT recurrence_id FROM %i WHERE comment_id = %d', Database::comments_table(), $comment_id ) ),
+			'The RSVP still points at the date it was made on.'
+		);
+		$this->assertNotNull(
+			Occurrences::get( $post_id, '20260810T100000' ),
+			'The date the RSVP points at still exists.'
+		);
+	}
+
+	/**
+	 * An event that stops being a recurring one does lose its series data:
+	 * the dates and the RSVPs mapped onto them point at occurrences that no
+	 * longer exist.
+	 */
+	public function test_dropping_the_recurrence_rule_removes_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		// The rule is locked while the event is published, so this is the
+		// order an organizer has to do it in: unpublish, which now keeps the
+		// series data, and only then drop the recurrence.
+		$post = $this->set_post_status( $post_id, 'draft' );
 		Plugin::get_instance()->save_event( $post_id, $post );
 
-		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id ) ) );
-		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ) );
+		delete_post_meta( $post_id, Rule::META_PREFIX . 'frequency' );
+		Plugin::get_instance()->save_event( $post_id, $post );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 0,
+				'mappings'    => 0,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * Permanent deletion still clears everything — that is the path that is
+	 * actually destructive, and it is unaffected by the above.
+	 */
+	public function test_deleting_recurring_event_removes_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->delete_event( $post_id, get_post( $post_id ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 0,
+				'mappings'    => 0,
+			),
+			$this->count_series_rows( $post_id )
+		);
 	}
 
 	/**

@@ -140,6 +140,22 @@ function get_recipient( WP_Comment $comment ): ?array {
 }
 
 /**
+ * Decode the entities WordPress hands text over with, for a plain-text body.
+ *
+ * `the_title` runs `wptexturize()`, so an apostrophe arrives as `&#8217;`, and
+ * option and term names are stored HTML-escaped. Nothing decodes those in a
+ * `text/plain` message, so they would reach the member literally. `inc/rest.php`
+ * decodes titles for the same reason.
+ *
+ * @param string $text Text as WordPress hands it over.
+ *
+ * @return string
+ */
+function plain_text( string $text ): string {
+	return html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
+}
+
+/**
  * Build and send the confirmation.
  *
  * @param array{email: string, name: string} $recipient Recipient.
@@ -147,8 +163,8 @@ function get_recipient( WP_Comment $comment ): ?array {
  */
 function send_email( array $recipient, int $event_id ): void {
 	$event      = new Event( $event_id );
-	$title      = get_the_title( $event_id );
-	$group_name = get_bloginfo( 'name' );
+	$title      = plain_text( get_the_title( $event_id ) );
+	$group_name = plain_text( get_bloginfo( 'name' ) );
 
 	/*
 	 * On a recurring event this resolves to the occurrence the member is
@@ -158,7 +174,7 @@ function send_email( array $recipient, int $event_id ): void {
 	 */
 	$when      = $event->get_display_datetime();
 	$permalink = get_permalink( $event_id );
-	$venue     = $event->get_venue_information()['name'] ?? '';
+	$venue     = plain_text( $event->get_venue_information()['name'] ?? '' );
 
 	$lines = array(
 		sprintf(

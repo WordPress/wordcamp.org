@@ -194,6 +194,42 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 	}
 
 	/**
+	 * Nothing in the body or the subject arrives HTML-escaped. `the_title`
+	 * runs `wptexturize()`, and the group name is stored escaped, so both
+	 * would otherwise reach the member as `&#8217;` and `&quot;` in what is
+	 * a plain-text message.
+	 */
+	public function test_entities_are_decoded_for_plain_text() {
+		update_option( 'blogname', 'Jess\'s "Group"' );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Let\'s build Jess\'s "demo" site',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2031-05-20 10:00:00',
+				'datetime_end'   => '2031-05-20 12:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$mail = $this->sent_mail[0];
+
+		$this->assertStringNotContainsString( '&#', $mail['subject'], 'The subject should carry no HTML entities.' );
+		$this->assertStringNotContainsString( '&#', $mail['message'], 'The body should carry no HTML entities.' );
+		$this->assertStringNotContainsString( '&quot;', $mail['message'] );
+		$this->assertStringContainsString( 'Jess', $mail['message'] );
+	}
+
+	/**
 	 * Terms set on some other taxonomy never reach the mailer.
 	 */
 	public function test_ignores_other_taxonomies() {

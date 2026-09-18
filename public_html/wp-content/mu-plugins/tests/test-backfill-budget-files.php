@@ -48,12 +48,21 @@ class Test_Backfill_Budget_Files extends WP_UnitTestCase {
 			'post_status' => $status,
 		) );
 
-		$file_id = self::factory()->attachment->create_object( array(
-			'file'           => 'receipt-aB3dEfGhIjKlMn0p.pdf',
-			'post_parent'    => $request_id,
-			'post_status'    => 'inherit',
-			'post_mime_type' => 'application/pdf',
-		) );
+		// Without the hook that marks a file on insert, since this is a row from before that hook existed.
+		$mark_on_insert = 'WordCamp\\Budgets\\Privacy\\mark_budget_file_upload';
+
+		remove_action( 'add_attachment', $mark_on_insert );
+
+		try {
+			$file_id = self::factory()->attachment->create_object( array(
+				'file'           => 'receipt-aB3dEfGhIjKlMn0p.pdf',
+				'post_parent'    => $request_id,
+				'post_status'    => 'inherit',
+				'post_mime_type' => 'application/pdf',
+			) );
+		} finally {
+			add_action( 'add_attachment', $mark_on_insert );
+		}
 
 		return $file_id;
 	}

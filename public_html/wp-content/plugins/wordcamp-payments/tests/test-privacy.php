@@ -86,8 +86,8 @@ class Test_Privacy extends WP_UnitTestCase {
 			'post_status' => 'draft',
 		) );
 
-		self::$payment_file_id       = self::create_file( 'invoice-a1b2c3d4e5f6g7h8.pdf', self::$payment_request_id, self::$organizer_a );
-		self::$reimbursement_file_id = self::create_file( 'receipt-h8g7f6e5d4c3b2a1.pdf', $reimbursement_id, self::$organizer_a );
+		self::$payment_file_id       = self::create_legacy_file( 'invoice-a1b2c3d4e5f6g7h8.pdf', self::$payment_request_id, self::$organizer_a );
+		self::$reimbursement_file_id = self::create_legacy_file( 'receipt-h8g7f6e5d4c3b2a1.pdf', $reimbursement_id, self::$organizer_a );
 		self::$public_file_id        = self::create_file( 'sponsor-logo.png', 0, self::$organizer_a );
 
 		$blog_post               = $factory->post->create( array( 'post_author' => self::$organizer_a ) );
@@ -112,6 +112,28 @@ class Test_Privacy extends WP_UnitTestCase {
 			'post_author'    => $author_id,
 			'post_mime_type' => 'application/pdf',
 		) );
+	}
+
+	/**
+	 * The same, without the hook that marks a file on insert, for the rows the tests below model from before
+	 * that hook existed.
+	 *
+	 * @param string $filename
+	 * @param int    $parent_id
+	 * @param int    $author_id
+	 *
+	 * @return int
+	 */
+	protected static function create_legacy_file( $filename, $parent_id, $author_id ) {
+		$mark_on_insert = 'WordCamp\Budgets\Privacy\mark_budget_file_upload';
+
+		remove_action( 'add_attachment', $mark_on_insert );
+
+		try {
+			return self::create_file( $filename, $parent_id, $author_id );
+		} finally {
+			add_action( 'add_attachment', $mark_on_insert );
+		}
 	}
 
 	/**
@@ -321,7 +343,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	 * Uploading onto someone else's request doesn't cost you sight of your own file.
 	 */
 	public function test_uploader_sees_own_file_on_another_organizers_request() {
-		$own_file = self::create_file( 'quote-9z8y7x6w5v4u3t2s.pdf', self::$payment_request_id, self::$organizer_b );
+		$own_file = self::create_legacy_file( 'quote-9z8y7x6w5v4u3t2s.pdf', self::$payment_request_id, self::$organizer_b );
 
 		wp_set_current_user( self::$organizer_b );
 
@@ -1024,6 +1046,26 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An insert from PHP is stored the same way, though it sends none of the parameters the upload routes do.
+	 */
+	public function test_an_insert_onto_a_request_is_marked_and_private() {
+		$request_id = self::create_request( self::$organizer_a );
+
+		$file_id = wp_insert_attachment(
+			array(
+				'post_mime_type' => 'application/pdf',
+				'post_title'     => 'receipt',
+				'post_parent'    => $request_id,
+				'post_author'    => self::$organizer_a,
+			),
+			'receipt-2r3s4t5u6v7w8x9y.pdf'
+		);
+
+		$this->assertSame( 'private', get_post( $file_id )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
+	}
+
+	/**
 	 * Uploading onto anything else is left exactly as Core does it.
 	 */
 	public function test_upload_onto_an_ordinary_post_is_untouched() {
@@ -1204,7 +1246,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	 */
 	public function test_an_unmarked_file_on_a_request_is_still_scoped_by_its_parent() {
 		$request_id = self::create_request( self::$organizer_a );
-		$file_id    = self::create_file( 'receipt-7x8y9z1a2b3c4d5e.pdf', $request_id, self::$organizer_a );
+		$file_id    = self::create_legacy_file( 'receipt-7x8y9z1a2b3c4d5e.pdf', $request_id, self::$organizer_a );
 
 		$this->assertSame( 'inherit', get_post( $file_id )->post_status );
 		$this->assertFalse( \WordCamp\Budgets\Privacy\is_budget_file( $file_id ) );
@@ -1223,7 +1265,7 @@ class Test_Privacy extends WP_UnitTestCase {
 	 */
 	public function test_an_unmarked_file_on_a_trashed_request_is_still_scoped_by_its_parent() {
 		$request_id = self::create_request( self::$organizer_a );
-		$file_id    = self::create_file( 'receipt-8y9z1a2b3c4d5e6f.pdf', $request_id, self::$organizer_a );
+		$file_id    = self::create_legacy_file( 'receipt-8y9z1a2b3c4d5e6f.pdf', $request_id, self::$organizer_a );
 
 		self::trash_request( $request_id );
 

@@ -193,6 +193,27 @@ class Test_Backfill_Budget_Files extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A marked file reads as delete-listed only once a run has named it as a copy.
+	 *
+	 * `scan` keeps a site while that is outstanding: marking is done there, recording the copy isn't, and the
+	 * two happen on different runs because a copy's original can sit on a site `scan` hasn't reached yet.
+	 */
+	public function test_a_marked_file_is_delete_listed_only_once_it_is_named() {
+		$file_id = $this->create_unattached_file( 'invoice-cD4eFgHiJkLmN0pQ.pdf' );
+
+		backfill_files();
+
+		$candidate = $this->candidate_for( get_unattached_candidates(), $file_id );
+
+		$this->assertNotNull( $candidate->marked );
+		$this->assertNull( $candidate->delete_listed );
+
+		backfill_files( array( $file_id ) );
+
+		$this->assertNotNull( $this->candidate_for( get_unattached_candidates(), $file_id )->delete_listed );
+	}
+
+	/**
 	 * A dry run reports what a real one would do, and touches nothing.
 	 */
 	public function test_a_dry_run_writes_nothing() {
@@ -218,6 +239,22 @@ class Test_Backfill_Budget_Files extends WP_UnitTestCase {
 	 */
 	protected function candidate_ids( $candidates ) {
 		return array_map( 'intval', wp_list_pluck( $candidates, 'ID' ) );
+	}
+
+	/**
+	 * The candidate row for one attachment.
+	 *
+	 * @param object[] $candidates
+	 * @param int      $attachment_id
+	 *
+	 * @return object
+	 */
+	protected function candidate_for( $candidates, $attachment_id ) {
+		$matches = array_values( array_filter( $candidates, fn( $row ) => (int) $row->ID === $attachment_id ) );
+
+		$this->assertCount( 1, $matches, "No candidate row for attachment {$attachment_id}." );
+
+		return $matches[0];
 	}
 
 	/**

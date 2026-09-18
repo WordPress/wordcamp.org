@@ -1120,19 +1120,65 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Move a file the way the Media Library's Attach and Detach actions do: a direct `UPDATE`, then the hook,
-	 * then the cache.
+	 * The parent an attach writes over is only readable before `upload.php` dispatches the action, so a file
+	 * whose previous parent nobody captured is left as it is rather than guessed at.
+	 */
+	public function test_an_uncaptured_attach_leaves_a_file_unmarked() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::create_request( self::$organizer_b );
+		$unattached  = self::create_file( 'receipt-2c3d4e5f6g7h8i9j.pdf', 0, self::$organizer_b );
+
+		self::media_library_attach_action( $unattached, $own_request, 'attach', false );
+
+		$this->assertSame( $own_request, (int) get_post( $unattached )->post_parent );
+		$this->assertSame( 'inherit', get_post( $unattached )->post_status );
+		$this->assertFalse( \WordCamp\Budgets\Privacy\is_budget_file( $unattached ) );
+	}
+
+	/**
+	 * Move a file the way the Media Library's Attach and Detach actions do: the screen load that reads the
+	 * parent, a direct `UPDATE`, then the hook, then the cache.
 	 *
 	 * @param int    $attachment_id
 	 * @param int    $parent_id
 	 * @param string $action        Either `attach` or `detach`.
+	 * @param bool   $capture       Whether `load-upload.php` runs first, as it does on a real request.
 	 */
-	protected static function media_library_attach_action( $attachment_id, $parent_id, $action = 'attach' ) {
+	protected static function media_library_attach_action( $attachment_id, $parent_id, $action = 'attach', $capture = true ) {
 		global $wpdb;
 
+		if ( $capture ) {
+			self::capture_attach_action( $attachment_id, $parent_id );
+		}
+
 		$wpdb->update( $wpdb->posts, array( 'post_parent' => $parent_id ), array( 'ID' => $attachment_id ) );
+
+		/*
+		 * Core writes that parent with a direct `UPDATE` and nothing reads the row back before the hook, so
+		 * whatever is left in the cache is incidental. Cleared here, so the hook can't be relying on it.
+		 */
+		clean_post_cache( $attachment_id );
+
 		do_action( 'wp_media_attach_action', $action, $attachment_id, $parent_id );
 		clean_attachment_cache( $attachment_id );
+	}
+
+	/**
+	 * Load `upload.php` with the request the find-posts modal posts, which is where the previous parent is read.
+	 *
+	 * @param int $attachment_id
+	 * @param int $parent_id
+	 */
+	protected static function capture_attach_action( $attachment_id, $parent_id ) {
+		$_REQUEST['media']         = array( $attachment_id );
+		$_REQUEST['found_post_id'] = $parent_id;
+
+		try {
+			do_action( 'load-upload.php' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own name for it.
+		} finally {
+			unset( $_REQUEST['media'], $_REQUEST['found_post_id'] );
+		}
 	}
 
 	/**
@@ -1374,6 +1420,93 @@ class Test_Privacy extends WP_UnitTestCase {
 			$someone_elses,
 			$this->get_visible_attachment_ids( self::media_library_query_args() )
 		);
+	}
+
+	/**
+	 * Run a query whose results a `posts_pre_query` filter supplies, as jetpack-search does. The clauses are
+	 * built and thrown away, so the pass over the results is the only one that runs.
+	 *
+	 * @param int[] $attachment_ids
+	 *
+	 * @return int[]
+	 */
+	protected static function supplied_results( array $attachment_ids ) {
+		$supply = fn() => array_map( 'get_post', $attachment_ids );
+
+		add_filter( 'posts_pre_query', $supply );
+
+		try {
+			$query = new WP_Query( array_merge(
+				array(
+					'post_type'        => 'attachment',
+					'suppress_filters' => false,
+				),
+				self::any_status()
+			) );
+		} finally {
+			remove_filter( 'posts_pre_query', $supply );
+		}
+
+		return array_map( 'intval', wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
+	 * The pass over the results answers the `private` gate as well, and to the same answer the clauses give.
+	 *
+	 * A requester who is only an Author asks for `private` outright, which is what makes `WP_Query` skip its
+	 * own gate, so the files on their own request come back and a stranger's `private` media doesn't.
+	 */
+	public function test_supplied_results_answer_the_private_gate() {
+		$request_id = self::create_request( self::$volunteer );
+
+		$their_own     = self::create_file( 'receipt-0p1q2r3s4t5u6v7w.pdf', $request_id, self::$volunteer );
+		$uploaded_by_a = self::create_file( 'receipt-1q2r3s4t5u6v7w8x.pdf', $request_id, self::$organizer_a );
+
+		foreach ( array( $their_own, $uploaded_by_a ) as $file_id ) {
+			\WordCamp\Budgets\Privacy\mark_budget_file( $file_id );
+		}
+
+		// A `private` attachment that is nobody's payment file: sponsorship agreements are stored this way.
+		$someone_elses = self::create_file( 'agreement-9o0p1q2r3s4t5u6v.pdf', 0, self::$organizer_a );
+		wp_update_post( array(
+			'ID'          => $someone_elses,
+			'post_status' => 'private',
+		) );
+
+		$supplied = array( $someone_elses, $their_own, $uploaded_by_a );
+
+		wp_set_current_user( self::$volunteer );
+
+		$visible = self::supplied_results( $supplied );
+
+		$this->assertNotContains( $someone_elses, $visible );
+		$this->assertContains( $their_own, $visible );
+		$this->assertContains( $uploaded_by_a, $visible );
+
+		wp_set_current_user( self::$organizer_b );
+
+		$this->assertContains( $someone_elses, self::supplied_results( $supplied ) );
+	}
+
+	/**
+	 * A network admin reviews every request, so none of the rules above may cost them a file.
+	 *
+	 * The control on the `private` status: a marked file with no parent left is the shape the status changes
+	 * most, and it is still theirs to read.
+	 */
+	public function test_a_network_admin_keeps_every_payment_file() {
+		$detached = self::create_file( 'receipt-3d4e5f6g7h8i9j0k.pdf', 0, self::$organizer_a );
+
+		\WordCamp\Budgets\Privacy\mark_budget_file( $detached );
+
+		wp_set_current_user( self::$network_admin );
+
+		$visible = $this->get_visible_attachment_ids( self::any_status() );
+
+		$this->assertContains( $detached, $visible );
+		$this->assertContains( self::$payment_file_id, $visible );
+		$this->assertContains( self::$reimbursement_file_id, $visible );
+		$this->assertTrue( current_user_can( 'read_post', $detached ) );
 	}
 
 	/**

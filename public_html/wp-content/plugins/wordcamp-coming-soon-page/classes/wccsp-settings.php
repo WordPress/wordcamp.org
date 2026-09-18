@@ -36,6 +36,7 @@ class WCCSP_Settings {
 			'enabled'                    => 'off',        // So that sites created before the plugin was deployed won't display the home page when the plugin is activated.
 			'body_background_color'      => '#0073AA',
 			'image_id'                   => 0,
+			'contact_form_page_id'       => 0,
 			'background_id'              => 0,
 			'container_background_color' => '#FFFFFF', // Deprecated.
 			'text_color'                 => '#000000', // Deprecated.

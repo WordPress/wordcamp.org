@@ -833,13 +833,12 @@ function mark_attached_budget_file( $action, $attachment_id, $parent_id ) {
  */
 function capture_attach_action_parents() {
 	// phpcs:ignore WordPress.Security.NonceVerification -- `upload.php` checks `bulk-media` before it acts.
-	$media = isset( $_REQUEST['found_post_id'] ) ? ( $_REQUEST['media'] ?? null ) : null;
-
-	if ( ! is_array( $media ) ) {
+	if ( ! isset( $_REQUEST['found_post_id'], $_REQUEST['media'] ) ) {
 		return;
 	}
 
-	$attachment_ids = array_filter( array_map( 'absint', $media ) );
+	// Core reads `media` through an `(array)` cast, so a single ID in a plain query string attaches too.
+	$attachment_ids = array_filter( array_map( 'absint', (array) $_REQUEST['media'] ) );
 	$parents        = array();
 
 	if ( $attachment_ids ) {

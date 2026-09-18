@@ -1120,6 +1120,21 @@ class Test_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Core reads `media` through an `(array)` cast, so `upload.php?action=attach&media=123` attaches one file.
+	 */
+	public function test_the_attach_action_marks_a_file_posted_as_a_single_id() {
+		wp_set_current_user( self::$organizer_b );
+
+		$own_request = self::create_request( self::$organizer_b );
+		$unattached  = self::create_file( 'receipt-7h8i9j1k2l3m4n5o.pdf', 0, self::$organizer_b );
+
+		self::media_library_attach_action( $unattached, $own_request, 'attach', 'scalar' );
+
+		$this->assertSame( 'private', get_post( $unattached )->post_status );
+		$this->assertTrue( \WordCamp\Budgets\Privacy\is_budget_file( $unattached ) );
+	}
+
+	/**
 	 * The parent an attach writes over is only readable before `upload.php` dispatches the action, so a file
 	 * whose previous parent nobody captured is left as it is rather than guessed at.
 	 */
@@ -1143,13 +1158,14 @@ class Test_Privacy extends WP_UnitTestCase {
 	 * @param int    $attachment_id
 	 * @param int    $parent_id
 	 * @param string $action        Either `attach` or `detach`.
-	 * @param bool   $capture       Whether `load-upload.php` runs first, as it does on a real request.
+	 * @param mixed  $capture       Whether `load-upload.php` runs first, as it does on a real request; `scalar`
+	 *                              posts `media` as a single ID rather than the list the modal sends.
 	 */
 	protected static function media_library_attach_action( $attachment_id, $parent_id, $action = 'attach', $capture = true ) {
 		global $wpdb;
 
 		if ( $capture ) {
-			self::capture_attach_action( $attachment_id, $parent_id );
+			self::capture_attach_action( 'scalar' === $capture ? $attachment_id : array( $attachment_id ), $parent_id );
 		}
 
 		$wpdb->update( $wpdb->posts, array( 'post_parent' => $parent_id ), array( 'ID' => $attachment_id ) );
@@ -1167,11 +1183,11 @@ class Test_Privacy extends WP_UnitTestCase {
 	/**
 	 * Load `upload.php` with the request the find-posts modal posts, which is where the previous parent is read.
 	 *
-	 * @param int $attachment_id
-	 * @param int $parent_id
+	 * @param int|int[] $media
+	 * @param int       $parent_id
 	 */
-	protected static function capture_attach_action( $attachment_id, $parent_id ) {
-		$_REQUEST['media']         = array( $attachment_id );
+	protected static function capture_attach_action( $media, $parent_id ) {
+		$_REQUEST['media']         = $media;
 		$_REQUEST['found_post_id'] = $parent_id;
 
 		try {

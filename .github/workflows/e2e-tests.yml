@@ -187,7 +187,7 @@ jobs:
     - name: Install GatherPress on the groups site
       run: |
         docker compose exec -T wordcamp.test wp plugin install \
-          https://github.com/GatherPress/gatherpress/releases/download/0.35.3/gatherpress.0.35.3.zip \
+          https://github.com/GatherPress/gatherpress/releases/download/0.35.4/gatherpress.0.35.4.zip \
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
@@ -221,6 +221,14 @@ jobs:
         # front-end modal and then RSVPs to it, so it needs the editor tier
         # and an account no concurrent spec is logged into.
         create_user organiser6 editor & pids+=( "$!" )
+        # add-to-calendar.spec.js publishes its own event through the
+        # front-end modal, for the same reason as organiser5's spec: no
+        # events are seeded here.
+        create_user organiser7 editor & pids+=( "$!" )
+        # event-edit-surface.spec.js publishes its own event through the
+        # front-end modal and then opens it from the event page, so it needs
+        # the editor tier and an account of its own.
+        create_user organiser8 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

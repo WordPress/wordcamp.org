@@ -310,10 +310,10 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
  * resolves through this filter — hardcoded items, no per-site nav menu to
  * provision.
  *
- * Built at render time, so the account item can react to the visitor:
+ * Built at render time, so the member-facing items can react to the visitor:
  * logged-out visitors — the ones served from the page cache — all get the
- * same "Log in" link, while logged-in views bypass the cache, so the
- * per-user nonce in the logout URL is safe.
+ * same "Log in" link and no "My events", while logged-in views bypass the
+ * cache, so the per-user nonce in the logout URL is safe.
  *
  * @param array $menus Menus keyed by slug, each an array of label/url items.
  * @return array
@@ -327,21 +327,38 @@ function add_local_navigation_menus( $menus ) {
 	// where the fallback is harmless.
 	$current_url = home_url( empty( $wp->request ) ? '/' : trailingslashit( $wp->request ) );
 
-	$menus['local-navigation'] = array(
+	$items = array(
 		array(
 			'label' => __( 'All Events', 'groups-site' ),
 			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
 		),
-		is_user_logged_in()
-			? array(
-				'label' => __( 'Log out', 'groups-site' ),
-				'url'   => wp_logout_url( $current_url ),
-			)
-			: array(
-				'label' => __( 'Log in', 'groups-site' ),
-				'url'   => wp_login_url( $current_url ),
-			),
 	);
+
+	/*
+	 * A direct route to the member's own events (#2060), which otherwise have
+	 * to be found by scrolling the group's front page. The destination is the
+	 * `wporg/my-events` section on that page rather than a page of its own,
+	 * and the item is offered on the same terms the block renders on: members
+	 * of this group, since that's who the block has anything to show.
+	 */
+	if ( is_user_member_of_blog() ) {
+		$items[] = array(
+			'label' => __( 'My events', 'groups-site' ),
+			'url'   => home_url( '/#my-events' ),
+		);
+	}
+
+	$items[] = is_user_logged_in()
+		? array(
+			'label' => __( 'Log out', 'groups-site' ),
+			'url'   => wp_logout_url( $current_url ),
+		)
+		: array(
+			'label' => __( 'Log in', 'groups-site' ),
+			'url'   => wp_login_url( $current_url ),
+		);
+
+	$menus['local-navigation'] = $items;
 
 	return $menus;
 }

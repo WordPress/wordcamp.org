@@ -410,11 +410,11 @@ function publish_existing_event_permissions_check( WP_REST_Request $request ): b
 }
 
 /**
- * Capability check for the RSVP route — any logged-in visitor may RSVP to a
- * published event, exactly as with GatherPress's own RSVP endpoint.
+ * Capability check for the RSVP route — mirrors the gate GatherPress's own
+ * RSVP endpoint applies.
  */
-function rsvp_permissions_check(): bool {
-	return is_user_logged_in();
+function rsvp_permissions_check( WP_REST_Request $request ): bool {
+	return is_user_logged_in() && Event::can_read_rsvps( (int) $request->get_param( 'id' ) );
 }
 
 /**

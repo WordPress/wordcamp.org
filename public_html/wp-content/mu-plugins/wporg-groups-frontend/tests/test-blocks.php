@@ -110,6 +110,105 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The speaker list should stay behind an event's password gate.
+	 */
+	public function test_event_speakers_hides_speakers_behind_the_password_gate() {
+		$speaker_id = self::factory()->user->create(
+			array(
+				'display_name' => 'Speaker Behind The Gate',
+				'description'  => 'Bio that should not leak.',
+			)
+		);
+		$event_id   = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked Speaker Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		update_post_meta( $event_id, '_event_speakers', array( $speaker_id ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $locked );
+
+		// `preview` is a plain query var with no capability check behind it
+		// (`WP_Query::parse_query()` sets `is_preview` for any non-empty
+		// value), so it must not reopen the gate for an anonymous visitor.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Speaker Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'Bio that should not leak.', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-speakers /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Speaker Behind The Gate', $unlocked );
+	}
+
+	/**
+	 * The attendee roster should stay behind an event's password gate.
+	 */
+	public function test_event_rsvp_hides_attendees_behind_the_password_gate() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_status'   => 'publish',
+				'post_title'    => 'Locked RSVP Event',
+				'post_password' => 'secret-pass',
+			)
+		);
+		$user_id  = self::factory()->user->create(
+			array(
+				'display_name' => 'Attendee Behind The Gate',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$locked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $locked );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $locked );
+
+		// Same for the roster: `preview` is visitor-settable, so the gate has
+		// to hold with it set.
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$previewed = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$this->assertTrue( is_preview(), 'Expected the preview query var to set is_preview() without any capability check.' );
+		$this->assertStringNotContainsString( 'Attendee Behind The Gate', $previewed );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__attendee-list', $previewed );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		// The same viewer sees the roster once the password has been entered.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Attendee Behind The Gate', $unlocked );
+	}
+
+	/**
 	 * The RSVP action should precede the attendee summary in the rendered block.
 	 */
 	public function test_event_rsvp_action_precedes_attendee_summary() {
@@ -534,6 +633,167 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	public function test_my_events_block_is_hidden_without_upcoming_events() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $member_id );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/my-events /-->' ) ) );
+	}
+
+	/**
+	 * The section the block does render carries the `my-events` anchor the
+	 * header's "My events" link points at (#2060). The link is an anchor into
+	 * the group's front page rather than a route of its own, so the id is the
+	 * whole contract between the two.
+	 */
+	public function test_my_events_block_renders_the_header_link_anchor() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup worth finding',
+				'post_author' => $member_id,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString( 'A meetup worth finding', $output );
+		$this->assertStringContainsString( 'id="my-events"', $output );
+	}
+
+	/**
+	 * Past attendance gets its own list in the same section (#2061). The
+	 * heading is what distinguishes it — both lists draw the same card.
+	 */
+	public function test_my_events_block_lists_events_the_member_attended() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup already had',
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		wp_set_current_user( $member_id );
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString( 'Events I attended', $output );
+		$this->assertStringContainsString( 'A meetup already had', $output );
+
+		// The section exists on the strength of the past list alone, so the
+		// header's anchor still has somewhere to land.
+		$this->assertStringContainsString( 'id="my-events"', $output );
+		$this->assertStringNotContainsString( 'My upcoming events', $output );
+	}
+
+	/**
+	 * With both lists populated, upcoming comes first: what the member has to
+	 * turn up to outranks what they have already done.
+	 */
+	public function test_my_events_block_puts_upcoming_before_attended() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $member_id );
+
+		foreach ( array(
+			'+7 days' => 'Still to come', '-7 days' => 'Already had',
+		) as $offset => $title ) {
+			$event_id = self::factory()->post->create(
+				array(
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'publish',
+					'post_title'  => $title,
+					'post_author' => self::factory()->user->create(),
+				)
+			);
+
+			( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+				array(
+					'post_id'        => $event_id,
+					'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $offset ) ),
+					'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $offset . ' +2 hours' ) ),
+					'timezone'       => 'UTC',
+				)
+			);
+
+			( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+		}
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertLessThan(
+			strpos( $output, 'Events I attended' ),
+			strpos( $output, 'My upcoming events' ),
+			'The upcoming list should render above the attended one.'
+		);
+		$this->assertLessThan(
+			strpos( $output, 'Already had' ),
+			strpos( $output, 'Still to come' ),
+			'Each event should sit under its own heading.'
+		);
+	}
+
+	/**
+	 * An RSVP outlives the event's published status — unpublish an event and
+	 * the member still has a row pointing at it. The date drops out, and so
+	 * does the heading it was the only entry under: a heading standing over
+	 * an empty list reads as a rendering fault.
+	 */
+	public function test_my_events_block_drops_a_heading_left_with_no_events() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Withdrawn from view',
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'draft',
+			)
+		);
 
 		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/my-events /-->' ) ) );
 	}

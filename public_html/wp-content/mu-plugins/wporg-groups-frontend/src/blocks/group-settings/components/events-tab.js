@@ -31,7 +31,7 @@ import EventForm, { NS } from '../../../components/event-form/event-form';
 
 // === Event Form (inline) ===
 
-function InlineEventForm( { eventId, onDone, onCancel } ) {
+function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 	const isEdit = !! eventId;
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
 	// null until loaded, so a save can't overwrite speakers with an empty list.
@@ -104,7 +104,7 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 				onCancel,
 				onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
 				header: h( 'div', { className: 'wporg-event-form__header' },
-					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
+					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, backLabel ),
 				),
 			},
 				h( 'div', { className: 'wporg-event-form__field' },
@@ -133,7 +133,7 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 
 // === Events Tab (list + form) ===
 
-export default function EventsTab( { eventId: initialEventId, onClose } ) {
+export default function EventsTab( { eventId: initialEventId, onClose, singleEvent = false } ) {
 	const [ events, setEvents ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ editingId, setEditingId ] = useState( initialEventId || null );
@@ -182,6 +182,16 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	}, [ refreshKey ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const backToList = () => {
+		/*
+		 * There is no list behind the form in single-event mode: the modal is
+		 * that event's own editing surface (#2073), so backing out returns to
+		 * the event page it was opened from rather than to group settings.
+		 */
+		if ( singleEvent ) {
+			onClose();
+			return;
+		}
+
 		setEditingId( null );
 		setRefreshKey( ( k ) => k + 1 );
 	};
@@ -189,6 +199,9 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	if ( editingId !== null ) {
 		return h( InlineEventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
+			backLabel: singleEvent
+				? __( 'Back to event', 'wporg-groups-frontend' )
+				: __( 'Back to events', 'wporg-groups-frontend' ),
 			onDone: backToList,
 			onCancel: backToList,
 		} );

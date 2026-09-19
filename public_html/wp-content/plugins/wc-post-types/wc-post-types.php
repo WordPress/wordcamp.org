@@ -301,7 +301,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb-spon', // Avoid "sponsor" since that's a trigger word for ad blockers.
 			plugins_url( 'js/wcb-spon.js', __FILE__ ),
 			array( 'jquery', 'backbone', 'media-views' ),
-			1,
+			'20260909',
 			true
 		);
 		wp_localize_script(

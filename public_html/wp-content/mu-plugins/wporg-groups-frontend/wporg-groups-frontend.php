@@ -19,6 +19,7 @@ require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/group-location.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
+require_once __DIR__ . '/inc/rsvp-confirmation.php';
 require_once __DIR__ . '/inc/rest.php';
 require_once __DIR__ . '/inc/post-titles.php';
 require_once __DIR__ . '/inc/export.php';
@@ -51,6 +52,7 @@ function bootstrap(): void {
 	Post_Titles\bootstrap();
 	Export\bootstrap();
 	RSVP_Questions\bootstrap();
+	RSVP_Confirmation\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();
 

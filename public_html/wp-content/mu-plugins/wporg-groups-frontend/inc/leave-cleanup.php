@@ -26,14 +26,19 @@ defined( 'WPINC' ) || die();
  * Cancelling is `wp_delete_comment()` plus a cache flush on the event,
  * which is precisely what GatherPress's own `no_status` path does
  * (`Rsvp\Storage::save()`), rather than a second way of unsaying an RSVP.
- * Deleting also clears the occurrence mapping, which the recurring-events
- * extension cleans on `deleted_comment`.
+ * Note that with a trash configured -- the default -- that call trashes the
+ * comment rather than deleting it, so the seat is released (every query
+ * that counts an RSVP reads approved comments only) while the row stays
+ * recoverable, and the recurring-events extension's `deleted_comment`
+ * cleanup of the occurrence mapping runs when the trash is emptied rather
+ * than now. A mapping row outliving its comment reads to nothing: the
+ * mapping is only ever looked up for comment IDs that are still approved.
  *
  * @param int $user_id Member leaving the group.
  * @return int Number of RSVPs cancelled.
  */
 function cancel_future_rsvps( int $user_id ): int {
-	if ( ! $user_id || ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
+	if ( ! $user_id || ! class_exists( '\GatherPress\Core\Rsvp\Rsvp' ) || ! class_exists( '\GatherPress\Core\Rsvp\Cache' ) ) {
 		return 0;
 	}
 
@@ -78,6 +83,14 @@ function cancel_future_rsvps( int $user_id ): int {
  * the right call when deciding what to show a member and the wrong one
  * here -- it would read an RSVP to a finished date as upcoming and delete
  * a piece of attendance history.
+ *
+ * The cost of that is one case this does not catch: an RSVP to a recurring
+ * series carrying no occurrence -- one predating the recurring-events
+ * extension, since it maps every RSVP it sees -- falls back to the series'
+ * stored date, which is its *first*. A series that started before today
+ * keeps such an RSVP even though later dates are still to come. Erring
+ * that way is the point: an uncancelled seat is visible and fixable, a
+ * deleted attendance record is neither.
  *
  * @param int                  $event_id      Event the RSVP is on.
  * @param string               $recurrence_id Occurrence the RSVP was made on, if any.

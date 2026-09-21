@@ -10,6 +10,7 @@
 
 namespace WordCamp\Groups\Frontend\Members;
 
+use WordCamp\Groups\Frontend\Leave_Cleanup;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 defined( 'WPINC' ) || die();
@@ -365,9 +366,20 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
+		// Before the removal, while the RSVPs still belong to a member: a
+		// seat held for a date they will not be at is a seat nobody else
+		// can take (#2022). Past dates are left alone -- they are what the
+		// member attended, not a commitment to undo.
+		$cancelled = Leave_Cleanup\cancel_future_rsvps( $user_id );
+
 		remove_user_from_blog( $user_id, $blog_id );
 
-		return rest_ensure_response( array( 'success' => true ) );
+		return rest_ensure_response(
+			array(
+				'success'         => true,
+				'rsvps_cancelled' => $cancelled,
+			)
+		);
 	}
 
 	/**

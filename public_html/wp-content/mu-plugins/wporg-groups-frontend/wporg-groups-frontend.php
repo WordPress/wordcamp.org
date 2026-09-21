@@ -26,6 +26,7 @@ require_once __DIR__ . '/inc/export.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/my-events.php';
+require_once __DIR__ . '/inc/leave-cleanup.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';

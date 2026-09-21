@@ -23,6 +23,16 @@ const PUBLISH_NOTIFICATION_SCHEDULED_META = '_wporg_groups_event_publish_notific
 const GATHERPRESS_OPT_IN_META_KEY = 'gatherpress_event_updates_opt_in';
 
 /**
+ * A marker comment GatherPress's own `event-email.php` template always emits.
+ *
+ * The tailoring filter below is added around one `send_emails()` call, and
+ * anything else that sends mail inside that window -- another plugin acting
+ * on a hook GatherPress fires per recipient, say -- must come out untouched.
+ * Matching the template is what makes that true.
+ */
+const TEMPLATE_MARKER = '<!-- Event Title -->';
+
+/**
  * Register notification hooks.
  */
 function bootstrap(): void {
@@ -254,6 +264,10 @@ function send_pending_new_event_notifications(): void {
  * @return array
  */
 function tailor_publish_notification( array $atts, int $event_id ): array {
+	if ( ! str_contains( (string) ( $atts['message'] ?? '' ), TEMPLATE_MARKER ) ) {
+		return $atts;
+	}
+
 	$title = get_the_title( $event_id );
 
 	if ( recipient_is_event_author( $atts['to'] ?? '', $event_id ) ) {
@@ -321,11 +335,15 @@ function recipient_is_event_author( $to, int $event_id ): bool {
  * changes shape the match simply fails and the button stays, which is the
  * pre-existing behavior rather than a broken email.
  *
+ * The wrapper's contents deliberately may not themselves contain a `div`:
+ * without that, a nested one would end the match early and leave a dangling
+ * `</div>` behind, which is a broken email rather than the old one.
+ *
  * @param string $message Rendered email body.
  * @return string
  */
 function strip_rsvp_button( string $message ): string {
-	$stripped = preg_replace( '#<!-- RSVP Button -->\s*<div\b[^>]*>.*?</div>#s', '', $message, 1 );
+	$stripped = preg_replace( '#<!-- RSVP Button -->\s*<div\b[^>]*>(?:(?!</?div\b).)*?</div>#s', '', $message, 1 );
 
 	return null === $stripped ? $message : $stripped;
 }

@@ -9,6 +9,7 @@ use function WordCamp\Groups\Frontend\Notifications\schedule_new_event_notificat
 use function WordCamp\Groups\Frontend\Notifications\send_pending_new_event_notifications;
 use function WordCamp\Groups\Frontend\Notifications\recipient_is_event_author;
 use function WordCamp\Groups\Frontend\Notifications\strip_rsvp_button;
+use function WordCamp\Groups\Frontend\Notifications\tailor_publish_notification;
 use function WordCamp\Groups\Frontend\REST\publish_draft;
 use const WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META;
 use const WordCamp\Groups\Frontend\Notifications\GATHERPRESS_OPT_IN_META_KEY;
@@ -600,5 +601,37 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		$body = '<html><body><h1>An event</h1></body></html>';
 
 		$this->assertSame( $body, strip_rsvp_button( $body ) );
+	}
+
+	/**
+	 * If GatherPress ever nests a `div` inside the button's wrapper, the
+	 * strip has to decline rather than stop at the inner `</div>` and leave
+	 * a dangling closing tag: a button that stays is the old email, a
+	 * dangling tag is a broken one.
+	 */
+	public function test_strip_rsvp_button_declines_a_nested_wrapper() {
+		$body = '<p>Before</p><!-- RSVP Button --><div><div><a href="#">RSVP Now</a></div></div><p>After</p>';
+
+		$this->assertSame( $body, strip_rsvp_button( $body ) );
+	}
+
+	/**
+	 * The filter is added around one `send_emails()` call, so anything else
+	 * that sends mail inside that window has to come out untouched -- the
+	 * scoping is what bounds it in time, and matching GatherPress's own
+	 * template is what bounds it to the right email.
+	 */
+	public function test_tailoring_leaves_a_non_event_email_alone() {
+		$author_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft' );
+		wp_update_post( array( 'ID' => $event_id, 'post_author' => $author_id ) );
+
+		$atts = array(
+			'to'      => get_userdata( $author_id )->user_email,
+			'subject' => 'Your password has been changed',
+			'message' => 'Someone changed the password on your account.',
+		);
+
+		$this->assertSame( $atts, tailor_publish_notification( $atts, $event_id ) );
 	}
 }

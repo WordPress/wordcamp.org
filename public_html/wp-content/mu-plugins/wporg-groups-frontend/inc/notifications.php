@@ -23,6 +23,16 @@ const PUBLISH_NOTIFICATION_SCHEDULED_META = '_wporg_groups_event_publish_notific
 const GATHERPRESS_OPT_IN_META_KEY = 'gatherpress_event_updates_opt_in';
 
 /**
+ * A marker comment GatherPress's own `event-email.php` template always emits.
+ *
+ * The tailoring filter below is added around one `send_emails()` call, and
+ * anything else that sends mail inside that window -- another plugin acting
+ * on a hook GatherPress fires per recipient, say -- must come out untouched.
+ * Matching the template is what makes that true.
+ */
+const TEMPLATE_MARKER = '<!-- Event Title -->';
+
+/**
  * Register notification hooks.
  */
 function bootstrap(): void {
@@ -208,7 +218,23 @@ function send_pending_new_event_notifications(): void {
 		// publish request blocking briefly on sending mail, which is already
 		// true of GatherPress's own "Message all members" action once cron
 		// picks it up.
-		$sent = \GatherPress\Core\Event\Rest_Api::get_instance()->send_emails( $event_id, $recipients, '' );
+		// GatherPress subjects this mail `📅 <event title>`, which doesn't
+		// say what happened, and always renders an "RSVP Now" button --
+		// redundant for the organizer, who is on the recipient list because
+		// they're a member of their own group. Neither is filterable in
+		// GatherPress, so tailor the rendered message on its way out, for
+		// the duration of this one send only.
+		$tailor = static function ( array $atts ) use ( $event_id ): array {
+			return tailor_publish_notification( $atts, $event_id );
+		};
+
+		add_filter( 'wp_mail', $tailor );
+
+		try {
+			$sent = \GatherPress\Core\Event\Rest_Api::get_instance()->send_emails( $event_id, $recipients, '' );
+		} finally {
+			remove_filter( 'wp_mail', $tailor );
+		}
 
 		if ( $sent ) {
 			update_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
@@ -223,4 +249,101 @@ function send_pending_new_event_notifications(): void {
 			E_USER_WARNING
 		);
 	}
+}
+
+/**
+ * Rewrite one outgoing publish-notification email for its recipient.
+ *
+ * The organizer who just published the event gets a subject that says so,
+ * and no RSVP button -- they don't need a call to action for their own
+ * event. Everyone else gets a subject naming the group, and keeps the
+ * button, which for them is the point of the mail.
+ *
+ * @param array $atts     `wp_mail()` arguments.
+ * @param int   $event_id Event being announced.
+ * @return array
+ */
+function tailor_publish_notification( array $atts, int $event_id ): array {
+	if ( ! str_contains( (string) ( $atts['message'] ?? '' ), TEMPLATE_MARKER ) ) {
+		return $atts;
+	}
+
+	$title = get_the_title( $event_id );
+
+	if ( recipient_is_event_author( $atts['to'] ?? '', $event_id ) ) {
+		$atts['subject'] = sprintf(
+			/* translators: %s: event title. */
+			__( 'Your event has been published: %s', 'wporg-groups-frontend' ),
+			$title
+		);
+		$atts['message'] = strip_rsvp_button( (string) ( $atts['message'] ?? '' ) );
+
+		return $atts;
+	}
+
+	$atts['subject'] = sprintf(
+		/* translators: 1: group name, 2: event title. */
+		__( 'New event in %1$s: %2$s', 'wporg-groups-frontend' ),
+		get_bloginfo( 'name' ),
+		$title
+	);
+
+	return $atts;
+}
+
+/**
+ * Whether a `wp_mail()` recipient is the author of the event.
+ *
+ * `$to` is whatever GatherPress passed -- a bare address today, but
+ * `wp_mail()` also accepts a comma-joined list, an array, and
+ * `Name <address>` forms, so normalize all of them before comparing.
+ *
+ * @param string|string[] $to       `wp_mail()` recipient(s).
+ * @param int             $event_id Event being announced.
+ * @return bool
+ */
+function recipient_is_event_author( $to, int $event_id ): bool {
+	$author = get_userdata( (int) get_post_field( 'post_author', $event_id ) );
+
+	if ( ! $author || ! $author->user_email ) {
+		return false;
+	}
+
+	$addresses = is_array( $to ) ? $to : explode( ',', (string) $to );
+
+	foreach ( $addresses as $address ) {
+		$parsed = array();
+
+		// `Name <address>`, the other form `wp_mail()` accepts.
+		if ( preg_match( '/<([^>]+)>/', $address, $parsed ) ) {
+			$address = $parsed[1];
+		}
+
+		if ( 0 === strcasecmp( trim( $address ), $author->user_email ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Remove the RSVP button from a rendered event email.
+ *
+ * Anchored on the marker comment GatherPress's own `event-email.php`
+ * template puts directly above the button's wrapper. If that template ever
+ * changes shape the match simply fails and the button stays, which is the
+ * pre-existing behavior rather than a broken email.
+ *
+ * The wrapper's contents deliberately may not themselves contain a `div`:
+ * without that, a nested one would end the match early and leave a dangling
+ * `</div>` behind, which is a broken email rather than the old one.
+ *
+ * @param string $message Rendered email body.
+ * @return string
+ */
+function strip_rsvp_button( string $message ): string {
+	$stripped = preg_replace( '#<!-- RSVP Button -->\s*<div\b[^>]*>(?:(?!</?div\b).)*?</div>#s', '', $message, 1 );
+
+	return null === $stripped ? $message : $stripped;
 }

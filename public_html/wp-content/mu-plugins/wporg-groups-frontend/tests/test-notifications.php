@@ -624,7 +624,12 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	public function test_tailoring_leaves_a_non_event_email_alone() {
 		$author_id = $this->create_member();
 		$event_id  = $this->create_dated_event( 'draft' );
-		wp_update_post( array( 'ID' => $event_id, 'post_author' => $author_id ) );
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_author' => $author_id,
+			)
+		);
 
 		$atts = array(
 			'to'      => get_userdata( $author_id )->user_email,

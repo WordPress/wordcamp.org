@@ -85,6 +85,81 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```
 
 
+## Running alongside another local environment
+
+By default the containers bind ports 80, 443, 1080 (MailCatcher) and 3307
+(MariaDB) on every interface, which collides with anything else on the machine
+that wants them — another Docker stack, a local nginx/Apache, `wp-env`, Valet,
+Lando, and so on.
+
+All four bindings are overridable through environment variables. `docker compose`
+reads a `.env` file in the project root automatically, and `.env` is gitignored,
+so you can change them without touching a tracked file. Copy the template and
+uncomment what you need:
+
+```bash
+cp .env.example .env
+```
+
+### Freeing up 80/443
+
+Set `WORDCAMP_BIND_IP` to a loopback alias rather than moving the site off the
+standard ports. The containers keep listening on 80/443, just not on the
+address the other stack wants:
+
+```
+WORDCAMP_BIND_IP=127.0.0.2
+```
+
+On macOS the alias has to be created once per boot (Linux already routes all of
+`127.0.0.0/8` to the loopback interface):
+
+```bash
+sudo ifconfig lo0 alias 127.0.0.2
+```
+
+Then point the hostnames at it in your hosts file, in place of the `127.0.0.1`
+line from the setup steps above:
+
+```bash
+127.0.0.2 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test
+```
+
+Run `docker compose up -d` again to re-create the containers with the new
+binding. Site URLs are unchanged — still `https://central.wordcamp.test`, with
+no port suffix — so nothing else in the environment needs adjusting.
+
+### Why not just change the HTTPS port?
+
+`WORDCAMP_HTTP_PORT` and `WORDCAMP_HTTPS_PORT` exist, but a non-default value
+is **not supported**: it puts a `:8443`-style suffix into `HTTP_HOST`, and
+several parts of the environment assume portless hostnames.
+
+* The `switch ( strtolower( $_SERVER['HTTP_HOST'] ) )` in `.docker/wp-config.php`
+  matches no case, so every request silently falls through to the WordCamp
+  network — `events.wordpress.test:8443` would serve the wrong network entirely.
+* nginx's HTTP→HTTPS redirect (`.docker/config/nginx.conf`) sends you back to
+  port 443.
+* The site URLs seeded from `.docker/data/wordcamp_dev.sql` carry no port, and
+  neither do the redirects built in `public_html/wp-content/sunrise*.php`.
+
+Use `WORDCAMP_BIND_IP` instead.
+
+### MailCatcher and MariaDB
+
+`WORDCAMP_MAILCATCHER_PORT` (default `1080`) and `WORDCAMP_DB_PORT` (default
+`3307`) are safe to change on their own — nothing constructs URLs from them
+beyond the dashboard link and your own database client:
+
+```
+WORDCAMP_MAILCATCHER_PORT=1081
+WORDCAMP_DB_PORT=3308
+```
+
+The Playwright E2E suite reads the same `.env`, so it follows whatever you set
+here.
+
+
 ## Local Environment Customizations
 
 You may have a need to change a configuration or behavior in the local environment without modifying files that are tracked by version control. For this, you can add a file to the **mu-plugins** directory called **sandbox-functionality.php**. This file is ignored by git, so changes made to it will not affect the state of the working directory.
@@ -152,7 +227,7 @@ Note: All of these commands are meant to be executed from project directory.
     `wordcamp.db` is the name of Docker service which is running MariaDB server.
 
 
-Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
+Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](http://localhost:1080) to view the MailCatcher dashboard (or whatever `WORDCAMP_MAILCATCHER_PORT`/`WORDCAMP_BIND_IP` point at, if you've overridden them — see [Running alongside another local environment](#running-alongside-another-local-environment)).
 
 
 ## Testing with PHPUnit

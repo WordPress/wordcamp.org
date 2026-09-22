@@ -151,6 +151,46 @@ class Test_Groups_Leave_Cleanup extends Groups_TestCase {
 	}
 
 	/**
+	 * A freed seat on a full event promotes whoever is next (#2022).
+	 *
+	 * `Rsvp::process()` runs `check_waiting_list()` after every status change
+	 * it handles, but this module releases the seat with
+	 * `wp_delete_comment()` -- which is the right call, it is what GatherPress's
+	 * own `no_status` path does, but it pulls the row out from underneath
+	 * GatherPress rather than going through it. So nothing promoted anyone:
+	 * the member left, the seat was empty, and the person waiting for it went
+	 * on waiting.
+	 */
+	public function test_freed_seat_promotes_the_waiting_list() {
+		$event_id = $this->create_event( false );
+		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+
+		$leaver_id  = $this->create_member();
+		$waiting_id = $this->create_member();
+
+		$rsvp = new \GatherPress\Core\Rsvp\Rsvp( $event_id );
+		$rsvp->save( $leaver_id, 'attending' );
+		$rsvp->save( $waiting_id, 'attending' );
+
+		// The limit is one, so the second RSVP lands on the waiting list.
+		$this->assertSame( 1, $this->attending_count( $event_id ), 'Precondition: the event is full.' );
+		$this->assertSame(
+			'waiting_list',
+			( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $waiting_id )['status'],
+			'Precondition: the second member is waiting.'
+		);
+
+		$this->assertSame( 1, cancel_future_rsvps( $leaver_id ) );
+
+		$this->assertSame(
+			'attending',
+			( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $waiting_id )['status'],
+			'The seat the leaver gave up should go to whoever was waiting for it.'
+		);
+		$this->assertSame( 1, $this->attending_count( $event_id ) );
+	}
+
+	/**
 	 * Only the departing member's RSVPs go. Everyone else keeps their seat.
 	 */
 	public function test_leaves_other_members_rsvps_alone() {

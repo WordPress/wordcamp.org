@@ -268,7 +268,7 @@ function tailor_publish_notification( array $atts, int $event_id ): array {
 		return $atts;
 	}
 
-	$title = get_the_title( $event_id );
+	$title = subject_text( get_the_title( $event_id ) );
 
 	if ( recipient_is_event_author( $atts['to'] ?? '', $event_id ) ) {
 		$atts['subject'] = sprintf(
@@ -284,11 +284,30 @@ function tailor_publish_notification( array $atts, int $event_id ): array {
 	$atts['subject'] = sprintf(
 		/* translators: 1: group name, 2: event title. */
 		__( 'New event in %1$s: %2$s', 'wporg-groups-frontend' ),
-		get_bloginfo( 'name' ),
+		subject_text( get_bloginfo( 'name' ) ),
 		$title
 	);
 
 	return $atts;
+}
+
+/**
+ * Decode the entities WordPress hands text over with, for a mail subject.
+ *
+ * An event title comes back through `the_title`, which runs `wptexturize()`
+ * and `convert_chars()`, so an apostrophe arrives as `&#8217;`; `blogname` is
+ * stored `esc_html()`'d, so one arrives there as `&#039;`. Nothing downstream
+ * decodes either -- `wp_mail()` does not touch the subject, and GatherPress's
+ * own decode (`Event\Rest_Api::send_emails()`) has already run by the time
+ * this filter replaces the subject it produced. So the entities would reach
+ * every recipient literally: "New event in O&#039;Brien WP Meetup" (#2074).
+ *
+ * The same reasoning, and the same call, as `RSVP_Confirmation\plain_text()`.
+ *
+ * @param string $text Text as WordPress hands it over.
+ */
+function subject_text( string $text ): string {
+	return html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
 }
 
 /**

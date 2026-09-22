@@ -45,9 +45,10 @@ const PAST_EVENTS_LIMIT = 5;
  *
  * @param int $user_id Member to resolve dates for.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
  *         Upcoming dates ordered by start time ascending. `start` is local to
- *         the event, matching what GatherPress stores.
+ *         the event, matching what GatherPress stores, and `timezone` is the
+ *         zone it is local to.
  */
 function get_upcoming_events( int $user_id ): array {
 	if ( ! $user_id ) {
@@ -80,9 +81,10 @@ function get_upcoming_events( int $user_id ): array {
  * @param int $user_id Member to resolve dates for.
  * @param int $limit   Most recent dates to return.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
  *         Past dates ordered by start time descending. `start` is local to
- *         the event, matching what GatherPress stores.
+ *         the event, matching what GatherPress stores, and `timezone` is the
+ *         zone it is local to.
  */
 function get_past_events( int $user_id, int $limit = PAST_EVENTS_LIMIT ): array {
 	if ( ! $user_id || $limit < 1 ) {
@@ -109,7 +111,7 @@ function get_past_events( int $user_id, int $limit = PAST_EVENTS_LIMIT ): array 
  * @param array<int, array{event_id: int, recurrence_id: string}> $candidates Candidate dates.
  * @param int                                                     $limit      Most recent dates to return.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
  *         Past dates ordered by start time descending.
  */
 function filter_to_past( array $candidates, int $limit ): array {
@@ -137,6 +139,7 @@ function filter_to_past( array $candidates, int $limit ): array {
 					'recurrence_id' => $candidate['recurrence_id'],
 					'start'         => $occurrence->datetime_start,
 					'start_gmt'     => $occurrence->datetime_start_gmt,
+					'timezone'      => (string) $occurrence->timezone,
 				);
 			}
 
@@ -157,6 +160,7 @@ function filter_to_past( array $candidates, int $limit ): array {
 				'recurrence_id' => '',
 				'start'         => $row->datetime_start,
 				'start_gmt'     => $row->datetime_start_gmt,
+				'timezone'      => (string) $row->timezone,
 			);
 		}
 	}
@@ -186,12 +190,23 @@ function filter_to_past( array $candidates, int $limit ): array {
  * @return array<int, array{event_id: int, recurrence_id: string}> Unordered.
  */
 function get_attending_candidates( int $user_id ): array {
+	/*
+	 * Uncapped, deliberately. A cap here is not a cap on the list -- it is a
+	 * cap on the *candidates*, applied before anything knows which of them are
+	 * upcoming, and `get_comments()` orders by date descending. So a member
+	 * with more than the cap's worth of RSVPs lost their oldest ones, and an
+	 * RSVP made early to an event still months away is exactly an old RSVP to
+	 * an upcoming date: it vanished from "My upcoming events", which is the
+	 * one thing the block exists to be able to confirm (#1810).
+	 *
+	 * The bound is the group's own event count -- these are comments on this
+	 * site, not the network -- and a member cannot RSVP to an event twice.
+	 */
 	$rsvp_comments = get_comments(
 		array(
 			'user_id' => $user_id,
 			'type'    => 'gatherpress_rsvp',
 			'status'  => 'approve',
-			'number'  => 100,
 		)
 	);
 
@@ -321,7 +336,7 @@ function get_comment_recurrence_ids( array $comment_ids ): array {
  *
  * @param array<int, array{event_id: int, recurrence_id: string}> $candidates Candidate dates.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
  *         Upcoming dates ordered by start time ascending.
  */
 function filter_to_upcoming( array $candidates ): array {
@@ -355,6 +370,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'recurrence_id' => $candidate['recurrence_id'],
 				'start'         => $occurrence->datetime_start,
 				'start_gmt'     => $occurrence->datetime_start_gmt,
+				'timezone'      => (string) $occurrence->timezone,
 			);
 		}
 	}
@@ -376,6 +392,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'recurrence_id' => '',
 				'start'         => $row->datetime_start,
 				'start_gmt'     => $row->datetime_start_gmt,
+				'timezone'      => (string) $row->timezone,
 			);
 			continue;
 		}
@@ -395,6 +412,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'recurrence_id' => $next->recurrence_id,
 				'start'         => $next->datetime_start,
 				'start_gmt'     => $next->datetime_start_gmt,
+				'timezone'      => (string) $next->timezone,
 			);
 		}
 	}
@@ -440,7 +458,7 @@ function get_series_datetimes( array $event_ids ): array {
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
-			"SELECT post_id, datetime_start, datetime_start_gmt, datetime_end_gmt FROM {$table} WHERE post_id IN ( {$placeholders} )",
+			"SELECT post_id, datetime_start, datetime_start_gmt, datetime_end_gmt, timezone FROM {$table} WHERE post_id IN ( {$placeholders} )",
 			$event_ids
 		)
 	);
@@ -451,6 +469,30 @@ function get_series_datetimes( array $event_ids ): array {
 	}
 
 	return $series;
+}
+
+/**
+ * Build a `DateTimeZone` from a timezone as the events table spells it.
+ *
+ * The column holds whatever `Event::save_datetimes()` was handed, which is not
+ * always a spelling PHP accepts -- GatherPress's wp-admin sidebar writes core's
+ * `UTC+10` through raw, and `new DateTimeZone( 'UTC+10' )` throws. The
+ * recurring-events extension has the canonical normalizer for this, so defer to
+ * it when it is loaded and fall back to the site's own zone when it is not.
+ *
+ * @param string $timezone Timezone as stored, in any spelling.
+ * @return \DateTimeZone The zone, falling back to the site's own.
+ */
+function get_timezone( string $timezone ): \DateTimeZone {
+	if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Occurrences' ) ) {
+		return \WordPressdotorg\GatherPress_Recurring_Events\Occurrences::timezone( $timezone );
+	}
+
+	try {
+		return new \DateTimeZone( trim( $timezone ) ?: wp_timezone_string() );
+	} catch ( \Exception $exception ) {
+		return wp_timezone();
+	}
 }
 
 /**
@@ -479,7 +521,7 @@ function get_upcoming_occurrences( array $event_ids ): array {
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
-			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s AND status <> 'cancelled' ORDER BY datetime_start_gmt ASC",
+			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt, timezone FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s AND status <> 'cancelled' ORDER BY datetime_start_gmt ASC",
 			$query_args
 		)
 	);
@@ -519,7 +561,7 @@ function get_past_occurrences( array $event_ids ): array {
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
-			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt < %s AND status <> 'cancelled' ORDER BY datetime_start_gmt DESC",
+			"SELECT series_post_id, recurrence_id, datetime_start, datetime_start_gmt, timezone FROM {$table} WHERE series_post_id IN ( {$placeholders} ) AND datetime_end_gmt < %s AND status <> 'cancelled' ORDER BY datetime_start_gmt DESC",
 			$query_args
 		)
 	);

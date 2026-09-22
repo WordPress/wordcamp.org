@@ -40,8 +40,12 @@ function get_choices(): array {
  *
  * This is the allowlist, rather than `Utility::list_timezone_and_utc_offsets()`,
  * because a value the control cannot offer is one no organizer can have chosen.
- * `Event::save_datetimes()` runs whatever it is given through
- * `Utility::normalize_timezone_string()`, so a choice value is written happily.
+ *
+ * These are the values the *control* offers, not the ones the events table can
+ * hold: `Event::save_datetimes()` normalizes a manual offset only for the
+ * `DateTimeZone` it computes the GMT columns with, and writes the string it was
+ * given through raw. Anything on its way to that table goes through
+ * `canonicalize()` first -- see `REST\storable_timezone()`.
  *
  * @return string[] Timezone identifiers, 'UTC', and 'UTC±N' manual offsets.
  */

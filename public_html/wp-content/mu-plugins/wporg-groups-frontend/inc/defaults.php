@@ -11,6 +11,7 @@ defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
+use WordCamp\Groups\Frontend\Event_Timezone;
 
 /**
  * Build the default field values for the create-event form.
@@ -24,6 +25,8 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *   times-of-day, falling back to 18:00 / 20:00 if there is no prior event.
  * - **Venue ID** is the venue assigned to the most recent event, or `0` if
  *   none.
+ * - **Timezone** is the most recent event's timezone, falling back to the
+ *   site's own.
  *
  * @return array{
  *     title:string,
@@ -33,7 +36,8 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *     time_end:string,
  *     venue_id:int,
  *     is_online:bool,
- *     online_event_link:string
+ *     online_event_link:string,
+ *     timezone:string
  * }
  */
 function get_default_event_data(): array {
@@ -46,6 +50,7 @@ function get_default_event_data(): array {
 		'venue_id'          => 0,
 		'is_online'         => false,
 		'online_event_link' => '',
+		'timezone'          => Event_Timezone\get_default(),
 	);
 
 	$most_recent = get_most_recent_event_id();
@@ -68,6 +73,13 @@ function get_default_event_data(): array {
 	}
 
 	$defaults['venue_id'] = get_event_venue_post_id( $most_recent );
+
+	// A group that runs its meetups in one zone should not have to reselect it
+	// on every event, and a group that moved zones keeps the move.
+	$previous_timezone = Event_Timezone\get_event_timezone( $most_recent );
+	if ( '' !== $previous_timezone ) {
+		$defaults['timezone'] = $previous_timezone;
+	}
 
 	return $defaults;
 }

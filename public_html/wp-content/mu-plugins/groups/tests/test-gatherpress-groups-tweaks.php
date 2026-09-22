@@ -14,13 +14,14 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
-	 * Groups-network sites should never show a timezone suffix or offer
-	 * anonymous RSVP, regardless of GatherPress's own defaults.
+	 * Groups-network sites always show the event timezone and never offer
+	 * anonymous RSVP, regardless of GatherPress's own defaults or of what an
+	 * organizer saved on the settings screen.
 	 */
 	public function test_gatherpress_settings_overridden() {
 		$settings = get_option( 'gatherpress_settings' );
 
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
@@ -36,7 +37,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			array(
 				'max_guest_limit'  => 5,
 				'enable_open_rsvp' => 1,
-				'show_timezone'    => 1,
+				'show_timezone'    => 0,
 			)
 		);
 
@@ -46,7 +47,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 5, $settings['max_guest_limit'] );
 
 		// Forced keys win regardless of what was stored.
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
 

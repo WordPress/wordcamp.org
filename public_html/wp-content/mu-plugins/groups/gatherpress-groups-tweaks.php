@@ -68,10 +68,21 @@ function get_event_venue_post_id( int $event_id ): int {
 }
 
 /**
- * Disable the "Show Timezone" GatherPress setting so event date blocks
- * never append "GMT+0000" or similar suffixes.
+ * Enable the "Show Timezone" GatherPress setting, and disable anonymous RSVP
+ * and Open RSVP, at the global setting level.
  *
- * Also disable anonymous RSVP and Open RSVP at the global setting level.
+ * Timezone display used to be forced off here, because an event whose zone is
+ * a bare UTC offset renders as "GMT+0000" and a group site is not required to
+ * carry a `timezone_string`. Three testers asked for the timezone back (#2021),
+ * and suppressing it is the worse trade: "6:00 PM" with no zone is wrong for
+ * anyone reading it from somewhere else, where "6:00 PM GMT+0000" is merely
+ * ugly. The front-end event form now makes the zone an explicit per-event
+ * choice defaulting to a real identifier, so the ugly case is the exception
+ * rather than the rule. See `inc/event-timezone.php`.
+ *
+ * Forced rather than left to GatherPress's own default (which is already on)
+ * so the answer is the same on every group, including one whose organizer
+ * switched it off before this changed.
  *
  * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
  * so the forced keys overlay the stored settings (or defaults when unset)
@@ -82,7 +93,7 @@ $force_gatherpress_settings = static function ( $value ) {
 		$value = array();
 	}
 
-	$value['show_timezone']         = 0;
+	$value['show_timezone']         = 1;
 	$value['enable_anonymous_rsvp'] = 0;
 	$value['enable_open_rsvp']      = 0;
 

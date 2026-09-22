@@ -12,6 +12,12 @@ namespace WordCamp\Groups\GatherPress_Tweaks;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 
+use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
+use function WordCamp\Groups\Frontend\Event_Language\get_name as get_language_name;
+use function WordCamp\Groups\Frontend\Event_Language\transliterate;
+
+use const WordCamp\Groups\Frontend\Event_Language\META_KEY as LANGUAGE_META_KEY;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -260,14 +266,23 @@ add_filter(
 		// Add hidden field to default to "all" time when searching.
 		$hidden = '<input type="hidden" name="event_time" value="all" />';
 
-		// Keep the applied format, so searching narrows the current view
-		// rather than resetting it back to every format (#2035).
+		// Keep the applied format and language, so searching narrows the
+		// current view rather than resetting it back to every event (#2035).
 		$format = get_event_format_filter();
 
 		if ( 'all' !== $format ) {
 			$hidden .= sprintf(
 				'<input type="hidden" name="event_format" value="%s" />',
 				esc_attr( $format )
+			);
+		}
+
+		$language = get_event_language_filter();
+
+		if ( 'all' !== $language ) {
+			$hidden .= sprintf(
+				'<input type="hidden" name="event_language" value="%s" />',
+				esc_attr( $language )
 			);
 		}
 
@@ -452,6 +467,143 @@ add_filter(
 );
 
 /**
+ * The languages this group actually runs events in, as value => label.
+ *
+ * Built from the events rather than from the 593-entry language list: an
+ * archive control is for narrowing what is in front of you, and a group that
+ * meets in Spanish has no use for the other 592. Returns an empty array when
+ * the answer would not narrow anything — no language recorded anywhere, or a
+ * single one — and `wporg/query-filter` renders nothing for a filter with no
+ * options, so the control disappears on the groups it cannot help.
+ *
+ * @return array<string, string> Value => label, or an empty array to hide the filter.
+ */
+function get_event_language_filter_options(): array {
+	$named = array();
+
+	foreach ( get_language_tagged_event_ids() as $event_id ) {
+		$code = get_event_language( $event_id );
+		$name = '' === $code ? '' : get_language_name( $code );
+
+		if ( '' !== $name ) {
+			$named[ $code ] = $name;
+		}
+	}
+
+	// One language is not a choice: "All" and "Spanish" would select the same
+	// events, so the control would only ever cost the reader a click.
+	if ( count( $named ) < 2 ) {
+		return array();
+	}
+
+	uasort( $named, static fn( string $first, string $second ): int => strcasecmp( transliterate( $first ), transliterate( $second ) ) );
+
+	return array( 'all' => __( 'All', 'wporg-groups-frontend' ) ) + $named;
+}
+
+/**
+ * The language filter the current request asks for.
+ *
+ * Anything the group does not run events in falls back to `all`, for the same
+ * reason the format filter does: an unreadable filter should widen the archive
+ * rather than empty it.
+ *
+ * @return string A key of `get_event_language_filter_options()`, or 'all'.
+ */
+function get_event_language_filter(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$language = isset( $_GET['event_language'] ) ? sanitize_text_field( wp_unslash( $_GET['event_language'] ) ) : 'all';
+
+	return isset( get_event_language_filter_options()[ $language ] ) ? $language : 'all';
+}
+
+/**
+ * The published events that carry a language at all.
+ *
+ * Separate `fields => ids` query for the same two reasons `get_online_event_ids()`
+ * uses one: it keeps the `postmeta` join off the archive's own SQL, and
+ * `Query::clauses()` bails on ID queries, so it does not expand a series into
+ * one row per occurrence here.
+ *
+ * @return int[] Event post IDs.
+ */
+function get_language_tagged_event_ids(): array {
+	$ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- The archive filters on it; see the docblock.
+				array(
+					'key'     => LANGUAGE_META_KEY,
+					'compare' => 'EXISTS',
+				),
+			),
+		)
+	);
+
+	$ids = array_map( 'intval', $ids );
+
+	// One query for every language on the archive instead of one per event,
+	// since the options list and the filter both read each event's meta back.
+	if ( $ids ) {
+		update_meta_cache( 'post', $ids );
+	}
+
+	return $ids;
+}
+
+/**
+ * The published events run in one language.
+ *
+ * @param string $code Language subtag.
+ * @return int[] Event post IDs, empty when the group runs nothing in it.
+ */
+function get_event_ids_for_language( string $code ): array {
+	return array_values(
+		array_filter(
+			get_language_tagged_event_ids(),
+			static fn( int $event_id ): bool => get_event_language( $event_id ) === $code
+		)
+	);
+}
+
+/**
+ * Register the archive's language filter options.
+ */
+add_filter(
+	'wporg_query_filter_options_event_language',
+	static function (): array {
+		$options = get_event_language_filter_options();
+
+		if ( ! $options ) {
+			return array();
+		}
+
+		$current = get_event_language_filter();
+
+		return array(
+			// Named the way Time and Format are, and for the same reason
+			// (#2059): a single-select filter gets no count badge, so a bare
+			// "Language" would say which axis the control filters on but not
+			// what is already applied.
+			'label'    => sprintf(
+				/* translators: %s: the selected language filter, e.g. "Spanish". */
+				__( 'Language: %s', 'wporg-groups-frontend' ),
+				$options[ $current ]
+			),
+			'title'    => __( 'Filter by language', 'wporg-groups-frontend' ),
+			'key'      => 'event_language',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => $options,
+			'selected' => array( $current ),
+		);
+	}
+);
+
+/**
  * Carry the archive's other view state through each filter's form.
  *
  * Every `wporg/query-filter` renders a form holding only its own control, so
@@ -474,6 +626,10 @@ add_action(
 
 		if ( 'event_format' !== $key && 'all' !== get_event_format_filter() ) {
 			$carried['event_format'] = get_event_format_filter();
+		}
+
+		if ( 'event_language' !== $key && 'all' !== get_event_language_filter() ) {
+			$carried['event_language'] = get_event_language_filter();
 		}
 
 		if ( isset( $_GET['s'] ) && '' !== trim( (string) wp_unslash( $_GET['s'] ) ) ) {
@@ -519,6 +675,7 @@ add_filter(
 	static function ( array $vars ): array {
 		$vars[] = 'event_time';
 		$vars[] = 'event_format';
+		$vars[] = 'event_language';
 		return $vars;
 	}
 );
@@ -563,15 +720,35 @@ add_filter(
 			$query_vars['order']   = 'DESC';
 		}
 
-		$format_filter = get_event_format_filter();
+		$format_filter   = get_event_format_filter();
+		$language_filter = get_event_language_filter();
 
-		if ( 'all' !== $format_filter ) {
+		if ( 'all' !== $language_filter ) {
+			/*
+			 * Both ID filters have to resolve into the one `post__in`.
+			 * WP_Query treats `post__in` and `post__not_in` as an if/elseif
+			 * (see `parse_where()`), so the `post__not_in` the in-person
+			 * filter uses on its own would be dropped without a word the
+			 * moment a language was also picked. Narrowing the language's own
+			 * set in PHP keeps both applied, and costs nothing extra: it is a
+			 * set we have already resolved.
+			 */
+			$language_ids = get_event_ids_for_language( $language_filter );
+
+			if ( 'online' === $format_filter ) {
+				$language_ids = array_values( array_intersect( $language_ids, get_online_event_ids() ) );
+			} elseif ( 'in-person' === $format_filter ) {
+				$language_ids = array_values( array_diff( $language_ids, get_online_event_ids() ) );
+			}
+
+			// `array( 0 )` rather than an empty array: an empty `post__in` is
+			// ignored by WP_Query, which would show every event under a
+			// filter that matched none.
+			$query_vars['post__in'] = $language_ids ? $language_ids : array( 0 );
+		} elseif ( 'all' !== $format_filter ) {
 			$online_ids = get_online_event_ids();
 
 			if ( 'online' === $format_filter ) {
-				// `array( 0 )` rather than an empty array: an empty `post__in`
-				// is ignored by WP_Query, which would show every event under a
-				// filter that matched none.
 				$query_vars['post__in'] = $online_ids ? $online_ids : array( 0 );
 			} else {
 				$query_vars['post__not_in'] = $online_ids;

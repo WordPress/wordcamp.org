@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
@@ -258,13 +259,20 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	/**
 	 * Build the tax query the archive's Query Loop would run.
 	 *
-	 * @param string|null $event_format The `event_format` query arg to simulate.
+	 * @param string|null $event_format   The `event_format` query arg to simulate.
+	 * @param string|null $event_language The `event_language` query arg to simulate.
 	 */
-	private function get_archive_query_vars( ?string $event_format ): array {
+	private function get_archive_query_vars( ?string $event_format, ?string $event_language = null ): array {
 		if ( null === $event_format ) {
 			unset( $_GET['event_format'] );
 		} else {
 			$_GET['event_format'] = $event_format;
+		}
+
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
 		}
 
 		$block = new \WP_Block(
@@ -288,7 +296,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$block
 		);
 
-		unset( $_GET['event_format'] );
+		unset( $_GET['event_format'], $_GET['event_language'] );
 
 		return $query_vars;
 	}
@@ -433,6 +441,208 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		do_action( 'wporg_query_filter_in_form', 'event_time' );
 
 		$this->assertSame( '', ob_get_clean() );
+	}
+
+	/**
+	 * Create a published event in a language, optionally marked online.
+	 *
+	 * @param string $title     Event title.
+	 * @param string $language  Language subtag, or '' to leave it unset.
+	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_language_event( string $title, string $language, bool $is_online = false ): int {
+		$event_id = $this->make_format_event( $title, $is_online );
+
+		if ( '' !== $language ) {
+			set_event_language( $event_id, $language );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * Read the language filter's registered options.
+	 *
+	 * @param string|null $event_language The `event_language` query arg to simulate.
+	 */
+	private function get_event_language_filter( ?string $event_language ): array {
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_language', array() );
+
+		unset( $_GET['event_language'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The control offers the languages this group actually runs events in,
+	 * not the 593 CLDR knows about.
+	 */
+	public function test_event_language_filter_offers_only_languages_in_use() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$options = $this->get_event_language_filter( null )['options'];
+
+		$this->assertSame( array( 'all', 'en', 'es' ), array_keys( $options ) );
+		$this->assertSame( 'English', $options['en'] );
+		$this->assertSame( 'Spanish', $options['es'] );
+	}
+
+	/**
+	 * A group that runs everything in one language gets no control at all:
+	 * "All" and that language would select the same events.
+	 */
+	public function test_event_language_filter_is_hidden_without_a_choice() {
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Otra charla', 'es' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+	}
+
+	/**
+	 * The toggle names the applied view, the way Time and Format do.
+	 */
+	public function test_event_language_filter_names_every_view() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$this->assertSame( 'Language: All', $this->get_event_language_filter( null )['label'] );
+		$this->assertSame( 'Language: Spanish', $this->get_event_language_filter( 'es' )['label'] );
+	}
+
+	/**
+	 * A language the group does not run events in widens the archive rather
+	 * than emptying it.
+	 */
+	public function test_event_language_filter_ignores_an_unknown_value() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$filter = $this->get_event_language_filter( 'ja' );
+
+		$this->assertSame( 'Language: All', $filter['label'] );
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * Picking a language narrows the archive to the events run in it.
+	 */
+	public function test_event_language_filter_narrows_to_one_language() {
+		$spanish = $this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array( $spanish ), $this->get_archive_query_vars( null, 'es' )['post__in'] );
+	}
+
+	/**
+	 * Language and format have to narrow each other. WP_Query treats
+	 * `post__in` and `post__not_in` as an if/elseif, so the in-person filter's
+	 * `post__not_in` would be dropped without a word if both were left to set
+	 * their own query var.
+	 */
+	public function test_event_language_and_format_filters_narrow_together() {
+		$spanish_online    = $this->make_language_event( 'Charla en linea', 'es', true );
+		$spanish_in_person = $this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$online = $this->get_archive_query_vars( 'online', 'es' );
+		$this->assertSame( array( $spanish_online ), $online['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $online );
+
+		$in_person = $this->get_archive_query_vars( 'in-person', 'es' );
+		$this->assertSame( array( $spanish_in_person ), $in_person['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $in_person );
+	}
+
+	/**
+	 * An empty `post__in` is ignored by WP_Query, so a combination that
+	 * matches nothing has to say "no posts" explicitly rather than falling
+	 * back to the whole archive.
+	 */
+	public function test_event_language_filter_shows_nothing_when_the_combination_is_empty() {
+		$this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online', 'es' )['post__in'] );
+	}
+
+	/**
+	 * The language filter must stay off the archive's own query for the same
+	 * reason the format filter does: a join that makes WP_Query select
+	 * `DISTINCT` collapses a recurring series back into a single row.
+	 */
+	public function test_event_language_filter_keeps_a_meta_query_off_the_archive_query() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$query_vars = $this->get_archive_query_vars( null, 'es' );
+
+		$this->assertArrayNotHasKey( 'meta_query', $query_vars );
+		$this->assertArrayNotHasKey( 'meta_key', $query_vars );
+	}
+
+	/**
+	 * Each filter's form carries the applied language, so submitting one does
+	 * not reset it.
+	 */
+	public function test_filter_forms_carry_the_applied_language() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$_GET['event_language'] = 'es';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_language' );
+		$language_form = ob_get_clean();
+
+		unset( $_GET['event_language'] );
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_language"', $language_form );
+	}
+
+	/**
+	 * Searching narrows the language already in view rather than resetting it.
+	 */
+	public function test_search_form_carries_the_applied_language() {
+		global $wp_query;
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$_GET['event_language'] = 'es';
+
+		$search_form = '<form role="search" method="get" action="https://example.org"><input type="search" name="s" /></form>';
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own block filter name.
+		$output = apply_filters( 'render_block_core/search', $search_form );
+
+		unset( $_GET['event_language'] );
+		$wp_query = $original_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $output );
 	}
 
 	/**

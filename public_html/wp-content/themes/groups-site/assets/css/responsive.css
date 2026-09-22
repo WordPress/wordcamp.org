@@ -86,9 +86,20 @@
 		grid-template-columns: 1fr !important;
 	}
 
-	/* Archive filters: stack search and filter vertically. */
+	/* Archive filters: stack search and filter vertically.
+
+	   The row is laid out `nowrap` so the filters read as one control group
+	   on a wide screen. Two of them fit a phone; three do not -- Time,
+	   Format and Language come to roughly 410px of nowrap toggles before a
+	   selected value lengthens any of them (#2035), against about 360px of
+	   usable width at 400px. Let them wrap instead of pushing the page into
+	   a horizontal scroll. `!important` because the block's own generated
+	   layout rule sets `flex-wrap` from the template's `flexWrap` attribute,
+	   the same reason the grid rules above need it. */
+
 	.wporg-query-filters {
 		width: 100%;
+		flex-wrap: wrap !important;
 	}
 
 	/* Members grid: single column on small phones. */

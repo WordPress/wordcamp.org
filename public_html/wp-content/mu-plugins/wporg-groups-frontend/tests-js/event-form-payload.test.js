@@ -8,6 +8,7 @@ const form = {
 	venue_select: '42',
 	is_online: false,
 	online_event_link: 'https://example.test/join',
+	language: 'es',
 	rsvp_questions: [],
 };
 
@@ -50,6 +51,12 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends the language, and an empty string when it is unset', () => {
+		expect( build().language ).toBe( 'es' );
+		expect( build( { form: { ...form, language: '' } } ).language ).toBe( '' );
+		expect( build( { form: { ...form, language: undefined } } ).language ).toBe( '' );
 	} );
 
 	test( 'sends venue_id 0 when no venue is selected', () => {

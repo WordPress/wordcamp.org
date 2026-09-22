@@ -181,9 +181,12 @@ final class Plugin {
 		add_action( 'loop_end', array( Query::class, 'deactivate' ), 10, 1 );
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
+		add_filter( 'rest_request_before_callbacks', array( Rest_API::class, 'upstream_context' ), 10, 3 );
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
+		add_action( 'added_post_meta', array( Occurrences::class, 'reproject_on_schedule_write' ), 10, 3 );
+		add_action( 'updated_post_meta', array( Occurrences::class, 'reproject_on_schedule_write' ), 10, 3 );
 		add_filter( 'update_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_filter( 'delete_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_action( 'before_delete_post', array( $this, 'delete_event' ), 10, 2 );
@@ -246,6 +249,11 @@ final class Plugin {
 	 * `Occurrences::project()` is a no-op unless the event is published, so
 	 * a recurring series can be handed to it whatever its status.
 	 *
+	 * This hook is not where a *changed* schedule lands. It runs before the
+	 * events table has been rewritten, so it projects the previous one; the
+	 * new one arrives via `Occurrences::reproject_on_schedule_write()`. See
+	 * `Occurrences::SCHEDULE_META_KEYS`.
+	 *
 	 * @param int    $post_id Event post ID.
 	 * @param object $post    Event post.
 	 */
@@ -280,6 +288,21 @@ final class Plugin {
 
 		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), (string) filemtime( $style_path ) );
 		wp_enqueue_script( 'gpre', plugin_dir_url( FILE ) . 'assets/view.js', array(), (string) filemtime( $script_path ), true );
+
+		// Only on a date's own page, and only for a series that has one: the
+		// script below uses this to tell GatherPress's RSVP requests which
+		// date they are about. `wp_enqueue_scripts` runs after
+		// `template_redirect`, so the context is already resolved here.
+		if ( Context::get() ) {
+			wp_localize_script(
+				'gpre',
+				'gpreOccurrence',
+				array(
+					'recurrenceId' => Context::recurrence_id(),
+					'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
+				)
+			);
+		}
 	}
 
 	/**

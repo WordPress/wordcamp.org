@@ -11,6 +11,8 @@ defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
+use WordCamp\Groups\Frontend\Event_Timezone;
+use WordCamp\Groups\Frontend\Event_Language;
 
 /**
  * Build the default field values for the create-event form.
@@ -24,6 +26,10 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *   times-of-day, falling back to 18:00 / 20:00 if there is no prior event.
  * - **Venue ID** is the venue assigned to the most recent event, or `0` if
  *   none.
+ * - **Timezone** is the most recent event's timezone, falling back to the
+ *   site's own.
+ * - **Language** is the most recent event's language, falling back to the
+ *   site locale's own language.
  *
  * @return array{
  *     title:string,
@@ -33,7 +39,9 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *     time_end:string,
  *     venue_id:int,
  *     is_online:bool,
- *     online_event_link:string
+ *     online_event_link:string,
+ *     timezone:string
+ *     language:string
  * }
  */
 function get_default_event_data(): array {
@@ -46,6 +54,8 @@ function get_default_event_data(): array {
 		'venue_id'          => 0,
 		'is_online'         => false,
 		'online_event_link' => '',
+		'timezone'          => Event_Timezone\get_default(),
+		'language'          => Event_Language\get_default(),
 	);
 
 	$most_recent = get_most_recent_event_id();
@@ -68,6 +78,21 @@ function get_default_event_data(): array {
 	}
 
 	$defaults['venue_id'] = get_event_venue_post_id( $most_recent );
+
+	// A group that runs its meetups in one zone should not have to reselect it
+	// on every event, and a group that moved zones keeps the move.
+	$previous_timezone = Event_Timezone\get_event_timezone( $most_recent );
+	if ( '' !== $previous_timezone ) {
+		$defaults['timezone'] = $previous_timezone;
+	}
+
+	// The group's last event is a better guess at the next one's language than
+	// the site locale is: a Spanish-locale group that switched to running in
+	// English keeps the switch instead of being reset every time.
+	$previous_language = Event_Language\get_event_language( $most_recent );
+	if ( '' !== $previous_language ) {
+		$defaults['language'] = $previous_language;
+	}
 
 	return $defaults;
 }

@@ -704,7 +704,86 @@ delivered body at phone width, open it in the browser and measure:
 `getBoundingClientRect()` on the `img` catches an aspect-ratio regression
 that eyeballing will not.
 
-## 11. Influencing how a GatherPress date renders
+## 11. Timezones, and series-level data reaching its occurrences
+
+Three traps, all found by a browser pass that the automated suites had passed
+clean (#2021).
+
+- **GatherPress spells a UTC offset two ways.** The choices core builds
+  (`Utility::timezone_choices()`, parsed out of `wp_timezone_choice()`) say
+  `UTC+10`; the events table, `wp_timezone_string()` and
+  `Utility::list_timezone_and_utc_offsets()` all say `+10:00`.
+  `Utility::normalize_timezone_string()` maps the first onto the second, except
+  at zero, which it collapses to `UTC` while `wp_timezone_string()` keeps
+  saying `+00:00`. Anything round-tripping a zone between a form and the events
+  table has to canonicalize both sides (see
+  `wporg-groups-frontend/inc/event-timezone.php`). The failure is silent and
+  destructive: a `<select>` whose `value` matches no option falls back to its
+  first one, so an organizer opening an event and pressing save rescheduled it
+  into Africa/Abidjan.
+- **`show_timezone` is read before the block attribute.**
+  `Event::get_display_datetime()` resolves the global setting first and formats
+  the zone with an empty string when it is off, so `showTimezone: "yes"` on a
+  `gatherpress/event-date` block does nothing on its own. The same call with no
+  arguments is what every event email renders its date through, so the global
+  setting is the one lever for the emails too.
+- **Series-level data does not reach already-projected occurrences unless the
+  projection updates them.** `Occurrences::project()` upserts rather than
+  `INSERT IGNORE`s for this reason, updating the schedule columns while leaving
+  `status` and `created_gmt` alone so a cancelled occurrence survives. Anything
+  else that becomes series-level later needs the same treatment, and a test
+  that cancels an occurrence and re-projects.
+- **`save_post` is the wrong moment to project from.** GatherPress writes the
+  schedule on `wp_after_insert_post` (or, for a brand-new post, at `shutdown`),
+  and the front-end event form writes it directly after `wp_update_post()` has
+  returned. Either way `save_post_gatherpress_event` runs first and projects
+  the *previous* schedule, then sets the 6-hour `gpre_projected_` freshness
+  marker that stops `maybe_project()` repairing it — so a changed zone sat
+  stale until the daily cron. `Occurrences::reproject_on_schedule_write()`
+  watches the per-field meta `Event::save_datetimes()` writes instead, which is
+  the only thing it makes observable: it fires no action of its own. Verify a
+  schedule change by reading the occurrence rows back after a plain save, never
+  by calling `project()` yourself — an explicit call passes whether or not the
+  hook works.
+
+An occurrence page reads its date through `Context::metadata()`, which serves
+the occurrence row's own columns, so checking the series post's meta is not a
+check that the page will render what you expect. Look at the
+`{prefix}gatherpress_occurrences` row.
+
+## 12. Adding an events-archive filter
+
+The archive's filters (`event_time`, `event_format`, `event_language`) all
+live in `gatherpress-groups-tweaks.php` and share three constraints that are
+easy to break one at a time.
+
+- **Resolve every ID-based filter into one `post__in`.** WP_Query's
+  `parse_where()` treats `post__in` and `post__not_in` as an if/elseif, so a
+  filter expressed as `post__not_in` (the in-person view, since an event with
+  no venue is in person) is dropped without a word the moment another filter
+  sets `post__in`. Narrow one filter's own ID set in PHP rather than giving
+  each filter its own query var. An empty result must be `array( 0 )`, since
+  WP_Query ignores an empty `post__in` and would show the whole archive.
+- **Keep the join off the archive's own query.** A `tax_query` or
+  `meta_query` on the main query makes WP_Query select `DISTINCT`, which
+  collapses the duplicate rows `gatherpress-recurring-events` adds in
+  `Query::clauses()` to turn a series into one row per date — a weekly series
+  then appears once instead of on each of its dates, silently and only while
+  a filter is applied. Resolve the IDs in a separate `fields => ids` query
+  (which `Query::clauses()` bails on, so it does not expand occurrences
+  either), and prime the meta cache once for the set.
+- **Each `wporg/query-filter` renders a form holding only its own control**,
+  so every filter must carry the others' state, and the search form must
+  carry all of them, or submitting one silently resets the rest.
+
+Two more things to check before adding a fourth: the filter row is laid out
+`nowrap`, and three toggles already come to roughly 410px against about
+360px of usable width at 400px (it wraps below 781px in `responsive.css` for
+exactly that reason); and a control whose options come from the data should
+return an empty options array when there is nothing to choose between, which
+is what makes `wporg/query-filter` render nothing at all.
+
+## 13. Influencing how a GatherPress date renders
 
 Which lever works depends on which half of the format you are after, and the
 two answers are opposites — worth checking rather than assuming (#2033, #2021).

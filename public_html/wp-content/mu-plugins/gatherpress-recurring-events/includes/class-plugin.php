@@ -181,6 +181,7 @@ final class Plugin {
 		add_action( 'loop_end', array( Query::class, 'deactivate' ), 10, 1 );
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
+		add_filter( 'rest_request_before_callbacks', array( Rest_API::class, 'upstream_context' ), 10, 3 );
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
@@ -280,6 +281,21 @@ final class Plugin {
 
 		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), (string) filemtime( $style_path ) );
 		wp_enqueue_script( 'gpre', plugin_dir_url( FILE ) . 'assets/view.js', array(), (string) filemtime( $script_path ), true );
+
+		// Only on a date's own page, and only for a series that has one: the
+		// script below uses this to tell GatherPress's RSVP requests which
+		// date they are about. `wp_enqueue_scripts` runs after
+		// `template_redirect`, so the context is already resolved here.
+		if ( Context::get() ) {
+			wp_localize_script(
+				'gpre',
+				'gpreOccurrence',
+				array(
+					'recurrenceId' => Context::recurrence_id(),
+					'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
+				)
+			);
+		}
 	}
 
 	/**

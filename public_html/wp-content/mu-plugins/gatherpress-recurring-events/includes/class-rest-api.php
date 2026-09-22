@@ -322,6 +322,126 @@ final class Rest_API {
 	}
 
 	/**
+	 * Makes GatherPress's own event routes occurrence-aware.
+	 *
+	 * GatherPress's RSVP view modules talk to `gatherpress/v1/event/*` with
+	 * nothing but a post ID, and `rsvp-status-html` in particular re-renders
+	 * the attendee list from that answer on every page load. On a recurring
+	 * series that answer is the whole series' roster, which then replaces the
+	 * correctly scoped list the server rendered (#2072). Those modules are
+	 * upstream code this extension cannot change, so the date is read back off
+	 * the request here and the same context an occurrence page would have set
+	 * is applied before the handler runs.
+	 *
+	 * Runs late enough that URL parameters are populated and the route's own
+	 * permission callback has already answered: a request that was going to be
+	 * refused is left alone.
+	 *
+	 * @param mixed           $response Existing response, or null to continue.
+	 * @param array           $handler  Matched route handler.
+	 * @param WP_REST_Request $request  REST request.
+	 * @return mixed Response, untouched.
+	 */
+	public static function upstream_context( $response, $handler, WP_REST_Request $request ) {
+		if ( null !== $response || ! str_starts_with( (string) $request->get_route(), '/' . self::upstream_namespace() . '/event/' ) ) {
+			return $response;
+		}
+
+		// `post_id` on the RSVP routes, `comment_post_ID` on the form one.
+		$post_id = (int) ( $request->get_param( 'post_id' ) ?? 0 );
+		$post_id = $post_id ?: (int) ( $request->get_param( 'comment_post_ID' ) ?? 0 );
+
+		if ( ! $post_id || ! Rule::is_recurring( $post_id ) ) {
+			return $response;
+		}
+
+		// Before the occurrence is resolved, not after: a request that turns
+		// out to carry no usable date still must not leave a series-wide
+		// roster behind in the shared cache.
+		Rsvp_Cache::guard( $post_id );
+
+		$occurrence = self::requested_occurrence( $post_id, $request );
+
+		if ( $occurrence ) {
+			Context::set( $occurrence );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * The REST namespace GatherPress registers its event routes under.
+	 *
+	 * @return string Namespace, without leading or trailing slashes.
+	 */
+	public static function upstream_namespace(): string {
+		return defined( 'GATHERPRESS_REST_NAMESPACE' ) ? (string) GATHERPRESS_REST_NAMESPACE : 'gatherpress/v1';
+	}
+
+	/**
+	 * Resolves the occurrence a GatherPress event request belongs to.
+	 *
+	 * The identifier is appended to the request by `assets/view.js`. The
+	 * referring page is the fallback, for a browser running a copy of that
+	 * script from before this change, or a cached one: these are same-origin
+	 * `fetch()` calls from the occurrence page itself, so the default referrer
+	 * policy sends its full URL. Either way the pairing is checked against the
+	 * projected occurrence rows, so an identifier that was not issued for this
+	 * series resolves to nothing.
+	 *
+	 * @param int             $post_id Series post ID.
+	 * @param WP_REST_Request $request REST request.
+	 * @return object|null Occurrence row, or null when the request names none.
+	 */
+	private static function requested_occurrence( int $post_id, WP_REST_Request $request ): ?object {
+		$requested = sanitize_text_field( (string) ( $request->get_param( 'gpre_occurrence' ) ?? '' ) );
+
+		if ( '' === $requested ) {
+			$requested = self::referring_recurrence_id();
+		}
+
+		if ( ! preg_match( '/^[0-9]{8}(?:T[0-9]{6})?$/', $requested ) ) {
+			return null;
+		}
+
+		return Occurrences::get( $post_id, $requested );
+	}
+
+	/**
+	 * The recurrence identifier in the referring page's URL, if it has one.
+	 *
+	 * @return string Recurrence identifier, or an empty string.
+	 */
+	private static function referring_recurrence_id(): string {
+		// Same-host and not-this-request are both already enforced by core.
+		$referer = wp_get_referer();
+
+		if ( ! is_string( $referer ) || '' === $referer ) {
+			return '';
+		}
+
+		// The pretty permalink carries the date as the last path segment; the
+		// query variable is how the same page is addressed on a site without
+		// pretty permalinks, where the rewrite rule never matches.
+		$queried = '';
+		$parts   = wp_parse_url( $referer );
+
+		if ( ! empty( $parts['query'] ) ) {
+			$args = array();
+			wp_parse_str( $parts['query'], $args );
+			$queried = sanitize_text_field( (string) ( $args['gpre_occurrence'] ?? '' ) );
+		}
+
+		if ( '' !== $queried ) {
+			return $queried;
+		}
+
+		$path = (string) ( $parts['path'] ?? '' );
+
+		return preg_match( '#/([0-9]{8}(?:T[0-9]{6})?)/?$#', $path, $matches ) ? $matches[1] : '';
+	}
+
+	/**
 	 * Validates and activates REST occurrence context.
 	 *
 	 * @param int    $post_id       Series post ID.

@@ -4,6 +4,8 @@ namespace WordCamp\Budgets\Privacy;
 
 use WP_Query, WP_Post;
 
+use function WordCamp\Logger\log;
+
 defined( 'WPINC' ) || die();
 
 
@@ -13,9 +15,18 @@ if ( ! is_cli_request() ) {
 	add_filter( 'posts_clauses',                  __NAMESPACE__ . '\exclude_others_payment_files', 10, 2 );
 	add_filter( 'the_posts',                      __NAMESPACE__ . '\hide_others_payment_files' );
 	add_filter( 'map_meta_cap',                   __NAMESPACE__ . '\restrict_others_payment_file_caps', 10, 4 );
+	add_filter( 'ajax_query_attachments_args',    __NAMESPACE__ . '\ask_for_private_attachments' );
+	add_action( 'pre_get_posts',                  __NAMESPACE__ . '\ask_the_media_list_for_private_attachments', PHP_INT_MAX );
 }
 
+add_action( 'load-upload.php',                    __NAMESPACE__ . '\capture_attach_action_parents' );
+add_action( 'before_delete_post',                 __NAMESPACE__ . '\delete_budget_request_files', 10, 2 );
+add_action( 'add_attachment',                     __NAMESPACE__ . '\mark_budget_file_upload' );
+add_action( 'attachment_updated',                 __NAMESPACE__ . '\mark_reparented_budget_file', 10, 3 );
+add_action( 'wp_media_attach_action',             __NAMESPACE__ . '\mark_attached_budget_file', 10, 3 );
+add_filter( 'wp_insert_attachment_data',          __NAMESPACE__ . '\hide_budget_file_upload', 10, 4 );
 add_filter( 'xmlrpc_prepare_media_item',          __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
+add_filter( 'wp_prepare_attachment_for_js',       __NAMESPACE__ . '\redact_others_payment_files', 10, 2 );
 add_filter( 'wp_unique_filename',                 __NAMESPACE__ . '\obscure_payment_file_names', 10, 2 );
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_personal_data_exporters' );
 add_filter( 'wp_privacy_personal_data_erasers',   __NAMESPACE__ . '\register_personal_data_erasers'   );
@@ -65,12 +76,47 @@ const PAYMENT_REQUEST_POST_TYPE = 'wcp_payment_request';
 
 
 /**
+ * Marks an attachment as a budget request's file. On the attachment, so it survives the parent changing or going.
+ */
+const BUDGET_FILE_META_KEY = '_wcorg_budget_file';
+
+
+/**
+ * Set by `wp-cli-commands/backfill-budget-files.php` on each file it marks. Lives here because that command is
+ * deleted after its run.
+ */
+const BUDGET_FILE_BACKFILLED_META_KEY = '_wcorg_budget_file_backfilled';
+
+
+/**
+ * Set by the backfill on a file that is a copy of one still on a request elsewhere. Work list for a later pass;
+ * nothing here deletes.
+ */
+const BUDGET_FILE_DELETE_META_KEY = '_wcorg_budget_file_delete';
+
+
+/**
  * The post types whose attachments carry financial details.
  *
  * @return string[]
  */
 function get_budget_request_post_types() {
 	return array( REIMBURSEMENT_POST_TYPE, PAYMENT_REQUEST_POST_TYPE );
+}
+
+
+/**
+ * Whether the current user holds the capability that decides who reads another user's `private` attachment.
+ *
+ * Read off the post type object, which is where the two Core functions this compensates for read it --
+ * `wp_ajax_query_attachments()` and `WP_Query::get_posts()` -- rather than naming the default here.
+ *
+ * @return bool
+ */
+function may_read_private_attachments() {
+	$attachment = get_post_type_object( 'attachment' );
+
+	return current_user_can( $attachment->cap->read_private_posts );
 }
 
 
@@ -122,6 +168,57 @@ function query_may_return_attachments( $wp_query ) {
 }
 
 /**
+ * Ask the Media Library's Ajax query for `private` attachments as well.
+ *
+ * `wp_ajax_query_attachments()` appends `private` only for `read_private_posts`, which an Author lacks, so a
+ * requester who is a volunteer sees none of their own payment files in the grid or the media modal. Naming the
+ * status leaves who reads each file to `exclude_others_payment_files()`, which answers it per file.
+ *
+ * @param array $query The query vars the screen asked for.
+ *
+ * @return array
+ */
+function ask_for_private_attachments( $query ) {
+	$query['post_status'] = add_private_status( $query['post_status'] ?? '' );
+
+	return $query;
+}
+
+/**
+ * The same, for the media list table, which builds its query vars in `wp_edit_attachments_query_vars()` and
+ * runs them through the main query rather than through a filter of its own.
+ *
+ * @param WP_Query $wp_query
+ */
+function ask_the_media_list_for_private_attachments( $wp_query ) {
+	if ( ! is_admin() || ! $wp_query->is_main_query() || 'attachment' !== $wp_query->get( 'post_type' ) ) {
+		return;
+	}
+
+	$wp_query->set( 'post_status', add_private_status( $wp_query->get( 'post_status' ) ) );
+}
+
+/**
+ * Add `private` to a list of post statuses, leaving the two lists that already answer for it as they are:
+ * `trash` is a screen of its own, and `any` covers `private` already.
+ *
+ * @param string|string[] $post_status
+ *
+ * @return string|string[] Untouched if there was nothing to add to.
+ */
+function add_private_status( $post_status ) {
+	$statuses = is_array( $post_status ) ? $post_status : array_filter( explode( ',', (string) $post_status ) );
+
+	if ( ! $statuses || array_intersect( array( 'any', 'private', 'trash' ), $statuses ) ) {
+		return $post_status;
+	}
+
+	$statuses[] = 'private';
+
+	return $statuses;
+}
+
+/**
  * Exclude other users' payment files from a query, in SQL.
  *
  * `WP_Query` returns early for `fields => ids` and for the count behind `found_posts`, both before `the_posts`,
@@ -129,7 +226,7 @@ function query_may_return_attachments( $wp_query ) {
  * what breaks "Load more" in the Media Library grid for non-admins.
  *
  * Mirrors `get_hidden_payment_file_ids()`: the uploader and the requester keep access, nobody else does. A
- * logged-out visitor is neither.
+ * logged-out visitor is neither. The two joins ask the same question in SQL.
  *
  * @param string[] $clauses
  * @param WP_Query $wp_query
@@ -148,20 +245,38 @@ function exclude_others_payment_files( $clauses, $wp_query ) {
 	$post_types   = get_budget_request_post_types();
 	$placeholders = implode( ', ', array_fill( 0, count( $post_types ), '%s' ) );
 
-	// `$placeholders` is a generated run of `%s`, so the `IN` list stays in step with the post types above.
+	/*
+	 * The Media Library screens name `private` outright, which makes `WP_Query` skip its own gate on
+	 * `read_private_posts`. Keep that gate for everything this file doesn't mark, so asking for the status
+	 * widens the results by the user's own files and by nothing else -- sponsorship agreements are stored
+	 * `private` too.
+	 */
+	$private_where = may_read_private_attachments() ? '' : " AND {$wpdb->posts}.post_status != 'private'";
+
+	/*
+	 * `$placeholders` is a generated run of `%s`, so the `IN` list stays in step with the post types above.
+	 *
+	 * The marker join can't multiply rows: one row per attachment, written only through `update_post_meta()`.
+	 */
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+	$clauses['join'] .= $wpdb->prepare(
+		" LEFT JOIN {$wpdb->posts} AS budget_request
+			ON budget_request.ID = {$wpdb->posts}.post_parent
+			AND budget_request.post_type IN ( $placeholders )
+		LEFT JOIN {$wpdb->postmeta} AS budget_file_marker
+			ON budget_file_marker.post_id = {$wpdb->posts}.ID
+			AND budget_file_marker.meta_key = %s",
+		array_merge( $post_types, array( BUDGET_FILE_META_KEY ) )
+	);
+
 	$clauses['where'] .= $wpdb->prepare(
 		" AND (
 			{$wpdb->posts}.post_type != 'attachment'
 			OR {$wpdb->posts}.post_author = %d
-			OR {$wpdb->posts}.post_parent NOT IN (
-				SELECT budget_request.ID
-				FROM {$wpdb->posts} AS budget_request
-				WHERE budget_request.post_type IN ( $placeholders )
-				AND budget_request.post_author != %d
-			)
+			OR budget_request.post_author = %d
+			OR ( budget_request.ID IS NULL AND budget_file_marker.meta_id IS NULL $private_where )
 		)",
-		array_merge( array( $user_id ), $post_types, array( $user_id ) )
+		array( $user_id, $user_id )
 	);
 	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
@@ -176,6 +291,9 @@ function exclude_others_payment_files( $clauses, $wp_query ) {
  *
  * Reads the post type off each result rather than off the query, so results that include attachments
  * incidentally -- `post_type => 'any'`, a mixed array, a front-end search -- are covered too.
+ *
+ * Drops the same set the clauses exclude, which is the payment files plus the `private` gate the clauses
+ * answer in `$private_where`.
  *
  * @param WP_Post[]|int[] $posts
  *
@@ -193,7 +311,10 @@ function hide_others_payment_files( $posts ) {
 		return $posts;
 	}
 
-	$hidden = get_hidden_payment_file_ids( $attachments );
+	$hidden = array_merge(
+		get_hidden_payment_file_ids( $attachments ),
+		get_hidden_private_file_ids( $attachments )
+	);
 
 	if ( ! $hidden ) {
 		return $posts;
@@ -229,7 +350,7 @@ function get_attachments_from_results( $posts ) {
 	}
 
 	if ( $ids_to_prime ) {
-		_prime_post_caches( $ids_to_prime, false, false );
+		_prime_post_caches( $ids_to_prime, false, true );
 	}
 
 	$attachments = array();
@@ -244,11 +365,23 @@ function get_attachments_from_results( $posts ) {
 		}
 	}
 
+	/*
+	 * `WP_Query` primes the meta cache after `the_posts` rather than before it, so the marker the passes below
+	 * read is primed here instead: one read for the set, rather than one per file.
+	 */
+	if ( $attachments ) {
+		update_meta_cache( 'post', wp_list_pluck( $attachments, 'ID' ) );
+	}
+
 	return $attachments;
 }
 
 /**
  * Which of the given attachments are payment files the given user may not see.
+ *
+ * A payment file carries the marker, or sits on a live request. The parent rule only covers files from before
+ * the marker existed and can go once the backfill has run. Readers: the uploader, the requester while there is
+ * a request, and `manage_options`, which the callers settle first.
  *
  * @param WP_Post[] $attachments
  * @param int|null  $user_id     Defaults to the current user. Named explicitly by callers that are asked about
@@ -262,7 +395,9 @@ function get_hidden_payment_file_ids( $attachments, $user_id = null ) {
 	$hidden            = array();
 
 	foreach ( $attachments as $attachment ) {
-		if ( ! in_array( $attachment->post_parent, $payment_posts_ids, true ) ) {
+		$on_a_request = in_array( (int) $attachment->post_parent, $payment_posts_ids, true );
+
+		if ( ! $on_a_request && ! is_budget_file( $attachment->ID ) ) {
 			continue;
 		}
 
@@ -275,9 +410,7 @@ function get_hidden_payment_file_ids( $attachments, $user_id = null ) {
 		 * a new database query, it's just a way to access the individual post directly instead of iterating through
 		 * `$payment_posts_with_attachments`.
 		 */
-		$parent_author = (int) get_post( $attachment->post_parent )->post_author;
-
-		if ( $parent_author === $user_id ) {
+		if ( $on_a_request && (int) get_post( $attachment->post_parent )->post_author === $user_id ) {
 			continue;
 		}
 
@@ -288,10 +421,55 @@ function get_hidden_payment_file_ids( $attachments, $user_id = null ) {
 }
 
 /**
- * Strip the details of other users' payment files out of XML-RPC responses.
+ * Which of the given attachments are `private` rows the given query result may not widen by.
  *
- * `wp.getMediaItem` looks an attachment up by ID with `get_post()`, so it never runs a `WP_Query` for the query
- * guards to apply to. Returning an empty struct keeps the method able to answer without describing the file.
+ * The Media Library screens name `private` outright, which makes `WP_Query` skip its own gate on the
+ * capability, so the gate is restated here for everything this file doesn't mark. This is the results-pass
+ * half of the `$private_where` arm in `exclude_others_payment_files()`, and keeps the same readers: the
+ * uploader, the requester, and whoever holds the capability.
+ *
+ * A marked file is left to `get_hidden_payment_file_ids()`, which answers for it whatever its status.
+ *
+ * @param WP_Post[] $attachments
+ *
+ * @return int[]
+ */
+function get_hidden_private_file_ids( $attachments ) {
+	if ( may_read_private_attachments() ) {
+		return array();
+	}
+
+	$user_id    = get_current_user_id();
+	$parent_ids = get_payment_file_parent_ids( $attachments );
+	$hidden     = array();
+
+	foreach ( $attachments as $attachment ) {
+		if ( 'private' !== $attachment->post_status || (int) $attachment->post_author === $user_id ) {
+			continue;
+		}
+
+		if ( is_budget_file( $attachment->ID ) ) {
+			continue;
+		}
+
+		$on_a_request = in_array( (int) $attachment->post_parent, $parent_ids, true );
+
+		// The parent is cached from `get_payment_file_parent_ids()`, so this costs no query of its own.
+		if ( $on_a_request && (int) get_post( $attachment->post_parent )->post_author === $user_id ) {
+			continue;
+		}
+
+		$hidden[] = $attachment->ID;
+	}
+
+	return $hidden;
+}
+
+/**
+ * Strip the details of other users' payment files out of the two responses that describe one file.
+ *
+ * `wp.getMediaItem` and `wp_ajax_get_attachment()` both resolve by ID, so the query guards never run, and the
+ * second checks `upload_files` alone. An empty response keeps both able to answer.
  *
  * @param array   $media_item_struct
  * @param WP_Post $media_item
@@ -303,11 +481,37 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
 		return $media_item_struct;
 	}
 
+	// `wp_prepare_attachment_for_js()` runs once per attachment on the Media Library screens, as below.
+	if ( ! may_be_a_hidden_payment_file( $media_item, get_current_user_id() ) ) {
+		return $media_item_struct;
+	}
+
 	if ( get_hidden_payment_file_ids( array( $media_item ) ) ) {
 		return array();
 	}
 
 	return $media_item_struct;
+}
+
+/**
+ * Whether the rules above could hide an attachment from a user, answered from the post and meta caches.
+ *
+ * `map_meta_cap` and `wp_prepare_attachment_for_js()` each run once per attachment on the Media Library
+ * screens, and on most sites none of those attachments is a payment file at all. Both conditions restate one
+ * `get_hidden_payment_file_ids()` applies itself, so a `false` here is a file it would have passed over too.
+ *
+ * @param mixed $attachment The attachment to answer for.
+ * @param int   $user_id    The user being asked about, who isn't always the current one.
+ *
+ * @return bool
+ */
+function may_be_a_hidden_payment_file( $attachment, $user_id ) {
+	if ( ! $attachment instanceof WP_Post || (int) $attachment->post_author === (int) $user_id ) {
+		return false;
+	}
+
+	return is_budget_file( $attachment->ID )
+		|| in_array( get_post_type( $attachment->post_parent ), get_budget_request_post_types(), true );
 }
 
 /**
@@ -319,7 +523,8 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
  * media REST endpoints, the Media Library's Attach and Detach actions, XML-RPC. Declining the capability closes
  * all of them at once, instead of each one separately.
  *
- * Only `edit_post`, because that is the capability every one of those routes checks before it writes the field.
+ * `read_post` as well, because `private` maps it to `read_private_posts`, which every organizer has; without
+ * this the REST single-item route and the attachment permalink would answer for a file these rules hide.
  * Deletion is a separate question and isn't answered here.
  *
  * Note that `wp_update_post()` checks no capabilities at all, so anything that reparents through it needs its
@@ -334,7 +539,7 @@ function redact_others_payment_files( $media_item_struct, $media_item ) {
  */
 function restrict_others_payment_file_caps( $required_capabilities, $requested_capability, $user_id, $args ) {
 	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
-	if ( 'edit_post' !== $requested_capability ) {
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'read_post' ), true ) ) {
 		return $required_capabilities;
 	}
 
@@ -344,17 +549,8 @@ function restrict_others_payment_file_caps( $required_capabilities, $requested_c
 		return $required_capabilities;
 	}
 
-	/*
-	 * Two cheap ways to a "no", before the lookup that costs a query. `map_meta_cap` runs once per attachment on
-	 * the Media Library screens, and on most sites none of those attachments is a payment file at all -- these
-	 * settle that from the post cache. Both restate a condition `get_hidden_payment_file_ids()` applies itself,
-	 * so they only ever return early where it would have found nothing; the rule itself still lives there.
-	 */
-	if ( (int) $attachment->post_author === (int) $user_id ) {
-		return $required_capabilities;
-	}
-
-	if ( ! in_array( get_post_type( $attachment->post_parent ), get_budget_request_post_types(), true ) ) {
+	// Two cheap ways to a "no", before the lookup that costs a query.
+	if ( ! may_be_a_hidden_payment_file( $attachment, $user_id ) ) {
 		return $required_capabilities;
 	}
 
@@ -400,35 +596,79 @@ function get_capability_subject( $args ) {
 /**
  * Get the Reimbursement/Vendor Payment posts that are attached to the given media items.
  *
+ * Primes the parents and reads their type from the cache rather than querying for them, because a query has a
+ * status to ask for and every answer to that is wrong: a `trash` or `auto-draft` request carries files like any
+ * other, and the SQL guard has no status filter either.
+ *
  * @param WP_Post[] $attachments
  *
  * @return int[]
  */
 function get_payment_file_parent_ids( $attachments ) {
-	$parent_ids     = array_unique( wp_list_pluck( $attachments, 'post_parent' ) );
-	$orphaned_index = array_search( 0, $parent_ids, true );
+	$parent_ids = array_unique( array_map( 'intval', wp_list_pluck( $attachments, 'post_parent' ) ) );
 
-	// All payment files should be attached to a post, so unattached files can be removed.
-	if ( false !== $orphaned_index ) {
-		unset( $parent_ids[ $orphaned_index ] );
-	}
+	// A file with no parent has nothing to look up; the marker is what says what it is.
+	$parent_ids = array_filter( $parent_ids );
 
-	/*
-	 * `post__in` treats an empty array as "no restriction", so bail rather than pulling in every request on the
-	 * site to compare against a set of attachments that can't match any of them.
-	 */
 	if ( ! $parent_ids ) {
 		return array();
 	}
 
-	$payment_posts_with_attachments = get_posts( array(
-		'post__in'    => $parent_ids,
-		'post_status' => 'any',
-		'numberposts' => 1000,
-		'post_type'   => get_budget_request_post_types(),
+	_prime_post_caches( $parent_ids, false, false );
+
+	$is_budget_request = function ( $parent_id ) {
+		return in_array( get_post_type( $parent_id ), get_budget_request_post_types(), true );
+	};
+
+	return array_values( array_filter( $parent_ids, $is_budget_request ) );
+}
+
+/**
+ * Delete a budget request's files with the request.
+ *
+ * `wp_delete_post()` would reparent them to `0` instead, and nothing but the request's Files metabox reads them.
+ * `before_delete_post` covers Delete Permanently and both cron purges (trash, auto-drafts); trashing keeps them.
+ *
+ * @param int     $post_id
+ * @param WP_Post $post
+ */
+function delete_budget_request_files( $post_id, $post ) {
+	if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, get_budget_request_post_types(), true ) ) {
+		return;
+	}
+
+	foreach ( get_budget_request_file_ids( $post_id ) as $file_id ) {
+		$path = get_attached_file( $file_id );
+
+		// `true` so the file on disk goes with the row, whatever `MEDIA_TRASH` is set to.
+		wp_delete_attachment( $file_id, true );
+
+		// Core unlinks with `@unlink()` and reports nothing, and WP-CLI on the sandbox can't write to uploads.
+		if ( $path && is_file( $path ) ) {
+			log( 'budget_file_not_deleted', compact( 'post_id', 'file_id', 'path' ) );
+		}
+	}
+}
+
+/**
+ * The IDs of every attachment on a budget request.
+ *
+ * Straight from the table: the guards above hide other organizers' files from `WP_Query`, and a deletion has to
+ * take those too.
+ *
+ * @param int $post_id
+ *
+ * @return int[]
+ */
+function get_budget_request_file_ids( $post_id ) {
+	global $wpdb;
+
+	$file_ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT ID FROM {$wpdb->posts} WHERE post_parent = %d AND post_type = 'attachment'",
+		$post_id
 	) );
 
-	return wp_list_pluck( $payment_posts_with_attachments, 'ID' );
+	return array_map( 'intval', $file_ids );
 }
 
 /**
@@ -445,19 +685,241 @@ function get_payment_file_parent_ids( $attachments ) {
  * @return string
  */
 function obscure_payment_file_names( $filename, $extension ) {
-	$attached_post       = get_post( absint( $_REQUEST['post_id'] ?? 0 ) );
-	$relevant_post_types = get_budget_request_post_types();
-
-	if ( $attached_post instanceof WP_Post && in_array( $attached_post->post_type, $relevant_post_types, true ) ) {
-		$filename = sprintf(
-			'%s-%s%s',
-			str_replace( $extension, '', $filename ),
-			wp_generate_password( 16, false, false ),
-			$extension
-		);
+	if ( ! is_budget_request_upload() ) {
+		return $filename;
 	}
 
-	return $filename;
+	return sprintf(
+		'%s-%s%s',
+		str_replace( $extension, '', $filename ),
+		wp_generate_password( 16, false, false ),
+		$extension
+	);
+}
+
+/**
+ * Whether the current request is uploading a file onto a budget request.
+ *
+ * Read from the request because the hooks asking run before the attachment exists. `post_id` is what
+ * `wp_ajax_upload_attachment()` sends, `post` what the REST route sends. An `auto-draft` counts. The upload
+ * routes have already checked the nonce and `edit_post` on that parent.
+ *
+ * `post` is also the classic editor's "post being edited" parameter, so any attachment inserted while a
+ * request's edit screen is open is treated as that request's file.
+ *
+ * @return bool
+ */
+function is_budget_request_upload() {
+	// phpcs:ignore WordPress.Security.NonceVerification -- the upload routes checked it.
+	$parent_id = $_REQUEST['post_id'] ?? $_REQUEST['post'] ?? 0;
+
+	if ( ! is_scalar( $parent_id ) ) {
+		return false;
+	}
+
+	return in_array( get_post_type( absint( $parent_id ) ), get_budget_request_post_types(), true );
+}
+
+/**
+ * Give a budget request's file the `private` status before its row is written, so it is never stored as
+ * `inherit`. Inserts only: an update during a request's edit screen may be to an unrelated attachment.
+ *
+ * @param array $data              The attachment's post fields.
+ * @param array $postarr           Unused.
+ * @param array $unsanitized       Unused.
+ * @param bool  $update            Whether an existing row is being written.
+ *
+ * @return array
+ */
+function hide_budget_file_upload( $data, $postarr = array(), $unsanitized = array(), $update = false ) {
+	if ( $update || 'attachment' !== ( $data['post_type'] ?? '' ) || ! is_budget_request_upload() ) {
+		return $data;
+	}
+
+	$data['post_status'] = 'private';
+
+	return $data;
+}
+
+/**
+ * Mark a file uploaded onto a budget request once it has an ID. Also applies the status, as a backstop.
+ *
+ * The inserted row's own parent counts as well as the request parameter, because `wp_insert_attachment()`
+ * called from PHP sends no parameter at all. The parameter is still what the two hooks that run before the row
+ * exists have to read.
+ *
+ * @param int $attachment_id
+ */
+function mark_budget_file_upload( $attachment_id ) {
+	$attachment = get_post( $attachment_id );
+
+	$on_a_request = $attachment instanceof WP_Post
+		&& in_array( get_post_type( $attachment->post_parent ), get_budget_request_post_types(), true );
+
+	if ( ! $on_a_request && ! is_budget_request_upload() ) {
+		return;
+	}
+
+	mark_budget_file( $attachment_id );
+}
+
+/**
+ * Mark a file that `wp_insert_post()` has moved onto a budget request: the Files metabox and REST reparent this
+ * way.
+ *
+ * Only a file that had no parent, as in `mark_attached_budget_file()`.
+ *
+ * @param int     $attachment_id
+ * @param WP_Post $attachment_after  The attachment as it was saved.
+ * @param WP_Post $attachment_before The attachment as it was before the save.
+ */
+function mark_reparented_budget_file( $attachment_id, $attachment_after, $attachment_before ) {
+	if ( 0 !== (int) $attachment_before->post_parent ) {
+		return;
+	}
+
+	if ( ! in_array( get_post_type( $attachment_after->post_parent ), get_budget_request_post_types(), true ) ) {
+		return;
+	}
+
+	mark_budget_file( $attachment_id );
+}
+
+/**
+ * Mark a file the Media Library's Attach action has moved onto a budget request. It writes `post_parent` with a
+ * direct `UPDATE`, so no post hook sees it.
+ *
+ * Only a file that had no parent, because a file already sitting on another post is that post's media and the
+ * `private` status would take it out of wherever it is used. Detach is left alone in both directions: a marked
+ * file with no parent and `inherit` reads as ordinary public media to Core, so both have to survive the parent
+ * going away.
+ *
+ * @param string $action        Either `attach` or `detach`.
+ * @param int    $attachment_id
+ * @param int    $parent_id
+ */
+function mark_attached_budget_file( $action, $attachment_id, $parent_id ) {
+	if ( 'attach' !== $action ) {
+		return;
+	}
+
+	if ( ! in_array( get_post_type( $parent_id ), get_budget_request_post_types(), true ) ) {
+		return;
+	}
+
+	$previous_parents = attach_action_parents();
+
+	// An ID nobody captured has no previous parent to read, and an unknown one isn't a "had none".
+	if ( ! isset( $previous_parents[ $attachment_id ] ) || 0 !== $previous_parents[ $attachment_id ] ) {
+		return;
+	}
+
+	// The row changed under the cache, which `wp_update_post()` would otherwise write the old parent back from.
+	clean_post_cache( $attachment_id );
+
+	mark_budget_file( $attachment_id );
+}
+
+/**
+ * Record the parent each attachment the Media Library's Attach action names holds before it writes the new one.
+ *
+ * `wp_media_attach_action()` writes `post_parent` with a direct `UPDATE`, so by the time it fires its hook the
+ * previous value is only in the post cache, and only because it happens to call `current_user_can( 'edit_post' )`
+ * on each ID first. `load-upload.php` fires in `wp-admin/admin.php` before `upload.php` dispatches the bulk
+ * action, so the value can be read there for certain instead.
+ *
+ * The find-posts modal posts the chosen parent as `found_post_id` alongside the `media` list, which is how
+ * `WP_Media_List_Table::current_action()` recognises an attach whichever control opened the modal.
+ */
+function capture_attach_action_parents() {
+	// phpcs:ignore WordPress.Security.NonceVerification -- `upload.php` checks `bulk-media` before it acts.
+	if ( ! isset( $_REQUEST['found_post_id'], $_REQUEST['media'] ) ) {
+		return;
+	}
+
+	// Core reads `media` through an `(array)` cast, so a single ID in a plain query string attaches too.
+	$attachment_ids = array_filter( array_map( 'absint', (array) $_REQUEST['media'] ) );
+	$parents        = array();
+
+	if ( $attachment_ids ) {
+		_prime_post_caches( $attachment_ids, false, false );
+	}
+
+	foreach ( $attachment_ids as $attachment_id ) {
+		$attachment = get_post( $attachment_id );
+
+		if ( $attachment instanceof WP_Post ) {
+			$parents[ $attachment_id ] = (int) $attachment->post_parent;
+		}
+	}
+
+	attach_action_parents( $parents );
+}
+
+/**
+ * The capture `capture_attach_action_parents()` made, which `mark_attached_budget_file()` reads back.
+ *
+ * @param int[]|null $parents The capture to store. Read-only when omitted.
+ *
+ * @return int[] The previous `post_parent` per attachment ID, for the IDs this request named.
+ */
+function attach_action_parents( $parents = null ) {
+	static $captured = array();
+
+	if ( is_array( $parents ) ) {
+		$captured = $parents;
+	}
+
+	return $captured;
+}
+
+/**
+ * Mark one attachment as a budget request's file and give it the `private` status, which is what the REST
+ * routes, the queries, the attachment permalink and search all read.
+ *
+ * @param int $attachment_id
+ */
+function mark_budget_file( $attachment_id ) {
+	static $marking = array();
+
+	$attachment = get_post( $attachment_id );
+
+	if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type ) {
+		return;
+	}
+
+	// The write below fires `attachment_updated`, which comes back here for the same file.
+	if ( isset( $marking[ $attachment->ID ] ) ) {
+		return;
+	}
+
+	$marking[ $attachment->ID ] = true;
+
+	try {
+		update_post_meta( $attachment->ID, BUDGET_FILE_META_KEY, 1 );
+
+		// Only from `inherit`: `trash` would come back, `auto-draft` never finished, `private` is already there.
+		if ( 'inherit' === $attachment->post_status ) {
+			wp_update_post( array(
+				'ID'          => $attachment->ID,
+				'post_status' => 'private',
+			) );
+		}
+	} finally {
+		unset( $marking[ $attachment->ID ] );
+	}
+}
+
+/**
+ * Whether an attachment carries the marker.
+ *
+ * @param int $attachment_id
+ *
+ * @return bool
+ */
+function is_budget_file( $attachment_id ) {
+	// Existence, to match the SQL guard's `meta_id IS NULL` test.
+	return metadata_exists( 'post', $attachment_id, BUDGET_FILE_META_KEY );
 }
 
 /**

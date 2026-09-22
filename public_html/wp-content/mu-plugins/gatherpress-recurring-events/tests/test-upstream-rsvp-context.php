@@ -63,6 +63,7 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 
 		Context::set( null );
 		Rsvp_Cache::reset();
+		wp_set_current_user( 0 );
 		unset( $_SERVER['HTTP_REFERER'] );
 		$_SERVER['REQUEST_URI'] = self::$request_uri;
 
@@ -187,6 +188,150 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 		$this->assertSame( 2, $data['attending']['count'] );
 	}
 
+	/**
+	 * Ignores a recurrence identifier that belongs to a different series.
+	 *
+	 * This is the path that matters if the identifier is ever attacker-chosen,
+	 * whether through the parameter or a forged referer: `Occurrences::get()`
+	 * pairs it with the series post ID, so one series' date can never scope
+	 * another's roster. The two series repeat on different weekdays, so no
+	 * identifier of one is accidentally also a date of the other.
+	 */
+	public function test_a_recurrence_identifier_from_another_series_is_ignored(): void {
+		$series = $this->create_series_with_rsvps();
+		$other  = $this->create_event( true, 'TU' );
+		$theirs = Occurrences::all( $other, 'upcoming' );
+
+		$this->assertNotEmpty( $theirs, 'Precondition: the other series projected some dates.' );
+		$this->assertNotContains(
+			$theirs[0]->recurrence_id,
+			wp_list_pluck( $series['dates'], 'recurrence_id' ),
+			'Precondition: the two series must not share a date, or this proves nothing.'
+		);
+
+		$data = $this->responses( $series['post_id'], $theirs[0]->recurrence_id );
+
+		// Unscoped, exactly as for any identifier this series never issued.
+		$this->assertSame( 2, $data['attending']['count'] );
+
+		// And the request established no context at all. Asserting on the
+		// count alone is not enough: `Comments::prepare_query()` would ignore
+		// a foreign occurrence anyway, so a resolver that stopped pairing the
+		// identifier with the series would still leave the roster looking
+		// right while setting context other readers act on.
+		$this->assertNull(
+			Context::get(),
+			"A date belonging to another series was accepted as this one's."
+		);
+	}
+
+	/**
+	 * Reads the series from `comment_post_ID` on the form route.
+	 *
+	 * The RSVP form posts under that name rather than `post_id`, so it needs
+	 * its own branch in `upstream_context()`. The submission itself is refused
+	 * here because the Groups network forces open RSVP off, which is why this
+	 * asserts on the context the request established rather than on its
+	 * outcome.
+	 */
+	public function test_the_form_route_resolves_its_occurrence_from_comment_post_id(): void {
+		$series = $this->create_series_with_rsvps();
+		$user   = get_userdata( $series['second_user'] );
+
+		foreach ( array( $series['dates'][1]->recurrence_id, '' ) as $recurrence_id ) {
+			Context::set( null );
+			Rsvp_Cache::reset();
+
+			$request = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp-form' );
+			$request->set_param( 'comment_post_ID', $series['post_id'] );
+			$request->set_param( 'author', $user->display_name );
+			$request->set_param( 'email', $user->user_email );
+
+			if ( '' !== $recurrence_id ) {
+				$request->set_param( 'gpre_occurrence', $recurrence_id );
+			}
+
+			rest_do_request( $request );
+
+			$context = Context::get();
+
+			if ( '' === $recurrence_id ) {
+				$this->assertNull( $context, 'A form post naming no date must not inherit one.' );
+			} else {
+				$this->assertNotNull( $context, 'The form route did not resolve its occurrence.' );
+				$this->assertSame( $recurrence_id, $context->recurrence_id );
+			}
+		}
+	}
+
+	/**
+	 * An RSVP made through GatherPress's own route lands on the date in view.
+	 *
+	 * Its RSVP block posts to `gatherpress/v1/event/rsvp`, which knows nothing
+	 * about occurrences, so without the context those RSVPs went in unmapped
+	 * -- and an unmapped RSVP is invisible on every date rather than wrong on
+	 * one.
+	 */
+	public function test_an_rsvp_through_the_upstream_route_is_mapped_to_its_date(): void {
+		$series    = $this->create_series_with_rsvps();
+		$recurring = $series['dates'][2]->recurrence_id;
+		$user_id   = self::factory()->user->create();
+
+		wp_set_current_user( $user_id );
+
+		$request = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp' );
+		$request->set_param( 'post_id', $series['post_id'] );
+		$request->set_param( 'status', 'attending' );
+		$request->set_param( 'gpre_occurrence', $recurring );
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 200, $response->get_status(), 'Upstream RSVP route did not answer: ' . wp_json_encode( $response->get_data() ) );
+
+		// The roster of the date it was made on, and of no other.
+		Context::set( null );
+		Rsvp_Cache::reset();
+		$this->assertSame(
+			array( $user_id ),
+			wp_list_pluck( $this->responses( $series['post_id'], $recurring )['attending']['records'], 'userId' ),
+			'The RSVP did not land on the date it was made on.'
+		);
+
+		Context::set( null );
+		Rsvp_Cache::reset();
+		$this->assertNotContains(
+			$user_id,
+			wp_list_pluck( $this->responses( $series['post_id'], $series['dates'][0]->recurrence_id )['attending']['records'], 'userId' ),
+			'The RSVP also showed up on a date it was not made on.'
+		);
+	}
+
+	/**
+	 * A roster computed outside REST is guarded too.
+	 *
+	 * `Rsvp_Cache::guard()` is called from `Comments::prepare_query()` rather
+	 * than only from the REST hook precisely so that cron and the notification
+	 * emails cannot leave a series-wide roster behind either. Nothing else in
+	 * this file would notice if that call were removed.
+	 */
+	public function test_a_roster_computed_outside_rest_is_not_cached(): void {
+		$series = $this->create_series_with_rsvps();
+
+		Context::set( null );
+		Rsvp_Cache::reset();
+		Cache::delete( $series['post_id'] );
+
+		// What a notification email or a cron job does: ask for the roster
+		// with no request and no occurrence anywhere in sight.
+		$responses = ( new Event( $series['post_id'] ) )->rsvp->responses();
+
+		$this->assertSame( 2, $responses['attending']['count'], 'Precondition: an unscoped read still answers for the whole series.' );
+		$this->assertNull(
+			Cache::get( $series['post_id'] ),
+			'A series-wide roster computed outside REST was cached where the next occurrence page would be served it.'
+		);
+	}
+
 	/** An unscoped read leaves no series-wide roster behind for the next visitor. */
 	public function test_an_unscoped_read_is_not_cached(): void {
 		$series = $this->create_series_with_rsvps();
@@ -292,10 +437,11 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 	 * Dates are relative to whenever the suite runs, so the occurrences are
 	 * always in the future and RSVPs are always accepted.
 	 *
-	 * @param bool $recurring Whether to give the event a weekly rule.
+	 * @param bool   $recurring Whether to give the event a weekly rule.
+	 * @param string $weekday   Two-letter weekday the series repeats on.
 	 * @return int Event post ID.
 	 */
-	private function create_event( bool $recurring = false ): int {
+	private function create_event( bool $recurring = false, string $weekday = 'MO' ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -303,7 +449,14 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 			)
 		);
 
-		$start = new DateTimeImmutable( 'next monday 10:00', new DateTimeZone( 'UTC' ) );
+		$days  = array(
+			'MO' => 'monday',
+			'TU' => 'tuesday',
+			'WE' => 'wednesday',
+			'TH' => 'thursday',
+			'FR' => 'friday',
+		);
+		$start = new DateTimeImmutable( 'next ' . $days[ $weekday ] . ' 10:00', new DateTimeZone( 'UTC' ) );
 
 		( new Event( $post_id ) )->save_datetimes(
 			array(
@@ -317,7 +470,7 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 		if ( $recurring ) {
 			update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
 			update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
-			update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+			update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( $weekday ) );
 			update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
 			update_post_meta( $post_id, Rule::META_PREFIX . 'count', 4 );
 		}

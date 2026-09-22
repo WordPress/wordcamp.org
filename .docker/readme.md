@@ -132,14 +132,29 @@ no port suffix — so nothing else in the environment needs adjusting.
 ### Why not just change the HTTPS port?
 
 `WORDCAMP_HTTP_PORT` and `WORDCAMP_HTTPS_PORT` exist, but a non-default value
-is **not supported**: it puts a `:8443`-style suffix into `HTTP_HOST`, and
-several parts of the environment assume portless hostnames.
+is **not supported** — it doesn't just degrade, it breaks the environment
+completely. Running with `WORDCAMP_HTTPS_PORT=8443`, every URL answers with a
+redirect to a portless `https://central.wordcamp.test/`, where nothing is
+listening any more:
+
+```
+https://central.wordcamp.test:8443/                         302 -> https://central.wordcamp.test/
+https://events.wordpress.test:8443/                         302 -> https://central.wordcamp.test/
+https://events.wordpress.test:8443/group/sunshine-coast-qld/ 302 -> https://central.wordcamp.test/
+http://central.wordcamp.test:8080/                          301 -> https://central.wordcamp.test/
+```
+
+The cause is that a `:8443` suffix lands in `HTTP_HOST`, and several parts of
+the environment assume portless hostnames:
 
 * The `switch ( strtolower( $_SERVER['HTTP_HOST'] ) )` in `.docker/wp-config.php`
-  matches no case, so every request silently falls through to the WordCamp
-  network — `events.wordpress.test:8443` would serve the wrong network entirely.
-* nginx's HTTP→HTTPS redirect (`.docker/config/nginx.conf`) sends you back to
-  port 443.
+  matches no case, so every request falls through to the `default:` branch and
+  boots the WordCamp network — `events.wordpress.test:8443` serves the wrong
+  network entirely. The redirects above are that branch's `NOBLOGREDIRECT`,
+  which the `events.wordpress.test` case deliberately omits; seeing it prove
+  the fall-through.
+* nginx's HTTP→HTTPS redirect (`.docker/config/nginx.conf`) is
+  `return 301 https://$host$request_uri`, which drops the port.
 * The site URLs seeded from `.docker/data/wordcamp_dev.sql` carry no port, and
   neither do the redirects built in `public_html/wp-content/sunrise*.php`.
 

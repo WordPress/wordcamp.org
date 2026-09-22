@@ -135,33 +135,31 @@ redirect is `return 301 https://$host$request_uri`, and nginx has no way to know
 which host port Docker mapped 443 to, so it drops you on 443. Just use `https://`
 directly. For the same reason `WORDCAMP_HTTP_PORT` is not worth changing.
 
-### Keeping the standard ports, on another address
+### Restricting which address the stack binds
 
-If you'd rather not have a port in every URL, point the stack at a loopback
-alias instead. The containers keep listening on 80/443, just not on the address
-the other environment wants:
+By default the containers claim their ports on *every* interface, including your
+LAN address — so the dev site is reachable from other machines on the network,
+and nothing else on the box can have 443 on any address.
+
+`WORDCAMP_BIND_IP` narrows that to a single address:
 
 ```
-WORDCAMP_BIND_IP=127.0.0.2
+WORDCAMP_BIND_IP=127.0.0.1
 ```
-
-On macOS the alias has to be created once per boot (Linux already routes all of
-`127.0.0.0/8` to the loopback interface):
 
 ```bash
-sudo ifconfig lo0 alias 127.0.0.2
+docker compose up -d
 ```
 
-Then point the hostnames at it in your hosts file, in place of the `127.0.0.1`
-line from the setup steps above:
+Site URLs are completely unchanged — still `https://central.wordcamp.test/`, no
+port suffix, and no hosts-file edit, since the hostnames already point at
+`127.0.0.1`. What changes is that the ports are now bound on loopback only:
+`https://<your-LAN-ip>/` stops answering, and anything else on the machine is
+free to bind 443 on a *different* address.
 
-```bash
-127.0.0.2 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test
-```
-
-Run `docker compose up -d` again to re-create the containers. Site URLs are
-completely unchanged this way — still `https://central.wordcamp.test`, no port
-suffix.
+Note that this does not free up `0.0.0.0:443` — another stack that wants to bind
+every interface will still collide with this one. If that's what you're up
+against, change the port instead (above).
 
 ### MailCatcher and MariaDB
 

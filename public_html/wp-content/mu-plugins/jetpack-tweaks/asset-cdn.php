@@ -22,7 +22,8 @@ function skip_core_versions_the_cdn_lacks( $value ) {
 		return $value;
 	}
 
-	if ( ! cdn_has_core_version( $value[0] ) ) {
+	// Jetpack only uses the CDN for bare release numbers, so an alpha or RC build needs no check.
+	if ( preg_match( '/^\d+(\.\d+)+$/', $value[0] ) && ! cdn_has_core_version( $value[0] ) ) {
 		$value[0] .= '-unpublished';
 	}
 

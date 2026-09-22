@@ -54,6 +54,21 @@ class Test_Jetpack_Asset_CDN extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A build with a suffix is never on the CDN, and Jetpack already knows that, so it isn't even asked.
+	 *
+	 * @covers \WordCamp\Jetpack_Tweaks\Asset_CDN\skip_core_versions_the_cdn_lacks
+	 */
+	public function test_alpha_build_makes_no_request() {
+		$this->fake_cdn_response( array( 'response' => array( 'code' => 200 ) ) );
+
+		$this->assertSame(
+			array( '7.2-alpha-63900', 'en_US' ),
+			skip_core_versions_the_cdn_lacks( array( '7.2-alpha-63900', 'en_US' ) )
+		);
+		$this->assertSame( 0, $this->request_count );
+	}
+
+	/**
 	 * A version the CDN 404s on comes back as something Jetpack won't treat as a public release.
 	 *
 	 * @covers \WordCamp\Jetpack_Tweaks\Asset_CDN\skip_core_versions_the_cdn_lacks

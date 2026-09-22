@@ -704,6 +704,30 @@ delivered body at phone width, open it in the browser and measure:
 `getBoundingClientRect()` on the `img` catches an aspect-ratio regression
 that eyeballing will not.
 
+## 11. Influencing how a GatherPress date renders
+
+Which lever works depends on which half of the format you are after, and the
+two answers are opposites — worth checking rather than assuming (#2033, #2021).
+
+- **An explicit block format beats the filters.**
+  `Event::get_display_datetime()` resolves `gatherpress_date_format` and
+  `gatherpress_time_format` only when the block passed no format of its own,
+  and the groups-site templates pass explicit ones. Reaching those blocks means
+  rewriting the attribute in a `render_block_data` filter; the two GatherPress
+  filters then cover only what has no explicit format, which is every event
+  email. `wporg-groups-frontend/inc/event-date-format.php` needs both for that
+  reason.
+- **`show_timezone` is the other way round.** The same method resolves the
+  global setting *before* the block's `showTimezone` attribute and formats the
+  zone with an empty string when the setting is off, so the attribute alone
+  does nothing.
+
+When a template block has to carry a marker for one of these filters, put it in
+`className` rather than in a block attribute the block does not declare in its
+`block.json`. Gutenberg drops undeclared attributes when someone opens the
+template in the Site Editor and saves, and the marker goes with them silently;
+a class name survives.
+
 ## Known-issues appendix
 
 Use this to distinguish "this checklist found something new" from

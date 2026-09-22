@@ -85,18 +85,18 @@ class Test_Jetpack_Asset_CDN extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A failed request counts as "no" now, but leaves nothing behind for the next page load.
+	 * A failed request counts as "no", and is remembered so the next page doesn't wait on the timeout too.
 	 *
 	 * @covers \WordCamp\Jetpack_Tweaks\Asset_CDN\cdn_has_core_version
 	 */
-	public function test_request_error_is_not_cached() {
+	public function test_request_error_counts_as_missing() {
 		$this->fake_cdn_response( new WP_Error( 'http_request_failed', 'Operation timed out' ) );
 
 		$this->assertSame(
 			array( '7.2.0-unpublished', 'en_US' ),
 			skip_core_versions_the_cdn_lacks( array( '7.2.0', 'en_US' ) )
 		);
-		$this->assertFalse( get_site_transient( 'wc_cdn_core_version_' . md5( '7.2.0' ) ) );
+		$this->assertSame( 'no', get_site_transient( 'wc_cdn_core_version_' . md5( '7.2.0' ) ) );
 		$this->assertSame( 1, $this->request_count );
 	}
 }

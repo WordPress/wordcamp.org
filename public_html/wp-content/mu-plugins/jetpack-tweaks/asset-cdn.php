@@ -33,8 +33,8 @@ function skip_core_versions_the_cdn_lacks( $value ) {
  * Ask the CDN whether it serves a given core version, and remember the answer network-wide.
  *
  * A "yes" is cached for a day; a "no" only for an hour, so sites pick up the real release soon after it ships.
- * A request that fails outright isn't cached at all, and counts as "no" for this request only. Jetpack asks
- * several times per page, so the answer is also kept for the rest of the request.
+ * A request that fails outright counts as "no" for five minutes, so an unreachable CDN costs one timeout rather
+ * than one per page. Jetpack asks several times per page, so the answer is also kept for the rest of the request.
  *
  * @param string $version The core version, e.g. `7.1.3`.
  *
@@ -61,18 +61,15 @@ function cdn_has_core_version( $version ) {
 	);
 
 	if ( is_wp_error( $response ) ) {
-		$answers[ $version ] = false;
-		return false;
+		$available  = false;
+		$expiration = 5 * MINUTE_IN_SECONDS;
+	} else {
+		$available  = 200 === wp_remote_retrieve_response_code( $response );
+		$expiration = $available ? DAY_IN_SECONDS : HOUR_IN_SECONDS;
 	}
 
-	$available           = 200 === wp_remote_retrieve_response_code( $response );
 	$answers[ $version ] = $available;
-
-	set_site_transient(
-		$transient_key,
-		$available ? 'yes' : 'no',
-		$available ? DAY_IN_SECONDS : HOUR_IN_SECONDS
-	);
+	set_site_transient( $transient_key, $available ? 'yes' : 'no', $expiration );
 
 	return $available;
 }

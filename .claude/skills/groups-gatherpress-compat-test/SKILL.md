@@ -43,7 +43,13 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `Members_Controller` role rules, REST permission/IDOR checks, draft flow,
   block registration.
 - **E2E (Playwright)** — `npx playwright test` (or trigger the
-  `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
+  `e2e-tests.yml` GitHub Action manually; it also runs on any PR touching
+  the paths that workflow lists). **Check it actually ran before trusting a
+  green PR.** The path list is hand-maintained and has already lagged behind
+  what the specs assert on: they reach the recurring-events plugin's
+  occurrence pages and match `groups-site-*` class names only the theme
+  emits, so a change confined to either used to skip E2E entirely. When a
+  spec starts depending on a new path, add it there in the same PR.
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, per-event messaging, the
   auto-publish-notification email, the member directory, and Reply →
@@ -721,12 +727,10 @@ clean (#2021).
   destructive: a `<select>` whose `value` matches no option falls back to its
   first one, so an organizer opening an event and pressing save rescheduled it
   into Africa/Abidjan.
-- **`show_timezone` is read before the block attribute.**
-  `Event::get_display_datetime()` resolves the global setting first and formats
-  the zone with an empty string when it is off, so `showTimezone: "yes"` on a
-  `gatherpress/event-date` block does nothing on its own. The same call with no
-  arguments is what every event email renders its date through, so the global
-  setting is the one lever for the emails too.
+- **`show_timezone` is read before the block attribute**, so the block's own
+  `showTimezone` does nothing until the global setting is on. Section 13 has
+  the detail, alongside the format filters, which resolve the opposite way
+  round.
 - **Series-level data does not reach already-projected occurrences unless the
   projection updates them.** `Occurrences::project()` upserts rather than
   `INSERT IGNORE`s for this reason, updating the schedule columns while leaving
@@ -799,7 +803,10 @@ two answers are opposites — worth checking rather than assuming (#2033, #2021)
 - **`show_timezone` is the other way round.** The same method resolves the
   global setting *before* the block's `showTimezone` attribute and formats the
   zone with an empty string when the setting is off, so the attribute alone
-  does nothing.
+  does nothing. Turning the global on is therefore the only lever that reaches
+  the event emails, which call `get_display_datetime()` with no arguments at
+  all; a block that wants to stay quiet then opts out with
+  `showTimezone: "no"`, which does win once the global is on.
 
 When a template block has to carry a marker for one of these filters, put it in
 `className` rather than in a block attribute the block does not declare in its

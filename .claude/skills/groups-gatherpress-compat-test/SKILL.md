@@ -704,6 +704,41 @@ delivered body at phone width, open it in the browser and measure:
 `getBoundingClientRect()` on the `img` catches an aspect-ratio regression
 that eyeballing will not.
 
+## 11. Timezones, and series-level data reaching its occurrences
+
+Three traps, all found by a browser pass that the automated suites had passed
+clean (#2021).
+
+- **GatherPress spells a UTC offset two ways.** The choices core builds
+  (`Utility::timezone_choices()`, parsed out of `wp_timezone_choice()`) say
+  `UTC+10`; the events table, `wp_timezone_string()` and
+  `Utility::list_timezone_and_utc_offsets()` all say `+10:00`.
+  `Utility::normalize_timezone_string()` maps the first onto the second, except
+  at zero, which it collapses to `UTC` while `wp_timezone_string()` keeps
+  saying `+00:00`. Anything round-tripping a zone between a form and the events
+  table has to canonicalize both sides (see
+  `wporg-groups-frontend/inc/event-timezone.php`). The failure is silent and
+  destructive: a `<select>` whose `value` matches no option falls back to its
+  first one, so an organizer opening an event and pressing save rescheduled it
+  into Africa/Abidjan.
+- **`show_timezone` is read before the block attribute.**
+  `Event::get_display_datetime()` resolves the global setting first and formats
+  the zone with an empty string when it is off, so `showTimezone: "yes"` on a
+  `gatherpress/event-date` block does nothing on its own. The same call with no
+  arguments is what every event email renders its date through, so the global
+  setting is the one lever for the emails too.
+- **Series-level data does not reach already-projected occurrences unless the
+  projection updates them.** `Occurrences::project()` upserts rather than
+  `INSERT IGNORE`s for this reason, updating the schedule columns while leaving
+  `status` and `created_gmt` alone so a cancelled occurrence survives. Anything
+  else that becomes series-level later needs the same treatment, and a test
+  that cancels an occurrence and re-projects.
+
+An occurrence page reads its date through `Context::metadata()`, which serves
+the occurrence row's own columns, so checking the series post's meta is not a
+check that the page will render what you expect. Look at the
+`{prefix}gatherpress_occurrences` row.
+
 ## Known-issues appendix
 
 Use this to distinguish "this checklist found something new" from

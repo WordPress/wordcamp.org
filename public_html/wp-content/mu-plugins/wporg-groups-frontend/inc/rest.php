@@ -51,6 +51,13 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
+use function WordCamp\Groups\Frontend\Event_Date_Format\build_choices;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_date_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_date_formats;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_formats;
+use function WordCamp\Groups\Frontend\Event_Date_Format\set_date_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
 use function WordCamp\Groups\Frontend\Group_Location\clear_location;
 use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
@@ -268,6 +275,21 @@ function register_routes(): void {
 							return null === $location || is_array( $location );
 						},
 					),
+					// Both default to '', which clears the group's choice and
+					// hands the templates and GatherPress their own formats
+					// back. An unrecognized format clears it too rather than
+					// failing the save of the rest of the form -- the value is
+					// a `wp_date()` argument, so the allowlist is load-bearing.
+					'date_format' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => static fn( $format ): string => sanitize_group_date_format( $format ),
+					),
+					'time_format' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => static fn( $format ): string => sanitize_group_time_format( $format ),
+					),
 				),
 			),
 		)
@@ -291,8 +313,33 @@ function get_group_info(): WP_REST_Response {
 			'description' => get_option( 'blogdescription', '' ),
 			'location'    => get_location(),
 			'countries'   => get_country_options(),
+			'dateFormat'  => get_date_format(),
+			'timeFormat'  => get_time_format(),
+			// Each choice ships with the example it renders, so the form can
+			// offer "Tuesday, September 29" instead of `l, F j`. That is the
+			// whole point of the setting (#2033).
+			'dateChoices' => build_choices( get_date_formats() ),
+			'timeChoices' => build_choices( get_time_formats() ),
 		)
 	);
+}
+
+/**
+ * Normalize a submitted group date format. See `Event_Date_Format\sanitize_format()`.
+ *
+ * @param mixed $format Submitted format.
+ */
+function sanitize_group_date_format( $format ): string {
+	return \WordCamp\Groups\Frontend\Event_Date_Format\sanitize_format( $format, get_date_formats() );
+}
+
+/**
+ * Normalize a submitted group time format. See `Event_Date_Format\sanitize_format()`.
+ *
+ * @param mixed $format Submitted format.
+ */
+function sanitize_group_time_format( $format ): string {
+	return \WordCamp\Groups\Frontend\Event_Date_Format\sanitize_format( $format, get_time_formats() );
 }
 
 /**
@@ -332,6 +379,14 @@ function update_group_info( WP_REST_Request $request ) {
 
 	if ( null !== $description ) {
 		update_option( 'blogdescription', $description );
+	}
+
+	if ( $request->has_param( 'date_format' ) ) {
+		set_date_format( (string) $request->get_param( 'date_format' ) );
+	}
+
+	if ( $request->has_param( 'time_format' ) ) {
+		set_time_format( (string) $request->get_param( 'time_format' ) );
 	}
 
 	if ( $has_location ) {

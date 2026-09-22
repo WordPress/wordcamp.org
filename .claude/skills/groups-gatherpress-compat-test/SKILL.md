@@ -704,6 +704,38 @@ delivered body at phone width, open it in the browser and measure:
 `getBoundingClientRect()` on the `img` catches an aspect-ratio regression
 that eyeballing will not.
 
+## 11. Adding an events-archive filter
+
+The archive's filters (`event_time`, `event_format`, `event_language`) all
+live in `gatherpress-groups-tweaks.php` and share three constraints that are
+easy to break one at a time.
+
+- **Resolve every ID-based filter into one `post__in`.** WP_Query's
+  `parse_where()` treats `post__in` and `post__not_in` as an if/elseif, so a
+  filter expressed as `post__not_in` (the in-person view, since an event with
+  no venue is in person) is dropped without a word the moment another filter
+  sets `post__in`. Narrow one filter's own ID set in PHP rather than giving
+  each filter its own query var. An empty result must be `array( 0 )`, since
+  WP_Query ignores an empty `post__in` and would show the whole archive.
+- **Keep the join off the archive's own query.** A `tax_query` or
+  `meta_query` on the main query makes WP_Query select `DISTINCT`, which
+  collapses the duplicate rows `gatherpress-recurring-events` adds in
+  `Query::clauses()` to turn a series into one row per date — a weekly series
+  then appears once instead of on each of its dates, silently and only while
+  a filter is applied. Resolve the IDs in a separate `fields => ids` query
+  (which `Query::clauses()` bails on, so it does not expand occurrences
+  either), and prime the meta cache once for the set.
+- **Each `wporg/query-filter` renders a form holding only its own control**,
+  so every filter must carry the others' state, and the search form must
+  carry all of them, or submitting one silently resets the rest.
+
+Two more things to check before adding a fourth: the filter row is laid out
+`nowrap`, and three toggles already come to roughly 410px against about
+360px of usable width at 400px (it wraps below 781px in `responsive.css` for
+exactly that reason); and a control whose options come from the data should
+return an empty options array when there is nothing to choose between, which
+is what makes `wporg/query-filter` render nothing at all.
+
 ## Known-issues appendix
 
 Use this to distinguish "this checklist found something new" from

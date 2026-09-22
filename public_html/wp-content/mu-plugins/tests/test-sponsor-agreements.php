@@ -51,6 +51,16 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 				'rest_base'    => 'sponsors',
 			)
 		);
+
+		// Central's sponsor, from `multi-event-sponsors`.
+		register_post_type(
+			'mes',
+			array(
+				'public'       => true,
+				'show_in_rest' => true,
+				'rest_base'    => 'mes',
+			)
+		);
 	}
 
 	/**
@@ -64,11 +74,13 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 	/**
 	 * Create a published sponsor.
 	 *
+	 * @param string $post_type
+	 *
 	 * @return int
 	 */
-	protected function create_sponsor() {
+	protected function create_sponsor( $post_type = 'wcb_sponsor' ) {
 		return self::factory()->post->create( array(
-			'post_type'   => 'wcb_sponsor',
+			'post_type'   => $post_type,
 			'post_status' => 'publish',
 		) );
 	}
@@ -198,22 +210,23 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 	 * @dataProvider data_agreement_meta_keys
 	 *
 	 * @param string $meta_key
+	 * @param string $post_type
 	 */
-	public function test_attaching_an_agreement_makes_it_private( $meta_key ) {
-		$agreement_id = $this->attach_agreement( $this->create_sponsor(), $meta_key );
+	public function test_attaching_an_agreement_makes_it_private( $meta_key, $post_type ) {
+		$agreement_id = $this->attach_agreement( $this->create_sponsor( $post_type ), $meta_key );
 
 		$this->assertSame( 'private', get_post_status( $agreement_id ) );
 	}
 
 	/**
-	 * The two meta keys an agreement is stored under, on an event site and on central.
+	 * The meta key and post type an agreement is stored under, on an event site and on central.
 	 *
 	 * @return array
 	 */
 	public function data_agreement_meta_keys() {
 		return array(
-			'event site' => array( '_wcpt_sponsor_agreement' ),
-			'central'    => array( 'mes_sponsor_agreement' ),
+			'event site' => array( '_wcpt_sponsor_agreement', 'wcb_sponsor' ),
+			'central'    => array( 'mes_sponsor_agreement', 'mes' ),
 		);
 	}
 

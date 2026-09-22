@@ -42,6 +42,7 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 		parent::set_up();
 
 		register_post_type( 'wcb_sponsor', array( 'public' => true ) );
+		register_post_type( 'mes', array( 'public' => true ) );
 	}
 
 	/**
@@ -51,12 +52,18 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 	 * migration has to deal with.
 	 *
 	 * @param string $filename
+	 * @param string $post_type
+	 * @param string $meta_key
 	 *
 	 * @return array The sponsor ID and the attachment ID.
 	 */
-	protected function create_legacy_agreement( $filename = 'sponsorship-agreement-acme-signed.pdf' ) {
+	protected function create_legacy_agreement(
+		$filename = 'sponsorship-agreement-acme-signed.pdf',
+		$post_type = 'wcb_sponsor',
+		$meta_key = '_wcpt_sponsor_agreement'
+	) {
 		$sponsor_id = self::factory()->post->create( array(
-			'post_type'   => 'wcb_sponsor',
+			'post_type'   => $post_type,
 			'post_status' => 'publish',
 		) );
 
@@ -67,7 +74,7 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 			'post_mime_type' => 'application/pdf',
 		) );
 
-		add_post_meta( $sponsor_id, '_wcpt_sponsor_agreement', $agreement_id );
+		add_post_meta( $sponsor_id, $meta_key, $agreement_id );
 		wp_update_post( array(
 			'ID'          => $agreement_id,
 			'post_status' => 'inherit',
@@ -98,6 +105,50 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 		$this->assertSame( 'private', get_post_status( $agreement_id ) );
 		$this->assertTrue( is_agreement( $agreement_id ) );
 		$this->assertNotContains( $agreement_id, get_public_agreement_ids() );
+	}
+
+	/**
+	 * A PDF uploaded against a sponsor is an agreement whether or not the sponsor went on to record it.
+	 */
+	public function test_an_unrecorded_pdf_on_a_sponsor_is_reported() {
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+		) );
+
+		$unrecorded_id = self::factory()->attachment->create_object( array(
+			'file'           => 'sponsorship-agreement-acme-signed.pdf',
+			'post_parent'    => $sponsor_id,
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		$page_pdf_id = self::factory()->attachment->create_object( array(
+			'file'           => 'schedule.pdf',
+			'post_parent'    => self::factory()->post->create(),
+			'post_status'    => 'inherit',
+			'post_mime_type' => 'application/pdf',
+		) );
+
+		$public = get_public_agreement_ids();
+
+		$this->assertContains( $unrecorded_id, $public );
+		$this->assertNotContains( $page_pdf_id, $public, 'A PDF on an ordinary post is not an agreement.' );
+	}
+
+	/**
+	 * Central stores its sponsors under another post type and meta key.
+	 */
+	public function test_a_central_agreement_is_reported_and_migrated() {
+		list( , $agreement_id ) = $this->create_legacy_agreement(
+			'sponsorship-agreement-acme-signed.pdf',
+			'mes',
+			'mes_sponsor_agreement'
+		);
+
+		$this->assertContains( $agreement_id, get_public_agreement_ids() );
+		$this->assertTrue( make_agreement_private( $agreement_id ) );
+		$this->assertSame( 'private', get_post_status( $agreement_id ) );
 	}
 
 	/**

@@ -184,6 +184,8 @@ final class Plugin {
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
+		add_action( 'added_post_meta', array( Occurrences::class, 'reproject_on_schedule_write' ), 10, 3 );
+		add_action( 'updated_post_meta', array( Occurrences::class, 'reproject_on_schedule_write' ), 10, 3 );
 		add_filter( 'update_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_filter( 'delete_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_action( 'before_delete_post', array( $this, 'delete_event' ), 10, 2 );
@@ -245,6 +247,11 @@ final class Plugin {
 	 *
 	 * `Occurrences::project()` is a no-op unless the event is published, so
 	 * a recurring series can be handed to it whatever its status.
+	 *
+	 * This hook is not where a *changed* schedule lands. It runs before the
+	 * events table has been rewritten, so it projects the previous one; the
+	 * new one arrives via `Occurrences::reproject_on_schedule_write()`. See
+	 * `Occurrences::SCHEDULE_META_KEYS`.
 	 *
 	 * @param int    $post_id Event post ID.
 	 * @param object $post    Event post.

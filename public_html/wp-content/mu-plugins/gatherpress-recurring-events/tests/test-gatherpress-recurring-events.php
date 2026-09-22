@@ -698,6 +698,120 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'cancelled', $cancelled[0]->status, 'A cancelled occurrence must survive a re-projection.' );
 	}
 
+	/**
+	 * A schedule change has to land without anyone asking for a re-projection.
+	 *
+	 * `save_post` is too early to project from, and it sets the 6-hour
+	 * freshness marker on its way past, so `maybe_project()` will not come back
+	 * and repair it. Until this was hooked, an organizer who changed a
+	 * published series' timezone through the front-end form (#2021) saw the old
+	 * zone on every occurrence until the daily cron ran.
+	 */
+	public function test_a_schedule_write_reprojects_on_its_own(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->assertSame(
+			array( 'UTC' ),
+			$this->projected_timezones( $post_id ),
+			'The first schedule write should have projected the series on its own.'
+		);
+
+		$this->assertTrue(
+			(bool) get_transient( 'gpre_projected_' . $post_id ),
+			'Precondition: the freshness marker is set, so nothing else will re-project this series.'
+		);
+
+		// No Occurrences::project() call: the write is the whole trigger.
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		$this->assertSame(
+			array( 'Australia/Brisbane' ),
+			$this->projected_timezones( $post_id ),
+			'Every existing occurrence should have followed the series into its new zone.'
+		);
+
+		$gmt = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT DISTINCT TIME(datetime_start_gmt) FROM %i WHERE series_post_id = %d',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		// Brisbane is UTC+10 year round, so 10:00 local is 00:00 UTC.
+		$this->assertSame( array( '00:00:00' ), $gmt, 'The GMT columns derived from the zone should have been recomputed.' );
+	}
+
+	/**
+	 * One `save_datetimes()` writes five watched keys, and a projection is
+	 * ~30 upserts, so the other four have to recognize their own schedule and
+	 * do nothing.
+	 */
+	public function test_one_schedule_write_projects_once(): void {
+		$post_id     = $this->create_published_recurring_event();
+		$projections = 0;
+		$count       = static function () use ( &$projections ): void {
+			++$projections;
+		};
+
+		add_action( 'gpre_occurrences_projected', $count );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->assertSame( 1, $projections, 'The five meta writes of one schedule save should project once.' );
+
+		// An unrelated meta write is not a schedule change.
+		update_post_meta( $post_id, 'gatherpress_max_attendance_limit', 20 );
+
+		$this->assertSame( 1, $projections, 'A meta key that is not part of the schedule should not project.' );
+
+		remove_action( 'gpre_occurrences_projected', $count );
+	}
+
+	/**
+	 * The distinct timezones the series' occurrence rows are stored in.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return string[] One entry when every row agrees, which is the point.
+	 */
+	private function projected_timezones( int $post_id ): array {
+		global $wpdb;
+
+		return $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT DISTINCT timezone FROM %i WHERE series_post_id = %d',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+	}
+
 	/** Deactivation removes the site's projection cron event. */
 	public function test_deactivation_clears_projection_cron(): void {
 		Occurrences::clear_cron();

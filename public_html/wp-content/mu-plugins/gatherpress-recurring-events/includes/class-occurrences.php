@@ -18,6 +18,33 @@ final class Occurrences {
 
 	const CRON_HOOK = 'gpre_project_occurrences';
 
+	/**
+	 * The per-field meta keys `Event::save_datetimes()` writes.
+	 *
+	 * Watched because `save_post` is too early to project from: GatherPress
+	 * writes the schedule on `wp_after_insert_post` (or, for a brand-new post,
+	 * at `shutdown`), and the front-end event form writes it directly after
+	 * `wp_update_post()` has already returned. Either way the projection this
+	 * extension runs on `save_post_gatherpress_event` reads the *previous*
+	 * schedule out of the events table, and then sets the 6-hour freshness
+	 * marker that stops `maybe_project()` repairing it. A published series that
+	 * changed timezone kept showing the old one until the daily cron came round
+	 * (#2021).
+	 *
+	 * `save_datetimes()` updates the events table row before it writes any of
+	 * these, so the first of them to arrive is already a fresh read. It writes
+	 * the row and the meta from one array, which is what makes the meta a safe
+	 * proxy for the row: they cannot disagree, so a write that changes no meta
+	 * changed no schedule and has nothing to re-project.
+	 */
+	const SCHEDULE_META_KEYS = array(
+		'gatherpress_datetime_start',
+		'gatherpress_datetime_end',
+		'gatherpress_datetime_start_gmt',
+		'gatherpress_datetime_end_gmt',
+		'gatherpress_timezone',
+	);
+
 	/** Ensures the per-site daily projection job is scheduled. */
 	public static function schedule_cron(): void {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
@@ -428,5 +455,81 @@ final class Occurrences {
 		if ( Rule::is_recurring( $post_id ) && 'publish' === get_post_status( $post_id ) && ! get_transient( 'gpre_projected_' . $post_id ) ) {
 			self::project( $post_id );
 		}
+	}
+
+	/**
+	 * Re-projects a series whose stored schedule has just been rewritten.
+	 *
+	 * Hooked to `added_post_meta` and `updated_post_meta`, which is where a
+	 * schedule write becomes observable from outside GatherPress: it fires no
+	 * action of its own after `save_datetimes()`. See `SCHEDULE_META_KEYS` for
+	 * why `save_post` cannot be used instead.
+	 *
+	 * @param int    $meta_id   Meta row ID. Unused.
+	 * @param int    $object_id Post the meta belongs to.
+	 * @param string $meta_key  Meta key written.
+	 */
+	public static function reproject_on_schedule_write( $meta_id, $object_id, $meta_key ): void {
+		if ( ! in_array( (string) $meta_key, self::SCHEDULE_META_KEYS, true ) ) {
+			return;
+		}
+
+		self::reproject( (int) $object_id );
+	}
+
+	/**
+	 * Projects a series again, at most once per distinct schedule per request.
+	 *
+	 * One `save_datetimes()` call writes five of the watched keys, and a
+	 * projection is ~30 upserts, so the write that lands first does the work
+	 * and the other four recognize their own schedule and return. Recording
+	 * the signature *before* projecting also makes this re-entrant: nothing
+	 * `project()` itself writes is a watched key today, and if that changed it
+	 * would still not recurse.
+	 *
+	 * @param int $post_id Series post ID.
+	 */
+	private static function reproject( int $post_id ): void {
+		static $projected = array();
+
+		if ( ! Rule::is_recurring( $post_id ) || 'publish' !== get_post_status( $post_id ) ) {
+			return;
+		}
+
+		$signature = self::schedule_signature( $post_id );
+
+		// No events-table row yet: nothing to project from, and the write that
+		// creates one will bring us back here.
+		if ( '' === $signature || ( $projected[ $post_id ] ?? null ) === $signature ) {
+			return;
+		}
+
+		$projected[ $post_id ] = $signature;
+
+		// `project()` sets the freshness marker itself, so the repaired
+		// projection is the one `maybe_project()` will leave alone.
+		self::project( $post_id );
+	}
+
+	/**
+	 * A series' stored schedule, reduced to a value that changes when it does.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return string Empty when the series has no events-table row.
+	 */
+	private static function schedule_signature( int $post_id ): string {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT datetime_start, datetime_end, timezone FROM %i WHERE post_id = %d',
+				$wpdb->prefix . 'gatherpress_events',
+				$post_id
+			),
+			ARRAY_A
+		);
+
+		return $row ? implode( '|', $row ) : '';
 	}
 }

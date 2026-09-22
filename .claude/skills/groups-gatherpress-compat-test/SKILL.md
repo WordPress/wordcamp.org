@@ -733,6 +733,18 @@ clean (#2021).
   `status` and `created_gmt` alone so a cancelled occurrence survives. Anything
   else that becomes series-level later needs the same treatment, and a test
   that cancels an occurrence and re-projects.
+- **`save_post` is the wrong moment to project from.** GatherPress writes the
+  schedule on `wp_after_insert_post` (or, for a brand-new post, at `shutdown`),
+  and the front-end event form writes it directly after `wp_update_post()` has
+  returned. Either way `save_post_gatherpress_event` runs first and projects
+  the *previous* schedule, then sets the 6-hour `gpre_projected_` freshness
+  marker that stops `maybe_project()` repairing it — so a changed zone sat
+  stale until the daily cron. `Occurrences::reproject_on_schedule_write()`
+  watches the per-field meta `Event::save_datetimes()` writes instead, which is
+  the only thing it makes observable: it fires no action of its own. Verify a
+  schedule change by reading the occurrence rows back after a plain save, never
+  by calling `project()` yourself — an explicit call passes whether or not the
+  hook works.
 
 An occurrence page reads its date through `Context::metadata()`, which serves
 the occurrence row's own columns, so checking the series post's meta is not a

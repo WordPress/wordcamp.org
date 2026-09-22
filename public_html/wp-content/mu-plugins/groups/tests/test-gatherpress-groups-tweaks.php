@@ -217,6 +217,147 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * An event with an RSVP and nothing else.
+	 *
+	 * @return array{event_id: int, user_id: int}
+	 */
+	private function create_event_with_rsvp(): array {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		return array(
+			'event_id' => $event_id,
+			'user_id'  => $user_id,
+		);
+	}
+
+	/**
+	 * The #2020 symptom itself: a real comment query on a site whose only
+	 * comments are RSVPs must come back empty.
+	 *
+	 * This is the state the bug needed. GatherPress builds its exclusion by
+	 * listing the comment types that *do* exist and subtracting RSVPs -- on a
+	 * site with no ordinary comments that list is empty, and
+	 * `WP_Comment_Query` reads an empty type filter as "no type filter", so
+	 * every RSVP surfaced in the Discussion section. Asserting on the query
+	 * vars alone would not have caught it; the query has to actually run.
+	 */
+	public function test_rsvps_do_not_leak_into_a_general_comment_query() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$this->assertSame(
+			array(),
+			get_comments( array( 'post_id' => $fixture['event_id'] ) ),
+			'A general comment query on an RSVP-only site must return nothing.'
+		);
+
+		// The same query the Discussion section runs, unscoped by post. Not
+		// asserted empty -- the fixture install seeds an ordinary comment, and
+		// keeping that one is the point. Asserted free of RSVPs.
+		$this->assertNotContains(
+			'gatherpress_rsvp',
+			wp_list_pluck( get_comments( array( 'status' => 'approve' ) ), 'comment_type' )
+		);
+	}
+
+	/**
+	 * Asking for RSVPs explicitly still gets them: the exclusion is for
+	 * queries that did not ask, and GatherPress's own reads must keep working.
+	 */
+	public function test_an_explicit_rsvp_query_still_returns_rsvps() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$by_type = get_comments(
+			array(
+				'post_id' => $fixture['event_id'],
+				'type'    => 'gatherpress_rsvp',
+				'status'  => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type );
+
+		$by_type_in = get_comments(
+			array(
+				'post_id'  => $fixture['event_id'],
+				'type__in' => array( 'gatherpress_rsvp' ),
+				'status'   => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type_in );
+
+		// And through GatherPress's own reader, which is what the attendee
+		// list and the RSVP counts render from.
+		$this->assertSame(
+			1,
+			(int) ( ( new \GatherPress\Core\Rsvp\Rsvp( $fixture['event_id'] ) )->responses()['attending']['count'] ?? 0 )
+		);
+	}
+
+	/**
+	 * An ordinary comment alongside the RSVPs still comes back.
+	 *
+	 * The exclusion has to subtract RSVPs, not everything: a group site with a
+	 * real discussion must keep it.
+	 */
+	public function test_ordinary_comments_survive_the_exclusion() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $fixture['event_id'],
+				'comment_approved' => '1',
+			)
+		);
+
+		$comments = get_comments( array( 'post_id' => $fixture['event_id'] ) );
+
+		$this->assertCount( 1, $comments );
+		$this->assertSame( $comment_id, (int) $comments[0]->comment_ID );
+	}
+
+	/**
+	 * The exclusion hook runs after the capture hook, and both stay attached.
+	 *
+	 * The ordering is the whole mechanism: `capture_explicit_rsvp_query()` has
+	 * to mark an explicit request before `exclude_rsvps_from_general_comment_queries()`
+	 * decides whether to subtract. Pinned here because nothing else would
+	 * notice a priority drifting, and the symptom would be silent.
+	 */
+	public function test_the_rsvp_exclusion_hooks_are_wired_in_order() {
+		$this->assertSame(
+			5,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query' )
+		);
+		$this->assertSame(
+			20,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries' )
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'gatherpress_rsvp_comment_query_exclusion', 'WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries' )
+		);
+	}
+
+	/**
 	 * Read the archive's Format filter options as the query-filter block would.
 	 *
 	 * @param string|null $event_format The `event_format` query arg to simulate.

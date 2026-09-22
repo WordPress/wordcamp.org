@@ -12,6 +12,7 @@ use GatherPress\Core\Rsvp\Cache;
 use GatherPress\Core\Rsvp\Response\Status;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Utility;
+use WP_Error;
 use WP_Post;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -362,11 +363,46 @@ final class Rest_API {
 
 		$occurrence = self::requested_occurrence( $post_id, $request );
 
-		if ( $occurrence ) {
-			Context::set( $occurrence );
+		if ( ! $occurrence ) {
+			return $response;
 		}
 
+		/*
+		 * A cancelled date takes no RSVPs. This network's own occurrence-scoped
+		 * route already refuses one (`set_rsvp_occurrence_context()` in the
+		 * groups mu-plugin), but GatherPress's route resolves the occurrence
+		 * only to scope the roster and never asks what its status is -- so
+		 * posting straight to `gatherpress/v1/event/rsvp` with a cancelled
+		 * `gpre_occurrence` landed an RSVP on a date that is not happening
+		 * (#2072). Same refusal, same error code, at the one point this
+		 * extension can reach an upstream route.
+		 *
+		 * Reads are left alone: an attendee list for a cancelled date is a
+		 * reasonable thing to render, and refusing it would break the page
+		 * that shows the cancellation.
+		 */
+		if ( 'cancelled' === ( $occurrence->status ?? '' ) && self::is_rsvp_write( $request ) ) {
+			return new WP_Error(
+				'wporg_groups_invalid_recurrence',
+				__( 'This occurrence is not available for RSVP.', 'wordcamporg' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		Context::set( $occurrence );
+
 		return $response;
+	}
+
+	/**
+	 * Whether a request is the one that writes an RSVP.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool True for a write to GatherPress's `event/rsvp` route.
+	 */
+	private static function is_rsvp_write( WP_REST_Request $request ): bool {
+		return '/' . self::upstream_namespace() . '/event/rsvp' === (string) $request->get_route()
+			&& in_array( strtoupper( (string) $request->get_method() ), array( 'POST', 'PUT', 'PATCH' ), true );
 	}
 
 	/**

@@ -93,12 +93,12 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	 * @param string $status Post status.
 	 * @return int
 	 */
-	private function create_dated_event( string $status = 'publish' ): int {
+	private function create_dated_event( string $status = 'publish', string $title = '' ): int {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
 				'post_status' => $status,
-			)
+			) + ( '' !== $title ? array( 'post_title' => $title ) : array() )
 		);
 
 		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
@@ -542,6 +542,65 @@ class Test_Groups_Notifications extends Groups_TestCase {
 			$mail['subject']
 		);
 		$this->assertStringContainsString( 'RSVP Now', $mail['message'] );
+	}
+
+	/**
+	 * #2074: no subject arrives carrying HTML entities.
+	 *
+	 * GatherPress decodes the subject it builds; this filter then replaces it,
+	 * and the two values it builds the replacement from are both encoded --
+	 * `get_the_title()` comes through `wptexturize()`, so an apostrophe is
+	 * `&#8217;`, and `blogname` is stored `esc_html()`'d, so one there is
+	 * `&#039;`. Nothing downstream decodes either: `wp_mail()` does not touch
+	 * the subject. So every member of any group whose name has an apostrophe
+	 * -- which is a great many of them -- read the entity literally.
+	 *
+	 * Asserted against the literal string rather than against the same
+	 * `get_the_title()` / `get_bloginfo()` calls the code makes: doing it that
+	 * way is what let this through, because both sides carried the same
+	 * encoding and compared equal.
+	 */
+	public function test_subjects_carry_no_html_entities() {
+		update_option( 'blogname', 'O\'Brien & Sons "WP" Meetup' );
+
+		$author_id = $this->create_member();
+		$member_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft', 'Let\'s talk "blocks" & themes' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_author' => $author_id,
+				'post_status' => 'publish',
+			)
+		);
+		send_pending_new_event_notifications();
+
+		$member_mail = $this->mail_to( get_userdata( $member_id )->user_email );
+		$author_mail = $this->mail_to( get_userdata( $author_id )->user_email );
+
+		$this->assertNotNull( $member_mail );
+		$this->assertNotNull( $author_mail );
+
+		/*
+		 * Curly in the title, straight in the group name, and that is right:
+		 * `the_title` runs `wptexturize()` and `blogname` is not filtered, so
+		 * the decode gives back the character each one was encoded from.
+		 */
+		$this->assertSame(
+			'New event in O\'Brien & Sons "WP" Meetup: Let’s talk “blocks” & themes',
+			$member_mail['subject']
+		);
+		$this->assertSame(
+			'Your event has been published: Let’s talk “blocks” & themes',
+			$author_mail['subject']
+		);
+
+		foreach ( array( $member_mail, $author_mail ) as $mail ) {
+			$this->assertStringNotContainsString( '&#', $mail['subject'] );
+			$this->assertStringNotContainsString( '&amp;', $mail['subject'] );
+			$this->assertStringNotContainsString( '&quot;', $mail['subject'] );
+		}
 	}
 
 	/**

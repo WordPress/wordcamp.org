@@ -29,6 +29,7 @@ defined( 'ABSPATH' ) || exit;
 		<!-- wp:post-excerpt {"moreText":"","excerptLength":25,"fontSize":"small","textColor":"charcoal-3"} /-->
 		<!-- wp:group {"className":"groups-site-card-meta","style":{"spacing":{"blockGap":"4px"}},"layout":{"type":"constrained"}} -->
 		<div class="wp-block-group groups-site-card-meta">
+			<!-- wp:groups-site/event-cancelled /-->
 			<!-- wp:gatherpress/rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
 			<!-- wp:groups-site/event-format /-->
 			<!-- wp:gatherpress/venue -->

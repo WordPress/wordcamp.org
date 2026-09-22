@@ -6,6 +6,7 @@ use GatherPress\Core\Event\Event;
 use WP_REST_Request;
 
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
+use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_allowed;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_default;
@@ -153,7 +154,13 @@ class Test_Groups_Event_Timezone extends Groups_TestCase {
 
 	/**
 	 * Every value the control offers survives a write and a read back, so
-	 * picking any option and saving cannot land on a different one.
+	 * picking any option and saving cannot land on a different zone.
+	 *
+	 * "The same zone", not "the same option": the control offers both `UTC`
+	 * and the `UTC+0` manual offset, which are the same instant, and
+	 * `get_stored_spellings()` deliberately resolves that pair to the plain
+	 * `UTC` choice. So the round trip is asserted against the canonical
+	 * spelling of what was chosen rather than the choice's own string.
 	 */
 	public function test_every_offered_choice_round_trips() {
 		wp_set_current_user( $this->editor_id );
@@ -162,11 +169,61 @@ class Test_Groups_Event_Timezone extends Groups_TestCase {
 			$event_id = $this->create_event_in( $choice );
 
 			$this->assertSame(
-				sanitize( $choice ),
+				sanitize( canonicalize( $choice ) ),
 				get_event_timezone( $event_id ),
-				"Choosing {$choice} and reading it back must land on the same option."
+				"Choosing {$choice} and reading it back must land on the same zone."
 			);
 		}
+	}
+
+	/**
+	 * The regression test for #2021: what actually reaches the events table
+	 * has to be a spelling `DateTimeZone` accepts.
+	 *
+	 * Core's `wp_timezone_choice()` spells a manual offset `UTC+10`, and
+	 * `new DateTimeZone( 'UTC+10' )` throws. GatherPress writes the string it
+	 * is given through raw, so choosing anything under "Manual Offsets" used
+	 * to store a value every later read choked on -- most damagingly
+	 * `Occurrences::master_datetime()`, which catches and returns null, so a
+	 * recurring series got no occurrence rows at all.
+	 *
+	 * @dataProvider provide_manual_offsets
+	 *
+	 * @param string $choice Manual-offset choice as the control spells it.
+	 * @param string $stored Spelling that must reach the events table.
+	 */
+	public function test_manual_offsets_are_stored_in_a_usable_spelling( string $choice, string $stored ) {
+		global $wpdb;
+
+		wp_set_current_user( $this->editor_id );
+
+		$event_id = $this->create_event_in( $choice );
+
+		$written = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT timezone FROM {$wpdb->prefix}gatherpress_events WHERE post_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$event_id
+			)
+		);
+
+		$this->assertSame( $stored, $written, "Choosing {$choice} must store {$stored}." );
+		$this->assertSame( $stored, get_post_meta( $event_id, 'gatherpress_timezone', true ) );
+
+		// The point of all of it: the stored value has to be constructible.
+		$this->assertInstanceOf( \DateTimeZone::class, new \DateTimeZone( (string) $written ) );
+	}
+
+	/**
+	 * Data provider for the manual-offset storage spelling.
+	 */
+	public function provide_manual_offsets(): array {
+		return array(
+			'whole hours'  => array( 'UTC+10', '+10:00' ),
+			'negative'     => array( 'UTC-12', '-12:00' ),
+			'half hour'    => array( 'UTC+5.5', '+05:30' ),
+			'quarter hour' => array( 'UTC+8.75', '+08:45' ),
+			'zero'         => array( 'UTC+0', 'UTC' ),
+		);
 	}
 
 	/**

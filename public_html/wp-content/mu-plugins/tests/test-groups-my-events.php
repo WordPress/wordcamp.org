@@ -229,6 +229,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		return array(
 			'recurrence_id' => $recurrence_id,
 			'start'         => $start,
+			'timezone'      => 'UTC',
 		);
 	}
 
@@ -272,13 +273,14 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	 * @param int    $event_id Event post ID.
 	 * @param string $offset   The offset the event was created with.
 	 *
-	 * @return array{event_id: int, recurrence_id: string, start: string}
+	 * @return array{event_id: int, recurrence_id: string, start: string, timezone: string}
 	 */
 	protected function plain_entry( int $event_id, string $offset ): array {
 		return array(
 			'event_id'      => $event_id,
 			'recurrence_id' => '',
 			'start'         => gmdate( 'Y-m-d H:i:s', strtotime( $offset ) ),
+			'timezone'      => 'UTC',
 		);
 	}
 
@@ -440,6 +442,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'event_id'      => $series_id,
 					'recurrence_id' => $attending['recurrence_id'],
 					'start'         => $attending['start'],
+					'timezone'      => $attending['timezone'],
 				),
 			),
 			get_upcoming_events( $member ),
@@ -489,6 +492,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'event_id'      => $series_id,
 					'recurrence_id' => $next['recurrence_id'],
 					'start'         => $next['start'],
+					'timezone'      => $next['timezone'],
 				),
 			),
 			get_upcoming_events( $organiser ),
@@ -518,6 +522,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'event_id'      => $series_id,
 					'recurrence_id' => $attending['recurrence_id'],
 					'start'         => $attending['start'],
+					'timezone'      => $attending['timezone'],
 				),
 			),
 			get_upcoming_events( $organiser ),
@@ -729,6 +734,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'event_id'      => $series_id,
 					'recurrence_id' => $attended['recurrence_id'],
 					'start'         => $attended['start'],
+					'timezone'      => $attended['timezone'],
 				),
 			),
 			get_past_events( $member ),

@@ -109,10 +109,14 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 
 	/**
 	 * A PDF uploaded against a sponsor is an agreement whether or not the sponsor went on to record it.
+	 *
+	 * @dataProvider data_sponsor_post_types
+	 *
+	 * @param string $post_type
 	 */
-	public function test_an_unrecorded_pdf_on_a_sponsor_is_reported() {
+	public function test_an_unrecorded_pdf_on_a_sponsor_is_reported( $post_type ) {
 		$sponsor_id = self::factory()->post->create( array(
-			'post_type'   => 'wcb_sponsor',
+			'post_type'   => $post_type,
 			'post_status' => 'publish',
 		) );
 
@@ -134,6 +138,18 @@ class Test_Backfill_Sponsor_Agreements extends WP_UnitTestCase {
 
 		$this->assertContains( $unrecorded_id, $public );
 		$this->assertNotContains( $page_pdf_id, $public, 'A PDF on an ordinary post is not an agreement.' );
+	}
+
+	/**
+	 * The post type a sponsor is stored as, on an event site and on central.
+	 *
+	 * @return array
+	 */
+	public function data_sponsor_post_types() {
+		return array(
+			'event site' => array( 'wcb_sponsor' ),
+			'central'    => array( 'mes' ),
+		);
 	}
 
 	/**

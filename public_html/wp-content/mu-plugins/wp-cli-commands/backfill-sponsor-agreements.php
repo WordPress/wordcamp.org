@@ -75,7 +75,11 @@ function get_public_agreement_ids( $blog_id = null ) {
 		AND agreement.post_type = 'attachment'
 		AND agreement.post_status = 'inherit'
 		AND agreement.post_mime_type = 'application/pdf'",
-		array_merge( $meta_keys, $post_types, $post_types )
+		array_merge(
+			$meta_keys,  // First arm.
+			$post_types, // First arm.
+			$post_types  // Second arm.
+		)
 	) );
 	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 

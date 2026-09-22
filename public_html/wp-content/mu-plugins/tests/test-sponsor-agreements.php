@@ -52,13 +52,13 @@ class Test_Sponsor_Agreements extends WP_UnitTestCase {
 			)
 		);
 
-		// Central's sponsor, from `multi-event-sponsors`.
+		// Central's sponsor, from `multi-event-sponsors`, with the capabilities that registration gives it.
 		register_post_type(
 			'mes',
 			array(
-				'public'       => true,
-				'show_in_rest' => true,
-				'rest_base'    => 'mes',
+				'public'          => true,
+				'show_in_rest'    => true,
+				'capability_type' => 'page',
 			)
 		);
 	}

@@ -183,27 +183,3 @@ function has_block_with_attrs( $block_name, $attrs, $post = null ) {
 
 	return false;
 }
-
-/**
- * Turn off the Interactivity API router's client-side navigation on pages that render this block.
- *
- * The block mounts a classic script, which a swapped `<body>` doesn't carry over, so the router has
- * to do a full page load for these URLs. Core does the same for the query block's enhanced
- * pagination in `wp-includes/blocks/query.php`.
- *
- * @param string $block_content The block's rendered output.
- *
- * @return string The block content, unchanged.
- */
-function disable_client_side_navigation( $block_content ) {
-	if ( is_admin() || wp_is_json_request() || ! function_exists( 'wp_interactivity_config' ) ) {
-		return $block_content;
-	}
-
-	wp_interactivity_config( 'core/router', array( 'clientNavigationDisabled' => true ) );
-
-	return $block_content;
-}
-
-add_filter( 'render_block_wordcamp/schedule', __NAMESPACE__ . '\disable_client_side_navigation' );
-add_filter( 'render_block_wordcamp/live-schedule', __NAMESPACE__ . '\disable_client_side_navigation' );

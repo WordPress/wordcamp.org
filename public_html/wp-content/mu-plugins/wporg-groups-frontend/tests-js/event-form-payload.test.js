@@ -8,6 +8,7 @@ const form = {
 	venue_select: '42',
 	is_online: false,
 	online_event_link: 'https://example.test/join',
+	timezone: 'Australia/Brisbane',
 	rsvp_questions: [],
 };
 
@@ -50,6 +51,12 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends the timezone, and an empty string when it is unset', () => {
+		expect( build().timezone ).toBe( 'Australia/Brisbane' );
+		expect( build( { form: { ...form, timezone: '' } } ).timezone ).toBe( '' );
+		expect( build( { form: { ...form, timezone: undefined } } ).timezone ).toBe( '' );
 	} );
 
 	test( 'sends venue_id 0 when no venue is selected', () => {

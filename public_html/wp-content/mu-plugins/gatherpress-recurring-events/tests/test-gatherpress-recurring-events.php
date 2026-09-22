@@ -625,6 +625,79 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;COUNT=4', get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true ) );
 	}
 
+	/**
+	 * Moving a series to another timezone has to reach the occurrence rows
+	 * that already exist.
+	 *
+	 * The projection used to `INSERT IGNORE`, so every row kept the old zone
+	 * forever and the occurrence pages went on displaying it -- which made the
+	 * front-end form's new Time zone control (#2021) look like it had done
+	 * nothing on a recurring event.
+	 *
+	 * The wall-clock starts do not move, so the recurrence ids do not either;
+	 * only the zone and the GMT columns derived from it change.
+	 */
+	public function test_reprojecting_moves_existing_rows_to_a_new_timezone(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+
+		Occurrences::project( $post_id );
+
+		$before = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id )
+		);
+		$this->assertGreaterThan( 1, $before, 'Precondition: the series projected some occurrences to move.' );
+
+		// Cancelling one proves the re-projection preserves per-occurrence
+		// state rather than rewriting the row wholesale.
+		Occurrences::set_status( $post_id, '20260817T100000', 'cancelled' );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		Occurrences::project( $post_id );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d ORDER BY datetime_start_gmt ASC',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		$this->assertCount( $before, $rows, 'Re-projecting must not duplicate the rows it already wrote.' );
+
+		foreach ( $rows as $row ) {
+			$this->assertSame( 'Australia/Brisbane', $row->timezone );
+			// Brisbane is UTC+10 year round, so 10:00 local is 00:00 UTC.
+			$this->assertStringContainsString( '00:00:00', $row->datetime_start_gmt );
+			$this->assertStringContainsString( '10:00:00', $row->datetime_start );
+		}
+
+		$cancelled = array_values(
+			array_filter( $rows, static fn( object $row ): bool => '20260817T100000' === $row->recurrence_id )
+		);
+
+		$this->assertSame( 'cancelled', $cancelled[0]->status, 'A cancelled occurrence must survive a re-projection.' );
+	}
+
 	/** Deactivation removes the site's projection cron event. */
 	public function test_deactivation_clears_projection_cron(): void {
 		Occurrences::clear_cron();

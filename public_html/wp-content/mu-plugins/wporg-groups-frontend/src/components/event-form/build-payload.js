@@ -23,6 +23,7 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		is_online: form.is_online,
 		online_event_link: form.is_online ? form.online_event_link : '',
 		featured_image_id: featuredImageId,
+		timezone: form.timezone || '',
 		// Include recurrence while the schedule is editable, including for drafts.
 		// Published schedules are locked, so omit it from later updates.
 		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),

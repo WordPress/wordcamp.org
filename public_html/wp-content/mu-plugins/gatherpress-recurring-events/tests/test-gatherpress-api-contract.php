@@ -58,7 +58,14 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 			'methods' => array( 'get_ical_event_string' ),
 		),
 		'GatherPress\Core\Utility'              => array(
-			'methods' => array( 'ensure_user_authentication' ),
+			'methods' => array(
+				'ensure_user_authentication',
+				// The front-end event form's Time zone control is built from
+				// these two: the grouped choices it offers, and the allowlist
+				// it validates a submission against (#2021).
+				'timezone_choices',
+				'list_timezone_and_utc_offsets',
+			),
 		),
 	);
 

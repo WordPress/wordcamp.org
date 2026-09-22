@@ -89,10 +89,30 @@ final class Occurrences {
 			$end_gmt       = $end->setTimezone( new DateTimeZone( 'UTC' ) );
 			$recurrence_id = Rule::recurrence_id( $start );
 
+			/*
+			 * Upsert rather than `INSERT IGNORE`: a row's schedule columns are
+			 * derived from the series and have to follow it. Moving the series
+			 * to another timezone (which the front-end event form can now do,
+			 * #2021) leaves the same wall-clock starts and so the same
+			 * recurrence ids, and an ignored insert left every existing
+			 * occurrence displaying the old zone forever.
+			 *
+			 * `status` and `created_gmt` are deliberately not in the update
+			 * list: a cancelled occurrence stays cancelled across a
+			 * re-projection, which is the whole reason this could not simply
+			 * delete and reinsert.
+			 */
 			$sql = $wpdb->prepare(
-				"INSERT IGNORE INTO %i
+				"INSERT INTO %i
 				(series_post_id, recurrence_id, datetime_start, datetime_start_gmt, datetime_end, datetime_end_gmt, timezone, status, created_gmt, updated_gmt)
-				VALUES (%d, %s, %s, %s, %s, %s, %s, 'scheduled', %s, %s)",
+				VALUES (%d, %s, %s, %s, %s, %s, %s, 'scheduled', %s, %s)
+				ON DUPLICATE KEY UPDATE
+					datetime_start = VALUES(datetime_start),
+					datetime_start_gmt = VALUES(datetime_start_gmt),
+					datetime_end = VALUES(datetime_end),
+					datetime_end_gmt = VALUES(datetime_end_gmt),
+					timezone = VALUES(timezone),
+					updated_gmt = VALUES(updated_gmt)",
 				$table,
 				$post_id,
 				$recurrence_id,

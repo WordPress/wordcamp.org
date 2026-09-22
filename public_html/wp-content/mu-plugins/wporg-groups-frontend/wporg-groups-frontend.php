@@ -17,6 +17,7 @@ const VERSION = '0.2.0';
 require_once __DIR__ . '/inc/capabilities.php';
 require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/group-location.php';
+require_once __DIR__ . '/inc/event-date-format.php';
 require_once __DIR__ . '/inc/event-timezone.php';
 require_once __DIR__ . '/inc/event-language.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
@@ -56,6 +57,7 @@ function bootstrap(): void {
 	Post_Titles\bootstrap();
 	Export\bootstrap();
 	RSVP_Questions\bootstrap();
+	Event_Date_Format\bootstrap();
 	Event_Language\bootstrap();
 	RSVP_Confirmation\bootstrap();
 	Modal\bootstrap();

@@ -960,6 +960,9 @@ class WordCamp_Budgets {
 	/**
 	 * Get the files attached to a post
 	 *
+	 * The statuses are named so that `WP_Query` doesn't gate `private` on `read_private_posts`, which a requester
+	 * who is only an Author lacks. Who may see each file is decided by `privacy.php`, through the filters below.
+	 *
 	 * @param WP_Post $post
 	 *
 	 * @return array
@@ -968,6 +971,7 @@ class WordCamp_Budgets {
 		$files = get_posts( array(
 			'post_parent'    => $post->ID,
 			'post_type'      => 'attachment',
+			'post_status'    => array( 'inherit', 'private' ),
 			'posts_per_page' => 100,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
@@ -1035,9 +1039,9 @@ class WordCamp_Budgets {
 	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rules have to hold here for
 	 * whatever comes back in the field.
 	 *
-	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is an edit
-	 * to it -- `post_parent` is the field `privacy.php` reads to decide who sees a payment file -- so it takes
-	 * the same capability any other route to that field would, which is where the guard in `privacy.php` applies.
+	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is what
+	 * makes it a payment file, which `privacy.php` records on the attachment as it is reparented, so it takes
+	 * the same capability any other route to `post_parent` would, which is where the guard there applies.
 	 *
 	 * @param mixed $file_id An entry from the field, which is whatever JSON the browser sent.
 	 * @param int   $post_id The request the file would be attached to.

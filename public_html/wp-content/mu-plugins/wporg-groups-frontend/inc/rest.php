@@ -54,6 +54,8 @@ use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
+use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
 use function WordCamp\Groups\Frontend\Group_Location\clear_location;
 use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
@@ -662,6 +664,16 @@ function event_args_schema(): array {
 			'default'           => 0,
 			'sanitize_callback' => 'absint',
 		),
+		// The timezone the event is scheduled in. Unrecognized values
+		// sanitize to '', which the write paths read as "use the site's own
+		// zone" -- the behaviour every event had before there was a control
+		// for this.
+		'timezone'          => array(
+			'type'              => 'string',
+			'required'          => false,
+			'default'           => '',
+			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Timezone\\sanitize',
+		),
 		// The language the event is run in, as a CLDR language subtag.
 		// `sanitize_language_code()` drops anything unrecognized to '', so a
 		// stale or malformed code clears the field rather than rejecting the
@@ -760,6 +772,13 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			true
 		);
 
+		// An event with no usable stored zone reads back as '', which the
+		// form shows as the site default rather than as a blank option.
+		$stored_timezone = get_event_timezone( $event_id );
+		if ( '' !== $stored_timezone ) {
+			$fields['timezone'] = $stored_timezone;
+		}
+
 		// Not defaulted from the group's last event when editing: an existing
 		// event with no language set has had that answered already, and
 		// prefilling it would turn "unset" into a value the organizer never
@@ -818,6 +837,12 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			'event_id'   => $is_editing ? $event_id : 0,
 			'fields'     => $fields,
 			'venues'     => $venues,
+			// Grouped the way core's own timezone control groups them, so the
+			// select reads as "Australia > Brisbane" rather than as one flat
+			// list of 400-odd identifiers. Shipped with the rest of the form
+			// payload rather than as its own request: the list is static per
+			// locale, and the modal already opens on a single fetch.
+			'timezones'  => get_timezone_choices(),
 			// Shipped with the rest of the form payload rather than as its own
 			// request: the list is static per locale, and the modal already
 			// opens on a single fetch.
@@ -926,7 +951,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'post_id'        => $saved_id,
 				'datetime_start' => sprintf( '%s %s:00', $date, $time_start ),
 				'datetime_end'   => sprintf( '%s %s:00', resolve_event_end_date( $date, $time_start, $time_end ), $time_end ),
-				'timezone'       => wp_timezone_string(),
+				'timezone'       => (string) $request->get_param( 'timezone' ) ?: wp_timezone_string(),
 			)
 		);
 	}
@@ -1048,6 +1073,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'new_venue_name'    => (string) $request->get_param( 'new_venue_name' ),
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
+		'timezone'          => (string) $request->get_param( 'timezone' ),
 		'language'          => (string) $request->get_param( 'language' ),
 	);
 
@@ -1101,8 +1127,12 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	}
 	$saved_id = (int) $saved_id;
 
-	// Datetimes — pass through GatherPress's own writer.
-	$timezone = wp_timezone_string();
+	// Datetimes — pass through GatherPress's own writer. The submitted times
+	// are wall-clock times in the chosen zone, not UTC, so the zone only
+	// decides how they are stored and read back, never what the organizer
+	// typed. An unrecognized or absent zone sanitizes to '' and falls back to
+	// the site's own, which is what every event got before this was settable.
+	$timezone = '' !== $fields['timezone'] ? $fields['timezone'] : wp_timezone_string();
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 

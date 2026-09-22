@@ -30,7 +30,9 @@ defined( 'WPINC' ) || die();
  * The agreement attachments on one site that are still `inherit`.
  *
  * Found through the sponsor rather than through the marker meta, because the files this is for were
- * attached before anything marked them.
+ * attached before anything marked them. An agreement is either the attachment the sponsor's meta names,
+ * or a PDF uploaded against the sponsor that was never recorded -- the same two tests an upload meets
+ * today, applied to rows from before them.
  *
  * Takes a blog ID and builds the table names itself rather than switching, so that `scan()` can ask this of
  * every site on the network from a single process. `get_blog_prefix()` is string handling -- it loads no
@@ -61,8 +63,23 @@ function get_public_agreement_ids( $blog_id = null ) {
 		WHERE sponsor_meta.meta_key IN ( $key_placeholders )
 		AND sponsor.post_type IN ( $type_placeholders )
 		AND agreement.post_type = 'attachment'
-		AND agreement.post_status = 'inherit'",
-		array_merge( $meta_keys, $post_types )
+		AND agreement.post_status = 'inherit'
+
+		UNION
+
+		SELECT DISTINCT agreement.ID
+		FROM {$prefix}posts AS agreement
+		INNER JOIN {$prefix}posts AS sponsor
+			ON sponsor.ID = agreement.post_parent
+		WHERE sponsor.post_type IN ( $type_placeholders )
+		AND agreement.post_type = 'attachment'
+		AND agreement.post_status = 'inherit'
+		AND agreement.post_mime_type = 'application/pdf'",
+		array_merge(
+			$meta_keys,  // First arm.
+			$post_types, // First arm.
+			$post_types  // Second arm.
+		)
 	) );
 	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 

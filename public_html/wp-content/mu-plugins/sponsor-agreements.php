@@ -56,7 +56,7 @@ add_action( 'admin_enqueue_scripts',        __NAMESPACE__ . '\add_agreement_uplo
  * The meta keys that name a sponsor's agreement.
  *
  * `_wcpt_sponsor_agreement` sits on a `wcb_sponsor` on an event site, and `mes_sponsor_agreement` on an
- * `mes_sponsor` on central. Both hold nothing but an attachment ID -- see `save_post_sponsor()` in
+ * `mes` on central. Both hold nothing but an attachment ID -- see `save_post_sponsor()` in
  * `wc-post-types` and `MES_Sponsor::save_post_meta()`.
  *
  * Duplicated here rather than referenced, because this file loads on every site in the network and neither
@@ -74,7 +74,7 @@ function get_agreement_meta_keys() {
  * @return string[]
  */
 function get_sponsor_post_types() {
-	return array( 'wcb_sponsor', 'mes_sponsor' );
+	return array( 'wcb_sponsor', 'mes' );
 }
 
 /**

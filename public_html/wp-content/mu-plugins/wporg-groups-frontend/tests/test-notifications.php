@@ -7,6 +7,9 @@ use WP_REST_Request;
 use function WordCamp\Groups\Frontend\Notifications\pending_notification_queue;
 use function WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification;
 use function WordCamp\Groups\Frontend\Notifications\send_pending_new_event_notifications;
+use function WordCamp\Groups\Frontend\Notifications\recipient_is_event_author;
+use function WordCamp\Groups\Frontend\Notifications\strip_rsvp_button;
+use function WordCamp\Groups\Frontend\Notifications\tailor_publish_notification;
 use function WordCamp\Groups\Frontend\REST\publish_draft;
 use const WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META;
 use const WordCamp\Groups\Frontend\Notifications\GATHERPRESS_OPT_IN_META_KEY;
@@ -459,5 +462,181 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		update_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, 0 );
 
 		$this->assertFalse( \GatherPress\Core\User::get_instance()->has_event_updates_opt_in( $user_id ) );
+	}
+
+	/**
+	 * Find the captured mail addressed to a given address.
+	 *
+	 * @param string $email Recipient address.
+	 * @return array|null
+	 */
+	private function mail_to( string $email ): ?array {
+		foreach ( $this->sent_mail as $mail ) {
+			$to = is_array( $mail['to'] ) ? $mail['to'] : array( $mail['to'] );
+
+			if ( in_array( $email, array_map( 'trim', $to ), true ) ) {
+				return $mail;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * #2074: the organizer who published the event is on the recipient list
+	 * because they are a member of their own group, and their copy should
+	 * say what happened and drop the "RSVP Now" button -- they do not need
+	 * a call to action for the event they just created.
+	 */
+	public function test_author_copy_says_published_and_has_no_rsvp_button() {
+		$author_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_author' => $author_id,
+				'post_status' => 'publish',
+			)
+		);
+		send_pending_new_event_notifications();
+
+		$mail = $this->mail_to( get_userdata( $author_id )->user_email );
+
+		$this->assertNotNull( $mail, 'The event author should receive the notification.' );
+		$this->assertSame(
+			sprintf( 'Your event has been published: %s', get_the_title( $event_id ) ),
+			$mail['subject']
+		);
+		$this->assertStringNotContainsString( 'RSVP Now', $mail['message'] );
+		$this->assertStringContainsString(
+			get_the_title( $event_id ),
+			$mail['message'],
+			'Stripping the button must not take the rest of the email with it.'
+		);
+	}
+
+	/**
+	 * #2074: every other member gets a subject naming the group, and keeps
+	 * the RSVP button -- for them it is the point of the email.
+	 */
+	public function test_member_copy_names_the_group_and_keeps_the_rsvp_button() {
+		$author_id = $this->create_member();
+		$member_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_author' => $author_id,
+				'post_status' => 'publish',
+			)
+		);
+		send_pending_new_event_notifications();
+
+		$mail = $this->mail_to( get_userdata( $member_id )->user_email );
+
+		$this->assertNotNull( $mail, 'A group member should receive the notification.' );
+		$this->assertSame(
+			sprintf( 'New event in %1$s: %2$s', get_bloginfo( 'name' ), get_the_title( $event_id ) ),
+			$mail['subject']
+		);
+		$this->assertStringContainsString( 'RSVP Now', $mail['message'] );
+	}
+
+	/**
+	 * The filter is scoped to the one send it wraps: an unrelated
+	 * `wp_mail()` afterwards must come out untouched.
+	 */
+	public function test_tailoring_does_not_leak_past_the_send() {
+		$this->create_member();
+		$event_id = $this->create_dated_event( 'draft' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'publish',
+			)
+		);
+		send_pending_new_event_notifications();
+
+		$this->sent_mail = array();
+		wp_mail( 'someone@example.org', 'Untouched subject', 'Untouched body' );
+
+		$this->assertCount( 1, $this->sent_mail );
+		$this->assertSame( 'Untouched subject', $this->sent_mail[0]['subject'] );
+		$this->assertSame( 'Untouched body', $this->sent_mail[0]['message'] );
+	}
+
+	/**
+	 * `wp_mail()` accepts an array, a comma-joined list and `Name <address>`
+	 * forms. GatherPress passes a bare address today, but the author match
+	 * must not depend on that.
+	 */
+	public function test_author_match_handles_every_recipient_form() {
+		$author_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft' );
+		wp_update_post( array(
+			'ID' => $event_id, 'post_author' => $author_id,
+		) );
+
+		$email = get_userdata( $author_id )->user_email;
+
+		foreach ( array( $email, strtoupper( $email ), " $email ", "Someone <$email>", "other@example.org,$email", array( $email ) ) as $to ) {
+			$this->assertTrue(
+				recipient_is_event_author( $to, $event_id ),
+				'Should match: ' . wp_json_encode( $to )
+			);
+		}
+
+		$this->assertFalse( recipient_is_event_author( 'nobody@example.org', $event_id ) );
+		$this->assertFalse( recipient_is_event_author( '', $event_id ) );
+	}
+
+	/**
+	 * A body that carries no RSVP button (a GatherPress template change,
+	 * say) is returned unchanged rather than mangled.
+	 */
+	public function test_strip_rsvp_button_leaves_an_unrecognized_body_alone() {
+		$body = '<html><body><h1>An event</h1></body></html>';
+
+		$this->assertSame( $body, strip_rsvp_button( $body ) );
+	}
+
+	/**
+	 * If GatherPress ever nests a `div` inside the button's wrapper, the
+	 * strip has to decline rather than stop at the inner `</div>` and leave
+	 * a dangling closing tag: a button that stays is the old email, a
+	 * dangling tag is a broken one.
+	 */
+	public function test_strip_rsvp_button_declines_a_nested_wrapper() {
+		$body = '<p>Before</p><!-- RSVP Button --><div><div><a href="#">RSVP Now</a></div></div><p>After</p>';
+
+		$this->assertSame( $body, strip_rsvp_button( $body ) );
+	}
+
+	/**
+	 * The filter is added around one `send_emails()` call, so anything else
+	 * that sends mail inside that window has to come out untouched -- the
+	 * scoping is what bounds it in time, and matching GatherPress's own
+	 * template is what bounds it to the right email.
+	 */
+	public function test_tailoring_leaves_a_non_event_email_alone() {
+		$author_id = $this->create_member();
+		$event_id  = $this->create_dated_event( 'draft' );
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_author' => $author_id,
+			)
+		);
+
+		$atts = array(
+			'to'      => get_userdata( $author_id )->user_email,
+			'subject' => 'Your password has been changed',
+			'message' => 'Someone changed the password on your account.',
+		);
+
+		$this->assertSame( $atts, tailor_publish_notification( $atts, $event_id ) );
 	}
 }

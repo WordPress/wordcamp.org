@@ -649,6 +649,61 @@ caught automatically, before moving on:
    tracking issue, and — if it changes the shape of *how* this integration
    should be tested going forward, not just *what* — issue #1863 too.
 
+## 10. Event email rewrites (mandatory, run after every version bump)
+
+GatherPress renders every event email (the publish notification, "Message
+all members", "Message attendees") from
+`includes/templates/admin/emails/event-email.php`. That template is neither
+filterable nor theme-overridable: `Rest_Api::send_event_email_to_recipient()`
+renders it from a hardcoded path. So this integration corrects the rendered
+body on its way out, with `wp_mail` filters keyed off the template's own
+marker comments (`<!-- Featured Image -->`, `<!-- Event Title -->`,
+`<!-- RSVP Button -->`):
+
+- `wporg-groups-frontend/inc/event-email.php` gives the featured image
+  `height: auto` (it ships real `width`/`height` attributes and a
+  `max-width: 100%` cap, so phones squash it) and rebuilds the RSVP button
+  as a table (an inline `<a>` carrying its own padding overlaps the line
+  above it in clients that ignore padding on inline elements, e.g. Help
+  Scout, Outlook).
+- `wporg-groups-frontend/inc/notifications.php` tailors the publish
+  notification per recipient, stripping that same button from the author's
+  own copy.
+
+**A bump can break all of this silently**, because a marker that no longer
+matches produces a correct-looking email with the old bug back. After every
+bump, diff the template (`git diff <old-tag> <new-tag> -- includes/templates/admin/emails/event-email.php`)
+and confirm the three marker comments and the button's wrapper `<div>` are
+still there and still that shape. `test-event-email.php` and
+`test-notifications.php` pin the interaction between the two rewrites, so
+run them before trusting a bump.
+
+Two rules for writing any filter of this kind, both learned the hard way:
+
+- **Bound it to the template, not just to the send.** Scoping a `wp_mail`
+  filter to one `send_emails()` call with `add_filter`/`finally` is not
+  enough on its own: anything else that sends mail inside that window (a
+  plugin acting on a hook GatherPress fires per recipient) gets rewritten
+  too. A password-reset email came out subjected "Your event has been
+  published". Require a template marker in the body before touching
+  anything.
+- **A regex over rendered HTML must fail closed.** Matching
+  `<div\b[^>]*>.*?</div>` stops at the *first* `</div>`, so a nested one
+  would cut the match short and leave a dangling closing tag: a broken
+  email rather than the old one. Exclude the tag from the body of the
+  match (`(?:(?!</?div\b).)*?`) so an unexpected shape declines to match
+  instead.
+
+To check email locally: MailCatcher runs in the dev stack on
+`http://localhost:1080` (`curl -s http://localhost:1080/messages` for the
+list, `/messages/<id>.html` for a body, `curl -X DELETE .../messages` to
+clear). Publishing through the real front-end dialog exercises the true
+path; `do_action( 'shutdown' )` after a `wp_update_post()` in `wp eval`
+flushes the notification queue when driving it headlessly. To read a
+delivered body at phone width, open it in the browser and measure:
+`getBoundingClientRect()` on the `img` catches an aspect-ratio regression
+that eyeballing will not.
+
 ## Known-issues appendix
 
 Use this to distinguish "this checklist found something new" from
@@ -662,4 +717,5 @@ current status before treating any of these as new bugs:
 | `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organisers manage events fine via wp-admin. |
 | `/members` fully public with no membership/auth requirement | Section 5 | Open product/privacy question, not a bug in itself — confirm current decision, don't assume it's wrong. |
 | `my-events` block empty for a user who created events but never RSVP'd | Section 3, per-role browser pass as an event creator | RSVP-attendance based by design — confirm this still matches the current product decision. |
+| A departing member's RSVP row still in `wp_comments` after leaving, with `comment_approved = trash` | Section 3, leave-group click-through, then inspect the comment rows | Expected, not a leak. `Leave_Cleanup\cancel_future_rsvps()` cancels future RSVPs with `wp_delete_comment()` and no force flag, matching GatherPress's own `no_status` path (`Rsvp\Storage::save()`); with a trash configured, which is the default, that trashes rather than deletes. The seat is released either way, since everything counting an RSVP reads approved comments only. Consequence to know: `deleted_comment` does not fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied, not at once. Past RSVPs are kept on purpose (attendance history). |
 | `groups-site` theme activatable on non-groups-network sites | Not covered by this checklist (network-admin action, not a groups-site page) | If auditing this, attempt `wp theme activate groups-site --url=<non-groups-network-site>` and confirm it's blocked. |

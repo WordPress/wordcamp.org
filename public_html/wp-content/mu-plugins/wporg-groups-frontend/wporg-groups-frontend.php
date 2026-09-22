@@ -25,7 +25,9 @@ require_once __DIR__ . '/inc/post-titles.php';
 require_once __DIR__ . '/inc/export.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
+require_once __DIR__ . '/inc/event-email.php';
 require_once __DIR__ . '/inc/my-events.php';
+require_once __DIR__ . '/inc/leave-cleanup.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
@@ -55,6 +57,7 @@ function bootstrap(): void {
 	RSVP_Confirmation\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();
+	Event_Email\bootstrap();
 
 	add_action(
 		'rest_api_init',

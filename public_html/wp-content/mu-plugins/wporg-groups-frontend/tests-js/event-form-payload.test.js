@@ -9,6 +9,7 @@ const form = {
 	is_online: false,
 	online_event_link: 'https://example.test/join',
 	timezone: 'Australia/Brisbane',
+	language: 'es',
 	rsvp_questions: [],
 };
 
@@ -57,6 +58,12 @@ describe( 'buildEventPayload', () => {
 		expect( build().timezone ).toBe( 'Australia/Brisbane' );
 		expect( build( { form: { ...form, timezone: '' } } ).timezone ).toBe( '' );
 		expect( build( { form: { ...form, timezone: undefined } } ).timezone ).toBe( '' );
+	} );
+
+	test( 'sends the language, and an empty string when it is unset', () => {
+		expect( build().language ).toBe( 'es' );
+		expect( build( { form: { ...form, language: '' } } ).language ).toBe( '' );
+		expect( build( { form: { ...form, language: undefined } } ).language ).toBe( '' );
 	} );
 
 	test( 'sends venue_id 0 when no venue is selected', () => {

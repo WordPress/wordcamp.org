@@ -51,6 +51,9 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
+use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
+use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
+use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
 use function WordCamp\Groups\Frontend\Group_Location\clear_location;
@@ -671,6 +674,16 @@ function event_args_schema(): array {
 			'default'           => '',
 			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Timezone\\sanitize',
 		),
+		// The language the event is run in, as a CLDR language subtag.
+		// `sanitize_language_code()` drops anything unrecognized to '', so a
+		// stale or malformed code clears the field rather than rejecting the
+		// save of everything else on the form.
+		'language'          => array(
+			'type'              => 'string',
+			'required'          => false,
+			'default'           => '',
+			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Language\\sanitize_code',
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -766,6 +779,12 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			$fields['timezone'] = $stored_timezone;
 		}
 
+		// Not defaulted from the group's last event when editing: an existing
+		// event with no language set has had that answered already, and
+		// prefilling it would turn "unset" into a value the organizer never
+		// chose on the next save.
+		$fields['language'] = get_event_language( $event_id );
+
 		$thumb_id = (int) get_post_thumbnail_id( $event_id );
 		if ( $thumb_id ) {
 			$fields['featured_image_id']  = $thumb_id;
@@ -824,6 +843,17 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			// payload rather than as its own request: the list is static per
 			// locale, and the modal already opens on a single fetch.
 			'timezones'  => get_timezone_choices(),
+			// Shipped with the rest of the form payload rather than as its own
+			// request: the list is static per locale, and the modal already
+			// opens on a single fetch.
+			'languages'  => array_map(
+				static fn( string $code, string $name ): array => array(
+					'code' => $code,
+					'name' => $name,
+				),
+				array_keys( get_language_options() ),
+				array_values( get_language_options() )
+			),
 		)
 	);
 }
@@ -945,6 +975,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		(string) $request->get_param( 'online_event_link' )
 	);
 
+	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
+
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
 	if ( $featured_image_id > 0 && current_user_can_use_attachment( $featured_image_id ) ) {
@@ -1042,6 +1074,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
 		'timezone'          => (string) $request->get_param( 'timezone' ),
+		'language'          => (string) $request->get_param( 'language' ),
 	);
 
 	/**
@@ -1117,6 +1150,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$venue_id = resolve_venue_id( $fields );
 	sync_event_venue_terms( $saved_id, $venue_id, $fields['is_online'] );
 	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
+
+	set_event_language( $saved_id, $fields['language'] );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

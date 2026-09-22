@@ -37,6 +37,7 @@ import FeaturedImagePicker from './featured-image-picker';
 import DurationField from './duration-field';
 import VenueField from './venue-field';
 import TimezoneField from './timezone-field';
+import LanguageField from './language-field';
 
 export const NS =
 	( window.wporgGroupsEventModal &&
@@ -53,6 +54,7 @@ const EMPTY_FORM = {
 	is_online: false,
 	online_event_link: '',
 	timezone: '',
+	language: '',
 	rsvp_questions: [],
 };
 
@@ -111,6 +113,7 @@ function EventForm(
 	const [ recurrence, setRecurrence ] = useState( null );
 	const [ venues, setVenues ] = useState( [] );
 	const [ timezones, setTimezones ] = useState( {} );
+	const [ languages, setLanguages ] = useState( [] );
 	const descriptionRef = useRef( () => '' );
 	const cancelLoadRef = useRef( () => {} );
 
@@ -155,6 +158,7 @@ function EventForm(
 				}
 				setVenues( res.venues || [] );
 				setTimezones( res.timezones || {} );
+				setLanguages( res.languages || [] );
 				setIsExistingPost( !! res.is_editing );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
@@ -171,6 +175,7 @@ function EventForm(
 					is_online: !! res.fields.is_online,
 					online_event_link: res.fields.online_event_link || '',
 					timezone: res.fields.timezone || '',
+					language: res.fields.language || '',
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -352,6 +357,13 @@ function EventForm(
 					/>
 				) }
 			</div>
+
+			<LanguageField
+				languages={ languages }
+				value={ form.language }
+				onChange={ ( v ) => updateField( 'language', v ) }
+				classPrefix={ classPrefix }
+			/>
 
 			<RsvpQuestionsEditor
 				questions={ form.rsvp_questions }

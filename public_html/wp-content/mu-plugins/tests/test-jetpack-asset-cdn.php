@@ -78,14 +78,14 @@ class Test_Jetpack_Asset_CDN extends WP_UnitTestCase {
 	public function test_cached_answer_makes_no_request() {
 		$this->fake_cdn_response( array( 'response' => array( 'code' => 404 ) ) );
 
-		skip_core_versions_the_cdn_lacks( array( '7.1.3', 'en_US' ) );
-		skip_core_versions_the_cdn_lacks( array( '7.1.3', 'en_US' ) );
+		skip_core_versions_the_cdn_lacks( array( '7.1.9', 'en_US' ) );
+		skip_core_versions_the_cdn_lacks( array( '7.1.9', 'en_US' ) );
 
 		$this->assertSame( 1, $this->request_count );
 	}
 
 	/**
-	 * A failed request isn't cached, so the next page load asks again.
+	 * A failed request counts as "no" now, but leaves nothing behind for the next page load.
 	 *
 	 * @covers \WordCamp\Jetpack_Tweaks\Asset_CDN\cdn_has_core_version
 	 */
@@ -93,13 +93,10 @@ class Test_Jetpack_Asset_CDN extends WP_UnitTestCase {
 		$this->fake_cdn_response( new WP_Error( 'http_request_failed', 'Operation timed out' ) );
 
 		$this->assertSame(
-			array( '7.1.3-unpublished', 'en_US' ),
-			skip_core_versions_the_cdn_lacks( array( '7.1.3', 'en_US' ) )
+			array( '7.2.0-unpublished', 'en_US' ),
+			skip_core_versions_the_cdn_lacks( array( '7.2.0', 'en_US' ) )
 		);
-		$this->assertFalse( get_site_transient( 'wc_cdn_core_version_' . md5( '7.1.3' ) ) );
-
-		skip_core_versions_the_cdn_lacks( array( '7.1.3', 'en_US' ) );
-
-		$this->assertSame( 2, $this->request_count );
+		$this->assertFalse( get_site_transient( 'wc_cdn_core_version_' . md5( '7.2.0' ) ) );
+		$this->assertSame( 1, $this->request_count );
 	}
 }

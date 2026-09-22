@@ -17,9 +17,10 @@ services:
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
         # Host-side bindings are overridable so this stack can coexist with
-        # another local dev environment that wants 80/443 -- see `.env.example`
-        # and "Running alongside another local environment" in
-        # `.docker/readme.md`.
+        # another local dev environment that wants 80/443 -- either move this
+        # one to a different port (WORDCAMP_HTTPS_PORT) or to a different
+        # address (WORDCAMP_BIND_IP). See `.env.example` and "Running alongside
+        # another local environment" in `.docker/readme.md`.
         #
         # WORDCAMP_BIND_IP defaults to empty rather than 0.0.0.0 on purpose:
         # an unqualified mapping binds IPv4 *and* IPv6 (`[::]:443`), while an

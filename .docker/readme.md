@@ -90,7 +90,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 By default the containers bind ports 80, 443, 1080 (MailCatcher) and 3307
 (MariaDB) on every interface, which collides with anything else on the machine
 that wants them — another Docker stack, a local nginx/Apache, `wp-env`, Valet,
-Lando, and so on.
+Lando, and so on. There are two ways out: move this stack to a different port,
+or move it to a different address and keep the standard ports.
 
 All four bindings are overridable through environment variables. `docker compose`
 reads a `.env` file in the project root automatically, and `.env` is gitignored,
@@ -101,11 +102,44 @@ uncomment what you need:
 cp .env.example .env
 ```
 
-### Freeing up 80/443
+### Changing the HTTPS port
 
-Set `WORDCAMP_BIND_IP` to a loopback alias rather than moving the site off the
-standard ports. The containers keep listening on 80/443, just not on the
-address the other stack wants:
+Set `WORDCAMP_HTTPS_PORT` and restart:
+
+```
+WORDCAMP_HTTPS_PORT=8443
+```
+
+```bash
+docker compose up -d
+```
+
+Every site is then reachable with the port in the URL —
+`https://central.wordcamp.test:8443/`,
+`https://events.wordpress.test:8443/group/sunshine-coast-qld/` — with no
+database changes and nothing to re-run. The hosts-file entries are unchanged.
+
+How it works, in case a URL ever looks wrong: `.docker/wp-config.php` strips the
+port out of `HTTP_HOST` before anything reads it, so every hostname comparison
+in the codebase (the network `switch`, the `sunrise*.php` regexes, and
+WordPress's own lookups against the portless `domain` columns in `wp_blogs` and
+`wp_site`) behaves exactly as it does on 443. The `0-local-https-port` mu-plugin
+then puts the port back onto `siteurl`/`home` — which is what `admin_url()`,
+`rest_url()`, `content_url()` and the canonical redirects are all built from —
+and the redirects that `sunrise*.php` builds by hand get it via
+`WordCamp\Sunrise\get_url_port()`. The database stays canonical and portless
+throughout, so the port is purely a presentation concern.
+
+**Plain HTTP doesn't survive a non-default HTTPS port.** nginx's HTTP→HTTPS
+redirect is `return 301 https://$host$request_uri`, and nginx has no way to know
+which host port Docker mapped 443 to, so it drops you on 443. Just use `https://`
+directly. For the same reason `WORDCAMP_HTTP_PORT` is not worth changing.
+
+### Keeping the standard ports, on another address
+
+If you'd rather not have a port in every URL, point the stack at a loopback
+alias instead. The containers keep listening on 80/443, just not on the address
+the other environment wants:
 
 ```
 WORDCAMP_BIND_IP=127.0.0.2
@@ -125,40 +159,9 @@ line from the setup steps above:
 127.0.0.2 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test
 ```
 
-Run `docker compose up -d` again to re-create the containers with the new
-binding. Site URLs are unchanged — still `https://central.wordcamp.test`, with
-no port suffix — so nothing else in the environment needs adjusting.
-
-### Why not just change the HTTPS port?
-
-`WORDCAMP_HTTP_PORT` and `WORDCAMP_HTTPS_PORT` exist, but a non-default value
-is **not supported** — it doesn't just degrade, it breaks the environment
-completely. Running with `WORDCAMP_HTTPS_PORT=8443`, every URL answers with a
-redirect to a portless `https://central.wordcamp.test/`, where nothing is
-listening any more:
-
-```
-https://central.wordcamp.test:8443/                         302 -> https://central.wordcamp.test/
-https://events.wordpress.test:8443/                         302 -> https://central.wordcamp.test/
-https://events.wordpress.test:8443/group/sunshine-coast-qld/ 302 -> https://central.wordcamp.test/
-http://central.wordcamp.test:8080/                          301 -> https://central.wordcamp.test/
-```
-
-The cause is that a `:8443` suffix lands in `HTTP_HOST`, and several parts of
-the environment assume portless hostnames:
-
-* The `switch ( strtolower( $_SERVER['HTTP_HOST'] ) )` in `.docker/wp-config.php`
-  matches no case, so every request falls through to the `default:` branch and
-  boots the WordCamp network — `events.wordpress.test:8443` serves the wrong
-  network entirely. The redirects above are that branch's `NOBLOGREDIRECT`,
-  which the `events.wordpress.test` case deliberately omits; seeing it prove
-  the fall-through.
-* nginx's HTTP→HTTPS redirect (`.docker/config/nginx.conf`) is
-  `return 301 https://$host$request_uri`, which drops the port.
-* The site URLs seeded from `.docker/data/wordcamp_dev.sql` carry no port, and
-  neither do the redirects built in `public_html/wp-content/sunrise*.php`.
-
-Use `WORDCAMP_BIND_IP` instead.
+Run `docker compose up -d` again to re-create the containers. Site URLs are
+completely unchanged this way — still `https://central.wordcamp.test`, no port
+suffix.
 
 ### MailCatcher and MariaDB
 

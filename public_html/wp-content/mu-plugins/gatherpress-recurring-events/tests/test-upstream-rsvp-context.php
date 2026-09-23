@@ -307,6 +307,61 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A cancelled date takes no RSVP, whichever route asks (#2072).
+	 *
+	 * This network's own occurrence-scoped route already refused one, but
+	 * GatherPress's route resolves the occurrence only to scope the roster and
+	 * never asks what its status is -- so posting straight at it with a
+	 * cancelled `gpre_occurrence` landed a real RSVP on a date that is not
+	 * happening, and the member would have turned up for it.
+	 */
+	public function test_an_rsvp_to_a_cancelled_occurrence_is_refused(): void {
+		$series    = $this->create_series_with_rsvps();
+		$cancelled = $series['dates'][2]->recurrence_id;
+		$user_id   = self::factory()->user->create();
+
+		Occurrences::set_status( $series['post_id'], $cancelled, 'cancelled' );
+		wp_set_current_user( $user_id );
+
+		$request = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp' );
+		$request->set_param( 'post_id', $series['post_id'] );
+		$request->set_param( 'status', 'attending' );
+		$request->set_param( 'gpre_occurrence', $cancelled );
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'wporg_groups_invalid_recurrence', $response->get_data()['code'] ?? '' );
+
+		// Refused, not merely unscoped: no RSVP was stored anywhere.
+		Context::set( null );
+		Rsvp_Cache::reset();
+		$this->assertNotContains(
+			$user_id,
+			wp_list_pluck( $this->responses( $series['post_id'], $cancelled )['attending']['records'], 'userId' )
+		);
+	}
+
+	/**
+	 * Reading a cancelled date is still fine.
+	 *
+	 * The page that tells a member their date is off has to render, and its
+	 * attendee list is part of it -- so the refusal is scoped to the write.
+	 */
+	public function test_reading_a_cancelled_occurrence_is_still_allowed(): void {
+		$series    = $this->create_series_with_rsvps();
+		$cancelled = $series['dates'][1]->recurrence_id;
+
+		Occurrences::set_status( $series['post_id'], $cancelled, 'cancelled' );
+
+		$request = new WP_REST_Request( 'GET', '/gatherpress/v1/event/rsvp-responses' );
+		$request->set_param( 'post_id', $series['post_id'] );
+		$request->set_param( 'gpre_occurrence', $cancelled );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+	}
+
+	/**
 	 * A roster computed outside REST is guarded too.
 	 *
 	 * `Rsvp_Cache::guard()` is called from `Comments::prepare_query()` rather

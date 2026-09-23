@@ -96,6 +96,10 @@ function send_confirmation(
 		return;
 	}
 
+	if ( ! actor_owns_rsvp( $comment ) ) {
+		return;
+	}
+
 	$recipient = get_recipient( $comment );
 
 	if ( ! $recipient ) {
@@ -103,6 +107,25 @@ function send_confirmation(
 	}
 
 	send_email( $recipient, $event_id );
+}
+
+/**
+ * Whether the person whose RSVP this is is the one who just changed it.
+ *
+ * This mail confirms an action the member took themselves -- that is the whole
+ * reason it is sent unconditionally, outside the event-updates opt-in. Someone
+ * else moving their RSVP is not that, and GatherPress's own RSVP route takes a
+ * `user_id`, which anyone holding `edit_post` on the event may pass. Without
+ * this an organizer could walk another member's RSVP between attending and not
+ * attending in a loop and mail them once per step, indefinitely (#2062).
+ *
+ * A guest RSVP carries no `user_id`, and the visitor who left it is likewise
+ * not logged in, so the two compare equal and the confirmation still goes out.
+ *
+ * @param WP_Comment $comment RSVP comment.
+ */
+function actor_owns_rsvp( WP_Comment $comment ): bool {
+	return get_current_user_id() === (int) $comment->user_id;
 }
 
 /**

@@ -70,6 +70,16 @@ function cancel_future_rsvps( int $user_id ): int {
 
 	foreach ( $touched as $event_id ) {
 		\GatherPress\Core\Rsvp\Cache::delete( $event_id );
+
+		/*
+		 * Freeing a seat on a full event has to offer it to whoever is next.
+		 * `Rsvp::process()` runs `check_waiting_list()` after every status
+		 * change it handles, but `wp_delete_comment()` is not one of those
+		 * paths -- it removes the row underneath GatherPress -- so nothing
+		 * would have promoted anyone, and a member leaving a full event left
+		 * the waiting list sitting behind a seat that was now empty.
+		 */
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->check_waiting_list();
 	}
 
 	return $cancelled;

@@ -148,6 +148,103 @@ const DESCRIPTION_BLOCK_NAMES = array(
 );
 
 /**
+ * Reduce parsed blocks to the ones the description editor knows.
+ *
+ * Recursive, because `core/group`, `core/columns` and `core/column` are on the
+ * list and carry inner blocks: a disallowed block nested inside an allowed one
+ * has to come out too, or the container smuggles it back in.
+ *
+ * `parse_blocks()` gives a `blockName` of `null` to anything outside a block
+ * delimiter: both the whitespace between blocks and freeform HTML that was
+ * never blocks at all. The first is dropped -- it carries no markup and
+ * dropping it is what lets a filtered list re-serialize cleanly -- and the
+ * second is kept, because a description that is plain HTML is a description,
+ * and `wp_kses_post()` is what governs what may be in it. Only *named* blocks
+ * are what this list is about.
+ *
+ * @param array $blocks Parsed blocks.
+ * @return array Blocks, filtered to the allowed set at every depth.
+ */
+function filter_to_description_blocks( array $blocks ): array {
+	$kept = array();
+
+	foreach ( $blocks as $block ) {
+		$name = $block['blockName'] ?? null;
+
+		if ( null === $name ) {
+			if ( '' !== trim( (string) ( $block['innerHTML'] ?? '' ) ) ) {
+				$kept[] = $block;
+			}
+
+			continue;
+		}
+
+		if ( ! in_array( $name, DESCRIPTION_BLOCK_NAMES, true ) ) {
+			continue;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			$block = filter_inner_blocks( $block );
+		}
+
+		$kept[] = $block;
+	}
+
+	return $kept;
+}
+
+/**
+ * Filter a container's inner blocks, keeping `innerContent` in step.
+ *
+ * `serialize_block()` walks `innerContent` and, for each `null` chunk, consumes
+ * the next entry of `innerBlocks` -- the nulls are the placeholders saying
+ * where an inner block sat among the literal markup. Dropping an inner block
+ * without dropping its null leaves core indexing past the end of the array: a
+ * fistful of PHP warnings and a truncated serialization.
+ *
+ * Hence one pass over both, by position, rather than filtering the blocks and
+ * then trying to reconcile the two lists afterwards -- which cannot be done
+ * reliably, since two sibling blocks of the same name are indistinguishable
+ * once one of them is gone.
+ *
+ * @param array $block Parsed block with inner blocks.
+ * @return array The block, filtered, with both lists still agreeing.
+ */
+function filter_inner_blocks( array $block ): array {
+	$inner   = array();
+	$content = array();
+	$index   = 0;
+
+	foreach ( (array) ( $block['innerContent'] ?? array() ) as $chunk ) {
+		if ( is_string( $chunk ) ) {
+			$content[] = $chunk;
+
+			continue;
+		}
+
+		$child = $block['innerBlocks'][ $index++ ] ?? null;
+
+		if ( null === $child ) {
+			continue;
+		}
+
+		// One block at a time, so the keep/drop decision and the placeholder
+		// it belongs to cannot drift apart.
+		$filtered = filter_to_description_blocks( array( $child ) );
+
+		if ( $filtered ) {
+			$inner[]   = $filtered[0];
+			$content[] = null;
+		}
+	}
+
+	$block['innerBlocks']  = $inner;
+	$block['innerContent'] = $content;
+
+	return $block;
+}
+
+/**
  * Pull the description blocks (only) out of an existing event's post_content.
  *
  * Used by the REST `event-form-data` endpoint when loading an event for
@@ -163,15 +260,17 @@ function extract_description_blocks( int $event_id ): string {
 		return '';
 	}
 
-	$blocks = parse_blocks( $content );
-	$kept   = array_filter(
-		$blocks,
+	$blocks = array_filter(
+		filter_to_description_blocks( parse_blocks( $content ) ),
 		static function ( $block ) {
-			return in_array( $block['blockName'], DESCRIPTION_BLOCK_NAMES, true );
+			// Freeform HTML survives the filter above (see its docblock) but
+			// must not reach the editor, which would show its "Keep as HTML"
+			// recovery UI for markup it has no block to render.
+			return null !== ( $block['blockName'] ?? null );
 		}
 	);
 
-	return serialize_blocks( array_values( $kept ) );
+	return serialize_blocks( array_values( $blocks ) );
 }
 
 /**

@@ -676,6 +676,36 @@ body.error404 .site-content-container h1 {
 
 
 /*
+ * Cancelled-occurrence badge (#2023).
+ *
+ * A recurring series lists each of its dates as its own card, so a cancelled
+ * date needs saying on the card rather than on the event. Red rather than the
+ * format badges' neutral palette: this is the one thing on the card a member
+ * has to notice before they turn up.
+ */
+
+.groups-site-event-cancelled {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.groups-site-event-cancelled__badge {
+	display: inline-block;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 2px 8px;
+	border-radius: 2px;
+	line-height: 1.4;
+	background-color: #fcf0f1;
+	color: #8a2424;
+	border: 1px solid #d63638;
+}
+
+
+/*
  * Past events (the `?event_time=past` view - class set in `functions.php`)
  * drop the blue "coming up" date treatment and mute their photography a
  * touch. Same grid, but the page no longer dresses history as future.

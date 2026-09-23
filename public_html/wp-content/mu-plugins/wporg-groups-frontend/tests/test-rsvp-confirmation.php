@@ -89,13 +89,20 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 	}
 
 	/**
-	 * A group member who can RSVP.
+	 * A group member who can RSVP, acting as themselves.
+	 *
+	 * The current user matters, not just the `$user_id` passed to
+	 * `Rsvp::save()`: the confirmation goes out only when the person acting is
+	 * the one whose RSVP it is, because it confirms an action they took
+	 * themselves. Every test below is that case; the one that is not sets its
+	 * own actor.
 	 *
 	 * @return int
 	 */
 	private function create_member(): int {
 		$user_id = self::factory()->user->create();
 		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
 
 		return $user_id;
 	}
@@ -296,6 +303,48 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 
 		$this->assertCount( 1, $this->sent_mail, 'The confirmation itself should still go out.' );
 		$this->assertStringNotContainsString( 'Add to calendar:', $this->sent_mail[0]['message'] );
+	}
+
+	/**
+	 * An organizer moving someone else's RSVP does not mail that member.
+	 *
+	 * The regression test for the mail loop: GatherPress's own RSVP route
+	 * takes a `user_id`, which anyone holding `edit_post` on the event may
+	 * pass, and the unchanged-status guard does not help -- walking the RSVP
+	 * between attending and not attending is a real change each way. Without
+	 * the actor check an organizer could mail a member once per step, for as
+	 * long as they cared to keep going.
+	 */
+	public function test_does_not_confirm_when_someone_else_moves_the_rsvp() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		$organizer_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		add_user_to_blog( get_current_blog_id(), $organizer_id, 'editor' );
+		wp_set_current_user( $organizer_id );
+
+		$rsvp = new Rsvp( $event_id );
+		$rsvp->save( $user_id, 'attending' );
+		$rsvp->save( $user_id, 'not_attending' );
+		$rsvp->save( $user_id, 'attending' );
+
+		$this->assertCount( 0, $this->sent_mail, 'Only the member themselves earns a confirmation.' );
+	}
+
+	/**
+	 * The organizer's own RSVP still confirms: the check is "who acted",
+	 * not "is this person an organizer".
+	 */
+	public function test_confirms_an_organizers_own_rsvp() {
+		$event_id = $this->create_dated_event();
+
+		$organizer_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		add_user_to_blog( get_current_blog_id(), $organizer_id, 'editor' );
+		wp_set_current_user( $organizer_id );
+
+		( new Rsvp( $event_id ) )->save( $organizer_id, 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail );
 	}
 
 	/**

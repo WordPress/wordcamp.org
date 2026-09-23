@@ -13,13 +13,13 @@ import { TextControl, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 const DURATION_OPTIONS = [
-	{ label: __( '30 minutes', 'wporg-groups-frontend' ), value: '30' },
-	{ label: __( '1 hour', 'wporg-groups-frontend' ), value: '60' },
-	{ label: __( '1.5 hours', 'wporg-groups-frontend' ), value: '90' },
-	{ label: __( '2 hours', 'wporg-groups-frontend' ), value: '120' },
-	{ label: __( '2.5 hours', 'wporg-groups-frontend' ), value: '150' },
-	{ label: __( '3 hours', 'wporg-groups-frontend' ), value: '180' },
-	{ label: __( 'Custom', 'wporg-groups-frontend' ), value: 'custom' },
+	{ label: __( '30 minutes', 'wordcamporg' ), value: '30' },
+	{ label: __( '1 hour', 'wordcamporg' ), value: '60' },
+	{ label: __( '1.5 hours', 'wordcamporg' ), value: '90' },
+	{ label: __( '2 hours', 'wordcamporg' ), value: '120' },
+	{ label: __( '2.5 hours', 'wordcamporg' ), value: '150' },
+	{ label: __( '3 hours', 'wordcamporg' ), value: '180' },
+	{ label: __( 'Custom', 'wordcamporg' ), value: 'custom' },
 ];
 
 function addMinutesToTime( time, minutes ) {
@@ -55,9 +55,9 @@ export default function DurationField( { timeStart, timeEnd, onChange, classPref
 
 	return h( 'div', { className: `${ classPrefix }__field` },
 		h( SelectControl, {
-			label: __( 'Duration', 'wporg-groups-frontend' ),
+			label: __( 'Duration', 'wordcamporg' ),
 			value: selectedValue,
-			options: [ { label: __( '— Select —', 'wporg-groups-frontend' ), value: '' } ].concat( DURATION_OPTIONS ),
+			options: [ { label: __( '— Select —', 'wordcamporg' ), value: '' } ].concat( DURATION_OPTIONS ),
 			onChange: ( v ) => {
 				if ( v === 'custom' ) {
 					setIsCustom( true );
@@ -69,7 +69,7 @@ export default function DurationField( { timeStart, timeEnd, onChange, classPref
 			__nextHasNoMarginBottom: true,
 		} ),
 		isCustom && h( TextControl, {
-			label: __( 'End time', 'wporg-groups-frontend' ),
+			label: __( 'End time', 'wordcamporg' ),
 			type: 'time',
 			value: timeEnd,
 			onChange: onChange,

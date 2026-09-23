@@ -202,7 +202,7 @@ function send_email( array $recipient, int $event_id ): void {
 	$lines = array(
 		sprintf(
 			/* translators: %s: event title. */
-			__( 'You\'re on the list for "%s".', 'wporg-groups-frontend' ),
+			__( 'You\'re on the list for "%s".', 'wordcamporg' ),
 			$title
 		),
 		'',
@@ -213,7 +213,7 @@ function send_email( array $recipient, int $event_id ): void {
 	if ( $when && Event::DATETIME_PLACEHOLDER !== $when ) {
 		$lines[] = sprintf(
 			/* translators: %s: event date and time. */
-			__( 'When: %s', 'wporg-groups-frontend' ),
+			__( 'When: %s', 'wordcamporg' ),
 			$when
 		);
 	}
@@ -221,29 +221,29 @@ function send_email( array $recipient, int $event_id ): void {
 	if ( $venue ) {
 		$lines[] = sprintf(
 			/* translators: %s: venue name. */
-			__( 'Where: %s', 'wporg-groups-frontend' ),
+			__( 'Where: %s', 'wordcamporg' ),
 			$venue
 		);
 	}
 
 	$lines[] = sprintf(
 		/* translators: %s: group name. */
-		__( 'Group: %s', 'wporg-groups-frontend' ),
+		__( 'Group: %s', 'wordcamporg' ),
 		$group_name
 	);
 
 	if ( $permalink ) {
 		$lines[] = '';
-		$lines[] = __( 'Event page:', 'wporg-groups-frontend' );
+		$lines[] = __( 'Event page:', 'wordcamporg' );
 		$lines[] = $permalink;
 	}
 
 	$lines[] = '';
-	$lines[] = __( 'If your plans change, you can cancel your RSVP on the event page.', 'wporg-groups-frontend' );
+	$lines[] = __( 'If your plans change, you can cancel your RSVP on the event page.', 'wordcamporg' );
 
 	$subject = sprintf(
 		/* translators: %s: event title. */
-		__( 'You\'re going to "%s"', 'wporg-groups-frontend' ),
+		__( 'You\'re going to "%s"', 'wordcamporg' ),
 		$title
 	);
 

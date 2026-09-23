@@ -102,11 +102,12 @@ uncomment what you need:
 cp .env.example .env
 ```
 
-### Changing the HTTPS port
+### Changing the ports
 
-Set `WORDCAMP_HTTPS_PORT` and restart:
+Set both ports and restart:
 
 ```
+WORDCAMP_HTTP_PORT=8080
 WORDCAMP_HTTPS_PORT=8443
 ```
 
@@ -114,7 +115,12 @@ WORDCAMP_HTTPS_PORT=8443
 docker compose up -d
 ```
 
-Every site is then reachable with the port in the URL —
+**Set both, even though you only care about HTTPS.** The containers bind port 80
+whether or not you use it, so if the other environment already holds 80,
+`docker compose up` fails outright with `Bind for 0.0.0.0:80 failed: port is
+already allocated` — moving HTTPS alone isn't enough to get the stack started.
+
+Every site is then reachable with the HTTPS port in the URL —
 `https://central.wordcamp.test:8443/`,
 `https://events.wordpress.test:8443/group/sunshine-coast-qld/` — with no
 database changes and nothing to re-run. The hosts-file entries are unchanged.
@@ -125,15 +131,16 @@ in the codebase (the network `switch`, the `sunrise*.php` regexes, and
 WordPress's own lookups against the portless `domain` columns in `wp_blogs` and
 `wp_site`) behaves exactly as it does on 443. The `0-local-https-port` mu-plugin
 then puts the port back onto `siteurl`/`home` — which is what `admin_url()`,
-`rest_url()`, `content_url()` and the canonical redirects are all built from —
-and the redirects that `sunrise*.php` builds by hand get it via
-`WordCamp\Sunrise\get_url_port()`. The database stays canonical and portless
-throughout, so the port is purely a presentation concern.
+`rest_url()` and the canonical redirects are all built from — and the redirects
+that `sunrise*.php` builds by hand get it via `WordCamp\Sunrise\get_url_port()`.
+The database stays canonical and portless throughout, so the port is purely a
+presentation concern.
 
-**Plain HTTP doesn't survive a non-default HTTPS port.** nginx's HTTP→HTTPS
-redirect is `return 301 https://$host$request_uri`, and nginx has no way to know
-which host port Docker mapped 443 to, so it drops you on 443. Just use `https://`
-directly. For the same reason `WORDCAMP_HTTP_PORT` is not worth changing.
+**Use `https://` directly; plain HTTP won't get you there.** nginx's
+HTTP→HTTPS redirect is `return 301 https://$host$request_uri`, and nginx has no
+way to know which host port Docker mapped 443 to, so it sends you to 443.
+`WORDCAMP_HTTP_PORT` exists to free up port 80, not to give you a working
+`http://` entry point.
 
 ### Restricting which address the stack binds
 

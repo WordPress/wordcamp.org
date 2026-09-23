@@ -17,8 +17,12 @@
  * It keeps the stored URLs canonical and portless (so the seeded
  * `wordcamp_dev.sql` stays valid, and nothing has to be re-run when the port
  * changes), and those two options are what `admin_url()`, `rest_url()`,
- * `content_url()`, `includes_url()`, `plugins_url()` and the canonical redirects
- * are all built from -- so they inherit the port for free.
+ * `includes_url()` and the canonical redirects are all built from -- so they
+ * inherit the port for free.
+ *
+ * `content_url()` and `plugins_url()` are NOT in that list: locally they come
+ * from the `WP_CONTENT_URL` constant, which `.docker/wp-config.php` builds with
+ * the port already in it.
  *
  * @package WordCamp
  */
@@ -26,6 +30,65 @@
 namespace WordCamp\Local_HTTPS_Port;
 
 defined( 'WPINC' ) || die();
+
+/**
+ * Insert the local HTTPS port into a URL's host, if it isn't already there.
+ *
+ * @param mixed $url The URL to rewrite. Non-strings are returned untouched --
+ *                   `option_siteurl` fires for every `get_option()` call on
+ *                   that key, including ones that return `false` because the
+ *                   option isn't set.
+ *
+ * @return mixed
+ */
+function add_port( $url ) {
+	if ( ! is_string( $url ) || '' === $url ) {
+		return $url;
+	}
+
+	$host = wp_parse_url( $url, PHP_URL_HOST );
+
+	// Already carries a port, or isn't a URL with a host to rewrite.
+	if ( ! $host || wp_parse_url( $url, PHP_URL_PORT ) ) {
+		return $url;
+	}
+
+	// Anchored on `://` so a host that also appears in the path or query
+	// string isn't rewritten too.
+	return preg_replace(
+		'~^(\w+://)' . preg_quote( $host, '~' ) . '~',
+		'$1' . $host . WORDCAMP_LOCAL_URL_PORT,
+		$url,
+		1
+	);
+}
+
+/**
+ * Send WP-Cron's loopback request to the port nginx actually listens on.
+ *
+ * `spawn_cron()` builds its URL from `site_url()`, which now carries the host
+ * port -- but that port only exists on the *host* side of Docker's mapping.
+ * Inside the container nginx is still on 443, so a request to `:8443` is
+ * refused and cron silently never runs (verified: due events stay pending).
+ *
+ * @param array $cron_request The arguments `spawn_cron()` is about to use.
+ *
+ * @return array
+ */
+function use_container_port_for_cron( array $cron_request ): array {
+	if ( ! isset( $cron_request['url'] ) || ! is_string( $cron_request['url'] ) ) {
+		return $cron_request;
+	}
+
+	$cron_request['url'] = preg_replace(
+		'~^(https?://[^/:]+)' . preg_quote( WORDCAMP_LOCAL_URL_PORT, '~' ) . '~',
+		'$1',
+		$cron_request['url'],
+		1
+	);
+
+	return $cron_request;
+}
 
 /*
  * Inert unless this is the local Docker environment running on a non-standard
@@ -59,35 +122,4 @@ add_filter( 'option_siteurl', __NAMESPACE__ . '\add_port' );
 add_filter( 'option_home', __NAMESPACE__ . '\add_port' );
 add_filter( 'network_site_url', __NAMESPACE__ . '\add_port' );
 add_filter( 'network_home_url', __NAMESPACE__ . '\add_port' );
-
-/**
- * Insert the local HTTPS port into a URL's host, if it isn't already there.
- *
- * @param mixed $url The URL to rewrite. Non-strings are returned untouched --
- *                   `option_siteurl` fires for every `get_option()` call on
- *                   that key, including ones that return `false` because the
- *                   option isn't set.
- *
- * @return mixed
- */
-function add_port( $url ) {
-	if ( ! is_string( $url ) || '' === $url ) {
-		return $url;
-	}
-
-	$host = wp_parse_url( $url, PHP_URL_HOST );
-
-	// Already carries a port, or isn't a URL with a host to rewrite.
-	if ( ! $host || wp_parse_url( $url, PHP_URL_PORT ) ) {
-		return $url;
-	}
-
-	// Anchored on `://` so a host that also appears in the path or query
-	// string isn't rewritten too.
-	return preg_replace(
-		'~^(\w+://)' . preg_quote( $host, '~' ) . '~',
-		'$1' . $host . WORDCAMP_LOCAL_URL_PORT,
-		$url,
-		1
-	);
-}
+add_filter( 'cron_request', __NAMESPACE__ . '\use_container_port_for_cron' );

@@ -57,6 +57,16 @@ function enqueue_assets() {
 			true
 		);
 	}
+
+	if ( is_singular( 'gatherpress_event' ) ) {
+		wp_enqueue_script(
+			'groups-site-online-event-link',
+			get_theme_file_uri( 'assets/js/online-event-link.js' ),
+			array(),
+			filemtime( get_theme_file_path( 'assets/js/online-event-link.js' ) ),
+			true
+		);
+	}
 }
 
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
@@ -551,6 +561,13 @@ function compact_comment_reply_link_args( $args ) {
 add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );
 
 /**
+ * Block attribute carrying the online-event label for the state a render is
+ * *not* in — see `label_the_online_event_link()`. Deliberately not registered
+ * with the block, so it never reaches GatherPress's own render.
+ */
+const ONLINE_EVENT_LINK_TEXT_ATTR = 'groupsSiteDescriptionLinkText';
+
+/**
  * Say "Join event" once the online-event link is one.
  *
  * GatherPress renders the online-event label in a `<span>` until the viewer
@@ -563,11 +580,9 @@ add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_l
  * (#2057).
  *
  * Chosen here rather than in the template because the template holds one
- * string and the right one depends on the viewer. Server-side is enough:
- * GatherPress swaps the span for a link client-side off its own
- * interactivity store, which the theme's `wporg/event-rsvp` block doesn't
- * feed, so on these sites the element is only ever decided on a page load —
- * the same request that picks these words.
+ * string and the right one depends on the viewer. This settles the page load;
+ * an RSVP made in place is `assets/js/online-event-link.js`, which needs both
+ * strings and gets them from `label_the_online_event_link()`.
  *
  * @param array          $parsed_block The block about to render.
  * @param array          $source_block The block as it was parsed.
@@ -611,11 +626,55 @@ function name_the_online_event_link_action( $parsed_block, $source_block, $paren
 		return $parsed_block;
 	}
 
+	// Kept so `label_the_online_event_link()` can hand the browser the words
+	// for the state this render isn't in.
+	$parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] = (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
 	$parsed_block['attrs']['linkText'] = __( 'Join event', 'groups-site' );
 
 	return $parsed_block;
 }
 add_filter( 'render_block_data', __NAMESPACE__ . '\name_the_online_event_link_action', 10, 3 );
+
+/**
+ * Put both online-event labels on the rendered element.
+ *
+ * `name_the_online_event_link_action()` picks the right words for the viewer
+ * this page load has. An RSVP made without a reload moves the viewer to the
+ * other state, and `assets/js/online-event-link.js` rewrites the element in
+ * place — so it needs the words for both states, not just the rendered one
+ * (#2094). They ride on the element because that is where the script finds
+ * them, and because the "attendees only" wording lives in
+ * `templates/single-event.html` rather than in this file.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The block that produced it.
+ *
+ * @return string The block, with its two labels attached.
+ */
+function label_the_online_event_link( $block_content, $parsed_block ) {
+	if ( '' === trim( (string) $block_content ) ) {
+		return $block_content;
+	}
+
+	$linking     = isset( $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] );
+	$join        = $linking ? (string) ( $parsed_block['attrs']['linkText'] ?? '' ) : __( 'Join event', 'groups-site' );
+	$description = $linking
+		? (string) $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ]
+		: (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
+	$tags = new \WP_HTML_Tag_Processor( $block_content );
+
+	if ( ! $tags->next_tag() ) {
+		return $block_content;
+	}
+
+	$tags->set_attribute( 'data-groups-site-join-label', $join );
+	$tags->set_attribute( 'data-groups-site-description-label', $description );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
 
 /**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.

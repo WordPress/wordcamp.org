@@ -574,9 +574,13 @@ function save_rsvp( WP_REST_Request $request ) {
 
 	return new WP_REST_Response(
 		array(
-			'success'   => true,
-			'status'    => $record['status'] ?? 'no_status',
-			'responses' => $event->rsvp->responses(),
+			'success'           => true,
+			'status'            => $record['status'] ?? 'no_status',
+			'responses'         => $event->rsvp->responses(),
+			// Empty for everyone the link isn't for, on exactly the terms the
+			// online-event block renders it with. Sent so an RSVP made without
+			// a reload can reveal or withdraw the meeting link in place (#2094).
+			'online_event_link' => $event->maybe_get_online_event_link(),
 		)
 	);
 }

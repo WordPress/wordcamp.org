@@ -53,6 +53,75 @@ describe( 'DescriptionEditor history manager', () => {
 		expect( cloned[ 0 ].clientId ).toBe( original[ 0 ].clientId );
 	} );
 
+	/*
+	 * The regression test for #2018. Since WordPress 6.5 the `content`
+	 * attribute of every rich-text block is a `RichTextData`, which keeps
+	 * its value in a private field - so `Object.keys()` on one is `[]` and
+	 * a key-by-key clone produced `{}`. Undo rendered the block empty, and
+	 * because `@wordpress/blocks` swallows the `toHTMLString` throw and
+	 * falls back to `originalContent ?? ''`, that blank is what got saved.
+	 *
+	 * Stood in for here rather than imported: `@wordpress/rich-text` is a
+	 * `wp.*` external at build time and is not installed for the test run.
+	 * What the test needs is the shape that broke the clone - a class
+	 * holding its value where `Object.keys()` cannot see it - and this is
+	 * that shape.
+	 */
+	class FakeRichTextData {
+		#value;
+
+		constructor( value ) {
+			this.#value = value;
+		}
+
+		toHTMLString() {
+			return this.#value;
+		}
+	}
+
+	test( 'cloneBlocks keeps rich-text attribute instances intact', () => {
+		const content = new FakeRichTextData( 'typed <em>rich</em>' );
+		const original = [ { ...makeBlock( content ), originalContent: '' } ];
+
+		const cloned = cloneBlocks( original );
+
+		// By reference, not a copy: a copy is what lost the private field.
+		expect( cloned[ 0 ].attributes.content ).toBe( content );
+		expect( cloned[ 0 ].attributes.content.toHTMLString() ).toBe( 'typed <em>rich</em>' );
+	} );
+
+	test( 'undo and redo round-trip rich-text content without blanking it', () => {
+		// Serialising the way the editor really does, so a clone that lost
+		// its private field serialises to the empty fallback and fails here.
+		const serializeHtml = ( blocks ) =>
+			blocks
+				.map( ( block ) => {
+					const { content } = block.attributes;
+
+					try {
+						return content.toHTMLString();
+					} catch ( e ) {
+						return block.originalContent ?? '';
+					}
+				} )
+				.join( '' );
+
+		const first = [ { ...makeBlock( new FakeRichTextData( 'Hello' ) ), originalContent: '' } ];
+		const second = [ { ...makeBlock( new FakeRichTextData( 'Hello world' ) ), originalContent: '' } ];
+
+		const history = createHistoryManager( first );
+		recordChange( history, second, serializeHtml );
+
+		const undone = stepUndo( history, serializeHtml );
+		expect( serializeHtml( undone ) ).toBe( 'Hello' );
+
+		const redone = stepRedo( history );
+		expect( serializeHtml( redone ) ).toBe( 'Hello world' );
+
+		// What `getValueRef` would hand the submit handler.
+		expect( serializeHtml( history.present ) ).toBe( 'Hello world' );
+	} );
+
 	test( 'recordInput updates present without modifying past', () => {
 		const initial = [ makeBlock( 'Hello' ) ];
 		const history = createHistoryManager( initial );

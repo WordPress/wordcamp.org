@@ -12,6 +12,7 @@ require_once __DIR__ . '/class-groups-testcase.php';
 class Test_Groups_Blocks extends Groups_TestCase {
 
 	const EXPECTED_BLOCKS = array(
+		'wporg/event-language',
 		'wporg/event-manage',
 		'wporg/event-rsvp',
 		'wporg/event-speakers',
@@ -26,7 +27,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 11 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 12 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -708,6 +709,151 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		// header's anchor still has somewhere to land.
 		$this->assertStringContainsString( 'id="my-events"', $output );
 		$this->assertStringNotContainsString( 'My upcoming events', $output );
+	}
+
+	/**
+	 * A long-standing member's upcoming event is still listed (#2056).
+	 *
+	 * The candidate query was capped at 100 comments, and `get_comments()`
+	 * orders by date descending -- so the cap fell on the member's *oldest*
+	 * RSVPs, which is exactly where an RSVP made early to an event still to
+	 * come lives. The block exists so a member can confirm their event is
+	 * listed, and this was the case where it silently was not.
+	 */
+	public function test_my_events_block_lists_an_early_rsvp_past_the_old_cap() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$upcoming_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'The event booked long ago',
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $upcoming_id ) )->save_datetimes(
+			array(
+				'post_id'        => $upcoming_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+30 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+30 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		// The RSVP that has to survive: made first, so it is the oldest.
+		( new \GatherPress\Core\Rsvp\Rsvp( $upcoming_id ) )->save( $member_id, 'attending' );
+
+		// Then more than the old cap's worth of newer ones, to push it out.
+		for ( $i = 0; $i < 105; $i++ ) {
+			$past_id = self::factory()->post->create(
+				array(
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'publish',
+					'post_author' => self::factory()->user->create(),
+				)
+			);
+
+			( new \GatherPress\Core\Event\Event( $past_id ) )->save_datetimes(
+				array(
+					'post_id'        => $past_id,
+					'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+					'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+					'timezone'       => 'UTC',
+				)
+			);
+
+			( new \GatherPress\Core\Rsvp\Rsvp( $past_id ) )->save( $member_id, 'attending' );
+		}
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString( 'My upcoming events', $output );
+		$this->assertStringContainsString( 'The event booked long ago', $output );
+	}
+
+	/**
+	 * The block writes its dates the way the group chose, and names the zone.
+	 *
+	 * The event page, the event cards and the event emails all honour the
+	 * group's date and time format (#2033) and show the timezone (#2021). This
+	 * block hard-coded `M j, Y · g:i A` and showed no zone, so it was the one
+	 * surface that disagreed with the rest of the site -- and a member reading
+	 * a list that can mix events in different zones had no way to tell which
+	 * was which.
+	 */
+	public function test_my_events_block_uses_the_groups_date_format_and_names_the_zone() {
+		update_option( \WordCamp\Groups\Frontend\Event_Date_Format\DATE_OPTION, 'Y-m-d' );
+		update_option( \WordCamp\Groups\Frontend\Event_Date_Format\TIME_OPTION, 'H:i' );
+
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup in Brisbane',
+				'post_author' => $member_id,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				// Wall-clock time in Brisbane, which is UTC+10 year round.
+				'datetime_start' => gmdate( 'Y-m-d', strtotime( '+7 days' ) ) . ' 18:30:00',
+				'datetime_end'   => gmdate( 'Y-m-d', strtotime( '+7 days' ) ) . ' 20:30:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString(
+			gmdate( 'Y-m-d', strtotime( '+7 days' ) ) . ' · 18:30 AEST',
+			$output,
+			"The card should read the group's format, in the event's own zone."
+		);
+		$this->assertStringNotContainsString( '6:30 PM', $output, 'The hard-coded format should be gone.' );
+
+		delete_option( \WordCamp\Groups\Frontend\Event_Date_Format\DATE_OPTION );
+		delete_option( \WordCamp\Groups\Frontend\Event_Date_Format\TIME_OPTION );
+	}
+
+	/**
+	 * A group that has chosen no format keeps the card's own wording, still
+	 * with the zone named.
+	 */
+	public function test_my_events_block_falls_back_to_its_own_format() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'A meetup with no chosen format',
+				'post_author' => $member_id,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d', strtotime( '+7 days' ) ) . ' 18:30:00',
+				'datetime_end'   => gmdate( 'Y-m-d', strtotime( '+7 days' ) ) . ' 20:30:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/my-events /-->' );
+
+		$this->assertStringContainsString(
+			gmdate( 'M j, Y', strtotime( '+7 days' ) ) . ' · 6:30 PM AEST',
+			$output
+		);
 	}
 
 	/**

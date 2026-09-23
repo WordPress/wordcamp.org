@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
@@ -14,13 +15,14 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
-	 * Groups-network sites should never show a timezone suffix or offer
-	 * anonymous RSVP, regardless of GatherPress's own defaults.
+	 * Groups-network sites always show the event timezone and never offer
+	 * anonymous RSVP, regardless of GatherPress's own defaults or of what an
+	 * organizer saved on the settings screen.
 	 */
 	public function test_gatherpress_settings_overridden() {
 		$settings = get_option( 'gatherpress_settings' );
 
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
@@ -36,7 +38,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			array(
 				'max_guest_limit'  => 5,
 				'enable_open_rsvp' => 1,
-				'show_timezone'    => 1,
+				'show_timezone'    => 0,
 			)
 		);
 
@@ -46,7 +48,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 5, $settings['max_guest_limit'] );
 
 		// Forced keys win regardless of what was stored.
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
 
@@ -215,6 +217,147 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * An event with an RSVP and nothing else.
+	 *
+	 * @return array{event_id: int, user_id: int}
+	 */
+	private function create_event_with_rsvp(): array {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		return array(
+			'event_id' => $event_id,
+			'user_id'  => $user_id,
+		);
+	}
+
+	/**
+	 * The #2020 symptom itself: a real comment query on a site whose only
+	 * comments are RSVPs must come back empty.
+	 *
+	 * This is the state the bug needed. GatherPress builds its exclusion by
+	 * listing the comment types that *do* exist and subtracting RSVPs -- on a
+	 * site with no ordinary comments that list is empty, and
+	 * `WP_Comment_Query` reads an empty type filter as "no type filter", so
+	 * every RSVP surfaced in the Discussion section. Asserting on the query
+	 * vars alone would not have caught it; the query has to actually run.
+	 */
+	public function test_rsvps_do_not_leak_into_a_general_comment_query() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$this->assertSame(
+			array(),
+			get_comments( array( 'post_id' => $fixture['event_id'] ) ),
+			'A general comment query on an RSVP-only site must return nothing.'
+		);
+
+		// The same query the Discussion section runs, unscoped by post. Not
+		// asserted empty -- the fixture install seeds an ordinary comment, and
+		// keeping that one is the point. Asserted free of RSVPs.
+		$this->assertNotContains(
+			'gatherpress_rsvp',
+			wp_list_pluck( get_comments( array( 'status' => 'approve' ) ), 'comment_type' )
+		);
+	}
+
+	/**
+	 * Asking for RSVPs explicitly still gets them: the exclusion is for
+	 * queries that did not ask, and GatherPress's own reads must keep working.
+	 */
+	public function test_an_explicit_rsvp_query_still_returns_rsvps() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$by_type = get_comments(
+			array(
+				'post_id' => $fixture['event_id'],
+				'type'    => 'gatherpress_rsvp',
+				'status'  => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type );
+
+		$by_type_in = get_comments(
+			array(
+				'post_id'  => $fixture['event_id'],
+				'type__in' => array( 'gatherpress_rsvp' ),
+				'status'   => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type_in );
+
+		// And through GatherPress's own reader, which is what the attendee
+		// list and the RSVP counts render from.
+		$this->assertSame(
+			1,
+			(int) ( ( new \GatherPress\Core\Rsvp\Rsvp( $fixture['event_id'] ) )->responses()['attending']['count'] ?? 0 )
+		);
+	}
+
+	/**
+	 * An ordinary comment alongside the RSVPs still comes back.
+	 *
+	 * The exclusion has to subtract RSVPs, not everything: a group site with a
+	 * real discussion must keep it.
+	 */
+	public function test_ordinary_comments_survive_the_exclusion() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $fixture['event_id'],
+				'comment_approved' => '1',
+			)
+		);
+
+		$comments = get_comments( array( 'post_id' => $fixture['event_id'] ) );
+
+		$this->assertCount( 1, $comments );
+		$this->assertSame( $comment_id, (int) $comments[0]->comment_ID );
+	}
+
+	/**
+	 * The exclusion hook runs after the capture hook, and both stay attached.
+	 *
+	 * The ordering is the whole mechanism: `capture_explicit_rsvp_query()` has
+	 * to mark an explicit request before `exclude_rsvps_from_general_comment_queries()`
+	 * decides whether to subtract. Pinned here because nothing else would
+	 * notice a priority drifting, and the symptom would be silent.
+	 */
+	public function test_the_rsvp_exclusion_hooks_are_wired_in_order() {
+		$this->assertSame(
+			5,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query' )
+		);
+		$this->assertSame(
+			20,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries' )
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'gatherpress_rsvp_comment_query_exclusion', 'WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries' )
+		);
+	}
+
+	/**
 	 * Read the archive's Format filter options as the query-filter block would.
 	 *
 	 * @param string|null $event_format The `event_format` query arg to simulate.
@@ -258,13 +401,20 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	/**
 	 * Build the tax query the archive's Query Loop would run.
 	 *
-	 * @param string|null $event_format The `event_format` query arg to simulate.
+	 * @param string|null $event_format   The `event_format` query arg to simulate.
+	 * @param string|null $event_language The `event_language` query arg to simulate.
 	 */
-	private function get_archive_query_vars( ?string $event_format ): array {
+	private function get_archive_query_vars( ?string $event_format, ?string $event_language = null ): array {
 		if ( null === $event_format ) {
 			unset( $_GET['event_format'] );
 		} else {
 			$_GET['event_format'] = $event_format;
+		}
+
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
 		}
 
 		$block = new \WP_Block(
@@ -288,7 +438,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$block
 		);
 
-		unset( $_GET['event_format'] );
+		unset( $_GET['event_format'], $_GET['event_language'] );
 
 		return $query_vars;
 	}
@@ -433,6 +583,208 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		do_action( 'wporg_query_filter_in_form', 'event_time' );
 
 		$this->assertSame( '', ob_get_clean() );
+	}
+
+	/**
+	 * Create a published event in a language, optionally marked online.
+	 *
+	 * @param string $title     Event title.
+	 * @param string $language  Language subtag, or '' to leave it unset.
+	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_language_event( string $title, string $language, bool $is_online = false ): int {
+		$event_id = $this->make_format_event( $title, $is_online );
+
+		if ( '' !== $language ) {
+			set_event_language( $event_id, $language );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * Read the language filter's registered options.
+	 *
+	 * @param string|null $event_language The `event_language` query arg to simulate.
+	 */
+	private function get_event_language_filter( ?string $event_language ): array {
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_language', array() );
+
+		unset( $_GET['event_language'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The control offers the languages this group actually runs events in,
+	 * not the 593 CLDR knows about.
+	 */
+	public function test_event_language_filter_offers_only_languages_in_use() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$options = $this->get_event_language_filter( null )['options'];
+
+		$this->assertSame( array( 'all', 'en', 'es' ), array_keys( $options ) );
+		$this->assertSame( 'English', $options['en'] );
+		$this->assertSame( 'Spanish', $options['es'] );
+	}
+
+	/**
+	 * A group that runs everything in one language gets no control at all:
+	 * "All" and that language would select the same events.
+	 */
+	public function test_event_language_filter_is_hidden_without_a_choice() {
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Otra charla', 'es' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+	}
+
+	/**
+	 * The toggle names the applied view, the way Time and Format do.
+	 */
+	public function test_event_language_filter_names_every_view() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$this->assertSame( 'Language: All', $this->get_event_language_filter( null )['label'] );
+		$this->assertSame( 'Language: Spanish', $this->get_event_language_filter( 'es' )['label'] );
+	}
+
+	/**
+	 * A language the group does not run events in widens the archive rather
+	 * than emptying it.
+	 */
+	public function test_event_language_filter_ignores_an_unknown_value() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$filter = $this->get_event_language_filter( 'ja' );
+
+		$this->assertSame( 'Language: All', $filter['label'] );
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * Picking a language narrows the archive to the events run in it.
+	 */
+	public function test_event_language_filter_narrows_to_one_language() {
+		$spanish = $this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array( $spanish ), $this->get_archive_query_vars( null, 'es' )['post__in'] );
+	}
+
+	/**
+	 * Language and format have to narrow each other. WP_Query treats
+	 * `post__in` and `post__not_in` as an if/elseif, so the in-person filter's
+	 * `post__not_in` would be dropped without a word if both were left to set
+	 * their own query var.
+	 */
+	public function test_event_language_and_format_filters_narrow_together() {
+		$spanish_online    = $this->make_language_event( 'Charla en linea', 'es', true );
+		$spanish_in_person = $this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$online = $this->get_archive_query_vars( 'online', 'es' );
+		$this->assertSame( array( $spanish_online ), $online['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $online );
+
+		$in_person = $this->get_archive_query_vars( 'in-person', 'es' );
+		$this->assertSame( array( $spanish_in_person ), $in_person['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $in_person );
+	}
+
+	/**
+	 * An empty `post__in` is ignored by WP_Query, so a combination that
+	 * matches nothing has to say "no posts" explicitly rather than falling
+	 * back to the whole archive.
+	 */
+	public function test_event_language_filter_shows_nothing_when_the_combination_is_empty() {
+		$this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online', 'es' )['post__in'] );
+	}
+
+	/**
+	 * The language filter must stay off the archive's own query for the same
+	 * reason the format filter does: a join that makes WP_Query select
+	 * `DISTINCT` collapses a recurring series back into a single row.
+	 */
+	public function test_event_language_filter_keeps_a_meta_query_off_the_archive_query() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$query_vars = $this->get_archive_query_vars( null, 'es' );
+
+		$this->assertArrayNotHasKey( 'meta_query', $query_vars );
+		$this->assertArrayNotHasKey( 'meta_key', $query_vars );
+	}
+
+	/**
+	 * Each filter's form carries the applied language, so submitting one does
+	 * not reset it.
+	 */
+	public function test_filter_forms_carry_the_applied_language() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$_GET['event_language'] = 'es';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_language' );
+		$language_form = ob_get_clean();
+
+		unset( $_GET['event_language'] );
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_language"', $language_form );
+	}
+
+	/**
+	 * Searching narrows the language already in view rather than resetting it.
+	 */
+	public function test_search_form_carries_the_applied_language() {
+		global $wp_query;
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$_GET['event_language'] = 'es';
+
+		$search_form = '<form role="search" method="get" action="https://example.org"><input type="search" name="s" /></form>';
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own block filter name.
+		$output = apply_filters( 'render_block_core/search', $search_form );
+
+		unset( $_GET['event_language'] );
+		$wp_query = $original_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $output );
 	}
 
 	/**

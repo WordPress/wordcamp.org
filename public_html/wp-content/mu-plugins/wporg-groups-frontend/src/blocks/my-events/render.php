@@ -23,7 +23,10 @@
  * @package WordCamp\Groups\Frontend
  */
 
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_date_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_format;
 use function WordCamp\Groups\Frontend\My_Events\get_entry_url;
+use function WordCamp\Groups\Frontend\My_Events\get_timezone as get_event_timezone;
 use function WordCamp\Groups\Frontend\My_Events\get_past_events;
 use function WordCamp\Groups\Frontend\My_Events\get_upcoming_events;
 
@@ -126,6 +129,18 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 		'id'    => 'my-events',
 	)
 );
+
+/*
+ * The group's own choice of how its dates are written (#2033), with the
+ * template's previous literal as the fallback for a group that has not chosen.
+ * The event page, the event cards and the event emails all honour it; this
+ * block hard-coded its own format and so was the one surface that disagreed.
+ *
+ * `T` names the zone. Every date here is wall-clock time in the event's own
+ * zone (#2021), which for a member reading a list that can mix events is not
+ * necessarily theirs, so the list has to say which.
+ */
+$wporg_date_format = ( get_date_format() ?: 'M j, Y' ) . ' \· ' . ( get_time_format() ?: 'g:i A' ) . ' T';
 ?>
 <section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php foreach ( $wporg_sections as $wporg_section ) : ?>
@@ -142,8 +157,22 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 
 				if ( $wporg_start ) {
 					try {
-						$wporg_datetime   = new \DateTime( $wporg_start );
-						$wporg_date_label = $wporg_datetime->format( 'M j, Y · g:i A' );
+						/*
+						 * The event's own zone, not PHP's default and not the
+						 * reader's: the stored value is wall-clock time there,
+						 * so reading it in any other zone would move the event.
+						 * Normalized on the way in because the column can hold
+						 * a spelling `DateTimeZone` rejects -- see
+						 * `My_Events\get_timezone()`.
+						 */
+						$wporg_timezone = get_event_timezone( (string) ( $wporg_entry['timezone'] ?? '' ) );
+						$wporg_datetime = new \DateTimeImmutable( $wporg_start, $wporg_timezone );
+
+						$wporg_date_label = wp_date(
+							$wporg_date_format,
+							$wporg_datetime->getTimestamp(),
+							$wporg_timezone
+						);
 
 						/*
 						 * Local time with no offset. The stored value is

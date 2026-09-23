@@ -9,6 +9,11 @@ on:
     paths:
     - public_html/wp-content/mu-plugins/wporg-groups-frontend/**
     - public_html/wp-content/mu-plugins/groups/**
+    # The specs assert on this plugin's occurrence pages, and on class names
+    # that only the theme emits, so a change to either can break them without
+    # touching the two paths above.
+    - public_html/wp-content/mu-plugins/gatherpress-recurring-events/**
+    - public_html/wp-content/themes/groups-site/**
     - tests/e2e/**
     - playwright.config.js
     - .github/workflows/e2e-tests.yml

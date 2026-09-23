@@ -21,6 +21,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		add_action( 'save_post', array( $this, 'save_post' ) );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
 		add_action( 'template_redirect', array( $this, 'shortcode_private_template_redirect' ) );
+		add_filter( 'update_post_metadata', array( $this, 'clear_view_token_on_email_change' ), 10, 4 );
+		add_filter( 'add_post_metadata', array( $this, 'clear_view_token_on_email_change' ), 10, 4 );
 
 		add_shortcode( 'camptix_attendees', array( $this, 'shortcode_attendees' ) );
 		add_shortcode( 'camptix_stats', array( $this, 'shortcode_stats' ) );
@@ -456,7 +458,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 			// Remove cookies if a previous one was set.
 			if ( isset( $_COOKIE['tix_view_token'] ) ) {
-				setcookie( 'tix_view_token', '', time() - 60 * 60, COOKIEPATH, COOKIE_DOMAIN, false );
+				setcookie( 'tix_view_token', '', time() - 60 * 60, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 				unset( $_COOKIE['tix_view_token'] );
 			}
 
@@ -483,12 +485,11 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			if ( $attendees ) {
 				$attendee = $attendees[0];
 
-				$view_token = $this->generate_view_token_for_attendee( $attendee->ID );
-				setcookie( 'tix_view_token', $view_token, time() + 60 * 60 * 48, COOKIEPATH, COOKIE_DOMAIN, false );
+				$view_token = $this->get_view_token_for_attendee( $attendee->ID );
+				setcookie( 'tix_view_token', $view_token, time() + 60 * 60 * 48, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 				$_COOKIE['tix_view_token'] = $view_token;
 
 				foreach ( $attendees as $attendee ) {
-					update_post_meta( $attendee->ID, 'tix_view_token', $view_token );
 					$count = get_post_meta( $attendee->ID, 'tix_private_form_submit_count', true );
 					if ( ! $count ) {
 						$count = 0;
@@ -538,20 +539,25 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		);
 
 		$can_view_content = false;
-		$error            = false;
 
-		// If we have a view token cookie, we cas use that to search for attendees.
-		if ( isset( $_COOKIE['tix_view_token'] ) && ! empty( $_COOKIE['tix_view_token'] ) ) {
-			$view_token       = $_COOKIE['tix_view_token'];
+		// Look up attendees by the view token cookie. The meta_query compares with
+		// the DB collation, which folds case and trailing spaces, so a matched
+		// token is re-checked below with hash_equals().
+		$view_token = isset( $_COOKIE['tix_view_token'] ) && is_string( $_COOKIE['tix_view_token'] )
+			? $_COOKIE['tix_view_token']
+			: '';
+
+		if ( '' !== $view_token ) {
 			$attendees_params = apply_filters(
 				'camptix_private_attendees_parameters',
 				array(
-					'posts_per_page' => 50,
+					'posts_per_page' => -1,
+					'no_found_rows' => true,
 					'post_type' => 'tix_attendee',
 					'post_status' => 'publish',
 					'meta_query' => array(
 						array(
-							'key' => 'tix_view_token',
+							'key' => self::VIEW_TOKEN_META_KEY,
 							'value' => $view_token,
 						),
 					),
@@ -563,16 +569,13 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			// Making sure they have the right tickets is the other.
 			if ( $attendees ) {
 				$attendee = $attendees[0];
+				$stored   = (string) get_post_meta( $attendee->ID, self::VIEW_TOKEN_META_KEY, true );
 
-				// Let's try and recreate the view token and see if it was generated for this user.
-				$expected_view_token = $this->generate_view_token_for_attendee( $attendee->ID );
-				if ( $expected_view_token !== $view_token ) {
-					$camptix->error( __( 'Looks like you logged in from a different computer. Please log in again.', 'wordcamporg' ) );
-					$error = true;
-				}
+				// The meta_query above compares with the DB collation, which folds
+				// case and trailing spaces, so require an exact match here.
+				$token_ok = hash_equals( $stored, $view_token );
 
-				/** @todo: maybe cleanup the nested ifs */
-				if ( ! $error ) {
+				if ( $token_ok ) {
 					if ( $args['ticket_ids'] ) {
 						$args['ticket_ids'] = array_map( 'intval', explode( ',', $args['ticket_ids'] ) );
 					} else {
@@ -588,10 +591,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 							}
 						}
 					}
+				}
 
-					if ( ! $can_view_content && isset( $_POST['tix_private_shortcode_submit'] ) ) {
-						$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
-					}
+				if ( ! $can_view_content && isset( $_POST['tix_private_shortcode_submit'] ) ) {
+					$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
 				}
 			} else {
 				if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
@@ -607,7 +610,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 			return $this->shortcode_private_display_content( $args, $content );
 		} else {
-			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) && ! $error ) {
+			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) ) {
 				$camptix->notice( __( 'The content on this page is private. Please log in using the form below.', 'wordcamporg' ) );
 			}
 
@@ -684,16 +687,88 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	}
 
 	/**
-	 * Generate a unique view token for this attendee email, using the current IP address.
+	 * Meta key holding the [camptix_private] view token.
+	 *
+	 * Versioned so the previous IP-derived md5 values, stored under
+	 * 'tix_view_token', are never read again and so cannot be replayed.
+	 */
+	const VIEW_TOKEN_META_KEY = 'tix_view_token_v2';
+
+	/**
+	 * Return the view token shared by every attendee record with this e-mail.
+	 *
+	 * Reuses a stored token or mints one, then writes it to any record whose value
+	 * differs — on each form submission, so records added later pick it up.
 	 *
 	 * @param int $attendee_id
+	 * @return string
 	 */
-	public function generate_view_token_for_attendee( $attendee_id ) {
+	public function get_view_token_for_attendee( $attendee_id ) {
 		$email = get_post_meta( $attendee_id, 'tix_email', true );
-		$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
 
-		$view_token = md5( 'tix-view-token-' . strtolower( $email . $ip ) );
+		$ids = get_posts( array(
+			'posts_per_page' => -1, // The invariant needs every record for this e-mail.
+			'no_found_rows'  => true,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				array(
+					'key'   => 'tix_email',
+					'value' => $email,
+				),
+			),
+		) );
+
+		if ( ! in_array( $attendee_id, $ids, true ) ) {
+			$ids[] = $attendee_id;
+		}
+
+		// Reuse a token already stored for this e-mail.
+		$view_token = '';
+		foreach ( $ids as $id ) {
+			$stored = get_post_meta( $id, self::VIEW_TOKEN_META_KEY, true );
+			if ( $stored ) {
+				$view_token = $stored;
+				break;
+			}
+		}
+
+		if ( ! $view_token ) {
+			$view_token = wp_generate_password( 32, false );
+		}
+
+		// Converge every record sharing this e-mail on the one token.
+		foreach ( $ids as $id ) {
+			if ( get_post_meta( $id, self::VIEW_TOKEN_META_KEY, true ) !== $view_token ) {
+				update_post_meta( $id, self::VIEW_TOKEN_META_KEY, $view_token );
+			}
+		}
+
 		return $view_token;
+	}
+
+	/**
+	 * Clear the view token when an attendee's e-mail actually changes.
+	 *
+	 * On the add/update_post_metadata filters (before the write), so the old
+	 * e-mail is still readable to compare. Covers the form, admin edits and the
+	 * privacy eraser; a name or answer edit does not clear it.
+	 *
+	 * @param mixed  $check
+	 * @param int    $object_id
+	 * @param string $meta_key
+	 * @param mixed  $meta_value
+	 * @return mixed
+	 */
+	public function clear_view_token_on_email_change( $check, $object_id, $meta_key, $meta_value ) {
+		if ( 'tix_email' === $meta_key && 'tix_attendee' === get_post_type( $object_id ) ) {
+			if ( get_post_meta( $object_id, 'tix_email', true ) !== $meta_value ) {
+				delete_post_meta( $object_id, self::VIEW_TOKEN_META_KEY );
+			}
+		}
+
+		return $check;
 	}
 }
 

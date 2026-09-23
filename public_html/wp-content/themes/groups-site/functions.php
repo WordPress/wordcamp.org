@@ -724,6 +724,95 @@ function render_event_format_block( array $attributes, string $content = '', ?\W
 }
 
 /**
+ * Render callback for the `groups-site/event-cancelled` block.
+ *
+ * A recurring series is one post with many dates, and cancelling one of them
+ * cancels only that date. The archive and the front page list those dates
+ * individually, but nothing on the card said which of them were off, so a
+ * cancelled date advertised itself as an ordinary upcoming event (#2023).
+ *
+ * The occurrence is read from `Context`, which `Query::posts()` has already
+ * populated for the exact row this iteration of the loop is on -- the same
+ * source the occurrence selector reads, so a card and the selector cannot
+ * disagree. A non-recurring event has no occurrence and renders nothing, which
+ * is correct: cancelling one of those is unpublishing it.
+ *
+ * @param array          $attributes Block attributes.
+ * @param string         $content    Block inner content.
+ * @param \WP_Block|null $block      Block instance.
+ * @return string Rendered HTML.
+ */
+function render_event_cancelled_block( array $attributes, string $content = '', ?\WP_Block $block = null ): string {
+	$post_id = ( $block instanceof \WP_Block && isset( $block->context['postId'] ) )
+		? (int) $block->context['postId']
+		: (int) get_the_ID();
+	if ( ! $post_id ) {
+		return '';
+	}
+
+	$post_type = ( $block instanceof \WP_Block && isset( $block->context['postType'] ) )
+		? (string) $block->context['postType']
+		: (string) get_post_type( $post_id );
+	if ( 'gatherpress_event' !== $post_type ) {
+		return '';
+	}
+
+	if ( ! class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Context' ) ) {
+		return '';
+	}
+
+	$occurrence = \WordPressdotorg\GatherPress_Recurring_Events\Context::get();
+
+	if ( ! $occurrence || 'cancelled' !== ( $occurrence->status ?? '' ) ) {
+		return '';
+	}
+
+	$wrapper_classes = array(
+		'wp-block-groups-site-event-cancelled',
+		'groups-site-event-cancelled',
+	);
+
+	if ( ! empty( $attributes['className'] ) ) {
+		$wrapper_classes[] = $attributes['className'];
+	}
+
+	return sprintf(
+		'<div class="%1$s"><span class="groups-site-event-cancelled__badge">%2$s</span></div>',
+		esc_attr( implode( ' ', $wrapper_classes ) ),
+		esc_html__( 'Cancelled', 'groups-site' )
+	);
+}
+
+/**
+ * Register the event-cancelled block for event card grids.
+ */
+function register_event_cancelled_block(): void {
+	if ( \WP_Block_Type_Registry::get_instance()->is_registered( 'groups-site/event-cancelled' ) ) {
+		return;
+	}
+
+	register_block_type(
+		'groups-site/event-cancelled',
+		array(
+			'api_version'     => 3,
+			'title'           => __( 'Event Cancelled', 'groups-site' ),
+			'category'        => 'groups-site',
+			'description'     => __( 'Marks an event card whose date has been cancelled.', 'groups-site' ),
+			'uses_context'    => array( 'postId', 'postType' ),
+			'supports'        => array(
+				'html' => false,
+			),
+			'render_callback' => __NAMESPACE__ . '\render_event_cancelled_block',
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_cancelled_block' );
+
+if ( did_action( 'init' ) ) {
+	register_event_cancelled_block();
+}
+
+/**
  * Register the event-format block for event card grids.
  */
 function register_event_format_block(): void {

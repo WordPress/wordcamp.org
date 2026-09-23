@@ -10,7 +10,34 @@
 export const MAX_HISTORY_LENGTH = 50;
 
 /**
- * Deep clone an arbitrary value (objects, arrays, primitives).
+ * Whether a value is a plain `{}` object rather than an instance of a class.
+ *
+ * @param {*} value The value to test.
+ * @return {boolean} True for object literals and `Object.create( null )`.
+ */
+function isPlainObject( value ) {
+	const prototype = Object.getPrototypeOf( value );
+
+	return prototype === Object.prototype || null === prototype;
+}
+
+/**
+ * Deep clone an arbitrary value (plain objects, arrays, primitives).
+ *
+ * Only plain objects and arrays are recursed into. **Class instances are
+ * returned by reference, deliberately.** Copying an instance key by key
+ * loses everything it holds in a private field, and since WordPress 6.5 the
+ * `content` attribute of every rich-text block - paragraph, heading,
+ * list-item, quote, code, preformatted - is a `RichTextData`, whose value
+ * lives in exactly such a field. Cloning one produced `{}`: the block
+ * rendered empty after an undo, and serialising the clone threw inside
+ * `@wordpress/blocks`, which swallows it and falls back to
+ * `originalContent ?? ''` - so the blank was what got saved (#2018).
+ *
+ * Sharing the reference is safe because these instances are immutable:
+ * `RichTextData`'s mutators each return a new instance rather than writing
+ * to the one they were called on, which is also why the block-editor store
+ * holds them by reference itself.
  *
  * @param {*} value The value to deep clone.
  * @return {*} Cloned value.
@@ -21,6 +48,9 @@ function deepClone( value ) {
 	}
 	if ( Array.isArray( value ) ) {
 		return value.map( deepClone );
+	}
+	if ( ! isPlainObject( value ) ) {
+		return value;
 	}
 	const copy = {};
 	for ( const key of Object.keys( value ) ) {

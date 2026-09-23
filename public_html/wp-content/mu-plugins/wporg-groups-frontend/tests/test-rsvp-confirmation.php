@@ -4,6 +4,8 @@ namespace WordCamp\Groups\Tests;
 
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\RSVP_Confirmation\get_calendar_links;
+
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/class-groups-testcase.php';
@@ -227,6 +229,73 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 		$this->assertStringNotContainsString( '&#', $mail['message'], 'The body should carry no HTML entities.' );
 		$this->assertStringNotContainsString( '&quot;', $mail['message'] );
 		$this->assertStringContainsString( 'Jess', $mail['message'] );
+	}
+
+	/**
+	 * The email is the message someone keeps, and the point at which they
+	 * want the event in their own calendar — so it offers the same four
+	 * calendars the event page does (#2110).
+	 */
+	public function test_confirmation_offers_the_calendar_links() {
+		$event_id = $this->create_dated_event();
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$message = $this->sent_mail[0]['message'];
+
+		$this->assertStringContainsString( 'Add to calendar:', $message );
+
+		foreach ( get_calendar_links( $event_id ) as $calendar_name => $calendar_url ) {
+			$this->assertStringContainsString(
+				$calendar_name . ': ' . $calendar_url,
+				$message,
+				"Expected the {$calendar_name} link in the body."
+			);
+		}
+	}
+
+	/**
+	 * The links are the event page's own endpoints, so they inherit whatever
+	 * the permalink resolved to rather than being rebuilt here — which is what
+	 * keeps a recurring occurrence's links pointing at that occurrence.
+	 */
+	public function test_calendar_links_hang_off_the_event_permalink() {
+		$event_id = $this->create_dated_event();
+
+		$links = get_calendar_links( $event_id );
+
+		$this->assertSame(
+			array( 'Google Calendar', 'iCal', 'Outlook', 'Yahoo Calendar' ),
+			array_keys( $links ),
+			'The email should offer the same calendars, in the same order, as the event page.'
+		);
+
+		foreach ( $links as $calendar_name => $calendar_url ) {
+			$this->assertStringStartsWith(
+				get_permalink( $event_id ),
+				$calendar_url,
+				"The {$calendar_name} link does not hang off the event permalink."
+			);
+		}
+	}
+
+	/**
+	 * An event with no date yet has nothing to put in a calendar — every link
+	 * would hand it GatherPress's placeholder instead of a time.
+	 */
+	public function test_an_undated_event_offers_no_calendar_links() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Undated Event',
+			)
+		);
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail, 'The confirmation itself should still go out.' );
+		$this->assertStringNotContainsString( 'Add to calendar:', $this->sent_mail[0]['message'] );
 	}
 
 	/**

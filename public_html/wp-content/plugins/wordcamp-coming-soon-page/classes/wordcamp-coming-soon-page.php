@@ -19,8 +19,8 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'rest_request_after_callbacks', array( $this, 'disable_rest_endpoints' ), PHP_INT_MAX, 3 );
 		// Both sitemap filters have to be registered here rather than in `init()`, because the
 		// generators decide whether to run before `init` priority 11.
-		add_filter( 'wp_sitemaps_enabled',        array( $this, 'disable_core_sitemaps'           )        );
-		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_sitemaps'        )        );
+		add_filter( 'wp_sitemaps_enabled',        array( $this, 'disable_core_sitemaps' ) );
+		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_sitemaps' ) );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );

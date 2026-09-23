@@ -10,7 +10,7 @@ class WordCamp_Coming_Soon_Page {
 	public function __construct() {
 		add_action( 'init',                       array( $this, 'init'                            ), 11    );  // After WCCSP_Settings::init().
 		add_action( 'wp_enqueue_scripts',         array( $this, 'manage_plugin_theme_stylesheets' ), 99    );  // (Hopefully) after all plugins/themes have enqueued their styles.
-		add_action( 'wp_enqueue_scripts',         array( $this, 'disable_jetpack_instant_search'  ), 99    );  // After Jetpack Search has enqueued it at the default priority.
+		add_action( 'wp_enqueue_scripts',         array( $this, 'disable_jetpack_instant_search' ), 99 );  // After Jetpack Search has enqueued it at the default priority.
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );

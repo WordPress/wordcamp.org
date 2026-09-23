@@ -56,8 +56,9 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
 	 */
 	public function test_provisioning_cannot_update_to_overlay() {
-		update_option( 'jetpack_search_experience', 'embedded' );
-		update_option( 'instant_search_enabled', false );
+		// Seed both options so the writes below go through the update hooks, the path a re-provisioned site takes.
+		add_option( 'jetpack_search_experience', 'embedded' );
+		add_option( 'instant_search_enabled', '' );
 
 		$this->act_as_provisioning();
 		update_option( 'jetpack_search_experience', 'overlay' );
@@ -106,12 +107,28 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 		update_option( 'jetpack_search_experience', 'overlay' );
 		update_option( 'instant_search_enabled', true );
 
+		// A revert would call `update_option()` with the value just written, which core drops as a no-op, so the
+		// end state alone can't tell a revert from no revert. Count the writes instead: `pre_update_option_*` runs
+		// before that no-op check, so it sees every call, and only the test's own write is expected.
+		$writes = array();
+		$count  = function ( $value, $old_value, $option ) use ( &$writes ) {
+			$writes[ $option ] = ( $writes[ $option ] ?? 0 ) + 1;
+			return $value;
+		};
+		add_filter( 'pre_update_option_jetpack_search_experience', $count, 10, 3 );
+		add_filter( 'pre_update_option_instant_search_enabled', $count, 10, 3 );
+
 		$this->act_as_provisioning();
 		update_option( 'jetpack_search_experience', '' );
 		update_option( 'instant_search_enabled', false );
 
+		remove_filter( 'pre_update_option_jetpack_search_experience', $count, 10 );
+		remove_filter( 'pre_update_option_instant_search_enabled', $count, 10 );
+
 		$this->assertSame( '', get_option( 'jetpack_search_experience' ) );
 		$this->assertFalse( (bool) get_option( 'instant_search_enabled' ) );
+		$this->assertSame( 1, $writes['jetpack_search_experience'], 'The hook re-wrote the experience option.' );
+		$this->assertSame( 1, $writes['instant_search_enabled'], 'The hook re-wrote the legacy boolean.' );
 	}
 
 	/**

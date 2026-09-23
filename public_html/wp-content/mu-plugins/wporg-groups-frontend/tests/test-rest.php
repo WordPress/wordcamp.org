@@ -635,6 +635,141 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A block the editor cannot render never reaches `post_content` (#2042).
+	 *
+	 * The editor's `allowedBlockTypes` only ever constrained what the UI would
+	 * *insert*, and `wp_kses_post()` -- the only thing the server ran -- knows
+	 * nothing about block names: a block delimiter is an HTML comment, which
+	 * kses passes through untouched. So anything POSTing this route directly
+	 * could store a block the editor has no way to show, and then
+	 * `extract_description_blocks()` hid it on load while `build_post_content()`
+	 * re-appended it on save -- exactly the "cannot see it, cannot remove it"
+	 * the issue describes.
+	 */
+	public function test_event_description_drops_blocks_the_editor_cannot_render() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$description = implode(
+			"\n\n",
+			array(
+				'<!-- wp:paragraph --><p>Kept.</p><!-- /wp:paragraph -->',
+				'<!-- wp:embed {"url":"https://example.org/x"} --><figure class="wp-block-embed"></figure><!-- /wp:embed -->',
+				'<!-- wp:html --><div>raw</div><!-- /wp:html -->',
+			)
+		);
+
+		$response = create_event(
+			$this->event_request( $this->base_event_params() + array( 'description' => $description ) )
+		);
+
+		$this->assertNotWPError( $response );
+
+		$content = (string) get_post_field( 'post_content', (int) $response->get_data()['id'] );
+
+		$this->assertStringContainsString( 'wp:paragraph', $content );
+		$this->assertStringContainsString( 'Kept.', $content );
+		$this->assertStringNotContainsString( 'wp:embed', $content );
+		$this->assertStringNotContainsString( 'wp:html', $content );
+	}
+
+	/**
+	 * A disallowed block nested inside an allowed container comes out too.
+	 *
+	 * `core/group` and `core/columns` are on the allowed list and carry inner
+	 * blocks, so filtering only the top level would let a container smuggle
+	 * anything at all back in.
+	 */
+	public function test_event_description_filters_nested_blocks() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$description = '<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inside.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:embed {"url":"https://example.org/x"} --><figure></figure><!-- /wp:embed -->'
+			. '</div><!-- /wp:group -->';
+
+		$response = create_event(
+			$this->event_request( $this->base_event_params() + array( 'description' => $description ) )
+		);
+
+		$this->assertNotWPError( $response );
+
+		$content = (string) get_post_field( 'post_content', (int) $response->get_data()['id'] );
+
+		$this->assertStringContainsString( 'wp:group', $content );
+		$this->assertStringContainsString( 'Inside.', $content );
+		$this->assertStringNotContainsString( 'wp:embed', $content );
+	}
+
+	/**
+	 * A description that is plain HTML rather than blocks survives.
+	 *
+	 * The block filter is about block *names*; what may be in the markup is
+	 * `wp_kses_post()`'s question, and it has already answered it. Dropping
+	 * unnamed content here would have silently emptied any description that
+	 * was never blocks to begin with.
+	 */
+	public function test_event_description_keeps_plain_html() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = create_event(
+			$this->event_request(
+				$this->base_event_params() + array( 'description' => '<p>Just some markup.</p>' )
+			)
+		);
+
+		$this->assertNotWPError( $response );
+
+		$this->assertStringContainsString(
+			'Just some markup.',
+			(string) get_post_field( 'post_content', (int) $response->get_data()['id'] )
+		);
+	}
+
+	/**
+	 * Editing an event still preserves the GatherPress metadata blocks the
+	 * editor never sees -- the filter must not take those with it.
+	 */
+	public function test_event_description_edit_preserves_metadata_blocks() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = create_event(
+			$this->event_request(
+				$this->base_event_params() + array( 'description' => '<!-- wp:paragraph --><p>First.</p><!-- /wp:paragraph -->' )
+			)
+		);
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_content' => (string) get_post_field( 'post_content', $event_id )
+					. "\n\n" . '<!-- wp:gatherpress/rsvp /-->',
+			)
+		);
+
+		$update = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $event_id );
+		foreach ( $this->base_event_params() + array(
+			'id'          => $event_id,
+			'description' => '<!-- wp:paragraph --><p>Second.</p><!-- /wp:paragraph -->',
+		) as $key => $value ) {
+			$update->set_param( $key, $value );
+		}
+
+		$this->assertNotWPError( update_event( $update ) );
+
+		$content = (string) get_post_field( 'post_content', $event_id );
+
+		$this->assertStringContainsString( 'Second.', $content );
+		$this->assertStringNotContainsString( 'First.', $content );
+		$this->assertStringContainsString( 'wp:gatherpress/rsvp', $content );
+	}
+
+	/**
 	 * Saving an unrelated field leaves a location with a stale country intact.
 	 */
 	public function test_group_info_update_without_location_preserves_stale_country() {

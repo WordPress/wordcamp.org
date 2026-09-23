@@ -11,6 +11,7 @@ use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
+use GatherPress\Core\Utility;
 
 defined( 'WPINC' ) || die();
 
@@ -372,6 +373,44 @@ final class Occurrences {
 	}
 
 	/**
+	 * Builds a `DateTimeZone` from a timezone as the events table spells it.
+	 *
+	 * The column holds whatever was handed to `Event::save_datetimes()`, which
+	 * normalizes the value only for the `DateTimeZone` it computes the GMT
+	 * columns with and writes the string itself through raw. Both GatherPress's
+	 * own wp-admin sidebar and core's `wp_timezone_choice()` spell a manual
+	 * offset `UTC+10`, and `new DateTimeZone( 'UTC+10' )` throws -- PHP wants
+	 * `+10:00`. Rows written before the front-end form started canonicalizing
+	 * (#2021) still carry the throwing spelling, and every one of them made
+	 * `master_datetime()` return null, so `project()` wrote no occurrence rows
+	 * at all.
+	 *
+	 * Normalizing on read as well as on write is what makes those rows
+	 * recoverable: the next projection run repairs a series nobody has touched.
+	 *
+	 * @param string $timezone Timezone as stored, in any spelling.
+	 * @return DateTimeZone The zone, falling back to the site's own.
+	 * @throws Exception When neither the stored zone nor the site's is usable.
+	 */
+	public static function timezone( string $timezone ): DateTimeZone {
+		$timezone = trim( $timezone );
+
+		if ( '' !== $timezone && class_exists( Utility::class ) ) {
+			$timezone = Utility::normalize_timezone_string( $timezone );
+		}
+
+		if ( '' === $timezone ) {
+			$timezone = wp_timezone_string();
+		}
+
+		try {
+			return new DateTimeZone( $timezone );
+		} catch ( Exception $exception ) {
+			return wp_timezone();
+		}
+	}
+
+	/**
 	 * Reads the GatherPress master date and duration.
 	 *
 	 * @param int $post_id Series post ID.
@@ -395,10 +434,8 @@ final class Occurrences {
 			return null;
 		}
 
-		$timezone_name = $master->timezone ?: wp_timezone_string();
-
 		try {
-			$timezone = new DateTimeZone( $timezone_name );
+			$timezone = self::timezone( (string) $master->timezone );
 			$start    = new DateTimeImmutable( $master->datetime_start, $timezone );
 			$end      = new DateTimeImmutable( $master->datetime_end, $timezone );
 		} catch ( Exception $exception ) {

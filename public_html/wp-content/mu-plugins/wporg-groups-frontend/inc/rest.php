@@ -49,6 +49,7 @@ use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
+use function WordCamp\Groups\Frontend\Defaults\filter_to_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
 use function WordCamp\Groups\Frontend\Event_Date_Format\build_choices;
@@ -61,6 +62,7 @@ use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize as canonicalize_timezone;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
 use function WordCamp\Groups\Frontend\Group_Location\clear_location;
@@ -657,8 +659,9 @@ function event_args_schema(): array {
 			'sanitize_callback' => 'sanitize_text_field',
 		),
 		'description'       => array(
-			// Serialised block markup. Allowed-block enforcement happens
-			// when we run `wp_kses_post()` before saving.
+			// Serialised block markup. `wp_kses_post()` sanitizes the HTML,
+			// but it knows nothing about block names -- the allowed-block set
+			// is enforced separately, in `build_post_content()`.
 			'type'     => 'string',
 			'required' => false,
 			'default'  => '',
@@ -1010,7 +1013,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'post_id'        => $saved_id,
 				'datetime_start' => sprintf( '%s %s:00', $date, $time_start ),
 				'datetime_end'   => sprintf( '%s %s:00', resolve_event_end_date( $date, $time_start, $time_end ), $time_end ),
-				'timezone'       => (string) $request->get_param( 'timezone' ) ?: wp_timezone_string(),
+				'timezone'       => storable_timezone( (string) $request->get_param( 'timezone' ) ),
 			)
 		);
 	}
@@ -1092,6 +1095,38 @@ function update_event( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
 	}
 	return persist_event( $event_id, $request );
+}
+
+/**
+ * The spelling of a timezone that is safe to write to the events table.
+ *
+ * The form's control offers the values core's own `wp_timezone_choice()`
+ * builds, and those spell a manual offset `UTC+10`. GatherPress's
+ * `Event::save_datetimes()` normalizes that spelling only for the
+ * `DateTimeZone` it computes the GMT columns with, and writes
+ * `$fields['timezone']` through to `$wpdb->insert()` **raw** -- so `UTC+10`
+ * is what lands in `gatherpress_events.timezone` and in the
+ * `gatherpress_timezone` meta.
+ *
+ * `new DateTimeZone( 'UTC+10' )` throws: PHP accepts `+10:00`, not core's
+ * display spelling. Every later read that builds a `DateTimeZone` from the
+ * stored value therefore threw, and the one that matters catches and
+ * returns null -- `Occurrences::master_datetime()`, which is what
+ * `project()` needs before it can write a single occurrence row. A recurring
+ * series saved with a manual offset got a 200 and no dates: no occurrence
+ * selector, per-occurrence RSVP refused, "My upcoming events" showing only
+ * the seed date, and cron re-projection failing silently forever (#2021).
+ *
+ * So canonicalize on the way in. `canonicalize()` maps core's spelling onto
+ * the one the events table already uses elsewhere (`+10:00`, and `UTC` at
+ * zero), and `get_stored_spellings()` maps it back onto the choice when the
+ * form reads the event for editing, so the control still preselects.
+ *
+ * @param string $timezone Submitted timezone, in any spelling.
+ * @return string A timezone `DateTimeZone` accepts.
+ */
+function storable_timezone( string $timezone ): string {
+	return canonicalize_timezone( '' !== $timezone ? $timezone : wp_timezone_string() );
 }
 
 /**
@@ -1191,7 +1226,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	// decides how they are stored and read back, never what the organizer
 	// typed. An unrecognized or absent zone sanitizes to '' and falls back to
 	// the site's own, which is what every event got before this was settable.
-	$timezone = '' !== $fields['timezone'] ? $fields['timezone'] : wp_timezone_string();
+	$timezone = storable_timezone( $fields['timezone'] );
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
@@ -1251,7 +1286,22 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
  * event-rendering blocks the user might have customised in wp-admin.
  */
 function build_post_content( int $event_id, string $description ): string {
-	$description = wp_kses_post( wp_unslash( $description ) );
+	/*
+	 * `wp_kses_post()` is the HTML gate; this is the block gate. They are not
+	 * the same thing: kses knows nothing about block names, so it passes a
+	 * `<!-- wp:embed -->` delimiter through untouched as the HTML comment it
+	 * is. The editor's `allowedBlockTypes` only ever constrained what the UI
+	 * would *insert*, so anything POSTing this route directly could store a
+	 * block the editor cannot render -- and then `extract_description_blocks()`
+	 * hid it on load while this function re-appended it on save, leaving an
+	 * organizer with a block they could neither see nor remove (#2042).
+	 *
+	 * Filtering here closes both halves, and keeps the two allowlists honest:
+	 * what the server accepts is exactly what the editor can show.
+	 */
+	$description = serialize_blocks(
+		filter_to_description_blocks( parse_blocks( wp_kses_post( wp_unslash( $description ) ) ) )
+	);
 
 	if ( $event_id <= 0 ) {
 		return $description;

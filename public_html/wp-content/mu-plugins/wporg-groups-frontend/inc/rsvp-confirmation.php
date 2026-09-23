@@ -198,10 +198,10 @@ function get_calendar_links( int $event_id ): array {
 	$calendar = new Calendar( $event_id );
 
 	$links = array(
-		__( 'Google Calendar', 'wporg-groups-frontend' ) => $calendar->get_google_url(),
-		__( 'iCal', 'wporg-groups-frontend' )            => $calendar->get_ical_url(),
-		__( 'Outlook', 'wporg-groups-frontend' )         => $calendar->get_outlook_url(),
-		__( 'Yahoo Calendar', 'wporg-groups-frontend' )  => $calendar->get_yahoo_url(),
+		__( 'Google Calendar', 'wordcamporg' ) => $calendar->get_google_url(),
+		__( 'iCal', 'wordcamporg' )            => $calendar->get_ical_url(),
+		__( 'Outlook', 'wordcamporg' )         => $calendar->get_outlook_url(),
+		__( 'Yahoo Calendar', 'wordcamporg' )  => $calendar->get_yahoo_url(),
 	);
 
 	return array_filter(
@@ -284,7 +284,7 @@ function send_email( array $recipient, int $event_id ): void {
 
 	if ( $calendar_links ) {
 		$lines[] = '';
-		$lines[] = __( 'Add to calendar:', 'wporg-groups-frontend' );
+		$lines[] = __( 'Add to calendar:', 'wordcamporg' );
 
 		foreach ( $calendar_links as $calendar_name => $calendar_url ) {
 			// Not a translatable format: the names are already translated

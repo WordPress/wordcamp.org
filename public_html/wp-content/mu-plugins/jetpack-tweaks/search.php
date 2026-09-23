@@ -7,8 +7,10 @@ use Automattic\Jetpack\Connection\Rest_Authentication;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'add_option_instant_search_enabled',    __NAMESPACE__ . '\revert_provisioned_enable_on_add', 10, 2 );
-add_action( 'update_option_instant_search_enabled', __NAMESPACE__ . '\revert_provisioned_enable_on_update', 10, 2 );
+add_action( 'add_option_instant_search_enabled',       __NAMESPACE__ . '\revert_provisioned_enable_on_add', 10, 2 );
+add_action( 'update_option_instant_search_enabled',    __NAMESPACE__ . '\revert_provisioned_enable_on_update', 10, 2 );
+add_action( 'add_option_jetpack_search_experience',    __NAMESPACE__ . '\revert_provisioned_overlay_on_add', 10, 2 );
+add_action( 'update_option_jetpack_search_experience', __NAMESPACE__ . '\revert_provisioned_overlay_on_update', 10, 2 );
 
 /**
  * Handle the option being created (first time it's set).
@@ -31,12 +33,37 @@ function revert_provisioned_enable_on_update( $old_value, $value ) {
 }
 
 /**
+ * Handle the experience option being created (first time it's set).
+ *
+ * @param string $option The option name.
+ * @param mixed  $value  The new option value.
+ */
+function revert_provisioned_overlay_on_add( $option, $value ) {
+	maybe_revert_provisioned_overlay( $value );
+}
+
+/**
+ * Handle the experience option being updated.
+ *
+ * @param mixed $old_value The previous option value.
+ * @param mixed $value     The new option value.
+ */
+function revert_provisioned_overlay_on_update( $old_value, $value ) {
+	maybe_revert_provisioned_overlay( $value );
+}
+
+/**
  * Disable the Jetpack Search instant-search overlay when provisioning auto-enables it.
  *
  * WordCamp sites are auto-provisioned with a Jetpack Complete plan. As part of that, WordPress.com
  * enables Jetpack Search *and* its instant-search "live results" overlay by default (it writes
  * `instant_search_enabled = true`). That overlay renders broken on WordCamp themes -- it overflows
  * the viewport and overlaps site content (#1742).
+ *
+ * Since Jetpack Search 0.60 the overlay is also recorded as `jetpack_search_experience = 'overlay'`,
+ * and that option is read *first*: while it says `overlay`, the legacy boolean is ignored. Jetpack
+ * writes the experience option before the boolean, so reverting only the boolean left the overlay on
+ * for every site provisioned since. `maybe_revert_provisioned_overlay()` handles the experience option.
  *
  * The automated enable arrives as a WordPress.com-signed REST request authenticated as the Jetpack
  * connection owner -- on WordCamp that is always the system `wordcamp` user (we force it during
@@ -56,11 +83,52 @@ function maybe_revert_provisioned_enable( $value ) {
 		return;
 	}
 
-	if ( ! is_connection_owner_request() ) {
+	if ( ! is_provisioning_request() ) {
 		return;
 	}
 
 	update_option( 'instant_search_enabled', false );
+}
+
+/**
+ * Clear the `overlay` search experience when provisioning selects it.
+ *
+ * See `maybe_revert_provisioned_enable()` for the background. An empty experience is what Jetpack
+ * itself stores for "Inline" (the absence of an opt-in), which is the experience that works on
+ * WordCamp themes. Organizers can still pick Overlay in wp-admin; only signed requests from the
+ * connection owner are reverted.
+ *
+ * @param mixed $value The new option value.
+ */
+function maybe_revert_provisioned_overlay( $value ) {
+	// Only react to the overlay being selected. The revert below re-fires this hook with an empty
+	// value, which this guard short-circuits, so there's no recursion.
+	if ( 'overlay' !== $value ) {
+		return;
+	}
+
+	if ( ! is_provisioning_request() ) {
+		return;
+	}
+
+	update_option( 'jetpack_search_experience', '' );
+}
+
+/**
+ * Whether the current request is WordPress.com provisioning the site's Jetpack plan.
+ *
+ * @return bool
+ */
+function is_provisioning_request() {
+	/**
+	 * Filters whether the current request counts as WordPress.com provisioning.
+	 *
+	 * The default identity check needs a live Jetpack connection, so this lets environments without
+	 * one (the test suite, sandboxes) stand in for a signed connection-owner request.
+	 *
+	 * @param bool $is_provisioning_request Whether the request is a signed connection-owner request.
+	 */
+	return (bool) apply_filters( 'wcorg_jetpack_search_is_provisioning_request', is_connection_owner_request() );
 }
 
 /**

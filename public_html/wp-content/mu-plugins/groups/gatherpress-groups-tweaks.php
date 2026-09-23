@@ -336,9 +336,9 @@ add_filter(
 		$current = normalize_event_time_filter( $current );
 
 		$options = array(
-			'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
-			'past'     => __( 'Past', 'wporg-groups-frontend' ),
-			'all'      => __( 'All', 'wporg-groups-frontend' ),
+			'upcoming' => __( 'Upcoming', 'wordcamporg' ),
+			'past'     => __( 'Past', 'wordcamporg' ),
+			'all'      => __( 'All', 'wordcamporg' ),
 		);
 
 		if ( ! isset( $options[ $current ] ) ) {
@@ -357,13 +357,13 @@ add_filter(
 		 */
 		$label = sprintf(
 			/* translators: %s: the selected time filter, e.g. "Past". */
-			__( 'Time: %s', 'wporg-groups-frontend' ),
+			__( 'Time: %s', 'wordcamporg' ),
 			$options[ $current ]
 		);
 
 		return array(
 			'label'    => $label,
-			'title'    => __( 'Filter by time', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by time', 'wordcamporg' ),
 			'key'      => 'event_time',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -383,9 +383,9 @@ add_filter(
  */
 function get_event_format_filter_options(): array {
 	return array(
-		'all'       => __( 'All', 'wporg-groups-frontend' ),
-		'in-person' => __( 'In person', 'wporg-groups-frontend' ),
-		'online'    => __( 'Online', 'wporg-groups-frontend' ),
+		'all'       => __( 'All', 'wordcamporg' ),
+		'in-person' => __( 'In person', 'wordcamporg' ),
+		'online'    => __( 'Online', 'wordcamporg' ),
 	);
 }
 
@@ -465,10 +465,10 @@ add_filter(
 			// what is already applied.
 			'label'    => sprintf(
 				/* translators: %s: the selected format filter, e.g. "Online". */
-				__( 'Format: %s', 'wporg-groups-frontend' ),
+				__( 'Format: %s', 'wordcamporg' ),
 				$options[ $current ]
 			),
-			'title'    => __( 'Filter by format', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by format', 'wordcamporg' ),
 			'key'      => 'event_format',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -509,7 +509,7 @@ function get_event_language_filter_options(): array {
 
 	uasort( $named, static fn( string $first, string $second ): int => strcasecmp( transliterate( $first ), transliterate( $second ) ) );
 
-	return array( 'all' => __( 'All', 'wporg-groups-frontend' ) ) + $named;
+	return array( 'all' => __( 'All', 'wordcamporg' ) ) + $named;
 }
 
 /**
@@ -602,10 +602,10 @@ add_filter(
 			// what is already applied.
 			'label'    => sprintf(
 				/* translators: %s: the selected language filter, e.g. "Spanish". */
-				__( 'Language: %s', 'wporg-groups-frontend' ),
+				__( 'Language: %s', 'wordcamporg' ),
 				$options[ $current ]
 			),
-			'title'    => __( 'Filter by language', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by language', 'wordcamporg' ),
 			'key'      => 'event_language',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -672,7 +672,7 @@ add_filter(
 		}
 
 		/* translators: %s: the number of events found. */
-		return _n( '%s event', '%s events', $found_posts, 'wporg-groups-frontend' );
+		return _n( '%s event', '%s events', $found_posts, 'wordcamporg' );
 	},
 	10,
 	3
@@ -856,7 +856,7 @@ add_filter(
 
 		if ( $access ) {
 			$extra .= '<p class="wporg-venue-access"><strong>'
-				. esc_html__( 'Access:', 'wporg-groups-frontend' ) . '</strong> '
+				. esc_html__( 'Access:', 'wordcamporg' ) . '</strong> '
 				. esc_html( $access ) . '</p>';
 		}
 
@@ -940,7 +940,7 @@ add_filter(
 					if ( ! current_user_can( 'edit_posts' ) ) {
 						return new \WP_Error(
 							'rest_forbidden',
-							__( 'Sorry, you are not allowed to view venues.', 'wporg-groups-frontend' ),
+							__( 'Sorry, you are not allowed to view venues.', 'wordcamporg' ),
 							array( 'status' => rest_authorization_required_code() )
 						);
 					}

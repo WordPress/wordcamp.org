@@ -71,7 +71,7 @@ export default function AboutTab() {
 				setNoticeType( 'error' );
 				setNotice(
 					err.message ||
-						__( 'Could not load group settings.', 'wporg-groups-frontend' )
+						__( 'Could not load group settings.', 'wordcamporg' )
 				);
 				setLoading( false );
 			} );
@@ -106,10 +106,10 @@ export default function AboutTab() {
 				data,
 			} );
 			setNoticeType( 'success' );
-			setNotice( __( 'Settings saved.', 'wporg-groups-frontend' ) );
+			setNotice( __( 'Settings saved.', 'wordcamporg' ) );
 		} catch ( err ) {
 			setNoticeType( 'error' );
-			setNotice( err.message || __( 'Could not save settings.', 'wporg-groups-frontend' ) );
+			setNotice( err.message || __( 'Could not save settings.', 'wordcamporg' ) );
 		} finally {
 			setSaving( false );
 		}
@@ -138,7 +138,7 @@ export default function AboutTab() {
 				notice
 			),
 		h( TextControl, {
-			label: __( 'Group name', 'wporg-groups-frontend' ),
+			label: __( 'Group name', 'wordcamporg' ),
 			value: form.blogname,
 			onChange: ( v ) => setForm( { ...form, blogname: v } ),
 			disabled: loadFailed,
@@ -146,25 +146,25 @@ export default function AboutTab() {
 		} ),
 		// blogdescription is sanitized as a single line.
 		h( TextControl, {
-			label: __( 'Description', 'wporg-groups-frontend' ),
+			label: __( 'Description', 'wordcamporg' ),
 			value: form.blogdescription,
 			onChange: ( v ) => setForm( { ...form, blogdescription: v } ),
 			disabled: loadFailed,
-			help: __( 'A short tagline for your group, used in the browser title and search results.', 'wporg-groups-frontend' ),
+			help: __( 'A short tagline for your group, used in the browser title and search results.', 'wordcamporg' ),
 			__nextHasNoMarginBottom: true,
 		} ),
 		h(
 			'div',
 			{ className: 'wporg-settings-tab__location' },
-			h( 'h3', { className: 'wporg-settings-tab__section-title' }, __( 'Location', 'wporg-groups-frontend' ) ),
+			h( 'h3', { className: 'wporg-settings-tab__section-title' }, __( 'Location', 'wordcamporg' ) ),
 			h( RadioControl, {
-				label: __( 'Where is this group based?', 'wporg-groups-frontend' ),
-				help: __( 'This appears in the group header. Individual event venues and online access details are managed with each event.', 'wporg-groups-frontend' ),
+				label: __( 'Where is this group based?', 'wordcamporg' ),
+				help: __( 'This appears in the group header. Individual event venues and online access details are managed with each event.', 'wordcamporg' ),
 				selected: form.locationType,
 				disabled: loadFailed,
 				options: [
-					{ label: __( 'In person', 'wporg-groups-frontend' ), value: 'physical' },
-					{ label: __( 'Online', 'wporg-groups-frontend' ), value: 'online' },
+					{ label: __( 'In person', 'wordcamporg' ), value: 'physical' },
+					{ label: __( 'Online', 'wordcamporg' ), value: 'online' },
 				],
 				onChange: ( v ) => {
 					setLocationDirty( true );
@@ -176,7 +176,7 @@ export default function AboutTab() {
 					'div',
 					{ className: 'wporg-settings-tab__location-fields' },
 					h( TextControl, {
-						label: __( 'City', 'wporg-groups-frontend' ),
+						label: __( 'City', 'wordcamporg' ),
 						value: form.city,
 						onChange: ( v ) => {
 							setLocationDirty( true );
@@ -187,10 +187,10 @@ export default function AboutTab() {
 						__nextHasNoMarginBottom: true,
 					} ),
 					h( SelectControl, {
-						label: __( 'Country', 'wporg-groups-frontend' ),
+						label: __( 'Country', 'wordcamporg' ),
 						value: form.countryCode,
 						options: [
-							{ label: __( 'Select a country', 'wporg-groups-frontend' ), value: '' },
+							{ label: __( 'Select a country', 'wordcamporg' ), value: '' },
 						].concat(
 							countries.map( ( country ) => ( {
 								label: country.name,
@@ -210,7 +210,7 @@ export default function AboutTab() {
 				h(
 					'p',
 					{ className: 'wporg-settings-tab__empty' },
-					__( 'No location specified.', 'wporg-groups-frontend' )
+					__( 'No location specified.', 'wordcamporg' )
 				),
 			'' !== form.locationType &&
 				h(
@@ -229,7 +229,7 @@ export default function AboutTab() {
 							} );
 						},
 					},
-					__( 'Clear location', 'wporg-groups-frontend' )
+					__( 'Clear location', 'wordcamporg' )
 				)
 		),
 		h(
@@ -243,7 +243,7 @@ export default function AboutTab() {
 					isBusy: saving,
 					disabled: saving || loadFailed || '' === form.blogname.trim() || physicalLocationIsIncomplete,
 				},
-				__( 'Save', 'wporg-groups-frontend' )
+				__( 'Save', 'wordcamporg' )
 			)
 		)
 	);

@@ -61,7 +61,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="edit"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+			>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 
@@ -72,7 +72,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="message-all"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			><?php esc_html_e( 'Message all members', 'wporg-groups-frontend' ); ?></button>
+			><?php esc_html_e( 'Message all members', 'wordcamporg' ); ?></button>
 		</div>
 
 		<div class="wp-block-button is-style-outline">
@@ -81,7 +81,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="message-attendees"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			><?php esc_html_e( 'Message attendees', 'wporg-groups-frontend' ); ?></button>
+			><?php esc_html_e( 'Message attendees', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 
@@ -91,7 +91,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				type="button"
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="create"
-			>+ <?php esc_html_e( 'Create event', 'wporg-groups-frontend' ); ?></button>
+			>+ <?php esc_html_e( 'Create event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 

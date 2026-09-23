@@ -17,7 +17,7 @@ export default function LanguageField( { languages, value, onChange, classPrefix
 		// Not "Select a language": unlike the group's country this is genuinely
 		// optional, and a required-sounding placeholder would push organizers
 		// into answering a question they may not want to.
-		{ label: __( '— Not specified —', 'wporg-groups-frontend' ), value: '' },
+		{ label: __( '— Not specified —', 'wordcamporg' ), value: '' },
 	].concat(
 		( languages || [] ).map( ( language ) => ( {
 			label: language.name,
@@ -29,10 +29,10 @@ export default function LanguageField( { languages, value, onChange, classPrefix
 		'div',
 		{ className: `${ classPrefix }__field` },
 		h( SelectControl, {
-			label: __( 'Language', 'wporg-groups-frontend' ),
+			label: __( 'Language', 'wordcamporg' ),
 			help: __(
 				'The language this event is held in. Attendees can filter the events list by it.',
-				'wporg-groups-frontend'
+				'wordcamporg'
 			),
 			value: value || '',
 			options: options,

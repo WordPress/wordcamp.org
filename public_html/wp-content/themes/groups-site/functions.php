@@ -263,7 +263,7 @@ function register_pattern_category() {
 	register_block_pattern_category(
 		'groups-site',
 		array(
-			'label' => __( 'Groups Site', 'groups-site' ),
+			'label' => __( 'Groups Site', 'wordcamporg' ),
 		)
 	);
 }
@@ -339,7 +339,7 @@ function add_local_navigation_menus( $menus ) {
 
 	$items = array(
 		array(
-			'label' => __( 'All Events', 'groups-site' ),
+			'label' => __( 'All Events', 'wordcamporg' ),
 			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
 		),
 	);
@@ -353,18 +353,18 @@ function add_local_navigation_menus( $menus ) {
 	 */
 	if ( is_user_member_of_blog() ) {
 		$items[] = array(
-			'label' => __( 'My events', 'groups-site' ),
+			'label' => __( 'My events', 'wordcamporg' ),
 			'url'   => home_url( '/#my-events' ),
 		);
 	}
 
 	$items[] = is_user_logged_in()
 		? array(
-			'label' => __( 'Log out', 'groups-site' ),
+			'label' => __( 'Log out', 'wordcamporg' ),
 			'url'   => wp_logout_url( $current_url ),
 		)
 		: array(
-			'label' => __( 'Log in', 'groups-site' ),
+			'label' => __( 'Log in', 'wordcamporg' ),
 			'url'   => wp_login_url( $current_url ),
 		);
 
@@ -404,13 +404,13 @@ function filter_site_breadcrumbs( $breadcrumbs ) {
 	$title = '';
 
 	if ( is_post_type_archive( 'gatherpress_event' ) ) {
-		$title = __( 'Events', 'groups-site' );
+		$title = __( 'Events', 'wordcamporg' );
 	} elseif ( is_home() ) {
-		$title = __( 'Latest posts', 'groups-site' );
+		$title = __( 'Latest posts', 'wordcamporg' );
 	} elseif ( is_search() ) {
-		$title = __( 'Search results', 'groups-site' );
+		$title = __( 'Search results', 'wordcamporg' );
 	} elseif ( is_404() ) {
-		$title = __( 'Page not found', 'groups-site' );
+		$title = __( 'Page not found', 'wordcamporg' );
 	}
 
 	if ( $title ) {
@@ -534,13 +534,13 @@ function compact_comment_form_defaults( $defaults ) {
 	$defaults['cancel_reply_before'] = '';
 	$defaults['cancel_reply_after']  = '';
 
-	$defaults['label_submit'] = __( 'Post comment', 'groups-site' );
+	$defaults['label_submit'] = __( 'Post comment', 'wordcamporg' );
 	$defaults['class_submit'] = 'submit wp-element-button';
 
 	$defaults['comment_field'] = sprintf(
 		'<p class="comment-form-comment"><label class="screen-reader-text" for="comment">%1$s</label><textarea id="comment" name="comment" cols="45" rows="3" maxlength="65525" required placeholder="%2$s"></textarea></p>',
-		esc_html__( 'Comment', 'groups-site' ),
-		esc_attr__( 'Add a comment&hellip;', 'groups-site' )
+		esc_html__( 'Comment', 'wordcamporg' ),
+		esc_attr__( 'Add a comment&hellip;', 'wordcamporg' )
 	);
 
 	return $defaults;
@@ -553,8 +553,8 @@ add_filter( 'comment_form_defaults', __NAMESPACE__ . '\compact_comment_form_defa
  */
 function compact_comment_reply_link_args( $args ) {
 	if ( has_compact_comment_form() ) {
-		$args['reply_text'] = __( 'Reply', 'groups-site' );
-		$args['login_text'] = __( 'Log in to comment', 'groups-site' );
+		$args['reply_text'] = __( 'Reply', 'wordcamporg' );
+		$args['login_text'] = __( 'Log in to comment', 'wordcamporg' );
 	}
 	return $args;
 }
@@ -630,7 +630,7 @@ function name_the_online_event_link_action( $parsed_block, $source_block, $paren
 	// for the state this render isn't in.
 	$parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] = (string) ( $parsed_block['attrs']['linkText'] ?? '' );
 
-	$parsed_block['attrs']['linkText'] = __( 'Join event', 'groups-site' );
+	$parsed_block['attrs']['linkText'] = __( 'Join event', 'wordcamporg' );
 
 	return $parsed_block;
 }
@@ -658,7 +658,7 @@ function label_the_online_event_link( $block_content, $parsed_block ) {
 	}
 
 	$linking     = isset( $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] );
-	$join        = $linking ? (string) ( $parsed_block['attrs']['linkText'] ?? '' ) : __( 'Join event', 'groups-site' );
+	$join        = $linking ? (string) ( $parsed_block['attrs']['linkText'] ?? '' ) : __( 'Join event', 'wordcamporg' );
 	$description = $linking
 		? (string) $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ]
 		: (string) ( $parsed_block['attrs']['linkText'] ?? '' );
@@ -730,12 +730,12 @@ function get_event_format( int $event_id ): string {
 function get_event_format_label( string $format ): string {
 	switch ( $format ) {
 		case 'hybrid':
-			return __( 'Hybrid', 'groups-site' );
+			return __( 'Hybrid', 'wordcamporg' );
 		case 'online':
-			return __( 'Online', 'groups-site' );
+			return __( 'Online', 'wordcamporg' );
 		case 'in-person':
 		default:
-			return __( 'In person', 'groups-site' );
+			return __( 'In person', 'wordcamporg' );
 	}
 }
 
@@ -838,7 +838,7 @@ function render_event_cancelled_block( array $attributes, string $content = '', 
 	return sprintf(
 		'<div class="%1$s"><span class="groups-site-event-cancelled__badge">%2$s</span></div>',
 		esc_attr( implode( ' ', $wrapper_classes ) ),
-		esc_html__( 'Cancelled', 'groups-site' )
+		esc_html__( 'Cancelled', 'wordcamporg' )
 	);
 }
 
@@ -854,9 +854,9 @@ function register_event_cancelled_block(): void {
 		'groups-site/event-cancelled',
 		array(
 			'api_version'     => 3,
-			'title'           => __( 'Event Cancelled', 'groups-site' ),
+			'title'           => __( 'Event Cancelled', 'wordcamporg' ),
 			'category'        => 'groups-site',
-			'description'     => __( 'Marks an event card whose date has been cancelled.', 'groups-site' ),
+			'description'     => __( 'Marks an event card whose date has been cancelled.', 'wordcamporg' ),
 			'uses_context'    => array( 'postId', 'postType' ),
 			'supports'        => array(
 				'html' => false,
@@ -883,9 +883,9 @@ function register_event_format_block(): void {
 		'groups-site/event-format',
 		array(
 			'api_version'     => 3,
-			'title'           => __( 'Event Format', 'groups-site' ),
+			'title'           => __( 'Event Format', 'wordcamporg' ),
 			'category'        => 'groups-site',
-			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'groups-site' ),
+			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'wordcamporg' ),
 			'uses_context'    => array( 'postId', 'postType' ),
 			'supports'        => array(
 				'html' => false,

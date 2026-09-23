@@ -541,7 +541,7 @@ function save_rsvp( WP_REST_Request $request ) {
 				'wporg_groups_missing_answers',
 				sprintf(
 					/* translators: %s: comma-separated list of question labels. */
-					__( 'Please answer: %s', 'wporg-groups-frontend' ),
+					__( 'Please answer: %s', 'wordcamporg' ),
 					implode( ', ', $missing )
 				),
 				array( 'status' => 400 )
@@ -982,7 +982,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'draft',
 		// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
-		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wporg-groups-frontend' ) : wcorg_sanitize_plain_text( $title ),
+		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wordcamporg' ) : wcorg_sanitize_plain_text( $title ),
 		'post_content' => wp_kses_post( wp_unslash( $description ) ),
 	);
 
@@ -1191,7 +1191,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	if ( ( 0 === $event_id || 'publish' !== get_post_status( $event_id ) ) && $fields['date'] < wp_date( 'Y-m-d' ) ) {
 		return new WP_Error(
 			'wporg_groups_past_event_date',
-			__( 'Event date cannot be in the past.', 'wporg-groups-frontend' ),
+			__( 'Event date cannot be in the past.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
 	}

@@ -148,7 +148,7 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 			keyboardShortcutsDispatch.registerShortcut( {
 				name: 'wporg-groups/description-undo',
 				category: 'global',
-				description: __( 'Undo the last change.', 'wporg-groups-frontend' ),
+				description: __( 'Undo the last change.', 'wordcamporg' ),
 				keyCombination: {
 					modifier: 'primary',
 					character: 'z',
@@ -157,7 +157,7 @@ export default function DescriptionEditor( { initialValue, getValueRef, onDirty,
 			keyboardShortcutsDispatch.registerShortcut( {
 				name: 'wporg-groups/description-redo',
 				category: 'global',
-				description: __( 'Redo the last undone change.', 'wporg-groups-frontend' ),
+				description: __( 'Redo the last undone change.', 'wordcamporg' ),
 				keyCombination: {
 					modifier: 'primaryShift',
 					character: 'z',

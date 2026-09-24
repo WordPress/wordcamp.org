@@ -1037,6 +1037,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			$attendee->first_name = $name;
 			$attendee->last_name  = 'Row';
 			$attendee->email      = strtolower( $name ) . '@example.test';
+			$attendee->username   = strtolower( $name ); // Set during checkout by the Require Login addon.
 			$attendee->answers    = array();
 			$attendees[]          = $attendee;
 		}

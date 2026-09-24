@@ -186,6 +186,45 @@ class CampTix_Require_Login extends CampTix_Addon {
 			) );
 		}
 
+		// Remind the logged in user about their tickets.
+		if ( is_user_logged_in() && ! $this->user_is_editing_ticket() && empty( $_REQUEST['tix_action'] ) ) {
+			$user_tickets = $this->get_tickets_of_user( wp_get_current_user() );
+
+			$ticket_links = [];
+			foreach ( $user_tickets as $ticket ) {
+				$ticket_link = sprintf(
+					'%s (%s). %s.', // "Name (Ticket Type). Edit.".
+					esc_html( $camptix->format_name_string( "%first% %last%", $ticket->tix_first_name, $ticket->tix_last_name ) ),
+					esc_html( get_the_title( $ticket->tix_ticket_id ) ),
+					sprintf(
+						'<a href="%s">%s</a>',
+						esc_url( $camptix->get_edit_attendee_link( $ticket->ID, $ticket->tix_edit_token ) ),
+						__( 'Edit information', 'wordcamporg' )
+					),
+				);
+
+				if ( $this->get_unconfirmed_tickets_purchased_with( $ticket ) ) {
+					$ticket_link .= sprintf(
+						'<ul><li>%s</li></ul>',
+						sprintf(
+							__( 'One or more tickets are unconfirmed. <a href="%s">View tickets</a>.', 'wordcamporg' ),
+							esc_url( $camptix->get_access_tickets_link( $ticket->tix_access_token ) )
+						)
+					);
+				}
+
+				$ticket_links[] = $ticket_link;
+			}
+
+			if ( $ticket_links ) {
+				$camptix->info( apply_filters(
+					'camptix_require_login_your_tickets_message',
+					'<p>' . __( 'The following tickets are assigned to you:', 'wordcamporg' ) . '</p>' .
+					'<ul><li>' . implode( '</li><li>', $ticket_links ) . '</li></ul>'
+				) );
+			}
+		}
+
 		// Inform a user registering multiple attendees that other attendees will enter their own info
 		if ( isset( $_REQUEST['tix_action'], $_REQUEST['tix_tickets_selected'] ) ) {
 			if ( 'attendee_info' == $_REQUEST['tix_action'] && $this->registering_multiple_attendees( $_REQUEST['tix_tickets_selected'] ) ) {
@@ -997,6 +1036,67 @@ class CampTix_Require_Login extends CampTix_Addon {
 		) );
 
 		return $ticket ? reset( $ticket ) : false;
+	}
+
+	/**
+	 * Retrieve any tickets associated with the given user.
+	 *
+	 * @param WP_User $user The user object for whom to retrieve the tickets.
+	 * @return array An array of ticket post objects.
+	 */
+	protected function get_tickets_of_user( WP_User $user ) {
+		if ( empty( $user->user_login ) ) {
+			return [];
+		}
+
+		return get_posts( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'meta_query'     => array(
+				array(
+					'key'   => 'tix_username',
+					'value' => $user->user_login,
+				),
+				'relation' => 'OR',
+				array(
+					'key'   => 'tix_email',
+					'value' => $user->user_email,
+				),
+			),
+		) );
+	}
+
+	/**
+	 * Retrieve any unconfirmed tickets associated with the given ticket.
+	 *
+	 * @param WP_Post $ticket The ticket post object.
+	 * @return array An array of unconfirmed ticket post objects.
+	 */
+	protected function get_unconfirmed_tickets_purchased_with( WP_Post $ticket ) {
+		$unconfirmed_tickets = get_posts( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'post_not_in'    => array( $ticket->ID ),
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'   => 'tix_payment_token',
+					'value' => $ticket->tix_payment_token,
+				),
+				array(
+					'key'   => 'tix_username',
+					'value' => self::UNCONFIRMED_USERNAME,
+				),
+				array(
+					'key'   => 'tix_receipt_email',
+					'value' => $ticket->tix_email, // May differ from the user email.
+				),
+			),
+		) );
+
+		return $unconfirmed_tickets;
 	}
 } // CampTix_Require_Login
 

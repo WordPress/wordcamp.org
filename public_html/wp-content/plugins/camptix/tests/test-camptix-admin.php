@@ -1265,4 +1265,30 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertStringContainsString( '€', $formatted, "EUR must render with the euro sign, got: {$formatted}" );
 		$this->assertStringNotContainsString( '$', $formatted, "EUR must not render with a dollar sign, got: {$formatted}" );
 	}
+
+	/**
+	 * Verify EUR invoices render with the euro sign, even on an English locale.
+	 *
+	 * The Invoices add-on formats amounts with its own copy of the NumberFormatter
+	 * logic, so it needs the same formatCurrency() guard as append_currency().
+	 */
+	public function test_invoice_format_currency_eur_uses_euro_symbol_on_english_locale() {
+		if ( ! class_exists( 'NumberFormatter' ) ) {
+			$this->markTestSkipped( 'intl extension required for currency formatting.' );
+		}
+
+		require_once dirname( __DIR__, 2 ) . '/camptix-invoices/includes/class-camptix-addon-invoices.php';
+
+		$locale_filter = static function () {
+			return 'en_US';
+		};
+		add_filter( 'locale', $locale_filter );
+
+		$formatted = CampTix_Addon_Invoices::format_currency( 40, 'EUR' );
+
+		remove_filter( 'locale', $locale_filter );
+
+		$this->assertStringContainsString( '€', $formatted, "EUR invoices must render with the euro sign, got: {$formatted}" );
+		$this->assertStringNotContainsString( '$', $formatted, "EUR invoices must not render with a dollar sign, got: {$formatted}" );
+	}
 }

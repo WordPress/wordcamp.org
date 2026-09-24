@@ -24,6 +24,7 @@ $camptix_options = $camptix->get_options();
 	<script>
 		_camptixAttendanceSecret = '<?php echo esc_js( $_GET['camptix-attendance'] ); ?>';
 		_camptixAttendanceTickets = [ <?php echo esc_js( implode( ', ', array_map( 'absint', wp_list_pluck( $camptix_tickets, 'ID' ) ) ) ); ?> ];
+		_camptixAttendanceQRScanning = <?php echo ! empty( $camptix_options['attendance-qr-enabled'] ) ? 'true' : 'false'; ?>;
 	</script>
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
@@ -76,6 +77,7 @@ $camptix_options = $camptix->get_options();
 					<a href="#" class="search">Search</a>
 					<a href="#" class="filter">Sort & Filter</a>
 					<a href="#" class="refresh">Refresh</a>
+					<a href="#" class="qr">QR Scanner</a>
 				</div>
 			</div>
 			<h1><?php echo esc_html( $camptix_options['event_name'] ); ?></h1>
@@ -88,6 +90,7 @@ $camptix_options = $camptix->get_options();
 					<span>Loading...</span>
 				</li>
 			</ul>
+			<div class="qr-scanner-wrap"><div id="qr-scanner"></div></div>
 		</div>
 	</script>
 
@@ -95,6 +98,7 @@ $camptix_options = $camptix->get_options();
 		<a href="#" class="close dashicons dashicons-no"></a>
 		<div class="wrapper">
 			<input type="text" autocomplete="off" placeholder="Search" />
+			<div class="previews"></div>
 		</div>
 	</script>
 

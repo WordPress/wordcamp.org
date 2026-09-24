@@ -395,12 +395,13 @@ jQuery(document).ready(function($){
 		 * Main Application events/controls.
 		 */
 		events: {
-			'fastClick .dashicons-menu': 'menu',
-			'fastClick .submenu .search': 'searchView',
-			'fastClick header h1': 'searchView',
-			'fastClick .submenu .sort': 'sortView',
-			'fastClick .submenu .refresh': 'refresh',
-			'fastClick .submenu .filter': 'filterView'
+			'click .dashicons-menu': 'menu',
+			'click .submenu .search': 'searchView',
+			'click header h1': 'searchView',
+			'click .submenu .sort': 'sortView',
+			'click .submenu .refresh': 'refresh',
+			'click .submenu .qr': 'qr',
+			'click .submenu .filter': 'filterView',			
 		},
 
 		/**
@@ -421,8 +422,8 @@ jQuery(document).ready(function($){
 
 			this.render();
 
-			this.$header = this.$el.find( 'header' );
-			this.$menu = this.$header.find( '.menu' );
+			this.$header = this.$el.find('header');
+			this.$menu = this.$header.find('.menu');
 
 			this.scroll = _.chain( this.scroll ).bind( this ).value();
 			this.$list = this.$el.find( '.attendees-list' );
@@ -435,6 +436,14 @@ jQuery(document).ready(function($){
 			this.on( 'filter', this.filter, this );
 
 			this.setupCollection();
+
+			if (
+				_camptixAttendanceQRScanning !== undefined &&
+				_camptixAttendanceQRScanning
+			) {
+				this.qr();
+			}
+			
 		},
 
 		/**
@@ -571,6 +580,99 @@ jQuery(document).ready(function($){
 			delete this.collection;
 			this.flush();
 			this.setupCollection();
+			return false;
+		},
+
+		qr: function () {
+			this.$el.toggleClass('qr-scanner-active');
+			this.$menu.removeClass('dropdown');
+
+			let that = this;
+
+			let html5QrcodeScanner;
+			let lastScan;
+			let toggleView;
+			let lastScanTimeout;
+
+			function onScanSuccess(decodedText) {
+				if (lastScan === decodedText) {
+					return;
+				}
+
+				lastScan = decodedText;
+				lastScanTimeout && clearTimeout(lastScanTimeout);
+
+				if (toggleView) toggleView.close();
+				let method = 'read';
+				let model = that.collection;
+				let options = {
+					data: { qrcode: decodedText },
+				};
+				let attendeeModel;
+
+				that.collection
+					.sync(method, model, options)
+					.done(
+						function (res) {
+							// not sure why this is an array
+							attendeeModel = new camptix.models.Attendee(res[0]);
+							toggleView = new camptix.views.AttendeeToggleView({
+								model: attendeeModel,
+								controller: that,
+							});
+							$(document.body).append(toggleView.render().el);
+						}.bind(that)
+					)
+					.fail(function (res) {
+						console.error(res);
+						// play the sound to indicate that the scan is bad
+						window._camptixAttendanceSounds.blm();
+
+						// let the sound play before showing the alert
+						setTimeout(function () {
+							if (typeof res === 'string') {
+								alert(res);
+							} else {
+								alert('[' + res.status + '] ' + res.statusText);
+							}
+							lastScan = null;
+							html5QrcodeScanner.resume();
+						}, 100);
+
+					})
+					.then(() => {
+						// play the sound to indicate that the scan is good
+						window._camptixAttendanceSounds.beep();
+						setTimeout(() => {
+							html5QrcodeScanner.resume();							
+							//lastScan = null;
+							//that.refresh();
+						}, 3000);
+					})
+					.always(() => {
+						lastScanTimeout = setTimeout(() => {
+							// clear last scan to allow for new scan
+							lastScan = null;
+							// play the sound to indicate that the scan is over
+							//window._camptixAttendanceSounds.bob();
+						}, 15000);
+					});
+
+				html5QrcodeScanner.pause();
+			}
+
+			let qrReader = document.getElementById('qr-scanner').getBoundingClientRect();
+
+			let smallerSide = Math.min(qrReader.width, qrReader.height);
+
+			let qrbox = {
+				width: Math.max(smallerSide * 0.9, 50),
+				height: Math.max(smallerSide * 0.9, 50),
+			};
+
+			html5QrcodeScanner = new Html5QrcodeScanner('qr-scanner', { fps: 10, qrbox: qrbox }, false);
+			html5QrcodeScanner.render(onScanSuccess);
+
 			return false;
 		},
 

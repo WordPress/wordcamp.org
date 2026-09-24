@@ -95,10 +95,16 @@ function use_container_port_for_cron( array $cron_request ): array {
  * port. `WORDCAMP_LOCAL_URL_PORT` is only defined by `.docker/wp-config.php`,
  * which production never loads, but the environment is checked too so this can
  * never alter a real URL.
+ *
+ * `defined()` deliberately comes first. This file is the second mu-plugin
+ * WordPress loads, so an `Error: Undefined constant` here would take down every
+ * request before almost anything else runs -- and a bare `WORDCAMP_ENVIRONMENT`
+ * is exactly that on PHP 8. Testing the constant that only ever exists locally
+ * short-circuits everywhere else before any bare constant is evaluated.
  */
-if ( 'local' !== WORDCAMP_ENVIRONMENT
-	|| ! defined( 'WORDCAMP_LOCAL_URL_PORT' )
+if ( ! defined( 'WORDCAMP_LOCAL_URL_PORT' )
 	|| '' === WORDCAMP_LOCAL_URL_PORT
+	|| 'local' !== WORDCAMP_ENVIRONMENT
 ) {
 	return;
 }

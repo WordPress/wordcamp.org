@@ -69,8 +69,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				$this->description = 'Credit card and UPI processing, powered by Stripe.';
 				break;
 			case 'EUR':
-				$this->name = 'Credit Card or banking (Stripe)';
-				$this->description = 'Credit card, iDEAL, Bancontact, and EPS, powered by Stripe.';
+				// iDEAL, Bancontact and EPS each only work in one country, so only name the
+				// one that works where the event is held. Other EUR events keep the default.
+				$local_methods = array(
+					'NL' => 'iDEAL',
+					'BE' => 'Bancontact',
+					'AT' => 'EPS',
+				);
+				$wordcamp      = function_exists( 'get_wordcamp_post' ) ? get_wordcamp_post() : false;
+				$country       = $wordcamp ? strtoupper( $wordcamp->meta['_venue_country_code'][0] ?? '' ) : '';
+
+				if ( isset( $local_methods[ $country ] ) ) {
+					$this->name        = sprintf( 'Credit Card or %s (Stripe)', $local_methods[ $country ] );
+					$this->description = sprintf( 'Credit card and %s processing, powered by Stripe.', $local_methods[ $country ] );
+				}
 				break;
 		}
 	}

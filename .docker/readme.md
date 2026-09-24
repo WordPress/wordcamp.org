@@ -85,6 +85,104 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```
 
 
+## Running alongside another local environment
+
+By default the containers bind ports 80, 443, 1080 (MailCatcher) and 3307
+(MariaDB) on every interface, which collides with anything else on the machine
+that wants them — another Docker stack, a local nginx/Apache, `wp-env`, Valet,
+Lando, and so on. There are two ways out: move this stack to a different port,
+or move it to a different address and keep the standard ports.
+
+All four bindings are overridable through environment variables. `docker compose`
+reads a `.env` file in the project root automatically, and `.env` is gitignored,
+so you can change them without touching a tracked file. Copy the template and
+uncomment what you need:
+
+```bash
+cp .env.example .env
+```
+
+### Changing the ports
+
+Set both ports and restart:
+
+```
+WORDCAMP_HTTP_PORT=8080
+WORDCAMP_HTTPS_PORT=8443
+```
+
+```bash
+docker compose up -d
+```
+
+**Set both, even though you only care about HTTPS.** The containers bind port 80
+whether or not you use it, so if the other environment already holds 80,
+`docker compose up` fails outright with `Bind for 0.0.0.0:80 failed: port is
+already allocated` — moving HTTPS alone isn't enough to get the stack started.
+
+Every site is then reachable with the HTTPS port in the URL —
+`https://central.wordcamp.test:8443/`,
+`https://events.wordpress.test:8443/group/sunshine-coast-qld/` — with no
+database changes and nothing to re-run. The hosts-file entries are unchanged.
+
+How it works, in case a URL ever looks wrong: `.docker/wp-config.php` strips the
+port out of `HTTP_HOST` before anything reads it, so every hostname comparison
+in the codebase (the network `switch`, the `sunrise*.php` regexes, and
+WordPress's own lookups against the portless `domain` columns in `wp_blogs` and
+`wp_site`) behaves exactly as it does on 443. The `0-local-https-port` mu-plugin
+then puts the port back onto `siteurl`/`home` — which is what `admin_url()`,
+`rest_url()` and the canonical redirects are all built from — and the redirects
+that `sunrise*.php` builds by hand get it via `WordCamp\Sunrise\get_url_port()`.
+The database stays canonical and portless throughout, so the port is purely a
+presentation concern.
+
+**Use `https://` directly; plain HTTP won't get you there.** nginx's
+HTTP→HTTPS redirect is `return 301 https://$host$request_uri`, and nginx has no
+way to know which host port Docker mapped 443 to, so it sends you to 443.
+`WORDCAMP_HTTP_PORT` exists to free up port 80, not to give you a working
+`http://` entry point.
+
+### Restricting which address the stack binds
+
+By default the containers claim their ports on *every* interface, including your
+LAN address — so the dev site is reachable from other machines on the network,
+and nothing else on the box can have 443 on any address.
+
+`WORDCAMP_BIND_IP` narrows that to a single address:
+
+```
+WORDCAMP_BIND_IP=127.0.0.1
+```
+
+```bash
+docker compose up -d
+```
+
+Site URLs are completely unchanged — still `https://central.wordcamp.test/`, no
+port suffix, and no hosts-file edit, since the hostnames already point at
+`127.0.0.1`. What changes is that the ports are now bound on loopback only:
+`https://<your-LAN-ip>/` stops answering, and anything else on the machine is
+free to bind 443 on a *different* address.
+
+Note that this does not free up `0.0.0.0:443` — another stack that wants to bind
+every interface will still collide with this one. If that's what you're up
+against, change the port instead (above).
+
+### MailCatcher and MariaDB
+
+`WORDCAMP_MAILCATCHER_PORT` (default `1080`) and `WORDCAMP_DB_PORT` (default
+`3307`) are safe to change on their own — nothing constructs URLs from them
+beyond the dashboard link and your own database client:
+
+```
+WORDCAMP_MAILCATCHER_PORT=1081
+WORDCAMP_DB_PORT=3308
+```
+
+The Playwright E2E suite reads the same `.env`, so it follows whatever you set
+here.
+
+
 ## Local Environment Customizations
 
 You may have a need to change a configuration or behavior in the local environment without modifying files that are tracked by version control. For this, you can add a file to the **mu-plugins** directory called **sandbox-functionality.php**. This file is ignored by git, so changes made to it will not affect the state of the working directory.
@@ -152,7 +250,7 @@ Note: All of these commands are meant to be executed from project directory.
     `wordcamp.db` is the name of Docker service which is running MariaDB server.
 
 
-Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
+Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](http://localhost:1080) to view the MailCatcher dashboard (or whatever `WORDCAMP_MAILCATCHER_PORT`/`WORDCAMP_BIND_IP` point at, if you've overridden them — see [Running alongside another local environment](#running-alongside-another-local-environment)).
 
 
 ## Testing with PHPUnit

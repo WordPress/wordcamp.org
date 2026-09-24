@@ -29,7 +29,9 @@ import { sortBySlug } from './data';
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 	const { attributes, settings } = useContext( ScheduleGridContext );
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
-	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
+	const overlappingSessionIds = overlappingSessions.map(
+		( session ) => session.id
+	);
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
 	const timezone = getTimezone( attributes );
@@ -54,7 +56,9 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 		const classes = classnames(
 			'wordcamp-schedule__time-slot-header',
-			sessionsByTimeSlot[ currentSlot ].length ? 'has-sessions' : 'is-empty'
+			sessionsByTimeSlot[ currentSlot ].length
+				? 'has-sessions'
+				: 'is-empty'
 		);
 
 		timeGroups.push(
@@ -70,7 +74,9 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 					session={ session }
 					displayedTracks={ displayedTracks }
 					showCategories={ attributes.showCategories }
-					overlapsAnother={ overlappingSessionIds.includes( session.id ) }
+					overlapsAnother={ overlappingSessionIds.includes(
+						session.id
+					) }
 				/>
 			);
 		}
@@ -136,6 +142,9 @@ function groupSessionsByTimeSlot( ungroupedSessions ) {
  */
 function sortByTrack( sessions ) {
 	sessions.sort( ( first, second ) => {
-		return sortBySlug( first.derived.assignedTracks[ 0 ], second.derived.assignedTracks[ 0 ] );
+		return sortBySlug(
+			first.derived.assignedTracks[ 0 ],
+			second.derived.assignedTracks[ 0 ]
+		);
 	} );
 }

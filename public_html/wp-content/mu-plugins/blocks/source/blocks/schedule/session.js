@@ -31,19 +31,34 @@ import { implicitTrack } from './data';
  * @param {boolean} props.overlapsAnother
  * @return {Element}
  */
-export function Session( { session, displayedTracks, showCategories, overlapsAnother } ) {
+export function Session( {
+	session,
+	displayedTracks,
+	showCategories,
+	overlapsAnother,
+} ) {
 	const { renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { time_format: timeFormat } = settings;
-	const { id, slug, title, link: permalink, meta: { _wcpt_session_type: type } } = session;
-	const { assignedCategories, assignedTracks, startTime, endTime, timezone } = session.derived;
+	const {
+		id,
+		slug,
+		title,
+		link: permalink,
+		meta: { _wcpt_session_type: type },
+	} = session;
+	const { assignedCategories, assignedTracks, startTime, endTime, timezone } =
+		session.derived;
 	const displayedTrackIds = displayedTracks.map( ( track ) => track.id );
 
-	const displayedAssignedTracks = assignedTracks.filter(
-		( track ) => displayedTrackIds.includes( track.id )
+	const displayedAssignedTracks = assignedTracks.filter( ( track ) =>
+		displayedTrackIds.includes( track.id )
 	);
 
 	const speakers = session.session_speakers || [];
-	const titleLinkUrl = 'editor' === renderEnvironment ? `/wp-admin/post.php?post=${ id }&action=edit` : permalink;
+	const titleLinkUrl =
+		'editor' === renderEnvironment
+			? `/wp-admin/post.php?post=${ id }&action=edit`
+			: permalink;
 
 	/*
 	 * Link to the edit-post screen when editing because, in that context, it's more likely that the
@@ -60,17 +75,23 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 		'is-type-' + type,
 
 		{ 'is-spanning-some-tracks': displayedAssignedTracks.length > 1 },
-		{ 'is-spanning-all-tracks': displayedAssignedTracks.length === displayedTracks.length },
+		{
+			'is-spanning-all-tracks':
+				displayedAssignedTracks.length === displayedTracks.length,
+		},
 		{ 'is-overlapping-another-session': overlapsAnother },
 
 		displayedAssignedTracks.map( ( track ) => 'has-track-' + track.slug ),
-		assignedCategories.map( ( category ) => 'has-category-' + category.slug ),
-		speakers.map( ( speaker ) => 'has-speaker-' + speaker.slug ),
+		assignedCategories.map(
+			( category ) => 'has-category-' + category.slug
+		),
+		speakers.map( ( speaker ) => 'has-speaker-' + speaker.slug )
 	);
 
 	// This expects that `assignedTracks` and `displayedAssignedTracks` have identical sorting.
 	const startTrackId = displayedAssignedTracks[ 0 ].id;
-	let endTrackId = displayedAssignedTracks[ displayedAssignedTracks.length - 1 ].id;
+	let endTrackId =
+		displayedAssignedTracks[ displayedAssignedTracks.length - 1 ].id;
 
 	const spansNonContiguousTracks = sessionSpansNonContiguousTracks(
 		assignedTracks.map( ( track ) => track.id ),
@@ -101,7 +122,11 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 		>
 			<h4 className="wordcamp-schedule__session-title">
 				{ 'session' === type ? (
-					<a href={ titleLinkUrl } target={ titleLinkTarget } rel="noopener noreferrer">
+					<a
+						href={ titleLinkUrl }
+						target={ titleLinkTarget }
+						rel="noopener noreferrer"
+					>
 						{ decodeEntities( stripTags( title.rendered ) ) }
 					</a>
 				) : (
@@ -122,15 +147,18 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 				) }
 			</p>
 
-			{ speakers.length > 0 && renderSpeakers( speakers, renderEnvironment ) }
+			{ speakers.length > 0 &&
+				renderSpeakers( speakers, renderEnvironment ) }
 
 			{ displayedAssignedTracks[ 0 ].id !== implicitTrack.id &&
-				renderAssignedTracks( displayedAssignedTracks )
-			}
+				renderAssignedTracks( displayedAssignedTracks ) }
 
-			{ showCategories && assignedCategories.length > 0 && renderCategories( assignedCategories ) }
+			{ showCategories &&
+				assignedCategories.length > 0 &&
+				renderCategories( assignedCategories ) }
 
-			{ 'editor' === renderEnvironment && renderWarnings( spansNonContiguousTracks ) }
+			{ 'editor' === renderEnvironment &&
+				renderWarnings( spansNonContiguousTracks ) }
 		</div>
 	);
 }
@@ -150,12 +178,18 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
  * @param {Array} displayedTrackIds Tracks that are being displayed in the grid.
  * @return {boolean}
  */
-function sessionSpansNonContiguousTracks( assignedTrackIds, displayedTrackIds ) {
+function sessionSpansNonContiguousTracks(
+	assignedTrackIds,
+	displayedTrackIds
+) {
 	let toggleCount = 0;
 	let previousWasAssigned = false;
 	let currentIsAssigned;
 
-	if ( assignedTrackIds.length < 2 || isEqual( assignedTrackIds, displayedTrackIds ) ) {
+	if (
+		assignedTrackIds.length < 2 ||
+		isEqual( assignedTrackIds, displayedTrackIds )
+	) {
 		return false;
 	}
 
@@ -190,14 +224,22 @@ function renderSpeakers( speakers, renderEnvironment ) {
 					return null;
 				}
 
-				const speakerLinkUrl = 'editor' === renderEnvironment ? `/wp-admin/post.php?post=${ speaker.id }&action=edit` : speaker.link;
+				const speakerLinkUrl =
+					'editor' === renderEnvironment
+						? `/wp-admin/post.php?post=${ speaker.id }&action=edit`
+						: speaker.link;
 
 				// See note about `wordcamp-schedule__session-title` regarding the `target`.
-				const speakerLinkTarget = 'editor' === renderEnvironment ? '_blank' : '_self';
+				const speakerLinkTarget =
+					'editor' === renderEnvironment ? '_blank' : '_self';
 
 				return (
 					<dd key={ speaker.id }>
-						<a href={ speakerLinkUrl } target={ speakerLinkTarget } rel="noopener noreferrer">
+						<a
+							href={ speakerLinkUrl }
+							target={ speakerLinkTarget }
+							rel="noopener noreferrer"
+						>
 							{ decodeEntities( stripTags( speaker.name ) ) }
 						</a>
 					</dd>
@@ -268,11 +310,22 @@ function renderWarnings( spansNonContiguousTracks ) {
 	 * This string should explicitly mention the grid layout, because otherwise it could be
 	 * confusing to organizers viewing the mobile layout. They need to be aware of the problem
 	 * even if it isn't obvious on their current device.
-     */
+	 */
 	const pleaseRenameSlugs = createInterpolateElement(
-		__( "Warning: Sessions can't span non-contiguous tracks in the grid layout. Please <a>rename the track slugs</a> so that the tracks you want to appear next to each other are sorted alphabetically.", 'wordcamporg' ),
+		__(
+			"Warning: Sessions can't span non-contiguous tracks in the grid layout. Please <a>rename the track slugs</a> so that the tracks you want to appear next to each other are sorted alphabetically.",
+			'wordcamporg'
+		),
 		{
-			a: <a href={ '/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session' } >#21441-gutenberg</a>,
+			a: (
+				<a
+					href={
+						'/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session'
+					}
+				>
+					#21441-gutenberg
+				</a>
+			),
 		}
 	);
 
@@ -301,7 +354,12 @@ function renderFavoriteButton( title ) {
 		<div className="wcb-session-favourite-icon">
 			{ /* Known issue: https://meta.trac.wordpress.org/ticket/4247 */ }
 			{ /* eslint-disable jsx-a11y/anchor-is-valid */ }
-			<a href="#" role="button" className="fav-session-button" aria-pressed="false">
+			<a
+				href="#"
+				role="button"
+				className="fav-session-button"
+				aria-pressed="false"
+			>
 				<span className="screen-reader-text">
 					{ sprintf(
 						// translators: %s: Title of the session that will be favorited when clicking the button.

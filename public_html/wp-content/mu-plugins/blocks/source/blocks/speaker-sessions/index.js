@@ -10,5 +10,5 @@ export const NAME = metadata.name;
 export const SETTINGS = {
 	...metadata,
 	icon: 'list-view',
-	edit: edit,
+	edit,
 };

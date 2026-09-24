@@ -61,6 +61,31 @@ class WCOR_Mailer {
 					),
 				),
 			),
+
+			'wcor_mentor_assigned_or_changed' => array(
+				'name'       => 'When Mentor is assigned / changed',
+				'repeatable' => true,
+				'actions'    => array(
+					array(
+						'name'       => 'wcor_mentor_assigned_or_changed',
+						'callback'   => 'send_trigger_mentor_assigned_or_changed',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
+
+			'wcor_cc_needs_orientation' => array(
+				'name'    => 'Campus Connect application needs orientation',
+				'actions' => array(
+					array(
+						'name'       => 'wcpt_cc_needs_orientation',
+						'callback'   => 'send_trigger_cc_needs_orientation',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
 		);
 
 		add_action( 'wcor_send_timed_emails', array( $this, 'send_timed_emails' ) );
@@ -114,7 +139,7 @@ class WCOR_Mailer {
 	 */
 	protected function mail( $to, $subject, $body, $headers, $email, $wordcamp ) {
 		if ( ! $this->validate_email_addresses( $to ) ) {
-			log( 'Message not sent because of invalid recipients.', compact( 'email', 'wordcamp' ) );
+			log( 'Message not sent because of invalid recipients.', compact( 'to', 'email', 'wordcamp' ) );
 			return false;
 		}
 
@@ -352,6 +377,10 @@ class WCOR_Mailer {
 			'[venue_contact_info]',
 			'[venue_exhibition_space_message]',
 
+			// Mentor.
+			'[mentor_name]',
+			'[mentor_email]',
+
 			// Miscellaneous
 			'[multi_event_sponsor_info]',
 			'[session_feedback_list_url]',
@@ -420,6 +449,10 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['Website URL'][0] )         ? 'N/A' : $wordcamp_meta['Website URL'][0],
 			empty( $wordcamp_meta['Contact Information'][0] ) ? 'N/A' : $wordcamp_meta['Contact Information'][0],
 			empty( $wordcamp_meta['Exhibition Space Available'][0] ) ? 'This event has no exhibition space.' : 'This event might have exhibition space available, please check with the organizers for more information.',
+
+			// Mentor.
+			$wordcamp_meta['Mentor Name'][0] ?? '',
+			$wordcamp_meta['Mentor E-mail Address'][0] ?? '',
 
 			// Miscellaneous
 			$this->get_mes_info( $wordcamp->ID ),
@@ -572,6 +605,21 @@ class WCOR_Mailer {
 			$recipients[] = MES_Region::get_camera_wranger_from_region( $region_id );
 		}
 
+		if ( in_array( 'wcor_send_mentor', $send_where ) ) {
+			$mentor_email = get_post_meta( $wordcamp_id, 'Mentor E-mail Address', true );
+
+			if ( is_email( $mentor_email ) ) {
+				$recipients[] = $mentor_email;
+			} else {
+				$mentor_username = get_post_meta( $wordcamp_id, 'Mentor WordPress.org User Name', true );
+				$mentor_user     = wcorg_get_user_by_canonical_names( $mentor_username );
+
+				if ( $mentor_user && is_email( $mentor_user->user_email ) ) {
+					$recipients[] = $mentor_user->user_email;
+				}
+			}
+		}
+
 		if ( in_array( 'wcor_send_organizers', $send_where ) ) {
 			$email_address_key = wcpt_key_to_str( 'E-mail Address', 'wcpt_' ); // Team address.
 
@@ -584,9 +632,12 @@ class WCOR_Mailer {
 			} else {
 				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) ); // Team address.
 			}
+
+			// Also send to the lead organizer's personal email address ("Email" = Lead organizer email, "E-mail" = team email).
+			$recipients[] = get_post_meta( $wordcamp_id, 'Email Address', true );
 		}
 
-		$recipients = array_unique( $recipients );
+		$recipients = array_unique( array_filter( $recipients ) );
 		return $recipients;
 	}
 
@@ -874,6 +925,20 @@ class WCOR_Mailer {
 	}
 
 	/**
+	 * Sends e-mails hooked to the wcor_cc_needs_orientation trigger.
+	 *
+	 * This fires when a Campus Connect application transitions to wcpt-needs-orientati
+	 * status. A dedicated action is used (rather than reusing wcpt_approved_for_pre_planning)
+	 * so that CC status changes do not trigger the non-CC hooks that listen on that action
+	 * (e.g. add_organizer_to_central, mark_date_added_to_planning_schedule).
+	 *
+	 * @param WP_Post $wordcamp The Campus Connect post that needs orientation.
+	 */
+	public function send_trigger_cc_needs_orientation( $wordcamp ) {
+		$this->send_triggered_emails( $wordcamp, 'wcor_cc_needs_orientation' );
+	}
+
+	/**
 	 * Sends e-mails hooked to the wcor_added_to_schedule trigger.
 	 *
 	 * This fires when a WordCamp is added to the final schedule.
@@ -914,6 +979,17 @@ class WCOR_Mailer {
 	}
 
 	/**
+	 * Sends e-mails hooked to the wcor_mentor_assigned_or_changed trigger.
+	 *
+	 * This fires when a mentor is assigned or changed on a WordCamp.
+	 *
+	 * @param WP_Post $wordcamp
+	 */
+	public function send_trigger_mentor_assigned_or_changed( $wordcamp ) {
+		$this->send_triggered_emails( $wordcamp, 'wcor_mentor_assigned_or_changed' );
+	}
+
+	/**
 	 * Send emails associated with the given trigger.
 	 *
 	 * This will save a record of which e-mails have already been sent and avoid sending duplicates.
@@ -924,13 +1000,14 @@ class WCOR_Mailer {
 	protected function send_triggered_emails( $wordcamp, $trigger ) {
 		$sent_email_ids = (array) get_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', true );
 		$emails         = $this->get_triggered_posts( $trigger );
+		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
 		foreach( $emails as $email ) {
 			if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
 				continue;
 			}
 
-			if ( in_array( $email->ID, $sent_email_ids ) ) {
+			if ( ! $is_repeatable && in_array( $email->ID, $sent_email_ids ) ) {
 				continue;
 			}
 

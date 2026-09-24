@@ -21,18 +21,14 @@ function PushToActiveCamps( { adminUrl } ) {
 	const [ loading, setLoading ] = useState( false );
 	const [ result, setResult ] = useState( null );
 
-	const sourcePost = useSelect(
-		( select ) => {
-			// This doesn't update until the `Update` button is saved, but that's good enough for our uses.
-			return select( 'core/editor' ).getCurrentPost();
-		}
-	);
+	const sourcePost = useSelect( ( select ) => {
+		// This doesn't update until the `Update` button is saved, but that's good enough for our uses.
+		return select( 'core/editor' ).getCurrentPost();
+	} );
 
-	const isDirty = useSelect(
-		( select ) => {
-			return select( 'core/editor' ).isEditedPostDirty();
-		}
-	);
+	const isDirty = useSelect( ( select ) => {
+		return select( 'core/editor' ).isEditedPostDirty();
+	} );
 
 	if ( isDirty && result !== null ) {
 		// Make sure the UI doesn't show results from a previous push once the current changes are saved.
@@ -49,44 +45,45 @@ function PushToActiveCamps( { adminUrl } ) {
 			<p>
 				{ sprintf(
 					// translators: %s: Title of the post.
-					__( 'This will copy the title/content/etc of this post to all of its corresponding %s posts on active WordCamp sites (except regional camps).', 'wordcamporg' ),
+					__(
+						'This will copy the title/content/etc of this post to all of its corresponding %s posts on active WordCamp sites (except regional camps).',
+						'wordcamporg'
+					),
 					decodeEntities( stripTags( sourcePost.title ) )
 				) }
 			</p>
 
 			<p className="disclaimer">
 				{ createInterpolateElement(
-					__( "This won't push to sites that were created before this post; for that please <a>edit their WordCamp post</a> and <code>Push new sponsors to site</code>.", 'wordcamporg' ),
+					__(
+						"This won't push to sites that were created before this post; for that please <a>edit their WordCamp post</a> and <code>Push new sponsors to site</code>.",
+						'wordcamporg'
+					),
 					{
-						a: <a href={ adminUrl + 'edit.php?post_type=wordcamp' } >#21441-gutenberg</a>,
+						a: <a href={ adminUrl + 'edit.php?post_type=wordcamp' }>#21441-gutenberg</a>,
 						code: <code />,
 					}
 				) }
 			</p>
 
-			{ loading &&
-				<Spinner />
-			}
+			{ loading && <Spinner /> }
 
-			{ isDirty &&
+			{ isDirty && (
 				<div className={ `notice notice-error inline` }>
 					<p>
-						{ __( 'Please save or discard the current changes before pushing the post to other sites.', 'wordcamporg' ) }
+						{ __(
+							'Please save or discard the current changes before pushing the post to other sites.',
+							'wordcamporg'
+						) }
 					</p>
 				</div>
-			}
+			) }
 
-			{ ! loading && ! isDirty &&
-				<PushButton
-					sponsorId={ sourcePost.id }
-					setLoading={ setLoading }
-					setResult={ setResult }
-				/>
-			}
+			{ ! loading && ! isDirty && (
+				<PushButton sponsorId={ sourcePost.id } setLoading={ setLoading } setResult={ setResult } />
+			) }
 
-			{ ! loading && ! isDirty && null !== result &&
-				<Result result={ result } />
-			}
+			{ ! loading && ! isDirty && null !== result && <Result result={ result } /> }
 		</PluginSidebar>
 	);
 }
@@ -113,7 +110,12 @@ function PushButton( { sponsorId, setLoading, setResult } ) {
 		} catch ( error ) {
 			result = {
 				success: false,
-				error: error.message ?? __( 'An unknown error occurred, please try again or ask the maintenance developer for help.', 'wordcamporg' ),
+				error:
+					error.message ??
+					__(
+						'An unknown error occurred, please try again or ask the maintenance developer for help.',
+						'wordcamporg'
+					),
 			};
 		} finally {
 			setResult( result );
@@ -140,39 +142,37 @@ function Result( { result } ) {
 				<p>
 					{ success
 						? _x( 'Success!', 'admin notice', 'wordcamporg' )
-						// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
-						: _x( 'Error: ', 'admin notice', 'wordcamporg' ) + error
-					}
+						: // eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
+						  _x( 'Error: ', 'admin notice', 'wordcamporg' ) + error }
 				</p>
 			</div>
 
-			{ success && skipped_posts.length > 0 &&
+			{ success && skipped_posts.length > 0 && (
 				<div className="notice notice-warning">
 					<p>
-						{ __( 'These sites have already edited the post, so they were skipped to avoid overwriting their changes.', 'wordcamporg' ) }
+						{ __(
+							'These sites have already edited the post, so they were skipped to avoid overwriting their changes.',
+							'wordcamporg'
+						) }
 					</p>
 
 					<ul className="ul-disc">
 						{ skipped_posts.map( ( { edit_url, site_name } ) => {
 							return (
 								<li key={ edit_url }>
-									<a href={ edit_url }>
-										{ site_name }
-									</a>
+									<a href={ edit_url }>{ site_name }</a>
 								</li>
 							);
 						} ) }
 					</ul>
 				</div>
-			}
+			) }
 		</div>
 	);
 }
 
 registerPlugin( 'push-to-active-camps', {
 	render: () => {
-		return (
-			<PushToActiveCamps adminUrl={ MultiEventSponsor.admin_url } />
-		);
-	} }
-);
+		return <PushToActiveCamps adminUrl={ MultiEventSponsor.admin_url } />;
+	},
+} );

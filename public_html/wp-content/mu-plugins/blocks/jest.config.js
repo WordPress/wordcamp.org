@@ -8,7 +8,6 @@ module.exports = {
 	},
 	moduleNameMapper: {
 		...( baseConfig.moduleNameMapper || {} ),
-		// Force uuid to resolve to its CJS entry instead of the ESM browser build.
-		'^uuid$': path.join( __dirname, '../../../../node_modules/uuid/dist/index.js' ),
+		'^uuid$': path.join( __dirname, 'jest/uuid-mock.js' ),
 	},
 };

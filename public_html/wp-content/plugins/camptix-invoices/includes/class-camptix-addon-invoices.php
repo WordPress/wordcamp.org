@@ -218,13 +218,34 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 
 		$metas = get_post_meta( $attendees[0]->ID, 'invoice_metas', true );
-		if ( $metas ) {
-			$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
-			$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
-			if ( ! is_wp_error( $invoice_id ) && ! empty( $invoice_id ) ) {
-				self::send_invoice( $invoice_id );
-			}//end if
-		}//end if
+		if ( ! $metas ) {
+			return;
+		}
+
+		// Race-safe idempotency guard: payment_result() can fire camptix_payment_result
+		// more than once for the same payment_token (centralized Stripe webhook + interactive
+		// return run within ~1-2 seconds of each other). add_post_meta() with $unique=true
+		// is rejected by WordPress if the key already exists for this post, so only the first
+		// caller successfully claims invoice creation; concurrent callers bail. Keyed on the
+		// attendee rather than on tix_transaction_id so that no-transaction purchases
+		// (100% coupon, Stripe payment_status=no_payment_required) are also covered.
+		if ( get_post_meta( $attendees[0]->ID, '_invoice_id', true ) ) {
+			return;
+		}
+		if ( ! add_post_meta( $attendees[0]->ID, '_invoice_id', 0, true ) ) {
+			return;
+		}
+
+		$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
+		$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
+		if ( is_wp_error( $invoice_id ) || empty( $invoice_id ) ) {
+			// Release the lock so a later call can retry.
+			delete_post_meta( $attendees[0]->ID, '_invoice_id' );
+			return;
+		}
+
+		update_post_meta( $attendees[0]->ID, '_invoice_id', $invoice_id );
+		self::send_invoice( $invoice_id );
 	}
 
 	/**
@@ -392,7 +413,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
 		}
 
-		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
+		// basename() contains the value to the camptix-invoices directory so a crafted meta
+		// value cannot make the PDF generator write, or rename() move, outside of it.
+		$filename = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 		if ( empty( $filename ) ) {
 			$filename = $invoice_number . '-' . wp_generate_password( 12, false, false ) . '.pdf';
 		}
@@ -408,9 +431,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			}
 		}
 
-		rename( $tmp_path, $invoices_dirname . '/' . $filename );
-
-		update_post_meta( $invoice_id, 'invoice_document', $filename );
+		// `rename()` always fails with "Operation not permitted" here because the PDF is
+		// generated into a `/tmp` mount that is a different filesystem from the uploads
+		// volume, so cross-device renames are never possible in this environment. Copy
+		// across and remove the source instead of attempting (and logging a warning for)
+		// a rename that cannot succeed.
+		if ( copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			unlink( $tmp_path );
+			update_post_meta( $invoice_id, 'invoice_document', $filename );
+		}
 	}
 
 	/**
@@ -462,7 +491,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir = wp_upload_dir();
 		if ( ! empty( $upload_dir['basedir'] ) ) {
 			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
-			$filename         = $invoices_dirname . '/' . $filename;
+			// basename() contains the value to the camptix-invoices directory: the meta is
+			// not guaranteed to be plugin-written and must never be able to traverse out.
+			$filename         = $invoices_dirname . '/' . basename( $filename );
 			if ( file_exists( $filename ) ) {
 				wp_delete_file( $filename );
 			}
@@ -481,13 +512,23 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$currency = $camptix_currencies[ $currency_key ];
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) === true ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			try {
+				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+				$formatted_amount = $formatter->format( $amount );
+			} catch ( \Throwable $e ) {
+				$formatted_amount = false;
+			}
+		}
+
+		if ( false === $formatted_amount ) {
+			if ( isset( $currency['format'] ) && $currency['format'] ) {
+				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
+			} else {
+				$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			}
 		}
 
 		return $formatted_amount;

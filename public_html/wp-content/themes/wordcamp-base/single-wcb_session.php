@@ -31,10 +31,14 @@ get_header(); ?>
 
 					<div class="entry-content">
 						<?php the_content(); ?>
-						<?php wp_link_pages( array(
-						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
-						'after' => '</div>',
-) ); ?>
+						<?php
+						wp_link_pages(
+							array(
+								'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
+								'after'  => '</div>',
+							)
+						);
+						?>
 					</div><!-- .entry-content -->
 				</div><!-- #post-## -->
 

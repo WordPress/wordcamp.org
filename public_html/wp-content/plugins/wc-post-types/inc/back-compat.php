@@ -8,6 +8,7 @@
 class WordCamp_Post_Types_Plugin_Back_Compat {
 	protected $stylesheet = '';
 	protected $template   = '';
+	protected $wcpt;
 
 	function __construct() {
 		// This must run before `WordCamp_Post_Types_Plugin::init()` so that `wcpt_back_compat_init` is registered
@@ -58,7 +59,7 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 		global $wcpt_plugin;
 
 		// Keep a link to the main plugin object.
-		$this->wcpt =& $wcpt_plugin;
+		$this->wcpt = $wcpt_plugin;
 
 		add_filter( 'wcb_entry_meta', array( $this, 'wcb_session_entry_meta' ) );
 
@@ -81,6 +82,8 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 
 		$speakers = new WP_Query( array(
 			'post_type'      => 'wcb_speaker',
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
 			'posts_per_page' => -1,
@@ -158,6 +161,8 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 
 		$sessions = new WP_Query( array(
 			'post_type'      => 'wcb_session',
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'orberby'        => 'title',
 			'order'          => 'DESC',
 			'posts_per_page' => -1,
@@ -266,6 +271,8 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 
 				$sponsors = new WP_Query( array(
 					'post_type'      => 'wcb_sponsor',
+					'post_status'    => 'publish',
+					'has_password'   => false,
 					'order'          => 'ASC',
 					'posts_per_page' => - 1,
 					'taxonomy'       => $term->taxonomy,

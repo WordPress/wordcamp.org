@@ -28,7 +28,16 @@ function initialize() {
 		return;
 	}
 
-	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\register_scripts'               );
+	/*
+	 * The assets are only used inside the Customizer, and `customize.php` never fires
+	 * `admin_enqueue_scripts` itself. On classic themes it fires indirectly -- the Customizer's `widgets`
+	 * component calls `do_action( 'admin_enqueue_scripts', 'widgets.php' )` -- but block themes don't load
+	 * that component, so the assets must be registered on a hook that `customize.php` always fires.
+	 * Priority 1 so registration happens before `WP_Customize_Manager::enqueue_control_scripts()` runs
+	 * the controls' `enqueue()` callbacks at priority 10.
+	 */
+	add_action( 'customize_controls_enqueue_scripts', __NAMESPACE__ . '\register_scripts', 1 );
+
 	add_action( 'admin_menu',            __NAMESPACE__ . '\add_submenu_pages'              );
 	add_action( 'customize_register',    __NAMESPACE__ . '\register_customizer_components' );
 	add_action( 'rest_api_init',         __NAMESPACE__ . '\register_api_endpoints'         );

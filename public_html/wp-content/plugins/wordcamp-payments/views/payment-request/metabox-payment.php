@@ -54,9 +54,9 @@
 
 		<div id="payment_method_sepa_transfer_fields" class="form-table payment_method_fields <?php echo 'sepa_transfer' == $selected_payment_method ? 'active' : 'hidden'; ?>">
 			<table>
-				<?php $this->render_text_input( $post, esc_html__( 'Account Name', 'wordcamporg' ), 'sepa_account_name' ); ?>
-				<?php $this->render_text_input( $post, esc_html__( 'BIC',          'wordcamporg' ), 'sepa_bic'          ); ?>
-				<?php $this->render_text_input( $post, esc_html__( 'IBAN',         'wordcamporg' ), 'sepa_iban'         ); ?>
+				<?php $this->render_text_input( $post, esc_html__( 'Account Holder Name', 'wordcamporg' ), 'sepa_account_name', '', 'text', array(), false, true, esc_attr__( 'Jane Doe or XYZ Company', 'wordcamporg' ) ); ?>
+				<?php $this->render_text_input( $post, esc_html__( 'BIC', 'wordcamporg' ), 'sepa_bic', '', 'text', array(), false, true, esc_attr__( 'XXXXGB00', 'wordcamporg' ) ); ?>
+				<?php $this->render_text_input( $post, esc_html__( 'IBAN', 'wordcamporg' ), 'sepa_iban', '', 'text', array(), false, true, esc_attr__( 'GB00 XXXX 0000 0000 0000 00', 'wordcamporg' ) ); ?>
 			</table>
 		</div>
 

@@ -25,22 +25,30 @@ export function getSessionDetails( session, allTracks = false ) {
 	}
 
 	if ( ! hasDate && hasTracks ) {
-		const tracks = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+		const tracks = terms.filter(
+			( term ) => 'wcb_track' === term.taxonomy
+		);
 
 		return sprintf(
 			/* translators: %s: Session track(s) */
 			__( 'In %s', 'wordcamporg' ),
-			allTracks ? tracks.map( ( { name } ) => name.trim() ).join( ', ' ) : tracks[ 0 ].name.trim()
+			allTracks
+				? tracks.map( ( { name } ) => name.trim() ).join( ', ' )
+				: tracks[ 0 ].name.trim()
 		);
 	} else if ( hasTracks ) {
-		const tracks = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+		const tracks = terms.filter(
+			( term ) => 'wcb_track' === term.taxonomy
+		);
 
 		return sprintf(
 			/* translators: 1: A date; 2: A time; 3: Session track(s) */
 			__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
 			session.session_date_time.date,
 			session.session_date_time.time,
-			allTracks ? tracks.map( ( { name } ) => name.trim() ).join( ', ' ) : tracks[ 0 ].name.trim()
+			allTracks
+				? tracks.map( ( { name } ) => name.trim() ).join( ', ' )
+				: tracks[ 0 ].name.trim()
 		);
 	}
 
@@ -61,7 +69,10 @@ export function getSessionDetails( session, allTracks = false ) {
  */
 export function sortSessionByTime( sessionA, sessionB ) {
 	// If no meta values found, keep the same sort order.
-	if ( ! sessionA.meta?._wcpt_session_time || ! sessionB.meta?._wcpt_session_time ) {
+	if (
+		! sessionA.meta?._wcpt_session_time ||
+		! sessionB.meta?._wcpt_session_time
+	) {
 		return 0;
 	}
 	if ( sessionA.meta._wcpt_session_time < sessionB.meta._wcpt_session_time ) {

@@ -1,6 +1,11 @@
 /* global globalEventsPayload */
 
-document.addEventListener( 'DOMContentLoaded', function() {
+/**
+ * WordPress dependencies
+ */
+import { escapeAttribute, escapeHTML } from '@wordpress/escape-html';
+
+document.addEventListener( 'DOMContentLoaded', function () {
 	const speak = wp.a11y.speak;
 
 	/**
@@ -14,10 +19,14 @@ document.addEventListener( 'DOMContentLoaded', function() {
 		}
 
 		for ( const id in globalEventsPayload ) {
-			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
+			const listContainer = document.querySelector(
+				`#wp-block-wporg-event-list-${ id }`
+			);
 			if ( ! listContainer ) {
 				// eslint-disable-next-line no-console
-				console.error( `Missing container for global events with id ${ id }` );
+				console.error(
+					`Missing container for global events with id ${ id }`
+				);
 				continue;
 			}
 
@@ -37,22 +46,29 @@ document.addEventListener( 'DOMContentLoaded', function() {
 	 * @param {boolean} groupByMonth
 	 */
 	function renderGlobalEvents( container, events, groupByMonth ) {
-		const loadingElement = container.querySelector( '.wporg-marker-list__loading' );
+		const loadingElement = container.querySelector(
+			'.wporg-marker-list__loading'
+		);
 		const groupedEvents = {};
 		let markup = '';
 
 		if ( groupByMonth ) {
 			for ( let i = 0; i < events.length; i++ ) {
-				const eventMonthYear = new Date( events[ i ].timestamp * 1000 ).toLocaleDateString( [], {
+				const eventMonthYear = new Date(
+					events[ i ].timestamp * 1000
+				).toLocaleDateString( [], {
 					year: 'numeric',
 					month: 'long',
 				} );
 
-				groupedEvents[ eventMonthYear ] = groupedEvents[ eventMonthYear ] || [];
+				groupedEvents[ eventMonthYear ] =
+					groupedEvents[ eventMonthYear ] || [];
 				groupedEvents[ eventMonthYear ].push( events[ i ] );
 			}
 
-			for ( const [ month, eventGroup ] of Object.entries( groupedEvents ) ) {
+			for ( const [ month, eventGroup ] of Object.entries(
+				groupedEvents
+			) ) {
 				markup += renderEventGroup( eventGroup, month );
 			}
 		} else {
@@ -66,16 +82,31 @@ document.addEventListener( 'DOMContentLoaded', function() {
 	}
 
 	/**
-	 * Encode any HTML in a string to prevent XSS.
+	 * Reduce a URL to one that is safe to place in an `href` attribute.
+	 *
+	 * Encoding alone isn't enough for a URL, since the scheme matters as much as
+	 * the characters. Anything that isn't HTTP(S) is dropped. Values arrive
+	 * absolute from `index.php`, so no base is passed -- that way a value which
+	 * isn't a whole URL fails the parse rather than resolving against this page.
 	 *
 	 * @param {string} unsafe
 	 *
-	 * @return {string}
+	 * @return {string} The encoded URL, or an empty string if it isn't linkable.
 	 */
-	function escapeHtml( unsafe ) {
-		const safe = document.createTextNode( unsafe ).textContent;
+	function escapeUrl( unsafe ) {
+		let parsed;
 
-		return safe;
+		try {
+			parsed = new URL( String( unsafe ?? '' ) );
+		} catch {
+			return '';
+		}
+
+		if ( 'http:' !== parsed.protocol && 'https:' !== parsed.protocol ) {
+			return '';
+		}
+
+		return escapeAttribute( parsed.href );
 	}
 
 	/**
@@ -91,7 +122,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			<h2
 				class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size"
 				style="margin-top:var(--wp--preset--spacing--40);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">
-				${ escapeHtml( month ) }
+				${ escapeHTML( month ) }
 			</h2>`;
 
 		markup += renderEventList( group );
@@ -133,13 +164,13 @@ document.addEventListener( 'DOMContentLoaded', function() {
 		const markup = `
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
-					<a class="external-link" href="${ escapeHtml( url ) }">
-						${ escapeHtml( title ) }
+					<a class="external-link" href="${ escapeUrl( url ) }">
+						${ escapeHTML( title ) }
 					</a>
 				</h3>
 
 				<div class="wporg-marker-list-item__location">
-					${ escapeHtml( location ) }
+					${ escapeHTML( location ) }
 				</div>
 
 				${ getEventDateTime( title, timestamp ) }
@@ -184,7 +215,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			<time
 			    class="wporg-marker-list-item__date-time"
 			    datetime="${ eventDate.toISOString() }"
-			    title="${ escapeHtml( title ) }"
+			    title="${ escapeAttribute( title ) }"
 		    >
 				<span class="wporg-google-map__date">${ localeDate }</span>
 				<span class="wporg-google-map__time">${ localeTime }</span>

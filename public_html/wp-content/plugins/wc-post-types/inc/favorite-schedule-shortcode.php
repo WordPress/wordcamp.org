@@ -15,7 +15,7 @@ function enqueue_favorite_sessions_dependencies() {
 	wp_enqueue_script(
 		'favourite-sessions',
 		plugin_dir_url( __DIR__ ) . 'js/favourite-sessions.js',
-		array( 'jquery' ),
+		array( 'jquery', 'wp-api-fetch' ),
 		filemtime( plugin_dir_path( __DIR__ ) . 'js/favourite-sessions.js' ),
 		true
 	);
@@ -24,8 +24,8 @@ function enqueue_favorite_sessions_dependencies() {
 		'favourite-sessions',
 		'favSessionsPhpObject',
 		array(
-			'root' => esc_url_raw( rest_url() ),
-			'i18n' => array(
+			'isLoggedIn'            => is_user_logged_in(),
+			'i18n'                  => array(
 				'reqTimeOut'           => esc_html__( 'Sorry, the email request timed out.', 'wordcamporg' ),
 				'otherError'           => esc_html__( 'Sorry, the email request failed.',    'wordcamporg' ),
 				'overwriteFavSessions' => esc_html__( 'You already have some sessions saved. Would you like to overwrite those with the shared sessions that you are viewing?', 'wordcamporg' ),
@@ -34,6 +34,24 @@ function enqueue_favorite_sessions_dependencies() {
 			),
 		)
 	);
+
+	// Preload the fav-sessions endpoint so wp.apiFetch serves it from cache on first request.
+	if ( is_user_logged_in() ) {
+		$preload_data = array_reduce(
+			array( '/wc-post-types/v1/fav-sessions/' ),
+			'rest_preload_api_request',
+			array()
+		);
+
+		wp_add_inline_script(
+			'wp-api-fetch',
+			sprintf(
+				'wp.apiFetch.use( wp.apiFetch.createPreloadingMiddleware( %s ) );',
+				wp_json_encode( $preload_data )
+			),
+			'after'
+		);
+	}
 
 	wp_enqueue_style(
 		'favorite-sessions',
@@ -172,6 +190,8 @@ function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $t
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'meta_query'     => array(
 			'relation' => 'AND',
 			array(
@@ -353,7 +373,8 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 
 			$speakers_names = array();
 			foreach ( $speakers as $speaker ) {
-				$speaker_name     = apply_filters( 'the_title', $speaker->post_title );
+				// Decoded for the same reason the session title above is: this is a plain-text mail.
+				$speaker_name     = html_entity_decode( apply_filters( 'the_title', $speaker->post_title ) );
 				$speakers_names[] = $speaker_name;
 			}
 

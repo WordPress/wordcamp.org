@@ -17,7 +17,7 @@
 <!-- wp:column {"verticalAlignment":"center","width":"66.66%"} -->
 <div class="wp-block-column is-vertically-aligned-center" style="flex-basis:66.66%"><!-- wp:post-title {"textAlign":"left","isLink":true,"fontSize":"x-large"} /-->
 
-<!-- wp:read-more {"content":"<?php esc_attr_e( 'Read More', 'wordcamp' ); ?>"} /--></div>
+<!-- wp:read-more {"content":"<?php esc_attr_e( 'Read More', 'wordcamporg' ); ?>"} /--></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 <!-- /wp:post-template --></div>

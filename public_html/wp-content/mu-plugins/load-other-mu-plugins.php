@@ -28,7 +28,10 @@ function wcorg_include_common_plugins() {
  * Include mu-plugins that should only run on a specific network.
  */
 function wcorg_include_network_only_plugins() {
-	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+	if ( GROUPS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+		$network_folder = 'groups';
+
+	} elseif ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 		$network_folder = 'events';
 
 	} else {

@@ -169,7 +169,7 @@ class CampTix_Currency {
 			),
 			'CZK' => array(
 				'label'         => __( 'Czech Koruna', 'wordcamporg' ),
-				'locale'        => 'hcs_CZ',
+				'locale'        => 'cs_CZ',
 				'decimal_point' => 2,
 			),
 			'DJF' => array(

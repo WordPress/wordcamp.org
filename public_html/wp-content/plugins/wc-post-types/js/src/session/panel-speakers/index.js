@@ -9,8 +9,13 @@ import { withDispatch, withSelect } from '@wordpress/data';
 
 const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 	// `suggestions` expects an array of strings, not objects.
-	const speakerNames = speakers.map( ( { title: { rendered = '' } } ) => rendered );
-	const formatSpeakerForList = ( { title: { rendered = '' }, id } ) => ( { value: rendered, id: id } );
+	const speakerNames = speakers.map(
+		( { title: { rendered = '' } } ) => rendered
+	);
+	const formatSpeakerForList = ( { title: { rendered = '' }, id } ) => ( {
+		value: rendered,
+		id,
+	} );
 
 	return (
 		<PluginDocumentSettingPanel
@@ -21,7 +26,9 @@ const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 			<FormTokenField
 				label={ __( 'Select speakers', 'wordcamporg' ) }
 				help={ false }
-				value={ speakers.filter( ( { id } ) => selected.includes( id ) ).map( formatSpeakerForList ) }
+				value={ speakers
+					.filter( ( { id } ) => selected.includes( id ) )
+					.map( formatSpeakerForList ) }
 				suggestions={ speakerNames }
 				onChange={ ( value ) => {
 					// Find the selected name in the full list, format into value,id pair.
@@ -29,7 +36,9 @@ const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 						if ( val.id ) {
 							return val;
 						}
-						const speaker = speakers.find( ( { title } ) => title.rendered === val );
+						const speaker = speakers.find(
+							( { title } ) => title.rendered === val
+						);
 						if ( ! speaker ) {
 							return false;
 						}
@@ -45,11 +54,15 @@ const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 export default compose( [
 	withSelect( ( select ) => {
 		const meta = select( 'core/editor' ).getEditedPostAttribute( 'meta' );
-		const speakers = select( 'core' ).getEntityRecords( 'postType', 'wcb_speaker', {
-			status: 'any',
-			per_page: -1,
-			_embed: true,
-		} );
+		const speakers = select( 'core' ).getEntityRecords(
+			'postType',
+			'wcb_speaker',
+			{
+				status: 'any',
+				per_page: -1,
+				_embed: true,
+			}
+		);
 
 		return {
 			selected: meta._wcpt_speaker_id,

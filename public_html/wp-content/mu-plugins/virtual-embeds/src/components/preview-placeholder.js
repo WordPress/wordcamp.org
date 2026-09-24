@@ -21,7 +21,15 @@ import { BlockIcon } from '@wordpress/block-editor';
  * @param {string}   props.placeholder
  * @return {Element}
  */
-export default function( { classes, help, icon, instructions, label, embedHandler, placeholder } ) {
+export default function ( {
+	classes,
+	help,
+	icon,
+	instructions,
+	label,
+	embedHandler,
+	placeholder,
+} ) {
 	let currentUrl = '';
 
 	classes += ' is-preview-placeholder';
@@ -38,13 +46,10 @@ export default function( { classes, help, icon, instructions, label, embedHandle
 				label={ label }
 				help={ help }
 				placeholder={ placeholder }
-				onChange={ ( newUrl ) => currentUrl = newUrl }
+				onChange={ ( newUrl ) => ( currentUrl = newUrl ) }
 			/>
 
-			<Button
-				isPrimary
-				onClick={ () => embedHandler( currentUrl ) }
-			>
+			<Button isPrimary onClick={ () => embedHandler( currentUrl ) }>
 				{ __( 'Embed', 'wordcamporg' ) }
 			</Button>
 		</Placeholder>

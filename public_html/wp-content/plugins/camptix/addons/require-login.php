@@ -6,8 +6,8 @@
  * todo add a detailed explanation of the goals, workflow, etc
  */
 class CampTix_Require_Login extends CampTix_Addon {
-	const UNCONFIRMED_USERNAME = '[[ unconfirmed ]]';
-	const UNKNOWN_ATTENDEE_EMAIL = 'unknown.attendee@example.org';
+	public const UNCONFIRMED_USERNAME = '[[ unconfirmed ]]';
+	public const UNKNOWN_ATTENDEE_EMAIL = 'unknown.attendee@example.org';
 
 	/**
 	 * Register hook callbacks

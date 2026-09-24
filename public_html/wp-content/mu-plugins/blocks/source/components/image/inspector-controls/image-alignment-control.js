@@ -19,7 +19,13 @@ import { BaseControl, Toolbar } from '@wordpress/components';
  * @param {Object[]} root0.alignOptions
  * @return {Element}
  */
-function ImageAlignmentControl( { label, help, value, onChange, alignOptions } ) {
+function ImageAlignmentControl( {
+	label,
+	help,
+	value,
+	onChange,
+	alignOptions,
+} ) {
 	return (
 		<BaseControl className="wordcamp-image__alignment" help={ help }>
 			<span className="wordcamp-image__alignment-label">{ label }</span>
@@ -31,7 +37,7 @@ function ImageAlignmentControl( { label, help, value, onChange, alignOptions } )
 					return {
 						title: alignment.label,
 						icon: iconSlug,
-						isActive: isActive,
+						isActive,
 						onClick: () => {
 							onChange( alignment.value );
 						},

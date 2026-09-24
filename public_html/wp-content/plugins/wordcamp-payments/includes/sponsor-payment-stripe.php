@@ -143,11 +143,11 @@ function _handle_post_data( &$data ) {
 		// An invoice, event, currency and amount have been selected.
 		default:
 		case STEP_SELECT_INVOICE:
-			$payment_type = filter_input( INPUT_POST, 'payment_type' );
+			$payment_type = sanitize_text_field( wp_unslash( $_POST['payment_type'] ?? '' ) );
 			$wordcamp_id  = filter_input( INPUT_POST, 'wordcamp_id', FILTER_VALIDATE_INT );
 			$invoice_id   = filter_input( INPUT_POST, 'invoice_id', FILTER_VALIDATE_INT );
-			$description  = filter_input( INPUT_POST, 'description' );
-			$currency     = filter_input( INPUT_POST, 'currency' );
+			$description  = sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) );
+			$currency     = sanitize_text_field( wp_unslash( $_POST['currency'] ?? '' ) );
 			$amount       = filter_input( INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT );
 
 			if ( ! $fsp->validate_form_submission() ) {

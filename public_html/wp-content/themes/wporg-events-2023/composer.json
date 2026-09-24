@@ -84,7 +84,6 @@
 			]
 		}
 	],
-	"require": {},
 	"require-dev": {
 		"composer/installers": "~1.0",
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
@@ -93,7 +92,7 @@
 		"wordpress-meta/pub": "1",
 		"wordpress-meta/wporg": "1",
 		"wordpress-meta/wporg-main": "1",
-		"wp-coding-standards/wpcs": "2.*",
+		"wp-coding-standards/wpcs": "^3.4.1",
 		"wp-phpunit/wp-phpunit": "^5.4",
 		"wpackagist-plugin/gutenberg": "*",
 		"wpackagist-plugin/jetpack": "*",

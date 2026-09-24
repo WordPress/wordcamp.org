@@ -12,24 +12,18 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+WC-Post-Types%22"
 	},
 	"devDependencies": {
-		"@date-fns/tz": "1.4.1",
-		"@wordpress/api-fetch": "7.39.0",
-		"@wordpress/components": "32.1.0",
-		"@wordpress/compose": "7.39.0",
-		"@wordpress/data": "10.39.0",
-		"@wordpress/date": "5.39.0",
-		"@wordpress/edit-post": "8.39.0",
-		"@wordpress/element": "6.39.0",
-		"@wordpress/i18n": "6.12.0",
-		"@wordpress/plugins": "7.39.0",
-		"@wordpress/scripts": "31.4.0",
-		"date-fns": "4.1.0"
-	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js",
-		"globals": {
-			"WCPT_Session_Defaults": "true"
-		}
+		"@date-fns/tz": "1.5.0",
+		"@wordpress/api-fetch": "7.48.0",
+		"@wordpress/components": "35.0.0",
+		"@wordpress/compose": "8.1.0",
+		"@wordpress/data": "10.48.0",
+		"@wordpress/date": "5.48.0",
+		"@wordpress/edit-post": "8.48.0",
+		"@wordpress/element": "8.0.0",
+		"@wordpress/i18n": "6.21.0",
+		"@wordpress/plugins": "7.48.0",
+		"@wordpress/scripts": "32.4.0",
+		"date-fns": "4.4.0"
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {
@@ -39,7 +33,7 @@
 		"start": "wp-scripts start",
 		"build": "wp-scripts build",
 		"format:js": "wp-scripts format js/src --config=../../../../.prettierrc.js",
-		"lint:js": "wp-scripts lint-js js/src",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs js/src",
 		"lint:css": "wp-scripts lint-style css/editor.css",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	}

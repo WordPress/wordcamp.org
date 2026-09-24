@@ -12,16 +12,13 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
 	},
 	"devDependencies": {
-		"@wordpress/block-editor": "15.12.0",
-		"@wordpress/blocks": "15.12.0",
-		"@wordpress/components": "32.1.0",
-		"@wordpress/element": "6.39.0",
-		"@wordpress/i18n": "6.12.0",
-		"@wordpress/scripts": "31.4.0",
-		"@wordpress/url": "4.39.0"
-	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
+		"@wordpress/block-editor": "15.21.0",
+		"@wordpress/blocks": "15.21.0",
+		"@wordpress/components": "35.0.0",
+		"@wordpress/element": "8.0.0",
+		"@wordpress/i18n": "6.21.0",
+		"@wordpress/scripts": "32.4.0",
+		"@wordpress/url": "4.48.0"
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {
@@ -30,7 +27,7 @@
 	"scripts": {
 		"start": "wp-scripts start",
 		"build": "wp-scripts build",
-		"lint:js": "wp-scripts lint-js src",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs src",
 		"lint:css": "wp-scripts lint-style *.css",
 		"format:js": "wp-scripts format src --config=../../../../.prettierrc.js",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"

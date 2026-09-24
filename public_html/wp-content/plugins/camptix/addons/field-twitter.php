@@ -10,6 +10,8 @@
  */
 class CampTix_Addon_Twitter_Field extends CampTix_Addon {
 
+	protected $questions;
+
 	/**
 	 * Runs during camptix_init, see CampTix_Addon
 	 */

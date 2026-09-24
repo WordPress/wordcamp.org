@@ -8,7 +8,7 @@
  */
 
 class MES_Sponsorship_Level {
-	const POST_TYPE_SLUG = 'mes-sponsor-level';
+	public const POST_TYPE_SLUG = 'mes-sponsor-level';
 
 	/**
 	 * Constructor

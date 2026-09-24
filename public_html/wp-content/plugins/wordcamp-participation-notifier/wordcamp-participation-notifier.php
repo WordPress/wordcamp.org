@@ -20,7 +20,7 @@ if ( 'local' === WORDCAMP_ENVIRONMENT ) {
 }
 
 class WordCamp_Participation_Notifier {
-	const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
+	public const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
 
 	/**
 	 * Constructor

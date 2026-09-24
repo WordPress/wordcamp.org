@@ -44,6 +44,8 @@ const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 const CAMPUS_NETWORK_ID     = 3;
 const CAMPUS_ROOT_BLOG_ID   = 47;
+const GROUPS_NETWORK_ID     = 4;
+const GROUPS_ROOT_BLOG_ID   = 52;
 
 switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 	case 'campus.wordpress.test':
@@ -56,12 +58,28 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 		break;
 
 	case 'events.wordpress.test':
-		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
-		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
-		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
-		define( 'SUBDOMAIN_INSTALL',     false );
-		// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
-		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		// `/group/*` URLs live on a dedicated network (`GROUPS_NETWORK_ID`)
+		// so the groups network can have its own active plugins (e.g.
+		// GatherPress) without affecting the main events network. The host
+		// header is the same for both networks, so we branch on the request
+		// path here — at the very top of the request — to set the right
+		// network constants before WordPress (and sunrise) start resolving
+		// the current site.
+		if ( str_starts_with( $_SERVER['REQUEST_URI'] ?? '', '/group/' ) ) {
+			define( 'SITE_ID_CURRENT_SITE',  GROUPS_NETWORK_ID );
+			define( 'BLOG_ID_CURRENT_SITE',  GROUPS_ROOT_BLOG_ID );
+			define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+			define( 'PATH_CURRENT_SITE',     '/group/' );
+			define( 'SUBDOMAIN_INSTALL',     false );
+			define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		} else {
+			define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
+			define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
+			define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+			define( 'SUBDOMAIN_INSTALL',     false );
+			// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
+			define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		}
 		break;
 
 	case 'wordcamp.test':
@@ -78,7 +96,7 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 
 define( 'MULTISITE',         true );
 define( 'SUNRISE',           true );
-define( 'PATH_CURRENT_SITE', '/' );
+defined( 'PATH_CURRENT_SITE' ) || define( 'PATH_CURRENT_SITE', '/' );
 
 
 /*
@@ -96,18 +114,31 @@ define( 'JETPACK_DEV_DEBUG', true );
 /*
  * Salts
  *
- * It doesn't matter for local environments, but use `wp config shuffle-salts` to change this in production
- * environments, because generating the keys locally is safer than using the API (and exposing the keys to
- * your OS/browser if you copy/paste, etc).
+ * These must be real, unique values rather than the WP default placeholder. WordPress detects the
+ * placeholder and silently falls back to a secret auto-generated per network (cached in
+ * `wp_sitemeta`/site_option), which breaks auth cookie validation whenever a single hostname resolves to
+ * more than one network (e.g. events.wordpress.test vs events.wordpress.test/group/, see
+ * sunrise-groups.php). Generate them once on first boot into a gitignored file mounted from
+ * .docker/local (see docker-compose.yaml) so they're real, stable across restarts, shared by every
+ * network on this install, and never committed.
  */
-define( 'AUTH_KEY',                          'put your unique phrase here' );
-define( 'SECURE_AUTH_KEY',                   'put your unique phrase here' );
-define( 'LOGGED_IN_KEY',                     'put your unique phrase here' );
-define( 'NONCE_KEY',                         'put your unique phrase here' );
-define( 'AUTH_SALT',                         'put your unique phrase here' );
-define( 'SECURE_AUTH_SALT',                  'put your unique phrase here' );
-define( 'LOGGED_IN_SALT',                    'put your unique phrase here' );
-define( 'NONCE_SALT',                        'put your unique phrase here' );
+$wc_salts_file = '/usr/src/local/salts.php';
+if ( ! file_exists( $wc_salts_file ) ) {
+	$wc_salt_keys  = array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' );
+	$wc_salt_lines = array( '<?php' );
+
+	foreach ( $wc_salt_keys as $wc_salt_key ) {
+		$wc_salt_lines[] = sprintf( "define( '%s', %s );", $wc_salt_key, var_export( base64_encode( random_bytes( 48 ) ), true ) );
+	}
+
+	// Write atomically so concurrent PHP-FPM workers on first boot can't read a half-written file.
+	$wc_salts_tmp_file = $wc_salts_file . '.' . getmypid() . '.tmp';
+	file_put_contents( $wc_salts_tmp_file, implode( "\n", $wc_salt_lines ) . "\n" );
+	rename( $wc_salts_tmp_file, $wc_salts_file );
+}
+require $wc_salts_file;
+unset( $wc_salts_file, $wc_salt_keys, $wc_salt_lines, $wc_salt_key, $wc_salts_tmp_file );
+
 define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'put your unique phrase here' );
 
 

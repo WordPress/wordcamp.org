@@ -1,0 +1,572 @@
+<?php
+/**
+ * Occurrence projection and retrieval.
+ *
+ * @package WordPressdotorg\GatherPress_Recurring_Events
+ */
+
+namespace WordPressdotorg\GatherPress_Recurring_Events;
+
+use DateInterval;
+use DateTimeImmutable;
+use DateTimeZone;
+use Exception;
+use GatherPress\Core\Utility;
+
+defined( 'WPINC' ) || die();
+
+final class Occurrences {
+
+	const CRON_HOOK = 'gpre_project_occurrences';
+
+	/**
+	 * The per-field meta keys `Event::save_datetimes()` writes.
+	 *
+	 * Watched because `save_post` is too early to project from: GatherPress
+	 * writes the schedule on `wp_after_insert_post` (or, for a brand-new post,
+	 * at `shutdown`), and the front-end event form writes it directly after
+	 * `wp_update_post()` has already returned. Either way the projection this
+	 * extension runs on `save_post_gatherpress_event` reads the *previous*
+	 * schedule out of the events table, and then sets the 6-hour freshness
+	 * marker that stops `maybe_project()` repairing it. A published series that
+	 * changed timezone kept showing the old one until the daily cron came round
+	 * (#2021).
+	 *
+	 * `save_datetimes()` updates the events table row before it writes any of
+	 * these, so the first of them to arrive is already a fresh read. It writes
+	 * the row and the meta from one array, which is what makes the meta a safe
+	 * proxy for the row: they cannot disagree, so a write that changes no meta
+	 * changed no schedule and has nothing to re-project.
+	 */
+	const SCHEDULE_META_KEYS = array(
+		'gatherpress_datetime_start',
+		'gatherpress_datetime_end',
+		'gatherpress_datetime_start_gmt',
+		'gatherpress_datetime_end_gmt',
+		'gatherpress_timezone',
+	);
+
+	/** Ensures the per-site daily projection job is scheduled. */
+	public static function schedule_cron(): void {
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::CRON_HOOK );
+		}
+	}
+
+	/** Removes the per-site occurrence projection job. */
+	public static function clear_cron(): void {
+		wp_clear_scheduled_hook( self::CRON_HOOK );
+	}
+
+	/** Projects every published recurring series on the current site. */
+	public static function project_all(): void {
+		$post_ids = get_posts(
+			array(
+				'post_type'              => 'gatherpress_event',
+				'post_status'            => 'publish',
+				'fields'                 => 'ids',
+				'posts_per_page'         => -1,
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array(
+					array(
+						'key'     => Rule::META_PREFIX . 'frequency',
+						'value'   => Rule::frequencies(),
+						'compare' => 'IN',
+					),
+				),
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			self::project( (int) $post_id );
+		}
+	}
+
+	/**
+	 * Projects one published series into lightweight occurrence rows.
+	 *
+	 * @param int $post_id Series post ID.
+	 */
+	public static function project( int $post_id ): void {
+		if ( 'publish' !== get_post_status( $post_id ) || ! Rule::is_recurring( $post_id ) ) {
+			return;
+		}
+
+		$event = self::master_datetime( $post_id );
+		if ( ! $event ) {
+			return;
+		}
+
+		$months  = max( 1, (int) apply_filters( 'gpre_projection_months', 6, $post_id ) );
+		$minimum = max( 1, (int) apply_filters( 'gpre_projection_minimum_future', 12, $post_id ) );
+		$through = ( new DateTimeImmutable( 'now', $event['timezone'] ) )->add( new DateInterval( 'P' . $months . 'M' ) );
+		$rule    = Rule::from_post( $post_id );
+		$starts  = Rule::expand( $event['start'], $rule, $through, $minimum );
+		$now     = current_time( 'mysql', true );
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'rrule', Rule::to_rrule( $rule, $event['start'] ) );
+
+		global $wpdb;
+		$table = Database::occurrences_table();
+
+		foreach ( $starts as $start ) {
+			$end           = $start->add( $event['duration'] );
+			$start_gmt     = $start->setTimezone( new DateTimeZone( 'UTC' ) );
+			$end_gmt       = $end->setTimezone( new DateTimeZone( 'UTC' ) );
+			$recurrence_id = Rule::recurrence_id( $start );
+
+			/*
+			 * Upsert rather than `INSERT IGNORE`: a row's schedule columns are
+			 * derived from the series and have to follow it. Moving the series
+			 * to another timezone (which the front-end event form can now do,
+			 * #2021) leaves the same wall-clock starts and so the same
+			 * recurrence ids, and an ignored insert left every existing
+			 * occurrence displaying the old zone forever.
+			 *
+			 * `status` and `created_gmt` are deliberately not in the update
+			 * list: a cancelled occurrence stays cancelled across a
+			 * re-projection, which is the whole reason this could not simply
+			 * delete and reinsert.
+			 */
+			$sql = $wpdb->prepare(
+				"INSERT INTO %i
+				(series_post_id, recurrence_id, datetime_start, datetime_start_gmt, datetime_end, datetime_end_gmt, timezone, status, created_gmt, updated_gmt)
+				VALUES (%d, %s, %s, %s, %s, %s, %s, 'scheduled', %s, %s)
+				ON DUPLICATE KEY UPDATE
+					datetime_start = VALUES(datetime_start),
+					datetime_start_gmt = VALUES(datetime_start_gmt),
+					datetime_end = VALUES(datetime_end),
+					datetime_end_gmt = VALUES(datetime_end_gmt),
+					timezone = VALUES(timezone),
+					updated_gmt = VALUES(updated_gmt)",
+				$table,
+				$post_id,
+				$recurrence_id,
+				$start->format( 'Y-m-d H:i:s' ),
+				$start_gmt->format( 'Y-m-d H:i:s' ),
+				$end->format( 'Y-m-d H:i:s' ),
+				$end_gmt->format( 'Y-m-d H:i:s' ),
+				$event['timezone']->getName(),
+				$now,
+				$now
+			);
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $sql );
+		}
+
+		self::remove_stale_scheduled_rows(
+			$post_id,
+			array_map( static fn( DateTimeImmutable $start ): string => Rule::recurrence_id( $start ), $starts )
+		);
+		set_transient( 'gpre_projected_' . $post_id, 1, 6 * HOUR_IN_SECONDS );
+
+		do_action( 'gpre_occurrences_projected', $post_id, count( $starts ) );
+	}
+
+	/**
+	 * Gets an occurrence by its canonical identity.
+	 *
+	 * @param int    $post_id       Series post ID.
+	 * @param string $recurrence_id Recurrence identifier.
+	 * @return object|null Occurrence row.
+	 */
+	public static function get( int $post_id, string $recurrence_id ): ?object {
+		global $wpdb;
+
+		// A lightweight request-time repair covers missed WP-Cron runs.
+		self::maybe_project( $post_id );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d AND recurrence_id = %s',
+				Database::occurrences_table(),
+				$post_id,
+				$recurrence_id
+			)
+		);
+
+		return is_object( $row ) ? $row : null;
+	}
+
+	/**
+	 * Selects the next available occurrence for a series landing page.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return object|null Selected occurrence row.
+	 */
+	public static function select_for_series( int $post_id ): ?object {
+		self::maybe_project( $post_id );
+
+		global $wpdb;
+		$table = Database::occurrences_table();
+		$now   = current_time( 'mysql', true );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM %i WHERE series_post_id = %d AND datetime_end_gmt >= %s
+				ORDER BY (status = 'cancelled') ASC, datetime_start_gmt ASC LIMIT 1",
+				$table,
+				$post_id,
+				$now
+			)
+		);
+
+		if ( ! $row ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE series_post_id = %d ORDER BY datetime_start_gmt DESC LIMIT 1',
+					$table,
+					$post_id
+				)
+			);
+		}
+
+		return is_object( $row ) ? $row : null;
+	}
+
+	/**
+	 * Gets the earliest compact list of upcoming dates.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @param int $limit   Maximum number of rows.
+	 * @return object[] Occurrence rows.
+	 */
+	public static function around( int $post_id, int $limit = 6 ): array {
+		self::maybe_project( $post_id );
+
+		global $wpdb;
+		$table = Database::occurrences_table();
+		$now   = current_time( 'mysql', true );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d AND datetime_start_gmt >= %s ORDER BY datetime_start_gmt ASC LIMIT %d',
+				$table,
+				$post_id,
+				$now,
+				$limit
+			)
+		);
+	}
+
+	/**
+	 * Gets projected occurrences in one temporal direction.
+	 *
+	 * @param int    $post_id   Series post ID.
+	 * @param string $direction Upcoming or past.
+	 * @param int    $limit     Maximum number of rows.
+	 * @return object[] Occurrence rows.
+	 */
+	public static function all( int $post_id, string $direction = 'upcoming', int $limit = 100 ): array {
+		self::maybe_project( $post_id );
+
+		global $wpdb;
+		if ( 'past' === $direction ) {
+			$query = $wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d AND datetime_end_gmt < %s ORDER BY datetime_start_gmt DESC LIMIT %d',
+				Database::occurrences_table(),
+				$post_id,
+				current_time( 'mysql', true ),
+				$limit
+			);
+		} else {
+			$query = $wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d AND datetime_start_gmt >= %s ORDER BY datetime_start_gmt ASC LIMIT %d',
+				Database::occurrences_table(),
+				$post_id,
+				current_time( 'mysql', true ),
+				$limit
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		return $wpdb->get_results( $query );
+	}
+
+	/**
+	 * Cancels or restores a future occurrence.
+	 *
+	 * @param int    $post_id       Series post ID.
+	 * @param string $recurrence_id Recurrence identifier.
+	 * @param string $status        Scheduled or cancelled.
+	 * @return bool Whether the row was updated.
+	 */
+	public static function set_status( int $post_id, string $recurrence_id, string $status ): bool {
+		if ( ! in_array( $status, array( 'scheduled', 'cancelled' ), true ) || ! self::get( $post_id, $recurrence_id ) ) {
+			return false;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$updated = $wpdb->update(
+			Database::occurrences_table(),
+			array(
+				'status'      => $status,
+				'updated_gmt' => current_time( 'mysql', true ),
+			),
+			array(
+				'series_post_id' => $post_id,
+				'recurrence_id'  => $recurrence_id,
+			),
+			array( '%s', '%s' ),
+			array( '%d', '%s' )
+		);
+
+		if ( false !== $updated ) {
+			do_action( 'gpre_occurrence_status_changed', $post_id, $recurrence_id, $status );
+		}
+
+		return false !== $updated;
+	}
+
+	/**
+	 * Ends a series after a selected future occurrence.
+	 *
+	 * @param int    $post_id       Series post ID.
+	 * @param string $recurrence_id Final recurrence identifier.
+	 * @return bool Whether the series was ended.
+	 */
+	public static function end_after( int $post_id, string $recurrence_id ): bool {
+		$occurrence = self::get( $post_id, $recurrence_id );
+		if ( ! $occurrence || $occurrence->datetime_start_gmt <= current_time( 'mysql', true ) ) {
+			return false;
+		}
+
+		$until         = substr( $occurrence->datetime_start, 0, 10 );
+		$current_type  = get_post_meta( $post_id, Rule::META_PREFIX . 'end_type', true );
+		$current_until = get_post_meta( $post_id, Rule::META_PREFIX . 'until', true );
+
+		if ( 'until' === $current_type && $current_until && $current_until <= $until ) {
+			return false;
+		}
+
+		Plugin::update_end_condition( $post_id, $until );
+
+		global $wpdb;
+		// Keep projected later rows as stable, cancelled URLs with their existing discussion and RSVP history.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i SET status = 'cancelled', updated_gmt = %s
+				WHERE series_post_id = %d AND datetime_start_gmt > %s",
+				Database::occurrences_table(),
+				current_time( 'mysql', true ),
+				$post_id,
+				$occurrence->datetime_start_gmt
+			)
+		);
+
+		$event = self::master_datetime( $post_id );
+		if ( $event ) {
+			update_post_meta( $post_id, Rule::META_PREFIX . 'rrule', Rule::to_rrule( Rule::from_post( $post_id ), $event['start'] ) );
+		}
+
+		do_action( 'gpre_series_ended', $post_id, $recurrence_id );
+		return true;
+	}
+
+	/**
+	 * Builds a `DateTimeZone` from a timezone as the events table spells it.
+	 *
+	 * The column holds whatever was handed to `Event::save_datetimes()`, which
+	 * normalizes the value only for the `DateTimeZone` it computes the GMT
+	 * columns with and writes the string itself through raw. Both GatherPress's
+	 * own wp-admin sidebar and core's `wp_timezone_choice()` spell a manual
+	 * offset `UTC+10`, and `new DateTimeZone( 'UTC+10' )` throws -- PHP wants
+	 * `+10:00`. Rows written before the front-end form started canonicalizing
+	 * (#2021) still carry the throwing spelling, and every one of them made
+	 * `master_datetime()` return null, so `project()` wrote no occurrence rows
+	 * at all.
+	 *
+	 * Normalizing on read as well as on write is what makes those rows
+	 * recoverable: the next projection run repairs a series nobody has touched.
+	 *
+	 * @param string $timezone Timezone as stored, in any spelling.
+	 * @return DateTimeZone The zone, falling back to the site's own.
+	 * @throws Exception When neither the stored zone nor the site's is usable.
+	 */
+	public static function timezone( string $timezone ): DateTimeZone {
+		$timezone = trim( $timezone );
+
+		if ( '' !== $timezone && class_exists( Utility::class ) ) {
+			$timezone = Utility::normalize_timezone_string( $timezone );
+		}
+
+		if ( '' === $timezone ) {
+			$timezone = wp_timezone_string();
+		}
+
+		try {
+			return new DateTimeZone( $timezone );
+		} catch ( Exception $exception ) {
+			return wp_timezone();
+		}
+	}
+
+	/**
+	 * Reads the GatherPress master date and duration.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return array|null Master date data.
+	 */
+	private static function master_datetime( int $post_id ): ?array {
+		global $wpdb;
+
+		// Read the immutable series seed directly so active occurrence metadata overrides
+		// can never shift the projection's DTSTART.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$master = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT datetime_start, datetime_end, timezone FROM %i WHERE post_id = %d',
+				$wpdb->prefix . 'gatherpress_events',
+				$post_id
+			)
+		);
+
+		if ( ! $master ) {
+			return null;
+		}
+
+		try {
+			$timezone = self::timezone( (string) $master->timezone );
+			$start    = new DateTimeImmutable( $master->datetime_start, $timezone );
+			$end      = new DateTimeImmutable( $master->datetime_end, $timezone );
+		} catch ( Exception $exception ) {
+			return null;
+		}
+
+		if ( $end <= $start ) {
+			return null;
+		}
+
+		return array(
+			'start'    => $start,
+			'duration' => $start->diff( $end ),
+			'timezone' => $timezone,
+		);
+	}
+
+	/**
+	 * Removes unrealized scheduled rows that no longer belong to the rule.
+	 *
+	 * Cancelled rows are stable resources and realized rows are permanent history.
+	 *
+	 * @param int      $post_id       Series post ID.
+	 * @param string[] $recurrence_ids Valid projected identifiers.
+	 */
+	private static function remove_stale_scheduled_rows( int $post_id, array $recurrence_ids ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT occurrence_id, recurrence_id FROM %i
+				WHERE series_post_id = %d AND status = 'scheduled' AND datetime_start_gmt >= %s",
+				Database::occurrences_table(),
+				$post_id,
+				current_time( 'mysql', true )
+			)
+		);
+
+		foreach ( $rows as $row ) {
+			if ( ! in_array( $row->recurrence_id, $recurrence_ids, true ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->delete( Database::occurrences_table(), array( 'occurrence_id' => (int) $row->occurrence_id ), array( '%d' ) );
+			}
+		}
+	}
+
+	/**
+	 * Repairs a projection only when its short-lived freshness marker expires.
+	 *
+	 * @param int $post_id Series post ID.
+	 */
+	private static function maybe_project( int $post_id ): void {
+		if ( Rule::is_recurring( $post_id ) && 'publish' === get_post_status( $post_id ) && ! get_transient( 'gpre_projected_' . $post_id ) ) {
+			self::project( $post_id );
+		}
+	}
+
+	/**
+	 * Re-projects a series whose stored schedule has just been rewritten.
+	 *
+	 * Hooked to `added_post_meta` and `updated_post_meta`, which is where a
+	 * schedule write becomes observable from outside GatherPress: it fires no
+	 * action of its own after `save_datetimes()`. See `SCHEDULE_META_KEYS` for
+	 * why `save_post` cannot be used instead.
+	 *
+	 * @param int    $meta_id   Meta row ID. Unused.
+	 * @param int    $object_id Post the meta belongs to.
+	 * @param string $meta_key  Meta key written.
+	 */
+	public static function reproject_on_schedule_write( $meta_id, $object_id, $meta_key ): void {
+		if ( ! in_array( (string) $meta_key, self::SCHEDULE_META_KEYS, true ) ) {
+			return;
+		}
+
+		self::reproject( (int) $object_id );
+	}
+
+	/**
+	 * Projects a series again, at most once per distinct schedule per request.
+	 *
+	 * One `save_datetimes()` call writes five of the watched keys, and a
+	 * projection is ~30 upserts, so the write that lands first does the work
+	 * and the other four recognize their own schedule and return. Recording
+	 * the signature *before* projecting also makes this re-entrant: nothing
+	 * `project()` itself writes is a watched key today, and if that changed it
+	 * would still not recurse.
+	 *
+	 * @param int $post_id Series post ID.
+	 */
+	private static function reproject( int $post_id ): void {
+		static $projected = array();
+
+		if ( ! Rule::is_recurring( $post_id ) || 'publish' !== get_post_status( $post_id ) ) {
+			return;
+		}
+
+		$signature = self::schedule_signature( $post_id );
+
+		// No events-table row yet: nothing to project from, and the write that
+		// creates one will bring us back here.
+		if ( '' === $signature || ( $projected[ $post_id ] ?? null ) === $signature ) {
+			return;
+		}
+
+		$projected[ $post_id ] = $signature;
+
+		// `project()` sets the freshness marker itself, so the repaired
+		// projection is the one `maybe_project()` will leave alone.
+		self::project( $post_id );
+	}
+
+	/**
+	 * A series' stored schedule, reduced to a value that changes when it does.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return string Empty when the series has no events-table row.
+	 */
+	private static function schedule_signature( int $post_id ): string {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT datetime_start, datetime_end, timezone FROM %i WHERE post_id = %d',
+				$wpdb->prefix . 'gatherpress_events',
+				$post_id
+			),
+			ARRAY_A
+		);
+
+		return $row ? implode( '|', $row ) : '';
+	}
+}

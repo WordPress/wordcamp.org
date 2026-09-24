@@ -16,16 +16,27 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	 */
 	public function get_columns() {
 		$columns = array(
-			'request_title' => 'Request',
-			'wordcamp_name' => 'WordCamp',
-			'status'        => 'Status',
-			'categories'    => 'Categories',
-			'amount'        => 'Amount',
-			'method'        => 'Method',
-			'attachments'   => 'Attachments',
+			'request_title'  => 'Request',
+			'wordcamp_name'  => 'WordCamp',
+			'status'         => 'Status',
+			'categories'     => 'Categories',
+			'amount'         => 'Amount',
+			'method'         => 'Method',
+			'attachments'    => 'Attachments',
+			'date_requested' => 'Requested',
 		);
 
 		return $columns;
+	}
+
+	/**
+	 * Define the sortable table columns.
+	 */
+	protected function get_sortable_columns() {
+		return array(
+			'amount'         => array( 'amount', false ),
+			'date_requested' => array( 'date_requested', true, '', '', true ),
+		);
 	}
 
 	/**
@@ -46,16 +57,22 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		$this->_column_headers = array(
 			$this->get_columns(),
 			array(),
-			array(),
+			$this->get_sortable_columns(),
 			$this->get_primary_column_name(),
 		);
 
-		$table_name = get_index_table_name();
-		$status     = get_current_section();
-		$paged      = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
-		$limit      = 30;
-		$offset     = $limit * ( $paged - 1 );
-		$search     = '';
+		$table_name    = get_index_table_name();
+		$status        = get_current_section();
+		$paged         = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
+		$limit         = 30;
+		$offset        = $limit * ( $paged - 1 );
+		$search        = '';
+		$valid_orderby = array( 'amount', 'date_requested' );
+
+		$orderby = isset( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orderby, true )
+			? $_REQUEST['orderby']
+			: 'date_requested';
+		$order = isset( $_REQUEST['order'] ) && 'asc' === strtolower( $_REQUEST['order'] ) ? 'ASC' : 'DESC';
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
 			// Support searching for both amounts and names.
@@ -71,14 +88,14 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 			);
 		}
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- This is safe, and there isn't a better way to do it.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $orderby and $order are whitelisted, $search is prepared above.
 		$this->items = $wpdb->get_results( $wpdb->prepare( "
 			SELECT *
 			FROM `$table_name`
 			WHERE
 				status = %s
 				$search
-			ORDER BY date_requested ASC
+			ORDER BY {$orderby} {$order}
 			LIMIT %d
 			OFFSET %d",
 			$status,
@@ -112,11 +129,47 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	 */
 	public function single_row( $item ) {
 		switch_to_blog( $item->blog_id );
+		restore_previous_locale();
 
 		$request = get_post( $item->request_id );
 		parent::single_row( $request );
 
 		restore_current_blog();
+	}
+
+	/**
+	 * Render the value for the Requested column.
+	 *
+	 * Note: Runs in a switch_to_blog() context.
+	 *
+	 * @param \WP_Post $post
+	 *
+	 * @return string
+	 */
+	protected function column_date_requested( $post ) {
+		$timestamp = strtotime( $post->post_date_gmt );
+
+		if ( ! $timestamp || $timestamp < 0 ) {
+			$timestamp = strtotime( $post->post_date );
+		}
+
+		if ( ! $timestamp || $timestamp < 0 ) {
+			return '';
+		}
+
+		if ( $timestamp >= time() - MONTH_IN_SECONDS ) {
+			return sprintf(
+				'<span title="%s">%s</span>',
+				esc_attr( gmdate( 'Y-m-d H:i:s\Z', $timestamp ) ),
+				human_time_diff( $timestamp ) . ' ago'
+			);
+		}
+
+		return sprintf(
+			'<span title="%s">%s</span>',
+			esc_attr( human_time_diff( $timestamp ) . ' ago' ),
+			gmdate( 'Y-m-d', $timestamp ),
+		);
 	}
 
 	/**

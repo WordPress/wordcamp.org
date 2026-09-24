@@ -25,6 +25,11 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		define( 'WORDCAMP_PAYMENTS_ENCRYPTION_KEY', 'key' );
 		define( 'WORDCAMP_PAYMENTS_HMAC_KEY', 'hmac' );
 
+		// `WCP_Payment_Request::save_payment()` (hooked to `save_post`) looks
+		// up the current user to log who made the change; without one, the
+		// factory-created posts below trip a "read property on false" warning.
+		wp_set_current_user( $factory->user->create( array( 'role' => 'administrator' ) ) );
+
 		$factory->post->create( array(
 			'post_type'   => 'wcp_payment_request',
 			'post_status' => 'wcb-approved',
@@ -197,7 +202,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
 				'mime_type' => 'application/xml',
 				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
-				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+				'filename'  => 'WordCampPayments%s%sSEPA.xml',
 			),
 		);
 
@@ -240,7 +245,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
 				'mime_type' => 'application/xml',
 				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
-				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+				'filename'  => 'WordCampPayments%s%sSEPA.xml',
 			),
 		);
 

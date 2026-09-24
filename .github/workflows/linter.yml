@@ -26,15 +26,11 @@ jobs:
       with:
         fetch-depth: 0
 
-    - uses: actions/cache@v4
-      with:
-        path: '**/node_modules'
-        key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
+        cache: npm
 
     - name: Install SVN
       run: |
@@ -44,26 +40,61 @@ jobs:
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.4'
+        php-version: '8.3'
         coverage: none
         tools: composer:v2
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Get Composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
+        restore-keys: |
+          composer-${{ runner.os }}-
+
     - name: composer install
+      # The lock file is removed so that the latest wporg-mu-plugins dev-build is always installed.
       run: |
         rm composer.lock || true
         composer install
 
-    - name: yarn install and build
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          public_html/wp-content/**/node_modules
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+
+    - name: npm install and build
       run: |
-        yarn
-        yarn workspaces run build
+        if [ "${{ steps.node-modules-cache.outputs.cache-hit }}" != 'true' ]; then
+          npm ci --no-audit --no-fund
+        fi
+        npm run build --workspaces --if-present
 
     - name: Lint JavaScript and Styles
       run: |
-        yarn workspaces run lint:js
-        yarn workspaces run lint:css
+        npm run lint:js --workspaces --if-present
+        npm run lint:css --workspaces --if-present
+
+    - name: Lint styles not covered by an npm workspace
+      # `groups-site` and `gatherpress-recurring-events` are plain CSS with
+      # no other build/lint tooling need, so they're not registered as npm
+      # workspaces — the step above never reaches them. `stylelint` itself
+      # is still available here, hoisted to the root node_modules by one of
+      # the actual workspaces' `@wordpress/scripts` dependency.
+      run: |
+        npx stylelint \
+          'public_html/wp-content/themes/groups-site/assets/css/*.css' \
+          'public_html/wp-content/mu-plugins/gatherpress-recurring-events/assets/*.css'
 
     - name: Lint PHP
       run: |

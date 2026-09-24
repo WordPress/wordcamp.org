@@ -20,7 +20,12 @@ import {
 	PostList,
 } from '../../components';
 import { filterEntities } from '../../data';
-import { arrayTokenReplace, intersperse, listify, tokenSplit } from '../../i18n';
+import {
+	arrayTokenReplace,
+	intersperse,
+	listify,
+	tokenSplit,
+} from '../../i18n';
 
 /**
  * Component for the section of each session post that displays information about the session's speakers.
@@ -52,7 +57,12 @@ function SessionSpeakers( { session } ) {
 		}
 
 		return (
-			<a key={ link } href={ link } target="_blank" rel="noopener noreferrer">
+			<a
+				key={ link }
+				href={ link }
+				target="_blank"
+				rel="noopener noreferrer"
+			>
 				{ title }
 			</a>
 		);
@@ -88,7 +98,10 @@ function SessionCategory( { session } ) {
 			} )
 			.map( ( term ) => {
 				return (
-					<span key={ term.slug } className={ `wordcamp-sessions__category slug-${ term.slug }` }>
+					<span
+						key={ term.slug }
+						className={ `wordcamp-sessions__category slug-${ term.slug }` }
+					>
 						{ term.name.trim() }
 					</span>
 				);
@@ -97,7 +110,9 @@ function SessionCategory( { session } ) {
 		categoryContent = intersperse( categories, separator );
 	}
 
-	return <div className="wordcamp-sessions__categories">{ categoryContent }</div>;
+	return (
+		<div className="wordcamp-sessions__categories">{ categoryContent }</div>
+	);
 }
 
 /**
@@ -144,7 +159,7 @@ class SessionList extends Component {
 
 			args.filter = [
 				{
-					fieldName: fieldName,
+					fieldName,
 					fieldValue: item_ids,
 				},
 			];
@@ -158,12 +173,18 @@ class SessionList extends Component {
 
 		if ( Array.isArray( filtered ) && 'session_time' === sort ) {
 			filtered = filtered.sort( ( a, b ) => {
-				if ( Number( a.meta._wcpt_session_time ) === Number( b.meta._wcpt_session_time ) ) {
+				if (
+					Number( a.meta._wcpt_session_time ) ===
+					Number( b.meta._wcpt_session_time )
+				) {
 					const title = get( a, 'title.rendered', '' );
 					return title.localeCompare( b.title.rendered );
 				}
 
-				return Number( a.meta._wcpt_session_time ) - Number( b.meta._wcpt_session_time );
+				return (
+					Number( a.meta._wcpt_session_time ) -
+					Number( b.meta._wcpt_session_time )
+				);
 			} );
 		}
 
@@ -199,7 +220,10 @@ class SessionList extends Component {
 		return (
 			<PostList attributes={ attributes } className="wordcamp-sessions">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ `wordcamp-sessions__post slug-${ post.slug }` }>
+					<div
+						key={ post.slug }
+						className={ `wordcamp-sessions__post slug-${ post.slug }` }
+					>
 						<ItemTitle
 							className="wordcamp-sessions__title"
 							align={ headingAlign }
@@ -212,7 +236,11 @@ class SessionList extends Component {
 
 						{ show_images && (
 							<FeaturedImage
-								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
+								imageData={ get(
+									post,
+									'_embedded.wp:featuredmedia[0]',
+									{}
+								) }
 								width={ Number( featured_image_width ) }
 								className={ `wordcamp-sessions__featured-image align-${ image_align }` }
 								imageLink={ post.link }
@@ -222,14 +250,24 @@ class SessionList extends Component {
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-sessions__content is-${ content }` }
-								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								content={
+									'full' === content
+										? post.content.rendered.trim()
+										: post.excerpt.rendered.trim()
+								}
 							/>
 						) }
 
 						{ ( show_meta || show_category ) && (
 							<div className="wordcamp-sessions__details">
-								{ show_meta && <div className="wordcamp-sessions__time-location">{ post.details }</div> }
-								{ show_category && <SessionCategory session={ post } /> }
+								{ show_meta && (
+									<div className="wordcamp-sessions__time-location">
+										{ post.details }
+									</div>
+								) }
+								{ show_category && (
+									<SessionCategory session={ post } />
+								) }
 							</div>
 						) }
 					</div>

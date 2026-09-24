@@ -1,0 +1,314 @@
+<?php
+
+use function WordCamp\Dangling_Hosts\{ scan_network };
+use const WordCamp\Dangling_Hosts\REFERENCE_KINDS;
+
+defined( 'WP_CLI' ) || die();
+
+/**
+ * WordCamp.org: Audit published content for references to domains that no longer exist.
+ */
+class WordCamp_CLI_Dangling_Hosts extends WP_CLI_Command {
+	/**
+	 * Report external references in published content whose domains have lapsed.
+	 *
+	 * Walks the published posts and pages on each site, collects every third-party host they link to, embed,
+	 * or load a script from, and checks whether those hosts still resolve. A host that doesn't resolve, and
+	 * whose domain has no nameservers, is pointing at a registration that has lapsed.
+	 *
+	 * This only reports. What to do about a given reference depends on the post, so it needs a human.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--site=<site>]
+	 * : Scan a single site, by ID or URL, instead of the whole network.
+	 *
+	 * [--post-types=<post-types>]
+	 * : Comma-separated post types to scan.
+	 * ---
+	 * default: post,page
+	 * ---
+	 *
+	 * [--kinds=<kinds>]
+	 * : Comma-separated reference kinds to report: script, embed, iframe, img, link, url.
+	 * Defaults to all of them.
+	 *
+	 * [--fields=<fields>]
+	 * : Comma-separated columns to output: status, kind, host, domain, verified, site, blog_id, post_id,
+	 * permalink, url.
+	 * Pass `--fields=site` to get just the affected sites.
+	 *
+	 * [--include-ok]
+	 * : Also list references whose hosts resolve normally. Useful for seeing the full external surface.
+	 *
+	 * [--skip-verify]
+	 * : Skip the RDAP confirmation of lapsed domains. Faster, and works without outbound HTTP, but a
+	 * transient DNS failure can then look like a lapsed domain.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 *   - count
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Audit the whole network.
+	 *     wp wc-dangling scan
+	 *
+	 *     # Audit one site.
+	 *     wp wc-dangling scan --site=seattle.wordcamp.org/2020
+	 *
+	 *     # Only the kinds that are loaded as part of the page, as JSON.
+	 *     wp wc-dangling scan --kinds=script,embed,url --format=json
+	 *
+	 *     # Every external host the network references, whether or not it still resolves.
+	 *     wp wc-dangling scan --include-ok --format=csv
+	 *
+	 *     # Just the affected sites, one per line.
+	 *     wp wc-dangling scan --fields=site --format=csv | tail -n +2 | sort -u
+	 *
+	 * @subcommand scan
+	 *
+	 * @param array $args
+	 * @param array $assoc_args
+	 */
+	public function scan( $args, $assoc_args ) {
+		$format     = WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' );
+		$post_types = $this->parse_list( WP_CLI\Utils\get_flag_value( $assoc_args, 'post-types', 'post,page' ) );
+		$kinds      = $this->parse_kinds( WP_CLI\Utils\get_flag_value( $assoc_args, 'kinds', '' ) );
+		$blog_ids   = $this->parse_site( WP_CLI\Utils\get_flag_value( $assoc_args, 'site', '' ) );
+
+		// Validated up front -- a bad column name shouldn't surface only after a full network scan.
+		$fields = $this->parse_fields( WP_CLI\Utils\get_flag_value( $assoc_args, 'fields', '' ) );
+
+		/*
+		 * A progress bar would interleave with the report itself in the machine-readable formats, and it has
+		 * nothing to show anyone when stdout is a pipe or a cron log -- where it would instead land in the
+		 * output the caller is trying to parse.
+		 */
+		$show_progress = in_array( $format, array( 'table', 'count' ), true ) && ! \cli\Shell::isPiped();
+		$notify        = null;
+
+		if ( $show_progress ) {
+			/*
+			 * Counted the way `scan_network()` selects, so the bar doesn't stop short of its total on a
+			 * network run by including sites that are never scanned.
+			 */
+			$site_count = $blog_ids ? count( $blog_ids ) : (int) get_sites(
+				array(
+					'count'    => true,
+					'archived' => 0,
+					'deleted'  => 0,
+					'spam'     => 0,
+				)
+			);
+
+			// `make_progress_bar()` rather than a bare `Bar`, so it also no-ops in the cases the check above doesn't cover.
+			$notify = WP_CLI\Utils\make_progress_bar( 'Scanning sites', $site_count );
+		}
+
+		$references = scan_network(
+			array(
+				'blog_ids'   => $blog_ids,
+				'post_types' => $post_types,
+				'kinds'      => $kinds,
+				'verify'     => ! WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-verify', false ),
+				'include_ok' => (bool) WP_CLI\Utils\get_flag_value( $assoc_args, 'include-ok', false ),
+				'progress'   => $notify ? function () use ( $notify ) {
+					$notify->tick();
+				} : null,
+			)
+		);
+
+		if ( $notify ) {
+			$notify->finish();
+			WP_CLI::line();
+		}
+
+		if ( empty( $references ) ) {
+			WP_CLI::success( 'No references to lapsed domains found.' );
+
+			return;
+		}
+
+		WP_CLI\Utils\format_items( $format, $references, $fields );
+
+		if ( ! WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-verify', false ) ) {
+			$this->warn_about_unconfirmed_findings( $references );
+		}
+
+		$dangling = array_filter(
+			$references,
+			function ( $reference ) {
+				return 'dangling' === $reference['status'];
+			}
+		);
+
+		if ( empty( $dangling ) ) {
+			return;
+		}
+
+		// `count` prints a bare number with no trailing newline, which would run into the message below.
+		if ( 'count' === $format ) {
+			WP_CLI::line();
+		}
+
+		/*
+		 * Non-zero exit, so a scheduled run shows up as a failure instead of quietly succeeding with findings
+		 * buried in its output.
+		 */
+		WP_CLI::error(
+			sprintf(
+				'%d reference(s) point at %d lapsed domain(s).',
+				count( $dangling ),
+				count( array_unique( wp_list_pluck( $dangling, 'domain' ) ) )
+			)
+		);
+	}
+
+	/**
+	 * Say so when the registry didn't settle a finding.
+	 *
+	 * Covers being unable to reach it at all and its answering with something that decides nothing -- a
+	 * rate limit, a 5xx, a redirect that goes nowhere. The distinction doesn't change what the reader has to
+	 * do about it, and claiming the stronger one would misdescribe a registry that plainly did answer.
+	 *
+	 * Only for a run that asked for verification -- `--skip-verify` opting out of it is not a surprise worth
+	 * a warning. Without this the run looks like a clean verified pass, when its findings are actually resting
+	 * on DNS alone, which hides a weaker result behind the appearance of a stronger one.
+	 *
+	 * @param array[] $references
+	 */
+	protected function warn_about_unconfirmed_findings( array $references ) {
+		$unconfirmed = array_filter(
+			$references,
+			function ( $reference ) {
+				return 'dangling' === $reference['status'] && true !== ( $reference['verified'] ?? null );
+			}
+		);
+
+		if ( empty( $unconfirmed ) ) {
+			return;
+		}
+
+		WP_CLI::warning(
+			sprintf(
+				'Could not confirm %d domain(s) against the registry, so they are reported on DNS evidence alone: %s.',
+				count( array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) ),
+				implode( ', ', array_unique( wp_list_pluck( $unconfirmed, 'domain' ) ) )
+			)
+		);
+	}
+
+	/**
+	 * Split a comma-separated option into a trimmed list.
+	 *
+	 * @param string $value
+	 *
+	 * @return array
+	 */
+	protected function parse_list( $value ) {
+		if ( ! is_string( $value ) || '' === trim( $value ) ) {
+			return array();
+		}
+
+		return array_values( array_filter( array_map( 'trim', explode( ',', $value ) ) ) );
+	}
+
+	/**
+	 * Validate the `--fields` option.
+	 *
+	 * @param string $value
+	 *
+	 * @return array
+	 */
+	protected function parse_fields( $value ) {
+		$available = array( 'status', 'kind', 'host', 'domain', 'verified', 'site', 'blog_id', 'post_id', 'permalink', 'url' );
+		$fields    = $this->parse_list( $value );
+
+		if ( empty( $fields ) ) {
+			return array( 'status', 'kind', 'host', 'domain', 'site', 'permalink', 'url' );
+		}
+
+		$unknown = array_diff( $fields, $available );
+
+		if ( $unknown ) {
+			WP_CLI::error(
+				sprintf(
+					'Unknown field(s): %s. Valid fields are: %s.',
+					implode( ', ', $unknown ),
+					implode( ', ', $available )
+				)
+			);
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Validate the `--kinds` option.
+	 *
+	 * @param string $value
+	 *
+	 * @return array
+	 */
+	protected function parse_kinds( $value ) {
+		$kinds = $this->parse_list( $value );
+
+		if ( empty( $kinds ) ) {
+			return REFERENCE_KINDS;
+		}
+
+		$unknown = array_diff( $kinds, REFERENCE_KINDS );
+
+		if ( $unknown ) {
+			WP_CLI::error(
+				sprintf(
+					'Unknown reference kind(s): %s. Valid kinds are: %s.',
+					implode( ', ', $unknown ),
+					implode( ', ', REFERENCE_KINDS )
+				)
+			);
+		}
+
+		return $kinds;
+	}
+
+	/**
+	 * Resolve the `--site` option to a list holding a single blog ID.
+	 *
+	 * `--url` is reserved by WP-CLI itself for choosing the site to bootstrap, which isn't what's wanted here
+	 * -- the scan needs to bootstrap on the network and switch into each site -- so this takes its own option.
+	 *
+	 * @param string $value ID or URL.
+	 *
+	 * @return array Empty when no site was specified, meaning "scan the whole network".
+	 */
+	protected function parse_site( $value ) {
+		if ( ! is_string( $value ) || '' === trim( $value ) ) {
+			return array();
+		}
+
+		$value = trim( $value );
+
+		if ( ctype_digit( $value ) ) {
+			$site = get_site( (int) $value );
+		} else {
+			$parsed = wp_parse_url( 0 === strpos( $value, 'http' ) ? $value : 'https://' . $value );
+			$site   = get_site_by_path( $parsed['host'] ?? '', $parsed['path'] ?? '/' );
+		}
+
+		if ( ! $site ) {
+			WP_CLI::error( sprintf( 'Could not find a site matching `%s`.', $value ) );
+		}
+
+		return array( (int) $site->blog_id );
+	}
+}

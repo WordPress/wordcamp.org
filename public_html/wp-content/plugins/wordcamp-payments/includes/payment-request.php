@@ -8,7 +8,7 @@ use WordPressdotorg\MU_Plugins\Utilities;
 class WCP_Payment_Request {
 	var $meta_key_prefix = 'camppayments'; // Dirty hack so that Payment Method metabox rendering can be reused by other modules
 
-	const POST_TYPE = 'wcp_payment_request';
+	public const POST_TYPE = 'wcp_payment_request';
 
 	// @see https://core.trac.wordpress.org/ticket/19074
 	public static $transition_post_status = array();
@@ -69,6 +69,10 @@ class WCP_Payment_Request {
 			'show_in_nav_menus' => true,
 			'supports'          => array( 'title' ),
 			'has_archive'       => true,
+
+			// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+			'map_meta_cap'      => true,
+			'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 		);
 
 		return register_post_type( self::POST_TYPE, $args );
@@ -387,9 +391,14 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_select_input( $post, $label, $name, $required = true ) {
+	protected function render_select_input( $post, $label, $name, $required = true, $default = '' ) {
 		$selected = get_post_meta( $post->ID, '_camppayments_' . $name, true );
-		$options  = $this->get_field_value( $name, $post );
+
+		if ( empty( $selected ) && '' !== $default ) {
+			$selected = $default;
+		}
+
+		$options = $this->get_field_value( $name, $post );
 
 		require dirname( __DIR__ ) . '/views/payment-request/input-select.php';
 	}
@@ -451,7 +460,7 @@ class WCP_Payment_Request {
 	 * @param bool    $readonly
 	 * @param bool    $required
 	 */
-	protected function render_text_input( $post, $label, $name, $description = '', $variant = 'text', $row_classes = array(), $readonly = false, $required = true ) {
+	protected function render_text_input( $post, $label, $name, $description = '', $variant = 'text', $row_classes = array(), $readonly = false, $required = true, $placeholder = '' ) {
 		$value = $this->get_field_value( $name, $post );
 		array_walk( $row_classes, 'sanitize_html_class' );
 		$row_classes = implode( ' ', $row_classes );
@@ -595,6 +604,15 @@ class WCP_Payment_Request {
 			return $post_data;
 		}
 
+		/*
+		 * The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+		 * Behind the same question the other two budget types ask, so none of them records on a trash, bulk or
+		 * autosave path that has no use for it.
+		 */
+		if ( WordCamp_Budgets::post_edit_is_actionable( $post_data, self::POST_TYPE ) ) {
+			WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+		}
+
 		// Ensure that new posts have the `post_date_gmt` field populated.
 		if ( 'auto-draft' !== $post_data['post_status'] ) {
 			if ( '0000-00-00 00:00:00' === $post_data['post_date_gmt'] ) {
@@ -610,7 +628,22 @@ class WCP_Payment_Request {
 		// Submit for Review button was clicked.
 		if ( ! current_user_can( 'manage_network' ) ) {
 			$editable_statuses = self::get_editable_statuses();
-			if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses ) ) {
+			if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses, true ) ) {
+				$post_data['post_status'] = 'wcb-pending-approval';
+			}
+
+			/*
+			 * Statuses past pending approval (approval, payment, etc.) are reserved for network admins. For
+			 * everyone else, keep the status within the set a requester can set, defaulting to pending
+			 * approval.
+			 *
+			 * Keyed on the stored status, so this only applies while the request is still requester-editable
+			 * (draft/incomplete). Status changes made once it's further along, and the initial insert of a
+			 * new post, are left as-is.
+			 */
+			$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+			$requester_statuses = array_merge( $editable_statuses, array( 'wcb-pending-approval' ) );
+			if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 				$post_data['post_status'] = 'wcb-pending-approval';
 			}
 		}
@@ -960,6 +993,12 @@ Thanks for helping us with these details!",
 	 */
 	public function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
 		// todo maybe centralize this, since almost identical to counterparts in other modules
+
+		// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+		if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+			return $required_capabilities;
+		}
+
 		$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 		if ( is_a( $post, 'WP_Post' ) && self::POST_TYPE == $post->post_type ) {
@@ -969,8 +1008,10 @@ Thanks for helping us with these details!",
 			 * They can still open the request (in order to view the status and details), but won't be allowed to make any changes to it.
 			 * They can also edit and re-submit requests that were marked as incomplete.
 			 */
-			if ( ! in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) {
-				if ( 'edit_post' == $requested_capability && 'wcb-incomplete' != $post->post_status ) {
+			$status_for_edit_check = WordCamp_Budgets::get_status_for_edit_check( $post );
+
+			if ( ! in_array( $status_for_edit_check, array( 'auto-draft', 'draft' ), true ) ) {
+				if ( 'edit_post' == $requested_capability && 'wcb-incomplete' != $status_for_edit_check ) {
 					$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' != $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 					$is_bulk_edit   = isset( $_REQUEST['bulk_edit'] );
 

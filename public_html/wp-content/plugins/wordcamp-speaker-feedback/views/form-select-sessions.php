@@ -7,6 +7,8 @@ use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 $session_args = array(
 	'post_type'      => 'wcb_session',
 	'posts_per_page' => -1,
+	'post_status'    => 'publish',
+	'has_password'   => false,
 	'orderby'        => 'meta_value_num',
 	'order'          => 'asc',
 	'meta_key'       => '_wcpt_session_time',

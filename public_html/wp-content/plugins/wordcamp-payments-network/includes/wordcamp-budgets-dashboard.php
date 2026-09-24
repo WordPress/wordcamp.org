@@ -169,7 +169,7 @@ function get_export_types() {
 			'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
 			'mime_type' => 'application/xml',
 			'callback'  => __NAMESPACE__ . '\_generate_payment_report_sepa',
-			'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+			'filename'  => 'WordCampPayments%s%sSEPA.xml',
 		),
 	);
 }
@@ -937,7 +937,7 @@ function process_import_request() {
 	$header  = array();
 	$results = array();
 
-	while ( ( $line = fgetcsv( $handle ) ) !== false ) {
+	while ( ( $line = fgetcsv( $handle, null, ',', '"', '\\' ) ) !== false ) {
 		// Skip first line.
 		if ( ++$count == 1 ) {
 			continue;

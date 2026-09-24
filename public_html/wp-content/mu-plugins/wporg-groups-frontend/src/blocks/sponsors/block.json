@@ -1,0 +1,29 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/sponsors",
+	"version": "1.0.0",
+	"title": "Sponsors",
+	"category": "widgets",
+	"icon": "awards",
+	"description": "Displays the network's sponsors — logo, name, description and link — identically on every group site.",
+	"attributes": {
+		"limit": {
+			"type": "number",
+			"default": 4
+		},
+		"level": {
+			"type": "number",
+			"default": 2
+		}
+	},
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"spacing": { "margin": true }
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"viewScriptModule": "file:./view.js",
+	"style": "file:./style-index.css"
+}

@@ -21,33 +21,25 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
+1. Clone the development (trunk) version of WordPress into the **public_html/mu** directory. WordCamp.org runs against trunk, so there is no release branch to pin — the `WordPress/WordPress` mirror's default branch tracks it.
     ```bash
     cd ..
     cd public_html
-    git clone git://core.git.wordpress.org/ mu
-    cd mu
-    git checkout 6.9
+    git clone https://github.com/WordPress/WordPress.git mu
     ```
 
-1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
-	```bash
-	cd ../../ # to the directory above public_html/
-	composer install
-	```
-
-1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & [yarn](https://yarnpkg.com/). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Running the following will install and build all of the projects in one step (omit `nvm` command if you're not using it).
+1. Install the PHP & JS dependencies and build the bundled projects. You'll need [Composer](https://getcomposer.org/doc/00-intro.md), [node](https://nodejs.org/) & npm (bundled with Node), and optionally [nvm](https://github.com/nvm-sh/nvm). From the project root:
     ```bash
-    nvm install && nvm use
-    yarn
-    yarn workspaces run build
+    nvm install && nvm use   # optional, if you use nvm
+    npm run setup
     ```
+
+    `npm run setup` runs `composer install`, then `npm ci`, then builds every workspace project — one command in place of the separate Composer and npm steps.
 
 1. Build and boot the Docker environment.
     ```bash
-    docker compose build --pull
-    docker compose up
-	```
+    docker compose up --build
+    ```
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
@@ -63,7 +55,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     docker compose up -d
     ```
 
-	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
+	_Note: This will create `.docker/mariadb-database` directory which will contain MariaDB files to persist data across docker restarts._
 
     _Note: You won't be able to test in your browser just yet, so continue with the next steps._
 
@@ -83,14 +75,13 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
-1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
+1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/mariadb-database`. To start with different database, delete `.docker/mariadb-database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
 1. Optional: Add API keys to the `Third party services` section of `wp-config.php` to enabled working on specific features that require them.
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
-    rm -rf .git/hooks
-    ln -s .githooks .git/hooks
+    git config core.hooksPath .githooks
     ```
 
 
@@ -131,13 +122,13 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
 
-    Similarly, for the MySQL container, you can use:
+    Similarly, for the MariaDB container, you can use:
 
     ```bash
     docker compose exec wordcamp.db bash
     ```
 
-    `wordcamp.db` is the name of docker service running MySQL server.
+    `wordcamp.db` is the name of docker service running MariaDB server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
@@ -150,15 +141,15 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of the Docker service which is running `nginx` and `php`
 
-    Similarly, to view MySQL server logs, use:
+    Similarly, to view MariaDB server logs, use:
 
     ```bash
     docker compose logs -f --tail=100 wordcamp.db
     ```
 
-    Note that this does not show MySQL queries made by application, these are just server logs.
+    Note that this does not show database queries made by application, these are just server logs.
 
-    `wordcamp.db` is the name of Docker service which is running MySQL server.
+    `wordcamp.db` is the name of Docker service which is running MariaDB server.
 
 
 Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
@@ -177,20 +168,16 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     ```
     phpunit_wp_1  | […] NOTICE: ready to handle connections
     …
-    phpunit_db_1  | […] [Note] mysqld: ready for connections.
+    phpunit_db_1  | […] [Note] mariadbd: ready for connections.
     ```
 
-2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
+2. The WordPress test framework installs **automatically** the first time you start the container above — watch for `Installing the WordPress test suite...`. The download occasionally times out; if it does, restart with `docker compose -f docker-compose.phpunit.yml up`, or install it manually from inside the container:
     ```bash
-    docker compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp \
+        /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
     ```
 
-    Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
-    ```bash
-    /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
-    ```
-
-    Sometimes the download will time out. If that happens, you can delete `/tmp/wp` from the container, and re-run the install script. The test files will be added to the `.docker/test_suite` folder, which is ignored by git.
+    The test files are written to the `.docker/test_suite` folder, which is ignored by git.
 
 3. Now you can run `phpunit`. From the project folder on your machine:
     ```bash

@@ -149,7 +149,7 @@ abstract class Base_Details extends Base {
 			$data[] = $this->fill_data_row( $post );
 		}
 
-		$this->filter_data_fields( $data );
+		$data = $this->filter_data_fields( $data );
 
 		// Reorder of the fields in each row.
 		$field_order = array_fill_keys( $this->get_field_order(), '' );

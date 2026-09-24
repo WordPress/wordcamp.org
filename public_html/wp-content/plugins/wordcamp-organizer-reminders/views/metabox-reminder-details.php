@@ -101,6 +101,11 @@ defined( 'WPINC' ) || die();
 		</tr>
 
 		<tr>
+			<th><input id="wcor_send_mentor" name="wcor_send_where[]" type="checkbox" value="wcor_send_mentor" <?php checked( in_array( 'wcor_send_mentor', $send_where ) ); ?>></th>
+			<td colspan="2"><label for="wcor_send_mentor">The Assigned Mentor</label></td>
+		</tr>
+
+		<tr>
 			<th><input id="wcor_send_mes" name="wcor_send_where[]" type="checkbox" value="wcor_send_mes" <?php checked( in_array( 'wcor_send_mes', $send_where ) ); ?>></th>
 			<td colspan="2"><label for="wcor_send_mes">The WordCamp's Multi-Event Sponsors</label></td>
 		</tr>

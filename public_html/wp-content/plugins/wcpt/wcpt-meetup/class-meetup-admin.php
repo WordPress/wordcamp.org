@@ -52,6 +52,32 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		}
 
 		/**
+		 * Get searchable post meta keys for Meetup events.
+		 *
+		 * Returns a limited list of meta keys that are useful for searching.
+		 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
+		 *
+		 * @return array List of meta keys to search.
+		 */
+		public static function get_searchable_meta_keys() {
+			return array(
+				'Organizer Name',
+				'Meetup Co-organizer names',
+				'Primary organizer WordPress.org username',
+				'Co-Organizers usernames (seperated by comma)',
+				'Meetup Location (From meetup.com)',
+				'Meetup Location',
+				'Who contacted (Wordpress.org username)',
+				'Vetted by (Wordpress.org username)',
+				'Oriented by (Wordpress.org username)',
+				'Joined chapter by (Wordpress.org username)',
+				'Organizer description',
+				'Address',
+				'Extra Comments',
+			);
+		}
+
+		/**
 		 * TODO: Add valid transition statuses.
 		 *
 		 * @param string $status Current status of the meetup.
@@ -142,7 +168,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			switch ( $column ) {
 				case 'organizer':
-					echo esc_html( get_post_meta( $post_id, 'Organizer Name', true ) . '<' . get_post_meta( $post_id, 'Email', true ) . '>' );
+					echo esc_html( get_post_meta( $post_id, 'Organizer Name', true ) );
 					break;
 				case 'meetup.com_url':
 					$this->print_clickable_link( get_post_meta( $post_id, 'Meetup URL', true ) );
@@ -160,7 +186,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 */
 		protected function print_clickable_link( $link ) {
 			?>
-		<a href="<?php echo esc_attr( $link ); ?>" target="_blank">
+		<a href="<?php echo esc_url( $link ); ?>" target="_blank">
 			<?php echo esc_html( $link ); ?>
 		</a>
 			<?php
@@ -332,13 +358,13 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		public static function update_meetup_data( $post_id ) {
 
 			$meetup_url = get_post_meta( $post_id, 'Meetup URL', true );
+			$meetup_path = wp_parse_url( $meetup_url, PHP_URL_PATH );
 
-			$parsed_url = wp_parse_url( $meetup_url, -1 );
-
-			if ( ! $parsed_url ) {
+			if ( ! $meetup_path ) {
 				return new WP_Error( 'invalid-url', __('Provided Meetup URL is not a valid URL.', 'wordcamporg' ) );
 			}
-			$url_path_segments = explode( '/', rtrim( $parsed_url['path'], '/' ) );
+
+			$url_path_segments = explode( '/', rtrim( $meetup_path, '/' ) );
 			$slug              = array_pop( $url_path_segments );
 			$mtp_client        = new WordPressdotorg\MU_Plugins\Utilities\Meetup_Client();
 
@@ -348,7 +374,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return $group_details;
 			}
 
-			if ( isset( $group_details['errors'] ) ) {
+			if ( ! is_array( $group_details ) || isset( $group_details['errors'] ) ) {
 				return new WP_Error( 'invalid-response', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
@@ -363,22 +389,23 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return $group_leads;
 			}
 
-			if ( isset( $group_leads['errors'] ) ) {
+			if ( ! is_array( $group_leads ) || isset( $group_leads['errors'] ) ) {
 				return new WP_Error( 'invalid-response-leads', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
 			$event_hosts = array();
-			if ( isset( $group_leads ) && is_array( $group_leads ) ) {
-				foreach ( $group_leads as $event_host ) {
-					if ( WCPT_WORDPRESS_MEETUP_ID === $event_host['id'] ) {
-						// Skip WordPress admin user.
-						continue;
-					}
-					$event_hosts[] = array(
-						'name' => $event_host['name'],
-						'id'   => $event_host['id'],
-					);
+			foreach ( $group_leads as $event_host ) {
+				if ( ! is_array( $event_host ) ) {
+					continue;
 				}
+				// Skip WordPress admin user.
+				if ( WCPT_WORDPRESS_MEETUP_ID === (int) $event_host['id'] ) {
+					continue;
+				}
+				$event_hosts[] = array(
+					'name' => $event_host['name'],
+					'id'   => $event_host['id'],
+				);
 			}
 
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
@@ -419,8 +446,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			);
 
 			$original_organizers_list = $this->get_organizer_list(
-				$original_data['Primary organizer WordPress.org username'][0],
-				$original_data['Co-Organizers usernames (seperated by comma)'][0]
+				$original_data['Primary organizer WordPress.org username'][0] ?? '',
+				$original_data['Co-Organizers usernames (seperated by comma)'][0] ?? ''
 			);
 
 			$new_organizers = array_diff( $organizers_list, $original_organizers_list );
@@ -624,6 +651,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Primary organizer WordPress.org username'     => 'text',
 				'Co-Organizers usernames (seperated by comma)' => 'text',
 				'Meetup Location (From meetup.com)'            => 'text',
+				'Meetup members count'                         => 'text',
 				'Meetup group created on'                      => 'date',
 				'Number of past meetups'                       => 'text',
 				'Last meetup on'                               => 'date',
@@ -651,6 +679,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Date closed'           => 'date',
 				'Slack'                 => 'text',
 				'Region'                => 'text',
+				'Language'              => 'select-locale',
 				'Address'               => 'textarea',
 				'Extra Comments'        => 'textarea',
 			);
@@ -698,6 +727,17 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		}
 
 		/**
+		 * Return a list of valid Event Subtypes.
+		 *
+		 * @return array
+		 */
+		public function get_event_subtypes() {
+			return array(
+				'wp_meetup' => __( 'WordPress Meetup', 'wordcamporg' ),
+			);
+		}
+
+		/**
 		 * Schedule cron job for updating data from meetup API
 		 */
 		public function schedule_cron_jobs() {
@@ -716,7 +756,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$query = new WP_Query(
 				array(
 					'post_type'      => self::get_event_type(),
-					'post_status'    => 'wcpt-mtp-active',
+					'post_status'    => [
+						'wcpt-mtp-active',
+						'wcpt-mtp-dormant',
+						'wcpt-mtp-nds-nw-ow',
+					],
 					'fields'         => 'ids',
 					'posts_per_page' => - 1,
 				)

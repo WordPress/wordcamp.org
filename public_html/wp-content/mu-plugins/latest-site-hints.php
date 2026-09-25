@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Latest_Site_Hints;
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\{ get_flagship_canonical_url, get_url_port };
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
@@ -22,12 +22,21 @@ function maybe_add_latest_site_hints() {
 		return;
 	}
 
+	// Allow the banner to be skipped if necessary.
+	if ( wcorg_skip_feature( 'latest-site-hint' ) ) {
+		return;
+	}
+
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 
 	// Add a banner with a link to the latest WordCamp.
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
 	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
+
+	// Close comments on past sites to prevent spam.
+	add_filter( 'comments_open', '__return_false' );
+	add_filter( 'pings_open', '__return_false' );
 }
 
 /**
@@ -121,7 +130,12 @@ function show_notification_about_latest_site() {
 	}
 
 	echo '<div class="wordcamp-latest-site-notify"><p>' .
-		wp_sprintf( '%s is over. Check out <a href="%s">the next edition</a>!', esc_html( get_blog_details( $current_blog->blog_id )->blogname ), esc_url( $latest_domain ) ) .
+		wp_kses_post( wp_sprintf(
+			// translators: %1$s is the name of the WordCamp, %2$s is the URL of the next edition.
+			__( '%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),
+			esc_html( get_blog_details( $current_blog->blog_id )->blogname ),
+			esc_url( $latest_domain )
+		) ) .
 	'</p></div>';
 }
 
@@ -156,6 +170,17 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
 		return false;
+	}
+
+	/*
+	 * Flagship camps create next year's site (and sometimes the one after) before the current edition is
+	 * over, so the query below would otherwise link to an event that hasn't happened yet. Until then, stay
+	 * on the current edition. The shared list of dates lives with the redirect logic in sunrise.
+	 */
+	$flagship_url = get_flagship_canonical_url( $current_domain );
+
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
@@ -213,5 +238,5 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
-	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . $latest_site[0]->path ) );
+	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . get_url_port() . $latest_site[0]->path ) );
 }

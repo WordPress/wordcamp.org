@@ -1,0 +1,43 @@
+.page-slug-organize-an-event .wp-block-post-title {
+	margin: 0 auto;
+	text-align: center;
+}
+
+.page-organize-content-image {
+
+	@media (--medium-small) {
+		display: none;
+	}
+}
+
+body .is-layout-flex.page-upcoming-title-past-wrapper {
+	align-items: baseline;
+}
+
+.wporg-events__filters__no-count .wporg-events__filters__search {
+	flex: 1;
+
+	& form {
+		flex: 1;
+		min-width: 240px;
+
+		@media (min-width: 663px) {
+			max-width: 240px;
+		}
+	}
+}
+
+.wporg-events__search .wporg-events__filters {
+	margin-top: 10px !important;
+}
+
+/* Ensure Contact form fields have an outline */
+.wp-block-jetpack-contact-form {
+	input[type="text"],
+	input[type="email"],
+	input[type="tel"],
+	textarea,
+	select {
+		outline: 1px solid var(--wp--preset--color--charcoal-5);
+	}
+}

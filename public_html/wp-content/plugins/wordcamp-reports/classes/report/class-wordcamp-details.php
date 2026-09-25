@@ -89,7 +89,7 @@ class WordCamp_Details extends Base_Details {
 	 *     @type array $fields        Not implemented yet.
 	 * }
 	 */
-	public function __construct( Date_Range $date_range = null, array $wordcamp_ids = null, $include_counts = false, array $options = array() ) {
+	public function __construct( ?Date_Range $date_range = null, ?array $wordcamp_ids = null, $include_counts = false, array $options = array() ) {
 		// Report-specific options.
 
 		parent::__construct( $date_range, $wordcamp_ids, $options );
@@ -130,6 +130,7 @@ class WordCamp_Details extends Base_Details {
 				'Speakers',
 				'Sponsors',
 				'Organizers',
+				'Tracker URL',
 			),
 			array_diff( $this->get_meta_keys(), array_keys( $this->get_public_data_fields() ) )
 		);
@@ -147,7 +148,7 @@ class WordCamp_Details extends Base_Details {
 					$this->event_ids[] = validate_wordcamp_id( $wordcamp_id, array( 'require_site' => false ) )->post_id;
 				} catch ( Exception $e ) {
 					$this->error->add(
-						self::$slug . '-wordcamp-id-error',
+						static::$slug . '-wordcamp-id-error',
 						$e->getMessage()
 					);
 
@@ -180,6 +181,7 @@ class WordCamp_Details extends Base_Details {
 				'Speakers',
 				'Sponsors',
 				'Organizers',
+				'Tracker URL',
 			),
 			array_keys( WordCamp_Admin::meta_keys( 'contributor' ) ),
 			array_keys( WordCamp_Admin::meta_keys( 'organizer' ) ),
@@ -207,7 +209,12 @@ class WordCamp_Details extends Base_Details {
 
 				switch ( $key ) {
 					case 'Status':
-						$row[ $key ] = $all_statuses[ $value ];
+						/*
+						 * `post_status => 'any'` also matches core statuses such as
+						 * `draft`, which have no entry here -- fall back to the raw
+						 * slug rather than emitting null on an undefined key.
+						 */
+						$row[ $key ] = $all_statuses[ $value ] ?? $value;
 						break;
 					case 'Tickets':
 					case 'Speakers':
@@ -313,7 +320,7 @@ class WordCamp_Details extends Base_Details {
 	 * @return Base_Details
 	 */
 	public static function create_shadow_report_obj( $context ) {
-		return new self( null, null, false, array( 'public' => 'public' === $context ) );
+		return new static( null, null, false, array( 'public' => 'public' === $context ) );
 	}
 
 	/**
@@ -323,8 +330,8 @@ class WordCamp_Details extends Base_Details {
 	 * @param array  $field_defaults
 	 */
 	public static function render_available_fields( $context = 'public', array $field_defaults = array() ) {
-		$shadow_report = self::create_shadow_report_obj( $context );
-		self::render_available_fields_in_report( $shadow_report, $context, $field_defaults );
+		$shadow_report = static::create_shadow_report_obj( $context );
+		static::render_available_fields_in_report( $shadow_report, $context, $field_defaults );
 	}
 
 	/**
@@ -396,35 +403,57 @@ class WordCamp_Details extends Base_Details {
 			'Location'                => 'checked',
 			'URL'                     => 'checked',
 		);
+		foreach ( $_REQUEST['fields'] ?? array() as $field ) {
+			$field_defaults[ $field ] = 'checked';
+		}
+
+		$report = false;
+		$input  = static::get_report_inputs();
+		if (
+			! empty( $input ) &&
+			'Show Results' === $input['action'] &&
+			wp_verify_nonce( $input['nonce'], 'run-report' ) &&
+			current_user_can( CAPABILITY )
+		) {
+			$options = array(
+				'fields' => $input['fields'] ?? [],
+				'public' => false,
+			);
+
+			$report = new static( $input['range'], null, $input['include_counts'], $options );
+		}
+
+		$start_date = $input['start_date'] ?? '';
+		$end_date   = $input['end_date']   ?? '';
 
 		include get_views_dir_path() . 'report/wordcamp-details.php';
 	}
 
 	/**
-	 * Export the report data to a file.
+	 * Render an HTML version of the report output.
 	 *
 	 * @return void
 	 */
-	public static function export_to_file() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
-
-		$report = null;
-
-		if ( 'Export CSV' !== $action ) {
+	public function render_html() {
+		if ( ! empty( $this->error->get_error_messages() ) ) {
+			$this->render_error_html();
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) ) {
-			return;
-		}
+		$data = $this->prepare_data_for_display( $this->compile_report_data( $this->get_data() ) );
 
-		if ( ! current_user_can( CAPABILITY ) ) {
-			return;
-		}
+		include get_views_dir_path() . 'html/data-table.php';
+	}
+
+	/**
+	 * Fetch the input parameters for the report.
+	 */
+	public static function get_report_inputs() {
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ static::$slug . '-nonce' ] ?? '' );
 
 		$error = null;
 		$range = null;
@@ -441,14 +470,14 @@ class WordCamp_Details extends Base_Details {
 				);
 			} catch ( Exception $e ) {
 				$error = new WP_Error(
-					self::$slug . '-date-range-error',
+					static::$slug . '-date-range-error',
 					$e->getMessage()
 				);
 			}
 		}
 
 		$include_counts = false;
-		if ( ! empty( array_intersect( $fields, array( 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ) ) ) ) {
+		if ( $fields && ! empty( array_intersect( $fields, array( 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ) ) ) ) {
 			$include_counts = true;
 		}
 
@@ -456,14 +485,33 @@ class WordCamp_Details extends Base_Details {
 		// so add it in here.
 		$fields[] = 'Name';
 
+		return compact( 'action', 'nonce', 'range', 'start_date', 'end_date', 'fields', 'include_counts', 'error' );
+	}
+
+	/**
+	 * Export the report data to a file.
+	 *
+	 * @return void
+	 */
+	public static function export_to_file() {
+		$input = static::get_report_inputs();
+		if (
+			empty( $input ) ||
+			'Export CSV' !== $input['action'] ||
+			! wp_verify_nonce( $input['nonce'], 'run-report' ) ||
+			! current_user_can( CAPABILITY )
+		) {
+			return;
+		}
+
 		$options = array(
-			'fields' => $fields,
+			'fields' => $input['fields'],
 			'public' => false,
 		);
 
-		$report = new self( $range, null, $include_counts, $options );
+		$report = new static( $input['range'], null, $input['include_counts'], $options );
 
-		self::export_to_file_common( $report );
+		static::export_to_file_common( $report );
 	}
 
 }

@@ -3,8 +3,6 @@
  * Plugin Name: WordCamp.org Fonts
  */
 
-require_once __DIR__ . '/wc-google-fonts-provider.php';
-
 class WordCamp_Fonts_Plugin {
 	protected $options;
 
@@ -20,7 +18,10 @@ class WordCamp_Fonts_Plugin {
 		add_action( 'wp_head',            array( $this, 'wp_head_google_web_fonts' ) );
 		add_action( 'wp_head',            array( $this, 'wp_head_font_awesome'     ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_core_fonts'       ) );
-		add_action( 'init',               array( $this, 'register_fonts_for_editor' ) );
+
+		// Temporary workaround until we can use the core font library on WordCamp.org.
+		// See https://github.com/WordPress/gutenberg/pull/57697.
+		add_filter( 'wp_theme_json_data_theme', array( $this, 'inject_fonts_theme_json' ) );
 	}
 
 	/**
@@ -51,10 +52,8 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
-		if ( ! wp_is_block_theme() ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			printf( '<style>%s</style>', $this->options['google-web-fonts'] );
-		}
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<style>%s</style>', $this->options['google-web-fonts'] );
 	}
 
 	/**
@@ -316,93 +315,307 @@ class WordCamp_Fonts_Plugin {
 	}
 
 	/**
-	 * Register the google fonts into WordPress so they can be used in the Site Editor.
-	 */
-	public function register_fonts_for_editor() {
-		if ( ! function_exists( 'wp_register_fonts' ) ) {
-			return;
-		}
-
-		if ( ! isset( $this->options['google-web-fonts'] ) || empty( $this->options['google-web-fonts'] ) ) {
-			return;
-		}
-
-		$lines = explode( "\n", $this->options['google-web-fonts'] );
-		$fonts = array();
-		foreach ( $lines as $line ) {
-			if ( preg_match( '#https?://fonts\.googleapis\.com/css2?\?family=[^\)\'"]+#', $line, $matches ) ) {
-				$url = $matches[0];
-				$query = explode( '&', wp_parse_url( $url, PHP_URL_QUERY ) );
-
-				// Multiple families can be added to one URL, so we need to loop over to parse them.
-				// We can't just use wp_parse_str because each `family` will overwrite the previous.
-				foreach ( $query as $family ) {
-					// Make sure we're working with a `family=` value and not `display=` or anything else.
-					if ( ! str_starts_with( $family, 'family=' ) ) {
-						continue;
-					}
-					$details = explode( ':', $family );
-					$name = str_replace( 'family=', '', $details[0] );
-					$styles = $details[1] ?? '';
-
-					$variations = array(
-						array(
-							'font-family' => urldecode( $name ),
-							'provider'    => 'wordcamp-google',
-						),
-					);
-
-					if ( str_contains( $styles, '@' ) ) {
-						$variations = array_map(
-							function( $var ) use ( $name ) {
-								$variation = array(
-									'font-family' => urldecode( $name ),
-									'provider'    => 'wordcamp-google',
-								);
-								if ( isset( $var['ital'] ) ) {
-									$variation['font-style']  = '0' === $var['ital'] ? 'normal' : 'italic';
-								}
-								if ( isset( $var['wght'] ) ) {
-									$variation['font-weight'] = str_replace( '..', ' ', $var['wght'] );
-								}
-								return $variation;
-							},
-							$this->parse_google_font_variations( $styles )
-						);
-					}
-
-					$fonts[ urldecode( $name ) ] = $variations;
-				}
-			}
-		}
-
-		wp_register_fonts( $fonts );
-		wp_enqueue_fonts( array_keys( $fonts ) );
-	}
-
-	/**
-	 * Parse the google font options.
+	 * Inject the local fonts for WordCamps.
 	 *
-	 * Converts the string in a google fonts URL into an array of variations.
-	 * For example, `ital,wght@0,700;1,700` should return:
-	 * [
-	 *   [ 'ital' => 0, 'wght' => '700' ],
-	 *   [ 'ital' => 1, 'wght' => '700' ],
-	 * ]
+	 * @todo Remove this when Gutenberg 17.6 is rolled out to WordCamp.org.
+	 *
+	 * @param WP_Theme_JSON_Data $theme_json Class to access and update the underlying data.
+	 *
+	 * @return WP_Theme_JSON_Data The updated theme settings.
 	 */
-	public function parse_google_font_variations( $styles ) {
-		list( $props, $values ) = explode( '@', $styles );
-		$props = explode( ',', $props );
-		$values = explode( ';', $values );
-
-		$result = array();
-		foreach ( $values as $i => $value ) {
-			$style = explode( ',', $value );
-			foreach ( $props as $j => $prop ) {
-				$result[ $i ][ $prop ] = $style[ $j ];
-			}
+	public function inject_fonts_theme_json( $theme_json ) {
+		$theme_data = $theme_json->get_data();
+		if ( ! isset( $theme_data['settings'] ) ) {
+			return $theme_json;
 		}
-		return $result;
+
+		$fonts = _wp_array_get( $theme_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), array() );
+
+		// Add Krona One and Lora to WordCamp Europe sites.
+		// 1469: europe.wordcamp.org/2024.
+		// 1511: wceutest24.wordcamp.org/2024.
+		if ( in_array( get_current_blog_id(), array( 1469, 1511 ) ) ) {
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Krona One',
+						'fontStyle' => 'normal',
+						'fontWeight' => '400',
+						'src' => site_url( '/wp-content/fonts/krona-one_normal_400.ttf' ),
+					),
+				),
+				'fontFamily' => "'Krona One', sans-serif",
+				'name' => 'Krona One',
+				'slug' => 'krona-one',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/lora_normal_700.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 600,
+						'src' => site_url( '/wp-content/fonts/lora_normal_600.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/lora_normal_500.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/lora_normal_400.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/lora_italic_700.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 600,
+						'src' => site_url( '/wp-content/fonts/lora_italic_600.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/lora_italic_500.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/lora_italic_400.ttf' ),
+					),
+				),
+				'fontFamily' => 'Lora',
+				'name' => 'Lora',
+				'slug' => 'lora',
+			);
+		}
+		// Add Roboto, Roboto Slab, and Sansita to WordCamp Asia sites.
+		// 1450: asia.wordcamp.org/2024.
+		if ( in_array( get_current_blog_id(), array( 1450 ) ) ) {
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Medium.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Light.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Thin.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-BlackItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-BoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-MediumItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Italic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-LightItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-ThinItalic.ttf' ),
+					),
+				),
+				'fontFamily' => "'Roboto', sans-serif",
+				'name' => 'Roboto',
+				'slug' => 'roboto',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 800,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-ExtraBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 600,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-SemiBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Medium.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Light.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 200,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-ExtraLight.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Thin.ttf' ),
+					),
+				),
+				'fontFamily' => "'Roboto Slab', serif",
+				'name' => 'Roboto Slab',
+				'slug' => 'roboto-slab',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 800,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-ExtraBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-BlackItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 800,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-ExtraBoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-BoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Italic.ttf' ),
+					),
+				),
+				'fontFamily' => "'Sansita', sans-serif",
+				'name' => 'Sansita',
+				'slug' => 'sansita',
+			);
+		}
+
+		// Return early if no fonts have been added.
+		if ( empty( $fonts ) ) {
+			return $theme_json;
+		}
+
+		// Build a new theme.json object.
+		$new_data = array(
+			'version' => 2,
+		);
+		_wp_array_set( $new_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), $fonts );
+
+		return $theme_json->update_with( $new_data );
 	}
 }
 

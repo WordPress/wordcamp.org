@@ -140,9 +140,11 @@ function get_report_classes() {
 		__NAMESPACE__ . '\Report\WordCamp_Payment_Methods',
 		__NAMESPACE__ . '\Report\Meetup_Status',
 		__NAMESPACE__ . '\Report\Meetup_Details',
+		__NAMESPACE__ . '\Report\Meetup_Sponsors',
 		__NAMESPACE__ . '\Report\WordCamp_Counts',
 		__NAMESPACE__ . '\Report\Sponsor_Details',
 		__NAMESPACE__ . '\Report\WordCamp_Speaker_Feedback',
+		__NAMESPACE__ . '\Report\CampusConnect_Details',
 	);
 }
 
@@ -161,6 +163,10 @@ function get_report_groups( $classes = array() ) {
 		),
 		'wordcamp' => array(
 			'label'   => 'WordCamps',
+			'classes' => array(),
+		),
+		'campus-connect' => array(
+			'label'   => 'Campus Connect',
 			'classes' => array(),
 		),
 		'meetup'   => array(
@@ -215,7 +221,7 @@ add_action( 'admin_menu', __NAMESPACE__ . '\add_reports_page' );
  * @return void
  */
 function render_page() {
-	$report       = filter_input( INPUT_GET, 'report', FILTER_SANITIZE_STRING );
+	$report       = filter_input( INPUT_GET, 'report', FILTER_UNSAFE_RAW );
 	$report_class = get_report_class_by_slug( $report );
 
 	$reports_with_admin = array_filter(
@@ -255,7 +261,7 @@ function enqueue_admin_assets( $hook_suffix ) {
 		filemtime( get_assets_dir_path() . 'css/admin-common.css' )
 	);
 
-	$report       = filter_input( INPUT_GET, 'report', FILTER_SANITIZE_STRING );
+	$report       = filter_input( INPUT_GET, 'report', FILTER_UNSAFE_RAW );
 	$report_class = get_report_class_by_slug( $report );
 
 	if ( ! is_null( $report_class ) && method_exists( $report_class, 'enqueue_admin_assets' ) ) {
@@ -337,16 +343,45 @@ function register_rest_endpoints() {
 
 	foreach ( $report_classes as $class ) {
 		if ( property_exists( $class, 'rest_base' ) && method_exists( $class, 'rest_callback' ) ) {
+			/*
+			 * Reports read private post meta and non-public post statuses, so a
+			 * route is restricted to users who may view reports unless the
+			 * report class opts into something else with its own
+			 * `rest_permission_callback()`.
+			 */
+			$permission_callback = method_exists( $class, 'rest_permission_callback' )
+				? array( $class, 'rest_permission_callback' )
+				: __NAMESPACE__ . '\default_rest_permission_callback';
+
 			register_rest_route(
 				$namespace,
 				'/' . $class::$rest_base,
 				array(
-					'methods'  => array( 'GET' ),
-					'callback' => array( $class, 'rest_callback' ),
+					'methods'             => array( 'GET' ),
+					'callback'            => array( $class, 'rest_callback' ),
+					'permission_callback' => $permission_callback,
 				)
 			);
 		}
 	}
+}
+
+/**
+ * Default permission callback for a report REST route.
+ *
+ * Applies to any report that declares `$rest_base` without supplying its own
+ * `rest_permission_callback()`. Reports read private post meta and non-public
+ * post statuses, so the default is deny-unless-capable; a report that wants to
+ * be readable publicly has to say so explicitly.
+ *
+ * A named function rather than a closure so it can be tested directly. No route
+ * uses it today -- every current report defines its own -- but it is the line
+ * protecting every report added later.
+ *
+ * @return bool
+ */
+function default_rest_permission_callback() {
+	return current_user_can( CAPABILITY );
 }
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_endpoints' );

@@ -35,22 +35,37 @@ class Edit extends Component {
 		let output;
 
 		switch ( mode ) {
-			case 'all' :
+			case 'all':
 				output = (
-					<SpeakerList attributes={ attributes } entities={ entities } />
+					<SpeakerList
+						attributes={ attributes }
+						entities={ entities }
+					/>
 				);
 				break;
 
-			case 'wcb_speaker' :
-			case 'wcb_speaker_group' :
+			case 'wcb_speaker':
+			case 'wcb_speaker_group':
 				output = (
 					<EditAppender
-						content={ <SpeakerList attributes={ attributes } entities={ entities } /> }
+						content={
+							<SpeakerList
+								attributes={ attributes }
+								entities={ entities }
+							/>
+						}
 						appender={
 							isSelected && (
-								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+								<Placeholder
+									className="wordcamp__edit-placeholder"
+									icon={ ICON }
+									label={ LABEL }
+								>
 									<SpeakerSelect
-										label={ getOptionLabel( mode, options.mode ) }
+										label={ getOptionLabel(
+											mode,
+											options.mode
+										) }
 										attributes={ attributes }
 										entities={ entities }
 										icon={ ICON }
@@ -63,7 +78,7 @@ class Edit extends Component {
 				);
 				break;
 
-			default :
+			default:
 				output = (
 					<Placeholder
 						className="wordcamp__edit-placeholder has-no-mode"
@@ -83,7 +98,10 @@ class Edit extends Component {
 
 						<div className="wordcamp__edit-mode-option">
 							<SpeakerSelect
-								label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
+								label={ __(
+									'Choose specific speakers or groups',
+									'wordcamporg'
+								) }
 								attributes={ attributes }
 								entities={ entities }
 								icon={ ICON }
@@ -111,7 +129,7 @@ class Edit extends Component {
 		return (
 			<Fragment>
 				{ this.renderContent() }
-				{ mode &&
+				{ mode && (
 					<Fragment>
 						<InspectorControls
 							attributes={ attributes }
@@ -124,7 +142,7 @@ class Edit extends Component {
 							setAttributes={ setAttributes }
 						/>
 					</Fragment>
-				}
+				) }
 			</Fragment>
 		);
 	}

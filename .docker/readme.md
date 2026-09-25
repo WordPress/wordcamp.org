@@ -6,74 +6,40 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Clone the repo:
     ```bash
-    git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
+    git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
     ```
 
-    If you get an error about "Permission denied (publickey)", you have two options:
-      - Make sure you have [a working SSH key](https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey#make-sure-you-have-a-key-that-is-being-used).
-      - Or use the HTTPS URL:
-          ```bash
-          git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
-          cd wordcamp.test
-          ```
-
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
-	```bash
+   	
+    _Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command below. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
+	
+    ```bash
 	cd .docker
 	brew install mkcert
 	brew install nss
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-
-	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
-
-1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
+1. Clone the development (trunk) version of WordPress into the **public_html/mu** directory. WordCamp.org runs against trunk, so there is no release branch to pin — the `WordPress/WordPress` mirror's default branch tracks it.
     ```bash
+    cd ..
     cd public_html
-    git clone git://core.git.wordpress.org/ mu
-    cd mu
-    git checkout 6.2
+    git clone https://github.com/WordPress/WordPress.git mu
     ```
 
-1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
-	```bash
-	cd .. # to the directory above public_html/
-	composer install
-	```
-
-1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & [yarn](https://yarnpkg.com/). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Running the following will install and build all of the projects in one step (omit `nvm` command if you're not using it).
+1. Install the PHP & JS dependencies and build the bundled projects. You'll need [Composer](https://getcomposer.org/doc/00-intro.md), [node](https://nodejs.org/) & npm (bundled with Node), and optionally [nvm](https://github.com/nvm-sh/nvm). From the project root:
     ```bash
-    nvm install && nvm use
-    yarn
-    yarn workspaces run build
+    nvm install && nvm use   # optional, if you use nvm
+    npm run setup
     ```
+
+    `npm run setup` runs `composer install`, then `npm ci`, then builds every workspace project — one command in place of the separate Composer and npm steps.
 
 1. Build and boot the Docker environment.
     ```bash
-	#
-	# **** If you have an Apple Silicon CPU, make the edits below _before_ running these commands ****
-	#
-    docker compose build --pull
-    docker compose up
-	```
-
-    _Using an Apple ARM64 (Silicon) chip? You may see `failed to solve: rpc error: code = Unknown desc =...` or `failed to solve: mysql:5.7-debian: no match for platform in manifest` after running either of commands above. Try adding `platform: linux/amd64` to _both_ `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
+    docker compose up --build
     ```
-	wordcamp.test:
-	  build:
-	    context: .docker
-	    dockerfile: Dockerfile.php-fpm
-	  platform: linux/amd64
-
-	wordcamp.db:
-	  build:
-	    context: .docker
-	    dockerfile: Dockerfile.mysql
-	  platform: linux/amd64
-    ```
-
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
@@ -89,7 +55,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     docker compose up -d
     ```
 
-	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
+	_Note: This will create `.docker/mariadb-database` directory which will contain MariaDB files to persist data across docker restarts._
 
     _Note: You won't be able to test in your browser just yet, so continue with the next steps._
 
@@ -109,18 +75,145 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
-1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
+1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/mariadb-database`. To start with different database, delete `.docker/mariadb-database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
+
+1. Optional: Add API keys to the `Third party services` section of `wp-config.php` to enabled working on specific features that require them.
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
-    rm -rf .git/hooks
-    ln -s .githooks .git/hooks
+    git config core.hooksPath .githooks
     ```
+
+
+## Running alongside another local environment
+
+By default the containers bind ports 80, 443, 1080 (MailCatcher) and 3307
+(MariaDB) on every interface, which collides with anything else on the machine
+that wants them — another Docker stack, a local nginx/Apache, `wp-env`, Valet,
+Lando, and so on. There are two ways out: move this stack to a different port,
+or move it to a different address and keep the standard ports.
+
+All four bindings are overridable through environment variables. `docker compose`
+reads a `.env` file in the project root automatically, and `.env` is gitignored,
+so you can change them without touching a tracked file. Copy the template and
+uncomment what you need:
+
+```bash
+cp .env.example .env
+```
+
+### Changing the ports
+
+Set both ports and restart:
+
+```
+WORDCAMP_HTTP_PORT=8080
+WORDCAMP_HTTPS_PORT=8443
+```
+
+```bash
+docker compose up -d
+```
+
+**Set both, even though you only care about HTTPS.** The containers bind port 80
+whether or not you use it, so if the other environment already holds 80,
+`docker compose up` fails outright with `Bind for 0.0.0.0:80 failed: port is
+already allocated` — moving HTTPS alone isn't enough to get the stack started.
+
+Every site is then reachable with the HTTPS port in the URL —
+`https://central.wordcamp.test:8443/`,
+`https://events.wordpress.test:8443/group/sunshine-coast-qld/` — with no
+database changes and nothing to re-run. The hosts-file entries are unchanged.
+
+How it works, in case a URL ever looks wrong: `.docker/wp-config.php` strips the
+port out of `HTTP_HOST` before anything reads it, so every hostname comparison
+in the codebase (the network `switch`, the `sunrise*.php` regexes, and
+WordPress's own lookups against the portless `domain` columns in `wp_blogs` and
+`wp_site`) behaves exactly as it does on 443. The `0-local-https-port` mu-plugin
+then puts the port back onto `siteurl`/`home` — which is what `admin_url()`,
+`rest_url()` and the canonical redirects are all built from — and the redirects
+that `sunrise*.php` builds by hand get it via `WordCamp\Sunrise\get_url_port()`.
+The database stays canonical and portless throughout, so the port is purely a
+presentation concern.
+
+**Use `https://` directly; plain HTTP won't get you there.** nginx's
+HTTP→HTTPS redirect is `return 301 https://$host$request_uri`, and nginx has no
+way to know which host port Docker mapped 443 to, so it sends you to 443.
+`WORDCAMP_HTTP_PORT` exists to free up port 80, not to give you a working
+`http://` entry point.
+
+### Restricting which address the stack binds
+
+By default the containers claim their ports on *every* interface, including your
+LAN address — so the dev site is reachable from other machines on the network,
+and nothing else on the box can have 443 on any address.
+
+`WORDCAMP_BIND_IP` narrows that to a single address:
+
+```
+WORDCAMP_BIND_IP=127.0.0.1
+```
+
+```bash
+docker compose up -d
+```
+
+Site URLs are completely unchanged — still `https://central.wordcamp.test/`, no
+port suffix, and no hosts-file edit, since the hostnames already point at
+`127.0.0.1`. What changes is that the ports are now bound on loopback only:
+`https://<your-LAN-ip>/` stops answering, and anything else on the machine is
+free to bind 443 on a *different* address.
+
+Note that this does not free up `0.0.0.0:443` — another stack that wants to bind
+every interface will still collide with this one. If that's what you're up
+against, change the port instead (above).
+
+### MailCatcher and MariaDB
+
+`WORDCAMP_MAILCATCHER_PORT` (default `1080`) and `WORDCAMP_DB_PORT` (default
+`3307`) are safe to change on their own — nothing constructs URLs from them
+beyond the dashboard link and your own database client:
+
+```
+WORDCAMP_MAILCATCHER_PORT=1081
+WORDCAMP_DB_PORT=3308
+```
+
+The Playwright E2E suite reads the same `.env`, so it follows whatever you set
+here.
 
 
 ## Local Environment Customizations
 
 You may have a need to change a configuration or behavior in the local environment without modifying files that are tracked by version control. For this, you can add a file to the **mu-plugins** directory called **sandbox-functionality.php**. This file is ignored by git, so changes made to it will not affect the state of the working directory.
+
+### Buying tickets with Stripe in test mode
+
+CampTix sends buyers to Stripe's hosted Checkout page, so a local site can take test payments once it has Stripe test keys.
+
+**Keys.** Any Stripe account's test-mode keys work (`pk_test_…` and `sk_test_…`, a standard secret key rather than a restricted `rk_test_` one). A free Stripe account is enough, and people with w.org sandbox access can use the WPCS test keys from there. Never use live keys locally.
+
+Don't put the keys in `.docker/wp-config.php`: it's tracked by git, and it already defines `WORDCAMP_CAMPTIX_STRIPE_TEST_PUBLIC` and `WORDCAMP_CAMPTIX_STRIPE_TEST_SECRET` as empty strings, so they can't be redefined later. Instead, give them to the **WordCamp Sandbox** account in `sandbox-functionality.php`:
+
+```php
+add_filter( 'camptix_stripe_predefined_accounts', function ( $accounts ) {
+	$public = 'pk_test_…';
+	$secret = 'sk_test_…';
+
+	$accounts['wpcs-sandbox']['api_test_public_key'] = $public;
+	$accounts['wpcs-sandbox']['api_test_secret_key'] = $secret;
+	$accounts['wpcs-sandbox']['api_public_key']      = $public;
+	$accounts['wpcs-sandbox']['api_secret_key']      = $secret;
+
+	return $accounts;
+}, 20 );
+```
+
+**A site that sells tickets.** New sites already use Stripe with the WordCamp Sandbox account. A new site starts in Coming Soon mode with a draft Tickets page, so turn Coming Soon off, publish the Tickets page and add a ticket under **Tickets**. Sites for past events show "This event has completed" instead of the ticket form.
+
+**Buying.** Log in first, since logged-out visitors can't buy tickets, then pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC. Returning from Stripe confirms the order, so webhooks aren't needed for this.
+
+**Other payment methods.** CampTix doesn't choose payment methods itself; Stripe's Checkout page shows the ones turned on in that account's dashboard. To test iDEAL, Bancontact, Boleto and the like, turn them on in the account's test-mode settings. Some are only offered to accounts in certain countries.
 
 
 ## Useful Docker Commands:
@@ -141,6 +234,13 @@ Note: All of these commands are meant to be executed from project directory.
 
    Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
+1.  To clean up unused Docker images and reclaim disk space, use:
+    ```bash
+    docker image prune -a -f
+    ```
+
+    Note that before running `docker image prune -a -f`, it's a good practice to check which images will be removed using the  command: `docker image prune -a`. This will list all the images that would be removed without actually deleting them. This allows you to verify that the command won't remove any images you still need.
+
 1. To open a shell inside the web container, use:
     ```bash
     docker compose exec wordcamp.test bash
@@ -148,13 +248,13 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
 
-    Similarly, for the MySQL container, you can use:
+    Similarly, for the MariaDB container, you can use:
 
     ```bash
     docker compose exec wordcamp.db bash
     ```
 
-    `wordcamp.db` is the name of docker service running MySQL server.
+    `wordcamp.db` is the name of docker service running MariaDB server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
@@ -167,18 +267,18 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of the Docker service which is running `nginx` and `php`
 
-    Similarly, to view MySQL server logs, use:
+    Similarly, to view MariaDB server logs, use:
 
     ```bash
     docker compose logs -f --tail=100 wordcamp.db
     ```
 
-    Note that this does not show MySQL queries made by application, these are just server logs.
+    Note that this does not show database queries made by application, these are just server logs.
 
-    `wordcamp.db` is the name of Docker service which is running MySQL server.
+    `wordcamp.db` is the name of Docker service which is running MariaDB server.
 
 
-Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
+Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](http://localhost:1080) to view the MailCatcher dashboard (or whatever `WORDCAMP_MAILCATCHER_PORT`/`WORDCAMP_BIND_IP` point at, if you've overridden them — see [Running alongside another local environment](#running-alongside-another-local-environment)).
 
 
 ## Testing with PHPUnit
@@ -194,27 +294,23 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     ```
     phpunit_wp_1  | […] NOTICE: ready to handle connections
     …
-    phpunit_db_1  | […] [Note] mysqld: ready for connections.
+    phpunit_db_1  | […] [Note] mariadbd: ready for connections.
     ```
 
-2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
+2. The WordPress test framework installs **automatically** the first time you start the container above — watch for `Installing the WordPress test suite...`. The download occasionally times out; if it does, restart with `docker compose -f docker-compose.phpunit.yml up`, or install it manually from inside the container:
     ```bash
-    docker compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp \
+        /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
     ```
 
-    Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
-    ```bash
-    /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
-    ```
-
-    Sometimes the download will time out. If that happens, you can delete `/tmp/wp` from the container, and re-run the install script. The test files will be added to the `.docker/test_suite` folder, which is ignored by git.
+    The test files are written to the `.docker/test_suite` folder, which is ignored by git.
 
 3. Now you can run `phpunit`. From the project folder on your machine:
     ```bash
     docker compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
     ```
 
-    If you're still in the shell from the previous step, you can run `phpunit` directly.
+    If you're still in the shell from the previous step, you can run `phpunit` directly. You'll need to be in the `/app` directory to run the tests.
     ```bash
     phpunit
     ```
@@ -281,4 +377,4 @@ If the dev database needs to be updated to better reflect the state of productio
 * Make sure WP is running the latest branch, and the database schema has been updated.
 * Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is. There are some suggested strategies for reviewing database file diffs [here](https://github.com/WordPress/meta-environment/wiki/Reviewing-PRs-with-database-changes).
 
-Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.
+Then you can run `bash /var/scripts/database.sh clean-export` inside the container. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

@@ -3,8 +3,12 @@
  * Allows event organizers to track which attendees showed up to the event.
  */
 class CampTix_Attendance extends CampTix_Addon {
-	public $secret    = '';
-	public $questions = array();
+	public $secret           = '';
+	public $secret_generated = '';
+	public $questions        = array();
+	public $secret_expiry    = '2 weeks';
+	public $tickets;
+
 	/**
 	 * Runs during CampTix init.
 	 */
@@ -23,6 +27,7 @@ class CampTix_Attendance extends CampTix_Addon {
 			return;
 
 		$this->secret = $camptix_options['attendance-secret'];
+		$this->secret_generated = $camptix_options['attendance-secret-generated'] ?? '';
 
 		if ( isset( $camptix_options['attendance-questions'] ) ) {
 			$this->questions = $camptix_options['attendance-questions'];
@@ -30,6 +35,17 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		if ( empty( $camptix_options['attendance-enabled'] ) )
 			return;
+
+		// If secret has expired, trun the UI off, reset link and do not allow setup for UI use.
+		if ( strtotime( $this->secret_generated ) < strtotime( "-{$this->secret_expiry}" ) ) {
+			$camptix_options['attendance-enabled'] = 0;
+			$camptix_options['attendance-secret'] = '';
+			$camptix_options['attendance-secret-generated'] = '';
+			update_option( 'camptix_options', $camptix_options );
+			return;
+		}
+
+		add_action( 'tix_scheduled_daily', array( $this, 'cron_stats_update_attended_count' ) );
 
 		add_filter( 'wp_ajax_camptix-attendance', array( $this, 'ajax_callback' ) );
 		add_filter( 'wp_ajax_nopriv_camptix-attendance', array( $this, 'ajax_callback' ) );
@@ -78,9 +94,10 @@ class CampTix_Attendance extends CampTix_Addon {
 	/**
 	 * Synchronize a single attendee model.
 	 *
-	 * Sets are removes the attended flag for a given camptix_id.
+	 * Sets or removes the attended flag for a given camptix_id.
 	 */
 	public function _ajax_sync_model() {
+		global $camptix;
 		if ( empty( $_REQUEST['camptix_id'] ) )
 			return;
 
@@ -92,9 +109,11 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		if ( isset( $_REQUEST['camptix_set_attendance'] ) ) {
 			if ( 'true' == $_REQUEST['camptix_set_attendance'] ) {
+				$camptix->increment_stats( 'attended', 1 );
 				$this->log( 'Marked attendee as attended.', $attendee->ID );
 				update_post_meta( $attendee->ID, 'tix_attended', true );
 			} else {
+				$camptix->increment_stats( 'attended', -1 );
 				$this->log( 'Marked attendee as did not attended.', $attendee->ID );
 				delete_post_meta( $attendee->ID, 'tix_attended' );
 			}
@@ -321,9 +340,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		add_settings_section( 'general', esc_html__( 'Attendance UI', 'wordcamporg' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
 
 		// Fields
-		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general',
-			esc_html__( "Don't forget to disable the UI after the event is over.", 'wordcamporg' )
-		);
+		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general' );
 
 		add_settings_field( 'attendance-questions', esc_html__( 'Questions', 'wordcamporg' ), array( $this, 'field_questions' ), 'camptix_options', 'general', esc_html__( 'Show these additional ticket questions in the UI.', 'wordcamporg' ) );
 
@@ -344,6 +361,13 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		<input id="camptix-attendance-generate" type="checkbox" name="camptix_options[attendance-generate]" value="1" />
 		<label for="camptix-attendance-generate"><?php esc_html_e( 'Generate a new secret link (old links will expire)', 'wordcamporg' ); ?></label>
+		<p class="description">
+			<?php if ( empty( $this->secret_generated ) ) {
+				echo esc_html( sprintf( __( 'Link will expire automatically after two weeks from generating it.', 'wordcamporg' ), $this->secret_expiry ) );
+			} else {
+				echo esc_html( sprintf( __( 'Link will expire automatically on %s.', 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) ) );
+			} ?>
+		</p>
 		<?php
 	}
 
@@ -390,8 +414,10 @@ class CampTix_Attendance extends CampTix_Addon {
 		if ( isset( $input['attendance-enabled'] ) )
 			$output['attendance-enabled'] = (bool) $input['attendance-enabled'];
 
-		if ( ! empty( $input['attendance-generate'] ) )
+		if ( ! empty( $input['attendance-generate'] ) ) {
 			$output['attendance-secret'] = wp_generate_password( 32, false, false );
+			$output['attendance-secret-generated'] = wp_date( 'Y-m-d H:i:s' );
+		}
 
 		if ( ! empty( $input['attendance-questions'] ) ) {
 			$output['attendance-questions'] = array_map( 'intval', $input['attendance-questions'] );
@@ -418,6 +444,40 @@ class CampTix_Attendance extends CampTix_Addon {
 		) );
 
 		return $this->tickets;
+	}
+
+	/**
+	 * Get attended count.
+	 *
+	 * @return int Number of attendees marked as attended.
+	 */
+	public function get_attended_count() {
+		$attended_query = new WP_Query( array(
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'meta_key'       => 'tix_attended',
+			'meta_value'     => '1',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return $attended_query->found_posts;
+	}
+
+	/**
+	 * Cron job to update attended count in stats.
+	 */
+	public function cron_stats_update_attended_count() {
+		global $camptix;
+
+		$attended_count = $this->get_attended_count();
+		if ( ! $attended_count ) {
+			$attended_count = 0;
+		}
+
+		$camptix->update_stats( array(
+			'attended' => $attended_count,
+		) );
 	}
 
 	/**

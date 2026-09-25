@@ -29,7 +29,7 @@ class WordCamp_Counts extends Base {
 	 *
 	 * @var float
 	 */
-	const GENDER_PROBABILITY_THRESHOLD = 0.9;
+	public const GENDER_PROBABILITY_THRESHOLD = 0.9;
 
 	/**
 	 * Report name.
@@ -218,6 +218,23 @@ class WordCamp_Counts extends Base {
 	}
 
 	/**
+	 * Simple method to check against URL field
+	 *
+	 * @param int $wordcamp_id ID for the wordcamp post type.
+	 *
+	 * @return bool
+	 */
+	public function is_a_wordcamp_url( $wordcamp_id ) {
+		$url = get_post_meta( $wordcamp_id, 'URL', true );
+
+		// doaction sites are tracked but break the validate wordcamp site check.
+		if ( false !== strpos( $url, 'doaction' ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Query and parse the data for the report.
 	 *
 	 * @return array
@@ -246,6 +263,9 @@ class WordCamp_Counts extends Base {
 
 		foreach ( $wordcamp_ids as $wordcamp_id ) {
 			try {
+				if ( ! $this->is_a_wordcamp_url( $wordcamp_id ) ) {
+					continue;
+				}
 				$valid = validate_wordcamp_id( $wordcamp_id );
 
 				$data = array_merge( $data, $this->get_data_for_site( $valid->site_id, $valid->post_id ) );
@@ -732,13 +752,13 @@ class WordCamp_Counts extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date     = filter_input( INPUT_POST, 'start-date' );
-		$end_date       = filter_input( INPUT_POST, 'end-date' );
+		$start_date     = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date       = wp_unslash( $_POST['end-date'] ?? '' );
 		$statuses       = filter_input( INPUT_POST, 'statuses', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY ) ?: array();
 		$include_gender = filter_input( INPUT_POST, 'include-gender', FILTER_VALIDATE_BOOLEAN );
 		$refresh        = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action         = filter_input( INPUT_POST, 'action' );
-		$nonce          = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action         = wp_unslash( $_POST['action'] ?? '' );
+		$nonce          = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$all_statuses = WordCamp_Loader::get_post_statuses();
 

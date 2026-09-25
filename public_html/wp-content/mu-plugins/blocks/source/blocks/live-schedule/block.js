@@ -41,7 +41,9 @@ class Block extends Component {
 	}
 
 	fetchApi() {
-		getDataFromAPI().then( ( sessions ) => this.setState( { sessions: sessions, isFetching: false } ) );
+		getDataFromAPI().then( ( sessions ) =>
+			this.setState( { sessions, isFetching: false } )
+		);
 	}
 
 	render() {

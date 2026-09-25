@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/flagship-landing-timeline",
+	"version": "0.1.0",
+	"title": "Flagship Landing Page Timeline",
+	"category": "design",
+	"icon": "list-view",
+	"description": "List of events for the current flagship domain.",
+	"textdomain": "wporg",
+	"attributes": {
+	},
+	"supports": {
+		"spacing": {
+			"margin": [ "top", "bottom" ],
+			"padding": true,
+			"blockGap": false
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		}
+	},
+	"editorScript": "file:./index.js"
+}

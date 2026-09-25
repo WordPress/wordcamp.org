@@ -5,10 +5,22 @@ on:
   pull_request:
     paths:
     - public_html/**
+    - .github/workflows/**
+    - phpunit.*
+    - composer.json
+    - composer-dev.json
   push:
     branches: [production]
     paths:
     - public_html/**
+    - .github/workflows/**
+    - phpunit.*
+    - composer.json
+    - composer-dev.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit-js:
@@ -17,25 +29,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
-    - uses: actions/cache@v2
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
       with:
-        path: '**/node_modules'
-        key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+        node-version: 20.x
+        cache: npm
 
-    - name: Use Node.js 12.x
-      uses: actions/setup-node@v2-beta
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
       with:
-        node-version: 12.x
+        path: |
+          node_modules
+          public_html/wp-content/**/node_modules
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
 
     - name: Install dependencies
       # We don't need to build, since jest can interpret the source files.
-      run: yarn
+      run: |
+        if [ "${{ steps.node-modules-cache.outputs.cache-hit }}" != 'true' ]; then
+          npm ci --no-audit --no-fund
+        fi
 
-    # Run the Blocks unit tests. If/when other workspaces get tests, those would be added here.
+    # Run JavaScript tests for each workspace that currently provides them.
     - name: Running the tests
-      run: yarn workspace wordcamp-blocks run test
+      run: |
+        npm run test --workspace=wordcamp-blocks
+        npm run test --workspace=wporg-groups-frontend
 
   unit-php:
     name: PHP Tests
@@ -45,42 +67,85 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['7.4'] # 8.0 -- Add back to matrix when 8.0 is supported.
+        php-version: ['8.3', '8.4', '8.5']
 
     services:
-      mysql:
-        image: mysql:5.7
+      mariadb:
+        image: mariadb:lts
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: false
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wcorg_test
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wcorg_test
         ports:
           - 3306/tcp
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+
+    - name: Install SVN
+      run: |
+        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
+        sudo apt-get update && sudo apt-get install -y subversion
 
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php-version }}
         coverage: none
-        tools: composer:v1
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Start mysql service
-      run: sudo /etc/init.d/mysql start
+    - name: Get Composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
+        restore-keys: |
+          composer-${{ runner.os }}-
 
     - name: Install dependencies
-      run: composer install
+      # The lock file is removed so that the latest wporg-mu-plugins dev-build is always installed.
+      run: |
+        rm composer.lock || true
+        composer install
 
     - name: Install WordPress
+      env:
+        DB_PORT: ${{ job.services.mariadb.ports['3306'] }}
       run: |
-        bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
+        bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
 
-    - name: Install required plugins
+    - name: Install GatherPress
+      # Pinned to the same release used by local dev (see the
+      # groups-gatherpress-compat-test skill). GatherPress is gitignored/
+      # third-party; the WordCamp Groups PHPUnit suite needs it present.
       run: |
-        svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
+        curl -sL "https://github.com/GatherPress/gatherpress/releases/download/0.35.4/gatherpress.0.35.4.zip" -o /tmp/gatherpress.zip
+        unzip -q -o /tmp/gatherpress.zip -d public_html/wp-content/plugins/
+        rm -f /tmp/gatherpress.zip
+
+    - name: Use Node.js 20.x
+      # The WordCamp Groups PHPUnit suite asserts on registered block types,
+      # which register_block_type_from_metadata() silently no-ops for if
+      # build/blocks/ doesn't exist yet.
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: npm
+
+    - name: Build the groups frontend blocks
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build --workspace=public_html/wp-content/mu-plugins/wporg-groups-frontend
 
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

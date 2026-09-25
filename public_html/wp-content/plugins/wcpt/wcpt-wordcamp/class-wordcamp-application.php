@@ -11,7 +11,7 @@ class WordCamp_Application extends Event_Application {
 
 	public $post;
 
-	const SHORTCODE_SLUG = 'wordcamp-organizer-application';
+	public const SHORTCODE_SLUG = 'wordcamp-organizer-application';
 
 	/**
 	 * Return publicly displayed name of the event
@@ -153,6 +153,7 @@ class WordCamp_Application extends Event_Application {
 			'q_4236565_slack_username'                   => '',
 			'where_find_online'                          => '',
 			'q_1079098_anything_else'                    => '',
+			'q_contributor_day'                          => '',
 
 			// Bonus.
 			'q_1079112_best_describes_you'               => '',
@@ -185,19 +186,21 @@ class WordCamp_Application extends Event_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|\WP_Error
+	 * @return int|\WP_Error
 	 */
 	public function create_post( $data ) {
-		// Create the post.
-		$user      = wcorg_get_user_by_canonical_names( $data['q_4236565_wporg_username'] );
+		// `submit_application()` only reaches this method for a logged-in submitter, so the
+		// application is owned by that account. The username field is stored as meta below.
+		$author_id = get_current_user_id();
 		$statues   = \WordCamp_Loader::get_post_statuses();
 		$countries = wcorg_get_countries();
 
 		$post = array(
 			'post_type'   => $this->get_event_type(),
-			'post_title'  => 'WordCamp ' . $data['q_1079103_wordcamp_location'],
+			// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+			'post_title'  => 'WordCamp ' . wcorg_sanitize_plain_text( $data['q_1079103_wordcamp_location'] ),
 			'post_status' => WCPT_DEFAULT_STATUS,
-			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : 7694169, // Set `wordcamp` as author if supplied username is not valid.
+			'post_author' => $author_id ?: 7694169, // Fall back to the `wordcamp` account if there is somehow no current user.
 		);
 
 		$post_id = wp_insert_post( $post, true );
@@ -239,6 +242,10 @@ class WordCamp_Application extends Event_Application {
 			)
 		);
 
+		if ( false !== strpos( $data['q_contributor_day'], 'Yes' ) ) {
+			add_post_meta( $post_id, 'Contributor Day', true );
+		}
+
 		if ( 'It would be an online event' === $data['q_in_person_online'] ) {
 			add_post_meta( $post_id, 'Virtual event only', true );
 		}
@@ -248,13 +255,13 @@ class WordCamp_Application extends Event_Application {
 			'_status_change',
 			array(
 				'timestamp' => time(),
-				'user_id'   => is_a( $user, 'WP_User' ) ? $user->ID : 0,
+				'user_id'   => $author_id,
 				'message'   => sprintf( '%s &rarr; %s', 'Application', $statues[ WCPT_DEFAULT_STATUS ] ),
 			)
 		);
 
 		$this->post = get_post( $post_id );
-		return true;
+		return $post_id;
 	}
 
 	/**

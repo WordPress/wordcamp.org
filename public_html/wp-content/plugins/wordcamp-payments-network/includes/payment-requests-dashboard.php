@@ -59,7 +59,7 @@ class Payment_Requests_Dashboard {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		$charset_collate = "DEFAULT CHARACTER SET {$wpdb->charset} COLLATE {$wpdb->collate}";
+		$charset_collate = $wpdb->get_charset_collate();
 		$sql             = sprintf( "CREATE TABLE %s (
 			id int(11) unsigned NOT NULL auto_increment,
 			blog_id int(11) unsigned NOT NULL default '0',
@@ -333,13 +333,13 @@ class Payment_Requests_Dashboard {
 		$tabs = array(
 			'drafts',
 			'overdue',
-
 			'pending-approval',
 			'approved',
 			'pending-payment',
 			'paid',
 			'cancelled-failed',
 			'incomplete',
+			'needs-followup',
 		);
 
 		if ( isset( $_REQUEST['wcp-section'] ) && in_array( $_REQUEST['wcp-section'], $tabs ) ) {
@@ -363,6 +363,7 @@ class Payment_Requests_Dashboard {
 			'paid'             => __( 'Paid', 'wordcamporg' ),
 			'cancelled-failed' => __( 'Cancelled/Failed', 'wordcamporg' ),
 			'incomplete'       => __( 'Incomplete', 'wordcamporg' ),
+			'needs-followup'   => __( 'Needs Follow-up', 'wordcamporg' ),
 		);
 
 		foreach ( $sections as $section_key => $section_caption ) {

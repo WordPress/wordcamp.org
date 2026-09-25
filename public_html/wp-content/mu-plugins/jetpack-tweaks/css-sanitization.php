@@ -7,6 +7,9 @@ use WordCamp\Logger;
 
 defined( 'WPINC' ) || die();
 
+// Load the Jetpack Custom CSS Module that was removed in Jetpack 13.8.
+include_once __DIR__ . '/module-custom-css/custom-css.php';
+
 add_filter( 'update_custom_css_data',     __NAMESPACE__ . '\sanitize_custom_css', 15       ); // After Jetpack_Custom_CSS_Enhancements::update_custom_css_data().
 add_action( 'csstidy_optimize_postparse', __NAMESPACE__ . '\sanitize_csstidy_parsed_rules' );
 add_action( 'admin_notices',              __NAMESPACE__ . '\notify_import_rules_stripped'  );

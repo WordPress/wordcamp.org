@@ -3,6 +3,7 @@
 class CampTix_Network_Dashboard {
 	public static $attendee_search_limit;
 	protected $debug = false;
+	protected $list_table;
 
 	function __construct() {
 		self::$attendee_search_limit = apply_filters( 'camptix_nt_attendee_list_blog_limit', 700 ); // PHP times out around 900 sites.
@@ -43,7 +44,7 @@ class CampTix_Network_Dashboard {
 		}
 
 		// The cron job may be fired from a site that doesn't have CampTix loaded, so only run if it is loaded
-		if ( method_exists( $camptix, 'generate_revenue_report_data' ) ) {
+		if ( isset( $camptix ) && method_exists( $camptix, 'generate_revenue_report_data' ) ) {
 			$remaining_blogs = get_site_option( 'camptix_nt_revenue_report_blog_ids', array() );
 			if ( empty( $remaining_blogs ) ) {
 				$remaining_blogs = $wpdb->get_col( $wpdb->prepare( "

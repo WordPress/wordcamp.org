@@ -54,7 +54,7 @@ class Payment_Requests_List_Table extends WP_List_Table {
 		$order    = 'asc';
 
 		if ( 'overdue' == $view ) {
-			$where .= $wpdb->prepare( " AND `status` = 'wcb-pending-approval' AND `due` > 0 AND `due` <= %d ", time() );
+			$where .= $wpdb->prepare( " AND `status` IN ( 'wcb-pending-approval', 'wcb-needs-followup' ) AND `due` > 0 AND `due` <= %d ", time() );
 		} elseif ( 'pending-approval' == $view ) {
 			$where .= " AND `status` = 'wcb-pending-approval' ";
 		} elseif ( 'approved' == $view ) {
@@ -71,6 +71,8 @@ class Payment_Requests_List_Table extends WP_List_Table {
 			$where .= " AND `status` IN ( 'wcb-failed', 'wcb-cancelled' ) ";
 		} elseif ( 'drafts' == $view ) {
 			$where .= " AND `status` = 'draft' ";
+		} elseif ( 'needs-followup' == $view ) {
+			$where .= " AND `status` = 'wcb-needs-followup' ";
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
@@ -223,7 +225,7 @@ class Payment_Requests_List_Table extends WP_List_Table {
 	public function column_method( $request ) {
 		$method = get_post_meta( $request->ID, '_camppayments_payment_method', true );
 
-		return esc_html( $method );
+		return esc_html( \WordCamp_Budgets::get_payment_method_label( $method ) );
 	}
 
 	/**

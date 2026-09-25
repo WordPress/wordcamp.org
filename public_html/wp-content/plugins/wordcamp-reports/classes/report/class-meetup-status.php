@@ -107,7 +107,7 @@ class Meetup_Status extends Base_Status {
 	 * @param string $status
 	 * @param array  $options
 	 */
-	public function __construct( $start_date, $end_date, $status = '', array $options = array() ) {
+	public function __construct( $start_date, $end_date, $status = 'any', array $options = array() ) {
 
 		parent::__construct( $options );
 
@@ -119,7 +119,19 @@ class Meetup_Status extends Base_Status {
 				$e->getMessage()
 			);
 		}
-		$this->status = $status;
+
+		if ( $status && 'any' !== $status ) {
+			$statuses = \Meetup_Admin::get_post_statuses();
+
+			if ( isset( $statuses[ $status ] ) ) {
+				$this->status = $status;
+			} else {
+				$this->error->add(
+					self::$slug . '-status-error',
+					'Invalid status provided.'
+				);
+			}
+		}
 	}
 
 	/**
@@ -169,7 +181,7 @@ class Meetup_Status extends Base_Status {
 		$data         = array();
 
 		// Ensure status labels can match status log messages.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		foreach ( $meetup_posts as $meetup ) {
 			$logs = $this->sort_logs( get_post_meta( $meetup->ID, '_status_change' ) );
@@ -207,7 +219,9 @@ class Meetup_Status extends Base_Status {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 
 		$data = $this->filter_data_fields( $data );
 		$this->maybe_cache_data( $data );
@@ -216,7 +230,7 @@ class Meetup_Status extends Base_Status {
 	}
 
 	/**
-	 * Get all Meetup posts which have status changed between given time fram
+	 * Get all Meetup posts which have status changed between given time frame.
 	 *
 	 * @return array
 	 */
@@ -224,17 +238,14 @@ class Meetup_Status extends Base_Status {
 		global $wpdb;
 		$meetup_post_type = WCPT_MEETUP_SLUG;
 		$meetup_post_objs = $wpdb->get_results(
-			$wpdb->prepare(
-				"
-			SELECT DISTINCT post_id
-			FROM {$wpdb->prefix}postmeta
-			WHERE 
-				meta_key LIKE '_status_change_log_$meetup_post_type%'
-			AND
-				meta_value >= %d
-			AND 
-				meta_value <= %d
-			",
+			$wpdb->prepare( "
+				SELECT DISTINCT post_id
+				FROM {$wpdb->prefix}postmeta
+				WHERE
+					meta_key LIKE %s AND
+					meta_value >= %d AND
+					meta_value <= %d",
+				sprintf( '_status_change_log_%s%%', $meetup_post_type ),
 				$this->range->start->getTimestamp(),
 				$this->range->end->getTimestamp()
 			)
@@ -305,8 +316,9 @@ class Meetup_Status extends Base_Status {
 		$period = $params['period'];
 		$year   = $params['year'];
 		$status = $params['status'];
+
 		if ( ! empty( $params )  && isset( $params['range'] ) ) {
-			$report = new self( $params['range']->start, $params['range']->end, $params['status'], $params['options'] );
+			$report = new self( $params['range']->start, $params['range']->end, $status, $params['options'] );
 		}
 
 		include get_views_dir_path() . 'public/meetup-status.php';
@@ -318,13 +330,17 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$status     = filter_input( INPUT_POST, 'status' );
+		if ( ! current_user_can( CAPABILITY ) ) {
+			return;
+		}
+
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$status     = wp_unslash( $_POST['status'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$statuses   = Meetup_Application::get_post_statuses();
 
 		$field_defaults = array(
@@ -395,12 +411,18 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$action = filter_input( INPUT_POST, 'action' );
-		$report = filter_input( INPUT_GET, 'report' );
+		$action = wp_unslash( $_POST['action'] ?? '' );
+		$report = wp_unslash( $_GET['report'] ?? '' );
+		$nonce  = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
+
 		if ( $report !== self::$slug ) {
 			return;
 		}
 		if ( 'Export CSV' !== $action ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

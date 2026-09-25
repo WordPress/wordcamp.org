@@ -86,9 +86,14 @@ function Edit( { attributes, setAttributes, className, isSelected } ) {
 				classes={ classes }
 				icon={ embedYouTubeIcon }
 				label={ __( 'YouTube Live Chat', 'wordcamporg' ) }
-				instructions={ __( 'Enter a YouTube.com live video URL to embed its chat on your site.', 'wordcamporg' ) }
+				instructions={ __(
+					'Enter a YouTube.com live video URL to embed its chat on your site.',
+					'wordcamporg'
+				) }
 				placeholder="https://www.youtube.com/watch?v=pXPtCVMDzBA" // Thabo Tswana at WCEU 2017
-				embedHandler={ ( newUrl ) => setAttributes( { videoUrl: newUrl } ) }
+				embedHandler={ ( newUrl ) =>
+					setAttributes( { videoUrl: newUrl } )
+				}
 			/>
 		);
 	}
@@ -96,7 +101,13 @@ function Edit( { attributes, setAttributes, className, isSelected } ) {
 	try {
 		const videoId = getVideoId( videoUrl );
 
-		return <Preview classes={ classes } videoId={ videoId } isSelected={ isSelected } />;
+		return (
+			<Preview
+				classes={ classes }
+				videoId={ videoId }
+				isSelected={ isSelected }
+			/>
+		);
 	} catch ( error ) {
 		return <InvalidUrl error={ error } />;
 	}
@@ -116,18 +127,22 @@ function InvalidUrl( { error } ) {
 	return (
 		<div className="notice notice-error">
 			<p>
-				{ __( "This block couldn't be displayed because the video URL is not valid.", 'wordcamporg' ) }
+				{ __(
+					"This block couldn't be displayed because the video URL is not valid.",
+					'wordcamporg'
+				) }
 			</p>
 
 			<p>
-				{
-					createInterpolateElement(
-						__( 'Please delete this, and create new a block with valid a URL. The URL must be in a form similar to <code>https://www.youtube.com/watch?v=pXPtCVMDzBA</code>.', 'wordcamporg' ),
-						{
-							code: <code />,
-						}
-					)
-				}
+				{ createInterpolateElement(
+					__(
+						'Please delete this, and create new a block with valid a URL. The URL must be in a form similar to <code>https://www.youtube.com/watch?v=pXPtCVMDzBA</code>.',
+						'wordcamporg'
+					),
+					{
+						code: <code />,
+					}
+				) }
 			</p>
 		</div>
 	);
@@ -179,12 +194,14 @@ function Preview( { classes, videoId, isSelected } ) {
 
 			<div className={ classes }>
 				<iframe
-					id={ 'wp-block-wordcamp-youtube-live-chat-embed__video-' + videoId }
+					id={
+						'wp-block-wordcamp-youtube-live-chat-embed__video-' +
+						videoId
+					}
 					title="Embedded YouTube live chat"
 					src={ iframeSrc }
 					sandbox="allow-same-origin allow-scripts allow-popups"
-				>
-				</iframe>
+				></iframe>
 			</div>
 		</>
 	);

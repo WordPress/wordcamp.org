@@ -69,6 +69,18 @@ add_filter( 'pre_option_blog_public', 'wcorg_enforce_public_blog_option' );
 add_filter( 'pre_update_option_blog_public', 'wcorg_enforce_public_blog_option' );
 
 /**
+ * Disable attachment pages on all sites.
+ *
+ * WordPress 6.4+ disables attachment pages on new installs, but legacy sites still have them enabled.
+ * This forces them off for all sites, which causes WordPress core to 301 redirect attachment page
+ * requests to the attachment file URL.
+ *
+ * See https://github.com/WordPress/wordcamp.org/issues/1333
+ * See https://make.wordpress.org/core/2023/10/16/changes-to-attachment-pages/
+ */
+add_filter( 'pre_option_wp_attachment_pages_enabled', '__return_zero' );
+
+/**
  * We want to let organizers use shortcodes inside Text widgets.
  */
 add_filter( 'widget_text', 'do_shortcode' );
@@ -283,7 +295,12 @@ add_filter( 'change_locale', function() {
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
-	// Secrets.
+	// Secrets. Matches the `wordcamp_qbo_client_options` filter below; the plugin withholds its REST routes
+	// when the key is absent, so bailing is safer than fataling on an undefined constant.
+	if ( ! defined( 'WORDCAMP_QBO_HMAC_KEY' ) ) {
+		return $options;
+	}
+
 	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
 
 	// WordCamp Payments to QBO categories mapping.
@@ -353,7 +370,9 @@ add_filter( 'wordcamp_google_maps_api_key', function( $key, $scope = 'client' ) 
 
 		case 'development':
 		default:
-			if ( defined( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY' ) ) {
+			if ( 'server' === $scope && defined( 'WORDCAMP_DEV_GOOGLE_MAPS_SERVER_API_KEY') ) {
+				$key = WORDCAMP_DEV_GOOGLE_MAPS_SERVER_API_KEY;
+			} elseif ( defined( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY' ) ) {
 				$key = WORDCAMP_DEV_GOOGLE_MAPS_API_KEY;
 			}
 			break;
@@ -361,6 +380,11 @@ add_filter( 'wordcamp_google_maps_api_key', function( $key, $scope = 'client' ) 
 
 	return $key;
 }, 10, 2 );
+
+// Google Maps API Key as used in the wporg/google-map block.
+add_filter( 'wporg_google_map_apikey', function() {
+	return apply_filters( 'wordcamp_google_maps_api_key', '' );
+} );
 
 /**
  * Disable admin pointers
@@ -484,7 +508,8 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
 		'edit-flow/edit_flow.php',
-		'lang-attribute/lang-attribute.php',
+		'knit-pay/knit-pay.php',
+		'lang-attribute-blocks/lang-attribute-blocks.php',
 		'liveblog/liveblog.php',
 		'public-post-preview/public-post-preview.php',
 		'pwa/pwa.php',
@@ -582,7 +607,7 @@ function add_wcpt_cross_link( WP_Admin_Bar $wp_admin_bar ) {
 
 	$wp_admin_bar->add_node(
 		array(
-			'parent' => 'site-name',
+			'parent' => 'edit',
 			'id'     => 'wordcamp-post',
 			'title'  => __( 'WordCamp Post', 'wordcamporg' ),
 
@@ -678,6 +703,23 @@ function wcorg_country_list_mods( $countries ) {
 	return $countries;
 }
 add_filter( 'wcorg_get_countries', 'wcorg_country_list_mods' );
+
+/**
+ * Tell the site administrators to use the WordPress.org account information when adding new users.
+ */
+function wcorg_user_new_wporg_credentials_notice() {
+	global $pagenow;
+
+	if ( 'user-new.php' !== $pagenow ) {
+		return;
+	}
+	?>
+	<div class="notice notice-info">
+		<p><?php echo wp_kses_post( __( '<strong>Use WordPress.org accounts to add and invite users</strong>. You should use the same email address that the user has registered on WordPress.org with.' ) ); ?></p>
+	</div>
+	<?php
+}
+add_action( 'admin_notices', 'wcorg_user_new_wporg_credentials_notice' );
 
 /**
  * Fix malformed URLs for the `mu-plugins-private` folder.

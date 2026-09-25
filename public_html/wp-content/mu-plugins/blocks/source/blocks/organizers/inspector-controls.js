@@ -9,7 +9,11 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { GridInspectorPanel, ImageInspectorPanel, avatarSizePresets } from '../../components';
+import {
+	GridInspectorPanel,
+	ImageInspectorPanel,
+	avatarSizePresets,
+} from '../../components';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
@@ -42,8 +46,16 @@ export default class extends Component {
 	 */
 	render() {
 		const { attributes, blockData, setAttributes } = this.props;
-		const { avatar_align, avatar_size, content, headingAlign, show_avatars, sort } = attributes;
-		const { options = DEFAULT_OPTIONS, schema = DEFAULT_SCHEMA } = blockData;
+		const {
+			avatar_align,
+			avatar_size,
+			content,
+			headingAlign,
+			show_avatars,
+			sort,
+		} = attributes;
+		const { options = DEFAULT_OPTIONS, schema = DEFAULT_SCHEMA } =
+			blockData;
 
 		return (
 			<InspectorControls>
@@ -56,17 +68,26 @@ export default class extends Component {
 				<ImageInspectorPanel
 					title={ __( 'Avatar Settings', 'wordcamporg' ) }
 					show={ show_avatars }
-					onChangeShow={ ( value ) => setAttributes( { show_avatars: value } ) }
+					onChangeShow={ ( value ) =>
+						setAttributes( { show_avatars: value } )
+					}
 					size={ avatar_size }
-					onChangeSize={ ( value ) => setAttributes( { avatar_size: value } ) }
+					onChangeSize={ ( value ) =>
+						setAttributes( { avatar_size: value } )
+					}
 					sizeSchema={ schema.avatar_size }
 					sizePresets={ avatarSizePresets }
 					align={ avatar_align }
-					onChangeAlign={ ( value ) => setAttributes( { avatar_align: value } ) }
+					onChangeAlign={ ( value ) =>
+						setAttributes( { avatar_align: value } )
+					}
 					alignOptions={ options.align_image }
 				/>
 
-				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ false }>
+				<PanelBody
+					title={ __( 'Content Settings', 'wordcamporg' ) }
+					initialOpen={ false }
+				>
 					<BaseControl>
 						<span className="components-base-control__label">
 							{ __( 'Organizer name alignment', 'wordcamporg' ) }
@@ -84,16 +105,23 @@ export default class extends Component {
 						label={ __( 'Biography Length', 'wordcamporg' ) }
 						value={ content }
 						options={ options.content }
-						onChange={ ( value ) => setAttributes( { content: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { content: value } )
+						}
 					/>
 				</PanelBody>
 
-				<PanelBody title={ __( 'Sorting & Filtering', 'wordcamporg' ) } initialOpen={ false }>
+				<PanelBody
+					title={ __( 'Sorting & Filtering', 'wordcamporg' ) }
+					initialOpen={ false }
+				>
 					<SelectControl
 						label={ __( 'Sort by', 'wordcamporg' ) }
 						value={ sort }
 						options={ options.sort }
-						onChange={ ( value ) => setAttributes( { sort: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { sort: value } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>

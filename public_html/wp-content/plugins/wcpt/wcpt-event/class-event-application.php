@@ -132,10 +132,15 @@ abstract class Event_Application {
 			$message        = $application_data->get_error_message();
 			$notice_classes = 'notice-error';
 		} else {
-			$this->create_post( $application_data );
+			$application_post = $this->create_post( $application_data );
+			if ( is_wp_error( $application_post ) ) {
+				// Set application post to an int, rather than wp_error.
+				$application_post = 0;
+			}
 			$this->notify_applicant_application_received(
 				$this->get_organizer_email(),
-				$this->get_event_location()
+				$this->get_event_location(),
+				$application_post
 			);
 
 			$this->notify_new_application_in_slack();
@@ -253,8 +258,9 @@ abstract class Event_Application {
 	 *
 	 * @param string $email_address
 	 * @param string $event_city
+	 * @param int    $application_post id of post created on WC Central.
 	 */
-	public function notify_applicant_application_received( $email_address, $event_city ) {
+	public function notify_applicant_application_received( $email_address, $event_city, $application_post = 0 ) {
 		//translators: Name of the event. E.g. WordCamp or meetup.
 		$subject = sprintf( __( "We've received your %s application", 'wordcamporg' ), $this->get_event_label() );
 		$headers = array(
@@ -262,15 +268,29 @@ abstract class Event_Application {
 			'CC: '. EMAIL_CENTRAL_SUPPORT,
 		);
 
-		//translators: Name and city of the event. E.g. WordCamp New York.
+		//translators: 1: Name of the event. 2: City of the event.
 		$message = sprintf(
 			__(
-				"Thank you for applying to organize a %1\$s in %2\$s! We'll send you a follow-up e-mail once we've had a chance to review your application.",
+				"Thank you for applying to organize a %1\$s in %2\$s! We'll send you a follow-up e-mail once we've had a chance to review your application.\n\n",
 				'wordcamporg'
 			),
 			$this->get_event_label(),
 			sanitize_text_field( $event_city )
 		);
+		$message .= sprintf(
+			"---- Internal details for the Community Team ----\n
+			Name: %1\$s\n
+			Type: %2\$s",
+			sanitize_text_field( $event_city ),
+			$this->get_event_label(),
+		);
+
+		if ( 0 !== $application_post ) {
+			$message .= sprintf(
+				"\nURL: https://central.wordcamp.org/wp-admin/post.php?post=%1\$d&amp;action=edit",
+				absint( $application_post )
+			);
+		}
 
 		wp_mail( $email_address, $subject, $message, $headers );
 	}

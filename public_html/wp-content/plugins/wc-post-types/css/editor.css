@@ -9,7 +9,6 @@
 .wordcamp-panel-session-info .components-datetime__time .components-button,
 .wordcamp-panel-session-info .components-datetime__time input[type="number"],
 .wordcamp-panel-session-info .components-datetime__time select {
-	height: 30px;
 	margin-bottom: 0;
 	margin-top: 0;
 }

@@ -15,7 +15,7 @@ function enqueue_favorite_sessions_dependencies() {
 	wp_enqueue_script(
 		'favourite-sessions',
 		plugin_dir_url( __DIR__ ) . 'js/favourite-sessions.js',
-		array( 'jquery' ),
+		array( 'jquery', 'wp-api-fetch' ),
 		filemtime( plugin_dir_path( __DIR__ ) . 'js/favourite-sessions.js' ),
 		true
 	);
@@ -24,8 +24,8 @@ function enqueue_favorite_sessions_dependencies() {
 		'favourite-sessions',
 		'favSessionsPhpObject',
 		array(
-			'root' => esc_url_raw( rest_url() ),
-			'i18n' => array(
+			'isLoggedIn'            => is_user_logged_in(),
+			'i18n'                  => array(
 				'reqTimeOut'           => esc_html__( 'Sorry, the email request timed out.', 'wordcamporg' ),
 				'otherError'           => esc_html__( 'Sorry, the email request failed.',    'wordcamporg' ),
 				'overwriteFavSessions' => esc_html__( 'You already have some sessions saved. Would you like to overwrite those with the shared sessions that you are viewing?', 'wordcamporg' ),
@@ -34,6 +34,24 @@ function enqueue_favorite_sessions_dependencies() {
 			),
 		)
 	);
+
+	// Preload the fav-sessions endpoint so wp.apiFetch serves it from cache on first request.
+	if ( is_user_logged_in() ) {
+		$preload_data = array_reduce(
+			array( '/wc-post-types/v1/fav-sessions/' ),
+			'rest_preload_api_request',
+			array()
+		);
+
+		wp_add_inline_script(
+			'wp-api-fetch',
+			sprintf(
+				'wp.apiFetch.use( wp.apiFetch.createPreloadingMiddleware( %s ) );',
+				wp_json_encode( $preload_data )
+			),
+			'after'
+		);
+	}
 
 	wp_enqueue_style(
 		'favorite-sessions',
@@ -172,6 +190,8 @@ function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $t
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'meta_query'     => array(
 			'relation' => 'AND',
 			array(
@@ -353,7 +373,8 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 
 			$speakers_names = array();
 			foreach ( $speakers as $speaker ) {
-				$speaker_name     = apply_filters( 'the_title', $speaker->post_title );
+				// Decoded for the same reason the session title above is: this is a plain-text mail.
+				$speaker_name     = html_entity_decode( apply_filters( 'the_title', $speaker->post_title ) );
 				$speakers_names[] = $speaker_name;
 			}
 
@@ -442,10 +463,11 @@ function flip_sessions_subarrays( $sessions ) {
  *
  * @param string $wordcamp_name       WordCamp name to be used in the email.
  * @param array  $fav_sessions_lookup Mapping session _id -> 1 for favourite sessions.
+ * @param string $url_base            The URL for schedule page, into which favourite sessions parameter will be added.
  *
  * @return string                     Plain text body of the email.
  */
-function generate_email_body( $wordcamp_name, $fav_sessions_lookup ) {
+function generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base ) {
 	$date_format                 = get_option( 'date_format' );
 	$tracks                      = get_schedule_tracks( 'all' );
 	$tracks_explicitly_specified = false; // include all tracks in the email.
@@ -479,6 +501,9 @@ function generate_email_body( $wordcamp_name, $fav_sessions_lookup ) {
 		$email_message .= generate_plaintext_fav_sessions( $sessions_for_current_day, $fav_sessions_lookup );
 		$email_message .= "\n\n";
 	}
+
+	$email_message .= esc_html__( 'Link to your favorite sessions on schedule', 'wordcamporg' );
+	$email_message .= ' ' . add_query_arg( 'fav-sessions', implode( ',', array_keys( $fav_sessions_lookup ) ), $url_base );
 
 	return $email_message;
 }
@@ -522,6 +547,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	// Input sanitized by REST controller.
 	$email_address = $params['email-address'];
 	$fav_sessions  = $params['session-list'];
+	$page_slug     = $params['page-slug'];
 
 	// Don't send the email if no sessions were marked as favourite.
 	if ( count( explode( ',', $fav_sessions ) ) === 0 ) {
@@ -534,6 +560,16 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		);
 	}
 
+	// Page by slug existance validated in REST API.
+	$pages = get_posts( array(
+		'name'        => $page_slug,
+		'post_type'   => 'page',
+		'post_status' => 'publish',
+		'fields'      => 'ids',
+	) );
+
+	$url_base = get_the_permalink( $pages[0] );
+
 	$fav_sessions_lookup = array_fill_keys( explode( ',', $fav_sessions ), 1 );
 
 	$wordcamp_name = get_wordcamp_name();
@@ -542,7 +578,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	$headers[] = 'Content-Type: text/plain; charset=' . get_bloginfo( 'charset' );
 
 	$subject = sprintf( __( 'My favorite sessions for %s', 'wordcamporg' ), $wordcamp_name );
-	$message = generate_email_body( $wordcamp_name, $fav_sessions_lookup );
+	$message = generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base );
 
 	if ( wp_mail( $email_address, $subject, $message, $headers ) ) {
 		return new WP_REST_Response(

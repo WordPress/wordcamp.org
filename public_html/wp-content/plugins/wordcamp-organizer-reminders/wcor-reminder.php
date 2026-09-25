@@ -6,8 +6,8 @@
  */
 
 class WCOR_Reminder {
-	const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
-	const REQUIRED_CAPABILITY      = 'manage_options';
+	public const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
+	public const REQUIRED_CAPABILITY      = 'manage_options';
 
 	/**
 	 * Constructor
@@ -16,6 +16,7 @@ class WCOR_Reminder {
 		add_action( 'init',                              array( $this, 'register_post_type' ) );
 		add_action( 'admin_init',                        array( $this, 'add_meta_boxes' ) );
 		add_action( 'admin_menu',                        array( $this, 'register_menu_pages' ) );
+		add_action( 'admin_notices',                     array( $this, 'admin_notices' ) );
 		add_action( 'save_post_' . self::AUTOMATED_POST_TYPE_SLUG, array( $this, 'save_post' ), 10, 2 );
 	}
 
@@ -50,6 +51,27 @@ class WCOR_Reminder {
 			'show_in_nav_menus'   => false,
 			'hierarchical'        => false,
 			'capability_type'     => 'post',
+
+			/*
+			 * The menu page these live under requires `manage_options`, but the post type accepted
+			 * core's generic `edit_posts`, so `post-new.php`, which does not consult the menu, opened
+			 * without it. `map_meta_cap` needs setting here because it only defaults to true while
+			 * `capabilities` is empty.
+			 */
+			'capabilities'        => array(
+				'create_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_others_posts'    => self::REQUIRED_CAPABILITY,
+				'delete_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_private_posts'   => self::REQUIRED_CAPABILITY,
+				'delete_published_posts' => self::REQUIRED_CAPABILITY,
+				'edit_others_posts'      => self::REQUIRED_CAPABILITY,
+				'edit_posts'             => self::REQUIRED_CAPABILITY,
+				'edit_private_posts'     => self::REQUIRED_CAPABILITY,
+				'edit_published_posts'   => self::REQUIRED_CAPABILITY,
+				'publish_posts'          => self::REQUIRED_CAPABILITY,
+				'read_private_posts'     => self::REQUIRED_CAPABILITY,
+			),
+			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'rewrite'             => false,
 			'query_var'           => false,
@@ -87,6 +109,31 @@ class WCOR_Reminder {
 			self::AUTOMATED_POST_TYPE_SLUG,
 			'side'
 		);
+	}
+
+	/**
+	 * Renders admin notices
+	 */
+	public function admin_notices() {
+		if ( isset( $_COOKIE['wcor_manual_email_sent'] ) ) {
+			list( $sent, $event ) = explode( ':', $_COOKIE['wcor_manual_email_sent'] );
+			setcookie( 'wcor_manual_email_sent', '', time() - HOUR_IN_SECONDS );
+
+			$wordcamp = get_post( $event );
+			if ( $sent ) {
+				?>
+				<div class="updated">
+					<p><?php printf( esc_html__( 'The e-mail was sent successfully to the recipient(s) for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+				</div>
+				<?php
+			} else {
+				?>
+				<div class="error">
+					<p><?php printf( esc_html__( 'There was an error sending the e-mail for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+				</div>
+				<?php
+			}
+		}
 	}
 
 	/**
@@ -159,7 +206,7 @@ class WCOR_Reminder {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_posts', $post_id ) ) {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
 
@@ -178,7 +225,7 @@ class WCOR_Reminder {
 	 * @param array $new_meta
 	 */
 	protected function save_post_meta( $post, $new_meta ) {
-		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_custom' );
+		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_mentor', 'wcor_send_custom' );
 
 		delete_post_meta( $post->ID, 'wcor_send_where' );
 		if ( isset( $new_meta['wcor_send_where'] ) ) {
@@ -199,6 +246,11 @@ class WCOR_Reminder {
 			}
 		}
 
+		delete_post_meta( $post->ID, 'wcor_transparency_report' );
+		if ( isset( $new_meta['wcor_transparency_report'] ) ) {
+			update_post_meta( $post->ID, 'wcor_transparency_report', sanitize_text_field( $new_meta['wcor_transparency_report'] ) );
+		}
+
 		if ( isset( $new_meta['wcor_send_days_before'] ) ) {
 			update_post_meta( $post->ID, 'wcor_send_days_before', absint( $new_meta['wcor_send_days_before'] ) );
 		}
@@ -215,6 +267,18 @@ class WCOR_Reminder {
 			if ( in_array( $new_meta['wcor_which_trigger'], array_merge( array( 'null' ), array_keys( $GLOBALS['WCOR_Mailer']->triggers ) ) ) ) {
 				update_post_meta( $post->ID, 'wcor_which_trigger', $new_meta['wcor_which_trigger'] );
 			}
+		}
+
+		if ( isset( $new_meta['wcor_event_subtypes'] ) ) {
+			// Remove 'all', we it's the default.
+			$all_key = array_search( 'all', $new_meta['wcor_event_subtypes'] );
+			if ( $all_key !== false ) {
+				unset( $new_meta['wcor_event_subtypes'][ $all_key ] );
+			}
+
+			$new_meta['wcor_event_subtypes'] = array_filter( $new_meta['wcor_event_subtypes'] );
+
+			update_post_meta( $post->ID, 'wcor_event_subtypes', $new_meta['wcor_event_subtypes'] );
 		}
 	}
 
@@ -239,6 +303,8 @@ class WCOR_Reminder {
 		}
 
 		$wordcamp = get_post( $form_values['wcor_manually_send_wordcamp'] );
-		$WCOR_Mailer->send_manual_email( $email, $wordcamp );
+		$sent = $WCOR_Mailer->send_manual_email( $email, $wordcamp );
+
+		setcookie( 'wcor_manual_email_sent', "{$sent}:{$wordcamp->ID}", time() + MINUTE_IN_SECONDS );
 	}
 }

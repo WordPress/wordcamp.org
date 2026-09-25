@@ -2,14 +2,23 @@
  * WordPress dependencies
  */
 import { AlignmentToolbar, InspectorControls } from '@wordpress/block-editor';
-import { BaseControl, PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import {
+	BaseControl,
+	PanelBody,
+	SelectControl,
+	ToggleControl,
+} from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
-import { GridInspectorPanel, ImageInspectorPanel, featuredImageSizePresets } from '../../components';
+import {
+	GridInspectorPanel,
+	ImageInspectorPanel,
+	featuredImageSizePresets,
+} from '../../components';
 
 const DEFAULT_OPTIONS = {
 	align_image: {},
@@ -50,36 +59,57 @@ export default class extends Component {
 				<ImageInspectorPanel
 					title={ __( 'Logo Settings', 'wordcamporg' ) }
 					show={ show_logo }
-					onChangeShow={ ( value ) => setAttributes( { show_logo: value } ) }
+					onChangeShow={ ( value ) =>
+						setAttributes( { show_logo: value } )
+					}
 					size={ featured_image_width }
-					onChangeSize={ ( value ) => setAttributes( { featured_image_width: value } ) }
+					onChangeSize={ ( value ) =>
+						setAttributes( { featured_image_width: value } )
+					}
 					sizeSchema={ schema.featured_image_width }
 					sizePresets={ featuredImageSizePresets }
 					align={ image_align }
-					onChangeAlign={ ( value ) => setAttributes( { image_align: value } ) }
+					onChangeAlign={ ( value ) =>
+						setAttributes( { image_align: value } )
+					}
 					alignOptions={ options.align_image }
 				/>
 
-				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
+				<PanelBody
+					title={ __( 'Content Settings', 'wordcamporg' ) }
+					initialOpen={ true }
+				>
 					<ToggleControl
 						label={ __( 'Name', 'wordcamporg' ) }
-						help={ show_name
-							? __( 'Sponsor name is visible.', 'wordcamporg' )
-							: __( 'Sponsor name is hidden.', 'wordcamporg' ) }
+						help={
+							show_name
+								? __(
+										'Sponsor name is visible.',
+										'wordcamporg'
+								  )
+								: __( 'Sponsor name is hidden.', 'wordcamporg' )
+						}
 						checked={ show_name }
-						onChange={ ( value ) => setAttributes( { show_name: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { show_name: value } )
+						}
 					/>
 
 					{ show_name && (
 						<BaseControl>
 							<span className="components-base-control__label">
-								{ __( 'Sponsor name alignment', 'wordcamporg' ) }
+								{ __(
+									'Sponsor name alignment',
+									'wordcamporg'
+								) }
 							</span>
 							<AlignmentToolbar
 								isCollapsed={ false }
 								value={ headingAlign }
 								onChange={ ( nextAlign ) => {
-									setAttributes( { headingAlign: nextAlign } );
+									setAttributes( {
+										headingAlign: nextAlign,
+									} );
 								} }
 							/>
 						</BaseControl>
@@ -89,8 +119,13 @@ export default class extends Component {
 						label={ __( 'Description', 'wordcamporg' ) }
 						value={ content }
 						options={ options.content }
-						help={ __( 'Length of sponsor description.', 'wordcamporg' ) }
-						onChange={ ( value ) => setAttributes( { content: value } ) }
+						help={ __(
+							'Length of sponsor description.',
+							'wordcamporg'
+						) }
+						onChange={ ( value ) =>
+							setAttributes( { content: value } )
+						}
 					/>
 				</PanelBody>
 
@@ -102,7 +137,9 @@ export default class extends Component {
 						label={ __( 'Sort by', 'wordcamporg' ) }
 						value={ sort }
 						options={ options.sort }
-						onChange={ ( value ) => setAttributes( { sort: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { sort: value } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>

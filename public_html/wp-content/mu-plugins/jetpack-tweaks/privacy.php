@@ -58,7 +58,7 @@ function render_cookie_banner() {
 		'hide'               => 'button',
 		'consent-expiration' => 365,
 		'text'               => 'custom',
-		'customtext'         => __( "Privacy & Cookies: This site uses cookies. By continuing to use this website, you agree to their use. \r\nTo find out more, including how to control cookies, please see here:", 'wordcamporg' ) . ' ',
+		'customtext'         => __( "Privacy & Cookies: This site uses cookies. By continuing to use this website, you agree to their use.\nTo find out more, including how to control cookies, please see here:", 'wordcamporg' ) . ' ',
 		'color-scheme'       => 'default',
 		'policy-url'         => 'custom',
 		'custom-policy-url'  => trailingslashit( get_privacy_policy_url() ) . 'cookies/',

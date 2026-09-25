@@ -557,12 +557,12 @@ class Sponsor_Invoices extends Date_Range {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -595,12 +595,12 @@ class Sponsor_Invoices extends Date_Range {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -676,9 +676,9 @@ class Sponsor_Invoices extends Date_Range {
 	public static function render_public_page() {
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year        = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period      = filter_input( INPUT_GET, 'period' );
-		$wordcamp_id = filter_input( INPUT_GET, 'wordcamp-id' );
-		$action      = filter_input( INPUT_GET, 'action' );
+		$period      = wp_unslash( $_GET['period'] ?? '' );
+		$wordcamp_id = absint( $_GET['wordcamp-id'] ?? 0 );
+		$action      = wp_unslash( $_GET['action'] ?? '' );
 
 		$years    = self::year_array( absint( gmdate( 'Y' ) ), 2016 );
 		$quarters = self::quarter_array();

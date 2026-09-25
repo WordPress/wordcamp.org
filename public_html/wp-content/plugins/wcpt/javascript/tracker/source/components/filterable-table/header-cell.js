@@ -30,7 +30,10 @@ class TableHeaderCell extends Component {
 	}
 
 	render() {
-		const onClick = this.props.handleSortEvent.bind( null, this.props.fieldSlug );
+		const onClick = this.props.handleSortEvent.bind(
+			null,
+			this.props.fieldSlug
+		);
 
 		return (
 			<th className={ this.getClassNames() }>
@@ -42,7 +45,11 @@ class TableHeaderCell extends Component {
 					{ this.props.fieldName }
 				</button>
 
-				{ this.props.isSortedColumn ? <SortingIndicator sortOrder={ this.props.sortOrder } /> : '' }
+				{ this.props.isSortedColumn ? (
+					<SortingIndicator sortOrder={ this.props.sortOrder } />
+				) : (
+					''
+				) }
 			</th>
 		);
 	}

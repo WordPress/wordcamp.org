@@ -55,6 +55,8 @@ const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
 
 /*
  * Matches a URL path like '/vancouver/2023/diversity-day/`.
+ *
+ * These are used by the `events.wordpress.org` network.
  */
 const PATTERN_CITY_YEAR_TYPE_PATH = '
 	@ ^
@@ -68,11 +70,43 @@ const PATTERN_CITY_YEAR_TYPE_PATH = '
 	@ix
 ';
 
+/*
+ * Matches a URL path like '/vancouver/`.
+ *
+ * These are used by the `campus.wordpress.org` network.
+ */
+const PATTERN_CITY_PATH = '
+	@ ^
+	/
+	( [\w-]+ )    # Capture the city.
+	/?
+	@ix
+';
+
+/*
+ * Matches a URL path like `/group/sunshine-coast-qld/`.
+ *
+ * These are used by the `events.wordpress.org` network.
+ */
+const PATTERN_GROUP_PATH = '
+	@ ^
+	/ group /
+	( [\w-]+ )    # Capture the group slug.
+	/?
+	@ix
+';
+
 /**
  * Load the sunrise file for the current network.
  */
 function load_network_sunrise() {
 	switch ( SITE_ID_CURRENT_SITE ) {
+		case GROUPS_NETWORK_ID:
+			require __DIR__ . '/sunrise-groups.php';
+			break;
+
+		case CAMPUS_NETWORK_ID:
+			// Intentional Fall through. Load Events plugins for now.
 		case EVENTS_NETWORK_ID:
 			require __DIR__ . '/sunrise-events.php';
 			break;
@@ -93,5 +127,136 @@ function get_top_level_domain() {
 	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
 }
 
+/**
+ * Get the port to append to a redirect URL's host, if any.
+ *
+ * The local Docker stack can bind HTTPS to a non-standard host port so it can
+ * run alongside another environment that wants 443 (`WORDCAMP_HTTPS_PORT` in
+ * `.env` -- see `.docker/readme.md`). Redirects built by hand here have to
+ * carry it, or they send the browser to a port nothing is listening on.
+ *
+ * `WORDCAMP_LOCAL_URL_PORT` is defined only by `.docker/wp-config.php`, and is
+ * an empty string on the default port, so this is a no-op in production and
+ * under PHPUnit.
+ *
+ * @return string e.g. `:8443`, or `''`.
+ */
+function get_url_port(): string {
+	return defined( 'WORDCAMP_LOCAL_URL_PORT' ) ? WORDCAMP_LOCAL_URL_PORT : '';
+}
+
+/**
+ * Get the Network ID for a given domain (and optionally a request path).
+ *
+ * The events and groups networks share a hostname (`events.wordpress.org`),
+ * so for that host the request path is also needed to disambiguate. Anything
+ * under `/group/` routes to the groups network; everything else routes to the
+ * events network. For the other hosts the path argument is ignored.
+ *
+ * The path is optional so existing callers that only have a hostname (e.g.
+ * `wcpt-wordcamp/wordcamp-new-site.php` creating a new WordCamp site) keep
+ * working without changes.
+ *
+ * @param string $domain The domain to check.
+ * @param string $path   Optional. The request path, used to disambiguate the
+ *                       events/groups networks on shared `events.wordpress.org`.
+ * @return int The Network ID.
+ */
+function get_domain_network_id( string $domain, string $path = '' ): int {
+	$tld = get_top_level_domain();
+
+	switch ( $domain ) {
+		case "campus.wordpress.{$tld}":
+			return CAMPUS_NETWORK_ID;
+
+		case "events.wordpress.{$tld}":
+			if ( '' !== $path && 1 === preg_match( PATTERN_GROUP_PATH, $path ) ) {
+				return GROUPS_NETWORK_ID;
+			}
+			return EVENTS_NETWORK_ID;
+
+		default:
+			return WORDCAMP_NETWORK_ID;
+	}
+}
+
+/**
+ * Look up the current URL for a site that was previously at the given domain/path.
+ *
+ * When a site's domain or path is changed, the old URL is stored in `blogmeta`
+ * by the `site-url-history` mu-plugin. This queries that data so the caller can
+ * redirect old URLs to the current location.
+ *
+ * @param string $domain The requested domain.
+ * @param string $path   The requested path.
+ *
+ * @return string|false The new URL to redirect to, or false if no match.
+ */
+function get_renamed_site_url( string $domain, string $path ) {
+	global $wpdb;
+
+	$old_home_url = 'https://' . $domain . trailingslashit( $path );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT b.domain, b.path
+		FROM {$wpdb->blogmeta} bm
+		JOIN {$wpdb->blogs} b ON b.blog_id = bm.blog_id
+		WHERE bm.meta_key = 'old_home_url'
+			AND bm.meta_value = %s
+			AND b.public = 1
+			AND b.deleted = 0
+		LIMIT 1",
+		$old_home_url
+	) );
+
+	if ( ! $site ) {
+		return false;
+	}
+
+	return 'https://' . $site->domain . get_url_port() . $site->path;
+}
+
+
+/**
+ * Get the canonical URL for a flagship city whose next site is created before the current edition is over.
+ *
+ * The sites for next year's flagship camps -- and sometimes a placeholder for the year after that -- are
+ * often created well before the current edition is over. Until then, both the canonical redirect and the
+ * "latest site" banner should stay on the listed path rather than advancing to an event that hasn't
+ * happened yet. The dates are maintained here, in one place, for both callers to share.
+ *
+ * See also `get_canonical_year_url()` and `WordCamp\Latest_Site_Hints\get_latest_home_url()`.
+ *
+ * @param string $domain
+ *
+ * @return string|false The canonical URL, or false if the domain has no active special case.
+ */
+function get_flagship_canonical_url( $domain ) {
+	$tld = get_top_level_domain();
+
+	$upcoming = array(
+		"europe.wordcamp.$tld" => array(
+			'until' => '2026-06-20',
+			'path'  => '/2026/',
+		),
+		"us.wordcamp.$tld"     => array(
+			'until' => '2026-09-02',
+			'path'  => '/2026/',
+		),
+		"asia.wordcamp.$tld"   => array(
+			'until' => '2026-04-25',
+			'path'  => '/2026/',
+		),
+	);
+
+	$flagship = $upcoming[ $domain ] ?? null;
+
+	if ( $flagship && time() <= strtotime( $flagship['until'] ) ) {
+		return "https://{$domain}" . get_url_port() . $flagship['path'];
+	}
+
+	return false;
+}
 
 load_network_sunrise();

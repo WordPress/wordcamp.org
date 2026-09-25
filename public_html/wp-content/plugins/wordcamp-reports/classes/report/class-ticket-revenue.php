@@ -248,17 +248,16 @@ class Ticket_Revenue extends Date_Range {
 		$where_values = array();
 		$where        = '';
 
-		$where_clause[] = 'UNIX_TIMESTAMP( timestamp ) BETWEEN ' .
-						  $this->start_date->getTimestamp() .
-						  ' AND ' .
-						  $this->end_date->getTimestamp();
+		$where_clause[] = '`timestamp` BETWEEN %s AND %s';
+		$where_values[] = gmdate( 'Y-m-d H:i:s', $this->start_date->getTimestamp() );
+		$where_values[] = gmdate( 'Y-m-d H:i:s', $this->end_date->getTimestamp() );
 
 		if ( ! empty( $message_filter ) ) {
 			$like_clause = array();
 
 			foreach ( $message_filter as $string ) {
-				$like_clause[]  = 'message LIKE \'%%%s%%\'';
-				$where_values[] = $string;
+				$like_clause[]  = 'message LIKE %s';
+				$where_values[] = $string . '%';
 			}
 
 			$where_clause[] = '( ' . implode( ' OR ', $like_clause ) . ' )';
@@ -283,6 +282,15 @@ class Ticket_Revenue extends Date_Range {
 
 		$query  = $wpdb->prepare( $sql, $where_values );
 		$events = $wpdb->get_results( $query, ARRAY_A );
+
+		// Some sites that have past log entries may have been deleted. That shouldn't happen often in production,
+		// but it can be common in local environments.
+		$events = array_filter(
+			$events,
+			function ( $event ) {
+				return (bool) get_site( $event['blog_id'] );
+			}
+		);
 
 		return $events;
 	}
@@ -411,11 +419,14 @@ class Ticket_Revenue extends Date_Range {
 				) );
 			}
 
-			if ( ! in_array( $currency, $currencies, true ) ) {
+			if ( ! isset( $data_groups[ $method ]['gross_revenue_by_currency'][ $currency ] ) ) {
 				$data_groups[ $method ]['gross_revenue_by_currency'][ $currency ]   = 0;
 				$data_groups[ $method ]['discounts_by_currency'][ $currency ]       = 0;
 				$data_groups[ $method ]['amount_refunded_by_currency'][ $currency ] = 0;
 				$data_groups[ $method ]['net_revenue_by_currency'][ $currency ]     = 0;
+			}
+
+			if ( ! isset( $data_groups['total']['gross_revenue_by_currency'][ $currency ] ) ) {
 				$data_groups['total']['gross_revenue_by_currency'][ $currency ]     = 0;
 				$data_groups['total']['discounts_by_currency'][ $currency ]         = 0;
 				$data_groups['total']['amount_refunded_by_currency'][ $currency ]   = 0;
@@ -508,12 +519,12 @@ class Ticket_Revenue extends Date_Range {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -547,12 +558,12 @@ class Ticket_Revenue extends Date_Range {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -629,9 +640,9 @@ class Ticket_Revenue extends Date_Range {
 	public static function render_public_page() {
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year        = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period      = filter_input( INPUT_GET, 'period' );
-		$wordcamp_id = filter_input( INPUT_GET, 'wordcamp-id' );
-		$action      = filter_input( INPUT_GET, 'action' );
+		$period      = wp_unslash( $_GET['period'] ?? '' );
+		$wordcamp_id = absint( $_GET['wordcamp-id'] ?? 0 );
+		$action      = wp_unslash( $_GET['action'] ?? '' );
 
 		$years    = self::year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = self::quarter_array();

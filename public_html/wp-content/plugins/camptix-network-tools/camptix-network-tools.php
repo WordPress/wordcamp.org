@@ -12,7 +12,7 @@
 
 class CampTix_Network_Tools {
 	private $options;
-	private $db_version = 20131202;
+	private $db_version = 20260121;
 	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
@@ -27,7 +27,7 @@ class CampTix_Network_Tools {
 		), get_site_option( 'camptix_nt_options', array() ) );
 		$this->options = $this->validate_options( $this->options );
 
-		if ( $this->options['db_version'] != $this->db_version ) {
+		if ( $this->options['db_version'] < $this->db_version ) {
 			$this->upgrade();
 			update_site_option( 'camptix_nt_options', $this->options );
 		}
@@ -42,13 +42,7 @@ class CampTix_Network_Tools {
 	function upgrade() {
 		global $wpdb;
 
-		$charset_collate = '';
-		if ( ! empty( $wpdb->charset ) ) {
-			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-		}
-		if ( ! empty( $wpdb->collate ) ) {
-			$charset_collate .= " COLLATE $wpdb->collate";
-		}
+		$charset_collate = $wpdb->get_charset_collate();
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$sql        = "CREATE TABLE $table_name (
@@ -59,7 +53,10 @@ class CampTix_Network_Tools {
 			message text NOT NULL,
 			section varchar(32) DEFAULT 'general',
 			data mediumtext NOT NULL,
-			UNIQUE KEY id (id)
+			PRIMARY KEY (`id`),
+			KEY `timestamp` (`timestamp`),
+			KEY `blog_object` (`blog_id`,`object_id`),
+			KEY `message_prefix` (`message`(8))
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -107,7 +104,7 @@ class CampTix_Network_Tools {
 
 		$rows       = array();
 		$table_name = $wpdb->base_prefix . 'camptix_log';
-		$entries    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id ASC;", get_current_blog_id(), $post->ID ) );
+		$entries    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id DESC;", get_current_blog_id(), $post->ID ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		// Add entries as rows.
 		foreach ( $entries as $entry ) {
@@ -157,11 +154,12 @@ class CampTix_Network_Tools {
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$wpdb->insert( $table_name, array(
-			'blog_id' => $blog_id,
+			'timestamp' => current_time( 'mysql' ),
+			'blog_id'   => $blog_id,
 			'object_id' => $post_id,
-			'message' => $message,
-			'data' => $data,
-			'section' => $section,
+			'message'   => $message,
+			'section'   => $section,
+			'data'      => $data,
 		) );
 		$camptix->tmp( 'last_log_id', $wpdb->insert_id );
 

@@ -120,27 +120,28 @@ get_header();
 				</tr>
 			</table>
 
-			<form method="POST" class="payment-form" data-step="<?php echo STEP_PAYMENT_DETAILS; ?>">
-				<input type="hidden" name="step" value="<?php echo STEP_PAYMENT_DETAILS; ?>" />
-				<input type="hidden" name="sponsor_payment_submit" value="1" />
-				<input type="hidden" name="payment_data_json" value="<?php echo esc_attr( $data['payment_data_json'] ); ?>" />
-				<input type="hidden" name="payment_data_signature" value="<?php echo esc_attr( $data['payment_data_signature'] ); ?>" />
+			<div id="checkout"></div>
 
-				<script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
-					data-key="<?php echo esc_attr( $data['keys']['publishable'] ); ?>"
-					data-amount="<?php echo esc_attr( $data['payment']['decimal_amount'] ); ?>"
-					data-currency="<?php echo esc_attr( $data['payment']['currency'] ); ?>"
-					data-name="WordPress Community Support, PBC"
-					data-description="<?php esc_attr_e( 'Event Sponsorship Payment', 'wordcamporg' ); ?>"
-					data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
-					data-locale="auto"
-					data-panel-label="<?php esc_attr_e( 'Pay', 'wordcamporg' ); ?>"
-					data-label="<?php esc_attr_e( 'Make a Payment', 'wordcamporg' ); ?>"
-					data-zip-code="true">
-				</script>
-			</form>
+			<script
+				src="https://js.stripe.com/v3/"
+				id="script-stripe-checkout"
+				data-key="<?php echo esc_attr( $data['keys']['publishable'] ); ?>"
+				data-secret="<?php echo esc_attr( $data['session_secret'] ); ?>"
+			></script>
+			<script>
+				(async function(){
+					const stripeEl = document.getElementById('script-stripe-checkout');
+					const stripe   = Stripe( stripeEl.dataset.key );
+					const checkout = await stripe.initEmbeddedCheckout( {
+						clientSecret: stripeEl.dataset.secret
+					} );
+
+					checkout.mount('#checkout');
+				})()
+			</script>
 
 		<?php elseif ( $data['step'] == STEP_PAYMENT_SUCCESS ) : ?>
+			<script>history.replaceState( {}, '', window.location.pathname );</script>
 
 			<p class="notice notice-success">
 				<strong><?php esc_html_e( 'Success!', 'wordcamporg' ); ?></strong>
@@ -148,7 +149,7 @@ get_header();
 			</p>
 
 			<ul>
-				<li><a href="<?php echo esc_url( add_query_arg( 'again', 1 ) ); ?>"><?php esc_html_e( 'Make another payment', 'wordcamporg' ); ?></a></li>
+				<li><a href="<?php echo esc_url( add_query_arg( 'again', 1, get_permalink() ) ); ?>"><?php esc_html_e( 'Make another payment', 'wordcamporg' ); ?></a></li>
 				<li><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Go back to Central', 'wordcamporg' ); ?></a></li>
 			</ul>
 

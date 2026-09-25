@@ -56,6 +56,10 @@ function get_offline_page() {
 		'order'          => 'asc',
 		'meta_key'       => 'wc_page_offline',
 		'meta_value'     => 'yes',
+		// Unlike a listing, this page is pre-cached by the service worker
+		// and shown with no connection, where a password form could not be
+		// submitted. A protected one falls back to the default message.
+		'has_password'   => false,
 	) );
 	if ( count( $found_pages ) ) {
 		return $found_pages[0];
@@ -232,7 +236,10 @@ function get_wordcamp_block_template( $post_type = '' ) {
 	// To allow php (i18n), we can overwrite the content property with output buffering.
 	ob_start();
 	include $template_file;
-	$template->content = _inject_theme_attribute_in_block_template_content( ob_get_clean() );
+	$template->content = traverse_and_serialize_blocks(
+		parse_blocks( ob_get_clean() ),
+		'_inject_theme_attribute_in_template_part_block'
+	);
 
 	return $template;
 }

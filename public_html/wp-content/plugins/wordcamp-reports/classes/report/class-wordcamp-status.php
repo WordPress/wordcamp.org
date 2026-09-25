@@ -142,19 +142,6 @@ class WordCamp_Status extends Base_Status {
 	}
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * Some translated strings in the wcpt plugin are used here for comparison and matching. To ensure
-	 * that the matching happens correctly, we need need to prevent these strings from being converted
-	 * to a different locale.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_US() {
-		return 'en_US';
-	}
-
-	/**
 	 * Generate a cache key.
 	 *
 	 * @return string
@@ -199,7 +186,7 @@ class WordCamp_Status extends Base_Status {
 		}
 
 		// Ensure status labels can match status log messages.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		$wordcamp_posts = $this->get_wordcamp_posts();
 		$statuses       = WordCamp_Loader::get_post_statuses();
@@ -266,7 +253,9 @@ class WordCamp_Status extends Base_Status {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 
 		$data = $this->filter_data_fields( $data );
 		$this->maybe_cache_data( $data );
@@ -444,12 +433,12 @@ class WordCamp_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$status     = filter_input( INPUT_POST, 'status' );
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$status     = wp_unslash( $_POST['status'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 		$statuses   = WordCamp_Loader::get_post_statuses();
 
 		$field_defaults = array(
@@ -490,13 +479,13 @@ class WordCamp_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$status     = filter_input( INPUT_POST, 'status' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$status     = wp_unslash( $_POST['status'] ?? '' );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		if ( 'Export CSV' !== $action ) {
 			return;

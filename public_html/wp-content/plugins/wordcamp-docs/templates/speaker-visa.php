@@ -11,7 +11,7 @@ class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
 		$data = wp_parse_args( $data, array(
 			'speaker_first_name'   => '',
 			'speaker_last_name'    => '',
-			'country_of_residency' => '',
+			'passport_issuing_country' => '',
 			'passport_number' => '',
 
 			'wordcamp_name'       => $wordcamp->post_title          ?? '',
@@ -51,34 +51,34 @@ class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
 		</h2>
 
 		<div class="wcorg-docs-form">
-			<label><?php _e( 'Speaker First Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Speaker First Name:', 'wordcamporg' ); ?></label>
 			<input name="speaker_first_name" value="<?php echo esc_attr( $data['speaker_first_name'] ); ?>" />
 
-			<label><?php _e( 'Speaker Last Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Speaker Last Name:', 'wordcamporg' ); ?></label>
 			<input name="speaker_last_name" value="<?php echo esc_attr( $data['speaker_last_name'] ); ?>" />
 
-			<label><?php _e( 'Country of Residency:', 'wordcamporg' ); ?></label>
-			<input name="country_of_residency" value="<?php echo esc_attr( $data['country_of_residency'] ); ?>" />
+			<label><?php esc_html_e( 'Passport Issuing Country:', 'wordcamporg' ); ?></label>
+			<input name="passport_issuing_country" value="<?php echo esc_attr( $data['passport_issuing_country'] ); ?>" />
 
-			<label><?php _e( 'Passport Number:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Passport Number:', 'wordcamporg' ); ?></label>
 			<input name="passport_number" value="<?php echo esc_attr( $data['passport_number'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Name:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_name" value="<?php echo esc_attr( $data['wordcamp_name'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_location" value="<?php echo esc_attr( $data['wordcamp_location'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Date Start:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Date Start:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_date_start" value="<?php echo esc_attr( $data['wordcamp_date_start'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Date End:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Date End:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_date_end" value="<?php echo esc_attr( $data['wordcamp_date_end'] ); ?>" />
 
-			<label><?php _e( 'Organizer Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Organizer Name:', 'wordcamporg' ); ?></label>
 			<input name="organizer_name" value="<?php echo esc_attr( $data['organizer_name'] ); ?>" />
 
-			<label><?php _e( 'Organizer Contacts:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Organizer Contacts:', 'wordcamporg' ); ?></label>
 			<textarea name="organizer_contacts"><?php echo esc_textarea( $data['organizer_contacts'] ); ?></textarea>
 			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>
@@ -172,7 +172,7 @@ h2 {
 		<p>To Whom It May Concern:</p>
 
 		<p>This letter is to confirm that <?php echo esc_html( $data['speaker_first_name'] ); ?> <?php echo esc_html( $data['speaker_last_name'] ); ?>
-		<?php echo esc_html( $data['country_of_residency'] ); ?> passport number <?php echo esc_html( $data['passport_number'] ); ?>,
+		<?php echo esc_html( $data['passport_issuing_country'] ); ?> passport number <?php echo esc_html( $data['passport_number'] ); ?>,
 		has been invited to speak at <?php echo esc_html( $data['wordcamp_name'] ); ?>, a community-organized event focusing on WordPress
 		development and technology.</p>
 
@@ -206,7 +206,7 @@ h2 {
 		foreach ( array(
 			'speaker_first_name',
 			'speaker_last_name',
-			'country_of_residency',
+			'passport_issuing_country',
 			'passport_number',
 			'wordcamp_name',
 			'wordcamp_location',

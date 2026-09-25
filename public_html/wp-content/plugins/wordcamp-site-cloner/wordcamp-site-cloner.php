@@ -28,7 +28,16 @@ function initialize() {
 		return;
 	}
 
-	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\register_scripts'               );
+	/*
+	 * The assets are only used inside the Customizer, and `customize.php` never fires
+	 * `admin_enqueue_scripts` itself. On classic themes it fires indirectly -- the Customizer's `widgets`
+	 * component calls `do_action( 'admin_enqueue_scripts', 'widgets.php' )` -- but block themes don't load
+	 * that component, so the assets must be registered on a hook that `customize.php` always fires.
+	 * Priority 1 so registration happens before `WP_Customize_Manager::enqueue_control_scripts()` runs
+	 * the controls' `enqueue()` callbacks at priority 10.
+	 */
+	add_action( 'customize_controls_enqueue_scripts', __NAMESPACE__ . '\register_scripts', 1 );
+
 	add_action( 'admin_menu',            __NAMESPACE__ . '\add_submenu_pages'              );
 	add_action( 'customize_register',    __NAMESPACE__ . '\register_customizer_components' );
 	add_action( 'rest_api_init',         __NAMESPACE__ . '\register_api_endpoints'         );
@@ -168,8 +177,11 @@ function register_api_endpoints() {
  * @return array
  */
 function sites_endpoint() {
-	$sites        = array();
-	$cached_sites = get_site_option( WORDCAMP_SITES_OPTION_KEY, array() );
+	$sites = array();
+
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	$cached_sites = get_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, array() );
 
 	if ( $cached_sites ) {
 		unset( $cached_sites[ get_current_blog_id() ] );
@@ -190,11 +202,13 @@ function sites_endpoint() {
  */
 function prime_wordcamp_sites() {
 	// This only needs to run on a single site, then the whole network can use the cached result.
-	if ( ! is_main_site() ) {
+	if ( WORDCAMP_NETWORK_ID !== get_current_network_id() || ! is_main_site() ) {
 		return;
 	}
 
-	update_site_option( WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	update_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
 }
 
 /**

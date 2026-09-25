@@ -73,6 +73,14 @@ defined( 'WPINC' ) or die();
 			</select>
 
 			<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
+
+			<p class="description">
+				<?php echo wp_kses_data( sprintf(
+					// translators: email address.
+					__( 'Choose the location that corresponds to the city that the event is hosted in. If your city doesn\'t appear, email %s so that we can add it.', 'wordcamporg' ),
+					sprintf( '<a href="mailto:%1$s">%2$s</a>', EMAIL_CENTRAL_SUPPORT, EMAIL_CENTRAL_SUPPORT )
+				) ); ?>
+			</p>
 		</div>
 	</li>
 

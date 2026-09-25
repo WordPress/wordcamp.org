@@ -25,9 +25,15 @@ add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' 
 add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_session_query_args', 10, 2 );
 add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_session_collection_params', 10, 2 );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_user_meta_routes' );
 add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
 add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
 add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
+add_filter( 'rest_pre_insert_wcb_speaker', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'rest_pre_insert_wcb_organizer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'rest_pre_insert_wcb_volunteer', __NAMESPACE__ . '\guard_user_name_meta', 10, 2 );
+add_filter( 'add_post_metadata', __NAMESPACE__ . '\guard_participant_link_meta', 10, 4 );
+add_filter( 'update_post_metadata', __NAMESPACE__ . '\guard_participant_link_meta', 10, 4 );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -86,24 +92,9 @@ function register_speaker_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
-			'sanitize_callback' => function( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -149,7 +140,7 @@ function register_session_post_meta() {
 		'_wcpt_session_time',
 		array(
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
+				'prepare_callback' => function ( $value, $request, $args ) {
 					if ( $request->get_param( 'wc_session_utc' ) ) {
 						$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
 						return $datetime->getTimestamp();
@@ -180,7 +171,7 @@ function register_session_post_meta() {
 			'show_in_rest'      => true,
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
-			'sanitize_callback' => function( $value ) {
+			'sanitize_callback' => function ( $value ) {
 				if ( 'custom' === $value ) {
 					return $value;
 				}
@@ -204,10 +195,15 @@ function register_session_post_meta() {
 			'show_in_rest'      => true,
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
-			'sanitize_callback' => function( $value ) {
-				if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
-					return $value;
+			'sanitize_callback' => function ( $value ) {
+				if ( $value ) {
+					$host = wp_parse_url( $value, PHP_URL_HOST );
+
+					if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( $host ) ) ) {
+						return $value;
+					}
 				}
+
 				return '';
 			},
 		)
@@ -249,24 +245,9 @@ function register_organizer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
-			'sanitize_callback' => function( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -313,24 +294,9 @@ function register_volunteer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
-					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
-					if ( $user_id ) {
-						$wporg_user = get_userdata( $user_id );
-						if ( $wporg_user instanceof WP_User ) {
-							return $wporg_user->user_login;
-						}
-					}
-					return $value;
-				},
+				'prepare_callback' => __NAMESPACE__ . '\prepare_user_name_meta',
 			),
-			'sanitize_callback' => function( $value ) {
-				$wporg_user = wcorg_get_user_by_canonical_names( $value );
-				if ( ! $wporg_user ) {
-					return '';
-				}
-				return $wporg_user->user_login;
-			},
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_user_name_meta',
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
@@ -367,6 +333,149 @@ function register_volunteer_post_meta() {
 }
 
 /**
+ * Prepare `_wcpt_user_name` for REST reads by resolving it from the derived user ID.
+ *
+ * @param string $value The stored username.
+ *
+ * @return string The linked user's `user_login`, or the stored value when none is derived.
+ */
+function prepare_user_name_meta( $value ) {
+	$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+
+	if ( $user_id ) {
+		$wporg_user = get_userdata( $user_id );
+
+		if ( $wporg_user instanceof WP_User ) {
+			return $wporg_user->user_login;
+		}
+	}
+
+	return $value;
+}
+
+/**
+ * Sanitize a submitted WordPress.org username for the `_wcpt_user_name` meta.
+ *
+ * Resolves the value to a canonical `user_login`, blanking an unknown username. Who may link which account
+ * is enforced at the write boundary (see `guard_user_name_meta()` and the form handlers), not here, because
+ * this runs on every write path and can only rewrite a value, never reject one.
+ *
+ * @param string $value The submitted username.
+ *
+ * @return string The canonical `user_login`, or an empty string.
+ */
+function sanitize_user_name_meta( $value ) {
+	$wporg_user = wcorg_get_user_by_canonical_names( $value );
+
+	if ( ! $wporg_user ) {
+		return '';
+	}
+
+	return $wporg_user->user_login;
+}
+
+/**
+ * Reject a REST write that links a participant record to an account the user may not claim.
+ *
+ * A user may set `_wcpt_user_name` to their own account; naming a different one is reserved for those who
+ * can edit other authors' posts. Refusing the write here returns an error, rather than letting the meta
+ * sanitizer silently drop the value.
+ *
+ * @param object          $prepared_post The post about to be inserted or updated.
+ * @param WP_REST_Request $request       The REST request.
+ *
+ * @return object|WP_Error The unchanged post, or an error if the link is not allowed.
+ */
+function guard_user_name_meta( $prepared_post, $request ) {
+	$meta = $request['meta'] ?? null;
+
+	if ( ! is_array( $meta ) || ! array_key_exists( '_wcpt_user_name', $meta ) ) {
+		return $prepared_post;
+	}
+
+	$submitted = $meta['_wcpt_user_name'];
+
+	if ( ! is_string( $submitted ) || '' === $submitted ) {
+		return $prepared_post;
+	}
+
+	$wporg_user = wcorg_get_user_by_canonical_names( $submitted );
+
+	// An unknown username is left for the sanitizer to blank, as before.
+	if ( ! $wporg_user ) {
+		return $prepared_post;
+	}
+
+	// Only an actual change to the linked account is gated, so other fields on an already-linked record
+	// stay editable by anyone who can edit the post.
+	$post_id = $request['id'] ?? 0;
+	if ( $post_id && get_post_meta( (int) $post_id, '_wcpt_user_name', true ) === $wporg_user->user_login ) {
+		return $prepared_post;
+	}
+
+	if ( '' === wcorg_get_linkable_user_login( $submitted ) ) {
+		return new \WP_Error(
+			'wcpt_cannot_link_user',
+			__( 'You are not allowed to link this record to another account.', 'wordcamporg' ),
+			array( 'status' => rest_authorization_required_code() )
+		);
+	}
+
+	return $prepared_post;
+}
+
+/**
+ * Block a participant meta write that would link the record to an account the user may not claim.
+ *
+ * Gates `_wcpt_user_name` and its derived `_wcpt_user_id` at the metadata layer, so all write paths inherit
+ * the rule, not just the REST endpoint. Only a genuine change to an account the user isn't entitled to is
+ * blocked; re-saving the current link or clearing it stays allowed.
+ *
+ * @param mixed  $check      Short-circuit value; `null` to proceed with the write.
+ * @param int    $object_id  The post the meta is being written to.
+ * @param string $meta_key   The meta key.
+ * @param mixed  $meta_value The value being written.
+ *
+ * @return mixed `false` to block the write, or `$check` to allow it.
+ */
+function guard_participant_link_meta( $check, $object_id, $meta_key, $meta_value ) {
+	if ( '_wcpt_user_name' !== $meta_key && '_wcpt_user_id' !== $meta_key ) {
+		return $check;
+	}
+
+	if ( ! in_array( get_post_type( $object_id ), array( 'wcb_speaker', 'wcb_organizer', 'wcb_volunteer' ), true ) ) {
+		return $check;
+	}
+
+	// No current user means WP-CLI, cron, or an import managing the link directly, not a request; leave it be.
+	if ( 0 === get_current_user_id() ) {
+		return $check;
+	}
+
+	if ( '_wcpt_user_name' === $meta_key ) {
+		$target = wcorg_get_user_by_canonical_names( $meta_value );
+	} else {
+		$target = absint( $meta_value ) ? get_userdata( absint( $meta_value ) ) : false;
+	}
+
+	// An empty or unknown value links no account, so there's nothing to gate.
+	if ( ! $target ) {
+		return $check;
+	}
+
+	// Allow when the linked account isn't actually changing (e.g. a re-save), and when the user may claim it.
+	$linked_id = (int) get_post_meta( $object_id, '_wcpt_user_id', true );
+	if ( $linked_id === (int) $target->ID
+		|| get_current_user_id() === (int) $target->ID
+		|| current_user_can( 'edit_others_posts' )
+	) {
+		return $check;
+	}
+
+	return false;
+}
+
+/**
  * Check if the current user can edit the meta values.
  *
  * @param bool   $allowed   Whether the user can add the object meta. Default false.
@@ -395,9 +504,11 @@ function register_user_validation_route() {
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'username' => array(
-					'validate_callback' => function( $value ) {
-						$wporg_user = wcorg_get_user_by_canonical_names( $value );
-						return (bool) $wporg_user;
+					'type'              => 'string',
+					// Existence only. Whether the current user may link the named account is enforced when
+					// the value is saved (see `guard_user_name_meta()`), which surfaces its own error.
+					'validate_callback' => function ( $value ) {
+						return is_string( $value ) && (bool) wcorg_get_user_by_canonical_names( $value );
 					},
 				),
 			),
@@ -502,22 +613,42 @@ function register_additional_rest_fields() {
 		'wcb_session',
 		'session_speakers',
 		array(
-			'get_callback' => function( $post ) {
+			'get_callback' => function ( $post ) {
 				$speaker_ids = get_post_meta( $post['id'], '_wcpt_speaker_id', false );
-				$speakers = array();
+				$speakers    = array();
 
-				foreach ( $speaker_ids as $speaker_id ) {
-					$speaker = get_post( $speaker_id );
+				if ( empty( $speaker_ids ) ) {
+					return $speakers;
+				}
 
-					// Make sure the speaker post hasn't been deleted.
-					if ( $speaker instanceof WP_Post ) {
-						$speakers[] = array(
-							'id'   => $speaker_id,
-							'slug' => $speaker->post_name,
-							'name' => get_the_title( $speaker_id ),
-							'link' => get_permalink( $speaker_id ),
-						);
+				// One query rather than a lookup per speaker: this runs for every
+				// session in a collection response.
+				$speaker_posts = get_posts( array(
+					'post_type'      => 'wcb_speaker',
+					'post__in'       => array_map( 'absint', $speaker_ids ),
+					'post_status'    => 'any',
+					'posts_per_page' => -1,
+					'orderby'        => 'post__in',
+					'no_found_rows'  => true,
+					// Only the title, slug, permalink and status are used below.
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				) );
+
+				foreach ( $speaker_posts as $speaker ) {
+					// Served in the anonymous `view` context, and the controller's own
+					// read check covers the session, not the posts dereferenced here.
+					if ( 'publish' !== $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
 					}
+
+					$speakers[] = array(
+						// Kept as the stored meta string so the response shape is unchanged.
+						'id'   => (string) $speaker->ID,
+						'slug' => $speaker->post_name,
+						'name' => get_the_title( $speaker->ID ),
+						'link' => get_permalink( $speaker->ID ),
+					);
 				}
 
 				return $speakers;
@@ -550,7 +681,7 @@ function register_additional_rest_fields() {
 		'wcb_session',
 		'session_cats_rendered',
 		array(
-			'get_callback' => function( $post ) {
+			'get_callback' => function ( $post ) {
 				$terms = get_terms( 'wcb_session_category', array( 'object_ids' => $post['id'] ) );
 				if ( $terms ) {
 					return implode( ', ', wp_list_pluck( $terms, 'name' ) );
@@ -606,6 +737,15 @@ function prepare_session_query_args( $args, $request ) {
 	if ( 'session_date' === $request['orderby'] ) {
 		$args['meta_key'] = '_wcpt_session_time';
 		$args['orderby']  = 'meta_value_num';
+	}
+
+	// The controller drops unreadable posts from the body but still counts them
+	// in found_posts, so X-WP-Total would include what the caller never receives.
+	$args['post_status'] = array( 'publish' );
+
+	$post_type = get_post_type_object( 'wcb_session' );
+	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
+		$args['post_status'][] = 'private';
 	}
 
 	return $args;
@@ -703,17 +843,25 @@ function register_fav_sessions_email() {
 			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
-					'validate_callback' => function( $value, $request, $param ) {
-						return is_email( $value );
+					'type'              => 'string',
+					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
+						return is_email( trim( $value ) );
 					},
-					'sanitize_callback' => function( $value, $request, $param ) {
+					'sanitize_callback' => function ( $value, $request, $param ) {
 						return sanitize_email( $value );
 					},
 				),
 
 				'session-list'  => array(
 					'required'          => true,
-					'validate_callback' => function( $value, $request, $param ) {
+					'type'              => 'string',
+					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$session_ids = explode( ',', $value );
 						$session_count = count( $session_ids );
 						for ( $i = 0; $i < $session_count; $i++ ) {
@@ -723,9 +871,34 @@ function register_fav_sessions_email() {
 						}
 						return true;
 					},
-					'sanitize_callback' => function( $value, $request, $param ) {
+					'sanitize_callback' => function ( $value, $request, $param ) {
 						$session_ids = explode( ',', $value );
 						return implode( ',', array_filter( $session_ids, 'is_numeric' ) );
+					},
+				),
+
+				'page-slug'     => array(
+					'required'          => true,
+					'type'              => 'string',
+					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
+						$pages = get_posts( array(
+							'name'        => $value,
+							'post_type'   => 'page',
+							'post_status' => 'publish',
+							'fields'      => 'ids',
+						) );
+
+						if ( empty( $pages ) ) {
+							return false;
+						}
+
+						return true;
+					},
+					'sanitize_callback' => function ( $value, $request, $param ) {
+						return sanitize_title( $value );
 					},
 				),
 			),
@@ -814,6 +987,106 @@ function add_larger_avatar_sizes( $sizes ) {
 	$sizes[] = 512;
 
 	return $sizes;
+}
+
+/**
+ * Register REST API routes for saving/retrieving favourite sessions in user meta.
+ *
+ * This stores favourite sessions per-site in user meta, allowing users to access
+ * their favourites across devices when logged in.
+ *
+ * @return void
+ */
+function register_fav_sessions_user_meta_routes() {
+	register_rest_route(
+		'wc-post-types/v1',
+		'/fav-sessions/',
+		array(
+			array(
+				'methods'             => WP_Rest_Server::READABLE,
+				'callback'            => __NAMESPACE__ . '\get_fav_sessions_user_meta',
+				'permission_callback' => 'is_user_logged_in',
+			),
+			array(
+				'methods'             => WP_Rest_Server::CREATABLE,
+				'callback'            => __NAMESPACE__ . '\save_fav_sessions_user_meta',
+				'permission_callback' => 'is_user_logged_in',
+				'args'                => array(
+					'session_ids' => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							if ( ! is_array( $value ) ) {
+								return false;
+							}
+
+							foreach ( $value as $id ) {
+								if ( ! is_numeric( $id ) ) {
+									return false;
+								}
+							}
+
+							return true;
+						},
+						'sanitize_callback' => function ( $value ) {
+							return array_map( 'absint', $value );
+						},
+					),
+				),
+			),
+		)
+	);
+}
+
+/**
+ * Get favourite sessions from user meta for the current site.
+ *
+ * @return \WP_REST_Response
+ */
+function get_fav_sessions_user_meta() {
+	$user_id     = get_current_user_id();
+	$meta_key    = get_fav_sessions_meta_key();
+	$session_ids = get_user_meta( $user_id, $meta_key, true );
+
+	if ( ! is_array( $session_ids ) ) {
+		$session_ids = array();
+	}
+
+	return new \WP_REST_Response(
+		array( 'session_ids' => array_map( 'absint', $session_ids ) ),
+		200
+	);
+}
+
+/**
+ * Save favourite sessions to user meta for the current site.
+ *
+ * @param \WP_REST_Request $request REST API Request object.
+ *
+ * @return \WP_REST_Response
+ */
+function save_fav_sessions_user_meta( \WP_REST_Request $request ) {
+	$user_id     = get_current_user_id();
+	$meta_key    = get_fav_sessions_meta_key();
+	$session_ids = $request->get_param( 'session_ids' );
+
+	update_user_meta( $user_id, $meta_key, $session_ids );
+
+	return new \WP_REST_Response(
+		array( 'session_ids' => $session_ids ),
+		200
+	);
+}
+
+/**
+ * Get the user meta key for storing favourite sessions.
+ *
+ * Uses the current blog ID to scope favourites per-site, since each
+ * WordCamp site has its own set of sessions.
+ *
+ * @return string
+ */
+function get_fav_sessions_meta_key() {
+	return 'wc_favourite_sessions_' . get_current_blog_id();
 }
 
 /**

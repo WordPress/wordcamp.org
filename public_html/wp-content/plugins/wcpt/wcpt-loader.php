@@ -45,12 +45,16 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 			require_once WCPT_DIR . 'wcpt-functions.php';
 			require_once WCPT_DIR . 'wcpt-event/class-event-loader.php';
 			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-loader.php';
+			require_once WCPT_DIR . 'wcpt-wordcamp/class-wordcamp-status-guard.php';
 			require_once WCPT_DIR . 'wcpt-meetup/meetup-loader.php';
 			require_once WCPT_DIR . 'wcpt-event/tracker.php';
 			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp.php';
 			require_once WCPT_DIR . 'wcpt-meetup/meetup.php';
 			require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
 			require_once WCPT_DIR . 'wcpt-event/class-event-admin.php'; // required for declined application cron to work.
+
+			require_once WCPT_DIR . 'wcpt-events/class-events-application.php';
+			require_once WCPT_DIR . 'wcpt-events/events.php';
 
 			// Require admin files.
 			if ( is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {

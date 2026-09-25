@@ -36,7 +36,9 @@ class PostList extends Component {
 		];
 
 		if ( 'grid' === layout ) {
-			containerClasses.push( 'has-grid-columns-' + Number( grid_columns ) );
+			containerClasses.push(
+				'has-grid-columns-' + Number( grid_columns )
+			);
 		}
 
 		if ( align ) {
@@ -45,14 +47,17 @@ class PostList extends Component {
 
 		return (
 			<ul className={ classnames( containerClasses ) }>
-				{ ( children ).map( ( childComponent ) =>
+				{ children.map( ( childComponent ) => (
 					<li
 						key={ childComponent.key }
-						className={ classnames( 'wordcamp-post-list__post', 'wordcamp-clearfix' ) }
+						className={ classnames(
+							'wordcamp-post-list__post',
+							'wordcamp-clearfix'
+						) }
 					>
 						{ childComponent }
 					</li>
-				) }
+				) ) }
 			</ul>
 		);
 	}

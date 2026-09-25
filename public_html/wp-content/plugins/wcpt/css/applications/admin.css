@@ -38,6 +38,11 @@ body.wp-admin.post-type-wp_meetup .postbox textarea {
 	width: 18rem;
 }
 
+/* Hide the create checkbox if the field has changed */
+#post-body .field__type-wc-url input[type="text"].has-changed + label {
+	display: none;
+}
+
 .postbox-container .select2-container {
 	min-width: 25%;
 }

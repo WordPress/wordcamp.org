@@ -1,0 +1,16 @@
+body {
+	--wp--custom--layout--wide-size: 1600px;
+}
+
+.wp-site-blocks .is-layout-constrained,
+.wp-block-post-content-is-layout-constrained {
+	& .alignwide {
+
+		/* See note about about the `global` sizes. */
+		max-width: var(--wp--custom--layout--wide-size) !important;
+	}
+}
+
+.wporg-events__hidden {
+	display: none;
+}

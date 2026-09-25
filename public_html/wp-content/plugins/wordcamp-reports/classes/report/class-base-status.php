@@ -139,12 +139,12 @@ abstract class Base_Status extends Base {
 	 */
 	public static function parse_public_report_input() {
 
-		$action = filter_input( INPUT_GET, 'action' );
+		$action = wp_unslash( $_GET['action'] ?? '' );
 
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year   = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period = filter_input( INPUT_GET, 'period' );
-		$status = filter_input( INPUT_GET, 'status' );
+		$period = wp_unslash( $_GET['period'] ?? '' );
+		$status = wp_unslash( $_GET['status'] ?? '' );
 
 		if ( ! $year ) {
 			$year = absint( date( 'Y' ) );
@@ -152,6 +152,10 @@ abstract class Base_Status extends Base {
 
 		if ( ! $period ) {
 			$period = absint( date( 'm' ) );
+		}
+
+		if ( $status && ! is_string( $status ) ) {
+			$status = null;
 		}
 
 		$report  = null;

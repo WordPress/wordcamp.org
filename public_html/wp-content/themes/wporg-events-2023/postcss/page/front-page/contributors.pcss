@@ -1,0 +1,27 @@
+.wporg-events__contributors {
+	& .is-style-links-list {
+		& li {
+			border-color: var(--wp--preset--color--light-grey-1);
+
+			& a {
+				color: var(--wp--preset--color--charcoal-0);
+			}
+
+			&:first-child {
+				border-top: none;
+			}
+
+			&:last-child {
+				border-bottom: none;
+			}
+		}
+	}
+
+	& .wporg-events__contributors__image {
+
+		@media screen and (min-width: 1170px) {
+			min-width: 565px;
+			align-self: flex-start;
+		}
+	}
+}

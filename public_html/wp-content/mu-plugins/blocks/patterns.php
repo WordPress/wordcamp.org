@@ -60,7 +60,7 @@ function register_patterns() {
 						esc_html(
 							sprintf(
 								/* translators: %s: file name. */
-								__( 'Could not register file "%s" as a block pattern ("Slug" field missing)', 'wordcamp' ),
+								__( 'Could not register file "%s" as a block pattern ("Slug" field missing)', 'wordcamporg' ),
 								$file
 							)
 						),
@@ -75,7 +75,7 @@ function register_patterns() {
 						esc_html(
 							sprintf(
 								/* translators: %1s: file name; %2s: slug value found. */
-								__( 'Could not register file "%1$s" as a block pattern (invalid slug "%2$s")', 'wordcamp' ),
+								__( 'Could not register file "%1$s" as a block pattern (invalid slug "%2$s")', 'wordcamporg' ),
 								$file,
 								$pattern_data['slug']
 							)
@@ -95,7 +95,7 @@ function register_patterns() {
 						esc_html(
 							sprintf(
 								/* translators: %1s: file name; %2s: slug value found. */
-								__( 'Could not register file "%s" as a block pattern ("Title" field missing)', 'wordcamp' ),
+								__( 'Could not register file "%s" as a block pattern ("Title" field missing)', 'wordcamporg' ),
 								$file
 							)
 						),
@@ -141,10 +141,10 @@ function register_patterns() {
 				}
 
 				//phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText
-				$pattern_data['title'] = translate_with_gettext_context( $pattern_data['title'], 'Pattern title', 'wordcamp' );
+				$pattern_data['title'] = translate_with_gettext_context( $pattern_data['title'], 'Pattern title', 'wordcamporg' );
 				if ( ! empty( $pattern_data['description'] ) ) {
 					//phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText
-					$pattern_data['description'] = translate_with_gettext_context( $pattern_data['description'], 'Pattern description', 'wordcamp' );
+					$pattern_data['description'] = translate_with_gettext_context( $pattern_data['description'], 'Pattern description', 'wordcamporg' );
 				}
 
 				// The actual pattern content is the output of the file.

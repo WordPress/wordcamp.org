@@ -30,6 +30,10 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\transition_post_status',
 add_filter( 'map_meta_cap',        __NAMESPACE__ . '\modify_capabilities', 10, 4 );
 add_filter( 'display_post_states', __NAMESPACE__ . '\display_post_states', 10, 2 );
 
+// Columns.
+add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns' );
+add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns', 10, 2 );
+
 /**
  * Register the custom post type
  *
@@ -62,6 +66,10 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 	);
 
 	return \register_post_type( POST_TYPE, $args );
@@ -75,6 +83,7 @@ function get_post_statuses() {
 		'draft',
 		'wcb-incomplete',
 		'wcb-pending-approval',
+		'wcb-needs-followup',
 		'wcb-approved',
 		'wcb-pending-payment',
 		'wcb-paid',
@@ -93,7 +102,7 @@ function register_post_statuses() {
 		'wcbrr_submitted',
 		array(
 			'label'              => esc_html_x( 'Submitted', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -103,7 +112,7 @@ function register_post_statuses() {
 		'wcbrr_info_requested',
 		array(
 			'label'              => esc_html_x( 'Information Requested', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -113,7 +122,7 @@ function register_post_statuses() {
 		'wcbrr_rejected',
 		array(
 			'label'              => esc_html_x( 'Rejected', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -123,7 +132,7 @@ function register_post_statuses() {
 		'wcbrr_in_process',
 		array(
 			'label'              => esc_html_x( 'Payment in Process', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -133,7 +142,7 @@ function register_post_statuses() {
 		'wcbrr_paid',
 		array(
 			'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -257,7 +266,8 @@ function enqueue_assets() {
  * @return bool
  */
 function user_can_edit_request( $post ) {
-	$editable_status = in_array( $post->post_status ?? '', array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	$status          = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$editable_status = in_array( $status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
 	return current_user_can( 'manage_network' ) || $editable_status;
 }
 
@@ -343,8 +353,13 @@ function render_general_information_metabox( $post ) {
 	$other_reason      = get_post_meta( $post->ID, '_wcbrr_reason_other',   true );
 	$date_paid         = get_post_meta( $post->ID, '_wcbrr_date_paid',      true );
 
-	if ( empty ( $name_of_payer ) ) {
+	if ( empty( $name_of_payer ) ) {
 		$name_of_payer = \WordCamp_Budgets::get_requester_name( $post->post_author );
+	}
+
+	if ( empty( $selected_currency ) ) {
+		$camptix_options   = get_option( 'camptix_options', array() );
+		$selected_currency = $camptix_options['currency'] ?? '';
 	}
 
 	wp_localize_script( 'wcb-attached-files', 'wcbAttachedFiles', $files );
@@ -412,6 +427,64 @@ function display_post_states( $states, $post ) {
 }
 
 /**
+ * Define columns for the Vendor Payments screen.
+ *
+ * @param array $_columns
+ * @return array
+ */
+function get_columns( $_columns ) {
+	$columns = array(
+		'cb'             => $_columns['cb'],
+		'author'         => esc_html__( 'Author' ),
+		'title'          => $_columns['title'],
+		'date'           => $_columns['date'],
+		'payment_amount' => esc_html__( 'Amount', 'wordcamporg' ),
+		'expenses'       => esc_html__( 'Expenses', 'wordcamporg' ),
+	);
+
+	return $columns;
+}
+
+/**
+ * Render custom columns on the Vendor Payments screen.
+ *
+ * @param string $column
+ * @param int    $post_id
+ */
+function render_columns( $column, $post_id ) {
+	switch ( $column ) {
+		case 'payment_amount':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+			if ( $currency && false === strpos( $currency, 'null' ) ) {
+				echo esc_html( $currency ) . ' ';
+			}
+
+			$total    = 0;
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					$total += $expense['_wcbrr_amount'];
+				}
+			}
+
+			echo esc_html( $total );
+			break;
+
+		case 'expenses':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					echo esc_html( "{$expense['_wcbrr_description']} ({$expense['_wcbrr_amount']} {$currency})<br/>" );
+				}
+			}
+
+			break;
+	}
+}
+
+/**
  * Set the status when reimbursements are submitted.
  *
  * @param array $post_data
@@ -424,6 +497,9 @@ function set_request_status( $post_data, $post_data_raw ) {
 		return $post_data;
 	}
 
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 	// Requesting to save draft
 	if ( isset( $post_data_raw['wcb-save-draft'] ) ) {
 		if ( current_user_can( 'draft_post', $post_data_raw['ID'] ) ) {
@@ -434,7 +510,21 @@ function set_request_status( $post_data, $post_data_raw ) {
 	// Requesting to submit/update the post
 	if ( ! current_user_can( 'manage_network' ) ) {
 		$editable_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete' );
-		if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses ) ) {
+		if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses, true ) ) {
+			$post_data['post_status'] = 'wcb-pending-approval';
+		}
+
+		/*
+		 * Statuses past pending approval (approval, payment, etc.) are reserved for network admins. For
+		 * everyone else, keep the status within the set a requester can set, defaulting to pending approval.
+		 *
+		 * Keyed on the stored status, so this only applies while the request is still requester-editable
+		 * (draft/incomplete). Status changes made once it's further along, and the initial insert of a new
+		 * post, are left as-is.
+		 */
+		$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+		$requester_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete', 'wcb-pending-approval' );
+		if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 			$post_data['post_status'] = 'wcb-pending-approval';
 		}
 	}
@@ -458,22 +548,22 @@ function save_request( $post_id, $post ) {
 	}
 
 	verify_metabox_nonces();
+	// phpcs:ignore is added because verify_metabox_nonces(); already checks that.
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
-	 * We need to determine if the user is allowed to modify the request -- in terms of this plugin's post_status
-	 * restrictions, not in terms of current_user_can( 'edit_post', N ) -- but at this point in the execution
-	 * the status has already changed from the original one to the new one, so user_can_edit_request() would often
-	 * return an incorrect result, because it would be evaluating the new status, when it should use the old one.
-	 * That would result in all the meta fields the user entered being ignored when going from `draft` to
-	 * `submitted`, `info_requested` to `submitted`, etc.
+	 * The status this reads is the stored one, which by now is the status the save just wrote. That used to be
+	 * worked around with a stub post built from `$_POST['original_post_status']`, so the check saw the status the
+	 * request had before the save -- otherwise a `draft` being submitted would be judged as `wcb-pending-approval`
+	 * and the fields entered alongside it dropped.
 	 *
-	 * To avoid that, we create a stub WP_Post with the original post status, and give that to
-	 * user_can_edit_request() instead.
+	 * That's no longer what decides it. `post_edit_is_actionable()` above asks `edit_post`, which this post type's
+	 * `map_meta_cap` callback refuses for a request past the editable statuses, so a save that would have needed
+	 * the stub has already returned. What's left here is a request still in those statuses, which reads the same
+	 * either way -- and reading the real post keeps the decision out of the request body.
 	 */
-	$original_post = new WP_Post( (object) array( 'post_status' => $_POST['original_post_status'] ) );
-
-	if ( user_can_edit_request( $original_post ) ) {
+	if ( user_can_edit_request( $post ) ) {
 		$text_fields = array( 'name_of_payer', 'currency', 'reason', 'reason_other' );
 		validate_and_save_text_fields( $post_id, $text_fields, $_POST );
 
@@ -690,10 +780,11 @@ function validate_and_save_expenses( $post_id, $expenses ) {
 function validate_and_save_notes( $post, $new_note_message ) {
 
 	// Save incomplete message.
-	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) {
+	// phpcs:ignore is used because verify_metabox_nonces(); already checks that.
+	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$safe_value = '';
-		if ( $post->post_status == 'wcb-incomplete' ) {
-			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) );
+		if ( 'wcb-incomplete' == $post->post_status ) {
+			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		}
 
 		update_post_meta( $post->ID, '_wcp_incomplete_notes', $safe_value );
@@ -721,9 +812,14 @@ function validate_and_save_notes( $post, $new_note_message ) {
 	update_post_meta( $post->ID, '_wcbrr_notes', $notes );
 	notify_parties_of_new_note( $post, $new_note );
 
-	\WordCamp_Budgets::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
-		'action' => 'note-added',
-	) );
+	\WordCamp_Budgets::log(
+		$post->ID,
+		get_current_user_id(),
+		sprintf( 'Note: %s', $new_note_message ),
+		array(
+			'action' => 'note-added',
+		)
+	);
 }
 
 /**
@@ -825,14 +921,20 @@ function notify_organizer_request_updated( $new_status, $old_status, $request ) 
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'draft_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 	if ( ! is_a( $post, 'WP_Post' ) || POST_TYPE !== $post->post_type ) {
 		return $required_capabilities;
 	}
 
-	$drafted_status             = in_array( $post->post_status, array( 'auto-draft', 'draft' ), true );
-	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $post->post_status;
+	$status_for_edit_check      = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$drafted_status             = in_array( $status_for_edit_check, array( 'auto-draft', 'draft' ), true );
+	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $status_for_edit_check;
 	$is_bulk_edit               = isset( $_REQUEST['bulk_edit'] );
 
 	switch ( $requested_capability ) {
@@ -846,7 +948,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 
 		case 'draft_post':
 			if ( $draft_or_incomplete_status ) {
-				$required_capabilities = array( 'edit_posts' );
+				$required_capabilities = array( \WordCamp_Budgets::VIEWER_CAP );
 			} else {
 				$required_capabilities[] = 'manage_network';
 			}
@@ -879,7 +981,7 @@ function _generate_payment_report_default( $args ) {
 	ob_start();
 	$report = fopen( 'php://output', 'w' );
 
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ) );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ), ',', '"', '\\', "\n" );
 
 	foreach ( $args['data'] as $entry ) {
 		switch_to_blog( $entry->blog_id );
@@ -952,12 +1054,12 @@ function _generate_payment_report_default( $args ) {
 		restore_current_blog();
 
 		if ( ! empty( $row ) ) {
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( $row ) );
+			fputcsv( $report, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\\', "\n" );
 		}
 
 		// Break out expenses into individual line items
 		foreach ( $expenses as $expense ) {
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( _generate_payment_report_default_line_items( $expense, $row ) ) );
+			fputcsv( $report, Utilities\Export_CSV::esc_csv( _generate_payment_report_default_line_items( $expense, $row ) ), ',', '"', '\\', "\n" );
 		}
 	}
 
@@ -1019,7 +1121,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 	ob_start();
 
 	// File Header
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|' );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], gmdate( 'm/d/Y' ), gmdate( 'Hi' ) ) ), ',', '|', '\\', "\n" );
 
 	$total = 0;
 	$count = 0;
@@ -1077,57 +1179,92 @@ function _generate_payment_report_jpm_checks( $args ) {
 		$description = html_entity_decode( $description );
 
 		// Payment Header
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-			'PMTHDR',
-			'USPS',
-			'QKCHECKS',
-			date( 'm/d/Y' ),
-			number_format( $amount, 2, '.', '' ),
-			$options['account_number'],
-			$start + $count, // must be globally unique?
-			$options['contact_email'],
-			$options['contact_phone'],
-		) ), ',', '|' );
+		fputcsv(
+			$report,
+			Utilities\Export_CSV::esc_csv( array(
+				'PMTHDR',
+				'USPS',
+				'QKCHECKS',
+				gmdate( 'm/d/Y' ),
+				number_format( $amount, 2, '.', '' ),
+				$options['account_number'],
+				$start + $count, // must be globally unique?
+				$options['contact_email'],
+				$options['contact_phone'],
+			) ),
+			',',
+			'|',
+			'\\',
+			"\n"
+		);
 
 		// Payee Name Record
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-			'PAYENM',
-			substr( $payable_to, 0, 35 ),
-			'',
-			sprintf( '%d-%d', $entry->blog_id, $entry->request_id ),
-		) ), ',', '|' );
+		fputcsv(
+			$report,
+			Utilities\Export_CSV::esc_csv( array(
+				'PAYENM',
+				substr( $payable_to, 0, 35 ),
+				'',
+				sprintf( '%d-%d', $entry->blog_id, $entry->request_id ),
+			) ),
+			',',
+			'|',
+			'\\',
+			"\n"
+		);
 
 		// Payee Address Record
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-			'PYEADD',
-			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_street_address', true ) ), 0, 35 ),
-			'',
-		) ), ',', '|' );
+		fputcsv(
+			$report,
+			Utilities\Export_CSV::esc_csv( array(
+				'PYEADD',
+				substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_street_address', true ) ), 0, 35 ),
+				'',
+			) ),
+			',',
+			'|',
+			'\\',
+			"\n"
+		);
 
 		// Additional Payee Address Record
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'ADDPYE', '', '' ) ), ',', '|' );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'ADDPYE', '', '' ) ), ',', '|', '\\', "\n" );
 
 		// Payee Postal Record
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-			'PYEPOS',
-			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_city',     true ) ), 0, 35 ),
-			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_state',    true ) ), 0, 35 ),
-			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_zip_code', true ) ), 0, 10 ),
-			substr( $vendor_country_code, 0, 3 ),
-		) ), ',', '|' );
+		fputcsv(
+			$report,
+			Utilities\Export_CSV::esc_csv( array(
+				'PYEPOS',
+				substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_city',     true ) ), 0, 35 ),
+				substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_state',    true ) ), 0, 35 ),
+				substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_zip_code', true ) ), 0, 10 ),
+				substr( $vendor_country_code, 0, 3 ),
+			) ),
+			',',
+			'|',
+			'\\',
+			"\n"
+		);
 
 		// Payment Description
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-			'PYTDES',
-			substr( $description, 0, 122 ),
-		) ), ',', '|' );
+		fputcsv(
+			$report,
+			Utilities\Export_CSV::esc_csv( array(
+				'PYTDES',
+				substr( $description, 0, 122 ),
+			) ),
+			',',
+			'|',
+			'\\',
+			"\n"
+		);
 
 		restore_current_blog();
 		$count++;
 	}
 
 	// File Trailer
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILTRL', $count * 6 + 2 ) ), ',', '|' );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILTRL', $count * 6 + 2 ) ), ',', '|', '\\', "\n" );
 
 	// Subtract 1 because counter stores the _last_ check number, not the _next_ check number.
 	update_site_option( '_wcb_jpm_checks_counter', $start + $count - 1 );
@@ -1341,7 +1478,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 	$report = fopen( 'php://output', 'w' );
 
 	// JPM Header
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ) );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ), ',', '"', '\\', "\n" );
 
 	$total = 0;
 	$count = 0;
@@ -1473,12 +1610,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 			'73-blank' => '',
 
 			'74-ref-text' => 'Reimbursement',
-			'75-internal-ref' => '',
-			'76-on-behalf-of' => '',
+			'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ), 0, 16 ),
+			'76-on-behalf-of' => 'WordPress Community Support',
 
-			'77-detial-1' => '',
-			'78-detial-2' => '',
-			'79-detial-3' => '',
+			'77-detail-1' => 'Reimbursement',
+			'78-detail-2' => '',
+			'79-detail-3' => '',
 			'80-detail-4' => '',
 
 			'81-blank' => '',
@@ -1548,12 +1685,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 		// Use for debugging.
 		// print_r( $row );
 
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ) );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '"', '\\', "\n" );
 		restore_current_blog();
 	}
 
 	// JPM Trailer
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ) );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '"', '\\', "\n" );
 
 	fclose( $report );
 	$results = ob_get_clean();
@@ -1561,4 +1698,62 @@ function _generate_payment_report_jpm_wires( $args ) {
 	// JPM chokes on accents and non-latin characters.
 	$results = remove_accents( $results );
 	return $results;
+}
+
+/**
+ * SEPA Credit Transfer – ISO 20022 XML (pain.001.003.03)
+ *
+ * @param array $args
+ *
+ * @return string
+ */
+function _generate_payment_report_sepa( $args ) {
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
+
+	$payments = array();
+
+	foreach ( $args['data'] as $entry ) {
+		switch_to_blog( $entry->blog_id );
+		$post = get_post( $entry->request_id );
+
+		if ( $args['status'] && $args['status'] !== $post->post_status ) {
+			restore_current_blog();
+			continue;
+		} elseif ( POST_TYPE !== $post->post_type ) {
+			restore_current_blog();
+			continue;
+		} elseif ( 'sepa_transfer' !== get_post_meta( $post->ID, '_wcbrr_payment_method', true ) ) {
+			restore_current_blog();
+			continue;
+		}
+
+		$amount   = 0;
+		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
+		foreach ( $expenses as $expense ) {
+			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
+				$amount += floatval( $expense['_wcbrr_amount'] );
+			}
+		}
+		$amount = round( $amount, 2 );
+
+		$payments[] = array(
+			'amount'       => $amount,
+			'account_name' => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_account_name', true ) ),
+			'bic'          => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_bic', true ) ),
+			'iban'         => preg_replace( '#\s#', '', \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_iban', true ) ) ),
+			'reference'    => sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ),
+			'invoice'      => '',
+		);
+
+		restore_current_blog();
+	}
+
+	return \WordCamp_Budgets::generate_sepa_xml( $payments );
 }

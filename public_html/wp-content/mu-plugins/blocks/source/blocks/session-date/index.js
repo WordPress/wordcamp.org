@@ -9,5 +9,5 @@ export const NAME = metadata.name;
 export const SETTINGS = {
 	...metadata,
 	icon: 'clock',
-	edit: edit,
+	edit,
 };

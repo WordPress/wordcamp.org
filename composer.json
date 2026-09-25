@@ -8,40 +8,39 @@
 	},
 	"config": {
 		"platform": {
-			"php": "7.4"
+			"php": "8.3"
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor",
 		"_comment": "Work around `test:watch` timeout, see https://github.com/spatie/phpunit-watcher/issues/63#issuecomment-545633709",
 		"process-timeout": 0,
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true,
-			"composer/installers": true
+			"composer/installers": true,
+			"automattic/jetpack-autoloader": true
 		}
 	},
 	"extra": {
+		"_installer_paths_comment": "Nothing here may install into `wp-content/plugins` or `wp-content/themes` -- those paths are managed by `svn:externals` on the deploy checkout, and Composer replaces a package's directory wholesale. WordPress plugins and themes needed for local development live in `composer-dev.json` instead.",
 		"installer-paths": {
-			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"]
+			"public_html/wp-content/mu-plugins/vendor/{$vendor}/{$name}/": ["wordpress/mcp-adapter"],
+			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"]
 		}
 	},
-	"repositories": [
-		{
-			"type": "vcs",
-			"url": "git@github.com:WordPress/wporg-parent-2021.git"
-		}
-	],
 	"require": {
 		"adhocore/jwt": "^1.0",
-		"wporg/wporg-parent-2021": "dev-build"
+		"scssphp/scssphp": "^2.1.0",
+		"wordpress/mcp-adapter": "^0.6.1"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
-		"wp-coding-standards/wpcs": "~3.0.0",
+		"wp-coding-standards/wpcs": "^3.3.0",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^9",
-		"sirbrillig/phpcs-changed": "2.10.0",
+		"sirbrillig/phpcs-changed": "^2.12.0",
 		"spatie/phpunit-watcher": "^1.23",
-		"yoast/phpunit-polyfills": "^1.0",
-		"composer/installers": "^2.2"
+		"yoast/phpunit-polyfills": "^4.0",
+		"composer/installers": "^2.2",
+		"quickbooks/v3-php-sdk": "*"
 	},
 	"scripts": {
 		"format": "phpcbf -p",
@@ -57,8 +56,14 @@
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",
 		"phpcbf": "phpcbf -p",
-
 		"tw": "@test:watch",
-		"twg": "@test:watch:group"
+		"twg": "@test:watch:group",
+		"_composer_dev_comment": "`composer-dev.json` installs the WordPress plugins and themes that only the local environment needs. Chaining it here keeps `composer install` and `composer update` doing what they always have. The deploy checkout skips it by passing `--no-scripts`, so Composer never touches the `svn:externals` directories there.",
+		"post-install-cmd": [
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer install --no-interaction"
+		],
+		"post-update-cmd": [
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer update --no-interaction"
+		]
 	}
 }

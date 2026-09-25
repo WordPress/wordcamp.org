@@ -10,5 +10,5 @@ export const NAME = metadata.name;
 export const SETTINGS = {
 	...metadata,
 	icon: 'megaphone',
-	edit: edit,
+	edit,
 };

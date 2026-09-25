@@ -1,0 +1,19 @@
+/* stylelint-disable */
+
+/*=
+SPECIFIC CSS STYLES FOR JANE
+============================================================================== */
+
+#pd-question-7,
+#pd-question-10,
+#pd-question-11,
+#pd-question-12,
+#pd-question-13,
+#pd-question-14,
+#pd-question-16,
+#pd-question-21,
+#pd-question-23,
+#pd-question-28,
+.qNumber {
+	display: block;
+}

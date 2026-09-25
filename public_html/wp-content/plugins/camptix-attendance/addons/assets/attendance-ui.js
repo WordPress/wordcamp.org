@@ -322,7 +322,8 @@ jQuery(document).ready(function($){
 			'fastClick .close': 'close',
 			'fastClick .filter-sort li': 'toggleSort',
 			'fastClick .filter-attendance li': 'toggleAttendance',
-			'fastClick .filter-tickets li': 'toggleTickets'
+			'fastClick .filter-tickets li': 'toggleTickets',
+			'fastClick .filter-bulk li': 'bulkAction'
 		},
 
 		initialize: function( options ) {
@@ -382,6 +383,88 @@ jQuery(document).ready(function($){
 			this.render();
 
 			this.controller.trigger( 'filter', this.filterSettings );
+		},
+
+		/**
+		 * Start a bulk attendance action on everything matching the current filters.
+		 */
+		bulkAction: function( event ) {
+			var attending = 'true' === String( $( event.target ).data( 'attending' ) );
+
+			this.controller.trigger( 'bulk', attending );
+			this.close();
+		}
+	});
+
+	/**
+	 * Bulk Confirm View
+	 *
+	 * The modal that confirms a bulk attendance change, showing the live count
+	 * of matching attendees before anything is written.
+	 */
+	camptix.views.BulkConfirmView = Backbone.View.extend({
+		className: 'attendee-toggle-wrap',
+
+		template: wp.template( 'attendee-bulk-confirm' ),
+
+		events: {
+			'fastClick .yes': 'yes',
+			'fastClick .no': 'close',
+			'fastClick .close': 'close'
+		},
+
+		initialize: function( options ) {
+			this.controller = options.controller;
+			this.count = options.count;
+			this.attending = options.attending;
+			this.error = options.error || false;
+			this.$overlay = $('.overlay');
+		},
+
+		render: function() {
+			this.$el.html( this.template({
+				count: this.count,
+				attending: this.attending,
+				error: this.error
+			}) );
+			this.$overlay.show();
+			return this;
+		},
+
+		/**
+		 * Confirmed: apply the bulk change, guarded by the previewed count.
+		 */
+		yes: function() {
+			var view = this;
+
+			wp.ajax.send({
+				type: 'POST',
+				data: {
+					action: 'camptix-attendance',
+					camptix_secret: _camptixAttendanceSecret,
+					camptix_action: 'sync-bulk',
+					camptix_bulk_nonce: _camptixAttendanceBulkNonce,
+					camptix_set_attendance: this.attending ? 'true' : 'false',
+					camptix_expected_count: this.count,
+					camptix_filters: this.controller.filterSettings,
+					camptix_search: this.controller.keyword || ''
+				}
+			}).done( function() {
+				view.close();
+				view.controller.refresh();
+			}).fail( function( response ) {
+				view.error = response && response.error ? response.error : 'not_allowed';
+				view.count = response && response.actual ? response.actual : view.count;
+				view.render();
+			});
+
+			return false;
+		},
+
+		close: function() {
+			this.$overlay.hide();
+			this.remove();
+			return false;
 		}
 	});
 
@@ -433,6 +516,7 @@ jQuery(document).ready(function($){
 			this.on( 'flush', this.flush, this );
 			this.on( 'more:toggle', this.moreToggle, this );
 			this.on( 'filter', this.filter, this );
+			this.on( 'bulk', this.bulkMark, this );
 
 			this.setupCollection();
 		},
@@ -594,6 +678,44 @@ jQuery(document).ready(function($){
 			delete this.collection;
 			this.flush();
 			this.setupCollection();
+		},
+
+		/**
+		 * Preview a bulk attendance change (dry run), then open the confirm modal.
+		 */
+		bulkMark: function( attending ) {
+			var controller = this;
+
+			wp.ajax.send({
+				type: 'POST',
+				data: {
+					action: 'camptix-attendance',
+					camptix_secret: _camptixAttendanceSecret,
+					camptix_action: 'sync-bulk',
+					camptix_bulk_nonce: _camptixAttendanceBulkNonce,
+					camptix_dry_run: 1,
+					camptix_set_attendance: attending ? 'true' : 'false',
+					camptix_filters: this.filterSettings,
+					camptix_search: this.keyword || ''
+				}
+			}).done( function( response ) {
+				var confirmView = new camptix.views.BulkConfirmView({
+					controller: controller,
+					count: response.matched,
+					attending: attending
+				});
+
+				$(document.body).append( confirmView.render().el );
+			}).fail( function( response ) {
+				var confirmView = new camptix.views.BulkConfirmView({
+					controller: controller,
+					count: 0,
+					attending: attending,
+					error: response && response.error ? response.error : 'not_allowed'
+				});
+
+				$(document.body).append( confirmView.render().el );
+			});
 		},
 
 		/**

@@ -424,6 +424,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir    = wp_upload_dir();
 		$tmp_path      = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename );
 
+		global $camptix;
+
+		// Only record the document once the PDF verifiably exists, so a wkhtmltopdf
+		// failure can't leave the invoice pointing at a file that was never written.
+		if ( ! file_exists( $tmp_path ) || 0 === filesize( $tmp_path ) ) {
+			$camptix->log( __( 'Invoice PDF generation failed: wkhtmltopdf produced no output.', 'wordcamporg' ), $invoice_id, array( 'filename' => $filename ) );
+			return false;
+		}
+
 		if ( ! empty( $upload_dir['basedir'] ) ) {
 			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
 			if ( ! file_exists( $invoices_dirname ) ) {
@@ -436,10 +445,14 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		// volume, so cross-device renames are never possible in this environment. Copy
 		// across and remove the source instead of attempting (and logging a warning for)
 		// a rename that cannot succeed.
-		if ( copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
-			unlink( $tmp_path );
-			update_post_meta( $invoice_id, 'invoice_document', $filename );
+		if ( ! copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			$camptix->log( __( 'Invoice PDF generation failed: could not move the PDF into the uploads directory.', 'wordcamporg' ), $invoice_id, array( 'filename' => $filename ) );
+			return false;
 		}
+
+		unlink( $tmp_path );
+
+		update_post_meta( $invoice_id, 'invoice_document', $filename );
 	}
 
 	/**

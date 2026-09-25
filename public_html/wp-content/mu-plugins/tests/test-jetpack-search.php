@@ -34,10 +34,10 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Provisioning turning the overlay on for the first time is reverted.
+	 * Provisioning turning the overlay on for the first time is blocked.
 	 *
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_enable
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_enable
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
 	 */
 	public function test_provisioning_cannot_add_overlay() {
 		$this->act_as_provisioning();
@@ -51,12 +51,12 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Provisioning switching an existing experience to the overlay is reverted too.
+	 * Provisioning switching an existing experience to the overlay is blocked too.
 	 *
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
 	 */
 	public function test_provisioning_cannot_update_to_overlay() {
-		// Seed both options so the writes below go through the update hooks, the path a re-provisioned site takes.
+		// Seed both options, the state of a site being re-provisioned.
 		add_option( 'jetpack_search_experience', 'embedded' );
 		add_option( 'instant_search_enabled', '' );
 
@@ -69,9 +69,44 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Re-provisioning a site that already has the overlay stored clears it.
+	 *
+	 * Core drops a write of the value already stored, so this needs the filter to run before that check.
+	 *
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_enable
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
+	 */
+	public function test_reprovisioning_clears_stored_overlay() {
+		add_option( 'jetpack_search_experience', 'overlay' );
+		add_option( 'instant_search_enabled', true );
+
+		$this->act_as_provisioning();
+
+		// What `Module_Control::update_experience( 'overlay' )` writes.
+		update_option( 'jetpack_search_experience', 'overlay' );
+		update_option( 'instant_search_enabled', true );
+		update_option( 'jetpack_search_experience', 'overlay' );
+
+		$this->assertSame( '', get_option( 'jetpack_search_experience' ) );
+		$this->assertFalse( (bool) get_option( 'instant_search_enabled' ) );
+	}
+
+	/**
+	 * Provisioning can't pick the blocks-powered overlay either.
+	 *
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
+	 */
+	public function test_provisioning_cannot_pick_overlay_blocks() {
+		$this->act_as_provisioning();
+		update_option( 'jetpack_search_experience', 'overlay_blocks' );
+
+		$this->assertSame( '', get_option( 'jetpack_search_experience' ) );
+	}
+
+	/**
 	 * Provisioning picking a non-overlay experience is left alone.
 	 *
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
 	 */
 	public function test_provisioning_can_pick_other_experiences() {
 		$this->act_as_provisioning();
@@ -84,10 +119,10 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An organizer's own request (not a signed connection-owner request) can turn the overlay on.
+	 * An organizer's own request (not a signed connection-owner request) can turn either overlay on.
 	 *
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_enable
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_enable
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
 	 */
 	public function test_organizer_can_enable_overlay() {
 		update_option( 'jetpack_search_experience', 'overlay' );
@@ -95,44 +130,31 @@ class Test_Jetpack_Search extends WP_UnitTestCase {
 
 		$this->assertSame( 'overlay', get_option( 'jetpack_search_experience' ) );
 		$this->assertTrue( (bool) get_option( 'instant_search_enabled' ) );
+
+		update_option( 'jetpack_search_experience', 'overlay_blocks' );
+		$this->assertSame( 'overlay_blocks', get_option( 'jetpack_search_experience' ) );
 	}
 
 	/**
-	 * Provisioning turning the overlay off is not something to revert.
+	 * Provisioning turning the overlay off goes through.
 	 *
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_enable
-	 * @covers \WordCamp\Jetpack_Tweaks\Search\maybe_revert_provisioned_overlay
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_enable
+	 * @covers \WordCamp\Jetpack_Tweaks\Search\block_provisioned_overlay
 	 */
 	public function test_provisioning_can_turn_overlay_off() {
 		update_option( 'jetpack_search_experience', 'overlay' );
 		update_option( 'instant_search_enabled', true );
 
-		// A revert would call `update_option()` with the value just written, which core drops as a no-op, so the
-		// end state alone can't tell a revert from no revert. Count the writes instead: `pre_update_option_*` runs
-		// before that no-op check, so it sees every call, and only the test's own write is expected.
-		$writes = array();
-		$count  = function ( $value, $old_value, $option ) use ( &$writes ) {
-			$writes[ $option ] = ( $writes[ $option ] ?? 0 ) + 1;
-			return $value;
-		};
-		add_filter( 'pre_update_option_jetpack_search_experience', $count, 10, 3 );
-		add_filter( 'pre_update_option_instant_search_enabled', $count, 10, 3 );
-
 		$this->act_as_provisioning();
 		update_option( 'jetpack_search_experience', '' );
 		update_option( 'instant_search_enabled', false );
 
-		remove_filter( 'pre_update_option_jetpack_search_experience', $count, 10 );
-		remove_filter( 'pre_update_option_instant_search_enabled', $count, 10 );
-
 		$this->assertSame( '', get_option( 'jetpack_search_experience' ) );
 		$this->assertFalse( (bool) get_option( 'instant_search_enabled' ) );
-		$this->assertSame( 1, $writes['jetpack_search_experience'], 'The hook re-wrote the experience option.' );
-		$this->assertSame( 1, $writes['instant_search_enabled'], 'The hook re-wrote the legacy boolean.' );
 	}
 
 	/**
-	 * Without a Jetpack connection the identity check fails closed: nothing is reverted.
+	 * Without a Jetpack connection the identity check fails closed: nothing is blocked.
 	 *
 	 * @covers \WordCamp\Jetpack_Tweaks\Search\is_connection_owner_request
 	 */

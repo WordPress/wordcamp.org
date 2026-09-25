@@ -7,53 +7,11 @@ use Automattic\Jetpack\Connection\Rest_Authentication;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'add_option_instant_search_enabled',       __NAMESPACE__ . '\revert_provisioned_enable_on_add', 10, 2 );
-add_action( 'update_option_instant_search_enabled',    __NAMESPACE__ . '\revert_provisioned_enable_on_update', 10, 2 );
-add_action( 'add_option_jetpack_search_experience',    __NAMESPACE__ . '\revert_provisioned_overlay_on_add', 10, 2 );
-add_action( 'update_option_jetpack_search_experience', __NAMESPACE__ . '\revert_provisioned_overlay_on_update', 10, 2 );
+add_filter( 'pre_update_option_instant_search_enabled',    __NAMESPACE__ . '\block_provisioned_enable' );
+add_filter( 'pre_update_option_jetpack_search_experience', __NAMESPACE__ . '\block_provisioned_overlay' );
 
 /**
- * Handle the option being created (first time it's set).
- *
- * @param string $option The option name.
- * @param mixed  $value  The new option value.
- */
-function revert_provisioned_enable_on_add( $option, $value ) {
-	maybe_revert_provisioned_enable( $value );
-}
-
-/**
- * Handle the option being updated.
- *
- * @param mixed $old_value The previous option value.
- * @param mixed $value     The new option value.
- */
-function revert_provisioned_enable_on_update( $old_value, $value ) {
-	maybe_revert_provisioned_enable( $value );
-}
-
-/**
- * Handle the experience option being created (first time it's set).
- *
- * @param string $option The option name.
- * @param mixed  $value  The new option value.
- */
-function revert_provisioned_overlay_on_add( $option, $value ) {
-	maybe_revert_provisioned_overlay( $value );
-}
-
-/**
- * Handle the experience option being updated.
- *
- * @param mixed $old_value The previous option value.
- * @param mixed $value     The new option value.
- */
-function revert_provisioned_overlay_on_update( $old_value, $value ) {
-	maybe_revert_provisioned_overlay( $value );
-}
-
-/**
- * Disable the Jetpack Search instant-search overlay when provisioning auto-enables it.
+ * Keep provisioning from turning on the Jetpack Search instant-search overlay.
  *
  * WordCamp sites are auto-provisioned with a Jetpack Complete plan. As part of that, WordPress.com
  * enables Jetpack Search *and* its instant-search "live results" overlay by default (it writes
@@ -61,57 +19,54 @@ function revert_provisioned_overlay_on_update( $old_value, $value ) {
  * the viewport and overlaps site content (#1742).
  *
  * Since Jetpack Search 0.60 the overlay is also recorded as `jetpack_search_experience = 'overlay'`,
- * and that option is read *first*: while it says `overlay`, the legacy boolean is ignored. Jetpack
- * writes the experience option before the boolean, so reverting only the boolean left the overlay on
- * for every site provisioned since. `maybe_revert_provisioned_overlay()` handles the experience option.
+ * and that option is read *first*: while it says `overlay`, the legacy boolean is ignored, so
+ * blocking only the boolean left the overlay on for every site provisioned since.
+ * `block_provisioned_overlay()` handles the experience option.
+ *
+ * Both run on `pre_update_option_*`, which is before core drops a write of the value already stored.
+ * Reverting after the write instead missed sites whose option already said `overlay`: re-provisioning
+ * them wrote the same value, no update hook fired, and the overlay stayed on.
  *
  * The automated enable arrives as a WordPress.com-signed REST request authenticated as the Jetpack
  * connection owner -- on WordCamp that is always the system `wordcamp` user (we force it during
  * provisioning). An organizer enabling the overlay themselves does so from wp-admin as their own
- * account, so we leave those changes alone. We therefore revert the option only when the change is
+ * account, so we leave those changes alone. We therefore block the value only when the change is
  * made by the connection owner via a signed request, which uniquely identifies the automated path.
  *
  * The Search module itself stays active, so Jetpack falls back to its classic search experience and
  * search keeps working without the broken overlay.
  *
  * @param mixed $value The new option value.
+ *
+ * @return mixed
  */
-function maybe_revert_provisioned_enable( $value ) {
-	// Only react to it being turned on. The revert below re-fires this hook with a falsey value,
-	// which this guard short-circuits, so there's no recursion.
-	if ( ! $value ) {
-		return;
+function block_provisioned_enable( $value ) {
+	if ( $value && is_provisioning_request() ) {
+		return false;
 	}
 
-	if ( ! is_provisioning_request() ) {
-		return;
-	}
-
-	update_option( 'instant_search_enabled', false );
+	return $value;
 }
 
 /**
- * Clear the `overlay` search experience when provisioning selects it.
+ * Store no experience instead of an overlay one when provisioning selects it.
  *
- * See `maybe_revert_provisioned_enable()` for the background. An empty experience is what Jetpack
+ * See `block_provisioned_enable()` for the background. Jetpack has two overlays, the legacy `overlay`
+ * and the blocks-powered `overlay_blocks`, and both are blocked. An empty experience is what Jetpack
  * itself stores for "Inline" (the absence of an opt-in), which is the experience that works on
- * WordCamp themes. Organizers can still pick Overlay in wp-admin; only signed requests from the
- * connection owner are reverted.
+ * WordCamp themes. Organizers can still pick an overlay in wp-admin; only signed requests from the
+ * connection owner are blocked.
  *
  * @param mixed $value The new option value.
+ *
+ * @return mixed
  */
-function maybe_revert_provisioned_overlay( $value ) {
-	// Only react to the overlay being selected. The revert below re-fires this hook with an empty
-	// value, which this guard short-circuits, so there's no recursion.
-	if ( 'overlay' !== $value ) {
-		return;
+function block_provisioned_overlay( $value ) {
+	if ( in_array( $value, array( 'overlay', 'overlay_blocks' ), true ) && is_provisioning_request() ) {
+		return '';
 	}
 
-	if ( ! is_provisioning_request() ) {
-		return;
-	}
-
-	update_option( 'jetpack_search_experience', '' );
+	return $value;
 }
 
 /**

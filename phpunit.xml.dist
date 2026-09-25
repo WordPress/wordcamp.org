@@ -32,6 +32,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Visa Letters">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-visa-letters/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/

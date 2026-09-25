@@ -128,6 +128,24 @@ function get_top_level_domain() {
 }
 
 /**
+ * Get the port to append to a redirect URL's host, if any.
+ *
+ * The local Docker stack can bind HTTPS to a non-standard host port so it can
+ * run alongside another environment that wants 443 (`WORDCAMP_HTTPS_PORT` in
+ * `.env` -- see `.docker/readme.md`). Redirects built by hand here have to
+ * carry it, or they send the browser to a port nothing is listening on.
+ *
+ * `WORDCAMP_LOCAL_URL_PORT` is defined only by `.docker/wp-config.php`, and is
+ * an empty string on the default port, so this is a no-op in production and
+ * under PHPUnit.
+ *
+ * @return string e.g. `:8443`, or `''`.
+ */
+function get_url_port(): string {
+	return defined( 'WORDCAMP_LOCAL_URL_PORT' ) ? WORDCAMP_LOCAL_URL_PORT : '';
+}
+
+/**
  * Get the Network ID for a given domain (and optionally a request path).
  *
  * The events and groups networks share a hostname (`events.wordpress.org`),
@@ -196,7 +214,7 @@ function get_renamed_site_url( string $domain, string $path ) {
 		return false;
 	}
 
-	return 'https://' . $site->domain . $site->path;
+	return 'https://' . $site->domain . get_url_port() . $site->path;
 }
 
 
@@ -235,7 +253,7 @@ function get_flagship_canonical_url( $domain ) {
 	$flagship = $upcoming[ $domain ] ?? null;
 
 	if ( $flagship && time() <= strtotime( $flagship['until'] ) ) {
-		return "https://{$domain}{$flagship['path']}";
+		return "https://{$domain}" . get_url_port() . $flagship['path'];
 	}
 
 	return false;

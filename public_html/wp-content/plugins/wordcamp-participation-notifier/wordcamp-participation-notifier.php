@@ -98,7 +98,7 @@ class WordCamp_Participation_Notifier {
 	}
 
 	/**
-	 * Maybe add mentor activity when the User ID meta is updated.
+	 * Remove the old user's badge when a published post's User ID changes, and maybe add mentor activity.
 	 *
 	 * @param int    $meta_id    ID of the metadata entry to update.
 	 * @param int    $object_id  ID of the object metadata is for.
@@ -108,6 +108,15 @@ class WordCamp_Participation_Notifier {
 	public function username_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
 		$post       = get_post( $object_id );
 		$prev_value = get_post_meta( $object_id, $meta_key, true );
+
+		// The new user gets their badge from maybe_notify_on_post_save(); the old one loses it here.
+		if ( '_wcpt_user_id' === $meta_key && 'publish' === $post->post_status ) {
+			$prev_user_id = absint( $prev_value );
+
+			if ( $prev_user_id && absint( $meta_value ) !== $prev_user_id ) {
+				$this->maybe_remove_badge( $post, $prev_user_id );
+			}
+		}
 
 		if ( 'Mentor WordPress.org User Name' === $meta_key && $meta_value && $prev_value !== $meta_value ) {
 			// Username has already been validated by `Event_Admin::metabox_save()`.

@@ -62,10 +62,28 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 
-		// Use specific name for INR as we support UPI via Stripe.
-		if ( 'INR' === ( $this->camptix_options['currency'] ?? '' ) ) {
-			$this->name = 'Credit Card or UPI (Stripe)';
-			$this->description = 'Credit card and UPI processing, powered by Stripe.';
+		// Use specific name for EUR/INR as we support some local payment methods via Stripe.
+		switch ( $this->camptix_options['currency'] ?? '' ) {
+			case 'INR':
+				$this->name = 'Credit Card or UPI (Stripe)';
+				$this->description = 'Credit card and UPI processing, powered by Stripe.';
+				break;
+			case 'EUR':
+				// iDEAL, Bancontact and EPS each only work in one country, so only name the
+				// one that works where the event is held. Other EUR events keep the default.
+				$local_methods = array(
+					'NL' => 'iDEAL',
+					'BE' => 'Bancontact',
+					'AT' => 'EPS',
+				);
+				$wordcamp      = function_exists( 'get_wordcamp_post' ) ? get_wordcamp_post() : false;
+				$country       = $wordcamp ? strtoupper( $wordcamp->meta['_venue_country_code'][0] ?? '' ) : '';
+
+				if ( isset( $local_methods[ $country ] ) ) {
+					$this->name        = sprintf( 'Credit Card or %s (Stripe)', $local_methods[ $country ] );
+					$this->description = sprintf( 'Credit card and %s processing, powered by Stripe.', $local_methods[ $country ] );
+				}
+				break;
 		}
 	}
 

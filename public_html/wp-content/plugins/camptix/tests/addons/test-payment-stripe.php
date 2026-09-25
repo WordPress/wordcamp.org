@@ -742,4 +742,106 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$this->assertSame( 'draft', get_post_status( $orders['tok_flaky'] ), '500: kept for the next sweep' );
 		$this->assertSame( 'timeout', get_post_status( $orders['tok_expired'] ), 'expired: timed out' );
 	}
+
+	/**
+	 * Venue countries and the gateway name and description a EUR event should show for them.
+	 */
+	public function eurVenueCountryProvider() {
+		return array(
+			'Netherlands names iDEAL'  => array( 'NL', 'Credit Card or iDEAL (Stripe)', 'Credit card and iDEAL processing, powered by Stripe.' ),
+			'Belgium names Bancontact' => array( 'BE', 'Credit Card or Bancontact (Stripe)', 'Credit card and Bancontact processing, powered by Stripe.' ),
+			'Austria names EPS'        => array( 'AT', 'Credit Card or EPS (Stripe)', 'Credit card and EPS processing, powered by Stripe.' ),
+			'lower-case country code'  => array( 'nl', 'Credit Card or iDEAL (Stripe)', 'Credit card and iDEAL processing, powered by Stripe.' ),
+			'other EUR country'        => array( 'DE', 'Credit Card (Stripe)', 'Credit card processing, powered by Stripe.' ),
+			'no venue country'         => array( '', 'Credit Card (Stripe)', 'Credit card processing, powered by Stripe.' ),
+		);
+	}
+
+	/**
+	 * @covers CampTix_Payment_Method_Stripe::camptix_init
+	 * @dataProvider eurVenueCountryProvider
+	 */
+	public function test_eur_gateway_label_follows_venue_country( $country, $expected_name, $expected_description ) {
+		$this->set_venue_country( $country );
+
+		$stripe = $this->init_stripe_for_currency( 'EUR' );
+
+		$this->assertSame( $expected_name, $stripe->name );
+		$this->assertSame( $expected_description, $stripe->description );
+	}
+
+	/**
+	 * @covers CampTix_Payment_Method_Stripe::camptix_init
+	 */
+	public function test_eur_gateway_label_without_a_wordcamp_post() {
+		$stripe = $this->init_stripe_for_currency( 'EUR' );
+
+		$this->assertSame( 'Credit Card (Stripe)', $stripe->name );
+		$this->assertSame( 'Credit card processing, powered by Stripe.', $stripe->description );
+	}
+
+	/**
+	 * The venue country only changes the EUR label; other currencies keep their own.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::camptix_init
+	 */
+	public function test_venue_country_does_not_change_other_currencies() {
+		$this->set_venue_country( 'NL' );
+
+		$this->assertSame( 'Credit Card or UPI (Stripe)', $this->init_stripe_for_currency( 'INR' )->name );
+		$this->assertSame( 'Credit Card (Stripe)', $this->init_stripe_for_currency( 'USD' )->name );
+	}
+
+	/**
+	 * Point the current site's WordCamp post, on the root blog, at a venue country.
+	 *
+	 * @param string $country Two-letter country code, or '' for none.
+	 */
+	protected function set_venue_country( $country ) {
+		$site_id = get_current_blog_id();
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$wordcamp_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'wordcamp',
+				'post_status' => 'publish',
+			)
+		);
+		update_post_meta( $wordcamp_id, '_site_id', $site_id );
+		if ( $country ) {
+			update_post_meta( $wordcamp_id, '_venue_country_code', $country );
+		}
+		restore_current_blog();
+	}
+
+	/**
+	 * A Stripe gateway run through camptix_init() with the site's currency set.
+	 *
+	 * @param string $currency Currency code.
+	 *
+	 * @return CampTix_Payment_Method_Stripe
+	 */
+	protected function init_stripe_for_currency( $currency ) {
+		global $camptix;
+
+		$options             = get_option( 'camptix_options', array() );
+		$options['currency'] = $currency;
+		update_option( 'camptix_options', $options );
+		$camptix->load_options();
+
+		$stripe = new CampTix_Payment_Method_Stripe();
+		$stripe->camptix_init();
+
+		return $stripe;
+	}
+
+	/**
+	 * Reload CampTix's cached options, since the test's option change was rolled back.
+	 */
+	public function tear_down() {
+		global $camptix;
+
+		parent::tear_down();
+		$camptix->load_options();
+	}
 }

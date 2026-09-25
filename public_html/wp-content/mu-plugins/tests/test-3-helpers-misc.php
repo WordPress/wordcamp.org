@@ -175,4 +175,97 @@ class Test_Helpers_Misc extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<code>', wp_filter_kses( sanitize_text_field( self::SPACED_TAG ) ) );
 		$this->assertStringNotContainsString( '<code>', wp_filter_kses( wcorg_sanitize_plain_text( self::SPACED_TAG ) ) );
 	}
+
+	/**
+	 * @covers ::wcorg_escape_shortcodes
+	 *
+	 * @dataProvider data_wcorg_escape_shortcodes
+	 */
+	public function test_wcorg_escape_shortcodes( $value, $expected ) {
+		$this->assertSame( $expected, wcorg_escape_shortcodes( $value ) );
+	}
+
+	/**
+	 * Data provider for `test_wcorg_escape_shortcodes()`.
+	 *
+	 * @return array
+	 */
+	public function data_wcorg_escape_shortcodes() {
+		return array(
+			'text without delimiters is untouched' => array(
+				'Portland, Oregon',
+				'Portland, Oregon',
+			),
+			'both delimiters are encoded'          => array(
+				'[camptix_private]hello[/camptix_private]',
+				'&#91;camptix_private&#93;hello&#91;/camptix_private&#93;',
+			),
+			'an unpaired delimiter still counts'   => array(
+				'Rated [A best',
+				'Rated &#91;A best',
+			),
+			'arrays are handled recursively'       => array(
+				array(
+					'a' => '[x]',
+					'b' => 'y',
+				),
+				array(
+					'a' => '&#91;x&#93;',
+					'b' => 'y',
+				),
+			),
+			'non-scalars become an empty string'   => array(
+				new \stdClass(),
+				'',
+			),
+			'integers keep their digits'           => array(
+				42,
+				'42',
+			),
+		);
+	}
+
+	/**
+	 * Escaping an already-escaped value must not change it again.
+	 *
+	 * The write paths apply this on top of `wcorg_sanitize_plain_text()`, and some of them run
+	 * twice over the same value, so a second pass has to be a no-op.
+	 *
+	 * @covers ::wcorg_escape_shortcodes
+	 */
+	public function test_wcorg_escape_shortcodes_is_idempotent() {
+		$once = wcorg_escape_shortcodes( '[camptix_private]hello[/camptix_private]' );
+
+		$this->assertSame( $once, wcorg_escape_shortcodes( $once ) );
+	}
+
+	/**
+	 * The point of the helper: what comes out is not parsed as a shortcode.
+	 *
+	 * `wp_kses_post()` rewrites `&#91;` to the equivalent `&#091;`, so the assertion is that no
+	 * delimiter survives rather than that a particular entity does.
+	 *
+	 * @covers ::wcorg_escape_shortcodes
+	 */
+	public function test_wcorg_escape_shortcodes_survives_the_kses_pass() {
+		$escaped = wp_kses_post( wcorg_escape_shortcodes( '[caption width=1 caption=x]y[/caption]' ) );
+
+		$this->assertStringNotContainsString( '[', $escaped );
+		$this->assertStringNotContainsString( ']', $escaped );
+		$this->assertSame( $escaped, do_shortcode( $escaped ) );
+	}
+
+	/**
+	 * The stored form decodes back to what the submitter typed.
+	 *
+	 * The read sites that pre-fill a text input decode with `html_entity_decode()`, so the
+	 * round trip has to hold for the delimiters too.
+	 *
+	 * @covers ::wcorg_escape_shortcodes
+	 */
+	public function test_wcorg_escape_shortcodes_round_trips() {
+		$value = 'Rated [A best';
+
+		$this->assertSame( $value, html_entity_decode( wcorg_escape_shortcodes( $value ) ) );
+	}
 }

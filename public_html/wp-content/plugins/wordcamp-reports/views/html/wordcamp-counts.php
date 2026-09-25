@@ -201,7 +201,7 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 
 		<?php foreach ( $data['wordcamps'] as $event ) : ?>
 			<tr>
-				<td><a href="<?php echo esc_attr( $event['info']['URL'] ); ?>"><?php echo esc_html( $event['info']['Name'] ); ?></a></td>
+				<td><a href="<?php echo esc_url( $event['info']['URL'] ); ?>"><?php echo esc_html( $event['info']['Name'] ); ?></a></td>
 				<td><?php echo esc_html( $event['info']['Start Date (YYYY-mm-dd)'] ); ?></td>
 				<td><?php echo esc_html( $event['info']['Status'] ); ?></td>
 

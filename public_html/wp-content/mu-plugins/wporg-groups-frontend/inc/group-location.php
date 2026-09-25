@@ -88,7 +88,7 @@ function normalize_location( array $location ): array|WP_Error {
 	if ( TYPE_PHYSICAL !== $type ) {
 		return new WP_Error(
 			'wporg_groups_invalid_location_type',
-			__( 'Choose an in-person or online location.', 'wporg-groups-frontend' ),
+			__( 'Choose an in-person or online location.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -99,7 +99,7 @@ function normalize_location( array $location ): array|WP_Error {
 	if ( '' === $city || '' === $country_code ) {
 		return new WP_Error(
 			'wporg_groups_incomplete_location',
-			__( 'City and country are required for an in-person group.', 'wporg-groups-frontend' ),
+			__( 'City and country are required for an in-person group.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -107,7 +107,7 @@ function normalize_location( array $location ): array|WP_Error {
 	if ( ! wcorg_get_country_name_from_code( $country_code ) ) {
 		return new WP_Error(
 			'wporg_groups_invalid_country',
-			__( 'Choose a valid country.', 'wporg-groups-frontend' ),
+			__( 'Choose a valid country.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -165,7 +165,7 @@ function get_location_label(): string {
 	}
 
 	if ( TYPE_ONLINE === $location['type'] ) {
-		return __( 'Online', 'wporg-groups-frontend' );
+		return __( 'Online', 'wordcamporg' );
 	}
 
 	$city         = $location['city'];
@@ -177,7 +177,7 @@ function get_location_label(): string {
 
 	return sprintf(
 		/* translators: 1: city name, 2: country name. */
-		__( '%1$s, %2$s', 'wporg-groups-frontend' ),
+		__( '%1$s, %2$s', 'wordcamporg' ),
 		$city,
 		$country_name
 	);

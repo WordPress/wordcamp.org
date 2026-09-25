@@ -56,6 +56,8 @@ class WCB_Widget_Sponsors extends WP_Widget {
 
 			$sponsors = new WP_Query( array(
 				'post_type'      => 'wcb_sponsor',
+				'post_status'    => 'publish',
+				'has_password'   => false,
 				'posts_per_page' => -1,
 				'order'          => 'ASC',
 				'taxonomy'       => $term->taxonomy,

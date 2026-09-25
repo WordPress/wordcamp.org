@@ -10,6 +10,7 @@ class WordCamp_Coming_Soon_Page {
 	public function __construct() {
 		add_action( 'init',                       array( $this, 'init'                            ), 11    );  // After WCCSP_Settings::init().
 		add_action( 'wp_enqueue_scripts',         array( $this, 'manage_plugin_theme_stylesheets' ), 99    );  // (Hopefully) after all plugins/themes have enqueued their styles.
+		add_action( 'wp_enqueue_scripts',         array( $this, 'disable_jetpack_instant_search' ), 99 );  // After Jetpack Search has enqueued it at the default priority.
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
@@ -17,6 +18,10 @@ class WordCamp_Coming_Soon_Page {
 		// Again after the callbacks, since `before_callbacks` only sets a response and a
 		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
 		add_filter( 'rest_request_after_callbacks', array( $this, 'disable_rest_endpoints' ), PHP_INT_MAX, 3 );
+		// Both sitemap filters have to be registered here rather than in `init()`, because the
+		// generators decide whether to run before `init` priority 11.
+		add_filter( 'wp_sitemaps_enabled',        array( $this, 'disable_core_sitemaps' ) );
+		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_sitemaps' ) );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
@@ -79,6 +84,23 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
+	 * Keep Jetpack's Instant Search overlay off the Coming Soon page.
+	 *
+	 * Instant Search renders its overlay with JavaScript and relies on its own stylesheet to keep it hidden
+	 * until a visitor opens a search. `dequeue_all_stylesheets()` removes that stylesheet, so the overlay would
+	 * render unstyled at the bottom of the page. The template has no search UI at all, so drop the script and
+	 * the widget area it prints in the footer instead.
+	 */
+	public function disable_jetpack_instant_search() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		wp_dequeue_script( 'jetpack-instant-search' );
+		remove_action( 'wp_footer', array( 'Automattic\Jetpack\Search\Helper', 'print_instant_search_sidebar' ) );
+	}
+
+	/**
 	 * Dequeue all enqueued stylesheets and Custom CSS.
 	 *
 	 * This prevents Custom CSS & Remote CSS styles from conflicting with the Coming Soon template. Coming Soon
@@ -130,6 +152,67 @@ class WordCamp_Coming_Soon_Page {
 		if ( $this->override_theme_template ) {
 			add_filter( 'jetpack_enable_open_graph', '__return_false' );
 		}
+	}
+
+	/**
+	 * Keep Core's XML sitemaps off while Coming Soon is active.
+	 *
+	 * Sitemaps render on `template_redirect`, which Core dispatches before it applies
+	 * `template_include`, so `override_theme_template()` does not cover them.
+	 *
+	 * Core decides whether sitemaps are enabled during `wp_sitemaps_get_server()` on `init` at
+	 * priority 10, before this plugin's `init()` at priority 11, so `$this->override_theme_template`
+	 * is not populated yet and the condition is recomputed here. `WP_Sitemaps::render_sitemaps()`
+	 * re-checks this filter and sends a 404, so disabling it covers the index, the individual
+	 * sitemaps and the stylesheet routes alike.
+	 *
+	 * The settings lookup is deliberately first: on the overwhelming majority of sites Coming Soon
+	 * is off, and short-circuiting there avoids resolving the current user on every front end
+	 * request just to answer this filter.
+	 *
+	 * @param bool $enabled Whether XML sitemaps are enabled.
+	 *
+	 * @return bool
+	 */
+	public function disable_core_sitemaps( $enabled ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' === $settings['enabled'] && ! current_user_can( 'edit_posts' ) ) {
+			return false;
+		}
+
+		return $enabled;
+	}
+
+	/**
+	 * Keep Jetpack's sitemaps off while Coming Soon is active.
+	 *
+	 * Jetpack serves its sitemaps from `wp_loaded`, even earlier than Core's `template_redirect`,
+	 * and exposes no filter for declining an individual request, so the module is switched off
+	 * instead and the URLs 404 like any other unrecognised route.
+	 *
+	 * Unlike `disable_core_sitemaps()` this gates on the setting alone. Jetpack loads its modules
+	 * on `after_setup_theme` at priority -2, and calling `current_user_can()` that early would
+	 * resolve the current user well before WordPress otherwise does. Editors give up nothing for
+	 * it, because a sitemap is only of use to a crawler and `mu-plugins/robots.php` already leaves
+	 * Coming Soon sites out of robots.txt entirely.
+	 *
+	 * Most sites no longer run this module - `mu-plugins/jetpack-tweaks/modules.php` drops it from
+	 * the defaults for new sites in favour of Core's - but sites created before that still have it
+	 * active.
+	 *
+	 * @param array $modules Slugs of the active Jetpack modules.
+	 *
+	 * @return array
+	 */
+	public function disable_jetpack_sitemaps( $modules ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' !== $settings['enabled'] ) {
+			return $modules;
+		}
+
+		return array_values( array_diff( (array) $modules, array( 'sitemaps' ) ) );
 	}
 
 	/**

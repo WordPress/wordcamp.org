@@ -8,7 +8,6 @@
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use GatherPress\Core\Rsvp\Cache;
 use WP_HTML_Tag_Processor;
 
@@ -137,7 +136,7 @@ final class Context {
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular() ) ) {
+		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) ) ) {
 			return self::occurrence_url( (int) $post->ID, self::recurrence_id() );
 		}
 
@@ -169,6 +168,18 @@ final class Context {
 			return $redirect_url;
 		}
 
+		/*
+		 * The calendar endpoints hang off an occurrence rather than being one:
+		 * `…/{occurrence}/ical` is a download, not a page. Rewriting the
+		 * redirect below would send it to `…/{occurrence}/` and drop the
+		 * endpoint, so the visitor lands on the event instead of getting the
+		 * file (#2010). Query var name matches the one our own rewrite rules
+		 * in `Plugin::init()` set.
+		 */
+		if ( get_query_var( 'gatherpress_calendar' ) ) {
+			return false;
+		}
+
 		if ( $redirect_url && self::$occurrence ) {
 			return self::occurrence_url( (int) self::$occurrence->series_post_id, self::recurrence_id() );
 		}
@@ -192,10 +203,23 @@ final class Context {
 			usort( $occurrences, static fn( object $first, object $second ): int => strcmp( $first->datetime_start_gmt, $second->datetime_start_gmt ) );
 		}
 
+		/*
+		 * The group's own choice of how its dates are written (#2033), not a
+		 * format of this extension's own. Through GatherPress's filters rather
+		 * than by calling into the groups mu-plugin: the filters are the
+		 * contract `wporg-groups-frontend` already hooks to answer this for the
+		 * event page, the cards and the emails, and going through them keeps
+		 * this extension usable on a site that has no such setting -- the
+		 * defaults below are then what it falls back to.
+		 */
+		$date_format = (string) apply_filters( 'gatherpress_date_format', 'M j' );
+		$time_format = (string) apply_filters( 'gatherpress_time_format', 'g:i A' );
+		$format      = $date_format . ' @ ' . $time_format . ' T';
+
 		foreach ( $occurrences as $occurrence ) {
-			$timezone = new DateTimeZone( $occurrence->timezone );
+			$timezone = Occurrences::timezone( (string) $occurrence->timezone );
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );
-			$label    = wp_date( 'M j @ g:i A T', $date->getTimestamp(), $timezone );
+			$label    = wp_date( $format, $date->getTimestamp(), $timezone );
 			if ( 'cancelled' === $occurrence->status ) {
 				$label .= ' — ' . __( 'Cancelled', 'wordcamporg' );
 			}

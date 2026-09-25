@@ -4,6 +4,50 @@
  * @package WordCamp\Groups\Frontend
  */
 
+/* === Cancel RSVP ===
+   Sits under the "Attending" button and only while that is what the button
+   says. Deliberately quiet — a text button rather than a second filled one,
+   so the card still reads as one primary action with a way out beneath it,
+   not as two competing choices. */
+.wporg-event-rsvp__cancel {
+
+	/* Its own line — the attendee summary next to it is `inline-flex`, so an
+	   inline cancel sits down beside the avatars and reads as part of that
+	   row. `fit-content` keeps the click target the width of the words
+	   rather than the width of the card. */
+	display: block;
+	width: fit-content;
+	margin: 8px 0 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--wp--preset--color--charcoal-4, #646970);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.5;
+	text-decoration: underline;
+	cursor: pointer;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__cancel:hover {
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e);
+}
+
+.wporg-event-rsvp__cancel:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1, #3858e9);
+	outline-offset: 2px;
+}
+
+.wporg-event-rsvp__cancel[disabled] {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.wporg-event-rsvp__cancel.is-hidden {
+	display: none;
+}
+
 /* === Summary (avatar stack + count) ===
    The button under the RSVP button that opens the attendee modal.
    `inline-flex` keeps the avatars and the "N attending" label on a single
@@ -125,6 +169,43 @@
 /* A past event's button is `disabled`, so the theme's disabled treatment
    already greys it out — the class is left as a styling hook only. */
 
+/* === RSVP status notice === */
+.wporg-event-rsvp__notice:not(.screen-reader-text) {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10, 10px);
+	margin-top: 12px;
+	padding: 10px 16px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.5;
+}
+
+.wporg-event-rsvp__notice.is-success {
+	border-color: #007a2f;
+	background: var(--wp--preset--color--acid-green-3, #e2ffed);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
+
+.wporg-event-rsvp__notice.is-success::before {
+	content: "\2713";
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+.wporg-event-rsvp__notice.is-error {
+	border-color: #b32d0f;
+	background: var(--wp--preset--color--pomegranate-3, #fbeae5);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
+
+.wporg-event-rsvp__notice.is-error::before {
+	content: "!";
+	font-weight: 600;
+	line-height: 1.5;
+}
+
 /* === Full-screen modal === */
 .wporg-event-rsvp__modal {
 	display: none;
@@ -221,28 +302,6 @@
 	display: none;
 }
 
-/* Compact button size — matches the comment composer's submit. */
-.wporg-event-rsvp__save-answers {
-	align-self: flex-start;
-	padding: 10px 20px;
-	font-size: var(--wp--preset--font-size--small, 14px);
-	font-weight: 600;
-	line-height: 1.3;
-	border: 1px solid transparent;
-	border-radius: 2px;
-}
-
-.wporg-event-rsvp__save-answers:disabled {
-	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
-	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
-	color: var(--wp--preset--color--charcoal-4, #656a71);
-	cursor: not-allowed;
-}
-
-.wporg-event-rsvp__save-answers.is-hidden {
-	display: none;
-}
-
 .wporg-event-rsvp__question {
 	display: flex;
 	flex-direction: column;
@@ -287,9 +346,46 @@
 	color: var(--wp--preset--color--blueberry-1);
 }
 
+.wporg-event-rsvp__modal-buttons {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.wporg-event-rsvp__questions ~ .wporg-event-rsvp__modal-buttons {
+	width: 100%;
+	margin-top: 4px;
+}
+
+/* Compact button size - matches the comment composer's submit. */
+.wporg-event-rsvp__save-answers {
+	padding: 8px 16px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	font-weight: 600;
+	line-height: 1.4;
+	border: 1px solid transparent;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__save-answers:disabled {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
+	color: var(--wp--preset--color--charcoal-4, #656a71);
+	cursor: not-allowed;
+}
+
+.wporg-event-rsvp__save-answers.is-hidden {
+	display: none;
+}
+
 .wporg-event-rsvp__modal-rsvp-btn {
 	white-space: nowrap;
 	flex-shrink: 0;
+	padding: 8px 16px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	font-weight: 600;
+	line-height: 1.4;
 }
 
 .wporg-event-rsvp__modal-rsvp-btn.is-attending {
@@ -384,5 +480,15 @@
 		max-width: none;
 		max-height: none;
 		height: 100%;
+	}
+
+	.wporg-event-rsvp__modal-buttons {
+		width: 100%;
+	}
+
+	.wporg-event-rsvp__modal-buttons button {
+		flex: 1 1 auto;
+		text-align: center;
+		justify-content: center;
 	}
 }

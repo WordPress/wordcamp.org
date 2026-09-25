@@ -303,6 +303,8 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 	}
 
 	ctx.rsvpNotice = '';
+	ctx.rsvpNoticeSuccess = false;
+	ctx.rsvpNoticeError = false;
 	ctx.questionsError = '';
 
 	// Join group first if not a member.
@@ -323,6 +325,10 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		} catch {
 			ctx.rsvpLoading = false;
 			ctx.rsvpNotice = labelFromContext( ctx, 'rsvpError' );
+			ctx.rsvpNoticeError = true;
+			if ( ctx.modalOpen ) {
+				ctx.questionsError = ctx.rsvpNotice;
+			}
 			return;
 		}
 	}
@@ -338,6 +344,7 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		const message = labelFromContext( ctx, 'missingAnswers' );
 		ctx.questionsError = message;
 		ctx.rsvpNotice = message;
+		ctx.rsvpNoticeError = true;
 		openRsvpModal( ctx, actionElement );
 		flagMissingAnswers( block, missingInputs );
 		return;
@@ -364,6 +371,8 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		ctx.rsvpNotice = statusChanged
 			? getRsvpSuccessNotice( ctx, data.status )
 			: labelFromContext( ctx, 'answersSaved' );
+		ctx.rsvpNoticeSuccess = true;
+		ctx.rsvpNoticeError = false;
 
 		// Organizers see the answers inline in the attendee list, which the
 		// client-side refresh can't rebuild — reload so their view stays
@@ -373,23 +382,57 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 			return;
 		}
 
+		announceRsvpChange( ctx, data );
+
 		refreshAttendees( ctx, actionElement );
+		closeRsvpModal( ctx );
 	} catch ( error ) {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
 
 		// Our own validation failures carry a message the attendee can act on
-		// ("Please answer: Dietary requirements"). Anything else — a network
-		// blip, a 500 — gets the generic retry wording.
+		// ("Please answer: Dietary requirements"). Anything else - a network
+		// blip, a 500 - gets the generic retry wording.
 		const ours = error?.code?.startsWith?.( 'wporg_groups_' ) && error.message;
 		ctx.rsvpNotice = ours ? error.message : labelFromContext( ctx, 'rsvpError' );
+		ctx.rsvpNoticeError = true;
 		if ( ours ) {
 			ctx.questionsError = error.message;
 			openRsvpModal( ctx, actionElement );
+		} else if ( ctx.modalOpen ) {
+			ctx.questionsError = ctx.rsvpNotice;
 		}
 	} finally {
 		ctx.rsvpLoading = false;
 	}
+}
+
+/**
+ * Tell the rest of the page that this event's RSVP changed.
+ *
+ * Anything outside this block that a reload would have re-rendered has to hear
+ * about an RSVP made in place. The online-event link is the case that prompted
+ * this: it is attendees-only, so the meeting URL can only come from the server
+ * response to the RSVP itself, and the words around it belong to whoever
+ * rendered it rather than to this block (#2094). A DOM event keeps that the
+ * listener's business — the theme owns its own markup and strings, and a site
+ * without one loses nothing.
+ *
+ * @param {Object} ctx  The block's interactivity context.
+ * @param {Object} data The RSVP endpoint's response.
+ */
+function announceRsvpChange( ctx, data ) {
+	document.dispatchEvent(
+		new CustomEvent( 'wporg-groups-rsvp-changed', {
+			detail: {
+				postId: Number( ctx.postId ) || 0,
+				status: data.status,
+				// Absent rather than empty on an older response body, which
+				// tells a listener to leave what is on screen alone.
+				onlineEventLink: data.online_event_link,
+			},
+		} )
+	);
 }
 
 async function getNonce( apiBase ) {

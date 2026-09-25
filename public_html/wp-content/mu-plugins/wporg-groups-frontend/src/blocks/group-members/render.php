@@ -68,16 +68,16 @@ if ( $renders_role_switcher ) {
 	// into one of the three.
 	$switcher_roles = array(
 		'subscriber' => array(
-			'label'       => __( 'Member', 'wporg-groups-frontend' ),
-			'description' => __( 'Join and leave, RSVP, set email preferences.', 'wporg-groups-frontend' ),
+			'label'       => __( 'Member', 'wordcamporg' ),
+			'description' => __( 'Join and leave, RSVP, set email preferences.', 'wordcamporg' ),
 		),
 		'author'     => array(
-			'label'       => __( 'Event Organizer', 'wporg-groups-frontend' ),
-			'description' => __( 'Everything a Member can do, plus create and manage your own events and venues.', 'wporg-groups-frontend' ),
+			'label'       => __( 'Event Organizer', 'wordcamporg' ),
+			'description' => __( 'Everything a Member can do, plus create and manage your own events and venues.', 'wordcamporg' ),
 		),
 		'editor'     => array(
-			'label'       => __( 'Organizer', 'wporg-groups-frontend' ),
-			'description' => __( "Everything an Event Organizer can do, plus manage everyone's events, member roles, group info and design.", 'wporg-groups-frontend' ),
+			'label'       => __( 'Organizer', 'wordcamporg' ),
+			'description' => __( "Everything an Event Organizer can do, plus manage everyone's events, member roles, group info and design.", 'wordcamporg' ),
 		),
 	);
 
@@ -88,7 +88,7 @@ if ( $renders_role_switcher ) {
 		'isError'     => false,
 		'roleApi'     => rest_url( 'wporg-groups/v1/members/me/role' ),
 		'restNonce'   => wp_create_nonce( 'wp_rest' ),
-		'errorLabel'  => __( 'Your role could not be changed. Please try again.', 'wporg-groups-frontend' ),
+		'errorLabel'  => __( 'Your role could not be changed. Please try again.', 'wordcamporg' ),
 	);
 }
 
@@ -103,7 +103,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php
 		echo esc_html(
 			sprintf(
-				_n( '%s Member', '%s Members', $total_count, 'wporg-groups-frontend' ),
+				_n( '%s Member', '%s Members', $total_count, 'wordcamporg' ),
 				number_format_i18n( $total_count )
 			)
 		);
@@ -117,10 +117,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wp-context="<?php echo esc_attr( wp_json_encode( $switcher_context ) ); ?>"
 		>
 			<h3 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
-				<?php esc_html_e( 'Your role in this group', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'Your role in this group', 'wordcamporg' ); ?>
 			</h3>
 			<p class="wporg-group-members__role-switcher-help">
-				<?php esc_html_e( 'This is a testing group, so you can switch your own role to try out the organizer tools. Pick a role below, then switch back whenever you like.', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'This is a testing group, so you can switch your own role to try out the organizer tools. Pick a role below, then switch back whenever you like.', 'wordcamporg' ); ?>
 			</p>
 
 			<div class="wporg-group-members__role-options" role="group" aria-labelledby="wporg-role-switcher-heading">
@@ -159,7 +159,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<div class="wporg-group-members__grid">
 		<?php foreach ( $users as $user ) :
 			$user_role  = reset( $user->roles ) ?: 'subscriber';
-			$role_label = $role_labels[ $user_role ] ?? __( 'Member', 'wporg-groups-frontend' );
+			$role_label = $role_labels[ $user_role ] ?? __( 'Member', 'wordcamporg' );
 			$bio        = wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" );
 			$profile    = sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename );
 			?>

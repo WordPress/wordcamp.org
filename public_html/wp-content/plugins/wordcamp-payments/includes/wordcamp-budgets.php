@@ -34,6 +34,18 @@ class WordCamp_Budgets {
 	);
 
 	/**
+	 * The status each budget request held before the save that is currently running, keyed by post ID.
+	 *
+	 * `save_post` runs after the new status is stored, so a requester submitting a draft would otherwise be
+	 * judged on the status the submission moved it to, and refused the save that writes the fields entered
+	 * alongside it. Written as each save begins and dropped as it ends, so it only ever describes a save that
+	 * is still in flight.
+	 *
+	 * @var array<int, string>
+	 */
+	protected static $status_before_save = array();
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -745,6 +757,108 @@ class WordCamp_Budgets {
 	}
 
 	/**
+	 * Record the status a budget request holds, before the save that is currently running overwrites it.
+	 *
+	 * Called from each budget CPT's own `wp_insert_post_data` callback, past the post-type guard those already
+	 * carry. That hook runs before the row is written, so the stored status is still the one the request had
+	 * when the save began -- and it means this needs no hook of its own. `post_updated` would hand over the old
+	 * post directly, but it, like `wp_after_insert_post`, fires for every post on every site in the network,
+	 * and none of them but these three has any use for it.
+	 *
+	 * The cleanup is attached here rather than at file scope for the same reason: until a budget request is
+	 * actually saved there is nothing to clean up, so on the requests that save anything else the hook is
+	 * simply not there.
+	 *
+	 * @param int|string $post_id The request being saved. Absent for a request being created.
+	 */
+	public static function remember_status_before_save( $post_id ) {
+		if ( ! is_numeric( $post_id ) ) {
+			return;
+		}
+
+		$post_id = (int) $post_id;
+		$status  = get_post_status( $post_id );
+
+		if ( ! $status ) {
+			return;
+		}
+
+		if ( ! self::$status_before_save ) {
+			add_action( 'wp_after_insert_post', array( __CLASS__, 'forget_status_before_save' ), PHP_INT_MAX );
+		}
+
+		self::$status_before_save[ $post_id ] = $status;
+	}
+
+	/**
+	 * Forget the status recorded above, once the save it describes has finished.
+	 *
+	 * Runs on `wp_after_insert_post`, at the lowest priority, so every `save_post` handler has already had its
+	 * answer, and detaches itself once there is nothing left to forget.
+	 *
+	 * @param int $post_id
+	 */
+	public static function forget_status_before_save( $post_id ) {
+		unset( self::$status_before_save[ (int) $post_id ] );
+
+		if ( ! self::$status_before_save ) {
+			remove_action( 'wp_after_insert_post', array( __CLASS__, 'forget_status_before_save' ), PHP_INT_MAX );
+		}
+	}
+
+	/**
+	 * The status to judge a budget request's editability on.
+	 *
+	 * During a save that's the status the request held before it, so a draft being submitted is judged as the
+	 * draft it was rather than as the status the submission moved it to. Everywhere else it's simply the
+	 * stored status.
+	 *
+	 * The recorded status is only honoured while a save of this post is running, which is where every caller
+	 * that needs it sits. That bounds the answer to the handlers this exists for, rather than to whether the
+	 * cleanup below got a chance to run -- `wp_insert_post()` skips `wp_after_insert_post` when a caller
+	 * passes `$fire_after_hooks = false`, and an entry left behind must not widen anything.
+	 *
+	 * What it reports is read off the row itself, so it is always a status the request genuinely held moments
+	 * earlier -- there is no value a caller can put here that the request did not already have. It can widen
+	 * the answer only across the transition the request just made, and only for the request that made it.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return string
+	 */
+	public static function get_status_for_edit_check( $post ) {
+		$recorded = isset( $post->ID ) ? self::$status_before_save[ (int) $post->ID ] ?? null : null;
+
+		if ( ! is_null( $recorded ) && self::is_inside_a_save( $post ) ) {
+			return $recorded;
+		}
+
+		return $post->post_status ?? '';
+	}
+
+	/**
+	 * Whether a `save_post` for the given post is running right now.
+	 *
+	 * Both forms count. `save_post_{$post_type}` fires before the untyped hook, so reading only the latter
+	 * would leave a handler on the typed one judging the request by the status the save had just written --
+	 * the same fields dropped, one hook earlier. Nothing here uses the typed hook today; this keeps it from
+	 * behaving differently if something does.
+	 *
+	 * @param \WP_Post|object $post
+	 *
+	 * @return bool
+	 */
+	protected static function is_inside_a_save( $post ) {
+		if ( doing_action( 'save_post' ) ) {
+			return true;
+		}
+
+		$post_type = $post->post_type ?? '';
+
+		return $post_type && doing_action( "save_post_{$post_type}" );
+	}
+
+	/**
 	 * Determines whether we want to perform actions on the given post based on the current context.
 	 *
 	 * Examples of actions we might perform are saving the meta fields during the `save_post` hook, or send out an
@@ -846,6 +960,9 @@ class WordCamp_Budgets {
 	/**
 	 * Get the files attached to a post
 	 *
+	 * The statuses are named so that `WP_Query` doesn't gate `private` on `read_private_posts`, which a requester
+	 * who is only an Author lacks. Who may see each file is decided by `privacy.php`, through the filters below.
+	 *
 	 * @param WP_Post $post
 	 *
 	 * @return array
@@ -854,6 +971,7 @@ class WordCamp_Budgets {
 		$files = get_posts( array(
 			'post_parent'    => $post->ID,
 			'post_type'      => 'attachment',
+			'post_status'    => array( 'inherit', 'private' ),
 			'posts_per_page' => 100,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
@@ -921,9 +1039,9 @@ class WordCamp_Budgets {
 	 * list in the browser. `wp_update_post()` checks nothing of its own, so the same rules have to hold here for
 	 * whatever comes back in the field.
 	 *
-	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is an edit
-	 * to it -- `post_parent` is the field `privacy.php` reads to decide who sees a payment file -- so it takes
-	 * the same capability any other route to that field would, which is where the guard in `privacy.php` applies.
+	 * Two of them. A file already sitting on another post keeps the post it has. And attaching a file is what
+	 * makes it a payment file, which `privacy.php` records on the attachment as it is reparented, so it takes
+	 * the same capability any other route to `post_parent` would, which is where the guard there applies.
 	 *
 	 * @param mixed $file_id An entry from the field, which is whatever JSON the browser sent.
 	 * @param int   $post_id The request the file would be attached to.

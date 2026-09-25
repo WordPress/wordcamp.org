@@ -186,7 +186,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 */
 		protected function print_clickable_link( $link ) {
 			?>
-		<a href="<?php echo esc_attr( $link ); ?>" target="_blank">
+		<a href="<?php echo esc_url( $link ); ?>" target="_blank">
 			<?php echo esc_html( $link ); ?>
 		</a>
 			<?php

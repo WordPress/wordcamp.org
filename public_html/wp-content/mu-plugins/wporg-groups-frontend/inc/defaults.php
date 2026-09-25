@@ -11,6 +11,8 @@ defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
+use WordCamp\Groups\Frontend\Event_Timezone;
+use WordCamp\Groups\Frontend\Event_Language;
 
 /**
  * Build the default field values for the create-event form.
@@ -24,6 +26,10 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *   times-of-day, falling back to 18:00 / 20:00 if there is no prior event.
  * - **Venue ID** is the venue assigned to the most recent event, or `0` if
  *   none.
+ * - **Timezone** is the most recent event's timezone, falling back to the
+ *   site's own.
+ * - **Language** is the most recent event's language, falling back to the
+ *   site locale's own language.
  *
  * @return array{
  *     title:string,
@@ -33,7 +39,9 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *     time_end:string,
  *     venue_id:int,
  *     is_online:bool,
- *     online_event_link:string
+ *     online_event_link:string,
+ *     timezone:string
+ *     language:string
  * }
  */
 function get_default_event_data(): array {
@@ -46,6 +54,8 @@ function get_default_event_data(): array {
 		'venue_id'          => 0,
 		'is_online'         => false,
 		'online_event_link' => '',
+		'timezone'          => Event_Timezone\get_default(),
+		'language'          => Event_Language\get_default(),
 	);
 
 	$most_recent = get_most_recent_event_id();
@@ -68,6 +78,21 @@ function get_default_event_data(): array {
 	}
 
 	$defaults['venue_id'] = get_event_venue_post_id( $most_recent );
+
+	// A group that runs its meetups in one zone should not have to reselect it
+	// on every event, and a group that moved zones keeps the move.
+	$previous_timezone = Event_Timezone\get_event_timezone( $most_recent );
+	if ( '' !== $previous_timezone ) {
+		$defaults['timezone'] = $previous_timezone;
+	}
+
+	// The group's last event is a better guess at the next one's language than
+	// the site locale is: a Spanish-locale group that switched to running in
+	// English keeps the switch instead of being reset every time.
+	$previous_language = Event_Language\get_event_language( $most_recent );
+	if ( '' !== $previous_language ) {
+		$defaults['language'] = $previous_language;
+	}
 
 	return $defaults;
 }
@@ -123,6 +148,103 @@ const DESCRIPTION_BLOCK_NAMES = array(
 );
 
 /**
+ * Reduce parsed blocks to the ones the description editor knows.
+ *
+ * Recursive, because `core/group`, `core/columns` and `core/column` are on the
+ * list and carry inner blocks: a disallowed block nested inside an allowed one
+ * has to come out too, or the container smuggles it back in.
+ *
+ * `parse_blocks()` gives a `blockName` of `null` to anything outside a block
+ * delimiter: both the whitespace between blocks and freeform HTML that was
+ * never blocks at all. The first is dropped -- it carries no markup and
+ * dropping it is what lets a filtered list re-serialize cleanly -- and the
+ * second is kept, because a description that is plain HTML is a description,
+ * and `wp_kses_post()` is what governs what may be in it. Only *named* blocks
+ * are what this list is about.
+ *
+ * @param array $blocks Parsed blocks.
+ * @return array Blocks, filtered to the allowed set at every depth.
+ */
+function filter_to_description_blocks( array $blocks ): array {
+	$kept = array();
+
+	foreach ( $blocks as $block ) {
+		$name = $block['blockName'] ?? null;
+
+		if ( null === $name ) {
+			if ( '' !== trim( (string) ( $block['innerHTML'] ?? '' ) ) ) {
+				$kept[] = $block;
+			}
+
+			continue;
+		}
+
+		if ( ! in_array( $name, DESCRIPTION_BLOCK_NAMES, true ) ) {
+			continue;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			$block = filter_inner_blocks( $block );
+		}
+
+		$kept[] = $block;
+	}
+
+	return $kept;
+}
+
+/**
+ * Filter a container's inner blocks, keeping `innerContent` in step.
+ *
+ * `serialize_block()` walks `innerContent` and, for each `null` chunk, consumes
+ * the next entry of `innerBlocks` -- the nulls are the placeholders saying
+ * where an inner block sat among the literal markup. Dropping an inner block
+ * without dropping its null leaves core indexing past the end of the array: a
+ * fistful of PHP warnings and a truncated serialization.
+ *
+ * Hence one pass over both, by position, rather than filtering the blocks and
+ * then trying to reconcile the two lists afterwards -- which cannot be done
+ * reliably, since two sibling blocks of the same name are indistinguishable
+ * once one of them is gone.
+ *
+ * @param array $block Parsed block with inner blocks.
+ * @return array The block, filtered, with both lists still agreeing.
+ */
+function filter_inner_blocks( array $block ): array {
+	$inner   = array();
+	$content = array();
+	$index   = 0;
+
+	foreach ( (array) ( $block['innerContent'] ?? array() ) as $chunk ) {
+		if ( is_string( $chunk ) ) {
+			$content[] = $chunk;
+
+			continue;
+		}
+
+		$child = $block['innerBlocks'][ $index++ ] ?? null;
+
+		if ( null === $child ) {
+			continue;
+		}
+
+		// One block at a time, so the keep/drop decision and the placeholder
+		// it belongs to cannot drift apart.
+		$filtered = filter_to_description_blocks( array( $child ) );
+
+		if ( $filtered ) {
+			$inner[]   = $filtered[0];
+			$content[] = null;
+		}
+	}
+
+	$block['innerBlocks']  = $inner;
+	$block['innerContent'] = $content;
+
+	return $block;
+}
+
+/**
  * Pull the description blocks (only) out of an existing event's post_content.
  *
  * Used by the REST `event-form-data` endpoint when loading an event for
@@ -138,15 +260,17 @@ function extract_description_blocks( int $event_id ): string {
 		return '';
 	}
 
-	$blocks = parse_blocks( $content );
-	$kept   = array_filter(
-		$blocks,
+	$blocks = array_filter(
+		filter_to_description_blocks( parse_blocks( $content ) ),
 		static function ( $block ) {
-			return in_array( $block['blockName'], DESCRIPTION_BLOCK_NAMES, true );
+			// Freeform HTML survives the filter above (see its docblock) but
+			// must not reach the editor, which would show its "Keep as HTML"
+			// recovery UI for markup it has no block to render.
+			return null !== ( $block['blockName'] ?? null );
 		}
 	);
 
-	return serialize_blocks( array_values( $kept ) );
+	return serialize_blocks( array_values( $blocks ) );
 }
 
 /**

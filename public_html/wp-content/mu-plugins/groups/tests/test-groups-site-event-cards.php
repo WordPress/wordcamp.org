@@ -2,6 +2,8 @@
 
 namespace WordCamp\Groups\Tests;
 
+use GatherPress\Core\Event\Event;
+
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
@@ -233,6 +235,81 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The placeholder links to its event, the way core links a real
+	 * thumbnail. Without it the media region of an image-less card opened
+	 * nothing while its neighbours' did (#2055).
+	 *
+	 * The link is decorative — it repeats the title link right below it — so
+	 * it stays out of the tab order and inside the `aria-hidden` wrapper.
+	 * `custom.css` also stretches the title link across the whole card, which
+	 * is what actually receives the click; this anchor is what makes the
+	 * markup say so. The stretch is hit-tested in
+	 * `tests/e2e/event-card-clickability.spec.js`, which is the only place a
+	 * layout regression can be caught.
+	 */
+	public function test_placeholder_links_to_its_event() {
+		$this->create_event( 'Imageless Meetup', false );
+
+		$event_ids = get_posts(
+			array(
+				'post_type' => 'gatherpress_event',
+				'fields'    => 'ids',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString(
+			sprintf(
+				'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"><a tabindex="-1" href="%s"></a></div>',
+				esc_url( get_permalink( $event_ids[0] ) )
+			),
+			$output,
+			'The placeholder no longer carries a decorative, non-tabbable link to its event.'
+		);
+	}
+
+	/**
+	 * The card's date line carries the start time as well as the date, so a
+	 * member can tell whether an event is viable without opening it (#2063).
+	 *
+	 * The format matches the one the "My upcoming events" cards already use
+	 * (`inc/../src/blocks/my-events/render.php`) — the design guide calls
+	 * that block the compact variant of this card and asks the two to share
+	 * their date typography, and they disagreed until now.
+	 *
+	 * The time is the event's own, not the viewer's: rendering in the
+	 * viewer's timezone is #2021's and its follow-up's scope.
+	 */
+	public function test_card_shows_the_start_time_beside_the_date() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Timed Meetup',
+			)
+		);
+
+		( new Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2030-05-20 18:30:00',
+				'datetime_end'   => '2030-05-20 20:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'Timed Meetup', $output );
+		$this->assertStringContainsString(
+			'May 20, 2030 · 6:30 PM',
+			$output,
+			"The card's date line no longer shows the event's start time."
+		);
+	}
+
+	/**
 	 * Both grids draw the one shared card — which is also the condition that
 	 * makes the priming above necessary.
 	 */
@@ -261,6 +338,125 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 			);
 		}
 	}
+
+	/**
+	 * Create a published event post and return its post ID.
+	 *
+	 * @param string $title The event title.
+	 * @return int The event post ID.
+	 */
+	private function create_event_post( string $title ): int {
+		return self::factory()->post->create(
+			array(
+				'post_type'    => 'gatherpress_event',
+				'post_status'  => 'publish',
+				'post_title'   => $title,
+				'post_content' => 'An evening of talks, demos and questions about the web.',
+			)
+		);
+	}
+
+	/**
+	 * Assign event venue terms (online sentinel and/or physical venue term).
+	 *
+	 * @param int  $event_id   Event post ID.
+	 * @param bool $is_online  Whether event has the online-event term.
+	 * @param bool $with_venue Whether event has a physical venue term.
+	 */
+	private function set_event_format_terms( int $event_id, bool $is_online, bool $with_venue ): void {
+		if ( ! taxonomy_exists( '_gatherpress_venue' ) ) {
+			register_taxonomy( '_gatherpress_venue', 'gatherpress_event' );
+		}
+
+		$term_ids = array();
+
+		if ( $with_venue ) {
+			$venue_term = term_exists( '_test-venue', '_gatherpress_venue' );
+			if ( ! $venue_term ) {
+				$venue_term = wp_insert_term( 'Test Venue', '_gatherpress_venue', array( 'slug' => '_test-venue' ) );
+			}
+			$term_ids[] = is_array( $venue_term ) ? (int) $venue_term['term_id'] : (int) $venue_term;
+		}
+
+		if ( $is_online ) {
+			$online_term = term_exists( 'online-event', '_gatherpress_venue' );
+			if ( ! $online_term ) {
+				$online_term = wp_insert_term( 'Online event', '_gatherpress_venue', array( 'slug' => 'online-event' ) );
+			}
+			$term_ids[] = is_array( $online_term ) ? (int) $online_term['term_id'] : (int) $online_term;
+		}
+
+		wp_set_object_terms( $event_id, $term_ids, '_gatherpress_venue', false );
+	}
+
+	/**
+	 * Test that get_event_format() returns 'in-person' by default and for physical venue events.
+	 */
+	public function test_event_format_helper_returns_in_person_by_default() {
+		$event_without_terms = $this->create_event_post( 'Default Event' );
+		$this->assertSame( 'in-person', \WordCamp\Groups\Site\get_event_format( $event_without_terms ) );
+
+		$event_with_venue = $this->create_event_post( 'In Person Venue Event' );
+		$this->set_event_format_terms( $event_with_venue, false, true );
+		$this->assertSame( 'in-person', \WordCamp\Groups\Site\get_event_format( $event_with_venue ) );
+	}
+
+	/**
+	 * Test that get_event_format() returns 'online' for online-only events.
+	 */
+	public function test_event_format_helper_returns_online_for_online_only_event() {
+		$event_online = $this->create_event_post( 'Online Only Event' );
+		$this->set_event_format_terms( $event_online, true, false );
+		$this->assertSame( 'online', \WordCamp\Groups\Site\get_event_format( $event_online ) );
+	}
+
+	/**
+	 * Test that get_event_format() returns 'hybrid' for events with both online and physical venue terms.
+	 */
+	public function test_event_format_helper_returns_hybrid_for_event_with_online_and_venue_terms() {
+		$event_hybrid = $this->create_event_post( 'Hybrid Event' );
+		$this->set_event_format_terms( $event_hybrid, true, true );
+		$this->assertSame( 'hybrid', \WordCamp\Groups\Site\get_event_format( $event_hybrid ) );
+	}
+
+	/**
+	 * Test that event cards in the grid render the format badge correctly for in-person events.
+	 */
+	public function test_card_renders_event_format_badge_in_person() {
+		$this->create_event_post( 'In Person Card Event' );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'is-format-in-person', $output );
+		$this->assertStringContainsString( 'In person', $output );
+	}
+
+	/**
+	 * Test that event cards in the grid render the format badge correctly for online events.
+	 */
+	public function test_card_renders_event_format_badge_online() {
+		$event_id = $this->create_event_post( 'Online Card Event' );
+		$this->set_event_format_terms( $event_id, true, false );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'is-format-online', $output );
+		$this->assertStringContainsString( 'Online', $output );
+	}
+
+	/**
+	 * Test that event cards in the grid render the format badge correctly for hybrid events.
+	 */
+	public function test_card_renders_event_format_badge_hybrid() {
+		$event_id = $this->create_event_post( 'Hybrid Card Event' );
+		$this->set_event_format_terms( $event_id, true, true );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'is-format-hybrid', $output );
+		$this->assertStringContainsString( 'Hybrid', $output );
+	}
+
 
 	/**
 	 * Find the first block of a given name in a parsed block tree.

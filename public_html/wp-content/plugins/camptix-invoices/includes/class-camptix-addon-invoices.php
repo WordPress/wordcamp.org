@@ -529,8 +529,11 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) === true ) {
 			try {
+				// Use formatCurrency() with the explicit ISO code so the symbol always matches
+				// the configured currency, rather than format(), which would fall back to the
+				// locale's default currency (e.g. rendering EUR as "$" on an en_US site).
 				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-				$formatted_amount = $formatter->format( $amount );
+				$formatted_amount = $formatter->formatCurrency( $amount, $currency_key );
 			} catch ( \Throwable $e ) {
 				$formatted_amount = false;
 			}

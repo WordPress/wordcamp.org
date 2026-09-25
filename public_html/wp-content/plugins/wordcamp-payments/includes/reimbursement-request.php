@@ -266,7 +266,8 @@ function enqueue_assets() {
  * @return bool
  */
 function user_can_edit_request( $post ) {
-	$editable_status = in_array( $post->post_status ?? '', array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	$status          = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$editable_status = in_array( $status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
 	return current_user_can( 'manage_network' ) || $editable_status;
 }
 
@@ -495,6 +496,9 @@ function set_request_status( $post_data, $post_data_raw ) {
 	if ( ! \WordCamp_Budgets::post_edit_is_actionable( $post_data, POST_TYPE ) ) {
 		return $post_data;
 	}
+
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
 
 	// Requesting to save draft
 	if ( isset( $post_data_raw['wcb-save-draft'] ) ) {
@@ -928,8 +932,9 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 		return $required_capabilities;
 	}
 
-	$drafted_status             = in_array( $post->post_status, array( 'auto-draft', 'draft' ), true );
-	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $post->post_status;
+	$status_for_edit_check      = \WordCamp_Budgets::get_status_for_edit_check( $post );
+	$drafted_status             = in_array( $status_for_edit_check, array( 'auto-draft', 'draft' ), true );
+	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $status_for_edit_check;
 	$is_bulk_edit               = isset( $_REQUEST['bulk_edit'] );
 
 	switch ( $requested_capability ) {

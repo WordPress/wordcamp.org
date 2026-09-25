@@ -187,6 +187,34 @@ here.
 
 You may have a need to change a configuration or behavior in the local environment without modifying files that are tracked by version control. For this, you can add a file to the **mu-plugins** directory called **sandbox-functionality.php**. This file is ignored by git, so changes made to it will not affect the state of the working directory.
 
+### Buying tickets with Stripe in test mode
+
+CampTix sends buyers to Stripe's hosted Checkout page, so a local site can take test payments once it has Stripe test keys.
+
+**Keys.** Any Stripe account's test-mode keys work (`pk_test_…` and `sk_test_…`, a standard secret key rather than a restricted `rk_test_` one). A free Stripe account is enough, and people with w.org sandbox access can use the WPCS test keys from there. Never use live keys locally.
+
+Don't put the keys in `.docker/wp-config.php`: it's tracked by git, and it already defines `WORDCAMP_CAMPTIX_STRIPE_TEST_PUBLIC` and `WORDCAMP_CAMPTIX_STRIPE_TEST_SECRET` as empty strings, so they can't be redefined later. Instead, give them to the **WordCamp Sandbox** account in `sandbox-functionality.php`:
+
+```php
+add_filter( 'camptix_stripe_predefined_accounts', function ( $accounts ) {
+	$public = 'pk_test_…';
+	$secret = 'sk_test_…';
+
+	$accounts['wpcs-sandbox']['api_test_public_key'] = $public;
+	$accounts['wpcs-sandbox']['api_test_secret_key'] = $secret;
+	$accounts['wpcs-sandbox']['api_public_key']      = $public;
+	$accounts['wpcs-sandbox']['api_secret_key']      = $secret;
+
+	return $accounts;
+}, 20 );
+```
+
+**A site that sells tickets.** New sites already use Stripe with the WordCamp Sandbox account. A new site starts in Coming Soon mode with a draft Tickets page, so turn Coming Soon off, publish the Tickets page and add a ticket under **Tickets**. Sites for past events show "This event has completed" instead of the ticket form.
+
+**Buying.** Log in first, since logged-out visitors can't buy tickets, then pay with the test card `4242 4242 4242 4242`, any future expiry date and any CVC. Returning from Stripe confirms the order, so webhooks aren't needed for this.
+
+**Other payment methods.** CampTix doesn't choose payment methods itself; Stripe's Checkout page shows the ones turned on in that account's dashboard. To test iDEAL, Bancontact, Boleto and the like, turn them on in the account's test-mode settings. Some are only offered to accounts in certain countries.
+
 
 ## Useful Docker Commands:
 

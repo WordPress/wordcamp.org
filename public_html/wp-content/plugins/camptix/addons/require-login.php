@@ -638,23 +638,30 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		// Display the ticket status using buyer-friendly labels (issue #1721).
 		if ( $is_unknown_attendee ) {
-			$status_text = _x( 'Status: Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
 			$status_help = __( 'This ticket is fully paid for. It has not been assigned to a specific attendee yet — forward the claim link to whoever will use it.', 'wordcamporg' );
 		} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
-			$status_text = _x( 'Status: Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
 			$status_help = __( 'This ticket is fully paid for. The attendee has not yet logged in with their WordPress.org account to claim it.', 'wordcamporg' );
 		} else {
-			$status_text = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
 			$status_help = '';
 		}
 
-		// Use a non-breaking space to prevent the status text from wrapping.
+		// Use a non-breaking space to prevent the status text from wrapping. The text is already
+		// escaped, so the entity is added after escaping.
 		$content = str_replace( ' ', '&nbsp;', $status_text );
 
-		// Append a help tooltip for non-confirmed cases so buyers see at a glance that
-		// the status is not a payment issue.
+		// For non-confirmed tickets, add a help toggle so buyers can see the status is not a
+		// payment issue. A native disclosure works with a keyboard, screen readers and touch,
+		// which a `title` tooltip doesn't.
 		if ( $status_help ) {
-			$content .= ' <span class="tix-status-help" tabindex="0" aria-label="' . esc_attr( $status_help ) . '" title="' . esc_attr( $status_help ) . '">' . esc_html_x( '(?)', 'CampTix help icon', 'wordcamporg' ) . '</span>';
+			$content .= sprintf(
+				' <details class="tix-status-help"><summary aria-label="%1$s">%2$s</summary><span class="tix-status-help__text">%3$s</span></details>',
+				esc_attr__( 'What does this status mean?', 'wordcamporg' ),
+				esc_html_x( '(?)', 'CampTix help icon', 'wordcamporg' ),
+				esc_html( $status_help )
+			);
 		}
 
 		// Redirect back to this same overview, as they may not login with the correct username.
@@ -1102,6 +1109,47 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
+	 * Get every attendee on an order.
+	 *
+	 * Queries in batches of 200, like CampTix_Plugin::form_access_tickets(), so
+	 * orders with more tickets than one batch are covered too.
+	 *
+	 * @param string $access_token The order's access token.
+	 *
+	 * @return WP_Post[]
+	 */
+	public function get_attendees_by_access_token( $access_token ) {
+		$per_page  = 200;
+		$paged     = 1;
+		$attendees = array();
+
+		do {
+			$batch = get_posts( array(
+				'posts_per_page' => $per_page,
+				'paged'          => $paged++,
+				'post_type'      => 'tix_attendee',
+				'post_status'    => array( 'publish', 'pending' ),
+				'meta_query'     => array(
+					array(
+						'key'     => 'tix_access_token',
+						'value'   => $access_token,
+						'compare' => '=',
+						'type'    => 'CHAR',
+					),
+				),
+				'cache_results'  => false,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			) );
+
+			$attendees   = array_merge( $attendees, $batch );
+			$batch_count = count( $batch );
+		} while ( $batch_count === $per_page );
+
+		return $attendees;
+	}
+
+	/**
 	 * Process the "Email me my claim links" form submission (issue #1721).
 	 *
 	 * Hooked on template_redirect (priority 8, after block_unauthenticated_actions
@@ -1129,20 +1177,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
-		$attendees = get_posts( array(
-			'posts_per_page' => 200,
-			'post_type'      => 'tix_attendee',
-			'post_status'    => array( 'publish', 'pending' ),
-			'meta_query'     => array(
-				array(
-					'key'     => 'tix_access_token',
-					'value'   => $access_token,
-					'compare' => '=',
-					'type'    => 'CHAR',
-				),
-			),
-			'cache_results'  => false,
-		) );
+		$attendees = $this->get_attendees_by_access_token( $access_token );
 
 		$sent          = array();
 		$throttled     = 0;

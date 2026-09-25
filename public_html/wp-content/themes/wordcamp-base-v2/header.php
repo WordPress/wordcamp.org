@@ -52,6 +52,7 @@ if ( $paged >= 2 || $page >= 2 ) {
 </head>
 
 <body <?php body_class(); ?>>
+<?php wp_body_open(); ?>
 
 <div id="page" class="hfeed site">
 	<?php do_action( 'before' ); ?>

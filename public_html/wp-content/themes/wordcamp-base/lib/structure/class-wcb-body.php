@@ -5,6 +5,7 @@ class WCB_Body extends WCB_Elements {
 		echo '<body ';
 		body_class();
 		echo '>';
+		wp_body_open();
 	}
 
 	function after() {

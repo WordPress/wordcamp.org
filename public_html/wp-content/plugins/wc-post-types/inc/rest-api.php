@@ -525,7 +525,7 @@ function register_user_validation_route() {
  */
 function register_additional_rest_fields() {
 	/**
-	 * Speaker/organizer avatars.
+	 * Speaker/organizer/volunteer avatars.
 	 *
 	 * We can't expose a Speaker's e-mail address in the API response, but can we go ahead
 	 * and derive their Gravatar URL and expose that instead.
@@ -562,6 +562,15 @@ function register_additional_rest_fields() {
 
 	register_rest_field(
 		'wcb_organizer',
+		'avatar_urls',
+		array(
+			'get_callback' => __NAMESPACE__ . '\get_avatar_urls_from_username_email',
+			'schema'       => $avatar_schema,
+		)
+	);
+
+	register_rest_field(
+		'wcb_volunteer',
 		'avatar_urls',
 		array(
 			'get_callback' => __NAMESPACE__ . '\get_avatar_urls_from_username_email',

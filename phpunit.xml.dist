@@ -32,6 +32,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="Multi-Event Sponsors">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/multi-event-sponsors/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/

@@ -118,6 +118,7 @@ require_once SUT_WPMU_PLUGIN_DIR . '/groups/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-coming-soon-page/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-forms-to-drafts/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/campt-indian-payment-gateway/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/multi-event-sponsors/tests/bootstrap.php';
 
 /*
  * GatherPress hooks `send_headers` to set a novelty HTTP header ("Go

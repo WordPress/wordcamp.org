@@ -10,10 +10,14 @@ class WordCamp_Coming_Soon_Page {
 	public function __construct() {
 		add_action( 'init',                       array( $this, 'init'                            ), 11    );  // After WCCSP_Settings::init().
 		add_action( 'wp_enqueue_scripts',         array( $this, 'manage_plugin_theme_stylesheets' ), 99    );  // (Hopefully) after all plugins/themes have enqueued their styles.
+		add_action( 'wp_enqueue_scripts',         array( $this, 'disable_jetpack_instant_search' ), 99 );  // After Jetpack Search has enqueued it at the default priority.
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
+		// Again after the callbacks, since `before_callbacks` only sets a response and a
+		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
+		add_filter( 'rest_request_after_callbacks', array( $this, 'disable_rest_endpoints' ), PHP_INT_MAX, 3 );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
@@ -73,6 +77,23 @@ class WordCamp_Coming_Soon_Page {
 
 		// Jetpack Contact Form module. Should be enqueued by rendering, but a change in core rendering has caused it to not apply.
 		wp_enqueue_style( 'grunion.css' );
+	}
+
+	/**
+	 * Keep Jetpack's Instant Search overlay off the Coming Soon page.
+	 *
+	 * Instant Search renders its overlay with JavaScript and relies on its own stylesheet to keep it hidden
+	 * until a visitor opens a search. `dequeue_all_stylesheets()` removes that stylesheet, so the overlay would
+	 * render unstyled at the bottom of the page. The template has no search UI at all, so drop the script and
+	 * the widget area it prints in the footer instead.
+	 */
+	public function disable_jetpack_instant_search() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		wp_dequeue_script( 'jetpack-instant-search' );
+		remove_action( 'wp_footer', array( 'Automattic\Jetpack\Search\Helper', 'print_instant_search_sidebar' ) );
 	}
 
 	/**

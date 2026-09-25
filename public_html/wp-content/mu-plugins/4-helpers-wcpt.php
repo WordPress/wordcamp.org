@@ -1,6 +1,6 @@
 <?php
 
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\{ get_top_level_domain, get_domain_network_id };
 
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
 
@@ -90,13 +90,11 @@ function get_wordcamp_site_id( $wordcamp_post ) {
 
 	$site_id = get_post_meta( $wordcamp_post->ID, '_site_id', true );
 	if ( ! $site_id ) {
-		$url = parse_url( get_post_meta( $wordcamp_post->ID, 'URL', true ) );
+		$url = wp_parse_url( get_post_meta( $wordcamp_post->ID, 'URL', true ) );
 
 		if ( isset( $url['host'] ) && isset( $url['path'] ) ) {
-			$site = get_site_by_path( $url['host'], $url['path'] );
-			if ( $site ) {
-				$site_id = $site->blog_id;
-			}
+			// Not `get_site_by_path()`, which walks up the path and would resolve this to somebody else's site.
+			$site_id = domain_exists( $url['host'], $url['path'], get_domain_network_id( $url['host'], $url['path'] ) ) ?: '';
 		}
 	}
 

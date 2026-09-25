@@ -301,7 +301,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb-spon', // Avoid "sponsor" since that's a trigger word for ad blockers.
 			plugins_url( 'js/wcb-spon.js', __FILE__ ),
 			array( 'jquery', 'backbone', 'media-views' ),
-			1,
+			'20260909',
 			true
 		);
 		wp_localize_script(
@@ -544,6 +544,8 @@ class WordCamp_Post_Types_Plugin {
 					$speakers = get_posts( array(
 						'post_type'      => 'wcb_speaker',
 						'posts_per_page' => -1,
+						'post_status'    => 'publish',
+						'has_password'   => false,
 						'post__in'       => $speakers_ids,
 					) );
 				}
@@ -572,18 +574,19 @@ class WordCamp_Post_Types_Plugin {
 
 				// Determine the session title.
 				if ( 'permalink' === $attr['session_link'] && 'session' === $session_type ) {
-					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( get_permalink( $session->ID ) ), $session_title );
+					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( get_permalink( $session->ID ) ), esc_html( $session_title ) );
 				} elseif ( 'anchor' === $attr['session_link'] && 'session' === $session_type ) {
-					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( $this->get_wcpt_anchor_permalink( $session->ID ) ), $session_title );
+					$session_title_html = sprintf( '<a class="wcpt-session-title" href="%s">%s</a>', esc_url( $this->get_wcpt_anchor_permalink( $session->ID ) ), esc_html( $session_title ) );
 				} else {
-					$session_title_html = sprintf( '<span class="wcpt-session-title">%s</span>', $session_title );
+					$session_title_html = sprintf( '<span class="wcpt-session-title">%s</span>', esc_html( $session_title ) );
 				}
 
 				$content .= $session_title_html;
 
 				$speakers_names = array();
 				foreach ( $speakers as $speaker ) {
-					$speaker_name = apply_filters( 'the_title', $speaker->post_title );
+					$speaker_name      = esc_html( apply_filters( 'the_title', $speaker->post_title ) );
+					$speaker_permalink = '';
 
 					if ( 'anchor' === $attr['speaker_link'] ) {
 						// speakers/#wcorg-speaker-slug.
@@ -597,7 +600,7 @@ class WordCamp_Post_Types_Plugin {
 					}
 
 					if ( ! empty( $speaker_permalink ) ) {
-						$speaker_name = sprintf( '<a href="%s">%s</a>', esc_url( $speaker_permalink ), esc_html( $speaker_name ) );
+						$speaker_name = sprintf( '<a href="%s">%s</a>', esc_url( $speaker_permalink ), $speaker_name );
 					}
 
 					$speakers_names[] = $speaker_name;
@@ -615,7 +618,7 @@ class WordCamp_Post_Types_Plugin {
 				if ( 'session' === $session_type ) {
 					$content .= '<div class="wcb-session-favourite-icon">';
 					$content .= '<a href="#" role="button" class="fav-session-button" aria-pressed="false"><span class="screen-reader-text">';
-					$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), $session_title );
+					$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), esc_html( $session_title ) );
 					$content .= '</span><span class="dashicons dashicons-star-filled"></span></a></div>';
 				}
 
@@ -637,7 +640,7 @@ class WordCamp_Post_Types_Plugin {
 					}
 				}
 
-				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', $colspan, esc_attr( implode( ' ', $classes ) ), $session_track_titles, esc_attr( $session->ID ), $content );
+				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', (int) $colspan, esc_attr( implode( ' ', $classes ) ), esc_attr( $session_track_titles ), esc_attr( $session->ID ), $content );
 			}
 
 			$global_session      = count( $columns ) === $colspan ? ' global-session' : '';
@@ -802,7 +805,26 @@ class WordCamp_Post_Types_Plugin {
 	protected function is_single_cpt_post( $post_type ) {
 		global $wp_query;
 
-		return isset( $wp_query->query[ $post_type ] ) && $post_type === $wp_query->query['post_type'];
+		return isset( $wp_query->query[ $post_type ], $wp_query->query['post_type'] ) && $post_type === $wp_query->query['post_type'];
+	}
+
+	/**
+	 * Whether the callbacks below should add their markup to a post's content.
+	 *
+	 * @param string $post_type The post type the caller adds to.
+	 *
+	 * @return bool
+	 */
+	protected function should_add_to_content( $post_type ) {
+		/*
+		 * The main query being a single CPT post is not enough: `the_content` also
+		 * runs for the entries a listing widget renders on that page, and those
+		 * widgets cache their markup. Add only to the post being viewed.
+		 */
+		return $this->is_single_cpt_post( $post_type )
+			&& get_the_ID() === get_queried_object_id()
+			&& ! site_supports_block_templates()
+			&& ! post_password_required( get_post() );
 	}
 
 	/**
@@ -819,7 +841,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_avatar_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( ! $this->should_add_to_content( 'wcb_speaker' ) ) {
 			return $content;
 		}
 
@@ -853,7 +875,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_session_post_speaker_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session') ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -876,6 +898,8 @@ class WordCamp_Post_Types_Plugin {
 		$speaker_args = array(
 			'post_type'      => 'wcb_speaker',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'post__in'       => $speaker_ids,
 			'orderby'        => 'title',
 			'order'          => 'asc',
@@ -900,7 +924,11 @@ class WordCamp_Post_Types_Plugin {
 		$speakers_html .= '<ul id="session-speaker-names">';
 		while ( $speakers->have_posts() ) {
 			$speakers->the_post();
-			$speakers_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$speakers_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$speakers_html .= '</ul>';
 
@@ -933,7 +961,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -984,7 +1012,7 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -1022,7 +1050,7 @@ class WordCamp_Post_Types_Plugin {
 	public function add_session_categories_to_session_posts( $content ) {
 		global $post;
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( ! $this->should_add_to_content( 'wcb_session' ) ) {
 			return $content;
 		}
 
@@ -1081,7 +1109,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_session_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( ! $this->should_add_to_content( 'wcb_speaker' ) ) {
 			return $content;
 		}
 
@@ -1098,6 +1126,8 @@ class WordCamp_Post_Types_Plugin {
 		$session_args = array(
 			'post_type'      => 'wcb_session',
 			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'meta_key'       => '_wcpt_speaker_id',
 			'meta_value'     => $post->ID,
 			'orderby'        => 'title',
@@ -1123,7 +1153,11 @@ class WordCamp_Post_Types_Plugin {
 		$sessions_html .= '<ul id="speaker-session-names">';
 		while ( $sessions->have_posts() ) {
 			$sessions->the_post();
-			$sessions_html .= sprintf( '<li><a href="%s">%s</a></li>', get_the_permalink(), get_the_title() );
+			$sessions_html .= sprintf(
+				'<li><a href="%s">%s</a></li>',
+				esc_url( get_the_permalink() ),
+				wcorg_escape_shortcodes( get_the_title() )
+			);
 		}
 		$sessions_html .= '</ul>';
 
@@ -1954,6 +1988,9 @@ class WordCamp_Post_Types_Plugin {
 	 *
 	 * This generates the output to the extra columns added to the posts lists in the admin.
 	 *
+	 * Columns carrying private meta check the row, so the screen requires what
+	 * `meta_auth_callback()` already requires for the same keys over REST.
+	 *
 	 * @see manage_post_types_columns()
 	 */
 	public function manage_post_types_columns_output( $column, $post_id ) {
@@ -1967,7 +2004,9 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_speaker_email':
-				echo esc_html( get_post_meta( get_the_ID(), '_wcb_speaker_email', true ) );
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					echo esc_html( get_post_meta( $post_id, '_wcb_speaker_email', true ) );
+				}
 				break;
 
 			case 'wcb_speaker_wporg_username':
@@ -2000,13 +2039,20 @@ class WordCamp_Post_Types_Plugin {
 				$output = array();
 
 				foreach ( $speakers as $speaker ) {
+					// The Speakers screen withholds others' `private` rows and lists drafts to
+					// everyone, so match it.
+					if ( 'private' === $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
+					}
+
 					$status_label = ( 'publish' !== $speaker->post_status ) ? get_post_status_object( $speaker->post_status )->label . ': ' : '';
-					$output[] = sprintf(
-						'<a href="%1$s">%2$s%3$s</a>',
-						esc_url( get_edit_post_link( $speaker->ID ) ),
-						$status_label,
-						esc_html( apply_filters( 'the_title', $speaker->post_title ) )
-					);
+					$title        = $status_label . esc_html( apply_filters( 'the_title', $speaker->post_title ) );
+					$edit_link    = get_edit_post_link( $speaker->ID );
+
+					// Null for a viewer who cannot edit the speaker, which `esc_url()` does not accept.
+					$output[] = $edit_link
+						? sprintf( '<a href="%1$s">%2$s</a>', esc_url( $edit_link ), $title )
+						: $title;
 				}
 
 				// Output is escaped when the string is built, so we can ignore the PHPCS error.
@@ -2032,11 +2078,13 @@ class WordCamp_Post_Types_Plugin {
 				break;
 
 			case 'wcb_sponsor_amount':
-				echo sprintf(
-					'%1$s %2$s',
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_amount', true ) ),
-					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_currency', true ) )
-				);
+				if ( current_user_can( 'edit_post', $post_id ) ) {
+					printf(
+						'%1$s %2$s',
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_amount', true ) ),
+						esc_html( get_post_meta( $post_id, '_wcb_sponsor_currency', true ) )
+					);
+				}
 				break;
 			default:
 		}

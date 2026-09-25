@@ -19,10 +19,10 @@ get_header(); ?>
 					<h1 class="page-title">
 						<?php
 						if ( is_category() ) {
-							printf( __( 'Category Archives: %s', 'wordcamporg' ), '<span>' . single_cat_title( '', false ) . '</span>' );
+							printf( esc_html__( 'Category Archives: %s', 'wordcamporg' ), '<span>' . esc_html( single_cat_title( '', false ) ) . '</span>' );
 
 						} elseif ( is_tag() ) {
-							printf( __( 'Tag Archives: %s', 'wordcamporg' ), '<span>' . single_tag_title( '', false ) . '</span>' );
+							printf( esc_html__( 'Tag Archives: %s', 'wordcamporg' ), '<span>' . esc_html( single_tag_title( '', false ) ) . '</span>' );
 
 						} elseif ( is_author() ) {
 							/*
@@ -30,7 +30,7 @@ get_header(); ?>
 							 * what author we're dealing with (if that is the case).
 							*/
 							the_post();
-							printf( __( 'Author Archives: %s', 'wordcamporg' ), '<span class="vcard"><a class="url fn n" href="' . get_author_posts_url( get_the_author_meta( 'ID' ) ) . '" title="' . esc_attr( get_the_author() ) . '" rel="me">' . get_the_author() . '</a></span>' );
+							printf( esc_html__( 'Author Archives: %s', 'wordcamporg' ), '<span class="vcard"><a class="url fn n" href="' . esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ) . '" title="' . esc_attr( get_the_author() ) . '" rel="me">' . esc_html( get_the_author() ) . '</a></span>' );
 							/*
 								 Since we called the_post() above, we need to
 							 * rewind the loop back to the beginning that way
@@ -39,16 +39,16 @@ get_header(); ?>
 							rewind_posts();
 
 						} elseif ( is_day() ) {
-							printf( __( 'Daily Archives: %s', 'wordcamporg' ), '<span>' . get_the_date() . '</span>' );
+							printf( esc_html__( 'Daily Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date() ) . '</span>' );
 
 						} elseif ( is_month() ) {
-							printf( __( 'Monthly Archives: %s', 'wordcamporg' ), '<span>' . get_the_date( 'F Y' ) . '</span>' );
+							printf( esc_html__( 'Monthly Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date( 'F Y' ) ) . '</span>' );
 
 						} elseif ( is_year() ) {
-							printf( __( 'Yearly Archives: %s', 'wordcamporg' ), '<span>' . get_the_date( 'Y' ) . '</span>' );
+							printf( esc_html__( 'Yearly Archives: %s', 'wordcamporg' ), '<span>' . esc_html( get_the_date( 'Y' ) ) . '</span>' );
 
 						} else {
-							_e( 'Archives', 'wordcamporg' );
+							esc_html_e( 'Archives', 'wordcamporg' );
 
 						}
 						?>

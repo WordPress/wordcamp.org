@@ -11,11 +11,11 @@ if ( ! $gallery_term ) {
 <?php if ( $wp_query->max_num_pages > 1 ) : ?>
 	<div id="nav-above" class="navigation">
 		<div class="nav-previous">
-			<?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'wordcamporg' ) ); ?>
+			<?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?>
 		</div>
 
 		<div class="nav-next">
-			<?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+			<?php previous_posts_link( esc_html__( 'Newer posts', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 		</div>
 	</div>
 <?php endif; ?>
@@ -24,11 +24,11 @@ if ( ! $gallery_term ) {
 <?php if ( ! have_posts() ) : ?>
 	<div id="post-0" class="post error404 not-found">
 		<h1 class="entry-title">
-			<?php _e( 'Not Found', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Not Found', 'wordcamporg' ); ?>
 		</h1>
 
 		<div class="entry-content">
-			<p><?php _e( 'Apologies, but no results were found for the requested archive. Perhaps searching will help find a related post.', 'wordcamporg' ); ?></p>
+			<p><?php esc_html_e( 'Apologies, but no results were found for the requested archive. Perhaps searching will help find a related post.', 'wordcamporg' ); ?></p>
 			<?php get_search_form(); ?>
 		</div>
 	</div>
@@ -97,10 +97,10 @@ if ( ! $gallery_term ) {
 				</a>
 				<span class="meta-sep">|</span>
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div>
 		</div><!-- #post-## -->
 
@@ -113,7 +113,7 @@ if ( ! $gallery_term ) {
 				</div>
 			<?php else : ?>
 				<div class="entry-content">
-					<?php the_content( __( 'Continue reading <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+					<?php the_content( esc_html__( 'Continue reading', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 				</div>
 			<?php endif; ?>
 
@@ -121,9 +121,9 @@ if ( ! $gallery_term ) {
 				<?php twentyten_posted_on(); ?>
 				<span class="meta-sep">|</span>
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div>
 		</div><!-- #post-## -->
 
@@ -148,15 +148,21 @@ if ( ! $gallery_term ) {
 
 			<?php else : ?>
 				<div class="entry-content">
-					<?php the_content( sprintf(
-						// translators: The title of the post to continue reading
-						__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-						the_title( '<span class="screen-reader-text">', '</span> ', false )
-					) ); ?>
+					<?php
+					$more_title = get_the_title();
+
+					the_content(
+						sprintf(
+							/* translators: %s - the title of the post to continue reading */
+							esc_html__( 'Continue reading %s', 'wordcamporg' ),
+							$more_title ? '<span class="screen-reader-text">' . esc_html( $more_title ) . '</span> ' : ''
+						) . '<span class="meta-nav">&rarr;</span>'
+					);
+					?>
 
 					<?php
 					wp_link_pages( array(
-						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
+						'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
 						'after'  => '</div>',
 					) );
 					?>
@@ -167,7 +173,7 @@ if ( ! $gallery_term ) {
 				<?php if ( count( get_the_category() ) ) : ?>
 					<span class="cat-links">
 						<?php printf(
-							__( '<span class="%1$s">Posted in</span> %2$s', 'wordcamporg' ),
+							wp_kses_post( __( '<span class="%1$s">Posted in</span> %2$s', 'wordcamporg' ) ),
 							'entry-utility-prep entry-utility-prep-cat-links',
 							get_the_category_list( ', ' )
 						); ?>
@@ -180,7 +186,7 @@ if ( ! $gallery_term ) {
 				if ( $tags_list ) : ?>
 					<span class="tag-links">
 						<?php printf(
-							__( '<span class="%1$s">Tagged</span> %2$s', 'wordcamporg' ),
+							wp_kses_post( __( '<span class="%1$s">Tagged</span> %2$s', 'wordcamporg' ) ),
 							'entry-utility-prep entry-utility-prep-tag-links',
 							$tags_list
 						); ?>
@@ -189,10 +195,10 @@ if ( ! $gallery_term ) {
 				<?php endif; ?>
 
 				<span class="comments-link">
-					<?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?>
+					<?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?>
 				</span>
 
-				<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+				<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 			</div><!-- .entry-utility -->
 		</div><!-- #post-## -->
 
@@ -205,11 +211,11 @@ if ( ! $gallery_term ) {
 <?php if ( $wp_query->max_num_pages > 1 ) : ?>
 	<div id="nav-below" class="navigation">
 		<div class="nav-previous">
-			<?php next_posts_link( __( '<span class="meta-nav">&larr;</span> Older posts', 'wordcamporg' ) ); ?>
+			<?php next_posts_link( '<span class="meta-nav">&larr;</span> ' . esc_html__( 'Older posts', 'wordcamporg' ) ); ?>
 		</div>
 
 		<div class="nav-next">
-			<?php previous_posts_link( __( 'Newer posts <span class="meta-nav">&rarr;</span>', 'wordcamporg' ) ); ?>
+			<?php previous_posts_link( esc_html__( 'Newer posts', 'wordcamporg' ) . ' <span class="meta-nav">&rarr;</span>' ); ?>
 		</div>
 	</div>
 <?php endif; ?>

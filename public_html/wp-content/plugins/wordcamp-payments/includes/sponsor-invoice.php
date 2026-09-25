@@ -65,6 +65,10 @@ function register_post_type() {
 		'show_in_nav_menus' => true,
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
+
+		// Keep enabled: supplying `capabilities` suppresses the mapping core turns on by default.
+		'map_meta_cap'      => true,
+		'capabilities'      => \WordCamp_Budgets::POST_TYPE_CAPABILITIES,
 	);
 
 	return \register_post_type( POST_TYPE, $args );
@@ -406,6 +410,9 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 		return $post_data;
 	}
 
+	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
+	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
+
 	$sponsor                 = prepare_sponsor_data( $post_data_raw['_wcbsi_sponsor_id'] ?? null );
 	$sponsor                 = array_pop( $sponsor );
 	$sponsor_fields_complete = 'true' === $sponsor['data_attributes']['required-fields-complete'];
@@ -434,6 +441,24 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 		 */
 
 		$post_data['post_status'] = 'wcbsi_submitted';
+	}
+
+	/*
+	 * Statuses past submission (approval, payment, etc.) are reserved for network admins. For everyone
+	 * else, keep the status within the set a requester can set, defaulting to draft.
+	 *
+	 * Keyed on the stored status, so this only applies while the invoice is still requester-editable
+	 * (draft). Status changes made once it's further along, and the initial insert of a new invoice, are
+	 * left as-is.
+	 */
+	if ( ! current_user_can( 'manage_network' ) ) {
+		$requester_editable_statuses = array( 'auto-draft', 'draft' );
+		$requester_statuses          = array( 'auto-draft', 'draft', 'wcbsi_submitted' );
+		$stored_status               = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+
+		if ( in_array( $stored_status, $requester_editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
+			$post_data['post_status'] = 'draft';
+		}
 	}
 
 	return $post_data;
@@ -664,6 +689,12 @@ function action_success_message() {
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
 	// todo maybe centralize this, since almost identical to counterpart in payment-requests.php.
+
+	// `map_meta_cap` runs for every capability check, so skip the post lookup for the ones this ignores.
+	if ( ! in_array( $requested_capability, array( 'edit_post', 'delete_post' ), true ) ) {
+		return $required_capabilities;
+	}
+
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
 	if ( is_a( $post, 'WP_Post' ) && POST_TYPE === $post->post_type ) {
@@ -672,7 +703,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 		 *
 		 * The organizer can still open the request (in order to view the status and details), but won't be allowed to make any changes to it.
 		 */
-		if ( ! in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) {
+		if ( ! in_array( \WordCamp_Budgets::get_status_for_edit_check( $post ), array( 'auto-draft', 'draft' ), true ) ) {
 			if ( 'edit_post' === $requested_capability ) {
 				$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' !== $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 				$is_bulk_edit   = isset( $_REQUEST['bulk_edit'] );

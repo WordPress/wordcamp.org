@@ -413,7 +413,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
 		}
 
-		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
+		// basename() contains the value to the camptix-invoices directory so a crafted meta
+		// value cannot make the PDF generator write, or rename() move, outside of it.
+		$filename = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 		if ( empty( $filename ) ) {
 			$filename = $invoice_number . '-' . wp_generate_password( 12, false, false ) . '.pdf';
 		}
@@ -429,9 +431,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			}
 		}
 
-		rename( $tmp_path, $invoices_dirname . '/' . $filename );
-
-		update_post_meta( $invoice_id, 'invoice_document', $filename );
+		// `rename()` always fails with "Operation not permitted" here because the PDF is
+		// generated into a `/tmp` mount that is a different filesystem from the uploads
+		// volume, so cross-device renames are never possible in this environment. Copy
+		// across and remove the source instead of attempting (and logging a warning for)
+		// a rename that cannot succeed.
+		if ( copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			unlink( $tmp_path );
+			update_post_meta( $invoice_id, 'invoice_document', $filename );
+		}
 	}
 
 	/**
@@ -483,7 +491,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir = wp_upload_dir();
 		if ( ! empty( $upload_dir['basedir'] ) ) {
 			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
-			$filename         = $invoices_dirname . '/' . $filename;
+			// basename() contains the value to the camptix-invoices directory: the meta is
+			// not guaranteed to be plugin-written and must never be able to traverse out.
+			$filename         = $invoices_dirname . '/' . basename( $filename );
 			if ( file_exists( $filename ) ) {
 				wp_delete_file( $filename );
 			}

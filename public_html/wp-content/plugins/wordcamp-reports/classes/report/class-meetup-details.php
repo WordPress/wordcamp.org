@@ -245,7 +245,7 @@ class Meetup_Details extends Base_Details {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

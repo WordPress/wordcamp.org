@@ -51,6 +51,7 @@ function wcb_header_image() {
 
 	// Check if this is a post or page, if it has a thumbnail, and if it's a big one
 	if ( is_singular()
+	&& $post
 	&& has_post_thumbnail( $post->ID )
 	&& ( /* $src, $width, $height */ $image = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'post-thumbnail' ) )
 	&& $image[1] >= get_custom_header()->width ) :

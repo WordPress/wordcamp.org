@@ -224,13 +224,24 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		/** @var WCOR_Mailer $WCOR_Mailer */
 		global $WCOR_Mailer;
 
+		global $wcorg_subroles;
+
 		update_post_meta( self::$timed_reminder_post_id, 'wcor_send_when',  $send_when      );
 		update_post_meta( self::$timed_reminder_post_id, $send_when_period, $send_when_days );
+
+		// `WordCamp_Status_Guard::enforce_post_status()` only lets a wrangler move an
+		// application between statuses, so the fixture has to hold that capability.
+		$wrangler       = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$wcorg_subroles = array( $wrangler => array( 'wordcamp_wrangler' ) );
+		wp_set_current_user( $wrangler );
 
 		wp_update_post( array(
 			'ID'          => self::$wordcamp_dayton_post_id,
 			'post_status' => $wordcamp_post_status,
 		) );
+
+		$wcorg_subroles = array();
+		wp_set_current_user( 0 );
 
 		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after' ) ) ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );

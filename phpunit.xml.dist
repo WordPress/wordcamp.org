@@ -26,6 +26,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Indian Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/campt-indian-payment-gateway/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/
@@ -38,9 +44,21 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-payments/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Post Types">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wc-post-types/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Reports">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-reports/tests/
 			</directory>
 		</testsuite>
 
@@ -67,6 +85,27 @@
 				./public_html/wp-content/plugins/wordcamp-coming-soon-page/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="WordCamp Forms to Drafts">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-forms-to-drafts/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Groups">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
+			</directory>
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/groups/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="GatherPress Recurring Events">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/gatherpress-recurring-events/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">
@@ -80,6 +119,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-reports</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
 			<file>./public_html/wp-content/sunrise-events.php</file>
@@ -89,6 +129,10 @@
 		<exclude>
 			<directory>./public_html/wp-content/mu-plugins/tests</directory>
 			<directory>./public_html/wp-content/mu-plugins/vendor</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/build</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules</directory>
+			<directory>./public_html/wp-content/mu-plugins/groups/tests</directory>
 			<directory>./public_html/wp-content/plugins/*/tests</directory>
 			<directory>./public_html/wp-content/plugins/*/node_modules</directory>
 		</exclude>

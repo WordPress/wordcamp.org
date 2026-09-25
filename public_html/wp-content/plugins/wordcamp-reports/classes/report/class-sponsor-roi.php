@@ -255,7 +255,12 @@ class Sponsor_ROI extends Base {
 		$data = $camp_rows ? array_merge( ...$camp_rows ) : array();
 
 		$data = $this->filter_data_fields( $data );
-		$this->maybe_cache_data( $data );
+
+		// A failed exchange-rate lookup counts that spend as 0 and records an error. Caching
+		// those rows would serve them for up to a week with no error, so only cache clean runs.
+		if ( empty( $this->error->get_error_messages() ) ) {
+			$this->maybe_cache_data( $data );
+		}
 
 		return $data;
 	}
@@ -519,7 +524,8 @@ class Sponsor_ROI extends Base {
 	 * @param string $currency ISO currency code.
 	 * @param string $date     'Y-m-d' rate date (the event date).
 	 *
-	 * @return float Amount in base currency; 0.0 if the currency is unknown.
+	 * @return float Amount in base currency; 0.0 if the currency is unknown, or if the
+	 *               rates lookup fails (which is recorded in the report's errors).
 	 */
 	protected function to_base_currency( $amount, $currency, $date ) {
 		if ( self::BASE_CURRENCY === $currency ) {
@@ -530,19 +536,25 @@ class Sponsor_ROI extends Base {
 			$this->xrt = new Currency_XRT_Client( self::BASE_CURRENCY );
 		}
 
-		$conversion = $this->xrt->convert( $amount, $currency, $date );
+		/*
+		 * Look the rate up directly rather than calling convert(). The client keeps one error
+		 * object for its lifetime, and once convert() records an unknown currency on it, every
+		 * later rate fetch returns that error. This report converts at each camp's own date,
+		 * so that would silently zero out spend at every later camp.
+		 */
+		$rates = $this->xrt->get_rates( $date );
 
-		if ( is_wp_error( $conversion ) ) {
-			if ( 'unknown_currency' !== $conversion->get_error_code() ) {
-				$this->merge_errors( $this->error, $conversion );
-			}
+		if ( is_wp_error( $rates ) ) {
+			$this->merge_errors( $this->error, $rates );
 
 			return 0.0;
 		}
 
-		$base = self::BASE_CURRENCY;
+		if ( empty( $rates[ $currency ] ) ) {
+			return 0.0; // Unsupported currency; counted as 0, like the other spend reports.
+		}
 
-		return (float) $conversion->$base;
+		return (float) $amount / $rates[ $currency ];
 	}
 
 	/**

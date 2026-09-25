@@ -187,6 +187,86 @@ class Test_Sponsor_ROI_Integration extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A failed exchange-rate lookup must not be cached as $0 spend.
+	 *
+	 * The failed run reports the error; the next run must recompute spend
+	 * rather than serve the zeroed rows from cache with no error.
+	 */
+	public function test_get_data_does_not_cache_a_failed_conversion() {
+		$site_id = self::factory()->blog->create();
+		$camp    = array( 987, $site_id, 'WordCamp Test', strtotime( '2024-06-01' ) );
+		$options = array(
+			'cache_data' => true,
+			'public'     => false,
+		);
+
+		switch_to_blog( $site_id );
+
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+			'post_title'  => 'Euro Sponsor',
+		) );
+
+		// See test_get_data_emits_one_row_per_sponsor_per_camp().
+		$intercepted = remove_filter( 'wp_insert_post_data', 'WordCamp\\Budgets\\Sponsor_Invoices\\set_invoice_status', 10 );
+
+		$invoice_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor_invoice',
+			'post_status' => 'wcbsi_paid',
+		) );
+
+		if ( $intercepted ) {
+			add_filter( 'wp_insert_post_data', 'WordCamp\\Budgets\\Sponsor_Invoices\\set_invoice_status', 10, 2 );
+		}
+		update_post_meta( $invoice_id, '_wcbsi_sponsor_id', $sponsor_id );
+		update_post_meta( $invoice_id, '_wcbsi_amount', 100 );
+		update_post_meta( $invoice_id, '_wcbsi_currency', 'EUR' );
+
+		restore_current_blog();
+
+		$failed            = new Stubbed_Sponsor_ROI( '2024-01-01', '2024-12-31', 0, $options );
+		$failed->test_camp = $camp;
+		$failed->xrt       = new class() {
+			/**
+			 * Stubbed rates lookup that fails, as when the rates API is down.
+			 *
+			 * @param string $date
+			 *
+			 * @return \WP_Error
+			 */
+			public function get_rates( $date ) {
+				return new \WP_Error( 'http_response_code', '503: Service Unavailable' );
+			}
+		};
+
+		$failed->get_data();
+
+		$this->assertNotEmpty( $failed->error->get_error_messages() );
+
+		$retry            = new Stubbed_Sponsor_ROI( '2024-01-01', '2024-12-31', 0, $options );
+		$retry->test_camp = $camp;
+		$retry->xrt       = new class() {
+			/**
+			 * Stubbed rates lookup: 0.8 EUR per USD.
+			 *
+			 * @param string $date
+			 *
+			 * @return array
+			 */
+			public function get_rates( $date ) {
+				return array( 'EUR' => 0.8 );
+			}
+		};
+
+		$rows = $retry->get_data();
+
+		$this->assertEmpty( $retry->error->get_error_messages() );
+		$this->assertCount( 1, $rows );
+		$this->assertEqualsWithDelta( 125.0, $rows[0]['spend_usd'], 0.001 );
+	}
+
+	/**
 	 * `get_data` flags missing invoice and unmeasured attendance.
 	 */
 	public function test_get_data_flags_missing_invoice_and_unmeasured_attendance() {

@@ -12,6 +12,7 @@ use function WordCamp\Reports\get_report_classes;
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__, 2 ) . '/camptix/tests/trait-wordcamp-root-blog.php';
+require_once dirname( __DIR__, 3 ) . '/mu-plugins/utilities/class-currency-xrt-client.php'; // The mu-plugins autoloader isn't loaded in tests.
 
 /**
  * Unit tests for the Sponsor ROI report.
@@ -247,35 +248,26 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 	}
 
 	/**
-	 * `to_base_currency` reads converted value.
+	 * `to_base_currency` divides by the date's rate.
 	 */
 	public function test_to_base_currency_reads_converted_value() {
 		$report = $this->report();
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- currency codes are the XRT API's own property names.
-		// Stub the XRT client: convert() returns an object with a ->USD prop.
+		// Stub the XRT client: rates are units of each currency per 1 USD.
 		$report->xrt = new class() {
 			/**
-			 * Stubbed conversion: a fixed USD rate, no network call.
+			 * Stubbed rates: a fixed EUR rate, no network call.
 			 *
-			 * @param float  $amount
-			 * @param string $currency
 			 * @param string $date
 			 *
-			 * @return object
+			 * @return array
 			 */
-			public function convert( $amount, $currency, $date = '' ) {
-				$o = new \stdClass();
-
-				$o->{$currency} = $amount;
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- currency codes are the XRT API's own property names.
-				$o->USD = $amount * 1.1; // Pretend EUR->USD = 1.1.
-
-				return $o;
+			public function get_rates( $date ) {
+				return array( 'EUR' => 0.8 );
 			}
 		};
 
-		$this->assertEqualsWithDelta( 110.0, $this->invoke( $report, 'to_base_currency', array( 100.0, 'EUR', '2024-06-01' ) ), 0.001 );
+		$this->assertEqualsWithDelta( 125.0, $this->invoke( $report, 'to_base_currency', array( 100.0, 'EUR', '2024-06-01' ) ), 0.001 );
 	}
 
 	/**
@@ -286,16 +278,14 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 
 		$report->xrt = new class() {
 			/**
-			 * Stubbed conversion that reports an unknown currency.
+			 * Stubbed rates that don't include the requested currency.
 			 *
-			 * @param float  $amount
-			 * @param string $currency
 			 * @param string $date
 			 *
-			 * @return \WP_Error
+			 * @return array
 			 */
-			public function convert( $amount, $currency, $date = '' ) {
-				return new \WP_Error( 'unknown_currency', 'nope' );
+			public function get_rates( $date ) {
+				return array( 'EUR' => 0.8 );
 			}
 		};
 
@@ -358,21 +348,57 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 
 		$report->xrt = new class() {
 			/**
-			 * Stubbed conversion that fails with an unexpected error code.
+			 * Stubbed rates lookup that fails.
 			 *
-			 * @param float  $amount
-			 * @param string $currency
 			 * @param string $date
 			 *
 			 * @return \WP_Error
 			 */
-			public function convert( $amount, $currency, $date = '' ) {
+			public function get_rates( $date ) {
 				return new \WP_Error( 'request_error', 'API down' );
 			}
 		};
 
 		$this->assertSame( 0.0, $this->invoke( $report, 'to_base_currency', array( 50.0, 'EUR', '2024-06-01' ) ) );
 		$this->assertNotEmpty( $report->error->get_error_messages() );
+	}
+
+	/**
+	 * An unsupported currency at one camp must not zero out spend at later camps.
+	 *
+	 * Runs the real Currency_XRT_Client, with the rates API answered locally. The
+	 * client keeps one error object for its lifetime and returns it from every later
+	 * rate fetch, so a single `unknown_currency` would make a successful fetch for
+	 * another camp's date look like an unknown currency too.
+	 */
+	public function test_to_base_currency_unknown_currency_does_not_poison_later_dates() {
+		$answer_rates = function ( $preempt, $args, $url ) {
+			if ( false === strpos( $url, 'openexchangerates.org' ) ) {
+				return $preempt;
+			}
+
+			return array(
+				'headers'  => array(),
+				'body'     => wp_json_encode( array( 'rates' => array( 'EUR' => 0.8 ) ) ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $answer_rates, 10, 3 );
+
+		$report = $this->report();
+
+		$first  = $this->invoke( $report, 'to_base_currency', array( 50.0, 'XYZ', '2024-06-01' ) );
+		$second = $this->invoke( $report, 'to_base_currency', array( 100.0, 'EUR', '2024-09-01' ) );
+
+		remove_filter( 'pre_http_request', $answer_rates, 10 );
+
+		$this->assertSame( 0.0, $first ); // Unsupported currency: counted as zero, as before.
+		$this->assertEqualsWithDelta( 125.0, $second, 0.001 ); // 100 EUR at 0.8 EUR per USD.
+		$this->assertEmpty( $report->error->get_error_messages() );
 	}
 
 	/**

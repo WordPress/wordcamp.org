@@ -7,6 +7,7 @@ namespace WordCamp\Reports\Tests;
 
 use WP_UnitTestCase;
 use WordCamp\Reports\Report\Sponsor_ROI;
+use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\get_report_classes;
 
 defined( 'WPINC' ) || die();
@@ -484,6 +485,19 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 
 		// Identical parameters must share one.
 		$this->assertSame( $keys['a'], $this->invoke( $e, 'get_cache_key' ) );
+	}
+
+	/**
+	 * A range that ends at the start of today gets the short cache expiry.
+	 *
+	 * `generate_cache_duration()` compares against the beginning of the current
+	 * day, so a range ending at today's midnight still includes "today".
+	 */
+	public function test_cache_duration_is_short_when_the_range_ends_today() {
+		$today = new \DateTimeImmutable( 'today' );
+		$range = new Date_Range( $today->modify( '-7 days' ), $today );
+
+		$this->assertSame( HOUR_IN_SECONDS, $range->generate_cache_duration( WEEK_IN_SECONDS ) );
 	}
 
 	/**

@@ -1313,7 +1313,7 @@ function render_notice(): void {
 					'Export started for %s group. It runs in the background — reload this page to see progress.',
 					'Export started for %s groups. It runs in the background — reload this page to see progress.',
 					$groups,
-					'wporg-groups-frontend'
+					'wordcamporg'
 				),
 				number_format_i18n( $groups )
 			),

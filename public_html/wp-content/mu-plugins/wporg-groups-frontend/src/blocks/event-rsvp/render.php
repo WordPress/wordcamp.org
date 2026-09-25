@@ -115,7 +115,7 @@ $modal_title     = get_modal_title_label( $count, $event_title );
 
 // Shared across the labels array, the SSR label, and the modal button
 // below — keep in a local so the translator context can't drift.
-$cancel_rsvp = _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' );
+$cancel_rsvp = _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wordcamporg' );
 
 // Both the count line and the formats the view module re-renders it from come
 // out of `inc/rsvp-labels.php`, so the wording lives in one place. See
@@ -127,20 +127,20 @@ $rsvp_labels = array_merge(
 	get_modal_title_formats(),
 	array(
 		'loading'                 => "\u{2026}",
-		'attending'               => "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' ),
-		'rsvp'                    => __( 'RSVP', 'wporg-groups-frontend' ),
-		'joinRsvp'                => __( 'Join & RSVP', 'wporg-groups-frontend' ),
-		'statusAttending'         => __( 'You are attending this event.', 'wporg-groups-frontend' ),
-		'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
+		'attending'               => "\u{2713} " . __( 'Attending', 'wordcamporg' ),
+		'rsvp'                    => __( 'RSVP', 'wordcamporg' ),
+		'joinRsvp'                => __( 'Join & RSVP', 'wordcamporg' ),
+		'statusAttending'         => __( 'You are attending this event.', 'wordcamporg' ),
+		'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wordcamporg' ),
 		'cancelRsvp'              => $cancel_rsvp,
-		'attend'                  => __( 'Attend', 'wporg-groups-frontend' ),
-		'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
-		'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wporg-groups-frontend' ),
-		'rsvpSuccessNotAttending' => __( 'Your RSVP has been cancelled.', 'wporg-groups-frontend' ),
-		'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wporg-groups-frontend' ),
-		'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wporg-groups-frontend' ),
-		'missingAnswers'          => __( 'Please answer the required questions.', 'wporg-groups-frontend' ),
-		'answersSaved'            => __( 'Your answers have been saved.', 'wporg-groups-frontend' ),
+		'attend'                  => __( 'Attend', 'wordcamporg' ),
+		'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wordcamporg' ),
+		'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wordcamporg' ),
+		'rsvpSuccessNotAttending' => __( 'Your RSVP has been cancelled.', 'wordcamporg' ),
+		'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wordcamporg' ),
+		'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wordcamporg' ),
+		'missingAnswers'          => __( 'Please answer the required questions.', 'wordcamporg' ),
+		'answersSaved'            => __( 'Your answers have been saved.', 'wordcamporg' ),
 	)
 );
 
@@ -181,14 +181,14 @@ wp_interactivity_state(
 		'modalTitle'     => $modal_title,
 		'isMember'        => $is_member,
 		'rsvpButtonLabel' => $is_attending
-			? "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' )
-			: ( $is_member ? __( 'RSVP', 'wporg-groups-frontend' ) : __( 'Join & RSVP', 'wporg-groups-frontend' ) ),
+			? "\u{2713} " . __( 'Attending', 'wordcamporg' )
+			: ( $is_member ? __( 'RSVP', 'wordcamporg' ) : __( 'Join & RSVP', 'wordcamporg' ) ),
 		'statusText'     => $is_attending
-			? __( 'You are attending this event.', 'wporg-groups-frontend' )
-			: __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
+			? __( 'You are attending this event.', 'wordcamporg' )
+			: __( 'You have not RSVPed to this event.', 'wordcamporg' ),
 		'modalRsvpLabel' => $is_attending
 			? $cancel_rsvp
-			: __( 'Attend', 'wporg-groups-frontend' ),
+			: __( 'Attend', 'wordcamporg' ),
 	)
 );
 
@@ -224,11 +224,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			>
 				<?php
 				if ( $is_attending ) {
-					echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups-frontend' );
+					echo "\u{2713} " . esc_html__( 'Attending', 'wordcamporg' );
 				} elseif ( $is_member ) {
-					esc_html_e( 'RSVP', 'wporg-groups-frontend' );
+					esc_html_e( 'RSVP', 'wordcamporg' );
 				} else {
-					esc_html_e( 'Join & RSVP', 'wporg-groups-frontend' );
+					esc_html_e( 'Join & RSVP', 'wordcamporg' );
 				}
 				?>
 			</button>
@@ -236,7 +236,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php else : ?>
 		<div class="wp-block-button is-style-outline">
 			<button type="button" class="wp-block-button__link wp-element-button is-past" disabled>
-				<?php esc_html_e( 'Past Event', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'Past Event', 'wordcamporg' ); ?>
 			</button>
 		</div>
 	<?php endif; ?>
@@ -274,7 +274,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
 		data-wp-class--has-no-attendees="state.hasNoAttendees"
 		data-wp-on--click="actions.openModal"
-		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups-frontend' ); ?>">
+		aria-label="<?php esc_attr_e( 'View attendees', 'wordcamporg' ); ?>">
 
 		<span class="wporg-event-rsvp__avatars" aria-hidden="true">
 			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
@@ -316,7 +316,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
-		aria-label="<?php esc_attr_e( 'Event attendees', 'wporg-groups-frontend' ); ?>"
+		aria-label="<?php esc_attr_e( 'Event attendees', 'wordcamporg' ); ?>"
 	>
 		<div class="wporg-event-rsvp__modal-content">
 			<div class="wporg-event-rsvp__modal-header">
@@ -329,7 +329,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					type="button"
 					class="wporg-event-rsvp__modal-close"
 					data-wp-on--click="actions.closeModal"
-					aria-label="<?php esc_attr_e( 'Close', 'wporg-groups-frontend' ); ?>"
+					aria-label="<?php esc_attr_e( 'Close', 'wordcamporg' ); ?>"
 				>&times;</button>
 			</div>
 
@@ -339,9 +339,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<p class="wporg-event-rsvp__modal-status" data-wp-text="state.statusText">
 							<?php
 							if ( $is_attending ) {
-								esc_html_e( 'You are attending this event.', 'wporg-groups-frontend' );
+								esc_html_e( 'You are attending this event.', 'wordcamporg' );
 							} else {
-								esc_html_e( 'You have not RSVPed to this event.', 'wporg-groups-frontend' );
+								esc_html_e( 'You have not RSVPed to this event.', 'wordcamporg' );
 							}
 							?>
 						</p>
@@ -351,7 +351,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<?php // Stays visible while attending: an organizer can add a required question after people have signed up, and correcting an answer shouldn't mean cancelling the RSVP. ?>
 							<fieldset class="wporg-event-rsvp__questions">
 								<legend class="screen-reader-text">
-									<?php esc_html_e( 'Registration questions', 'wporg-groups-frontend' ); ?>
+									<?php esc_html_e( 'Registration questions', 'wordcamporg' ); ?>
 								</legend>
 								<?php foreach ( $questions as $question ) : ?>
 									<?php $field_id = 'wporg-event-rsvp-question-' . $event_post_id . '-' . $question['id']; ?>
@@ -392,7 +392,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									data-wp-bind--disabled="context.rsvpLoading"
 									data-wp-bind--aria-busy="context.rsvpLoading"
 								>
-									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
+									<?php esc_html_e( 'Save answers', 'wordcamporg' ); ?>
 								</button>
 							<?php endif; ?>
 
@@ -409,7 +409,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								if ( $is_attending ) {
 									echo esc_html( $cancel_rsvp );
 								} else {
-									esc_html_e( 'Attend', 'wporg-groups-frontend' );
+									esc_html_e( 'Attend', 'wordcamporg' );
 								}
 								?>
 							</button>
@@ -420,7 +420,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							printf(
 								wp_kses(
 									/* translators: %s: login URL */
-									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wporg-groups-frontend' ),
+									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wordcamporg' ),
 									array( 'a' => array( 'href' => array() ) )
 								),
 								esc_url( wp_login_url( get_permalink( $event_post_id ) ) )
@@ -457,7 +457,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					</a>
 				<?php endforeach; ?>
 				<?php if ( empty( $attendees ) ) : ?>
-					<p class="wporg-event-rsvp__empty"><?php esc_html_e( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ); ?></p>
+					<p class="wporg-event-rsvp__empty"><?php esc_html_e( 'No attendees yet. Be the first to RSVP!', 'wordcamporg' ); ?></p>
 				<?php endif; ?>
 			</div>
 		</div>

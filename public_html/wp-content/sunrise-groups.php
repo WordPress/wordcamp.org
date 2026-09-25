@@ -2,7 +2,7 @@
 
 namespace WordCamp\Sunrise\Groups;
 use WP_Network, WP_Site;
-use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url };
+use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url, get_url_port };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\PATTERN_GROUP_PATH;
@@ -163,7 +163,7 @@ function do_redirects() {
 	 */
 	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() && ! is_reachable_root_endpoint() ) {
 		header( 'X-Redirect-By: Groups/Sunrise::do_redirects' );
-		header( 'Location: https://events.wordpress.' . get_top_level_domain() . '/', true, 302 );
+		header( 'Location: https://events.wordpress.' . get_top_level_domain() . get_url_port() . '/', true, 302 );
 		exit;
 	}
 }

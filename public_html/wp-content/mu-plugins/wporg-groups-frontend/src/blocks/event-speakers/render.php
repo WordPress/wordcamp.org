@@ -45,7 +45,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<h3 class="wporg-event-speakers__heading">
 		<?php
-		echo esc_html( _n( 'Speaker', 'Speakers', count( $speakers ), 'wporg-groups-frontend' ) );
+		echo esc_html( _n( 'Speaker', 'Speakers', count( $speakers ), 'wordcamporg' ) );
 		?>
 	</h3>
 	<div class="wporg-event-speakers__list">
@@ -64,7 +64,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				/>
 				<div class="wporg-event-speakers__info">
 					<span class="wporg-event-speakers__name"><?php echo esc_html( $user->display_name ); ?></span>
-					<span class="wporg-event-speakers__badge"><?php esc_html_e( 'Speaker', 'wporg-groups-frontend' ); ?></span>
+					<span class="wporg-event-speakers__badge"><?php esc_html_e( 'Speaker', 'wordcamporg' ); ?></span>
 					<?php if ( $bio ) : ?>
 						<span class="wporg-event-speakers__bio"><?php echo esc_html( $bio ); ?></span>
 					<?php endif; ?>

@@ -640,3 +640,125 @@ describe( 'event RSVP count label', () => {
 		expect( [ ...asked ].sort() ).toEqual( Object.keys( countFormats ).sort() );
 	} );
 } );
+
+/**
+ * The online-event line sits outside this block and a reload used to be the
+ * only thing that moved it. #2094.
+ */
+describe( 'event RSVP announces the change to the rest of the page', () => {
+	let events;
+
+	function listen() {
+		events = [];
+		const handler = ( event ) => events.push( event.detail );
+		document.addEventListener( 'wporg-groups-rsvp-changed', handler );
+		return () => document.removeEventListener( 'wporg-groups-rsvp-changed', handler );
+	}
+
+	function mockRsvp( body ) {
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => body,
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: false } ),
+			} );
+	}
+
+	beforeEach( () => {
+		mockContext = createContext();
+		mockContext.postId = 12;
+		mockContext.rsvpApi = '/wp-json/wporg-groups/v1/event/12/rsvp';
+		mockElement = null;
+		mockStoreConfig = null;
+		global.fetch = jest.fn();
+		window.requestAnimationFrame = jest.fn( ( callback ) => {
+			callback();
+			return 1;
+		} );
+	} );
+
+	afterEach( () => {
+		document.body.innerHTML = '';
+		jest.restoreAllMocks();
+	} );
+
+	test( 'passes on the meeting link the RSVP just unlocked', async () => {
+		const stop = listen();
+		const { actions } = loadStore();
+
+		mockRsvp( {
+			success: true,
+			status: 'attending',
+			responses: { attending: { count: 1 } },
+			online_event_link: 'https://meet.example.test/online-meetup',
+		} );
+
+		await actions.toggleRsvp();
+		stop();
+
+		expect( events ).toEqual( [
+			{
+				postId: 12,
+				status: 'attending',
+				onlineEventLink: 'https://meet.example.test/online-meetup',
+			},
+		] );
+	} );
+
+	test( 'passes on the withdrawal when the RSVP is cancelled', async () => {
+		const stop = listen();
+		mockContext.currentUserStatus = 'attending';
+		mockContext.attendingCount = 1;
+		const { actions } = loadStore();
+
+		mockRsvp( {
+			success: true,
+			status: 'not_attending',
+			responses: { attending: { count: 0 } },
+			online_event_link: '',
+		} );
+
+		await actions.toggleRsvp();
+		stop();
+
+		expect( events ).toEqual( [ { postId: 12, status: 'not_attending', onlineEventLink: '' } ] );
+	} );
+
+	test( 'says nothing about the link when the response carries none', async () => {
+		const stop = listen();
+		const { actions } = loadStore();
+
+		mockRsvp( {
+			success: true,
+			status: 'attending',
+			responses: { attending: { count: 1 } },
+		} );
+
+		await actions.toggleRsvp();
+		stop();
+
+		// Undefined rather than '', so a listener leaves what is on screen
+		// alone instead of wiping a link an older server didn't mention.
+		expect( events[ 0 ].onlineEventLink ).toBeUndefined();
+	} );
+
+	test( 'stays quiet when the RSVP fails', async () => {
+		const stop = listen();
+		const { actions } = loadStore();
+
+		mockRsvp( { success: false } );
+
+		await actions.toggleRsvp();
+		stop();
+
+		expect( events ).toEqual( [] );
+	} );
+} );

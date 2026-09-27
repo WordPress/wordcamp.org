@@ -802,6 +802,189 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Create a published event with a published venue attached to it.
+	 *
+	 * GatherPress links the two with a shadow term in `_gatherpress_venue`
+	 * whose slug is the venue's `post_name` prefixed with an underscore.
+	 *
+	 * @return int The event's post ID.
+	 */
+	private function create_event_with_venue(): int {
+		$venue_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_venue',
+				'post_status' => 'publish',
+				'post_title'  => 'Salty Spaces',
+				'post_name'   => 'salty-spaces',
+			)
+		);
+
+		update_post_meta( $venue_id, 'gatherpress_address', 'The Wharf Mooloolaba, Mooloolaba QLD 4557' );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Event With A Venue',
+			)
+		);
+
+		$slug = '_' . get_post_field( 'post_name', $venue_id );
+		$term = get_term_by( 'slug', $slug, '_gatherpress_venue' );
+
+		if ( ! $term ) {
+			$inserted = wp_insert_term( 'Salty Spaces', '_gatherpress_venue', array( 'slug' => $slug ) );
+			$this->assertNotWPError( $inserted, 'Could not create the venue shadow term.' );
+			$term = get_term( $inserted['term_id'], '_gatherpress_venue' );
+		}
+
+		wp_set_object_terms( $event_id, array( (int) $term->term_id ), '_gatherpress_venue', false );
+
+		return $event_id;
+	}
+
+	/**
+	 * Render the venue block in the context of an event.
+	 *
+	 * @param int $event_id Event to render the block for.
+	 *
+	 * @return string The rendered block.
+	 */
+	private function render_venue_block( int $event_id ): string {
+		global $post;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_post = $post;
+		$post          = get_post( $event_id );
+		setup_postdata( $post );
+
+		$output = do_blocks(
+			'<!-- wp:gatherpress/venue -->'
+			. '<!-- wp:post-title {"level":0,"isLink":false} /-->'
+			. '<!-- wp:gatherpress/venue-detail {"fieldType":"address"} /-->'
+			. '<!-- /wp:gatherpress/venue -->'
+		);
+
+		wp_reset_postdata();
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		return $output;
+	}
+
+	/**
+	 * The venue block must render for logged-out visitors.
+	 *
+	 * GatherPress 0.35.4 gates the block's source post on
+	 * `is_post_publicly_viewable() || current_user_can( 'read_post' )`, and
+	 * the first arm reads `publicly_queryable`, which the tweak above turns
+	 * off. Anonymous visitors therefore got an empty block: no Location
+	 * heading, no venue name, no address, on every public event page and
+	 * card. Logged-in users passed the second arm, which is why it went
+	 * unnoticed. See #2027.
+	 */
+	public function test_venue_block_renders_for_logged_out_visitors() {
+		$event_id = $this->create_event_with_venue();
+
+		wp_set_current_user( 0 );
+
+		$output = $this->render_venue_block( $event_id );
+
+		$this->assertStringContainsString( 'Salty Spaces', $output );
+		$this->assertStringContainsString( 'Mooloolaba', $output );
+	}
+
+	/**
+	 * The override is scoped to the venue block's own render.
+	 *
+	 * A standing `is_post_type_viewable` override would leak into every
+	 * other caller — `WP_Sitemaps_Posts` above all, which would then list
+	 * venue URLs that 404.
+	 */
+	public function test_venue_visibility_override_does_not_outlive_the_block() {
+		$event_id = $this->create_event_with_venue();
+
+		wp_set_current_user( 0 );
+
+		$this->assertFalse( is_post_type_viewable( get_post_type_object( 'gatherpress_venue' ) ) );
+
+		$this->render_venue_block( $event_id );
+
+		$this->assertFalse(
+			is_post_type_viewable( get_post_type_object( 'gatherpress_venue' ) ),
+			'The venue visibility override outlived the block render.'
+		);
+		$this->assertNotContains(
+			'gatherpress_venue',
+			array_keys( ( new \WP_Sitemaps_Posts() )->get_object_subtypes() ),
+			'Venues must stay out of the sitemap - they have no front-end URL.'
+		);
+	}
+
+	/**
+	 * The venue description is an append, not a standalone renderer.
+	 *
+	 * When GatherPress renders nothing, appending the description to that
+	 * empty string leaves a stray sentence in the event card with no
+	 * heading, name or address around it - which is what made the venue
+	 * zone unrecognizable in #2027.
+	 */
+	public function test_venue_description_is_not_appended_to_an_empty_block() {
+		$event_id = $this->create_event_with_venue();
+		$venue    = get_page_by_path( 'salty-spaces', OBJECT, 'gatherpress_venue' );
+
+		$this->assertNotNull( $venue, 'The venue fixture was not created.' );
+
+		wp_update_post(
+			array(
+				'ID'           => $venue->ID,
+				'post_content' => 'An entire pub floor just for us!',
+			)
+		);
+		update_post_meta( $venue->ID, 'gatherpress_access_requirements', 'Step-free entrance.' );
+
+		// The append only runs on a singular event, so put the query there.
+		// Rewrite rules aren't flushed in this suite, so `go_to()` can't
+		// resolve the permalink - set the query up directly instead.
+		global $wp_query, $post;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query = $wp_query;
+		$original_post  = $post;
+
+		$wp_query = new \WP_Query(
+			array(
+				'p'         => $event_id,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+		$wp_query->the_post();
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Could not set up the singular event request.' );
+
+		// phpcs:disable WordPress.NamingConventions.ValidHookName.UseUnderscores -- GatherPress's block filter name.
+		$this->assertSame(
+			'',
+			apply_filters( 'render_block_gatherpress/venue', '', array(), null ),
+			'The description was appended to an empty venue block, stranding it in the event card.'
+		);
+
+		// It must still append when GatherPress actually rendered the venue.
+		$rendered = apply_filters( 'render_block_gatherpress/venue', '<div class="wp-block-gatherpress-venue"></div>', array(), null );
+		// phpcs:enable WordPress.NamingConventions.ValidHookName.UseUnderscores
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+		$wp_query = $original_query;
+		$post     = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertStringContainsString( 'An entire pub floor just for us!', $rendered );
+		$this->assertStringContainsString( 'Step-free entrance.', $rendered );
+	}
+
+	/**
 	 * Search block on the events archive rewrites form action, removes required,
 	 * adds the event_time hidden input, and marks the form for events search clear.
 	 */

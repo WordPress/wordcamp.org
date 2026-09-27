@@ -188,7 +188,7 @@ function EventForm(
 				if ( cancelled ) {
 					return;
 				}
-				setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wporg-groups-frontend' ) );
+				setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wordcamporg' ) );
 				setLoading( false );
 			} );
 	};
@@ -236,7 +236,7 @@ function EventForm(
 
 		onSubmitPayload( buildPayload() ).catch( ( err ) => {
 			setSaving( false );
-			setError( err && err.message ? err.message : __( 'Failed to save the event.', 'wporg-groups-frontend' ) );
+			setError( err && err.message ? err.message : __( 'Failed to save the event.', 'wordcamporg' ) );
 		} );
 	};
 
@@ -259,7 +259,7 @@ function EventForm(
 			) }
 
 			<TextControl
-				label={ __( 'Event title', 'wporg-groups-frontend' ) }
+				label={ __( 'Event title', 'wordcamporg' ) }
 				value={ form.title }
 				onChange={ ( v ) => updateField( 'title', v ) }
 				required
@@ -268,7 +268,7 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__field` }>
 				<label className="components-base-control__label">
-					{ __( 'Description', 'wporg-groups-frontend' ) }
+					{ __( 'Description', 'wordcamporg' ) }
 				</label>
 				<DescriptionEditor
 					key={ editorKey }
@@ -291,7 +291,7 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__row` }>
 				<TextControl
-					label={ __( 'Date', 'wporg-groups-frontend' ) }
+					label={ __( 'Date', 'wordcamporg' ) }
 					type="date"
 					value={ form.date }
 					min={ isExistingPost ? undefined : MINIMUM_EVENT_DATE }
@@ -300,7 +300,7 @@ function EventForm(
 					__nextHasNoMarginBottom
 				/>
 				<TextControl
-					label={ __( 'Start time', 'wporg-groups-frontend' ) }
+					label={ __( 'Start time', 'wordcamporg' ) }
 					type="time"
 					value={ form.time_start }
 					onChange={ ( v ) => updateField( 'time_start', v ) }
@@ -341,14 +341,14 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__online-event` }>
 				<ToggleControl
-					label={ __( 'This is an online event', 'wporg-groups-frontend' ) }
+					label={ __( 'This is an online event', 'wordcamporg' ) }
 					checked={ form.is_online }
 					onChange={ ( value ) => updateField( 'is_online', value ) }
 					__nextHasNoMarginBottom
 				/>
 				{ form.is_online && (
 					<TextControl
-						label={ __( 'Online event link', 'wporg-groups-frontend' ) }
+						label={ __( 'Online event link', 'wordcamporg' ) }
 						type="url"
 						value={ form.online_event_link }
 						onChange={ ( value ) => updateField( 'online_event_link', value ) }
@@ -375,12 +375,12 @@ function EventForm(
 			<div className={ `${ classPrefix }__actions` }>
 				{ footerStart }
 				<Button variant="tertiary" onClick={ onCancel } disabled={ saving }>
-					{ _x( 'Cancel', 'abort current action', 'wporg-groups-frontend' ) }
+					{ _x( 'Cancel', 'abort current action', 'wordcamporg' ) }
 				</Button>
 				<Button variant="primary" type="submit" isBusy={ saving } disabled={ saving }>
 					{ isEdit
-						? __( 'Save changes', 'wporg-groups-frontend' )
-						: __( 'Create event', 'wporg-groups-frontend' ) }
+						? __( 'Save changes', 'wordcamporg' )
+						: __( 'Create event', 'wordcamporg' ) }
 				</Button>
 			</div>
 		</form>

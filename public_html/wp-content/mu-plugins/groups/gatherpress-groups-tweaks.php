@@ -336,9 +336,9 @@ add_filter(
 		$current = normalize_event_time_filter( $current );
 
 		$options = array(
-			'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
-			'past'     => __( 'Past', 'wporg-groups-frontend' ),
-			'all'      => __( 'All', 'wporg-groups-frontend' ),
+			'upcoming' => __( 'Upcoming', 'wordcamporg' ),
+			'past'     => __( 'Past', 'wordcamporg' ),
+			'all'      => __( 'All', 'wordcamporg' ),
 		);
 
 		if ( ! isset( $options[ $current ] ) ) {
@@ -357,13 +357,13 @@ add_filter(
 		 */
 		$label = sprintf(
 			/* translators: %s: the selected time filter, e.g. "Past". */
-			__( 'Time: %s', 'wporg-groups-frontend' ),
+			__( 'Time: %s', 'wordcamporg' ),
 			$options[ $current ]
 		);
 
 		return array(
 			'label'    => $label,
-			'title'    => __( 'Filter by time', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by time', 'wordcamporg' ),
 			'key'      => 'event_time',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -383,9 +383,9 @@ add_filter(
  */
 function get_event_format_filter_options(): array {
 	return array(
-		'all'       => __( 'All', 'wporg-groups-frontend' ),
-		'in-person' => __( 'In person', 'wporg-groups-frontend' ),
-		'online'    => __( 'Online', 'wporg-groups-frontend' ),
+		'all'       => __( 'All', 'wordcamporg' ),
+		'in-person' => __( 'In person', 'wordcamporg' ),
+		'online'    => __( 'Online', 'wordcamporg' ),
 	);
 }
 
@@ -465,10 +465,10 @@ add_filter(
 			// what is already applied.
 			'label'    => sprintf(
 				/* translators: %s: the selected format filter, e.g. "Online". */
-				__( 'Format: %s', 'wporg-groups-frontend' ),
+				__( 'Format: %s', 'wordcamporg' ),
 				$options[ $current ]
 			),
-			'title'    => __( 'Filter by format', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by format', 'wordcamporg' ),
 			'key'      => 'event_format',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -509,7 +509,7 @@ function get_event_language_filter_options(): array {
 
 	uasort( $named, static fn( string $first, string $second ): int => strcasecmp( transliterate( $first ), transliterate( $second ) ) );
 
-	return array( 'all' => __( 'All', 'wporg-groups-frontend' ) ) + $named;
+	return array( 'all' => __( 'All', 'wordcamporg' ) ) + $named;
 }
 
 /**
@@ -602,10 +602,10 @@ add_filter(
 			// what is already applied.
 			'label'    => sprintf(
 				/* translators: %s: the selected language filter, e.g. "Spanish". */
-				__( 'Language: %s', 'wporg-groups-frontend' ),
+				__( 'Language: %s', 'wordcamporg' ),
 				$options[ $current ]
 			),
-			'title'    => __( 'Filter by language', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by language', 'wordcamporg' ),
 			'key'      => 'event_language',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
@@ -672,7 +672,7 @@ add_filter(
 		}
 
 		/* translators: %s: the number of events found. */
-		return _n( '%s event', '%s events', $found_posts, 'wporg-groups-frontend' );
+		return _n( '%s event', '%s events', $found_posts, 'wordcamporg' );
 	},
 	10,
 	3
@@ -825,6 +825,15 @@ add_filter(
 			return $content;
 		}
 
+		// GatherPress renders nothing when it cannot resolve a venue the
+		// viewer may see. Appending to that empty string would leave the
+		// description stranded in the event card with no heading, name or
+		// address around it, which reads as a stray sentence rather than a
+		// venue. Nothing to append to means nothing to append.
+		if ( '' === trim( $content ) ) {
+			return $content;
+		}
+
 		if ( ! is_singular( 'gatherpress_event' ) ) {
 			return $content;
 		}
@@ -856,7 +865,7 @@ add_filter(
 
 		if ( $access ) {
 			$extra .= '<p class="wporg-venue-access"><strong>'
-				. esc_html__( 'Access:', 'wporg-groups-frontend' ) . '</strong> '
+				. esc_html__( 'Access:', 'wordcamporg' ) . '</strong> '
 				. esc_html( $access ) . '</p>';
 		}
 
@@ -887,6 +896,82 @@ add_filter(
 	10,
 	2
 );
+
+/**
+ * Report the gatherpress_venue post type as viewable.
+ *
+ * Only ever hooked for the duration of a `gatherpress/venue` block render;
+ * see {@see open_venue_block_visibility()}.
+ *
+ * @param bool          $viewable  Whether the post type is viewable.
+ * @param \WP_Post_Type $post_type The post type being tested.
+ *
+ * @return bool
+ */
+function treat_venue_post_type_as_viewable( bool $viewable, \WP_Post_Type $post_type ): bool {
+	return 'gatherpress_venue' === $post_type->name ? true : $viewable;
+}
+
+/**
+ * Let the venue block resolve its venue for logged-out visitors.
+ *
+ * GatherPress 0.35.4 gates the block's source post on
+ * `is_post_publicly_viewable( $venue ) || current_user_can( 'read_post', $venue )`
+ * (Blocks\Venue::get_viewable_source_post()). For a non-builtin post type
+ * `is_post_type_viewable()` reads `publicly_queryable`, which the tweak above
+ * deliberately turns off, so the first arm is always false here. Logged-in
+ * users pass the second arm, which is why this only ever broke for anonymous
+ * visitors: the whole Location section — label, venue name, address, website,
+ * map — silently rendered as nothing on every public event page and card.
+ *
+ * Venues still have no front-end URL of their own: routing keys off the
+ * registered `publicly_queryable`/`public` args, which stay false, and no
+ * rewrite rules are registered for the type. This only changes the answer
+ * `is_post_type_viewable()` gives, and only while the block is rendering, so
+ * callers that read it for other purposes are untouched — `WP_Sitemaps_Posts`
+ * above all, which would otherwise list venue URLs that 404.
+ *
+ * @param string|null $pre          Pre-render short-circuit value.
+ * @param array       $parsed_block The block about to be rendered.
+ *
+ * @return string|null Unchanged.
+ */
+function open_venue_block_visibility( $pre, array $parsed_block ) {
+	// A non-null $pre means an earlier callback short-circuited the render,
+	// so `render_block_gatherpress/venue` never fires and the override would
+	// have nothing to close it.
+	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
+		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
+	}
+
+	return $pre;
+}
+
+add_filter( 'pre_render_block', __NAMESPACE__ . '\open_venue_block_visibility', 10, 2 );
+
+/**
+ * Close the window opened by {@see open_venue_block_visibility()}.
+ *
+ * Priority 1 so the override is gone before any other callback on this filter
+ * runs. `render.php` has already resolved the venue by this point, so nothing
+ * downstream needs it.
+ *
+ * Venue blocks do not nest — GatherPress resolves one source post per block —
+ * but a venue post whose own content embeds one would re-enter here; removing
+ * an already-removed callback is a no-op, and the outer render has finished
+ * resolving either way.
+ *
+ * @param string $content Rendered block content.
+ *
+ * @return string Unchanged.
+ */
+function close_venue_block_visibility( string $content ): string {
+	remove_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10 );
+
+	return $content;
+}
+
+add_filter( 'render_block_gatherpress/venue', __NAMESPACE__ . '\close_venue_block_visibility', 1 );
 
 /**
  * Require an editing capability to read venues over the REST API.
@@ -940,7 +1025,7 @@ add_filter(
 					if ( ! current_user_can( 'edit_posts' ) ) {
 						return new \WP_Error(
 							'rest_forbidden',
-							__( 'Sorry, you are not allowed to view venues.', 'wporg-groups-frontend' ),
+							__( 'Sorry, you are not allowed to view venues.', 'wordcamporg' ),
 							array( 'status' => rest_authorization_required_code() )
 						);
 					}

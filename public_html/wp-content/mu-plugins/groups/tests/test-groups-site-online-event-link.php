@@ -65,6 +65,13 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 			10,
 			3
 		);
+
+		add_filter(
+			'render_block_gatherpress/online-event-link',
+			'WordCamp\\Groups\\Site\\label_the_online_event_link',
+			10,
+			2
+		);
 	}
 
 	/**
@@ -167,6 +174,28 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 	}
 
 	/**
+	 * The label element and what follows it, which is where the words the
+	 * viewer reads live.
+	 *
+	 * The wrapper carries both states' words as data attributes, for the
+	 * browser to use after an RSVP made without a reload — so "Join event"
+	 * appears in the zone's markup whoever is looking, and an assertion about
+	 * what is *rendered* has to start after those.
+	 *
+	 * @param int $event_id The event to render for.
+	 *
+	 * @return string The rendered label.
+	 */
+	private function render_online_event_label( int $event_id ): string {
+		$output = $this->render_online_event_zone( $event_id );
+		$label  = strstr( $output, 'gatherpress-online-event__text' );
+
+		$this->assertIsString( $label, 'The online-event zone rendered without a label.' );
+
+		return $label;
+	}
+
+	/**
 	 * An attendee of an upcoming event gets the link, so the label offers the
 	 * action rather than describing the format — and drops the tooltip, which
 	 * only ever explained why there was nothing to click.
@@ -181,14 +210,14 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 
 		$this->assertSame( 'attending', $response['status'] );
 
-		$output = $this->render_online_event_zone( $event_id );
+		$label = $this->render_online_event_label( $event_id );
 
-		$this->assertStringContainsString( 'Join event', $output );
-		$this->assertStringContainsString( esc_url( self::MEETING_URL ), $output );
-		$this->assertStringNotContainsString( 'Online event', $output );
+		$this->assertStringContainsString( 'Join event', $label );
+		$this->assertStringContainsString( esc_url( self::MEETING_URL ), $label );
+		$this->assertStringNotContainsString( 'Online event', $label );
 		$this->assertStringNotContainsString(
 			'gatherpress-tooltip',
-			$output,
+			$label,
 			'The attendees-only tooltip is still shown to an attendee who can already use the link.'
 		);
 	}
@@ -202,14 +231,14 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 
 		wp_set_current_user( self::factory()->user->create() );
 
-		$output = $this->render_online_event_zone( $event_id );
+		$label = $this->render_online_event_label( $event_id );
 
-		$this->assertStringContainsString( 'Online event', $output );
-		$this->assertStringContainsString( 'gatherpress-tooltip', $output );
-		$this->assertStringNotContainsString( 'Join event', $output );
+		$this->assertStringContainsString( 'Online event', $label );
+		$this->assertStringContainsString( 'gatherpress-tooltip', $label );
+		$this->assertStringNotContainsString( 'Join event', $label );
 		$this->assertStringNotContainsString(
 			self::MEETING_URL,
-			$output,
+			$label,
 			'The meeting URL leaked to somebody who is not attending.'
 		);
 	}
@@ -227,11 +256,64 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 
 		( new Rsvp( $event_id ) )->save( $user_id, 'attending' );
 
+		$label = $this->render_online_event_label( $event_id );
+
+		$this->assertStringContainsString( 'Online event', $label );
+		$this->assertStringNotContainsString( 'Join event', $label );
+		$this->assertStringNotContainsString( self::MEETING_URL, $label );
+	}
+
+	/**
+	 * An RSVP made without a reload moves the viewer between the two states,
+	 * and `assets/js/online-event-link.js` rewrites the element in place. It
+	 * can only do that if the words for the state it is about to move *to*
+	 * are on the element, so both are always there (#2094).
+	 */
+	public function test_both_labels_are_attached_for_a_non_attendee() {
+		$event_id = $this->create_online_event();
+
+		wp_set_current_user( self::factory()->user->create() );
+
 		$output = $this->render_online_event_zone( $event_id );
 
-		$this->assertStringContainsString( 'Online event', $output );
-		$this->assertStringNotContainsString( 'Join event', $output );
-		$this->assertStringNotContainsString( self::MEETING_URL, $output );
+		$this->assertStringContainsString( 'data-groups-site-join-label="Join event"', $output );
+		$this->assertStringContainsString( 'data-groups-site-description-label=', $output );
+		$this->assertStringContainsString(
+			'Link available for attendees only.',
+			$output,
+			'The description label is not the one the template authored.'
+		);
+		$this->assertStringNotContainsString(
+			self::MEETING_URL,
+			$output,
+			'The meeting URL leaked to somebody who is not attending.'
+		);
+	}
+
+	/**
+	 * The same both ways round: an attendee who cancels has to get the
+	 * description and its tooltip back, so those words ship with the link.
+	 */
+	public function test_both_labels_are_attached_for_an_attendee() {
+		$event_id = $this->create_online_event();
+		$user_id  = self::factory()->user->create();
+
+		wp_set_current_user( $user_id );
+
+		( new Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$output = $this->render_online_event_zone( $event_id );
+
+		$this->assertStringContainsString( 'data-groups-site-join-label="Join event"', $output );
+		$this->assertStringContainsString(
+			'Link available for attendees only.',
+			$output,
+			'An attendee who cancels would have nothing to put back.'
+		);
+
+		// The tooltip is only stored for later — the rendered label is still
+		// the action, as `test_attendee_of_an_upcoming_event_is_offered_the_action()` pins.
+		$this->assertStringNotContainsString( '<span class="gatherpress-tooltip"', $output );
 	}
 
 	/**

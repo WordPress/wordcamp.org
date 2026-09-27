@@ -71,7 +71,7 @@ export default function DesignTab() {
 				setLoadFailed( true );
 				setNoticeType( 'error' );
 				setNotice(
-					err.message || __( 'Could not load group settings.', 'wporg-groups-frontend' )
+					err.message || __( 'Could not load group settings.', 'wordcamporg' )
 				);
 				setLoading( false );
 			} );
@@ -90,10 +90,10 @@ export default function DesignTab() {
 				},
 			} );
 			setNoticeType( 'success' );
-			setNotice( __( 'Settings saved.', 'wporg-groups-frontend' ) );
+			setNotice( __( 'Settings saved.', 'wordcamporg' ) );
 		} catch ( err ) {
 			setNoticeType( 'error' );
-			setNotice( err.message || __( 'Could not save settings.', 'wporg-groups-frontend' ) );
+			setNotice( err.message || __( 'Could not save settings.', 'wordcamporg' ) );
 		} finally {
 			setSaving( false );
 		}
@@ -118,31 +118,31 @@ export default function DesignTab() {
 			),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Date and time format', 'wporg-groups-frontend' )
+			__( 'Date and time format', 'wordcamporg' )
 		),
 		h( 'p', {},
 			__(
 				'How dates and times are written on your event pages, in the events list, and in the emails your members receive.',
-				'wporg-groups-frontend'
+				'wordcamporg'
 			)
 		),
 
 		h( RadioControl, {
-			label: __( 'Date format', 'wporg-groups-frontend' ),
+			label: __( 'Date format', 'wordcamporg' ),
 			selected: form.dateFormat,
 			options: toOptions(
 				dateChoices,
-				__( 'Use this site’s design default', 'wporg-groups-frontend' )
+				__( 'Use this site’s design default', 'wordcamporg' )
 			),
 			onChange: ( value ) => setForm( { ...form, dateFormat: value } ),
 		} ),
 
 		h( RadioControl, {
-			label: __( 'Time format', 'wporg-groups-frontend' ),
+			label: __( 'Time format', 'wordcamporg' ),
 			selected: form.timeFormat,
 			options: toOptions(
 				timeChoices,
-				__( 'Use this site’s design default', 'wporg-groups-frontend' )
+				__( 'Use this site’s design default', 'wordcamporg' )
 			),
 			onChange: ( value ) => setForm( { ...form, timeFormat: value } ),
 		} ),
@@ -158,15 +158,15 @@ export default function DesignTab() {
 					isBusy: saving,
 					disabled: saving || loadFailed,
 				},
-				__( 'Save', 'wporg-groups-frontend' )
+				__( 'Save', 'wordcamporg' )
 			)
 		),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Everything else', 'wporg-groups-frontend' )
+			__( 'Everything else', 'wordcamporg' )
 		),
 		h( 'p', {},
-			__( 'Use the WordPress Site Editor to customise your group site — change colors, fonts, the hero image, page layouts, and more.', 'wporg-groups-frontend' )
+			__( 'Use the WordPress Site Editor to customise your group site — change colors, fonts, the hero image, page layouts, and more.', 'wordcamporg' )
 		),
 		h(
 			Button,
@@ -175,7 +175,7 @@ export default function DesignTab() {
 				href: editorUrl,
 				target: '_self',
 			},
-			__( 'Open Site Editor', 'wporg-groups-frontend' )
+			__( 'Open Site Editor', 'wordcamporg' )
 		)
 	);
 }

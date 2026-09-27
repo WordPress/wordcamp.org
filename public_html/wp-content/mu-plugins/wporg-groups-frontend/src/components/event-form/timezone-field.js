@@ -34,10 +34,10 @@ export default function TimezoneField( { timezones, value, onChange, classPrefix
 		h(
 			SelectControl,
 			{
-				label: __( 'Time zone', 'wporg-groups-frontend' ),
+				label: __( 'Time zone', 'wordcamporg' ),
 				help: __(
 					'The start and end times above are in this zone.',
-					'wporg-groups-frontend'
+					'wordcamporg'
 				),
 				value: value || '',
 				onChange: onChange,

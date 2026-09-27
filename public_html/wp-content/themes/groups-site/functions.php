@@ -57,6 +57,16 @@ function enqueue_assets() {
 			true
 		);
 	}
+
+	if ( is_singular( 'gatherpress_event' ) ) {
+		wp_enqueue_script(
+			'groups-site-online-event-link',
+			get_theme_file_uri( 'assets/js/online-event-link.js' ),
+			array(),
+			filemtime( get_theme_file_path( 'assets/js/online-event-link.js' ) ),
+			true
+		);
+	}
 }
 
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
@@ -253,7 +263,7 @@ function register_pattern_category() {
 	register_block_pattern_category(
 		'groups-site',
 		array(
-			'label' => __( 'Groups Site', 'groups-site' ),
+			'label' => __( 'Groups Site', 'wordcamporg' ),
 		)
 	);
 }
@@ -329,7 +339,7 @@ function add_local_navigation_menus( $menus ) {
 
 	$items = array(
 		array(
-			'label' => __( 'All Events', 'groups-site' ),
+			'label' => __( 'All Events', 'wordcamporg' ),
 			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
 		),
 	);
@@ -343,18 +353,18 @@ function add_local_navigation_menus( $menus ) {
 	 */
 	if ( is_user_member_of_blog() ) {
 		$items[] = array(
-			'label' => __( 'My events', 'groups-site' ),
+			'label' => __( 'My events', 'wordcamporg' ),
 			'url'   => home_url( '/#my-events' ),
 		);
 	}
 
 	$items[] = is_user_logged_in()
 		? array(
-			'label' => __( 'Log out', 'groups-site' ),
+			'label' => __( 'Log out', 'wordcamporg' ),
 			'url'   => wp_logout_url( $current_url ),
 		)
 		: array(
-			'label' => __( 'Log in', 'groups-site' ),
+			'label' => __( 'Log in', 'wordcamporg' ),
 			'url'   => wp_login_url( $current_url ),
 		);
 
@@ -394,13 +404,13 @@ function filter_site_breadcrumbs( $breadcrumbs ) {
 	$title = '';
 
 	if ( is_post_type_archive( 'gatherpress_event' ) ) {
-		$title = __( 'Events', 'groups-site' );
+		$title = __( 'Events', 'wordcamporg' );
 	} elseif ( is_home() ) {
-		$title = __( 'Latest posts', 'groups-site' );
+		$title = __( 'Latest posts', 'wordcamporg' );
 	} elseif ( is_search() ) {
-		$title = __( 'Search results', 'groups-site' );
+		$title = __( 'Search results', 'wordcamporg' );
 	} elseif ( is_404() ) {
-		$title = __( 'Page not found', 'groups-site' );
+		$title = __( 'Page not found', 'wordcamporg' );
 	}
 
 	if ( $title ) {
@@ -524,13 +534,13 @@ function compact_comment_form_defaults( $defaults ) {
 	$defaults['cancel_reply_before'] = '';
 	$defaults['cancel_reply_after']  = '';
 
-	$defaults['label_submit'] = __( 'Post comment', 'groups-site' );
+	$defaults['label_submit'] = __( 'Post comment', 'wordcamporg' );
 	$defaults['class_submit'] = 'submit wp-element-button';
 
 	$defaults['comment_field'] = sprintf(
 		'<p class="comment-form-comment"><label class="screen-reader-text" for="comment">%1$s</label><textarea id="comment" name="comment" cols="45" rows="3" maxlength="65525" required placeholder="%2$s"></textarea></p>',
-		esc_html__( 'Comment', 'groups-site' ),
-		esc_attr__( 'Add a comment&hellip;', 'groups-site' )
+		esc_html__( 'Comment', 'wordcamporg' ),
+		esc_attr__( 'Add a comment&hellip;', 'wordcamporg' )
 	);
 
 	return $defaults;
@@ -543,12 +553,19 @@ add_filter( 'comment_form_defaults', __NAMESPACE__ . '\compact_comment_form_defa
  */
 function compact_comment_reply_link_args( $args ) {
 	if ( has_compact_comment_form() ) {
-		$args['reply_text'] = __( 'Reply', 'groups-site' );
-		$args['login_text'] = __( 'Log in to comment', 'groups-site' );
+		$args['reply_text'] = __( 'Reply', 'wordcamporg' );
+		$args['login_text'] = __( 'Log in to comment', 'wordcamporg' );
 	}
 	return $args;
 }
 add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );
+
+/**
+ * Block attribute carrying the online-event label for the state a render is
+ * *not* in — see `label_the_online_event_link()`. Deliberately not registered
+ * with the block, so it never reaches GatherPress's own render.
+ */
+const ONLINE_EVENT_LINK_TEXT_ATTR = 'groupsSiteDescriptionLinkText';
 
 /**
  * Say "Join event" once the online-event link is one.
@@ -563,11 +580,9 @@ add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_l
  * (#2057).
  *
  * Chosen here rather than in the template because the template holds one
- * string and the right one depends on the viewer. Server-side is enough:
- * GatherPress swaps the span for a link client-side off its own
- * interactivity store, which the theme's `wporg/event-rsvp` block doesn't
- * feed, so on these sites the element is only ever decided on a page load —
- * the same request that picks these words.
+ * string and the right one depends on the viewer. This settles the page load;
+ * an RSVP made in place is `assets/js/online-event-link.js`, which needs both
+ * strings and gets them from `label_the_online_event_link()`.
  *
  * @param array          $parsed_block The block about to render.
  * @param array          $source_block The block as it was parsed.
@@ -611,11 +626,55 @@ function name_the_online_event_link_action( $parsed_block, $source_block, $paren
 		return $parsed_block;
 	}
 
-	$parsed_block['attrs']['linkText'] = __( 'Join event', 'groups-site' );
+	// Kept so `label_the_online_event_link()` can hand the browser the words
+	// for the state this render isn't in.
+	$parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] = (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
+	$parsed_block['attrs']['linkText'] = __( 'Join event', 'wordcamporg' );
 
 	return $parsed_block;
 }
 add_filter( 'render_block_data', __NAMESPACE__ . '\name_the_online_event_link_action', 10, 3 );
+
+/**
+ * Put both online-event labels on the rendered element.
+ *
+ * `name_the_online_event_link_action()` picks the right words for the viewer
+ * this page load has. An RSVP made without a reload moves the viewer to the
+ * other state, and `assets/js/online-event-link.js` rewrites the element in
+ * place — so it needs the words for both states, not just the rendered one
+ * (#2094). They ride on the element because that is where the script finds
+ * them, and because the "attendees only" wording lives in
+ * `templates/single-event.html` rather than in this file.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The block that produced it.
+ *
+ * @return string The block, with its two labels attached.
+ */
+function label_the_online_event_link( $block_content, $parsed_block ) {
+	if ( '' === trim( (string) $block_content ) ) {
+		return $block_content;
+	}
+
+	$linking     = isset( $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] );
+	$join        = $linking ? (string) ( $parsed_block['attrs']['linkText'] ?? '' ) : __( 'Join event', 'wordcamporg' );
+	$description = $linking
+		? (string) $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ]
+		: (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
+	$tags = new \WP_HTML_Tag_Processor( $block_content );
+
+	if ( ! $tags->next_tag() ) {
+		return $block_content;
+	}
+
+	$tags->set_attribute( 'data-groups-site-join-label', $join );
+	$tags->set_attribute( 'data-groups-site-description-label', $description );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
 
 /**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.
@@ -671,12 +730,12 @@ function get_event_format( int $event_id ): string {
 function get_event_format_label( string $format ): string {
 	switch ( $format ) {
 		case 'hybrid':
-			return __( 'Hybrid', 'groups-site' );
+			return __( 'Hybrid', 'wordcamporg' );
 		case 'online':
-			return __( 'Online', 'groups-site' );
+			return __( 'Online', 'wordcamporg' );
 		case 'in-person':
 		default:
-			return __( 'In person', 'groups-site' );
+			return __( 'In person', 'wordcamporg' );
 	}
 }
 
@@ -779,7 +838,7 @@ function render_event_cancelled_block( array $attributes, string $content = '', 
 	return sprintf(
 		'<div class="%1$s"><span class="groups-site-event-cancelled__badge">%2$s</span></div>',
 		esc_attr( implode( ' ', $wrapper_classes ) ),
-		esc_html__( 'Cancelled', 'groups-site' )
+		esc_html__( 'Cancelled', 'wordcamporg' )
 	);
 }
 
@@ -795,9 +854,9 @@ function register_event_cancelled_block(): void {
 		'groups-site/event-cancelled',
 		array(
 			'api_version'     => 3,
-			'title'           => __( 'Event Cancelled', 'groups-site' ),
+			'title'           => __( 'Event Cancelled', 'wordcamporg' ),
 			'category'        => 'groups-site',
-			'description'     => __( 'Marks an event card whose date has been cancelled.', 'groups-site' ),
+			'description'     => __( 'Marks an event card whose date has been cancelled.', 'wordcamporg' ),
 			'uses_context'    => array( 'postId', 'postType' ),
 			'supports'        => array(
 				'html' => false,
@@ -824,9 +883,9 @@ function register_event_format_block(): void {
 		'groups-site/event-format',
 		array(
 			'api_version'     => 3,
-			'title'           => __( 'Event Format', 'groups-site' ),
+			'title'           => __( 'Event Format', 'wordcamporg' ),
 			'category'        => 'groups-site',
-			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'groups-site' ),
+			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'wordcamporg' ),
 			'uses_context'    => array( 'postId', 'postType' ),
 			'supports'        => array(
 				'html' => false,

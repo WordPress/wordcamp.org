@@ -234,6 +234,18 @@ jobs:
         # front-end modal and then opens it from the event page, so it needs
         # the editor tier and an account of its own.
         create_user organiser8 editor & pids+=( "$!" )
+        # event-rsvp-lifecycle.spec.js publishes its own events through the
+        # front-end modal and RSVPs to them, so it needs the editor tier. Its
+        # two tests get one account each, for the same reason
+        # event-manage-messaging.spec.js needs three: under `fullyParallel`
+        # the tests within a file also run concurrently, so sharing would let
+        # one test's login invalidate the other's session mid-run.
+        create_user organiser9 editor & pids+=( "$!" )
+        create_user organiser10 editor & pids+=( "$!" )
+        # venue-lifecycle.spec.js creates a venue, reuses it on a second
+        # event, and then edits it from the group settings modal, which needs
+        # the editor tier for the settings surface as well as the events.
+        create_user organiser11 editor & pids+=( "$!" )
         create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently

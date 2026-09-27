@@ -38,7 +38,7 @@ export default function VenuesTab() {
 		return h( 'div', { className: 'wporg-settings-tab' },
 			h( 'div', { className: 'wporg-event-form__header' },
 				h( Button, { variant: 'tertiary', onClick: () => setEditingId( null ), icon: 'arrow-left-alt2' },
-					__( 'Back to venues', 'wporg-groups-frontend' ) )
+					__( 'Back to venues', 'wordcamporg' ) )
 			),
 			h( VenueEditor, {
 			venueId: editingId,
@@ -71,18 +71,18 @@ export default function VenuesTab() {
 		h(
 			'div',
 			{ className: 'wporg-settings-tab__header' },
-			h( 'p', {}, __( 'Manage the venues your group uses for events.', 'wporg-groups-frontend' ) ),
+			h( 'p', {}, __( 'Manage the venues your group uses for events.', 'wordcamporg' ) ),
 			h(
 				Button,
 				{
 					variant: 'primary',
 					onClick: () => setEditingId( 0 ),
 				},
-				__( '+ Add venue', 'wporg-groups-frontend' )
+				__( '+ Add venue', 'wordcamporg' )
 			)
 		),
 		venues.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No venues yet.', 'wporg-groups-frontend' ) )
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No venues yet.', 'wordcamporg' ) )
 			: h(
 					'div',
 					{ className: 'wporg-settings-tab__list' },

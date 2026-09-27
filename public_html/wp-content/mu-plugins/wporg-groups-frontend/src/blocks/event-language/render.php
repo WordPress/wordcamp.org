@@ -36,6 +36,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<p class="wporg-event-language__label groups-site-event-label"><?php esc_html_e( 'Language', 'wporg-groups-frontend' ); ?></p>
+	<p class="wporg-event-language__label groups-site-event-label"><?php esc_html_e( 'Language', 'wordcamporg' ); ?></p>
 	<p class="wporg-event-language__value"><?php echo esc_html( $language_name ); ?></p>
 </div>

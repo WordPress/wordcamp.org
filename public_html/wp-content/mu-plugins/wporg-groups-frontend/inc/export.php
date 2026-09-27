@@ -162,7 +162,7 @@ function validate_date_param( $param ): bool {
 function export_db_error(): WP_Error {
 	return new WP_Error(
 		'export_failed',
-		__( 'The export could not be generated. Please try again.', 'wporg-groups-frontend' ),
+		__( 'The export could not be generated. Please try again.', 'wordcamporg' ),
 		array( 'status' => 500 )
 	);
 }
@@ -179,7 +179,7 @@ function export_permissions_check() {
 	if ( ! is_user_logged_in() ) {
 		return new WP_Error(
 			'rest_not_logged_in',
-			__( 'You must be logged in.', 'wporg-groups-frontend' ),
+			__( 'You must be logged in.', 'wordcamporg' ),
 			array( 'status' => 401 )
 		);
 	}
@@ -187,7 +187,7 @@ function export_permissions_check() {
 	if ( ! current_user_can_manage_group_settings() ) {
 		return new WP_Error(
 			'rest_forbidden',
-			__( 'Sorry, you are not allowed to export this group\'s data.', 'wporg-groups-frontend' ),
+			__( 'Sorry, you are not allowed to export this group\'s data.', 'wordcamporg' ),
 			array( 'status' => rest_authorization_required_code() )
 		);
 	}
@@ -786,7 +786,7 @@ function get_event_venue_names( array $event_ids ): array {
 		$event_id = (int) $term->object_id;
 
 		if ( 'online-event' === $term->slug ) {
-			$name = __( 'Online', 'wporg-groups-frontend' );
+			$name = __( 'Online', 'wordcamporg' );
 		} else {
 			// Decoded for the same reason as the event title: both the venue's
 			// `post_title` and the term name are stored entity-encoded, and an

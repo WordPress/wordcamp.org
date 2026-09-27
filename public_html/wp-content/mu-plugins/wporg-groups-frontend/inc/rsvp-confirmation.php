@@ -12,6 +12,7 @@
 
 namespace WordCamp\Groups\Frontend\RSVP_Confirmation;
 
+use GatherPress\Core\Calendar\Calendar;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Response\Status;
 use GatherPress\Core\Rsvp\Rsvp;
@@ -179,6 +180,39 @@ function plain_text( string $text ): string {
 }
 
 /**
+ * The event's calendar links, in the order the event page offers them.
+ *
+ * Same on-site endpoint URLs the add-to-calendar control links to, rather
+ * than URLs built here: GatherPress resolves them off the event's permalink,
+ * so on a recurring event they inherit the occurrence the RSVP was for, the
+ * same way the permalink in the body above does.
+ *
+ * A getter returns `false` when it can't resolve the post, so anything that
+ * isn't a usable URL is dropped rather than printed as an empty line.
+ *
+ * @param int $event_id Event post ID.
+ *
+ * @return array<string, string> Calendar name => URL.
+ */
+function get_calendar_links( int $event_id ): array {
+	$calendar = new Calendar( $event_id );
+
+	$links = array(
+		__( 'Google Calendar', 'wordcamporg' ) => $calendar->get_google_url(),
+		__( 'iCal', 'wordcamporg' )            => $calendar->get_ical_url(),
+		__( 'Outlook', 'wordcamporg' )         => $calendar->get_outlook_url(),
+		__( 'Yahoo Calendar', 'wordcamporg' )  => $calendar->get_yahoo_url(),
+	);
+
+	return array_filter(
+		$links,
+		static function ( $url ): bool {
+			return is_string( $url ) && '' !== $url;
+		}
+	);
+}
+
+/**
  * Build and send the confirmation.
  *
  * @param array{email: string, name: string} $recipient Recipient.
@@ -202,7 +236,7 @@ function send_email( array $recipient, int $event_id ): void {
 	$lines = array(
 		sprintf(
 			/* translators: %s: event title. */
-			__( 'You\'re on the list for "%s".', 'wporg-groups-frontend' ),
+			__( 'You\'re on the list for "%s".', 'wordcamporg' ),
 			$title
 		),
 		'',
@@ -210,10 +244,12 @@ function send_email( array $recipient, int $event_id ): void {
 
 	// An event with no datetime yet renders as GatherPress's placeholder dash,
 	// which says less than leaving the line out altogether.
-	if ( $when && Event::DATETIME_PLACEHOLDER !== $when ) {
+	$has_datetime = $when && Event::DATETIME_PLACEHOLDER !== $when;
+
+	if ( $has_datetime ) {
 		$lines[] = sprintf(
 			/* translators: %s: event date and time. */
-			__( 'When: %s', 'wporg-groups-frontend' ),
+			__( 'When: %s', 'wordcamporg' ),
 			$when
 		);
 	}
@@ -221,29 +257,48 @@ function send_email( array $recipient, int $event_id ): void {
 	if ( $venue ) {
 		$lines[] = sprintf(
 			/* translators: %s: venue name. */
-			__( 'Where: %s', 'wporg-groups-frontend' ),
+			__( 'Where: %s', 'wordcamporg' ),
 			$venue
 		);
 	}
 
 	$lines[] = sprintf(
 		/* translators: %s: group name. */
-		__( 'Group: %s', 'wporg-groups-frontend' ),
+		__( 'Group: %s', 'wordcamporg' ),
 		$group_name
 	);
 
 	if ( $permalink ) {
 		$lines[] = '';
-		$lines[] = __( 'Event page:', 'wporg-groups-frontend' );
+		$lines[] = __( 'Event page:', 'wordcamporg' );
 		$lines[] = $permalink;
 	}
 
+	/*
+	 * Offered here because this is the message someone keeps, and the point
+	 * at which they want the event in their own calendar (#2110). Withheld
+	 * from an event with no date yet: every one of these would hand the
+	 * calendar GatherPress's placeholder rather than a time.
+	 */
+	$calendar_links = $has_datetime ? get_calendar_links( $event_id ) : array();
+
+	if ( $calendar_links ) {
+		$lines[] = '';
+		$lines[] = __( 'Add to calendar:', 'wordcamporg' );
+
+		foreach ( $calendar_links as $calendar_name => $calendar_url ) {
+			// Not a translatable format: the names are already translated
+			// above, and a "name: url" line has nothing left to reorder.
+			$lines[] = $calendar_name . ': ' . $calendar_url;
+		}
+	}
+
 	$lines[] = '';
-	$lines[] = __( 'If your plans change, you can cancel your RSVP on the event page.', 'wporg-groups-frontend' );
+	$lines[] = __( 'If your plans change, you can cancel your RSVP on the event page.', 'wordcamporg' );
 
 	$subject = sprintf(
 		/* translators: %s: event title. */
-		__( 'You\'re going to "%s"', 'wporg-groups-frontend' ),
+		__( 'You\'re going to "%s"', 'wordcamporg' ),
 		$title
 	);
 

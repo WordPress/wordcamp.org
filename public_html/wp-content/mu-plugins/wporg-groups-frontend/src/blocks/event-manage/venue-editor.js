@@ -99,7 +99,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				setLoading( false );
 			} )
 			.catch( () => {
-				setError( __( 'Could not load venue data.', 'wporg-groups-frontend' ) );
+				setError( __( 'Could not load venue data.', 'wordcamporg' ) );
 				setLoading( false );
 			} );
 	}, [ venueId ] );
@@ -232,7 +232,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 
 	const handleSave = async () => {
 		if ( ! name.trim() ) {
-			setError( __( 'Venue name is required.', 'wporg-groups-frontend' ) );
+			setError( __( 'Venue name is required.', 'wordcamporg' ) );
 			return;
 		}
 
@@ -272,7 +272,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 		} catch ( err ) {
 			setError(
 				err.message ||
-					__( 'Could not save venue.', 'wporg-groups-frontend' )
+					__( 'Could not save venue.', 'wordcamporg' )
 			);
 			setSaving( false );
 		}
@@ -323,12 +323,12 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				'h2',
 				{},
 				venueId
-					? __( 'Edit venue', 'wporg-groups-frontend' )
-					: __( 'New venue', 'wporg-groups-frontend' )
+					? __( 'Edit venue', 'wordcamporg' )
+					: __( 'New venue', 'wordcamporg' )
 			),
 			h( Button, {
 				icon: 'no-alt',
-				label: __( 'Close', 'wporg-groups-frontend' ),
+				label: __( 'Close', 'wordcamporg' ),
 				onClick: onCancel,
 				className: 'wporg-groups-venue-editor__close',
 			} )
@@ -347,7 +347,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 					error
 				),
 			h( TextControl, {
-				label: __( 'Venue name', 'wporg-groups-frontend' ),
+				label: __( 'Venue name', 'wordcamporg' ),
 				value: name,
 				onChange: setName,
 				required: true,
@@ -360,7 +360,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 					style: { position: 'relative' },
 				},
 				h( TextControl, {
-					label: __( 'Address', 'wporg-groups-frontend' ),
+					label: __( 'Address', 'wordcamporg' ),
 					value: fullAddress,
 					onChange: ( v ) => {
 						setFullAddress( v );
@@ -373,7 +373,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 					},
 					placeholder: __(
 						'Start typing to search…',
-						'wporg-groups-frontend'
+						'wordcamporg'
 					),
 					__nextHasNoMarginBottom: true,
 				} ),
@@ -414,14 +414,14 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 					ref: mapCallbackRef,
 				} ),
 			h( TextareaControl, {
-				label: __( 'Description', 'wporg-groups-frontend' ),
+				label: __( 'Description', 'wordcamporg' ),
 				value: description,
 				onChange: setDescription,
 				rows: 3,
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( TextControl, {
-				label: __( 'Website', 'wporg-groups-frontend' ),
+				label: __( 'Website', 'wordcamporg' ),
 				type: 'url',
 				value: website,
 				onChange: setWebsite,
@@ -429,13 +429,13 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( TextareaControl, {
-				label: __( 'Access requirements', 'wporg-groups-frontend' ),
+				label: __( 'Access requirements', 'wordcamporg' ),
 				value: accessRequirements,
 				onChange: setAccessRequirements,
 				rows: 2,
 				help: __(
 					'Parking, public transit, wheelchair access, etc.',
-					'wporg-groups-frontend'
+					'wordcamporg'
 				),
 				__nextHasNoMarginBottom: true,
 			} ),
@@ -449,7 +449,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 						onClick: onCancel,
 						disabled: saving,
 					},
-					_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
+					_x( 'Cancel', 'abort current action', 'wordcamporg' )
 				),
 				h(
 					Button,
@@ -460,8 +460,8 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 						disabled: saving,
 					},
 					venueId
-						? __( 'Save venue', 'wporg-groups-frontend' )
-						: __( 'Create venue', 'wporg-groups-frontend' )
+						? __( 'Save venue', 'wordcamporg' )
+						: __( 'Create venue', 'wordcamporg' )
 				)
 			)
 		)

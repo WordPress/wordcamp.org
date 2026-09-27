@@ -100,14 +100,14 @@ $wporg_sections = array();
 // they have already done.
 if ( $wporg_upcoming ) {
 	$wporg_sections[] = array(
-		'heading' => __( 'My upcoming events', 'wporg-groups-frontend' ),
+		'heading' => __( 'My upcoming events', 'wordcamporg' ),
 		'entries' => $wporg_upcoming,
 	);
 }
 
 if ( $wporg_past ) {
 	$wporg_sections[] = array(
-		'heading' => __( 'Events I attended', 'wporg-groups-frontend' ),
+		'heading' => __( 'Events I attended', 'wordcamporg' ),
 		'entries' => $wporg_past,
 	);
 }

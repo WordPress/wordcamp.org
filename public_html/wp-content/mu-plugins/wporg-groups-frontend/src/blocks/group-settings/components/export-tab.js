@@ -28,29 +28,29 @@ import { __ } from '@wordpress/i18n';
 
 // Keys mirror the endpoint's CSV_COLUMNS; labels are what the picker shows.
 const COLUMN_OPTIONS = [
-	{ key: 'event_id', label: __( 'Event ID', 'wporg-groups-frontend' ) },
-	{ key: 'event_title', label: __( 'Event title', 'wporg-groups-frontend' ) },
-	{ key: 'event_start_gmt', label: __( 'Event start (GMT)', 'wporg-groups-frontend' ) },
-	{ key: 'event_end_gmt', label: __( 'Event end (GMT)', 'wporg-groups-frontend' ) },
-	{ key: 'venue', label: __( 'Venue', 'wporg-groups-frontend' ) },
-	{ key: 'organiser', label: __( 'Organiser', 'wporg-groups-frontend' ) },
-	{ key: 'attending_count', label: __( 'Attending count', 'wporg-groups-frontend' ) },
-	{ key: 'waiting_list_count', label: __( 'Waiting list count', 'wporg-groups-frontend' ) },
-	{ key: 'not_attending_count', label: __( 'Not attending count', 'wporg-groups-frontend' ) },
-	{ key: 'occurrence_start_gmt', label: __( 'Occurrence start (GMT)', 'wporg-groups-frontend' ) },
-	{ key: 'occurrence_end_gmt', label: __( 'Occurrence end (GMT)', 'wporg-groups-frontend' ) },
-	{ key: 'attendee_name', label: __( 'Attendee name', 'wporg-groups-frontend' ) },
-	{ key: 'attendee_login', label: __( 'Attendee username', 'wporg-groups-frontend' ) },
-	{ key: 'rsvp_status', label: __( 'RSVP status', 'wporg-groups-frontend' ) },
-	{ key: 'rsvp_timestamp_gmt', label: __( 'RSVP timestamp (GMT)', 'wporg-groups-frontend' ) },
-	{ key: 'rsvp_guests', label: __( 'RSVP guests', 'wporg-groups-frontend' ) },
+	{ key: 'event_id', label: __( 'Event ID', 'wordcamporg' ) },
+	{ key: 'event_title', label: __( 'Event title', 'wordcamporg' ) },
+	{ key: 'event_start_gmt', label: __( 'Event start (GMT)', 'wordcamporg' ) },
+	{ key: 'event_end_gmt', label: __( 'Event end (GMT)', 'wordcamporg' ) },
+	{ key: 'venue', label: __( 'Venue', 'wordcamporg' ) },
+	{ key: 'organiser', label: __( 'Organiser', 'wordcamporg' ) },
+	{ key: 'attending_count', label: __( 'Attending count', 'wordcamporg' ) },
+	{ key: 'waiting_list_count', label: __( 'Waiting list count', 'wordcamporg' ) },
+	{ key: 'not_attending_count', label: __( 'Not attending count', 'wordcamporg' ) },
+	{ key: 'occurrence_start_gmt', label: __( 'Occurrence start (GMT)', 'wordcamporg' ) },
+	{ key: 'occurrence_end_gmt', label: __( 'Occurrence end (GMT)', 'wordcamporg' ) },
+	{ key: 'attendee_name', label: __( 'Attendee name', 'wordcamporg' ) },
+	{ key: 'attendee_login', label: __( 'Attendee username', 'wordcamporg' ) },
+	{ key: 'rsvp_status', label: __( 'RSVP status', 'wordcamporg' ) },
+	{ key: 'rsvp_timestamp_gmt', label: __( 'RSVP timestamp (GMT)', 'wordcamporg' ) },
+	{ key: 'rsvp_guests', label: __( 'RSVP guests', 'wordcamporg' ) },
 ];
 
 const RANGE_OPTIONS = [
-	{ label: __( 'All events', 'wporg-groups-frontend' ), value: 'all' },
-	{ label: __( 'Upcoming events', 'wporg-groups-frontend' ), value: 'upcoming' },
-	{ label: __( 'Past events', 'wporg-groups-frontend' ), value: 'past' },
-	{ label: __( 'Custom date range', 'wporg-groups-frontend' ), value: 'custom' },
+	{ label: __( 'All events', 'wordcamporg' ), value: 'all' },
+	{ label: __( 'Upcoming events', 'wordcamporg' ), value: 'upcoming' },
+	{ label: __( 'Past events', 'wordcamporg' ), value: 'past' },
+	{ label: __( 'Custom date range', 'wordcamporg' ), value: 'custom' },
 ];
 
 // The "(#123)" suffix keeps tokens unambiguous when a recurring meetup
@@ -154,7 +154,7 @@ export default function ExportTab() {
 						// Non-JSON error body; fall through to the generic notice.
 					}
 				}
-				setNotice( message || __( 'Export failed.', 'wporg-groups-frontend' ) );
+				setNotice( message || __( 'Export failed.', 'wordcamporg' ) );
 			} finally {
 				setDownloading( '' );
 			}
@@ -170,15 +170,15 @@ export default function ExportTab() {
 		h( 'p', {},
 			__(
 				'Download this group’s event history, including the RSVP breakdown for every event. Anonymous RSVPs are included as a non-identifying token instead of the member’s name.',
-				'wporg-groups-frontend'
+				'wordcamporg'
 			)
 		),
 		h( 'div', { className: 'wporg-export-tab__field' },
 			h( FormTokenField, {
-				label: __( 'Which columns should be exported?', 'wporg-groups-frontend' ),
+				label: __( 'Which columns should be exported?', 'wordcamporg' ),
 				placeholder: columns.length
 					? undefined
-					: __( 'All columns', 'wporg-groups-frontend' ),
+					: __( 'All columns', 'wordcamporg' ),
 				value: columns.map(
 					( key ) => COLUMN_OPTIONS.find( ( option ) => option.key === key ).label
 				),
@@ -195,10 +195,10 @@ export default function ExportTab() {
 		),
 		h( 'div', { className: 'wporg-export-tab__field' },
 			h( FormTokenField, {
-				label: __( 'Which events should be exported?', 'wporg-groups-frontend' ),
+				label: __( 'Which events should be exported?', 'wordcamporg' ),
 				placeholder: eventIds.length
 					? undefined
-					: __( 'All events', 'wporg-groups-frontend' ),
+					: __( 'All events', 'wordcamporg' ),
 				value: eventIds.map( ( id ) => {
 					const event = eventOptions.find( ( option ) => option.id === id );
 					return event ? eventToken( event ) : `#${ id }`;
@@ -219,7 +219,7 @@ export default function ExportTab() {
 		),
 		h( 'div', { className: 'wporg-export-tab__field' },
 			h( SelectControl, {
-				label: __( 'Which dates should be exported?', 'wporg-groups-frontend' ),
+				label: __( 'Which dates should be exported?', 'wordcamporg' ),
 				value: range,
 				options: RANGE_OPTIONS,
 				onChange: setRange,
@@ -229,14 +229,14 @@ export default function ExportTab() {
 		range === 'custom' &&
 			h( 'div', { className: 'wporg-export-tab__field wporg-export-tab__dates' },
 				h( TextControl, {
-					label: __( 'Starting on or after', 'wporg-groups-frontend' ),
+					label: __( 'Starting on or after', 'wordcamporg' ),
 					type: 'date',
 					value: after,
 					onChange: setAfter,
 					__nextHasNoMarginBottom: true,
 				} ),
 				h( TextControl, {
-					label: __( 'Starting on or before', 'wporg-groups-frontend' ),
+					label: __( 'Starting on or before', 'wordcamporg' ),
 					type: 'date',
 					value: before,
 					onChange: setBefore,
@@ -254,7 +254,7 @@ export default function ExportTab() {
 					disabled: !! downloading,
 					onClick: () => downloadExport( 'csv' ),
 				},
-				__( 'Download CSV', 'wporg-groups-frontend' )
+				__( 'Download CSV', 'wordcamporg' )
 			),
 			h(
 				Button,
@@ -264,7 +264,7 @@ export default function ExportTab() {
 					disabled: !! downloading,
 					onClick: () => downloadExport( 'json' ),
 				},
-				__( 'Download JSON', 'wporg-groups-frontend' )
+				__( 'Download JSON', 'wordcamporg' )
 			)
 		)
 	);

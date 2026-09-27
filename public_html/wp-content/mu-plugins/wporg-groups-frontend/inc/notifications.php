@@ -273,7 +273,7 @@ function tailor_publish_notification( array $atts, int $event_id ): array {
 	if ( recipient_is_event_author( $atts['to'] ?? '', $event_id ) ) {
 		$atts['subject'] = sprintf(
 			/* translators: %s: event title. */
-			__( 'Your event has been published: %s', 'wporg-groups-frontend' ),
+			__( 'Your event has been published: %s', 'wordcamporg' ),
 			$title
 		);
 		$atts['message'] = strip_rsvp_button( (string) ( $atts['message'] ?? '' ) );
@@ -283,7 +283,7 @@ function tailor_publish_notification( array $atts, int $event_id ): array {
 
 	$atts['subject'] = sprintf(
 		/* translators: 1: group name, 2: event title. */
-		__( 'New event in %1$s: %2$s', 'wporg-groups-frontend' ),
+		__( 'New event in %1$s: %2$s', 'wordcamporg' ),
 		subject_text( get_bloginfo( 'name' ) ),
 		$title
 	);

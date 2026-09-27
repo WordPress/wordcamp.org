@@ -164,8 +164,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			const shouldPrompt = dirty || draftId > 0;
 			if ( shouldPrompt ) {
 				const message = draftId
-					? __( 'This event has been auto-saved as a draft. Close the form?', 'wporg-groups-frontend' )
-					: __( 'You have unsaved changes. Close this form anyway?', 'wporg-groups-frontend' );
+					? __( 'This event has been auto-saved as a draft. Close the form?', 'wordcamporg' )
+					: __( 'You have unsaved changes. Close this form anyway?', 'wordcamporg' );
 				if ( ! window.confirm( message ) ) {
 					return;
 				}
@@ -192,16 +192,16 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				return '';
 			}
 			if ( autosaveStatus === 'saving' ) {
-				return __( 'Saving draft…', 'wporg-groups-frontend' );
+				return __( 'Saving draft…', 'wordcamporg' );
 			}
 			if ( autosaveStatus === 'error' ) {
-				return __( 'Couldn\u2019t autosave', 'wporg-groups-frontend' );
+				return __( 'Couldn\u2019t autosave', 'wordcamporg' );
 			}
 			if ( autosaveStatus === 'saved' && autosaveTime ) {
 				const t = autosaveTime;
 				const hh = String( t.getHours() ).padStart( 2, '0' );
 				const mm = String( t.getMinutes() ).padStart( 2, '0' );
-				return __( 'Draft saved at', 'wporg-groups-frontend' ) + ` ${ hh }:${ mm }`;
+				return __( 'Draft saved at', 'wordcamporg' ) + ` ${ hh }:${ mm }`;
 			}
 			return '';
 		} )();
@@ -210,8 +210,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			Modal,
 			{
 				title: isEdit
-					? __( 'Edit event', 'wporg-groups-frontend' )
-					: __( 'Create event', 'wporg-groups-frontend' ),
+					? __( 'Edit event', 'wordcamporg' )
+					: __( 'Create event', 'wordcamporg' ),
 				onRequestClose: handleClose,
 				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
 				size: 'large',
@@ -242,13 +242,13 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 						h(
 							SelectControl,
 							{
-								label: __( 'Continue from a draft', 'wporg-groups-frontend' ),
+								label: __( 'Continue from a draft', 'wordcamporg' ),
 								value: draftId ? String( draftId ) : '',
 								options: [
-									{ label: __( '— Start fresh —', 'wporg-groups-frontend' ), value: '' },
+									{ label: __( '— Start fresh —', 'wordcamporg' ), value: '' },
 								].concat(
 									drafts.map( ( d ) => ( {
-										label: ( d.title || __( '(Untitled)', 'wporg-groups-frontend' ) )
+										label: ( d.title || __( '(Untitled)', 'wordcamporg' ) )
 											+ ( d.event_date ? ` — ${ d.event_date.slice( 0, 10 ) }` : '' ),
 										value: String( d.id ),
 									} ) )

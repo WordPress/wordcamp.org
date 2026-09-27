@@ -279,7 +279,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $user || ! is_user_member_of_blog( $user_id ) ) {
 			return new \WP_Error(
 				'rest_user_not_found',
-				__( 'User not found.', 'wporg-groups-frontend' ),
+				__( 'User not found.', 'wordcamporg' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -300,7 +300,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( is_user_member_of_blog( $user_id, $blog_id ) ) {
 			return new \WP_Error(
 				'already_member',
-				__( 'You are already a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are already a member of this group.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -330,7 +330,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -338,7 +338,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_member_of_blog() ) {
 			return new \WP_Error(
 				'not_a_member',
-				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are not a member of this group.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -361,7 +361,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( $user && array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
 			return new \WP_Error(
 				'cannot_leave',
-				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wporg-groups-frontend' ),
+				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -391,7 +391,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -399,7 +399,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_member_of_blog() ) {
 			return new \WP_Error(
 				'not_a_member',
-				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are not a member of this group.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -442,7 +442,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -450,7 +450,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events() ) {
 			return new \WP_Error(
 				'rest_cannot_manage_group',
-				__( 'Sorry, you are not allowed to manage this group.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to manage this group.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -458,7 +458,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings() ) {
 			return new \WP_Error(
 				'rest_cannot_edit_roles',
-				__( 'Sorry, you are not allowed to edit roles of this user.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to edit roles of this user.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -481,7 +481,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $user || ! is_user_member_of_blog( $user_id, $blog_id ) ) {
 			return new \WP_Error(
 				'rest_user_not_found',
-				__( 'User not found.', 'wporg-groups-frontend' ),
+				__( 'User not found.', 'wordcamporg' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -489,7 +489,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( in_array( 'administrator', $user->roles, true ) ) {
 			return new \WP_Error(
 				'cannot_manage_administrator',
-				__( 'Site administrators must be managed in wp-admin.', 'wporg-groups-frontend' ),
+				__( 'Site administrators must be managed in wp-admin.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -497,7 +497,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( get_current_user_id() === $user_id ) {
 			return new \WP_Error(
 				'cannot_change_own_role',
-				__( 'You cannot change your own group role.', 'wporg-groups-frontend' ),
+				__( 'You cannot change your own group role.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -505,7 +505,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->validate_assignable_role( $role ) ) {
 			return new \WP_Error(
 				'invalid_role',
-				__( 'Invalid role.', 'wporg-groups-frontend' ),
+				__( 'Invalid role.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -513,7 +513,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->can_demote_organizer( $user, $role ) ) {
 			return new \WP_Error(
 				'cannot_remove_last_organizer',
-				__( 'A group must have at least one organizer.', 'wporg-groups-frontend' ),
+				__( 'A group must have at least one organizer.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -534,7 +534,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -542,7 +542,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\self_serve_roles_enabled() ) {
 			return new \WP_Error(
 				'rest_self_serve_roles_disabled',
-				__( 'Changing your own role is not available on this group.', 'wporg-groups-frontend' ),
+				__( 'Changing your own role is not available on this group.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -550,7 +550,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_member_of_blog() ) {
 			return new \WP_Error(
 				'not_a_member',
-				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are not a member of this group.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -558,7 +558,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( in_array( 'administrator', wp_get_current_user()->roles, true ) ) {
 			return new \WP_Error(
 				'cannot_manage_administrator',
-				__( 'Site administrators must be managed in wp-admin.', 'wporg-groups-frontend' ),
+				__( 'Site administrators must be managed in wp-admin.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -568,7 +568,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role() ) {
 			return new \WP_Error(
 				'rest_cannot_change_own_role',
-				__( 'Sorry, you are not allowed to change your role on this group.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to change your role on this group.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -592,7 +592,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->validate_assignable_role( $role ) ) {
 			return new \WP_Error(
 				'invalid_role',
-				__( 'Invalid role.', 'wporg-groups-frontend' ),
+				__( 'Invalid role.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -603,7 +603,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->can_demote_organizer( $user, $role ) ) {
 			return new \WP_Error(
 				'cannot_remove_last_organizer',
-				__( 'A group must have at least one organizer. Promote someone else first.', 'wporg-groups-frontend' ),
+				__( 'A group must have at least one organizer. Promote someone else first.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}

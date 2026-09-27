@@ -16,12 +16,12 @@ registerBlockType( metadata.name, {
 		return (
 			<div { ...blockProps }>
 				<InspectorControls>
-					<PanelBody title={ __( 'Settings', 'wporg-groups-frontend' ) }>
+					<PanelBody title={ __( 'Settings', 'wordcamporg' ) }>
 						<RangeControl
-							label={ __( 'Sponsors shown', 'wporg-groups-frontend' ) }
+							label={ __( 'Sponsors shown', 'wordcamporg' ) }
 							help={ __(
 								'The rest are revealed by a "Show all" button. Set to 0 to always show every sponsor.',
-								'wporg-groups-frontend'
+								'wordcamporg'
 							) }
 							value={ attributes.limit }
 							onChange={ ( limit ) => setAttributes( { limit } ) }
@@ -29,7 +29,7 @@ registerBlockType( metadata.name, {
 							max={ 20 }
 						/>
 						<RangeControl
-							label={ __( 'Heading level', 'wporg-groups-frontend' ) }
+							label={ __( 'Heading level', 'wordcamporg' ) }
 							value={ attributes.level }
 							onChange={ ( level ) => setAttributes( { level } ) }
 							min={ 1 }

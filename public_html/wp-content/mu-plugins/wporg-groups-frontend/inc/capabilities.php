@@ -46,12 +46,12 @@ const ORGANIZER_ROLES = array( 'administrator', 'editor' );
  */
 function get_role_tier_label( string $role ): string {
 	$labels = array(
-		'administrator' => __( 'Organizer', 'wporg-groups-frontend' ),
-		'editor'        => __( 'Organizer', 'wporg-groups-frontend' ),
-		'author'        => __( 'Event Organizer', 'wporg-groups-frontend' ),
+		'administrator' => __( 'Organizer', 'wordcamporg' ),
+		'editor'        => __( 'Organizer', 'wordcamporg' ),
+		'author'        => __( 'Event Organizer', 'wordcamporg' ),
 	);
 
-	return $labels[ $role ] ?? __( 'Member', 'wporg-groups-frontend' );
+	return $labels[ $role ] ?? __( 'Member', 'wordcamporg' );
 }
 
 /**

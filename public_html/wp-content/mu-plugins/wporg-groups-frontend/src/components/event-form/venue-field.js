@@ -14,14 +14,14 @@ import { __ } from '@wordpress/i18n';
 
 export default function VenueField( { venues, venueId, onSelect, onOpenVenueEditor, classPrefix } ) {
 	const options = [
-		{ label: __( '— No venue —', 'wporg-groups-frontend' ), value: '' },
+		{ label: __( '— No venue —', 'wordcamporg' ), value: '' },
 	].concat(
 		( venues || [] ).map( ( v ) => ( {
 			label: v.name,
 			value: String( v.id ),
 		} ) )
 	).concat( [
-		{ label: __( '+ Add a new venue', 'wporg-groups-frontend' ), value: '__new__' },
+		{ label: __( '+ Add a new venue', 'wordcamporg' ), value: '__new__' },
 	] );
 
 	const handleChange = ( v ) => {
@@ -36,7 +36,7 @@ export default function VenueField( { venues, venueId, onSelect, onOpenVenueEdit
 		'div',
 		{ className: `${ classPrefix }__field` },
 		h( SelectControl, {
-			label: __( 'Venue', 'wporg-groups-frontend' ),
+			label: __( 'Venue', 'wordcamporg' ),
 			value: venueId ? String( venueId ) : '',
 			options: options,
 			onChange: handleChange,
@@ -47,6 +47,6 @@ export default function VenueField( { venues, venueId, onSelect, onOpenVenueEdit
 				variant: 'link',
 				onClick: () => onOpenVenueEditor( parseInt( venueId, 10 ) ),
 				className: `${ classPrefix }__edit-venue`,
-			}, __( 'Edit venue', 'wporg-groups-frontend' ) )
+			}, __( 'Edit venue', 'wordcamporg' ) )
 	);
 }

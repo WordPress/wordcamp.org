@@ -109,7 +109,7 @@ function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 			},
 				h( 'div', { className: 'wporg-event-form__field' },
 					h( FormTokenField, {
-						label: __( 'Speakers', 'wporg-groups-frontend' ),
+						label: __( 'Speakers', 'wordcamporg' ),
 						value: ( speakers || [] ).map( ( id ) => {
 							const member = memberOptions.find( ( m ) => m.id === id );
 							return member ? member.name : String( id );
@@ -200,8 +200,8 @@ export default function EventsTab( { eventId: initialEventId, onClose, singleEve
 		return h( InlineEventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
 			backLabel: singleEvent
-				? __( 'Back to event', 'wporg-groups-frontend' )
-				: __( 'Back to events', 'wporg-groups-frontend' ),
+				? __( 'Back to event', 'wordcamporg' )
+				: __( 'Back to events', 'wordcamporg' ),
 			onDone: backToList,
 			onCancel: backToList,
 		} );
@@ -218,7 +218,7 @@ export default function EventsTab( { eventId: initialEventId, onClose, singleEve
 			const res = await apiFetch( { path: `/${ NS }/event-form-data${ params }` } );
 			// Create a draft with the source data but a new date.
 			const draftData = {
-				title: res.fields.title + ' ' + __( '(copy)', 'wporg-groups-frontend' ),
+				title: res.fields.title + ' ' + __( '(copy)', 'wordcamporg' ),
 				description: res.fields.description || '',
 				time_start: res.fields.time_start || '',
 				time_end: res.fields.time_end || '',
@@ -259,7 +259,7 @@ export default function EventsTab( { eventId: initialEventId, onClose, singleEve
 				h( 'strong', {}, event.title ),
 				h( 'span', {},
 					event.dateStart ? formatEventDate( event.dateStart ) : '',
-					event.status === 'draft' ? ( event.dateStart ? ' — ' : '' ) + __( 'Draft', 'wporg-groups-frontend' ) : ''
+					event.status === 'draft' ? ( event.dateStart ? ' — ' : '' ) + __( 'Draft', 'wordcamporg' ) : ''
 				)
 			),
 			showClone && h( 'div', { className: 'wporg-settings-tab__list-item-actions',
@@ -268,32 +268,32 @@ export default function EventsTab( { eventId: initialEventId, onClose, singleEve
 					variant: 'tertiary', isSmall: true,
 					onClick: () => cloneEvent( event.id ),
 					disabled: cloning,
-				}, __( 'Clone', 'wporg-groups-frontend' ) )
+				}, __( 'Clone', 'wordcamporg' ) )
 			)
 		);
 
 	return h( 'div', { className: 'wporg-settings-tab' },
 		h( 'div', { className: 'wporg-settings-tab__header' },
-			h( 'p', {}, __( 'Manage your group events.', 'wporg-groups-frontend' ) ),
+			h( 'p', {}, __( 'Manage your group events.', 'wordcamporg' ) ),
 			h( Button, { variant: 'primary', onClick: () => setEditingId( 0 ) },
-				__( '+ Create event', 'wporg-groups-frontend' ) )
+				__( '+ Create event', 'wordcamporg' ) )
 		),
 
 		drafts.length > 0 && h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Drafts', 'wporg-groups-frontend' ) ),
+			__( 'Drafts', 'wordcamporg' ) ),
 		drafts.length > 0 && h( 'div', { className: 'wporg-settings-tab__list' },
 			drafts.map( ( e ) => renderEventItem( e, false ) ) ),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Upcoming', 'wporg-groups-frontend' ) ),
+			__( 'Upcoming', 'wordcamporg' ) ),
 		upcoming.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No upcoming events.', 'wporg-groups-frontend' ) )
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No upcoming events.', 'wordcamporg' ) )
 			: h( 'div', { className: 'wporg-settings-tab__list' }, upcoming.map( ( e ) => renderEventItem( e, true ) ) ),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Past', 'wporg-groups-frontend' ) ),
+			__( 'Past', 'wordcamporg' ) ),
 		past.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No past events.', 'wporg-groups-frontend' ) )
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No past events.', 'wordcamporg' ) )
 			: h( 'div', { className: 'wporg-settings-tab__list' }, past.map( ( e ) => renderEventItem( e, true ) ) )
 	);
 }

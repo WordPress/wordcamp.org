@@ -24,12 +24,12 @@ import AboutTab from './about-tab';
 import ExportTab from './export-tab';
 
 const TABS = [
-	{ name: 'events', title: __( 'Events', 'wporg-groups-frontend' ) },
-	{ name: 'venues', title: __( 'Venues', 'wporg-groups-frontend' ) },
-	{ name: 'members', title: __( 'Members', 'wporg-groups-frontend' ) },
-	{ name: 'design', title: __( 'Design', 'wporg-groups-frontend' ) },
-	{ name: 'about', title: __( 'About', 'wporg-groups-frontend' ) },
-	{ name: 'export', title: __( 'Export', 'wporg-groups-frontend' ) },
+	{ name: 'events', title: __( 'Events', 'wordcamporg' ) },
+	{ name: 'venues', title: __( 'Venues', 'wordcamporg' ) },
+	{ name: 'members', title: __( 'Members', 'wordcamporg' ) },
+	{ name: 'design', title: __( 'Design', 'wordcamporg' ) },
+	{ name: 'about', title: __( 'About', 'wordcamporg' ) },
+	{ name: 'export', title: __( 'Export', 'wordcamporg' ) },
 ];
 
 export default function SettingsApp( {
@@ -89,8 +89,8 @@ export default function SettingsApp( {
 		Modal,
 		{
 			title: isSingleEvent
-				? __( 'Edit event', 'wporg-groups-frontend' )
-				: siteName || __( 'Group Settings', 'wporg-groups-frontend' ),
+				? __( 'Edit event', 'wordcamporg' )
+				: siteName || __( 'Group Settings', 'wordcamporg' ),
 			onRequestClose: onClose,
 			className: 'wporg-groups-modal-accent wporg-group-settings-modal',
 			isFullScreen: true,

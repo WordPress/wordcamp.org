@@ -19,6 +19,10 @@
 		"headingLevel": {
 			"type": "number",
 			"default": 2
+		},
+		"excerpt": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {

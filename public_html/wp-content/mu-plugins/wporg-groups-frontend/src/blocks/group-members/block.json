@@ -9,9 +9,11 @@
 	"description": "Displays a grid of group members with roles and profile links.",
 	"supports": {
 		"html": false,
+		"interactivity": true,
 		"inserter": false
 	},
 	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js",
 	"editorScript": "file:./index.js",
 	"style": "file:./style-index.css"
 }

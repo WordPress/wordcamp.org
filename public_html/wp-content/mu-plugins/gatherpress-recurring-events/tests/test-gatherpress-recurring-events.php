@@ -18,6 +18,7 @@ use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_Comment_Query;
+use WP_Query;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -26,6 +27,22 @@ defined( 'WPINC' ) || die();
  * @group gatherpress-recurring-events
  */
 final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
+
+	/** Ensure GatherPress tables exist for this suite. */
+	public static function set_up_before_class() {
+		parent::set_up_before_class();
+
+		if ( class_exists( 'GatherPress\Core\Setup' ) ) {
+			\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+		}
+	}
+
+	/** Leave the screen global as we found it for whatever runs next. */
+	public function tear_down() {
+		unset( $GLOBALS['current_screen'] );
+
+		parent::tear_down();
+	}
 
 	/** Weekly expansion keeps local wall time across DST. */
 	public function test_weekly_recurrence_preserves_wall_time_across_dst(): void {
@@ -90,6 +107,13 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			array( '2024-02-29', '2028-02-29', '2032-02-29' ),
 			$this->format( Rule::expand( $start, $this->rule( 'yearly', 3 ), $start->modify( '+9 years' ) ) )
 		);
+	}
+
+	/** A post with no recurrence meta reads back a rule that passes the REST enum. */
+	public function test_rule_from_bare_post_uses_valid_weekday(): void {
+		$post_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$this->assertContains( Rule::from_post( $post_id )['monthly_weekday'], Rule::weekdays() );
 	}
 
 	/** Published end conditions can only change through the dedicated mutation. */
@@ -235,11 +259,15 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'weekly', get_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', true ) );
 	}
 
-	/** Unpublishing a recurring series removes its projected occurrence data. */
-	public function test_unpublishing_recurring_event_removes_series_data(): void {
+	/**
+	 * Seeds one occurrence and an RSVP mapped onto it.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return int The mapped comment ID.
+	 */
+	private function seed_occurrence_with_rsvp( int $post_id ): int {
 		global $wpdb;
 
-		$post_id    = $this->create_published_recurring_event();
 		$comment_id = self::factory()->comment->create(
 			array(
 				'comment_post_ID' => $post_id,
@@ -249,26 +277,288 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$wpdb->insert(
 			Database::occurrences_table(),
 			array(
-				'series_post_id'    => $post_id,
-				'recurrence_id'     => '20260810T100000',
-				'datetime_start'    => '2026-08-10 10:00:00',
+				'series_post_id'     => $post_id,
+				'recurrence_id'      => '20260810T100000',
+				'datetime_start'     => '2026-08-10 10:00:00',
 				'datetime_start_gmt' => '2026-08-10 10:00:00',
-				'datetime_end'      => '2026-08-10 11:00:00',
-				'datetime_end_gmt'  => '2026-08-10 11:00:00',
-				'timezone'          => 'UTC',
-				'status'            => 'scheduled',
-				'created_gmt'       => $now,
-				'updated_gmt'       => $now,
+				'datetime_end'       => '2026-08-10 11:00:00',
+				'datetime_end_gmt'   => '2026-08-10 11:00:00',
+				'timezone'           => 'UTC',
+				'status'             => 'scheduled',
+				'created_gmt'        => $now,
+				'updated_gmt'        => $now,
 			)
 		);
 		Database::map_comment( $comment_id, $post_id, '20260810T100000' );
 
-		$post              = get_post( $post_id );
-		$post->post_status = 'draft';
+		return $comment_id;
+	}
+
+	/**
+	 * Writes a post status straight to the database.
+	 *
+	 * `wp_update_post()` would fire `save_post_gatherpress_event` itself,
+	 * which is the thing under test here; the schedule meta lock reads the
+	 * stored status, so mutating the object alone is not enough.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $status  Status to store.
+	 * @return \WP_Post The refreshed post.
+	 */
+	private function set_post_status( int $post_id, string $status ): \WP_Post {
+		global $wpdb;
+
+		$wpdb->update(
+			$wpdb->posts,
+			array( 'post_status' => $status ),
+			array( 'ID' => $post_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		clean_post_cache( $post_id );
+
+		return get_post( $post_id );
+	}
+
+	/**
+	 * Counts this series' rows in both of the extension's tables.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return array{occurrences: int, mappings: int}
+	 */
+	private function count_series_rows( int $post_id ): array {
+		global $wpdb;
+
+		return array(
+			'occurrences' => (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id ) ),
+			'mappings'    => (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ),
+		);
+	}
+
+	/**
+	 * Unpublishing a series hides it; it does not discard its dates.
+	 *
+	 * The mapping rows are the only record of which date each RSVP was made
+	 * on, so dropping them here erased a member's attendance history for good
+	 * — projection only ever rebuilds future dates, so republishing could not
+	 * restore it.
+	 */
+	public function test_unpublishing_recurring_event_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'draft' ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id ),
+			'An unpublished series keeps its dates and the RSVPs mapped onto them.'
+		);
+	}
+
+	/**
+	 * The same guarantee, driven the way an organizer actually triggers it.
+	 *
+	 * The two tests around this one call `save_event()` by hand against a
+	 * status written straight to the posts table, which is deliberate -- it
+	 * isolates the handler -- but it means neither of them touches the hook
+	 * that has to call it. A `save_post_gatherpress_event` priority drifting,
+	 * or the handler coming unhooked, would leave both green while a real
+	 * unpublish silently discarded a member's attendance history.
+	 *
+	 * So: the real `wp_update_post()` and `wp_trash_post()`, nothing called by
+	 * hand, asserting the rows are still there afterwards.
+	 */
+	public function test_unpublishing_through_wp_update_post_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertSame( 'draft', get_post_status( $post_id ), 'Precondition: the post really was unpublished.' );
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id ),
+			'Unpublishing through the real post API must keep the dates and their RSVP mappings.'
+		);
+	}
+
+	/**
+	 * Trashing, likewise through core's own path rather than by hand.
+	 */
+	public function test_trashing_through_wp_trash_post_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		wp_trash_post( $post_id );
+
+		$this->assertSame( 'trash', get_post_status( $post_id ), 'Precondition: the post really was trashed.' );
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * And the handler is on the hook that fires it, at the priority it needs.
+	 *
+	 * Priority 100 so GatherPress has already written the event's datetimes by
+	 * the time the series is projected from them -- projecting first would read
+	 * the previous dates. Pinned because nothing else here would notice.
+	 */
+	public function test_the_save_handler_is_hooked_after_gatherpress(): void {
+		$this->assertSame(
+			100,
+			has_action( 'save_post_gatherpress_event', array( Plugin::get_instance(), 'save_event' ) )
+		);
+	}
+
+	/**
+	 * Trashing is reversible too, so it keeps the series data for the same
+	 * reason unpublishing does.
+	 */
+	public function test_trashing_recurring_event_keeps_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'trash' ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 1,
+				'mappings'    => 1,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * Republishing restores the series, history included.
+	 */
+	public function test_republishing_recurring_event_restores_the_series(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		$comment_id = $this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'draft' ) );
+		Plugin::get_instance()->save_event( $post_id, $this->set_post_status( $post_id, 'publish' ) );
+
+		$this->assertSame(
+			'20260810T100000',
+			$wpdb->get_var( $wpdb->prepare( 'SELECT recurrence_id FROM %i WHERE comment_id = %d', Database::comments_table(), $comment_id ) ),
+			'The RSVP still points at the date it was made on.'
+		);
+		$this->assertNotNull(
+			Occurrences::get( $post_id, '20260810T100000' ),
+			'The date the RSVP points at still exists.'
+		);
+	}
+
+	/**
+	 * An event that stops being a recurring one does lose its series data:
+	 * the dates and the RSVPs mapped onto them point at occurrences that no
+	 * longer exist.
+	 */
+	public function test_dropping_the_recurrence_rule_removes_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		// The rule is locked while the event is published, so this is the
+		// order an organizer has to do it in: unpublish, which now keeps the
+		// series data, and only then drop the recurrence.
+		$post = $this->set_post_status( $post_id, 'draft' );
 		Plugin::get_instance()->save_event( $post_id, $post );
 
-		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id ) ) );
-		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ) );
+		delete_post_meta( $post_id, Rule::META_PREFIX . 'frequency' );
+		Plugin::get_instance()->save_event( $post_id, $post );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 0,
+				'mappings'    => 0,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * Permanent deletion still clears everything — that is the path that is
+	 * actually destructive, and it is unaffected by the above.
+	 */
+	public function test_deleting_recurring_event_removes_series_data(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->seed_occurrence_with_rsvp( $post_id );
+
+		Plugin::get_instance()->delete_event( $post_id, get_post( $post_id ) );
+
+		$this->assertSame(
+			array(
+				'occurrences' => 0,
+				'mappings'    => 0,
+			),
+			$this->count_series_rows( $post_id )
+		);
+	}
+
+	/**
+	 * A calendar endpoint on an occurrence is left alone by the canonical
+	 * redirect.
+	 *
+	 * `…/{occurrence}/ical` is a download hanging off the occurrence, not the
+	 * occurrence page. Rewriting it to the page drops the endpoint and the
+	 * visitor lands on the event instead of getting the file (#2010).
+	 */
+	public function test_canonical_redirect_leaves_calendar_endpoints_alone(): void {
+		$post_id    = $this->create_published_recurring_event();
+		$occurrence = (object) array(
+			'series_post_id' => $post_id,
+			'recurrence_id'  => '20260810T100000',
+		);
+		Context::set( $occurrence );
+		set_query_var( 'gpre_occurrence', '20260810T100000' );
+
+		try {
+			// Without an endpoint the redirect is still corrected to the
+			// occurrence's own URL, which is what this filter exists for.
+			set_query_var( 'gatherpress_calendar', '' );
+			$this->assertStringContainsString(
+				'20260810T100000',
+				(string) Context::canonical_redirect( get_permalink( $post_id ) )
+			);
+
+			// With one, no redirect at all.
+			set_query_var( 'gatherpress_calendar', 'ical' );
+			$this->assertFalse(
+				Context::canonical_redirect( get_permalink( $post_id ) ),
+				'A calendar endpoint was redirected, which drops the endpoint and cancels the download.'
+			);
+		} finally {
+			set_query_var( 'gatherpress_calendar', '' );
+			set_query_var( 'gpre_occurrence', '' );
+			Context::set( null );
+		}
 	}
 
 	/** Only comment queries for the active series are occurrence-scoped. */
@@ -405,6 +695,275 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;COUNT=4', get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true ) );
 	}
 
+	/**
+	 * A series whose stored zone is a manual offset still projects.
+	 *
+	 * The regression test for the read half of #2021. Core's
+	 * `wp_timezone_choice()` -- which both GatherPress's wp-admin sidebar and
+	 * the front-end form build their control from -- spells a manual offset
+	 * `UTC+10`, and `Event::save_datetimes()` writes the string it is given to
+	 * `gatherpress_events.timezone` raw. `new DateTimeZone( 'UTC+10' )` throws,
+	 * so `master_datetime()` caught, returned null, and `project()` bailed
+	 * before writing a single row: a 200 on save, an occurrence selector that
+	 * never appeared, per-occurrence RSVP refused, and cron re-projection
+	 * failing silently forever.
+	 *
+	 * The front-end form now canonicalizes on the way in, but rows written
+	 * before that -- and every one wp-admin writes -- still carry the throwing
+	 * spelling, so the read has to cope too.
+	 *
+	 * @dataProvider provide_offset_spellings
+	 *
+	 * @param string $stored     Timezone as the row spells it.
+	 * @param string $equivalent A spelling of the same zone PHP accepts.
+	 */
+	public function test_projection_survives_an_offset_spelling_php_rejects( string $stored, string $equivalent ): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => $stored,
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+
+		// What GatherPress actually leaves behind, and the whole premise here.
+		$this->assertSame(
+			$stored,
+			$wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT timezone FROM %i WHERE post_id = %d',
+					$wpdb->prefix . 'gatherpress_events',
+					$post_id
+				)
+			),
+			'Precondition: GatherPress stores the offset spelling unchanged.'
+		);
+
+		Occurrences::project( $post_id );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d ORDER BY datetime_start_gmt ASC',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		$this->assertGreaterThan( 1, count( $rows ), 'A manual-offset series must still project its dates.' );
+
+		// The zone was read as the offset it names, not silently as UTC.
+		$expected = ( new DateTimeImmutable( '2026-08-10 10:00:00', new DateTimeZone( $equivalent ) ) )
+			->setTimezone( new DateTimeZone( 'UTC' ) )
+			->format( 'Y-m-d H:i:s' );
+
+		$this->assertSame( $expected, $rows[0]->datetime_start_gmt );
+	}
+
+	/**
+	 * Data provider for offset spellings PHP's `DateTimeZone` rejects.
+	 */
+	public function provide_offset_spellings(): array {
+		return array(
+			'whole hours' => array( 'UTC+10', '+10:00' ),
+			'negative'    => array( 'UTC-3', '-03:00' ),
+			'half hour'   => array( 'UTC+5.5', '+05:30' ),
+			'zero'        => array( 'UTC+0', 'UTC' ),
+		);
+	}
+
+	/**
+	 * Moving a series to another timezone has to reach the occurrence rows
+	 * that already exist.
+	 *
+	 * The projection used to `INSERT IGNORE`, so every row kept the old zone
+	 * forever and the occurrence pages went on displaying it -- which made the
+	 * front-end form's new Time zone control (#2021) look like it had done
+	 * nothing on a recurring event.
+	 *
+	 * The wall-clock starts do not move, so the recurrence ids do not either;
+	 * only the zone and the GMT columns derived from it change.
+	 */
+	public function test_reprojecting_moves_existing_rows_to_a_new_timezone(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+
+		Occurrences::project( $post_id );
+
+		$before = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id )
+		);
+		$this->assertGreaterThan( 1, $before, 'Precondition: the series projected some occurrences to move.' );
+
+		// Cancelling one proves the re-projection preserves per-occurrence
+		// state rather than rewriting the row wholesale.
+		Occurrences::set_status( $post_id, '20260817T100000', 'cancelled' );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		Occurrences::project( $post_id );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d ORDER BY datetime_start_gmt ASC',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		$this->assertCount( $before, $rows, 'Re-projecting must not duplicate the rows it already wrote.' );
+
+		foreach ( $rows as $row ) {
+			$this->assertSame( 'Australia/Brisbane', $row->timezone );
+			// Brisbane is UTC+10 year round, so 10:00 local is 00:00 UTC.
+			$this->assertStringContainsString( '00:00:00', $row->datetime_start_gmt );
+			$this->assertStringContainsString( '10:00:00', $row->datetime_start );
+		}
+
+		$cancelled = array_values(
+			array_filter( $rows, static fn( object $row ): bool => '20260817T100000' === $row->recurrence_id )
+		);
+
+		$this->assertSame( 'cancelled', $cancelled[0]->status, 'A cancelled occurrence must survive a re-projection.' );
+	}
+
+	/**
+	 * A schedule change has to land without anyone asking for a re-projection.
+	 *
+	 * `save_post` is too early to project from, and it sets the 6-hour
+	 * freshness marker on its way past, so `maybe_project()` will not come back
+	 * and repair it. Until this was hooked, an organizer who changed a
+	 * published series' timezone through the front-end form (#2021) saw the old
+	 * zone on every occurrence until the daily cron ran.
+	 */
+	public function test_a_schedule_write_reprojects_on_its_own(): void {
+		global $wpdb;
+
+		$post_id = $this->create_published_recurring_event();
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->assertSame(
+			array( 'UTC' ),
+			$this->projected_timezones( $post_id ),
+			'The first schedule write should have projected the series on its own.'
+		);
+
+		$this->assertTrue(
+			(bool) get_transient( 'gpre_projected_' . $post_id ),
+			'Precondition: the freshness marker is set, so nothing else will re-project this series.'
+		);
+
+		// No Occurrences::project() call: the write is the whole trigger.
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'Australia/Brisbane',
+			)
+		);
+
+		$this->assertSame(
+			array( 'Australia/Brisbane' ),
+			$this->projected_timezones( $post_id ),
+			'Every existing occurrence should have followed the series into its new zone.'
+		);
+
+		$gmt = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT DISTINCT TIME(datetime_start_gmt) FROM %i WHERE series_post_id = %d',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		// Brisbane is UTC+10 year round, so 10:00 local is 00:00 UTC.
+		$this->assertSame( array( '00:00:00' ), $gmt, 'The GMT columns derived from the zone should have been recomputed.' );
+	}
+
+	/**
+	 * One `save_datetimes()` writes five watched keys, and a projection is
+	 * ~30 upserts, so the other four have to recognize their own schedule and
+	 * do nothing.
+	 */
+	public function test_one_schedule_write_projects_once(): void {
+		$post_id     = $this->create_published_recurring_event();
+		$projections = 0;
+		$count       = static function () use ( &$projections ): void {
+			++$projections;
+		};
+
+		add_action( 'gpre_occurrences_projected', $count );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00',
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->assertSame( 1, $projections, 'The five meta writes of one schedule save should project once.' );
+
+		// An unrelated meta write is not a schedule change.
+		update_post_meta( $post_id, 'gatherpress_max_attendance_limit', 20 );
+
+		$this->assertSame( 1, $projections, 'A meta key that is not part of the schedule should not project.' );
+
+		remove_action( 'gpre_occurrences_projected', $count );
+	}
+
+	/**
+	 * The distinct timezones the series' occurrence rows are stored in.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return string[] One entry when every row agrees, which is the point.
+	 */
+	private function projected_timezones( int $post_id ): array {
+		global $wpdb;
+
+		return $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT DISTINCT timezone FROM %i WHERE series_post_id = %d',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+	}
+
 	/** Deactivation removes the site's projection cron event. */
 	public function test_deactivation_clears_projection_cron(): void {
 		Occurrences::clear_cron();
@@ -436,6 +995,428 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		} finally {
 			restore_current_blog();
 		}
+	}
+
+	/**
+	 * A stored lowercase monthly weekday is normalized to the REST enum.
+	 */
+	public function test_rule_from_post_normalizes_stored_monthly_weekday(): void {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type' => 'gatherpress_event',
+			)
+		);
+
+		update_post_meta(
+			$post_id,
+			Rule::META_PREFIX . 'monthly_weekday',
+			'we'
+		);
+
+		$this->assertSame(
+			'WE',
+			Rule::from_post( $post_id )['monthly_weekday']
+		);
+	}
+
+	/**
+	 * Archive queries bucket a series by each occurrence's date, not the master date.
+	 *
+	 * GatherPress builds the WHERE comparison with `$wpdb->prepare( '%i.%i' )`,
+	 * which backtick-quotes the identifiers. The extension's clause rewrite
+	 * used to match only the unquoted form, so once a series' first occurrence
+	 * had ended the whole series fell out of Upcoming and every future
+	 * occurrence was listed under Past.
+	 */
+	public function test_archive_queries_use_occurrence_dates(): void {
+		/*
+		 * `wordcamp-remote-css/tests/bootstrap.php` defines `WP_ADMIN` for the
+		 * whole run, so `is_admin()` is true unless a screen says otherwise, and
+		 * `Query::clauses()` exempts wp-admin. This is a front-end archive query.
+		 */
+		set_current_screen( 'front' );
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+
+		$start = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-8 days' )->setTime( 10, 0 );
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => $start->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 4 );
+
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Occurrences at -8d, -1d, +6d and +13d relative to now.
+		$upcoming = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'post__in'                => array( $post_id ),
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+			)
+		);
+		$past     = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'post__in'                => array( $post_id ),
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+			)
+		);
+
+		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_end_gmt', $upcoming->request );
+		$this->assertStringContainsString( 'COALESCE(gpre_occ_query.datetime_start_gmt', $upcoming->request );
+		$this->assertCount( 2, $upcoming->posts, 'Upcoming should list the two future occurrences.' );
+		$this->assertCount( 2, $past->posts, 'Past should list only the two finished occurrences.' );
+	}
+
+	/** Reproduce archive loop occurrence date behavior. */
+	public function test_archive_loop_renders_occurrence_dates_in_order(): void {
+		set_current_screen( 'front' );
+
+		// Event A: started 32 days ago, 20 occurrences (5 in past, 15 in future).
+		$post_id_a             = self::factory()->post->create(
+			array(
+				'post_title'  => 'Recurring Weekly A',
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		$start_a               = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-32 days' )->setTime( 10, 0 );
+		$master_date_formatted = $start_a->format( 'M j, Y' );
+		( new Event( $post_id_a ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id_a,
+				'datetime_start' => $start_a->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start_a->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start_a->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id_a, Rule::META_PREFIX . 'count', 20 );
+		wp_update_post( array(
+			'ID' => $post_id_a, 'post_status' => 'publish',
+		) );
+
+		// Several single events interleaved.
+		for ( $i = 1; $i <= 5; $i++ ) {
+			$post_id_single = self::factory()->post->create(
+				array(
+					'post_title'  => "Single Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+			$start_single   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '+' . ( $i * 5 ) . ' days' )->setTime( 14, 0 );
+			( new Event( $post_id_single ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id_single,
+					'datetime_start' => $start_single->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $start_single->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id_single, 'post_status' => 'publish',
+			) );
+		}
+
+		$page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 1,
+			)
+		);
+
+		$this->assertCount( 12, $page1->posts, 'Page 1 should contain exactly 12 events/occurrences.' );
+		$this->assertSame( 20, $page1->found_posts, 'Total found posts should be 15 upcoming occurrences + 5 single events = 20.' );
+		$this->assertSame( 2, $page1->max_num_pages, 'Total pages should be 2.' );
+
+		$page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 8, $page2->posts, 'Page 2 should contain the remaining 8 events/occurrences.' );
+
+		// Register pattern and render the actual query block.
+		$theme_dir = dirname( dirname( dirname( __DIR__ ) ) ) . '/themes/groups-site/';
+		if ( ! \WP_Block_Patterns_Registry::get_instance()->is_registered( 'groups-site/event-card' ) && file_exists( $theme_dir . 'patterns/event-card.php' ) ) {
+			ob_start();
+			include $theme_dir . 'patterns/event-card.php';
+			$card_content = ob_get_clean();
+			register_block_pattern(
+				'groups-site/event-card',
+				array(
+					'title'   => 'Event card',
+					'content' => $card_content,
+				)
+			);
+		}
+
+		$query_block_markup = '<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":12,"offset":0,"order":"asc","orderBy":"datetime","gatherpress_event_query":"upcoming","include_unfinished":1,"inherit":false},"namespace":"gatherpress-event-query","className":"gatherpress-event-query","align":"wide"} -->
+<div class="wp-block-query alignwide gatherpress-event-query">
+	<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+		<!-- wp:pattern {"slug":"groups-site/event-card"} /-->
+	<!-- /wp:post-template -->
+	<!-- wp:query-pagination -->
+		<!-- wp:query-pagination-numbers /-->
+	<!-- /wp:query-pagination -->
+</div>
+<!-- /wp:query -->';
+
+		// Render Page 1.
+		$_GET           = array();
+		$rendered_page1 = do_blocks( $query_block_markup );
+		preg_match_all( '/<div[^>]*class="[^"]*wp-block-gatherpress-event-date[^"]*"[^>]*>(.*?)<\/div>/s', $rendered_page1, $dates_p1 );
+		preg_match_all( '/<h3[^>]*class="[^"]*wp-block-post-title[^"]*"[^>]*><a[^>]+href="([^"]+)"[^>]*>(.*?)<\/a><\/h3>/s', $rendered_page1, $titles_p1 );
+
+		$this->assertCount( 12, $titles_p1[2], 'Rendered page 1 should have 12 cards.' );
+
+		$all_rendered_urls = array();
+
+		foreach ( $titles_p1[2] as $idx => $title ) {
+			$date_str = trim( wp_strip_all_tags( $dates_p1[1][ $idx ] ?? '' ) );
+			$url      = $titles_p1[1][ $idx ];
+
+			// Crucial CFT assertion: Master creation date from 32 days ago must NEVER render on upcoming cards.
+			$this->assertNotSame(
+				$master_date_formatted,
+				$date_str,
+				sprintf( 'Card %d (%s) must not render past master creation date (%s).', $idx + 1, $title, $master_date_formatted )
+			);
+
+			// Occurrence links must include recurrence timestamp.
+			if ( str_contains( $title, 'Recurring' ) ) {
+				$this->assertMatchesRegularExpression(
+					'#/\d{8}T\d{6}/#',
+					$url,
+					sprintf( 'Card %d (%s) must link to its specific occurrence URL.', $idx + 1, $title )
+				);
+			}
+
+			$all_rendered_urls[] = $url;
+		}
+
+		// Render Page 2.
+		$_GET           = array( 'query-page' => 2 );
+		$rendered_page2 = do_blocks( $query_block_markup );
+		preg_match_all( '/<div[^>]*class="[^"]*wp-block-gatherpress-event-date[^"]*"[^>]*>(.*?)<\/div>/s', $rendered_page2, $dates_p2 );
+		preg_match_all( '/<h3[^>]*class="[^"]*wp-block-post-title[^"]*"[^>]*><a[^>]+href="([^"]+)"[^>]*>(.*?)<\/a><\/h3>/s', $rendered_page2, $titles_p2 );
+
+		$this->assertCount( 8, $titles_p2[2], 'Rendered page 2 should have 8 cards.' );
+
+		$page2_urls = array();
+		foreach ( $titles_p2[2] as $idx => $title ) {
+			$date_str = trim( wp_strip_all_tags( $dates_p2[1][ $idx ] ?? '' ) );
+			$url      = $titles_p2[1][ $idx ];
+
+			$this->assertNotSame(
+				$master_date_formatted,
+				$date_str,
+				sprintf( 'Page 2 card %d (%s) must not render past master creation date (%s).', $idx + 1, $title, $master_date_formatted )
+			);
+
+			$page2_urls[] = $url;
+		}
+
+		// Pagination stability: Zero duplicate URLs between Page 1 and Page 2.
+		$intersection = array_intersect( $all_rendered_urls, $page2_urls );
+		$this->assertEmpty(
+			$intersection,
+			'Pagination instability detected: events repeated across page 1 and page 2: ' . implode( ', ', $intersection )
+		);
+
+		// Total distinct items rendered across page 1 and page 2 must equal 20.
+		$total_unique_rendered = count( array_unique( array_merge( $all_rendered_urls, $page2_urls ) ) );
+		$this->assertSame( 20, $total_unique_rendered, 'All 20 events should be rendered exactly once across pages 1 and 2.' );
+
+		$_GET = array();
+	}
+
+	/**
+	 * Verify pagination stability when multiple events or occurrences tie on start datetime.
+	 */
+	public function test_pagination_stability_with_tied_timestamps(): void {
+		$base_time     = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '+10 days' )->setTime( 18, 0 );
+		$created_posts = array();
+
+		// Create 15 events where items 10, 11, 12, 13 share the exact same start datetime.
+		for ( $i = 1; $i <= 15; $i++ ) {
+			$post_id = self::factory()->post->create(
+				array(
+					'post_title'  => "Tied Test Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+
+			// Items 10, 11, 12, 13 all have the same start datetime.
+			$offset_days = ( $i >= 10 && $i <= 13 ) ? 10 : $i;
+			$event_start = $base_time->modify( '+' . $offset_days . ' days' );
+
+			( new Event( $post_id ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id,
+					'datetime_start' => $event_start->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $event_start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id, 'post_status' => 'publish',
+			) );
+			$created_posts[ $post_id ] = $event_start->format( 'Y-m-d H:i:s' );
+		}
+
+		$page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 1,
+			)
+		);
+
+		$page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 12,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 12, $page1->posts, 'Page 1 should have 12 items.' );
+		$this->assertCount( 3, $page2->posts, 'Page 2 should have 3 items.' );
+		$this->assertSame( 15, $page1->found_posts, 'Total found posts should be 15.' );
+
+		$page1_ids = wp_list_pluck( $page1->posts, 'ID' );
+		$page2_ids = wp_list_pluck( $page2->posts, 'ID' );
+
+		// Enforce pagination stability: No row should appear on both Page 1 and Page 2.
+		$intersection = array_intersect( $page1_ids, $page2_ids );
+		$this->assertEmpty(
+			$intersection,
+			'Tied timestamps caused pagination instability: post IDs repeated across pages 1 and 2: ' . implode( ', ', $intersection )
+		);
+
+		// Combined items must contain all 15 unique post IDs.
+		$all_ids = array_merge( $page1_ids, $page2_ids );
+		$this->assertSame( 15, count( array_unique( $all_ids ) ), 'All 15 events must be accounted for across pages 1 and 2.' );
+	}
+
+	/**
+	 * Verify past events archive ordering and pagination stability with DESC order.
+	 */
+	public function test_past_events_archive_ordering_and_pagination(): void {
+		$now = new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) );
+
+		// Create 15 past events.
+		for ( $i = 1; $i <= 15; $i++ ) {
+			$post_id    = self::factory()->post->create(
+				array(
+					'post_title'  => "Past Event {$i}",
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'draft',
+				)
+			);
+			$past_start = $now->modify( '-' . ( 20 - $i ) . ' days' )->setTime( 10, 0 );
+
+			( new Event( $post_id ) )->save_datetimes(
+				array(
+					'post_id'        => $post_id,
+					'datetime_start' => $past_start->format( 'Y-m-d H:i:s' ),
+					'datetime_end'   => $past_start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+					'timezone'       => 'UTC',
+				)
+			);
+			wp_update_post( array(
+				'ID' => $post_id, 'post_status' => 'publish',
+			) );
+		}
+
+		$past_page1 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+				'posts_per_page'          => 10,
+				'paged'                   => 1,
+			)
+		);
+
+		$past_page2 = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'DESC',
+				'gatherpress_event_query' => 'past',
+				'include_unfinished'      => 0,
+				'posts_per_page'          => 10,
+				'paged'                   => 2,
+			)
+		);
+
+		$this->assertCount( 10, $past_page1->posts, 'Past Page 1 should contain 10 items.' );
+		$this->assertCount( 5, $past_page2->posts, 'Past Page 2 should contain 5 items.' );
+
+		$p1_ids = wp_list_pluck( $past_page1->posts, 'ID' );
+		$p2_ids = wp_list_pluck( $past_page2->posts, 'ID' );
+
+		$intersection = array_intersect( $p1_ids, $p2_ids );
+		$this->assertEmpty(
+			$intersection,
+			'Past events pagination instability: post IDs repeated across pages 1 and 2: ' . implode( ', ', $intersection )
+		);
 	}
 
 	/**

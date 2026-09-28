@@ -265,6 +265,46 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 	}
 
 	/**
+	 * The RSVP route is gated by the event's password, so a member who hasn't
+	 * unlocked the event can neither join its roster nor read it back.
+	 */
+	public function test_rsvp_route_is_gated_by_the_event_password() {
+		$event_id = $this->create_event();
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		$attendee = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $attendee, 'attending' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		global $wp_rest_server;
+		$wp_rest_server = new \WP_REST_Server();
+		do_action( 'rest_api_init', $wp_rest_server );
+
+		$locked = rest_do_request( $this->rsvp_request( $event_id, 'attending' ) );
+
+		$this->assertSame( 403, $locked->get_status() );
+
+		// Once the password is satisfied the same request goes through.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = rest_do_request( $this->rsvp_request( $event_id, 'attending' ) );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+		$wp_rest_server = null;
+
+		$this->assertSame( 200, $unlocked->get_status() );
+		$this->assertTrue( $unlocked->get_data()['success'] );
+	}
+
+	/**
 	 * A required question with no answer blocks the RSVP outright — a recorded
 	 * RSVP without the organizer's required detail is exactly the wrong-data
 	 * problem this feature exists to avoid.

@@ -13,6 +13,7 @@ if ( 'cli' !== php_sapi_name() ) {
  * so Jetpack has to be loaded before the plugin under test.
  */
 function manually_load_plugins() {
+	require_once SUT_WPMU_PLUGIN_DIR . '/3-helpers-misc.php';
 	require_once dirname( dirname( __DIR__ ) ) . '/jetpack/jetpack.php';
 	require_once dirname( __DIR__ ) . '/wordcamp-forms-to-drafts.php';
 }

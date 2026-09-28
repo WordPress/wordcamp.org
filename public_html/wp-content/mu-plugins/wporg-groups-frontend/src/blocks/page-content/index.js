@@ -16,9 +16,9 @@ registerBlockType( metadata.name, {
 				{},
 				wp.element.createElement(
 					PanelBody,
-					{ title: __( 'Settings', 'wporg-groups-frontend' ) },
+					{ title: __( 'Settings', 'wordcamporg' ) },
 					wp.element.createElement( TextControl, {
-						label: __( 'Page slug', 'wporg-groups-frontend' ),
+						label: __( 'Page slug', 'wordcamporg' ),
 						value: attributes.slug,
 						onChange: ( val ) => setAttributes( { slug: val } ),
 					} )
@@ -32,7 +32,7 @@ registerBlockType( metadata.name, {
 				: wp.element.createElement(
 						'p',
 						{ style: { color: '#656a71', fontStyle: 'italic' } },
-						__( 'Enter a page slug in the block settings.', 'wporg-groups-frontend' )
+						__( 'Enter a page slug in the block settings.', 'wordcamporg' )
 					)
 		);
 	},

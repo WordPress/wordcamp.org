@@ -1,4 +1,9 @@
 const { defineConfig, devices } = require( '@playwright/test' );
+const { loadDotEnv, siteOrigin } = require( './tests/e2e/utils/env' );
+
+// The dev stack's host bindings are overridable via `.env` (see
+// `.env.example`), so the target origin is derived rather than hardcoded.
+loadDotEnv();
 
 /**
  * E2E config for the Groups/GatherPress front-end integration.
@@ -20,7 +25,7 @@ module.exports = defineConfig( {
 		// root, not to this path — specs must use relative paths without a
 		// leading slash (e.g. `page.goto( 'members/' )`, not `'/members/'`)
 		// or they'll silently drop the `/group/sunshine-coast-qld` prefix.
-		baseURL: 'https://events.wordpress.test/group/sunshine-coast-qld/',
+		baseURL: `${ siteOrigin() }/group/sunshine-coast-qld/`,
 		// The local dev cert is self-signed (matches the `-k` flag used
 		// throughout the project's curl-based test plans).
 		ignoreHTTPSErrors: true,

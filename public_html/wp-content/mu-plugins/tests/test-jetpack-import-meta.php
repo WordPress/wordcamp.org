@@ -69,15 +69,14 @@ class Test_Jetpack_Import_Meta extends WP_UnitTestCase {
 	 */
 	public function test_serialized_array_round_trips() {
 		$original = array(
-			'width'  => 1024,
-			'height' => 768,
-			'sizes'  => array( 'thumbnail', 'medium' ),
+			'question' => 'Shirt size',
+			'options'  => array( 'S', 'M', 'L' ),
 		);
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Building a fixture of the exact WXR-style serialized value the importer receives.
 		$serialized = serialize( $original );
-		$meta       = $this->filter_meta( '/jetpack/v4/import/posts', array( '_wp_attachment_metadata' => $serialized ) );
-		$value      = maybe_unserialize( $meta['_wp_attachment_metadata'] );
+		$meta       = $this->filter_meta( '/jetpack/v4/import/posts', array( 'tix_questions' => $serialized ) );
+		$value      = maybe_unserialize( $meta['tix_questions'] );
 
 		$this->assertSame( $original, $value );
 	}
@@ -146,5 +145,61 @@ class Test_Jetpack_Import_Meta extends WP_UnitTestCase {
 		}
 
 		$this->assertTrue( true );
+	}
+
+	/**
+	 * Meta that names a file on disk is not imported.
+	 *
+	 * These routes write meta directly rather than through `import_post_meta_key`, so they drop
+	 * the same keys the WXR importer does.
+	 *
+	 * @dataProvider data_file_path_meta_keys
+	 *
+	 * @param string $key A meta key that stores a filesystem path.
+	 */
+	public function test_file_path_meta_is_dropped( $key ) {
+		$meta = $this->filter_meta( '/jetpack/v4/import/posts', array( $key => '../../../evil.txt' ) );
+
+		$this->assertArrayNotHasKey( $key, $meta );
+	}
+
+	/**
+	 * Data provider for test_file_path_meta_is_dropped().
+	 *
+	 * @return array[]
+	 */
+	public function data_file_path_meta_keys() {
+		return array(
+			'attached file'       => array( '_wp_attached_file' ),
+			'attachment metadata' => array( '_wp_attachment_metadata' ),
+			'font face file'      => array( '_wp_font_face_file' ),
+		);
+	}
+
+	/**
+	 * Dropping a file path key leaves the rest of the meta alone.
+	 */
+	public function test_other_meta_survives_the_drop() {
+		$meta = $this->filter_meta(
+			'/jetpack/v4/import/posts',
+			array(
+				'_wp_font_face_file' => '../../../evil.txt',
+				'_thumbnail_id'      => '4242',
+				'tix_coupon'         => 'early-bird',
+			)
+		);
+
+		$this->assertArrayNotHasKey( '_wp_font_face_file', $meta );
+		$this->assertSame( '4242', $meta['_thumbnail_id'] );
+		$this->assertSame( 'early-bird', $meta['tix_coupon'] );
+	}
+
+	/**
+	 * Routes outside the importer are left alone.
+	 */
+	public function test_other_routes_are_untouched() {
+		$meta = $this->filter_meta( '/wp/v2/posts', array( '_wp_font_face_file' => 'font.ttf' ) );
+
+		$this->assertSame( 'font.ttf', $meta['_wp_font_face_file'] );
 	}
 }

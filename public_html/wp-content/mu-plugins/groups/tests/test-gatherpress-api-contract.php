@@ -64,6 +64,12 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		'GatherPress\Core\User'             => array(
 			'methods' => array( 'has_event_updates_opt_in' ),
 		),
+		// The RSVP confirmation email links to the same on-site endpoints the
+		// event page's add-to-calendar control does, so a rename upstream
+		// would silently drop those lines from the email.
+		'GatherPress\Core\Calendar\Calendar' => array(
+			'methods' => array( 'get_google_url', 'get_ical_url', 'get_outlook_url', 'get_yahoo_url' ),
+		),
 	);
 
 	/**

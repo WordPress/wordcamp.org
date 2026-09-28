@@ -172,17 +172,17 @@ function register_post_type(): void {
 		POST_TYPE,
 		array(
 			'labels'          => array(
-				'name'               => __( 'Sponsors', 'wporg-groups-frontend' ),
-				'singular_name'      => __( 'Sponsor', 'wporg-groups-frontend' ),
-				'add_new_item'       => __( 'Add New Sponsor', 'wporg-groups-frontend' ),
-				'edit_item'          => __( 'Edit Sponsor', 'wporg-groups-frontend' ),
-				'new_item'           => __( 'New Sponsor', 'wporg-groups-frontend' ),
-				'view_item'          => __( 'View Sponsor', 'wporg-groups-frontend' ),
-				'search_items'       => __( 'Search Sponsors', 'wporg-groups-frontend' ),
-				'not_found'          => __( 'No sponsors found', 'wporg-groups-frontend' ),
-				'not_found_in_trash' => __( 'No sponsors found in Trash', 'wporg-groups-frontend' ),
-				'all_items'          => __( 'Sponsors', 'wporg-groups-frontend' ),
-				'menu_name'          => __( 'Sponsors', 'wporg-groups-frontend' ),
+				'name'               => __( 'Sponsors', 'wordcamporg' ),
+				'singular_name'      => __( 'Sponsor', 'wordcamporg' ),
+				'add_new_item'       => __( 'Add New Sponsor', 'wordcamporg' ),
+				'edit_item'          => __( 'Edit Sponsor', 'wordcamporg' ),
+				'new_item'           => __( 'New Sponsor', 'wordcamporg' ),
+				'view_item'          => __( 'View Sponsor', 'wordcamporg' ),
+				'search_items'       => __( 'Search Sponsors', 'wordcamporg' ),
+				'not_found'          => __( 'No sponsors found', 'wordcamporg' ),
+				'not_found_in_trash' => __( 'No sponsors found in Trash', 'wordcamporg' ),
+				'all_items'          => __( 'Sponsors', 'wordcamporg' ),
+				'menu_name'          => __( 'Sponsors', 'wordcamporg' ),
 			),
 			// Sponsors have no pages of their own — they're rendered by the
 			// `wporg/sponsors` block and link out to the sponsor's own site.
@@ -227,7 +227,7 @@ function register_post_type(): void {
 function add_meta_boxes(): void {
 	add_meta_box(
 		'wporg-sponsor-url',
-		__( 'Sponsor Website', 'wporg-groups-frontend' ),
+		__( 'Sponsor Website', 'wordcamporg' ),
 		__NAMESPACE__ . '\render_url_meta_box',
 		POST_TYPE,
 		'side'
@@ -245,7 +245,7 @@ function render_url_meta_box( WP_Post $post ): void {
 	?>
 	<p>
 		<label class="screen-reader-text" for="wporg-sponsor-url-field">
-			<?php esc_html_e( 'Sponsor website URL', 'wporg-groups-frontend' ); ?>
+			<?php esc_html_e( 'Sponsor website URL', 'wordcamporg' ); ?>
 		</label>
 		<input
 			type="url"
@@ -257,7 +257,7 @@ function render_url_meta_box( WP_Post $post ): void {
 		/>
 	</p>
 	<p class="description">
-		<?php esc_html_e( 'Where the sponsor card links to. Leave empty to render the sponsor without a link.', 'wporg-groups-frontend' ); ?>
+		<?php esc_html_e( 'Where the sponsor card links to. Leave empty to render the sponsor without a link.', 'wordcamporg' ); ?>
 	</p>
 	<?php
 }
@@ -352,7 +352,7 @@ function render_invalid_url_notice(): void {
 	wp_admin_notice(
 		sprintf(
 			/* translators: %s: the URL the user entered. */
-			esc_html__( '%s isn\'t a usable web address, so the sponsor\'s existing link was kept. Include a full address, e.g. https://example.org/.', 'wporg-groups-frontend' ),
+			esc_html__( '%s isn\'t a usable web address, so the sponsor\'s existing link was kept. Include a full address, e.g. https://example.org/.', 'wordcamporg' ),
 			'<code>' . esc_html( $raw ) . '</code>'
 		),
 		array(

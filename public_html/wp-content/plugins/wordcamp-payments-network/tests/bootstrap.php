@@ -28,6 +28,10 @@ function manually_load_plugin() {
 	// budget CPTs.
 	$GLOBALS['wcp_payment_request'] = new \WCP_Payment_Request();
 
+	// The shared `wcb-*` statuses are registered by `WordCamp_Budgets`' constructor, which the plugin only
+	// instantiates in the admin. Register them on their own so posts can be stored at those statuses.
+	add_action( 'init', array( '\WordCamp_Budgets', 'register_post_statuses' ) );
+
 	require_once dirname( __DIR__ )  . '/includes/payment-requests-dashboard.php';
 	require_once dirname( __DIR__ )  . '/includes/wordcamp-budgets-dashboard.php';
 }

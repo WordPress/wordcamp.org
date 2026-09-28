@@ -106,14 +106,9 @@ git checkout production -f
 ### Steps to deploy
 
 ```
-cd /home/wordcamp
-git pull origin production
-cd public_html
-svn up
-cd /home/wordcamp/public_html/wp-content/mu-plugins/wporg-groups-frontend
-npm install --loglevel=warn 2>&1 | tee /tmp/npm-install.log
-npm run build
 cd /home/wordcamp/public_html
+git pull origin production
+svnup-all.sh
 php bin/php/multiple-use/miscellaneous/sync-svn-with-git.php
 # Don't forget to press RETURN after it's committed, because it'll just stay
 ```

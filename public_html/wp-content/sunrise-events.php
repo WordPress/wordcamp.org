@@ -2,7 +2,7 @@
 
 namespace WordCamp\Sunrise\Events;
 use WP_Network, WP_Site;
-use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url };
+use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url, get_url_port };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
@@ -33,8 +33,9 @@ function main() {
 function get_redirect_url( string $request_uri ): string {
 	$domain       = 'events.wordpress.' . get_top_level_domain();
 	$old_full_url = sprintf(
-		'https://%s/%s',
+		'https://%s%s/%s',
 		$domain,
+		get_url_port(),
 		ltrim( $request_uri, '/' )
 	);
 
@@ -181,7 +182,7 @@ function get_latest_event_url( string $request_path ) {
 		return false;
 	}
 
-	return 'https://' . $latest_site->domain . $latest_site->path;
+	return 'https://' . $latest_site->domain . get_url_port() . $latest_site->path;
 }
 
 /**

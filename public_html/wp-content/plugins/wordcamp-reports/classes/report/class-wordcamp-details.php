@@ -209,7 +209,12 @@ class WordCamp_Details extends Base_Details {
 
 				switch ( $key ) {
 					case 'Status':
-						$row[ $key ] = $all_statuses[ $value ];
+						/*
+						 * `post_status => 'any'` also matches core statuses such as
+						 * `draft`, which have no entry here -- fall back to the raw
+						 * slug rather than emitting null on an undefined key.
+						 */
+						$row[ $key ] = $all_statuses[ $value ] ?? $value;
 						break;
 					case 'Tickets':
 					case 'Speakers':

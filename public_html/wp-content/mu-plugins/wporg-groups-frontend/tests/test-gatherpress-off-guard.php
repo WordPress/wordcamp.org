@@ -39,6 +39,29 @@ class Test_Groups_GatherPress_Off_Guard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The sponsors store is the one piece that must run *without* GatherPress:
+	 * it's edited on the groups network root site, which doesn't run the
+	 * plugin. If someone moves `Sponsors\bootstrap()` below the guard, the
+	 * Sponsors admin screen silently disappears.
+	 */
+	public function test_sponsors_bootstrap_runs_before_the_gatherpress_guard() {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a local plugin file, not a remote URL.
+		$source = file_get_contents(
+			dirname( __DIR__ ) . '/wporg-groups-frontend.php'
+		);
+
+		$sponsors = strpos( $source, 'Sponsors\bootstrap();' );
+		$guard    = strpos( $source, 'class_exists( \'\GatherPress\Core\Event\Event\' )' );
+
+		$this->assertNotFalse( $sponsors, 'wporg-groups-frontend.php should still bootstrap the sponsors store.' );
+		$this->assertLessThan(
+			$guard,
+			$sponsors,
+			'Sponsors\bootstrap() should run before the GatherPress guard, since the network root site has no GatherPress.'
+		);
+	}
+
+	/**
 	 * `gatherpress-groups-tweaks.php` must stay guarded on its
 	 * GatherPress-dependent code path.
 	 */

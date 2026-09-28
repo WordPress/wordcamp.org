@@ -46,15 +46,47 @@ abstract class Event_Loader {
 	abstract public static function get_post_statuses();
 
 	/**
+	 * Statuses whose single view resolves for everyone.
+	 *
+	 * Defaults to the statuses that public surfaces already list. Subclasses widen it for
+	 * statuses that aren't listed but whose permalink is still linked from somewhere.
+	 *
+	 * @return array
+	 */
+	public static function get_publicly_viewable_post_statuses() {
+		return static::get_public_post_statuses();
+	}
+
+	/**
 	 * Register post statuses for this event type.
 	 */
 	public function register_post_statuses() {
+		$viewable = static::get_publicly_viewable_post_statuses();
+
 		foreach ( $this->get_post_statuses() as $key => $label ) {
+			$is_viewable = in_array( $key, $viewable, true );
+
 			register_post_status(
 				$key, array(
-					'label'       => $label,
-					'public'      => true,
-					'label_count' => _nx_noop(
+					'label'               => $label,
+					'public'              => $is_viewable,
+
+					/*
+					 * `protected` rather than plain non-public, so WP_Query still resolves the
+					 * single view for users who can edit the post. Wranglers and mentors open
+					 * applications they're processing that way. Everyone else gets a 404.
+					 */
+					'protected'           => ! $is_viewable,
+
+					/*
+					 * Deliberately false for every status. This governs `post_status => 'any'`,
+					 * not the default status set, and `get_wordcamps()` / `get_wordcamp_post()`
+					 * both rely on 'any' meaning all of them. Setting it true would also break
+					 * asymmetrically, since these statuses are only registered on Central.
+					 */
+					'exclude_from_search' => false,
+
+					'label_count'         => _nx_noop(
 						sprintf( '%s <span class="count">(%s)</span>', $label, '%s' ),
 						sprintf( '%s <span class="count">(%s)</span>', $label, '%s' ),
 						'wordcamporg'

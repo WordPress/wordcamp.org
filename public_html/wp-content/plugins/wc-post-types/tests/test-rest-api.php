@@ -12,9 +12,15 @@ defined( 'WPINC' ) || die();
 class Test_Favorite_Sessions_Email_Validation extends WP_UnitTestCase {
 	/**
 	 * Ensure the REST route is registered before tests run.
+	 *
+	 * `register_fav_sessions_email()` is already hooked to `rest_api_init`
+	 * (see `inc/rest-api.php`); firing that action -- rather than calling
+	 * the function directly -- keeps `register_rest_route()` inside its
+	 * expected `doing_action( 'rest_api_init' )` context and avoids an
+	 * "incorrectly called" notice.
 	 */
 	public static function wpSetUpBeforeClass(): void {
-		\WordCamp\Post_Types\REST_API\register_fav_sessions_email();
+		do_action( 'rest_api_init' );
 	}
 
 	/**

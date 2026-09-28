@@ -72,6 +72,18 @@ class WordCamp_QBO {
 	 * Runs during rest_api_init.
 	 */
 	public static function rest_api_init() {
+		/*
+		 * The routes below are authenticated solely by an HMAC signature. Every input to that signature comes
+		 * from the request itself, so without a secret `is_valid_request()` would be comparing digests that any
+		 * caller can compute for themselves. Withhold the routes entirely until the secret is provisioned, so
+		 * that an unconfigured host serves a 404 rather than an endpoint whose authentication is a no-op.
+		 */
+		if ( empty( self::$hmac_key ) ) {
+			Logger\log( 'qbo_hmac_key_missing' );
+
+			return;
+		}
+
 		register_rest_route(
 			'wordcamp-qbo/v1',
 			'/expense',
@@ -1263,6 +1275,11 @@ class WordCamp_QBO {
 	 * @return bool True if valid, false if invalid.
 	 */
 	public static function is_valid_request( $request ) {
+		// Fail closed rather than validating against a key that every caller knows. See `rest_api_init()`.
+		if ( empty( self::$hmac_key ) ) {
+			return false;
+		}
+
 		if ( ! $request->get_header( 'authorization' ) ) {
 			return false;
 		}

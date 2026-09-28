@@ -1,34 +1,37 @@
 /**
  * Group Members block styles.
+ *
+ * The members page's only section, so its heading takes the same main-column
+ * Heading 3 treatment as the front page's sections, and each member card
+ * follows the shared card spec.
  */
 
-.wporg-group-members__heading {
-	font-size: 24px;
-	font-weight: 600;
-	margin: 0 0 24px !important;
-	padding: 0 !important;
-}
+@import "../../components/section-heading.css";
 
 .wporg-group-members__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	gap: 16px;
+	gap: var(--wp--preset--spacing--20);
 }
 
 .wporg-group-members__card {
 	display: flex;
 	align-items: flex-start;
-	gap: 14px;
-	padding: 16px;
-	border: 1px solid #d9d9d9;
+	gap: var(--wp--preset--spacing--20);
+
+	/* 20px rather than 24px: an avatar-plus-two-lines row is a compact card,
+	   the same call made for `.wporg-my-events__card`. */
+	padding: var(--wp--preset--spacing--20);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
 	text-decoration: none;
 	color: inherit;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.wporg-group-members__card:hover {
-	border-color: #3858e9;
+.wporg-group-members__card:hover,
+.wporg-group-members__card:focus-visible {
+	border-color: var(--wp--preset--color--blueberry-1);
 	box-shadow: 0 2px 8px rgba(56, 88, 233, 0.1);
 	text-decoration: none;
 }
@@ -49,35 +52,167 @@
 }
 
 .wporg-group-members__name {
-	font-size: 15px;
+	font-size: var(--wp--preset--font-size--normal);
 	font-weight: 600;
-	color: #1a1919;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-group-members__role {
-	font-size: 12px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: #656a71;
+	color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-group-members__role--administrator,
 .wporg-group-members__role--editor {
-	color: #3858e9;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-group-members__role--author {
-	color: #008a20;
+	color: #007a2f;
 }
 
 .wporg-group-members__bio {
-	font-size: 13px;
-	color: #656a71;
-	line-height: 1.4;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+	line-height: 1.55;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
+}
+
+/*
+ * Self-serve role switcher — beta groups only (see
+ * `Capabilities\SELF_SERVE_ROLE_GROUPS`). Framed as a bordered panel above
+ * the member grid rather than an inline control, because it changes what
+ * the whole site lets you do, not just what this page shows.
+ */
+
+.wporg-group-members__role-switcher {
+	margin-bottom: var(--wp--preset--spacing--40);
+	padding: var(--wp--preset--spacing--30);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	background: var(--wp--preset--color--white);
+}
+
+/* `!important` for the same reason `.wporg-section-heading` needs it: the
+   parent theme's `.wp-site-blocks h3:not([class*="-font-size"], ...)` rule
+   outranks any plain class selector and would open a spacing-40 gap between
+   the panel's own padding and its heading. */
+.wporg-group-members__role-switcher-heading {
+	margin: 0 !important;
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-0);
+}
+
+.wporg-group-members__role-switcher-help {
+	margin: 4px 0 var(--wp--preset--spacing--20);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wporg-group-members__role-options {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--wp--preset--spacing--20);
+}
+
+/* Each option is a card, not a segmented-control segment: the descriptions
+   are the point — a tester picking "Organizer" should be able to read what
+   that grants before clicking. */
+.wporg-group-members__role-option {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	padding: var(--wp--preset--spacing--20);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	background: var(--wp--preset--color--white);
+	font-family: var(--wp--preset--font-family--inter);
+	text-align: left;
+	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* The current role reads as selected rather than as a call to action, so it
+   keeps the accent border but loses the pointer and the hover lift. */
+.wporg-group-members__role-option.is-current {
+	border-color: var(--wp--preset--color--blueberry-1);
+	background: var(--wp--preset--color--blueberry-4);
+	cursor: default;
+}
+
+.wporg-group-members__role-option:disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.wporg-group-members__role-option:focus-visible {
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 2px 8px rgba(56, 88, 233, 0.1);
+}
+
+/* Ordered after the two rules above to satisfy `no-descending-specificity`;
+   the `:not()`s mean it never actually competes with either. */
+.wporg-group-members__role-option:hover:not(.is-current):not(:disabled) {
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 2px 8px rgba(56, 88, 233, 0.1);
+}
+
+.wporg-group-members__role-option-label {
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-0);
+}
+
+/* A checkmark on the selected card, so the state isn't carried by colour
+   alone for the border and background above. */
+.wporg-group-members__role-option.is-current .wporg-group-members__role-option-label::after {
+	content: " \2713";
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+.wporg-group-members__role-option-description {
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wporg-group-members__role-switcher-status:empty {
+	display: none;
+}
+
+/* Matches the notice treatment in `group-membership`'s preference status. */
+.wporg-group-members__role-switcher-status:not(:empty) {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10);
+	margin: var(--wp--preset--spacing--20) 0 0;
+	padding: 10px 20px;
+	border: 1px solid;
+	border-radius: 2px;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+}
+
+.wporg-group-members__role-switcher-status.is-error {
+	border-color: #b32d0f;
+	background: var(--wp--preset--color--pomegranate-3);
+	color: var(--wp--preset--color--charcoal-0);
+}
+
+.wporg-group-members__role-switcher-status.is-error::before {
+	content: "!";
+	font-weight: 600;
+	line-height: 1.55;
 }

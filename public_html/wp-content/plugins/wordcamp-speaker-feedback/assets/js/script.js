@@ -31,10 +31,8 @@
 			},
 		};
 
-		const author = rawData[ 'sft-author' ];
-		if ( '0' !== author ) {
-			data.author = author;
-		} else {
+		// Only an anonymous submitter sends a name and email. A logged-in one is identified by the session.
+		if ( '0' === rawData[ 'sft-author' ] ) {
 			data.author_name = rawData[ 'sft-author-name' ];
 			data.author_email = rawData[ 'sft-author-email' ];
 		}

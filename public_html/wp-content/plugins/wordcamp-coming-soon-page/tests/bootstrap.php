@@ -12,6 +12,9 @@ if ( 'cli' !== php_sapi_name() ) {
 function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/classes/wccsp-settings.php';
 	require_once dirname( __DIR__ ) . '/classes/wccsp-customizer.php';
+	require_once dirname( __DIR__ ) . '/classes/wordcamp-coming-soon-page.php';
+
+	$GLOBALS['WCCSP_Settings'] = new \WCCSP_Settings();
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );

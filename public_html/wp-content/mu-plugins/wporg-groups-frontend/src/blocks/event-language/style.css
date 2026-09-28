@@ -1,0 +1,28 @@
+/*
+ * One more label/value pair in the event info card, built to the same
+ * specification as the date and location pairs it sits with: an eyebrow
+ * (12/600 uppercase, muted) over the answer (Inter 16/1.4/600).
+ *
+ * Those two carry their sizes as block attributes in single-event.html, which
+ * a single server-rendered block has no way to express, so they are set here
+ * from the same tokens. The eyebrow also takes the theme's own
+ * `groups-site-event-label` class, so its tracking and casing stay wherever
+ * the card's other eyebrows get theirs rather than being restated.
+ */
+
+.wporg-event-language__label {
+	color: var(--wp--preset--color--charcoal-4);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	margin: 0 0 var(--wp--preset--spacing--10);
+}
+
+.wporg-event-language__value {
+	color: var(--wp--preset--color--charcoal-1);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	line-height: 1.4;
+	margin: 0;
+}

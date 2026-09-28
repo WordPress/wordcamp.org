@@ -150,15 +150,16 @@ class Events_Application extends WordCamp_Application {
 	public function create_post( $data ) {
 		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
 
-		// Create the post.
-		$user     = wcorg_get_user_by_canonical_names( $data['q_wporg_username'] );
-		$statuses = \WordCamp_Loader::get_post_statuses();
+		// `submit_application()` only reaches this method for a logged-in submitter, so the
+		// application is owned by that account. The username field is stored as meta below.
+		$author_id = get_current_user_id();
+		$statuses  = \WordCamp_Loader::get_post_statuses();
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
 			'post_title'  => esc_html( $data['q_event_location'] ),
 			'post_status' => self::get_default_status(),
-			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : $wordcamp_user_id, // Set `wordcamp` as author if supplied username is not valid.
+			'post_author' => $author_id ?: $wordcamp_user_id,
 		);
 
 		$post_id = wp_insert_post( $post, true );

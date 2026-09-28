@@ -28,7 +28,7 @@
 }
 
 .wporg-event-speakers__card:hover {
-	border-color: #3858e9;
+	border-color: var(--wp--preset--color--blueberry-1);
 	text-decoration: none;
 }
 
@@ -59,7 +59,7 @@
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: #3858e9;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-event-speakers__bio {

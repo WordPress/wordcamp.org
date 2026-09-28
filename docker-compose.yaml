@@ -1,31 +1,48 @@
 services:
     wordcamp.test:
-        build:
-            context: .docker
-            dockerfile: Dockerfile.php-fpm
+        # Local dev builds this from Dockerfile.php-fpm via the `build:` in
+        # docker-compose.override.yml, which `docker compose` merges in
+        # automatically. CI (`.github/workflows/e2e-tests.yml`) sets
+        # WORDCAMP_TEST_IMAGE to a prebuilt ghcr.io tag and runs against
+        # this base file alone, so it pulls instead of rebuilding from
+        # scratch every run -- see `.github/workflows/e2e-image.yml`.
+        image: "${WORDCAMP_TEST_IMAGE:-wordcamp-test-local}"
         volumes:
             - "./public_html:/usr/src/public_html"
             - ".docker/bin:/var/scripts"
             - ".docker/data:/usr/src/data"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
+            - ".docker/local:/usr/src/local"
             - ".docker/wp-cli.yml:/usr/src/public_html/wp-cli.yml"
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
+        # Host-side bindings are overridable so this stack can coexist with
+        # another local dev environment that wants 80/443 -- either move this
+        # one to a different port (WORDCAMP_HTTPS_PORT) or to a different
+        # address (WORDCAMP_BIND_IP). See `.env.example` and "Running alongside
+        # another local environment" in `.docker/readme.md`.
+        #
+        # WORDCAMP_BIND_IP defaults to empty rather than 0.0.0.0 on purpose:
+        # an unqualified mapping binds IPv4 *and* IPv6 (`[::]:443`), while an
+        # explicit `0.0.0.0:` prefix would bind IPv4 only -- enough to break
+        # anything that resolves `localhost` to `::1` first. Empty keeps the
+        # resolved config identical to the hardcoded mappings this replaced,
+        # which is what CI (`.github/workflows/e2e-tests.yml`) runs against.
         ports:
-            - "80:80"
-            - "443:443"
-            - "1080:1080"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_HTTP_PORT:-80}:80"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_HTTPS_PORT:-443}:443"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_MAILCATCHER_PORT:-1080}:1080"
         environment:
             - IS_LOCAL_DEV=1
             - WP_CLI_ALLOW_ROOT=true
 
     wordcamp.db:
-        build:
-            context: .docker
-            dockerfile: Dockerfile.mariadb
+        # See wordcamp.test's comment above -- same local-dev-vs-CI split.
+        image: "${WORDCAMP_DB_IMAGE:-wordcamp-db-local}"
         volumes:
             - ".docker/mariadb-database:/var/lib/mysql"
             - ".docker/bin:/var/scripts"
         ports:
-            # todo document that 3307 to avoid conflicts w/ host mariadb/mysql server?
-            - "3307:3306"
+            # 3307 rather than 3306 so this doesn't collide with a MariaDB/MySQL
+            # server running directly on the host.
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_DB_PORT:-3307}:3306"

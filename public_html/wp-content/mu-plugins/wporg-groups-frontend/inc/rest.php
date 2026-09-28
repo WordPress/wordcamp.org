@@ -15,11 +15,15 @@
  *   POST /event/{id}
  *        Updates an existing gatherpress_event.
  *
+ *   POST /event/{id}/rsvp
+ *        RSVPs the current user to an event, together with their answers to
+ *        the event's custom registration questions. Wraps GatherPress's own
+ *        RSVP save so the answers and the RSVP are written in one request and
+ *        required questions are enforced server-side.
+ *
  *   GET  /group-info
  *   POST /group-info
- *        Reads and writes the group's name and description. Exists because
- *        core's /wp/v2/settings requires `manage_options`, which Organisers
- *        (editors) do not have.
+ *        Reads and writes the group's name, description, and location.
  *
  * The event routes require the `current_user_can_manage_events()` capability,
  * plus post-specific capabilities when operating on an existing event. The
@@ -45,8 +49,34 @@ use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
+use function WordCamp\Groups\Frontend\Defaults\filter_to_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
+use function WordCamp\Groups\Frontend\Event_Date_Format\build_choices;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_date_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_date_formats;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_formats;
+use function WordCamp\Groups\Frontend\Event_Date_Format\set_date_format;
+use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
+use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
+use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
+use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize as canonicalize_timezone;
+use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
+use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
+use function WordCamp\Groups\Frontend\Group_Location\clear_location;
+use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
+use function WordCamp\Groups\Frontend\Group_Location\get_location;
+use function WordCamp\Groups\Frontend\Group_Location\normalize_location;
+use function WordCamp\Groups\Frontend\Group_Location\save_location;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_missing_required;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\merge_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\sanitize_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\save_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
 
 const NAMESPACE_V1 = 'wporg-groups/v1';
 
@@ -55,6 +85,7 @@ const NAMESPACE_V1 = 'wporg-groups/v1';
  */
 function bootstrap(): void {
 	add_action( 'rest_api_init', __NAMESPACE__ . '\register_routes' );
+	add_filter( 'rest_gatherpress_event_query', __NAMESPACE__ . '\apply_requested_event_list_type', 20, 2 );
 }
 
 /**
@@ -106,6 +137,41 @@ function register_routes(): void {
 					},
 				),
 			) + event_args_schema(),
+		)
+	);
+
+	register_rest_route(
+		NAMESPACE_V1,
+		'/event/(?P<id>\d+)/rsvp',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => __NAMESPACE__ . '\save_rsvp',
+			'permission_callback' => __NAMESPACE__ . '\rsvp_permissions_check',
+			'args'                => array(
+				'id'            => array(
+					'type'              => 'integer',
+					'required'          => true,
+					'sanitize_callback' => 'absint',
+				),
+				'status'        => array(
+					'type'              => 'string',
+					'required'          => true,
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => static function ( $param ) {
+						return in_array( $param, array( 'attending', 'not_attending' ), true );
+					},
+				),
+				'answers'       => array(
+					'type'     => 'object',
+					'required' => false,
+					'default'  => array(),
+				),
+				'recurrence_id' => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+			),
 		)
 	);
 
@@ -182,11 +248,9 @@ function register_routes(): void {
 
 	// ----- Group info -----------------------------------------------------
 	//
-	// The Settings > About tab edits `blogname` and `blogdescription`. Core's
-	// /wp/v2/settings gates both behind `manage_options`, which only network
-	// administrators have, so Organisers got a 403 on every read and write.
-	// These routes expose just those two fields, behind the same capability
-	// check that gates the settings UI itself.
+	// Organizers cannot use core's /wp/v2/settings endpoint because it requires
+	// `manage_options`. Expose only the fields managed by this UI behind the
+	// group-settings capability instead.
 
 	register_rest_route(
 		NAMESPACE_V1,
@@ -212,6 +276,27 @@ function register_routes(): void {
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'location'    => array(
+						'required'          => false,
+						'validate_callback' => static function ( $location ) {
+							return null === $location || is_array( $location );
+						},
+					),
+					// Both default to '', which clears the group's choice and
+					// hands the templates and GatherPress their own formats
+					// back. An unrecognized format clears it too rather than
+					// failing the save of the rest of the form -- the value is
+					// a `wp_date()` argument, so the allowlist is load-bearing.
+					'date_format' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => static fn( $format ): string => sanitize_group_date_format( $format ),
+					),
+					'time_format' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => static fn( $format ): string => sanitize_group_time_format( $format ),
+					),
 				),
 			),
 		)
@@ -226,28 +311,54 @@ function manage_group_settings_permissions_check(): bool {
 }
 
 /**
- * Return the group's name and description.
+ * Return the editable group details and location options.
  */
 function get_group_info(): WP_REST_Response {
 	return new WP_REST_Response(
 		array(
 			'title'       => get_option( 'blogname', '' ),
 			'description' => get_option( 'blogdescription', '' ),
+			'location'    => get_location(),
+			'countries'   => get_country_options(),
+			'dateFormat'  => get_date_format(),
+			'timeFormat'  => get_time_format(),
+			// Each choice ships with the example it renders, so the form can
+			// offer "Tuesday, September 29" instead of `l, F j`. That is the
+			// whole point of the setting (#2033).
+			'dateChoices' => build_choices( get_date_formats() ),
+			'timeChoices' => build_choices( get_time_formats() ),
 		)
 	);
 }
 
 /**
- * Update the group's name and description.
+ * Normalize a submitted group date format. See `Event_Date_Format\sanitize_format()`.
  *
- * Only the fields present in the request are written, so a client can send
- * one without clobbering the other.
+ * @param mixed $format Submitted format.
+ */
+function sanitize_group_date_format( $format ): string {
+	return \WordCamp\Groups\Frontend\Event_Date_Format\sanitize_format( $format, get_date_formats() );
+}
+
+/**
+ * Normalize a submitted group time format. See `Event_Date_Format\sanitize_format()`.
+ *
+ * @param mixed $format Submitted format.
+ */
+function sanitize_group_time_format( $format ): string {
+	return \WordCamp\Groups\Frontend\Event_Date_Format\sanitize_format( $format, get_time_formats() );
+}
+
+/**
+ * Only fields present in the request are written.
  *
  * @return WP_Error|WP_REST_Response
  */
 function update_group_info( WP_REST_Request $request ) {
-	$title       = $request->get_param( 'title' );
-	$description = $request->get_param( 'description' );
+	$title        = $request->get_param( 'title' );
+	$description  = $request->get_param( 'description' );
+	$has_location = $request->has_param( 'location' );
+	$location     = null;
 
 	// An empty group name is not recoverable from this UI: the next load
 	// returns the blank value, so there is nothing left to restore it from.
@@ -257,12 +368,40 @@ function update_group_info( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_empty_group_name', 'Group name is required.', array( 'status' => 400 ) );
 	}
 
+	if ( $has_location ) {
+		$location = $request->get_param( 'location' );
+
+		if ( null !== $location ) {
+			$location = normalize_location( $location );
+
+			if ( is_wp_error( $location ) ) {
+				return $location;
+			}
+		}
+	}
+
 	if ( null !== $title ) {
 		update_option( 'blogname', $title );
 	}
 
 	if ( null !== $description ) {
 		update_option( 'blogdescription', $description );
+	}
+
+	if ( $request->has_param( 'date_format' ) ) {
+		set_date_format( (string) $request->get_param( 'date_format' ) );
+	}
+
+	if ( $request->has_param( 'time_format' ) ) {
+		set_time_format( (string) $request->get_param( 'time_format' ) );
+	}
+
+	if ( $has_location ) {
+		if ( null === $location ) {
+			clear_location();
+		} else {
+			save_location( $location );
+		}
 	}
 
 	return get_group_info();
@@ -333,6 +472,122 @@ function publish_existing_event_permissions_check( WP_REST_Request $request ): b
 }
 
 /**
+ * Capability check for the RSVP route — mirrors the gate GatherPress's own
+ * RSVP endpoint applies.
+ */
+function rsvp_permissions_check( WP_REST_Request $request ): bool {
+	return is_user_logged_in() && Event::can_read_rsvps( (int) $request->get_param( 'id' ) );
+}
+
+/**
+ * POST /event/{id}/rsvp
+ *
+ * RSVP the current user, storing their answers to the event's custom
+ * registration questions on the same request.
+ *
+ * This exists rather than posting answers to GatherPress's RSVP endpoint and
+ * then storing them in a follow-up call, because a required question has to be
+ * able to *block* the RSVP. Splitting it in two would leave an RSVP recorded
+ * with the answers rejected — exactly the "the RSVP data is wrong" failure the
+ * feature is meant to prevent.
+ *
+ * @return WP_Error|WP_REST_Response
+ */
+function save_rsvp( WP_REST_Request $request ) {
+	$event_id = (int) $request->get_param( 'id' );
+	$status   = (string) $request->get_param( 'status' );
+	$post     = get_post( $event_id );
+
+	if ( ! $post || Event::POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
+		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
+	}
+
+	// Lets an occurrence-aware integration (e.g. recurring events) resolve and
+	// validate which occurrence this RSVP targets before the comment is saved,
+	// so it can be mapped to that occurrence rather than left unscoped.
+	$context_error = apply_filters( 'wporg_groups_frontend_before_rsvp', null, $event_id, $request );
+	if ( is_wp_error( $context_error ) ) {
+		return $context_error;
+	}
+
+	$event = new Event( $event_id );
+
+	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
+	// which the post-type check above already guarantees. The meaningful gate
+	// is whether RSVP is switched on for this event — without it
+	// `Rsvp::save()` is a no-op that would otherwise look like success.
+	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
+	}
+
+	if ( $event->has_event_past() ) {
+		return new WP_Error( 'wporg_groups_event_past', 'This event has already happened.', array( 'status' => 400 ) );
+	}
+
+	$user_id   = get_current_user_id();
+	$questions = get_questions( $event_id );
+
+	// Only the questions this request actually submitted are applied on top of
+	// what's already stored, so a stale form can't blank out answers it never
+	// rendered. Required questions are checked against that merged result.
+	$submitted = sanitize_answers( $questions, $request->get_param( 'answers' ) );
+	$answers   = merge_answers( get_user_answers( $event_id, $user_id ), $submitted );
+
+	if ( 'attending' === $status ) {
+		$missing = get_missing_required( $questions, $answers );
+
+		if ( $missing ) {
+			return new WP_Error(
+				'wporg_groups_missing_answers',
+				sprintf(
+					/* translators: %s: comma-separated list of question labels. */
+					__( 'Please answer: %s', 'wordcamporg' ),
+					implode( ', ', $missing )
+				),
+				array( 'status' => 400 )
+			);
+		}
+	}
+
+	// Group sites are open to join, and RSVPing is the point at which someone
+	// becomes a member — same as GatherPress's own endpoint and our
+	// /members/join route.
+	if ( ! is_user_member_of_blog( $user_id ) ) {
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+	}
+
+	$record     = $event->rsvp->save( $user_id, $status );
+	$comment_id = (int) ( $record['comment_id'] ?? 0 );
+
+	if ( ! $comment_id ) {
+		return new WP_Error(
+			'wporg_groups_rsvp_failed',
+			'Your RSVP could not be saved.',
+			array( 'status' => 500 )
+		);
+	}
+
+	// Answers belong to an attendance, not to a declined invitation — a
+	// cancelled RSVP drops them. Keyed off the *requested* status, not the
+	// saved one: a full event downgrades `attending` to `waiting_list`, and
+	// `check_waiting_list()` later promotes the RSVP without ever restoring
+	// answers deleted here.
+	save_answers( $comment_id, 'attending' === $status ? $answers : array() );
+
+	return new WP_REST_Response(
+		array(
+			'success'           => true,
+			'status'            => $record['status'] ?? 'no_status',
+			'responses'         => $event->rsvp->responses(),
+			// Empty for everyone the link isn't for, on exactly the terms the
+			// online-event block renders it with. Sent so an RSVP made without
+			// a reload can reveal or withdraw the meeting link in place (#2094).
+			'online_event_link' => $event->maybe_get_online_event_link(),
+		)
+	);
+}
+
+/**
  * Whether the current user can create a GatherPress event on this site.
  */
 function current_user_can_create_event(): bool {
@@ -371,7 +626,7 @@ function current_user_can_publish_event( int $event_id = 0 ): bool {
  * Whether the current user may use an attachment as an event's featured
  * image. Mirrors core's own visibility rules for attachments (public/
  * inherited attachments readable by anyone, private ones only by their
- * owner or users with `read_private_posts`) so a group organiser can't
+ * owner or users with `read_private_posts`) so a group organizer can't
  * point their event at another user's private/unattached media just by
  * guessing its ID.
  */
@@ -397,15 +652,16 @@ function draft_args_schema(): array {
  * Argument schema shared between POST /event and POST /event/{id}.
  */
 function event_args_schema(): array {
-	return array(
+	$args = array(
 		'title'             => array(
 			'type'              => 'string',
 			'required'          => true,
 			'sanitize_callback' => 'sanitize_text_field',
 		),
 		'description'       => array(
-			// Serialised block markup. Allowed-block enforcement happens
-			// when we run `wp_kses_post()` before saving.
+			// Serialised block markup. `wp_kses_post()` sanitizes the HTML,
+			// but it knows nothing about block names -- the allowed-block set
+			// is enforced separately, in `build_post_content()`.
 			'type'     => 'string',
 			'required' => false,
 			'default'  => '',
@@ -470,7 +726,63 @@ function event_args_schema(): array {
 			'default'           => 0,
 			'sanitize_callback' => 'absint',
 		),
+		// The timezone the event is scheduled in. Unrecognized values
+		// sanitize to '', which the write paths read as "use the site's own
+		// zone" -- the behaviour every event had before there was a control
+		// for this.
+		'timezone'          => array(
+			'type'              => 'string',
+			'required'          => false,
+			'default'           => '',
+			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Timezone\\sanitize',
+		),
+		// The language the event is run in, as a CLDR language subtag.
+		// `sanitize_language_code()` drops anything unrecognized to '', so a
+		// stale or malformed code clears the field rather than rejecting the
+		// save of everything else on the form.
+		'language'          => array(
+			'type'              => 'string',
+			'required'          => false,
+			'default'           => '',
+			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Language\\sanitize_code',
+		),
+		// Custom registration questions. Deliberately has no `default` — an
+		// absent parameter means "leave the existing questions alone", which
+		// an empty-array default would turn into "delete them all".
+		'rsvp_questions'    => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array(
+				'type'       => 'object',
+				'properties' => array(
+					'id'       => array( 'type' => 'string' ),
+					'label'    => array( 'type' => 'string' ),
+					'required' => array( 'type' => 'boolean' ),
+				),
+			),
+		),
 	);
+
+	/**
+	 * Filters the arguments accepted by the frontend event endpoints.
+	 *
+	 * @param array $args REST argument schema.
+	 */
+	return apply_filters( 'wporg_groups_frontend_event_args_schema', $args );
+}
+
+/**
+ * Write the event's custom registration questions, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_rsvp_questions( int $event_id, WP_REST_Request $request ): void {
+	$questions = $request->get_param( 'rsvp_questions' );
+
+	if ( is_array( $questions ) ) {
+		save_questions( $event_id, $questions );
+	}
 }
 
 /**
@@ -488,7 +800,10 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$is_editing = $event_id > 0 && Event::POST_TYPE === get_post_type( $event_id );
 
 	if ( $is_editing ) {
-		$fields['title'] = (string) get_post_field( 'post_title', $event_id );
+		// Decoded because the stored title is entity-encoded (see `wcorg_sanitize_plain_text()`) and
+		// this pre-fills a text input, not HTML. Matches the other two read sites, `list_drafts()`
+		// and the venue list below. Re-saving the decoded value encodes it back to the same bytes.
+		$fields['title'] = html_entity_decode( (string) get_post_field( 'post_title', $event_id ) );
 		// Hand the editor only the description-prose blocks so it doesn't
 		// trip on the GatherPress metadata blocks (event-date, venue, RSVP,
 		// etc.) it has no way to render. The save path puts the metadata
@@ -519,6 +834,19 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			true
 		);
 
+		// An event with no usable stored zone reads back as '', which the
+		// form shows as the site default rather than as a blank option.
+		$stored_timezone = get_event_timezone( $event_id );
+		if ( '' !== $stored_timezone ) {
+			$fields['timezone'] = $stored_timezone;
+		}
+
+		// Not defaulted from the group's last event when editing: an existing
+		// event with no language set has had that answered already, and
+		// prefilling it would turn "unset" into a value the organizer never
+		// chose on the next save.
+		$fields['language'] = get_event_language( $event_id );
+
 		$thumb_id = (int) get_post_thumbnail_id( $event_id );
 		if ( $thumb_id ) {
 			$fields['featured_image_id']  = $thumb_id;
@@ -535,6 +863,16 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	// `undefined` checks.
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
+	$fields['rsvp_questions']     = $is_editing ? get_questions( $event_id ) : array();
+
+	/**
+	 * Filters the fields returned to the frontend event form.
+	 *
+	 * @param array $fields     Event form fields.
+	 * @param int   $event_id   Requested event ID, or zero when creating.
+	 * @param bool  $is_editing Whether an existing event is being edited.
+	 */
+	$fields = apply_filters( 'wporg_groups_frontend_event_form_fields', $fields, $event_id, $is_editing );
 
 	$venues = array_map(
 		static function ( $post ) {
@@ -561,6 +899,23 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 			'event_id'   => $is_editing ? $event_id : 0,
 			'fields'     => $fields,
 			'venues'     => $venues,
+			// Grouped the way core's own timezone control groups them, so the
+			// select reads as "Australia > Brisbane" rather than as one flat
+			// list of 400-odd identifiers. Shipped with the rest of the form
+			// payload rather than as its own request: the list is static per
+			// locale, and the modal already opens on a single fetch.
+			'timezones'  => get_timezone_choices(),
+			// Shipped with the rest of the form payload rather than as its own
+			// request: the list is static per locale, and the modal already
+			// opens on a single fetch.
+			'languages'  => array_map(
+				static fn( string $code, string $name ): array => array(
+					'code' => $code,
+					'name' => $name,
+				),
+				array_keys( get_language_options() ),
+				array_values( get_language_options() )
+			),
 		)
 	);
 }
@@ -626,7 +981,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'draft',
-		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wporg-groups-frontend' ) : $title,
+		// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+		'post_title'   => '' === $title ? __( '(Untitled draft)', 'wordcamporg' ) : wcorg_sanitize_plain_text( $title ),
 		'post_content' => wp_kses_post( wp_unslash( $description ) ),
 	);
 
@@ -657,7 +1013,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'post_id'        => $saved_id,
 				'datetime_start' => sprintf( '%s %s:00', $date, $time_start ),
 				'datetime_end'   => sprintf( '%s %s:00', resolve_event_end_date( $date, $time_start, $time_end ), $time_end ),
-				'timezone'       => wp_timezone_string(),
+				'timezone'       => storable_timezone( (string) $request->get_param( 'timezone' ) ),
 			)
 		);
 	}
@@ -681,11 +1037,23 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		(string) $request->get_param( 'online_event_link' )
 	);
 
+	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
+
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
 	if ( $featured_image_id > 0 && current_user_can_use_attachment( $featured_image_id ) ) {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
+
+	/**
+	 * Fires after a frontend event draft has been saved.
+	 *
+	 * @param int             $saved_id Saved draft ID.
+	 * @param WP_REST_Request $request  REST request.
+	 */
+	do_action( 'wporg_groups_frontend_event_draft_saved', $saved_id, $request );
+
+	maybe_save_rsvp_questions( $saved_id, $request );
 
 	return new WP_REST_Response(
 		array(
@@ -730,6 +1098,38 @@ function update_event( WP_REST_Request $request ) {
 }
 
 /**
+ * The spelling of a timezone that is safe to write to the events table.
+ *
+ * The form's control offers the values core's own `wp_timezone_choice()`
+ * builds, and those spell a manual offset `UTC+10`. GatherPress's
+ * `Event::save_datetimes()` normalizes that spelling only for the
+ * `DateTimeZone` it computes the GMT columns with, and writes
+ * `$fields['timezone']` through to `$wpdb->insert()` **raw** -- so `UTC+10`
+ * is what lands in `gatherpress_events.timezone` and in the
+ * `gatherpress_timezone` meta.
+ *
+ * `new DateTimeZone( 'UTC+10' )` throws: PHP accepts `+10:00`, not core's
+ * display spelling. Every later read that builds a `DateTimeZone` from the
+ * stored value therefore threw, and the one that matters catches and
+ * returns null -- `Occurrences::master_datetime()`, which is what
+ * `project()` needs before it can write a single occurrence row. A recurring
+ * series saved with a manual offset got a 200 and no dates: no occurrence
+ * selector, per-occurrence RSVP refused, "My upcoming events" showing only
+ * the seed date, and cron re-projection failing silently forever (#2021).
+ *
+ * So canonicalize on the way in. `canonicalize()` maps core's spelling onto
+ * the one the events table already uses elsewhere (`+10:00`, and `UTC` at
+ * zero), and `get_stored_spellings()` maps it back onto the choice when the
+ * form reads the event for editing, so the control still preselects.
+ *
+ * @param string $timezone Submitted timezone, in any spelling.
+ * @return string A timezone `DateTimeZone` accepts.
+ */
+function storable_timezone( string $timezone ): string {
+	return canonicalize_timezone( '' !== $timezone ? $timezone : wp_timezone_string() );
+}
+
+/**
  * Resolve the calendar date an event's end time falls on.
  *
  * The form only collects one date plus separate start/end times, so an
@@ -754,7 +1154,8 @@ function resolve_event_end_date( string $date, string $time_start, string $time_
  * navigate to it.
  */
 function persist_event( int $event_id, WP_REST_Request $request ) {
-	$fields = array(
+	$schedule_editable = 0 === $event_id || 'publish' !== get_post_status( $event_id );
+	$fields            = array(
 		'title'             => (string) $request->get_param( 'title' ),
 		'description'       => (string) $request->get_param( 'description' ),
 		'date'              => (string) $request->get_param( 'date' ),
@@ -766,26 +1167,45 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'new_venue_name'    => (string) $request->get_param( 'new_venue_name' ),
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
+		'timezone'          => (string) $request->get_param( 'timezone' ),
+		'language'          => (string) $request->get_param( 'language' ),
 	);
+
+	/**
+	 * Filters frontend event request validation before anything is persisted.
+	 *
+	 * Extensions may return a WP_Error to reject their request fields.
+	 *
+	 * @param null|WP_Error   $error    Validation error, if any.
+	 * @param WP_REST_Request $request  REST request.
+	 * @param int             $event_id Existing event ID, or zero when creating.
+	 */
+	$validation_error = apply_filters( 'wporg_groups_frontend_validate_event_request', null, $request, $event_id );
+	if ( is_wp_error( $validation_error ) ) {
+		return $validation_error;
+	}
 
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
 	}
-	if ( $fields['time_start'] === $fields['time_end'] ) {
-		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
-	}
-	if ( $fields['is_online'] && '' === $fields['online_event_link'] ) {
+	if ( ( 0 === $event_id || 'publish' !== get_post_status( $event_id ) ) && $fields['date'] < wp_date( 'Y-m-d' ) ) {
 		return new WP_Error(
-			'wporg_groups_missing_online_event_link',
-			'Online event link is required for online events.',
+			'wporg_groups_past_event_date',
+			__( 'Event date cannot be in the past.', 'wordcamporg' ),
 			array( 'status' => 400 )
 		);
+	}
+	if ( $fields['time_start'] === $fields['time_end'] ) {
+		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
 	}
 
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'publish',
-		'post_title'   => $fields['title'],
+		// The `title` arg's `sanitize_text_field()` is not enough on its own here. See
+		// `wcorg_sanitize_plain_text()`. Applied at the write site rather than in the schema, so other
+		// consumers of `$fields` still see the raw value.
+		'post_title'   => wcorg_sanitize_plain_text( $fields['title'] ),
 		'post_content' => build_post_content( $event_id, $fields['description'] ),
 	);
 
@@ -801,8 +1221,12 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	}
 	$saved_id = (int) $saved_id;
 
-	// Datetimes — pass through GatherPress's own writer.
-	$timezone = wp_timezone_string();
+	// Datetimes — pass through GatherPress's own writer. The submitted times
+	// are wall-clock times in the chosen zone, not UTC, so the zone only
+	// decides how they are stored and read back, never what the organizer
+	// typed. An unrecognized or absent zone sanitizes to '' and falls back to
+	// the site's own, which is what every event got before this was settable.
+	$timezone = storable_timezone( $fields['timezone'] );
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
@@ -821,6 +1245,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	sync_event_venue_terms( $saved_id, $venue_id, $fields['is_online'] );
 	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
 
+	set_event_language( $saved_id, $fields['language'] );
+
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).
 	if ( $fields['featured_image_id'] > 0 && current_user_can_use_attachment( $fields['featured_image_id'] ) ) {
@@ -829,6 +1255,17 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		// Explicit clear on edit.
 		delete_post_thumbnail( $saved_id );
 	}
+
+	/**
+	 * Fires after a frontend event has been published and its core fields saved.
+	 *
+	 * @param int             $saved_id          Saved event ID.
+	 * @param WP_REST_Request $request           REST request.
+	 * @param bool            $schedule_editable Whether the schedule was editable before this save.
+	 */
+	do_action( 'wporg_groups_frontend_event_saved', $saved_id, $request, $schedule_editable );
+
+	maybe_save_rsvp_questions( $saved_id, $request );
 
 	return new WP_REST_Response(
 		array(
@@ -849,7 +1286,22 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
  * event-rendering blocks the user might have customised in wp-admin.
  */
 function build_post_content( int $event_id, string $description ): string {
-	$description = wp_kses_post( wp_unslash( $description ) );
+	/*
+	 * `wp_kses_post()` is the HTML gate; this is the block gate. They are not
+	 * the same thing: kses knows nothing about block names, so it passes a
+	 * `<!-- wp:embed -->` delimiter through untouched as the HTML comment it
+	 * is. The editor's `allowedBlockTypes` only ever constrained what the UI
+	 * would *insert*, so anything POSTing this route directly could store a
+	 * block the editor cannot render -- and then `extract_description_blocks()`
+	 * hid it on load while this function re-appended it on save, leaving an
+	 * organizer with a block they could neither see nor remove (#2042).
+	 *
+	 * Filtering here closes both halves, and keeps the two allowlists honest:
+	 * what the server accepts is exactly what the editor can show.
+	 */
+	$description = serialize_blocks(
+		filter_to_description_blocks( parse_blocks( wp_kses_post( wp_unslash( $description ) ) ) )
+	);
 
 	if ( $event_id <= 0 ) {
 		return $description;
@@ -891,7 +1343,8 @@ function resolve_venue_id( array $fields ): int {
 		array(
 			'post_type'   => Venue::POST_TYPE,
 			'post_status' => 'publish',
-			'post_title'  => $fields['new_venue_name'],
+			// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+			'post_title'  => wcorg_sanitize_plain_text( $fields['new_venue_name'] ),
 		),
 		true
 	);
@@ -958,4 +1411,43 @@ function sync_online_event_link( int $event_id, bool $is_online, string $online_
 	}
 
 	delete_post_meta( $event_id, 'gatherpress_online_event_link' );
+}
+
+/**
+ * Let the settings tab choose which slice of the event list it is asking for.
+ *
+ * GatherPress scopes an events query to upcoming dates by attaching
+ * `Event\Query::adjust_sorting_for_upcoming_events()` to `posts_clauses`, and
+ * the core REST collection this tab reads inherits it. That left the tab
+ * permanently reporting "No past events." and hiding every draft whose date
+ * had passed (#1977). The clause is real:
+ *
+ *     AND COALESCE( gpre_occ_query.datetime_end_gmt, …datetime_end_gmt ) >= NOW()
+ *
+ * Detaching the filter here would not hold, because GatherPress reattaches it
+ * from `pre_get_posts`, which runs later. Set the list type its switch reads
+ * instead: 'past' flips the comparison, and anything outside 'upcoming' and
+ * 'past' takes the `default:` branch where GatherPress detaches both clause
+ * filters itself.
+ *
+ * Opt-in, so nothing else querying this collection changes. Registered at
+ * priority 20, not the default 10: GatherPress sets this same arg from its own
+ * callback on this filter, and at equal priority it is registered later and
+ * would overwrite this.
+ *
+ * @param array            $args    Query args destined for WP_Query.
+ * @param \WP_REST_Request $request The REST request being served.
+ *
+ * @return array The args, with the list type applied when one was asked for.
+ */
+function apply_requested_event_list_type( array $args, $request ): array {
+	$requested = (string) $request->get_param( 'wporg_groups_event_list' );
+
+	if ( ! in_array( $requested, array( 'all', 'upcoming', 'past' ), true ) ) {
+		return $args;
+	}
+
+	$args['gatherpress_event_query'] = $requested;
+
+	return $args;
 }

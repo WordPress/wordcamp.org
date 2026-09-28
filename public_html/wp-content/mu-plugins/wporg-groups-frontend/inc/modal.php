@@ -39,6 +39,7 @@ function enqueue_supplementary_assets(): void {
 	wp_enqueue_media();
 	wp_enqueue_style( 'wp-components' );
 	wp_enqueue_style( 'wp-block-editor' );
+	wp_enqueue_style( 'wp-format-library' );
 }
 
 /**
@@ -64,8 +65,9 @@ function localize_block_script( string $content, array $block ): string {
 	}
 
 	$config = array(
-		'restNamespace' => 'wporg-groups/v1',
-		'siteEditorUrl' => admin_url( 'site-editor.php' ),
+		'restNamespace'   => 'wporg-groups/v1',
+		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
+		'minimumEventDate' => wp_date( 'Y-m-d' ),
 	);
 
 	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {

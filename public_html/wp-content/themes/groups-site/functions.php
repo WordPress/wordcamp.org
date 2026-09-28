@@ -187,6 +187,60 @@ function prime_event_card_thumbnails( $query ) {
 add_action( 'loop_start', __NAMESPACE__ . '\prime_event_card_thumbnails' );
 
 /**
+ * Leave the event being viewed out of the "More events from this group" grid.
+ *
+ * The grid in `templates/single-event.html` opts in with a
+ * `groups_site_exclude_current` key on its query; the Query Loop block has no
+ * attribute for "not this post". Excluding the post drops every date of a
+ * recurring series along with it, which is intended: the next date of the
+ * same meetup isn't another event.
+ *
+ * @param array     $query_vars The query variables built from the block.
+ * @param \WP_Block $block      The post template block.
+ *
+ * @return array The query variables.
+ */
+function exclude_current_event_from_query( array $query_vars, \WP_Block $block ): array {
+	if ( empty( $block->context['query']['groups_site_exclude_current'] ) || ! is_singular( 'gatherpress_event' ) ) {
+		return $query_vars;
+	}
+
+	$query_vars['post__not_in'] = array_merge(
+		(array) ( $query_vars['post__not_in'] ?? array() ),
+		array( get_queried_object_id() )
+	);
+
+	return $query_vars;
+}
+add_filter( 'query_loop_block_query_vars', __NAMESPACE__ . '\exclude_current_event_from_query', 10, 2 );
+
+/**
+ * Drop the "More events from this group" section when it has nothing to show.
+ *
+ * The Post Template renders nothing for an empty query, but the section's
+ * heading and "View all events" link would still render around it.
+ *
+ * @param string $block_content The rendered Query Loop block.
+ * @param array  $parsed_block  The block that produced it.
+ *
+ * @return string The block, or an empty string.
+ */
+function hide_empty_more_events_section( $block_content, $parsed_block ) {
+	$class_name = $parsed_block['attrs']['className'] ?? '';
+
+	if ( ! in_array( 'groups-site-more-events', explode( ' ', $class_name ), true ) ) {
+		return $block_content;
+	}
+
+	if ( false === strpos( $block_content, 'wp-block-post-template' ) ) {
+		return '';
+	}
+
+	return $block_content;
+}
+add_filter( 'render_block_core/query', __NAMESPACE__ . '\hide_empty_more_events_section', 10, 2 );
+
+/**
  * Describe the events archive's view state on `<body>` so the stylesheet can
  * react to it.
  *

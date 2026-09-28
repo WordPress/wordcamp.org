@@ -336,7 +336,7 @@ class CampTix_Attendance extends CampTix_Addon {
 
 			<ul style="list-style: disc; margin-left: 2em;">
 				<li><?php esc_html_e( 'The file needs a header row with an "id" or "email" column (or both — id wins).', 'wordcamporg' ); ?></li>
-				<li><?php esc_html_e( 'An optional "attended" column (yes/no) sets the direction per row; without it, every row is marked attended.', 'wordcamporg' ); ?></li>
+				<li><?php esc_html_e( 'An optional "attended" (or "Attended the event") column sets the direction per row with yes or no; a row with a blank or any other value is left as it is. Without the column, every row is marked attended.', 'wordcamporg' ); ?></li>
 				<li><?php esc_html_e( 'Nothing is written until you confirm a preview of the changes.', 'wordcamporg' ); ?></li>
 			</ul>
 
@@ -373,6 +373,14 @@ class CampTix_Attendance extends CampTix_Addon {
 				<td><?php echo absint( count( $plan['unset'] ) ); ?></td>
 			</tr>
 			<tr>
+				<td><?php esc_html_e( 'Existing check-ins that will be removed', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( $plan['check_ins_removed'] ); ?></td>
+			</tr>
+			<tr>
+				<td><?php esc_html_e( 'Rows without a yes/no answer (will be left as they are)', 'wordcamporg' ); ?></td>
+				<td><?php echo absint( count( $plan['skipped'] ) ); ?></td>
+			</tr>
+			<tr>
 				<td><?php esc_html_e( 'Unmatched rows (will be skipped)', 'wordcamporg' ); ?></td>
 				<td><?php echo absint( count( $plan['unmatched'] ) ); ?></td>
 			</tr>
@@ -407,7 +415,8 @@ class CampTix_Attendance extends CampTix_Addon {
 	 *
 	 * @param string $file_path Path to the uploaded CSV.
 	 *
-	 * @return array|WP_Error List of rows: { id: int|0, email: string, attended: bool }.
+	 * @return array|WP_Error List of rows: { id: int|0, email: string, attended: bool|null },
+	 *                        where null means the row's attended cell was blank or unrecognized.
 	 */
 	public function parse_attendance_csv( $file_path ) {
 		$handle = fopen( $file_path, 'r' );
@@ -430,12 +439,24 @@ class CampTix_Attendance extends CampTix_Addon {
 			return strtolower( trim( str_replace( "\xEF\xBB\xBF", '', (string) $cell ) ) );
 		};
 		$header    = array_map( $normalize, $header );
-		$id_col    = array_search( 'id', $header, true );
-		if ( false === $id_col ) {
-			$id_col = array_search( 'attendee id', $header, true );
-		}
-		$email_col = array_search( 'email', $header, true );
-		$att_col   = array_search( 'attended', $header, true );
+
+		// First header matching any of the names. The attendee Export writes its labels
+		// ("Attendee ID", "Attended the event") in the exporting user's language.
+		$find_column = function ( array $names ) use ( $header, $normalize ) {
+			foreach ( $names as $name ) {
+				$column = array_search( $normalize( $name ), $header, true );
+
+				if ( false !== $column ) {
+					return $column;
+				}
+			}
+
+			return false;
+		};
+
+		$id_col    = $find_column( array( 'id', 'Attendee ID', __( 'Attendee ID', 'wordcamporg' ) ) );
+		$email_col = $find_column( array( 'email' ) );
+		$att_col   = $find_column( array( 'attended', 'Attended the event', __( 'Attended the event', 'wordcamporg' ) ) );
 
 		if ( false === $id_col && false === $email_col ) {
 			fclose( $handle );
@@ -463,8 +484,15 @@ class CampTix_Attendance extends CampTix_Addon {
 			$attended = true;
 
 			if ( false !== $att_col ) {
-				$raw      = strtolower( trim( (string) ( $line[ $att_col ] ?? '' ) ) );
-				$attended = in_array( $raw, array( 'yes', 'y', '1', 'true' ), true );
+				$raw = strtolower( trim( (string) ( $line[ $att_col ] ?? '' ) ) );
+
+				if ( in_array( $raw, array( 'yes', 'y', '1', 'true' ), true ) ) {
+					$attended = true;
+				} elseif ( in_array( $raw, array( 'no', 'n', '0', 'false' ), true ) ) {
+					$attended = false;
+				} else {
+					$attended = null; // Blank or unknown answer: leave this attendee as they are.
+				}
 			}
 
 			$rows[] = array(
@@ -484,24 +512,33 @@ class CampTix_Attendance extends CampTix_Addon {
 	 *
 	 * A row's id column wins when it points at a real published attendee;
 	 * otherwise the email is matched against tix_email (all matches count —
-	 * duplicate emails each get the row's attendance). Rows matching nothing
-	 * are reported, never silently dropped.
+	 * duplicate emails each get the row's attendance). Rows matching nothing,
+	 * and rows without a yes/no answer, are reported, never silently dropped.
 	 *
 	 * @param array $rows Rows from parse_attendance_csv().
 	 *
-	 * @return array { set: int[], unset: int[], unmatched: string[], total_rows: int }
+	 * @return array { set: int[], unset: int[], unmatched: string[], skipped: string[],
+	 *                 total_rows: int, check_ins_removed: int }
 	 */
 	public function resolve_attendance_rows( array $rows ) {
 		$plan = array(
-			'set'        => array(),
-			'unset'      => array(),
-			'unmatched'  => array(),
-			'total_rows' => count( $rows ),
+			'set'               => array(),
+			'unset'             => array(),
+			'unmatched'         => array(),
+			'skipped'           => array(),
+			'total_rows'        => count( $rows ),
+			'check_ins_removed' => 0,
 			// One-time token binding this exact plan to its preview's Apply button.
-			'token'      => wp_generate_password( 20, false, false ),
+			'token'             => wp_generate_password( 20, false, false ),
 		);
 
 		foreach ( $rows as $row ) {
+			if ( null === $row['attended'] ) {
+				$plan['skipped'][] = $row['id'] ? '#' . $row['id'] : $row['email'];
+
+				continue;
+			}
+
 			$matched = array();
 
 			if ( $row['id'] ) {
@@ -540,6 +577,15 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		$plan['set']   = array_values( array_unique( $plan['set'] ) );
 		$plan['unset'] = array_values( array_unique( array_diff( $plan['unset'], $plan['set'] ) ) );
+
+		// How many check-ins volunteers already made the unset would remove, for the preview.
+		update_meta_cache( 'post', $plan['unset'] );
+
+		foreach ( $plan['unset'] as $attendee_id ) {
+			if ( get_post_meta( $attendee_id, 'tix_attended', true ) ) {
+				++$plan['check_ins_removed'];
+			}
+		}
 
 		return $plan;
 	}

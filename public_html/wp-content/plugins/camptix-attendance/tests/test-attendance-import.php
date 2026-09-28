@@ -116,6 +116,79 @@ class Test_Attendance_Import extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parser reads the Export's "Attended the event" column.
+	 */
+	public function test_parser_reads_the_exports_attended_the_event_column() {
+		$addon = new CampTix_Attendance();
+
+		// The header row CampTix's attendee Export writes, trimmed to the columns that matter.
+		$rows = $addon->parse_attendance_csv( $this->csv(
+			"Attendee ID,First Name,E-mail Address,Attended the event\n" .
+			"12,Ada,ada@example.org,Yes\n" .
+			"13,Alan,alan@example.org,No\n"
+		) );
+
+		$this->assertTrue( $rows[0]['attended'] );
+		$this->assertFalse( $rows[1]['attended'] );
+	}
+
+	/**
+	 * Parser reads an Export whose header row is in the site's language.
+	 */
+	public function test_parser_reads_a_translated_export_header() {
+		$addon = new CampTix_Attendance();
+
+		$translate = function ( $translation, $text, $domain ) {
+			$german = array(
+				'Attendee ID'        => 'Teilnehmer-ID',
+				'Attended the event' => 'An der Veranstaltung teilgenommen',
+			);
+
+			return 'wordcamporg' === $domain && isset( $german[ $text ] ) ? $german[ $text ] : $translation;
+		};
+		add_filter( 'gettext', $translate, 10, 3 );
+
+		$rows = $addon->parse_attendance_csv( $this->csv(
+			"Teilnehmer-ID,Vorname,An der Veranstaltung teilgenommen\n" .
+			"12,Ada,Yes\n" .
+			"13,Alan,No\n"
+		) );
+
+		remove_filter( 'gettext', $translate, 10 );
+
+		$this->assertNotWPError( $rows );
+		$this->assertSame( 12, $rows[0]['id'] );
+		$this->assertTrue( $rows[0]['attended'] );
+		$this->assertFalse( $rows[1]['attended'] );
+	}
+
+	/**
+	 * Parser leaves blank and unrecognized attended values as they are.
+	 */
+	public function test_parser_leaves_blank_and_unknown_attended_values_unchanged() {
+		$addon = new CampTix_Attendance();
+
+		$rows = $addon->parse_attendance_csv( $this->csv(
+			"email,attended\n" .
+			"blank@example.org,\n" .
+			"maybe@example.org,maybe\n" .
+			"no@example.org,no\n" .
+			"n@example.org,N\n" .
+			"zero@example.org,0\n" .
+			"false@example.org,false\n"
+		) );
+
+		// Every row is still reported, so "Rows in file" matches the file.
+		$this->assertCount( 6, $rows );
+		$this->assertNull( $rows[0]['attended'] );
+		$this->assertNull( $rows[1]['attended'] );
+
+		foreach ( array_slice( $rows, 2 ) as $row ) {
+			$this->assertFalse( $row['attended'], $row['email'] );
+		}
+	}
+
+	/**
 	 * Parser rejects files without key columns.
 	 */
 	public function test_parser_rejects_files_without_key_columns() {
@@ -184,6 +257,92 @@ class Test_Attendance_Import extends WP_UnitTestCase {
 
 		$this->assertSame( array( $going ), $plan['set'] );
 		$this->assertSame( array( $notgoing ), $plan['unset'] );
+	}
+
+	/**
+	 * Resolver skips rows without an attended answer and reports them.
+	 */
+	public function test_resolver_skips_rows_without_an_attended_answer() {
+		$addon = new CampTix_Attendance();
+
+		$door = $this->make_attendee( 'door@example.org', true );
+
+		$plan = $addon->resolve_attendance_rows( array(
+			array(
+				'id' => $door, 'email' => '', 'attended' => null,
+			),
+		) );
+
+		$this->assertSame( array(), $plan['set'] );
+		$this->assertSame( array(), $plan['unset'] );
+		$this->assertSame( array( '#' . $door ), $plan['skipped'] );
+		$this->assertSame( 1, $plan['total_rows'] );
+	}
+
+	/**
+	 * Resolver counts the check-ins an unset would remove.
+	 */
+	public function test_resolver_counts_the_check_ins_an_unset_removes() {
+		$addon = new CampTix_Attendance();
+
+		$checked_in = $this->make_attendee( 'checked-in@example.org', true );
+		$not_yet    = $this->make_attendee( 'not-yet@example.org' );
+
+		$plan = $addon->resolve_attendance_rows( array(
+			array(
+				'id' => $checked_in, 'email' => '', 'attended' => false,
+			),
+			array(
+				'id' => $not_yet, 'email' => '', 'attended' => false,
+			),
+		) );
+
+		$this->assertEqualSets( array( $checked_in, $not_yet ), $plan['unset'] );
+		$this->assertSame( 1, $plan['check_ins_removed'] );
+	}
+
+	/**
+	 * An edited Export keeps the existing check-ins and marks only the "Yes" rows.
+	 */
+	public function test_edited_export_round_trip_keeps_existing_check_ins() {
+		$addon = new CampTix_Attendance();
+
+		$ada   = $this->make_attendee( 'ada@example.org', true );
+		$grace = $this->make_attendee( 'grace@example.org', true );
+		$alan  = $this->make_attendee( 'alan@example.org' );
+
+		$plan = $addon->resolve_attendance_rows( $addon->parse_attendance_csv( $this->csv(
+			"Attendee ID,E-mail Address,Attended the event\n" .
+			"$ada,ada@example.org,Yes\n" .
+			"$grace,grace@example.org,Yes\n" .
+			"$alan,alan@example.org,No\n"
+		) ) );
+
+		$this->assertEqualSets( array( $ada, $grace ), $plan['set'] );
+		$this->assertSame( array( $alan ), $plan['unset'] );
+		$this->assertSame( 0, $plan['check_ins_removed'] );
+	}
+
+	/**
+	 * A sign-in sheet with blank cells keeps the check-ins volunteers already made.
+	 */
+	public function test_sign_in_sheet_with_blank_cells_keeps_existing_check_ins() {
+		$addon = new CampTix_Attendance();
+
+		$ada   = $this->make_attendee( 'ada@example.org' );
+		$grace = $this->make_attendee( 'grace@example.org', true ); // Checked in at the door.
+
+		$plan = $addon->resolve_attendance_rows( $addon->parse_attendance_csv( $this->csv(
+			"email,attended\n" .
+			"ada@example.org,yes\n" .
+			"grace@example.org,\n"
+		) ) );
+
+		$this->assertSame( array( $ada ), $plan['set'] );
+		$this->assertSame( array(), $plan['unset'] );
+		$this->assertSame( array( 'grace@example.org' ), $plan['skipped'] );
+		$this->assertSame( 2, $plan['total_rows'] );
+		$this->assertSame( '1', get_post_meta( $grace, 'tix_attended', true ) );
 	}
 
 	/**

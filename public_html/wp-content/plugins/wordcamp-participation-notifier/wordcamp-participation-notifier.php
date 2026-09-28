@@ -20,7 +20,7 @@ if ( 'local' === WORDCAMP_ENVIRONMENT ) {
 }
 
 class WordCamp_Participation_Notifier {
-	const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
+	public const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
 
 	/**
 	 * Constructor
@@ -307,8 +307,6 @@ class WordCamp_Participation_Notifier {
 	 * @param string  $username
 	 */
 	public function primary_attendee_registered( $attendee, $username ) {
-		return; // TODO: This is not supported by profiles.
-
 		$user_id = $this->get_saved_wporg_user_id( $attendee );
 		$payload = $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' );
 
@@ -330,8 +328,6 @@ class WordCamp_Participation_Notifier {
 	 * @param string $username
 	 */
 	public function additional_attendee_confirmed_registration( $attendee_id, $username ) {
-		return; // TODO: This is not supported by profiles.
-
 		$attendee = get_post( $attendee_id );
 		$user_id  = $this->get_saved_wporg_user_id( $attendee );
 		$payload  = $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' );

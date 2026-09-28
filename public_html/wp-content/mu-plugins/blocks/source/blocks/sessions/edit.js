@@ -36,23 +36,38 @@ class Edit extends Component {
 		let output;
 
 		switch ( mode ) {
-			case 'all' :
+			case 'all':
 				output = (
-					<SessionList attributes={ attributes } entities={ entities } />
+					<SessionList
+						attributes={ attributes }
+						entities={ entities }
+					/>
 				);
 				break;
 
-			case 'wcb_session' :
-			case 'wcb_track' :
-			case 'wcb_session_category' :
+			case 'wcb_session':
+			case 'wcb_track':
+			case 'wcb_session_category':
 				output = (
 					<EditAppender
-						content={ <SessionList attributes={ attributes } entities={ entities } /> }
+						content={
+							<SessionList
+								attributes={ attributes }
+								entities={ entities }
+							/>
+						}
 						appender={
 							isSelected && (
-								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+								<Placeholder
+									className="wordcamp__edit-placeholder"
+									icon={ ICON }
+									label={ LABEL }
+								>
 									<SessionSelect
-										label={ getOptionLabel( mode, options.mode ) }
+										label={ getOptionLabel(
+											mode,
+											options.mode
+										) }
 										attributes={ attributes }
 										entities={ entities }
 										icon={ ICON }
@@ -65,7 +80,7 @@ class Edit extends Component {
 				);
 				break;
 
-			default :
+			default:
 				output = (
 					<Placeholder
 						className="wordcamp__edit-placeholder has-no-mode"
@@ -85,7 +100,10 @@ class Edit extends Component {
 
 						<div className="wordcamp__edit-mode-option">
 							<SessionSelect
-								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
+								label={ __(
+									'Choose specific sessions, tracks, or categories',
+									'wordcamporg'
+								) }
 								attributes={ attributes }
 								entities={ entities }
 								icon={ ICON }
@@ -149,7 +167,10 @@ const sessionsSelect = ( select ) => {
 
 	const sessions = getEntities( 'postType', 'wcb_session', sessionArgs );
 	if ( sessions ) {
-		entities.wcb_session = sessions.map( ( item ) => ( { ...item, details: getSessionDetails( item ) } ) );
+		entities.wcb_session = sessions.map( ( item ) => ( {
+			...item,
+			details: getSessionDetails( item ),
+		} ) );
 	}
 
 	return {

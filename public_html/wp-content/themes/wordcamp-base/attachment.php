@@ -18,12 +18,13 @@ get_header(); ?>
 					<p class="page-title">
 						<a
 							href="<?php echo esc_url( get_permalink( $post->post_parent ) ); ?>"
-							title="<?php esc_attr( printf( __( 'Return to %s', 'wordcamporg' ), get_the_title( $post->post_parent ) ) ); ?>"
+							title="<?php
+								/* translators: %s - title of parent post */
+								printf( esc_attr__( 'Return to %s', 'wordcamporg' ), esc_attr( get_the_title( $post->post_parent ) ) );
+							?>"
 							rel="gallery">
-							<?php
-							/* translators: %s - title of parent post */
-							printf( __( '<span class="meta-nav">&larr;</span> %s', 'wordcamporg' ), get_the_title( $post->post_parent ) );
-							?>
+							<span class="meta-nav">&larr;</span>
+							<?php echo esc_html( get_the_title( $post->post_parent ) ); ?>
 						</a>
 					</p>
 				<?php endif; ?>
@@ -33,43 +34,43 @@ get_header(); ?>
 
 					<div class="entry-meta">
 						<?php
-							printf(__('<span class="%1$s">By</span> %2$s', 'wordcamporg' ),
-								'meta-prep meta-prep-author',
-								sprintf( '<span class="author vcard"><a class="url fn n" href="%1$s" title="%2$s">%3$s</a></span>',
-									get_author_posts_url( get_the_author_meta( 'ID' ) ),
-									sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), get_the_author() ),
-									get_the_author()
-								)
+							printf(
+								'<span class="meta-prep meta-prep-author">%1$s</span> <span class="author vcard"><a class="url fn n" href="%2$s" title="%3$s">%4$s</a></span>',
+								esc_html_x( 'By', 'post author byline', 'wordcamporg' ),
+								esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ),
+								/* translators: %s - author display name */
+								sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), esc_attr( get_the_author() ) ),
+								esc_html( get_the_author() )
 							);
 						?>
 						<span class="meta-sep">|</span>
 						<?php
-							printf( __('<span class="%1$s">Published</span> %2$s', 'wordcamporg' ),
-								'meta-prep meta-prep-entry-date',
-								sprintf( '<span class="entry-date"><abbr class="published" title="%1$s">%2$s</abbr></span>',
-									esc_attr( get_the_time() ),
-									get_the_date()
-								)
+							printf(
+								'<span class="meta-prep meta-prep-entry-date">%1$s</span> <span class="entry-date"><abbr class="published" title="%2$s">%3$s</abbr></span>',
+								esc_html_x( 'Published', 'post publication date', 'wordcamporg' ),
+								esc_attr( get_the_time() ),
+								esc_html( get_the_date() )
 							);
 
-							if ( wp_attachment_is_image() ) {
-								$metadata = wp_get_attachment_metadata();
-								
-								if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
-									echo ' <span class="meta-sep">|</span> ';
+						if ( wp_attachment_is_image() ) {
+							$metadata = wp_get_attachment_metadata();
 
-									printf( __( 'Full size is %s pixels', 'wordcamporg' ),
-										sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
-											wp_get_attachment_url(),
-											esc_attr( __('Link to full-size image', 'wordcamporg' ) ),
-											$metadata['width'],
-											$metadata['height']
-										)
-									);
-								}
+							if ( ! empty( $metadata['width'] ) && ! empty( $metadata['height'] ) ) {
+								echo ' <span class="meta-sep">|</span> ';
+
+								/* translators: %s - a link reading "<width> × <height>" */
+								printf( esc_html__( 'Full size is %s pixels', 'wordcamporg' ),
+									sprintf( '<a href="%1$s" title="%2$s">%3$s &times; %4$s</a>',
+										esc_url( wp_get_attachment_url() ),
+										esc_attr__( 'Link to full-size image', 'wordcamporg' ),
+										absint( $metadata['width'] ),
+										absint( $metadata['height'] )
+									)
+								);
 							}
+						}
 						?>
-						<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
+						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="meta-sep">|</span> <span class="edit-link">', '</span>' ); ?>
 					</div><!-- .entry-meta -->
 
 					<div class="entry-content">
@@ -123,18 +124,28 @@ get_header(); ?>
 						</div><!-- .entry-attachment -->
 						<div class="entry-caption"><?php if ( !empty( $post->post_excerpt ) ) the_excerpt(); ?></div>
 
-<?php the_content( sprintf(
-	// translators: The title of the post to continue reading
-	__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-	the_title( '<span class="screen-reader-text">', '</span> ', false )
-) ); ?>
-<?php wp_link_pages( array( 'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+						<?php
+						the_content(
+							sprintf(
+								/* translators: %s - the title of the post to continue reading */
+								esc_html__( 'Continue reading %s', 'wordcamporg' ),
+								'<span class="screen-reader-text">' . esc_html( get_the_title() ) . '</span> '
+							) . '<span class="meta-nav">&rarr;</span>'
+						);
+
+						wp_link_pages(
+							array(
+								'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
+								'after'  => '</div>',
+							)
+						);
+						?>
 
 					</div><!-- .entry-content -->
 
 					<div class="entry-utility">
 						<?php twentyten_posted_in(); ?>
-						<?php edit_post_link( __( 'Edit', 'wordcamporg' ), ' <span class="edit-link">', '</span>' ); ?>
+						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), ' <span class="edit-link">', '</span>' ); ?>
 					</div><!-- .entry-utility -->
 				</div><!-- #post-## -->
 

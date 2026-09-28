@@ -1,0 +1,286 @@
+<?php
+/**
+ * Default field values for the front-end event form.
+ *
+ * @package WordCamp\Groups\Frontend
+ */
+
+namespace WordCamp\Groups\Frontend\Defaults;
+
+defined( 'WPINC' ) || die();
+
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Setup as Venue_Setup;
+use WordCamp\Groups\Frontend\Event_Timezone;
+use WordCamp\Groups\Frontend\Event_Language;
+
+/**
+ * Build the default field values for the create-event form.
+ *
+ * Defaults are scoped to the current site (group), not per user — every
+ * organizer that opens the form gets the same prefilled venue and time-of-day
+ * based on the most recent event on this group.
+ *
+ * - **Date** is always set to today + 7 days (a sensible "next week" default).
+ * - **Start time** and **end time** are copied from the most recent event's
+ *   times-of-day, falling back to 18:00 / 20:00 if there is no prior event.
+ * - **Venue ID** is the venue assigned to the most recent event, or `0` if
+ *   none.
+ * - **Timezone** is the most recent event's timezone, falling back to the
+ *   site's own.
+ * - **Language** is the most recent event's language, falling back to the
+ *   site locale's own language.
+ *
+ * @return array{
+ *     title:string,
+ *     description:string,
+ *     date:string,
+ *     time_start:string,
+ *     time_end:string,
+ *     venue_id:int,
+ *     is_online:bool,
+ *     online_event_link:string,
+ *     timezone:string
+ *     language:string
+ * }
+ */
+function get_default_event_data(): array {
+	$defaults = array(
+		'title'             => '',
+		'description'       => '',
+		'date'              => wp_date( 'Y-m-d', strtotime( '+7 days' ) ),
+		'time_start'        => '18:00',
+		'time_end'          => '20:00',
+		'venue_id'          => 0,
+		'is_online'         => false,
+		'online_event_link' => '',
+		'timezone'          => Event_Timezone\get_default(),
+		'language'          => Event_Language\get_default(),
+	);
+
+	$most_recent = get_most_recent_event_id();
+	if ( ! $most_recent ) {
+		return $defaults;
+	}
+
+	$event = new Event( $most_recent );
+
+	// Pull the time-of-day from the previous event's stored datetime. The
+	// `gatherpress_datetime_start` post meta is in `Y-m-d H:i:s` local time.
+	$start = (string) get_post_meta( $most_recent, 'gatherpress_datetime_start', true );
+	$end   = (string) get_post_meta( $most_recent, 'gatherpress_datetime_end', true );
+
+	if ( $start && preg_match( '/(\d{2}:\d{2})/', $start, $m ) ) {
+		$defaults['time_start'] = $m[1];
+	}
+	if ( $end && preg_match( '/(\d{2}:\d{2})/', $end, $m ) ) {
+		$defaults['time_end'] = $m[1];
+	}
+
+	$defaults['venue_id'] = get_event_venue_post_id( $most_recent );
+
+	// A group that runs its meetups in one zone should not have to reselect it
+	// on every event, and a group that moved zones keeps the move.
+	$previous_timezone = Event_Timezone\get_event_timezone( $most_recent );
+	if ( '' !== $previous_timezone ) {
+		$defaults['timezone'] = $previous_timezone;
+	}
+
+	// The group's last event is a better guess at the next one's language than
+	// the site locale is: a Spanish-locale group that switched to running in
+	// English keeps the switch instead of being reset every time.
+	$previous_language = Event_Language\get_event_language( $most_recent );
+	if ( '' !== $previous_language ) {
+		$defaults['language'] = $previous_language;
+	}
+
+	return $defaults;
+}
+
+/**
+ * Find the most recently published gatherpress_event on the current site.
+ *
+ * "Most recent" is by `post_date` (which is the post's creation/publish time,
+ * not the event's start datetime — that's intentional, we want the *most
+ * recently set up* event so the organizer's last choices are remembered).
+ */
+function get_most_recent_event_id(): int {
+	$posts = get_posts(
+		array(
+			'post_type'        => Event::POST_TYPE,
+			'post_status'      => 'publish',
+			'posts_per_page'   => 1,
+			'orderby'          => 'date',
+			'order'            => 'DESC',
+			'fields'           => 'ids',
+			'no_found_rows'    => true,
+			'suppress_filters' => false,
+		)
+	);
+
+	return $posts ? (int) $posts[0] : 0;
+}
+
+/**
+ * Block names treated as "description prose" blocks.
+ *
+ * These are the core blocks the front-end edit modal's inline Gutenberg
+ * editor knows how to render. Any block in `post_content` whose name is
+ * **not** in this list is considered metadata (GatherPress event-date,
+ * venue, RSVP, etc.) and is hidden from the editor on load and preserved
+ * on save.
+ *
+ * Kept in sync with `WordCamp\Groups\Frontend\REST\build_post_content()`.
+ */
+const DESCRIPTION_BLOCK_NAMES = array(
+	'core/paragraph',
+	'core/heading',
+	'core/list',
+	'core/list-item',
+	'core/image',
+	'core/quote',
+	'core/separator',
+	'core/code',
+	'core/preformatted',
+	'core/group',
+	'core/columns',
+	'core/column',
+);
+
+/**
+ * Reduce parsed blocks to the ones the description editor knows.
+ *
+ * Recursive, because `core/group`, `core/columns` and `core/column` are on the
+ * list and carry inner blocks: a disallowed block nested inside an allowed one
+ * has to come out too, or the container smuggles it back in.
+ *
+ * `parse_blocks()` gives a `blockName` of `null` to anything outside a block
+ * delimiter: both the whitespace between blocks and freeform HTML that was
+ * never blocks at all. The first is dropped -- it carries no markup and
+ * dropping it is what lets a filtered list re-serialize cleanly -- and the
+ * second is kept, because a description that is plain HTML is a description,
+ * and `wp_kses_post()` is what governs what may be in it. Only *named* blocks
+ * are what this list is about.
+ *
+ * @param array $blocks Parsed blocks.
+ * @return array Blocks, filtered to the allowed set at every depth.
+ */
+function filter_to_description_blocks( array $blocks ): array {
+	$kept = array();
+
+	foreach ( $blocks as $block ) {
+		$name = $block['blockName'] ?? null;
+
+		if ( null === $name ) {
+			if ( '' !== trim( (string) ( $block['innerHTML'] ?? '' ) ) ) {
+				$kept[] = $block;
+			}
+
+			continue;
+		}
+
+		if ( ! in_array( $name, DESCRIPTION_BLOCK_NAMES, true ) ) {
+			continue;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			$block = filter_inner_blocks( $block );
+		}
+
+		$kept[] = $block;
+	}
+
+	return $kept;
+}
+
+/**
+ * Filter a container's inner blocks, keeping `innerContent` in step.
+ *
+ * `serialize_block()` walks `innerContent` and, for each `null` chunk, consumes
+ * the next entry of `innerBlocks` -- the nulls are the placeholders saying
+ * where an inner block sat among the literal markup. Dropping an inner block
+ * without dropping its null leaves core indexing past the end of the array: a
+ * fistful of PHP warnings and a truncated serialization.
+ *
+ * Hence one pass over both, by position, rather than filtering the blocks and
+ * then trying to reconcile the two lists afterwards -- which cannot be done
+ * reliably, since two sibling blocks of the same name are indistinguishable
+ * once one of them is gone.
+ *
+ * @param array $block Parsed block with inner blocks.
+ * @return array The block, filtered, with both lists still agreeing.
+ */
+function filter_inner_blocks( array $block ): array {
+	$inner   = array();
+	$content = array();
+	$index   = 0;
+
+	foreach ( (array) ( $block['innerContent'] ?? array() ) as $chunk ) {
+		if ( is_string( $chunk ) ) {
+			$content[] = $chunk;
+
+			continue;
+		}
+
+		$child = $block['innerBlocks'][ $index++ ] ?? null;
+
+		if ( null === $child ) {
+			continue;
+		}
+
+		// One block at a time, so the keep/drop decision and the placeholder
+		// it belongs to cannot drift apart.
+		$filtered = filter_to_description_blocks( array( $child ) );
+
+		if ( $filtered ) {
+			$inner[]   = $filtered[0];
+			$content[] = null;
+		}
+	}
+
+	$block['innerBlocks']  = $inner;
+	$block['innerContent'] = $content;
+
+	return $block;
+}
+
+/**
+ * Pull the description blocks (only) out of an existing event's post_content.
+ *
+ * Used by the REST `event-form-data` endpoint when loading an event for
+ * editing — the inline block editor only knows how to render the
+ * `DESCRIPTION_BLOCK_NAMES` set, so handing it the GatherPress metadata
+ * blocks would trigger the editor's "Keep as HTML" recovery UI.
+ *
+ * Returns serialised block markup ready to feed straight into the editor.
+ */
+function extract_description_blocks( int $event_id ): string {
+	$content = (string) get_post_field( 'post_content', $event_id );
+	if ( '' === $content ) {
+		return '';
+	}
+
+	$blocks = array_filter(
+		filter_to_description_blocks( parse_blocks( $content ) ),
+		static function ( $block ) {
+			// Freeform HTML survives the filter above (see its docblock) but
+			// must not reach the editor, which would show its "Keep as HTML"
+			// recovery UI for markup it has no block to render.
+			return null !== ( $block['blockName'] ?? null );
+		}
+	);
+
+	return serialize_blocks( array_values( $blocks ) );
+}
+
+/**
+ * Resolve the gatherpress_venue post ID assigned to a given event.
+ *
+ * Delegates to GatherPress's own `Venue\Setup::get_venue_post_from_event_post_id()`
+ * rather than reversing the `_gatherpress_venue` taxonomy term slug ourselves.
+ */
+function get_event_venue_post_id( int $event_id ): int {
+	$venue_post = Venue_Setup::get_instance()->get_venue_post_from_event_post_id( $event_id );
+
+	return $venue_post ? (int) $venue_post->ID : 0;
+}

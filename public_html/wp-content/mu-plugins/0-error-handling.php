@@ -78,7 +78,6 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		E_USER_WARNING,
 		E_NOTICE,
 		E_USER_NOTICE,
-		E_STRICT,
 		E_DEPRECATED,
 		E_USER_DEPRECATED,
 	);
@@ -166,7 +165,6 @@ function is_third_party_file( $file ) {
 		WP_PLUGIN_DIR . '/edit-flow/',
 		WP_PLUGIN_DIR . '/email-post-changes/',
 		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
-		WP_PLUGIN_DIR . '/hyperdb/',
 		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
 		WP_PLUGIN_DIR . '/liveblog/',
 		WP_PLUGIN_DIR . '/public-post-preview/',
@@ -174,6 +172,7 @@ function is_third_party_file( $file ) {
 		WP_PLUGIN_DIR . '/wordpress-importer/',
 		WP_PLUGIN_DIR . '/wp-cldr/',
 		WP_PLUGIN_DIR . '/wp-super-cache/',
+		WP_PLUGIN_DIR . '/zero-bs-crm/', // Jetpack CRM.
 
 		WP_CONTENT_DIR . '/themes/p2/',
 		WP_CONTENT_DIR . '/themes/twenty', // Partial so that it matches all Core themes.
@@ -340,7 +339,6 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			break;
 		case E_NOTICE:
 		case E_USER_NOTICE:
-		case E_STRICT:
 		case E_DEPRECATED:
 		case E_USER_DEPRECATED:
 			$color = '#ffff00'; // Yellow.

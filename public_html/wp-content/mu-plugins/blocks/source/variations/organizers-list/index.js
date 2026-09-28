@@ -52,7 +52,10 @@ registerBlockVariation( 'core/query', {
 					'core/group',
 					{ layout: { type: 'flex', flexWrap: 'wrap' } },
 					[
-						[ 'core/paragraph', { content: __( 'Team:', 'wordcamporg' ) } ],
+						[
+							'core/paragraph',
+							{ content: __( 'Team:', 'wordcamporg' ) },
+						],
 						[ 'core/post-terms', { term: 'wcb_organizer_team' } ],
 					],
 				],
@@ -60,6 +63,14 @@ registerBlockVariation( 'core/query', {
 		],
 		[ 'core/query-pagination' ],
 	],
-	allowedControls: [ 'inherit', 'order', 'taxQuery', 'search', 'postCount', 'offset', 'pages' ],
+	allowedControls: [
+		'inherit',
+		'order',
+		'taxQuery',
+		'search',
+		'postCount',
+		'offset',
+		'pages',
+	],
 	scope: [ 'inserter' ],
 } );

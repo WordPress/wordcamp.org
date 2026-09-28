@@ -1,5 +1,11 @@
 <?php
 class CampTix_MailChimp_Addon extends CampTix_Addon {
+
+	/**
+	 * @var array
+	 */
+	protected $options;
+
 	public function camptix_init() {
 		global $camptix;
 

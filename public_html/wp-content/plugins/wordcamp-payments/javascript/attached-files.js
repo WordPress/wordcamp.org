@@ -66,6 +66,11 @@ jQuery( document ).ready( function( $ ) {
 		},
 
 		appendFile: function( file ) {
+			if ( ! this.isFileAttachable( file ) ) {
+				this.collection.remove( file );
+				return;
+			}
+
 			var noFilesUploaded  = $( '.wcb_no_files_uploaded' );
 			var attachedFileView = new app.AttachedFileView( { model: file } );
 
@@ -73,7 +78,28 @@ jQuery( document ).ready( function( $ ) {
 			noFilesUploaded.removeClass( 'active' );
 			noFilesUploaded.addClass( 'hidden' );
 
-			this.attachExistingFile( file );
+			this.trackExistingFile( file );
+		},
+
+		/**
+		 * Check if a file can be attached to this request.
+		 *
+		 * Files already attached to other posts are rejected with an error message.
+		 *
+		 * @param {app.AttachedFile} file
+		 * @return {boolean}
+		 */
+		isFileAttachable: function( file ) {
+			if ( 0 !== file.get( 'post_parent' ) && file.get( 'post_parent' ) !== parseInt( $( '#post_ID' ).val(), 10 ) ) {
+				$( '.wcb-attached-file-error' ).remove();
+				$( '.wcb_files_list' ).after(
+					$( '<div class="notice notice-error wcb-attached-file-error"><p></p></div>' )
+						.find( 'p' ).text( wcbLocalizedStrings.fileAlreadyAttached ).end()
+				);
+				return false;
+			}
+
+			return true;
 		},
 
 		/**
@@ -82,12 +108,9 @@ jQuery( document ).ready( function( $ ) {
 		 * Sometimes users add existing files to the request, rather than uploading new ones. We need to keep track
 		 * of those so that they can be attached to the request when the form is submitted.
 		 *
-		 * Files that are already attached to other posts are ignored.
-		 * @todo add an error message if the file is already attached to other posts, see https://wordpress.slack.com/archives/meta-wordcamp/p1459185670000179
-		 *
 		 * @param {app.AttachedFile} file
 		 */
-		attachExistingFile: function( file ) {
+		trackExistingFile: function( file ) {
 			var fileIDsToAttach,
 				existingFilesToAttach = $( '#wcb_existing_files_to_attach' );
 
@@ -97,7 +120,7 @@ jQuery( document ).ready( function( $ ) {
 				fileIDsToAttach = [];
 			}
 
-			if ( 0 === file.get( 'post_parent' ) && -1 === $.inArray( file.get( 'ID' ), fileIDsToAttach ) ) {
+			if ( -1 === $.inArray( file.get( 'ID' ), fileIDsToAttach ) ) {
 				fileIDsToAttach.push( file.get( 'ID' ) );
 				existingFilesToAttach.val( JSON.stringify( fileIDsToAttach ) );
 			}

@@ -12,12 +12,10 @@
  * @param {boolean} isSelected Whether or not the block is selected.
  * @return {*} Nothing when the block is selected, and the overlay when it's not.
  */
-export default function( { isSelected } ) {
+export default function ( { isSelected } ) {
 	if ( isSelected ) {
 		return null;
 	}
 
-	return (
-		<div className="deselected-iframe-overlay"></div>
-	);
+	return <div className="deselected-iframe-overlay"></div>;
 }

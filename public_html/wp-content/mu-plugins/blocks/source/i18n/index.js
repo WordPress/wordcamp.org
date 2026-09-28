@@ -103,16 +103,15 @@ export function intersperse( array, separator ) {
 		return [];
 	}
 
-	return array
-		.slice( 1 )
-		.reduce(
-			( accumulator, curValue, curIndex ) => {
-				const sep = ( typeof separator === 'function' ) ? sep( curIndex ) : separator;
+	return array.slice( 1 ).reduce(
+		( accumulator, curValue, curIndex ) => {
+			const sep =
+				typeof separator === 'function' ? sep( curIndex ) : separator;
 
-				return accumulator.concat( [ sep, curValue ] );
-			},
-			[ array[ 0 ] ]
-		);
+			return accumulator.concat( [ sep, curValue ] );
+		},
+		[ array[ 0 ] ]
+	);
 }
 
 /**
@@ -140,8 +139,10 @@ export function listify( array ) {
 	let list = [];
 
 	/* translators: used between list items, there is a space after the comma */
+	// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 	const separator = __( ', ', 'wordcamporg' );
 	/* translators: preceding the last item in a list, there are spaces on both sides */
+	// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 	const conjunction = __( ' and ', 'wordcamporg' );
 
 	if ( ! Array.isArray( array ) ) {
@@ -162,7 +163,11 @@ export function listify( array ) {
 		default:
 			const [ last, ...initial ] = [ ...array ].reverse();
 
-			list = intersperse( initial, separator ).concat( [ separator, conjunction, last ] );
+			list = intersperse( initial, separator ).concat( [
+				separator,
+				conjunction,
+				last,
+			] );
 			break;
 	}
 

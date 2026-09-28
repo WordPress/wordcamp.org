@@ -114,7 +114,7 @@ class WCB_Grid_Option extends WCB_Array_Option {
 				value="<?php echo esc_attr( wp_json_encode( $layout ) ); ?>"
 			/>
 			<?php $this->render_row( $layout ); ?>
-			<div class="edit"><a href="#"><?php echo esc_html_e( 'Edit', 'wordcamporg'); ?></a></div>
+			<div class="edit"><a href="#"><?php esc_html_e( 'Edit', 'wordcamporg'); ?></a></div>
 			<?php if ( $this->type != 'content' ) :
 				$front_page_id = esc_attr( "front-page-only-$this->key" );
 				?>

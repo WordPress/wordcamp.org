@@ -8,7 +8,12 @@ import PropTypes from 'prop-types';
  */
 import TableHeaderCell from './header-cell';
 
-function TableHeader( { columns = {}, sortField, sortOrder = 'asc', handleSortEvent } ) {
+function TableHeader( {
+	columns = {},
+	sortField,
+	sortOrder = 'asc',
+	handleSortEvent,
+} ) {
 	return (
 		<thead>
 			<tr>

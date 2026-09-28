@@ -357,7 +357,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 			'payment_' . $this->id,
 			array(
 				'name' => $this->settings_field_name_attr( $option_name ),
-				'value' => $this->options[ $option_name ],
+				'value' => $this->options[ $option_name ] ?? '',
 				'description' => $description,
 			)
 		);
@@ -377,5 +377,21 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		}
 
 		return $payment_options;
+	}
+
+	/**
+	 * Refresh `$this->camptix_options` from the current site's CampTix
+	 * options.
+	 *
+	 * Multisite callers can call this after `switch_to_blog()` to make sure
+	 * subsequent calls to `get_payment_options()` reflect the switched-to
+	 * site. Subclasses that maintain their own option snapshots should
+	 * override this and call `parent::load_options()` first.
+	 */
+	public function load_options() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$this->camptix_options = $camptix->get_options();
 	}
 }

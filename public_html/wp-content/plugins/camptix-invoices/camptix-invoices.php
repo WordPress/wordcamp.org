@@ -61,10 +61,28 @@ function register_tix_invoice() {
 				'view_items'     => __( 'View Invoices', 'wordcamporg' ),
 				'search_items'   => __( 'Search Invoices', 'wordcamporg' ),
 			),
-			'supports'     => array( 'title' ),
-			'public'       => false,
-			'show_ui'      => true,
-			'show_in_menu' => 'edit.php?post_type=tix_ticket',
+			'supports'        => array( 'title' ),
+			'public'          => false,
+			'show_ui'         => true,
+			'show_in_menu'    => 'edit.php?post_type=tix_ticket',
+			// Mirror the sibling tix_ticket CPT: gate every invoice capability behind
+			// manage_options (the cap already required to reach the CampTix menu). Without
+			// this, the capability-less CPT falls into core's 3.0 back-compat branch which
+			// sets map_meta_cap = true, letting a Contributor create and edit their own
+			// tix_invoice drafts. Invoices are still auto-created during checkout because
+			// wp_insert_post()/wp_update_post() do not perform capability checks.
+			'capability_type' => 'tix_invoice',
+			'capabilities'    => array(
+				'publish_posts'       => 'manage_options',
+				'edit_posts'          => 'manage_options',
+				'edit_others_posts'   => 'manage_options',
+				'delete_posts'        => 'manage_options',
+				'delete_others_posts' => 'manage_options',
+				'read_private_posts'  => 'manage_options',
+				'edit_post'           => 'manage_options',
+				'delete_post'         => 'manage_options',
+				'read_post'           => 'manage_options',
+			),
 		)
 	);
 
@@ -87,6 +105,50 @@ function register_tix_invoice() {
 			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
+
+	// Lock the invoice meta so it cannot be written through generic meta routes
+	// (XML-RPC custom_fields, the REST meta endpoint, or the Custom Fields metabox).
+	// The plugin only ever writes these via direct update_post_meta()/delete_post_meta(),
+	// which bypass auth_callback, so legitimate invoice generation is unaffected. The
+	// sanitize_callback additionally contains invoice_document to a bare filename at the
+	// storage layer, neutralising any path component before it is ever persisted.
+	register_post_meta(
+		'tix_invoice',
+		'invoice_document',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => false,
+			'auth_callback'     => '__return_false',
+			'sanitize_callback' => 'ctx_sanitize_invoice_document',
+		)
+	);
+
+	register_post_meta(
+		'tix_invoice',
+		'invoice_number',
+		array(
+			'type'          => 'string',
+			'single'        => true,
+			'show_in_rest'  => false,
+			'auth_callback' => '__return_false',
+		)
+	);
+}
+
+/**
+ * Contain the invoice_document meta to a bare filename at the storage layer.
+ *
+ * Registered as the sanitize_callback for the invoice_document post meta, so it runs on
+ * every update_post_meta() for a tix_invoice. A crafted value can therefore never be
+ * persisted with a directory component, even if a future writer forgets to sanitise.
+ * basename() is a no-op for the flat filenames the plugin itself generates.
+ *
+ * @param mixed $value The meta value being stored.
+ * @return string The contained filename.
+ */
+function ctx_sanitize_invoice_document( $value ) {
+	return basename( (string) $value );
 }
 
 /**
@@ -510,7 +572,9 @@ add_action( 'camptix_form_attendee_after_registration_information', 'ctx_invoice
  * @param int $invoice_id The invoice id.
  */
 function ctx_get_invoice( $invoice_id ) {
-	$invoice_document = get_post_meta( $invoice_id, 'invoice_document', true );
+	// basename() contains the value to the camptix-invoices directory: the meta must never
+	// resolve to a file outside it, whether it is served for download or attached to email.
+	$invoice_document = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 	$upload_dir       = wp_upload_dir();
 
 	if ( empty( $upload_dir['basedir'] ) ) {
@@ -534,7 +598,7 @@ function ctx_get_invoice( $invoice_id ) {
  */
 function ctx_get_invoice_url( $invoice_id ) {
 
-	$invoice_document = get_post_meta( $invoice_id, 'invoice_document', true );
+	$invoice_document = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 	if ( empty( $invoice_document ) ) {
 		return false;
 	}

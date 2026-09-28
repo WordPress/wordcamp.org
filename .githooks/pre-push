@@ -91,13 +91,13 @@ function js_css_lint( $workspaces, $changed_files ) {
 		if ( false !== strpos( $changed_files, $path ) ) {
 			echo "\nLinting $name workspace... ";
 
-			exec( 'yarn --silent workspace ' . $name . ' lint:js 2>&1', $lint_js_output, $exec_exit_status );
+			exec( 'npm run --silent --workspace=' . $name . ' lint:js 2>&1', $lint_js_output, $exec_exit_status );
 
 			if ( $exec_exit_status ) {
 				throw new Exception( implode( "\n", $lint_js_output ) );
 			}
 
-			exec( 'yarn --silent workspace ' . $name . ' lint:css 2>&1', $lint_css_output, $exec_exit_status );
+			exec( 'npm run --silent --workspace=' . $name . ' lint:css 2>&1', $lint_css_output, $exec_exit_status );
 
 			if ( $exec_exit_status ) {
 				throw new Exception( implode( "\n", $lint_css_output ) );

@@ -10,7 +10,7 @@ use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const LATEST_DATABASE_VERSION = 4;
+const LATEST_DATABASE_VERSION = 5;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
@@ -182,6 +182,8 @@ function upgrade_database() {
 	$table_name = get_index_table_name();
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+	$charset_collate = $wpdb->get_charset_collate();
+
 	$schema = "
 		CREATE TABLE $table_name (
 			blog_id        int( 11 )        unsigned NOT NULL default '0',
@@ -197,13 +199,11 @@ function upgrade_database() {
 			due_date       int( 11 )        unsigned NOT NULL default '0',
 			amount         numeric( 10, 2 ) unsigned NOT NULL default '0',
 			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
-
 			PRIMARY KEY (blog_id, invoice_id),
-			KEY status (status)
+			KEY status (status),
 			KEY last_modified (last_modified)
 		)
-		DEFAULT CHARACTER SET {$wpdb->charset}
-		COLLATE {$wpdb->collate};
+		$charset_collate
 	";
 
 	dbDelta( $schema );

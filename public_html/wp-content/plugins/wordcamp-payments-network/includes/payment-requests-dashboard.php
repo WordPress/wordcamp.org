@@ -59,7 +59,7 @@ class Payment_Requests_Dashboard {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		$charset_collate = "DEFAULT CHARACTER SET {$wpdb->charset} COLLATE {$wpdb->collate}";
+		$charset_collate = $wpdb->get_charset_collate();
 		$sql             = sprintf( "CREATE TABLE %s (
 			id int(11) unsigned NOT NULL auto_increment,
 			blog_id int(11) unsigned NOT NULL default '0',

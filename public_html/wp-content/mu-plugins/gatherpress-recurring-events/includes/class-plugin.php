@@ -178,6 +178,7 @@ final class Plugin {
 		add_filter( 'posts_clauses', array( Query::class, 'clauses' ), 30, 2 );
 		add_filter( 'the_posts', array( Query::class, 'posts' ), 20, 2 );
 		add_action( 'the_post', array( Query::class, 'activate' ), 10, 2 );
+		add_action( 'loop_start', array( Query::class, 'remember' ), 10, 1 );
 		add_action( 'loop_end', array( Query::class, 'deactivate' ), 10, 1 );
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );

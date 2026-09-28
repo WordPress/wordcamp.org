@@ -806,10 +806,10 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 		Occurrences::project( $post_id );
 
-		$before = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id )
+		$before = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT recurrence_id FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id )
 		);
-		$this->assertGreaterThan( 1, $before, 'Precondition: the series projected some occurrences to move.' );
+		$this->assertGreaterThan( 1, count( $before ), 'Precondition: the series projected some occurrences to move.' );
 
 		// Cancelling one proves the re-projection preserves per-occurrence
 		// state rather than rewriting the row wholesale.
@@ -834,7 +834,12 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertCount( $before, $rows, 'Re-projecting must not duplicate the rows it already wrote.' );
+		// The projection horizon is "now + N months" in the event's zone. Moving east to
+		// Brisbane pushes it later, so depending on when the test runs one more
+		// occurrence can land at the far end. Compare the rows, not the total count.
+		$after = wp_list_pluck( $rows, 'recurrence_id' );
+		$this->assertSame( $after, array_unique( $after ), 'Re-projecting must not duplicate the rows it already wrote.' );
+		$this->assertSame( array(), array_values( array_diff( $before, $after ) ), 'Re-projecting must keep the rows it already wrote.' );
 
 		foreach ( $rows as $row ) {
 			$this->assertSame( 'Australia/Brisbane', $row->timezone );

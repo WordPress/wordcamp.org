@@ -59,7 +59,7 @@ class Test_Groups_Site_More_Events extends Groups_TestCase {
 	 */
 	protected function tearDown(): void {
 		if ( $this->main_query ) {
-			$GLOBALS['wp_query'] = $this->main_query;
+			$GLOBALS['wp_query'] = $this->main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the query this test replaced.
 			$this->main_query    = null;
 		}
 
@@ -101,7 +101,8 @@ class Test_Groups_Site_More_Events extends Groups_TestCase {
 	 * @param int $event_id The event post ID.
 	 */
 	private function view_event( int $event_id ): void {
-		$this->main_query    = $GLOBALS['wp_query'];
+		$this->main_query = $GLOBALS['wp_query'];
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the event; restored in tearDown().
 		$GLOBALS['wp_query'] = new WP_Query(
 			array(
 				'p'         => $event_id,

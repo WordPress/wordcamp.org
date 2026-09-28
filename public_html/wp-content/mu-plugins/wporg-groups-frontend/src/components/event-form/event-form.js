@@ -73,7 +73,7 @@ const EMPTY_FORM = {
  * @param {*}        props.header            Rendered above the fields.
  * @param {*}        props.footerStart       Rendered at the start of the actions row.
  * @param {*}        props.children          Rendered after the RSVP questions.
- * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
+ * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `loadTemplate( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
  */
 function EventForm(
 	{
@@ -138,7 +138,7 @@ function EventForm(
 		markChanged();
 	};
 
-	const loadFormData = ( id ) => {
+	const loadFormData = ( id, templateId = 0 ) => {
 		cancelLoadRef.current();
 		let cancelled = false;
 		cancelLoadRef.current = () => {
@@ -147,9 +147,12 @@ function EventForm(
 		setLoading( true );
 		setError( '' );
 
-		const path = id
-			? `/${ NS }/event-form-data?event_id=${ id }`
-			: `/${ NS }/event-form-data`;
+		let path = `/${ NS }/event-form-data`;
+		if ( id ) {
+			path += `?event_id=${ id }`;
+		} else if ( templateId ) {
+			path += `?template_id=${ templateId }`;
+		}
 
 		apiFetch( { path } )
 			.then( ( res ) => {
@@ -212,6 +215,9 @@ function EventForm(
 		getPayload: buildPayload,
 		loadEvent: ( id ) => {
 			loadFormData( id );
+		},
+		loadTemplate: ( templateId ) => {
+			loadFormData( 0, templateId );
 		},
 		selectVenue: ( venue ) => {
 			updateField( 'venue_select', String( venue.id ) );

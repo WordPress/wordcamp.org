@@ -41,6 +41,11 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		// of the draft we're currently autosaving to (0 = none yet).
 		const [ drafts, setDrafts ] = useState( [] );
 		const [ draftId, setDraftId ] = useState( 0 );
+
+		// Templates: the group's published events a new one can start from
+		// (create mode only), and the one the form was last filled from.
+		const [ templates, setTemplates ] = useState( [] );
+		const [ templateId, setTemplateId ] = useState( 0 );
 		const [ autosaveStatus, setAutosaveStatus ] = useState( '' );
 		const [ autosaveTime, setAutosaveTime ] = useState( null );
 		const [ venueEditorOpen, setVenueEditorOpen ] = useState( false );
@@ -70,6 +75,9 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			}
 			apiFetch( { path: `/${ NS }/drafts` } )
 				.then( ( res ) => setDrafts( Array.isArray( res ) ? res : [] ) )
+				.catch( () => {} );
+			apiFetch( { path: `/${ NS }/event-templates` } )
+				.then( ( res ) => setTemplates( Array.isArray( res ) ? res : [] ) )
 				.catch( () => {} );
 		}, [ isEdit ] );
 
@@ -113,14 +121,30 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				return;
 			}
 			setDraftId( parseInt( id, 10 ) );
+			setTemplateId( 0 );
 			formRef.current.loadEvent( parseInt( id, 10 ) );
 		};
 
 		const handleStartFresh = () => {
 			setDraftId( 0 );
+			setTemplateId( 0 );
 			setAutosaveStatus( '' );
 			setAutosaveTime( null );
 			formRef.current.loadEvent( 0 );
+		};
+
+		// Starting from a template makes a new event, never an edit of the
+		// draft that may be open: the next autosave creates a fresh draft.
+		const handleSelectTemplate = ( id ) => {
+			if ( ! id ) {
+				handleStartFresh();
+				return;
+			}
+			setDraftId( 0 );
+			setTemplateId( parseInt( id, 10 ) );
+			setAutosaveStatus( '' );
+			setAutosaveTime( null );
+			formRef.current.loadTemplate( parseInt( id, 10 ) );
 		};
 
 		const submitPayload = ( payload ) => {
@@ -186,6 +210,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		} );
 
 		const showDraftPicker = ! isEdit && drafts.length > 0;
+		const showTemplatePicker = ! isEdit && templates.length > 0;
 
 		const autosaveLabel = ( () => {
 			if ( isEdit ) {
@@ -235,7 +260,33 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 					setDirty( false );
 					restartAutosave();
 				},
-				header: showDraftPicker &&
+				header: ( showTemplatePicker || showDraftPicker ) && h(
+					'div',
+					{ className: 'wporg-groups-event-modal__pickers' },
+					showTemplatePicker && h(
+						'div',
+						{ className: 'wporg-groups-event-modal__template-picker' },
+						h(
+							SelectControl,
+							{
+								label: __( 'Start from a past event', 'wordcamporg' ),
+								help: __( 'Copies everything except the date and time.', 'wordcamporg' ),
+								value: templateId ? String( templateId ) : '',
+								options: [
+									{ label: __( '— Start from scratch —', 'wordcamporg' ), value: '' },
+								].concat(
+									templates.map( ( t ) => ( {
+										label: ( t.title || __( '(Untitled)', 'wordcamporg' ) )
+											+ ( t.event_date ? ` — ${ t.event_date.slice( 0, 10 ) }` : '' ),
+										value: String( t.id ),
+									} ) )
+								),
+								onChange: handleSelectTemplate,
+								__nextHasNoMarginBottom: true,
+							}
+						)
+					),
+					showDraftPicker &&
 					h(
 						'div',
 						{ className: 'wporg-groups-event-modal__draft-picker' },
@@ -263,7 +314,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 								__nextHasNoMarginBottom: true,
 							}
 						)
-					),
+					)
+				),
 				footerStart: h(
 					'span',
 					{

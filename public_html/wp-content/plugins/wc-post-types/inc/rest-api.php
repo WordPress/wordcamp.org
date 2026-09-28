@@ -183,7 +183,16 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_slides',
 		array(
-			'show_in_rest'  => true,
+			// Session pages render these links through a server-side meta-link
+			// block, so the REST field only needs the edit context. Limiting it
+			// there keeps the value out of the default view response for a
+			// session whose body is withheld by a password.
+			'show_in_rest'  => array(
+				'schema' => array(
+					'type'    => 'string',
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'        => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
@@ -192,7 +201,12 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_video',
 		array(
-			'show_in_rest'      => true,
+			'show_in_rest'      => array(
+				'schema' => array(
+					'type'    => 'string',
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function ( $value ) {
@@ -746,6 +760,12 @@ function prepare_session_query_args( $args, $request ) {
 	$post_type = get_post_type_object( 'wcb_session' );
 	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
 		$args['post_status'][] = 'private';
+	} else {
+		// Password-protected sessions are `publish`, so they would otherwise
+		// appear in the public collection with their meta, and the wc_meta_key
+		// / wc_meta_value filter above would confirm a value against them. Keep
+		// them out for callers who could not open them anyway.
+		$args['has_password'] = false;
 	}
 
 	return $args;

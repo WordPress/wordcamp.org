@@ -231,8 +231,14 @@ function register_event_speakers_meta(): void {
 			'default'       => array(),
 			'show_in_rest'  => array(
 				'schema' => array(
-					'type'  => 'array',
-					'items' => array( 'type' => 'integer' ),
+					'type'    => 'array',
+					'items'   => array( 'type' => 'integer' ),
+					// The speaker list follows the event's password gate when
+					// rendered (see the event-speakers block). Restrict the
+					// REST field to the edit context so the raw roster is not
+					// served in the default view response for an event whose
+					// body is withheld.
+					'context' => array( 'edit' ),
 				),
 			),
 			'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
@@ -843,6 +849,14 @@ add_filter(
 			return $content;
 		}
 
+		// The event body honours its own post password, so the appended venue
+		// description and access notes must follow it too. Without this they
+		// render beneath the password form while every sibling block on the
+		// page stays hidden.
+		if ( post_password_required( $event_id ) ) {
+			return $content;
+		}
+
 		$venue_id = get_event_venue_post_id( $event_id );
 		if ( ! $venue_id ) {
 			return $content;
@@ -940,7 +954,16 @@ function open_venue_block_visibility( $pre, array $parsed_block ) {
 	// A non-null $pre means an earlier callback short-circuited the render,
 	// so `render_block_gatherpress/venue` never fires and the override would
 	// have nothing to close it.
-	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
+	//
+	// The override forces the venue post type viewable regardless of who is
+	// asking, so it must not run while the event that hosts the block is
+	// behind its post password: the venue is part of the gated event and
+	// should follow the same gate the event body does.
+	if (
+		is_null( $pre )
+		&& 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' )
+		&& ! ( is_singular( 'gatherpress_event' ) && post_password_required() )
+	) {
 		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
 	}
 

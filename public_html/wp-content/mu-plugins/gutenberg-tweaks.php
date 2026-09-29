@@ -7,6 +7,7 @@ defined( 'WPINC' ) || die();
 add_filter( 'classic_editor_network_default_settings', __NAMESPACE__ . '\classic_editor_default_settings' );
 add_filter( 'classic_editor_enabled_editors_for_post_type', __NAMESPACE__ . '\disable_editors_by_post_type', 10, 2 );
 add_action( 'after_setup_theme', __NAMESPACE__ . '\enable_block_templates' );
+add_filter( 'option_gutenberg-experiments', __NAMESPACE__ . '\disable_full_page_client_side_navigation' );
 
 /**
  * Configure the default settings for the Classic Editor
@@ -67,4 +68,24 @@ function disable_editors_by_post_type( $editors, $post_type ) {
  */
 function enable_block_templates() {
 	add_theme_support( 'block-templates' );
+}
+
+/**
+ * Keep Gutenberg's full-page client-side navigation experiment off, whatever a site has stored.
+ *
+ * The router only carries script modules across a navigation, so the classic scripts our sites
+ * depend on (CampTix checkout, the schedule block) never run on a swapped body.
+ *
+ * @see https://github.com/WordPress/gutenberg/pull/59707
+ *
+ * @param mixed $experiments The stored experiment settings.
+ *
+ * @return mixed The settings, without the full-page client-side navigation experiment.
+ */
+function disable_full_page_client_side_navigation( $experiments ) {
+	if ( is_array( $experiments ) ) {
+		unset( $experiments['gutenberg-full-page-client-side-navigation'] );
+	}
+
+	return $experiments;
 }

@@ -215,6 +215,78 @@ class Client {
 	}
 
 	/**
+	 * The user meta key for storing the OAuth `state` value.
+	 *
+	 * User meta is used rather than an option or a transient because it's shared across every site and network
+	 * in the install, while the redirect URI always points at the WordCamp network. That way an authorization
+	 * that starts on the Events network can still be matched up when QBO sends the user back here.
+	 *
+	 * @return string
+	 */
+	protected static function generate_oauth_state_key() {
+		return PLUGIN_PREFIX . '_oauth_state';
+	}
+
+	/**
+	 * Generate a `state` value for an authorization request, and remember it for the callback.
+	 *
+	 * @return string
+	 */
+	protected static function create_oauth_state() {
+		$state = wp_generate_password( 32, false );
+
+		update_user_meta(
+			get_current_user_id(),
+			self::generate_oauth_state_key(),
+			array(
+				'state'   => $state,
+				'expires' => time() + ( 15 * MINUTE_IN_SECONDS ),
+			)
+		);
+
+		return $state;
+	}
+
+	/**
+	 * Check that a callback's `state` matches the authorization request that this user started.
+	 *
+	 * This only reads the stored value; discarding it is left to `maybe_exchange_code_for_token()`. That way a
+	 * stray request to the callback endpoint -- a reloaded tab, an old one out of history -- can't throw away an
+	 * authorization that's still in flight, and a callback that dies on an upstream error can still be retried.
+	 *
+	 * @param string $state
+	 *
+	 * @return bool
+	 */
+	protected static function verify_oauth_state( $state ) {
+		$stored = get_user_meta( get_current_user_id(), self::generate_oauth_state_key(), true );
+
+		if ( ! is_string( $state ) || ! $state || ! is_array( $stored ) ) {
+			return false;
+		}
+
+		// `hash_equals()` throws a TypeError on anything but strings, so check the stored side too.
+		if ( empty( $stored['state'] ) || ! is_string( $stored['state'] ) ) {
+			return false;
+		}
+
+		if ( empty( $stored['expires'] ) || time() > $stored['expires'] ) {
+			return false;
+		}
+
+		return hash_equals( $stored['state'], $state );
+	}
+
+	/**
+	 * Discard the `state` stored for the current user, once it can't be of any more use.
+	 *
+	 * @return bool
+	 */
+	protected static function delete_oauth_state() {
+		return delete_user_meta( get_current_user_id(), self::generate_oauth_state_key() );
+	}
+
+	/**
 	 * Shortcut for importing an Exception into the client's WP_Error instance.
 	 *
 	 * @param Exception $exception
@@ -311,7 +383,21 @@ class Client {
 	 */
 	public function get_authorize_url() {
 		try {
-			return $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
+			// Bail through the usual insulation if the SDK or the credentials are unavailable.
+			$this->data_service();
+
+			/*
+			 * The SDK generates a `state` of its own, but never stores it, so there'd be nothing to compare
+			 * against when QBO sends it back. It accepts one from the caller, though, so hand it a value that's
+			 * tied to the user who started the process.
+			 *
+			 * That value is minted here rather than in `get_client_config()`, so that only an actual
+			 * authorization request writes to user meta.
+			 */
+			$config          = $this->get_client_config();
+			$config['state'] = self::create_oauth_state();
+
+			return DataService::Configure( $config )->getOAuth2LoginHelper()->getAuthorizationCodeURL();
 		} catch ( Exception $exception ) {
 			$this->add_error_from_exception( $exception );
 
@@ -323,25 +409,51 @@ class Client {
 	 * Send authorization data over to QBO and get back an OAuth token.
 	 *
 	 * Once a user has authorized a connection on the Intuit site, they are redirected back to our page, along with
-	 * an authorization code and realm ID. These are then sent back to the OAuth server to exchange for the actual
-	 * access token.
+	 * an authorization code, a realm ID, and the `state` that was sent along with the authorization request. The
+	 * `state` has to match the one this user started with before the code is worth exchanging, since this leg of
+	 * the process arrives from Intuit and so can't carry a nonce of its own.
+	 *
+	 * The stored value is only discarded once it's served its purpose, so that a callback which fails somewhere
+	 * upstream can be retried until it expires.
 	 *
 	 * @return void
 	 */
 	public function maybe_exchange_code_for_token() {
-		$authorization_code = wp_unslash( $_GET['code'] ?? '' );
-		$realm_id           = wp_unslash( $_GET['realmId'] ?? '' );
+		$authorization_code = sanitize_text_field( wp_unslash( $_GET['code'] ?? '' ) );
+		$realm_id           = sanitize_text_field( wp_unslash( $_GET['realmId'] ?? '' ) );
+		$state              = sanitize_text_field( wp_unslash( $_GET['state'] ?? '' ) );
 
-		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
-			try {
-				$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+		if ( ! $authorization_code || ! $realm_id ) {
+			return;
+		}
 
-				$this->data_service()->updateOAuth2Token( $token );
+		if ( $this->has_valid_token() ) {
+			// There's a working connection already, so whatever this user had in flight is moot.
+			self::delete_oauth_state();
 
-				self::save_oauth_token_data( $token );
-			} catch ( Exception | SdkException | ServiceException $exception ) {
-				$this->add_error_from_exception( $exception );
-			}
+			return;
+		}
+
+		if ( ! self::verify_oauth_state( $state ) ) {
+			$this->error->add(
+				'invalid_state',
+				'Your request could not be validated. Please start the connection process again.'
+			);
+
+			return;
+		}
+
+		try {
+			$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+
+			$this->data_service()->updateOAuth2Token( $token );
+
+			self::save_oauth_token_data( $token );
+
+			// The code has been spent, so the value that vouched for it is done too.
+			self::delete_oauth_state();
+		} catch ( Exception | SdkException | ServiceException $exception ) {
+			$this->add_error_from_exception( $exception );
 		}
 	}
 

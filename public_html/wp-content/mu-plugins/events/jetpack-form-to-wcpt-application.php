@@ -119,9 +119,11 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		return;
 	}
 
+	// `find_first_field_matching_label()` applies `sanitize_text_field()`, which is not enough on
+	// its own to keep the title text. See `wcorg_sanitize_plain_text()`.
 	$post = array(
 		'post_type'   => 'wordcamp',
-		'post_title'  => 'WordPress Campus Connect ' . ( $campus ?: trim( "$city, $country", ', ' ) ),
+		'post_title'  => 'WordPress Campus Connect ' . wcorg_sanitize_plain_text( $campus ?: trim( "$city, $country", ', ' ) ),
 		'post_status' => WCPT_DEFAULT_STATUS,
 		'post_author' => $service_account, // Public submission: owned by the service account.
 	);

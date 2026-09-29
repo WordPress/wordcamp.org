@@ -24,17 +24,60 @@ function bootstrap(): void {
  * Register all blocks provided by this mu-plugin.
  */
 function register_blocks(): void {
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-rsvp' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-manage' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-settings' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-location' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-membership' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-news' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-members' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-speakers' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/my-events' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/page-content' );
-	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/sponsors' );
+	$blocks = array(
+		'event-rsvp',
+		'event-manage',
+		'group-settings',
+		'group-location',
+		'group-membership',
+		'group-news',
+		'group-members',
+		'event-language',
+		'event-speakers',
+		'my-events',
+		'page-content',
+		'sponsors',
+	);
+
+	foreach ( $blocks as $block ) {
+		$block_type = register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/' . $block );
+
+		if ( $block_type instanceof \WP_Block_Type ) {
+			set_script_translations( $block_type );
+		}
+	}
+}
+
+/**
+ * Point one block's scripts at the `wordcamporg` translations.
+ *
+ * Registering a block doesn't tell WordPress where its script's strings are
+ * translated, so `__()` in our JS returned English whatever the visitor's
+ * language was. The PHP half of the same blocks was already translatable, so
+ * a settings panel could come out half in one language and half in another.
+ *
+ * Driven off the block type we just registered rather than off the registry,
+ * because the registry also holds `wporg/*` blocks from `wporg-mu-plugins`,
+ * whose strings belong to their own domain.
+ *
+ * `event-rsvp` renders through a `viewScriptModule`, which this does not
+ * cover -- script modules have no i18n API yet. It doesn't need one: its
+ * labels are resolved in PHP and handed over through the block's context,
+ * which `src/blocks/event-rsvp/view.js` documents as the reason it works
+ * that way.
+ *
+ * @param \WP_Block_Type $block_type The block that was just registered.
+ */
+function set_script_translations( \WP_Block_Type $block_type ): void {
+	$handles = array_merge(
+		(array) $block_type->editor_script_handles,
+		(array) $block_type->script_handles,
+		(array) $block_type->view_script_handles
+	);
+
+	foreach ( array_unique( $handles ) as $handle ) {
+		wp_set_script_translations( $handle, 'wordcamporg' );
+	}
 }
 
 /**

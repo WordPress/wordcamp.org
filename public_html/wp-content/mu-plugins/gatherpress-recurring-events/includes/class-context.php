@@ -8,7 +8,6 @@
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use GatherPress\Core\Rsvp\Cache;
 use WP_HTML_Tag_Processor;
 
@@ -132,12 +131,20 @@ final class Context {
 	/**
 	 * Uses an occurrence permalink while rendering a canonical occurrence.
 	 *
+	 * On a series' own undated page its links stay on the series URL. Other
+	 * events listed on that page (a loop below the event) are a different
+	 * post, so they link to their own dates like they would anywhere else.
+	 *
 	 * @param string $permalink Existing permalink.
 	 * @param object $post      Post object.
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular() ) ) {
+		if ( ! self::$occurrence || (int) self::$occurrence->series_post_id !== (int) $post->ID ) {
+			return $permalink;
+		}
+
+		if ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) || get_queried_object_id() !== (int) $post->ID ) {
 			return self::occurrence_url( (int) $post->ID, self::recurrence_id() );
 		}
 
@@ -147,11 +154,19 @@ final class Context {
 	/**
 	 * Prepends the date selector to singular event content.
 	 *
+	 * Only the page's own event gets it. Another series listed on the page
+	 * (a loop of other events below it) filters its excerpt through
+	 * `the_content` with its own occurrence active.
+	 *
 	 * @param string $content Event content.
 	 * @return string Filtered content.
 	 */
 	public static function prepend_selector( string $content ): string {
 		if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() || ! self::$occurrence ) {
+			return $content;
+		}
+
+		if ( get_queried_object_id() !== (int) self::$occurrence->series_post_id ) {
 			return $content;
 		}
 
@@ -167,6 +182,18 @@ final class Context {
 	public static function canonical_redirect( $redirect_url ) {
 		if ( ! get_query_var( 'gpre_occurrence' ) ) {
 			return $redirect_url;
+		}
+
+		/*
+		 * The calendar endpoints hang off an occurrence rather than being one:
+		 * `…/{occurrence}/ical` is a download, not a page. Rewriting the
+		 * redirect below would send it to `…/{occurrence}/` and drop the
+		 * endpoint, so the visitor lands on the event instead of getting the
+		 * file (#2010). Query var name matches the one our own rewrite rules
+		 * in `Plugin::init()` set.
+		 */
+		if ( get_query_var( 'gatherpress_calendar' ) ) {
+			return false;
 		}
 
 		if ( $redirect_url && self::$occurrence ) {
@@ -192,12 +219,25 @@ final class Context {
 			usort( $occurrences, static fn( object $first, object $second ): int => strcmp( $first->datetime_start_gmt, $second->datetime_start_gmt ) );
 		}
 
+		/*
+		 * The group's own choice of how its dates are written (#2033), not a
+		 * format of this extension's own. Through GatherPress's filters rather
+		 * than by calling into the groups mu-plugin: the filters are the
+		 * contract `wporg-groups-frontend` already hooks to answer this for the
+		 * event page, the cards and the emails, and going through them keeps
+		 * this extension usable on a site that has no such setting -- the
+		 * defaults below are then what it falls back to.
+		 */
+		$date_format = (string) apply_filters( 'gatherpress_date_format', 'M j' );
+		$time_format = (string) apply_filters( 'gatherpress_time_format', 'g:i A' );
+		$format      = $date_format . ' @ ' . $time_format . ' T';
+
 		foreach ( $occurrences as $occurrence ) {
-			$timezone = new DateTimeZone( $occurrence->timezone );
+			$timezone = Occurrences::timezone( (string) $occurrence->timezone );
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );
-			$label    = wp_date( 'M j @ g:i A T', $date->getTimestamp(), $timezone );
+			$label    = wp_date( $format, $date->getTimestamp(), $timezone );
 			if ( 'cancelled' === $occurrence->status ) {
-				$label .= ' — ' . __( 'Cancelled', 'gpre' );
+				$label .= ' — ' . __( 'Cancelled', 'wordcamporg' );
 			}
 
 			$items .= sprintf(
@@ -211,9 +251,9 @@ final class Context {
 
 		$notice = '';
 		if ( 'cancelled' === self::$occurrence->status ) {
-			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been cancelled.', 'gpre' ) . '</p>';
+			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been cancelled.', 'wordcamporg' ) . '</p>';
 		} elseif ( self::$occurrence->datetime_end_gmt < current_time( 'mysql', true ) ) {
-			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'gpre' ) . '</p>';
+			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'wordcamporg' ) . '</p>';
 		}
 
 		return sprintf(
@@ -224,10 +264,10 @@ final class Context {
 			'<button class="gpre-occurrence-selector__control is-next" type="button" aria-label="%4$s">' .
 			'<span aria-hidden="true">›</span></button>' .
 			'</nav>%5$s',
-			esc_attr__( 'Event dates', 'gpre' ),
-			esc_attr__( 'Previous event dates', 'gpre' ),
+			esc_attr__( 'Event dates', 'wordcamporg' ),
+			esc_attr__( 'Previous event dates', 'wordcamporg' ),
 			$items,
-			esc_attr__( 'Next event dates', 'gpre' ),
+			esc_attr__( 'Next event dates', 'wordcamporg' ),
 			$notice
 		);
 	}
@@ -244,7 +284,7 @@ final class Context {
 		}
 
 		if ( 'cancelled' === self::$occurrence->status ) {
-			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this cancelled occurrence.', 'gpre' ) . '</p>';
+			return '<p class="gpre-rsvp-closed">' . esc_html__( 'RSVP is closed for this cancelled occurrence.', 'wordcamporg' ) . '</p>';
 		}
 
 		$tag = new WP_HTML_Tag_Processor( $content );

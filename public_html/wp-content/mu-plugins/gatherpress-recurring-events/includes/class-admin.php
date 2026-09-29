@@ -106,5 +106,6 @@ final class Admin {
 			(string) filemtime( DIR . '/assets/editor.js' ),
 			true
 		);
+		wp_set_script_translations( 'gpre-editor', 'wordcamporg' );
 	}
 }

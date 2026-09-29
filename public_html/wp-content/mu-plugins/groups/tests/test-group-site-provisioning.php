@@ -53,6 +53,16 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 		$this->assertNotNull( $members_page );
 		$this->assertSame( 'publish', $members_page->post_status );
 
+		// The About page is seeded as a draft: invisible to visitors until
+		// published, but the organizer starts from example prose with an
+		// editor's note at the end instead of a blank editor.
+		$about_page = get_page_by_path( 'about' );
+		$this->assertNotNull( $about_page );
+		$this->assertSame( 'draft', $about_page->post_status );
+		$this->assertSame( self::$organizer_id, (int) $about_page->post_author );
+		$this->assertStringContainsString( 'all skill levels welcome', $about_page->post_content );
+		$this->assertStringContainsString( '<em>Editor’s note:', $about_page->post_content );
+
 		// The stock "Hello world!"/"Sample Page" boilerplate shouldn't survive --
 		// a group site should start from the group template, not generic WP content.
 		$this->assertNull( get_page_by_path( 'hello-world', OBJECT, 'post' ) );

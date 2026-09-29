@@ -9,6 +9,15 @@
 
 namespace WordCamp\Groups\GatherPress_Tweaks;
 
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Setup as Venue_Setup;
+
+use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
+use function WordCamp\Groups\Frontend\Event_Language\get_name as get_language_name;
+use function WordCamp\Groups\Frontend\Event_Language\transliterate;
+
+use const WordCamp\Groups\Frontend\Event_Language\META_KEY as LANGUAGE_META_KEY;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -65,10 +74,21 @@ function get_event_venue_post_id( int $event_id ): int {
 }
 
 /**
- * Disable the "Show Timezone" GatherPress setting so event date blocks
- * never append "GMT+0000" or similar suffixes.
+ * Enable the "Show Timezone" GatherPress setting, and disable anonymous RSVP
+ * and Open RSVP, at the global setting level.
  *
- * Also disable anonymous RSVP and Open RSVP at the global setting level.
+ * Timezone display used to be forced off here, because an event whose zone is
+ * a bare UTC offset renders as "GMT+0000" and a group site is not required to
+ * carry a `timezone_string`. Three testers asked for the timezone back (#2021),
+ * and suppressing it is the worse trade: "6:00 PM" with no zone is wrong for
+ * anyone reading it from somewhere else, where "6:00 PM GMT+0000" is merely
+ * ugly. The front-end event form now makes the zone an explicit per-event
+ * choice defaulting to a real identifier, so the ugly case is the exception
+ * rather than the rule. See `inc/event-timezone.php`.
+ *
+ * Forced rather than left to GatherPress's own default (which is already on)
+ * so the answer is the same on every group, including one whose organizer
+ * switched it off before this changed.
  *
  * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
  * so the forced keys overlay the stored settings (or defaults when unset)
@@ -79,7 +99,7 @@ $force_gatherpress_settings = static function ( $value ) {
 		$value = array();
 	}
 
-	$value['show_timezone']         = 0;
+	$value['show_timezone']         = 1;
 	$value['enable_anonymous_rsvp'] = 0;
 	$value['enable_open_rsvp']      = 0;
 
@@ -215,8 +235,8 @@ function register_event_speakers_meta(): void {
 					'items' => array( 'type' => 'integer' ),
 				),
 			),
-			'auth_callback' => static function () {
-				return current_user_can( 'edit_posts' );
+			'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
+				return current_user_can( 'edit_post', (int) $post_id );
 			},
 		)
 	);
@@ -226,7 +246,8 @@ add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 /**
  * Rewrite the search block form action on the events archive to submit
  * to the archive URL instead of the default search URL, so search results
- * stay scoped to events.
+ * stay scoped to events. Also remove the required attribute and handle clearing
+ * the search field to restore the full list of upcoming events.
  */
 add_filter(
 	'render_block_core/search',
@@ -242,16 +263,68 @@ add_filter(
 			$content
 		);
 
+		// Remove required attribute safely and mark the events search form for the clear script.
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		while ( $processor->next_tag() ) {
+			if ( 'FORM' === $processor->get_tag() ) {
+				$processor->set_attribute( 'data-events-search-form', '1' );
+			} elseif ( 'INPUT' === $processor->get_tag() ) {
+				$processor->remove_attribute( 'required' );
+			}
+		}
+		$content = $processor->get_updated_html();
+
 		// Add hidden field to default to "all" time when searching.
-		$content = str_replace(
-			'</form>',
-			'<input type="hidden" name="event_time" value="all" /></form>',
-			$content
-		);
+		$hidden = '<input type="hidden" name="event_time" value="all" />';
+
+		// Keep the applied format and language, so searching narrows the
+		// current view rather than resetting it back to every event (#2035).
+		$format = get_event_format_filter();
+
+		if ( 'all' !== $format ) {
+			$hidden .= sprintf(
+				'<input type="hidden" name="event_format" value="%s" />',
+				esc_attr( $format )
+			);
+		}
+
+		$language = get_event_language_filter();
+
+		if ( 'all' !== $language ) {
+			$hidden .= sprintf(
+				'<input type="hidden" name="event_language" value="%s" />',
+				esc_attr( $language )
+			);
+		}
+
+		$content = str_replace( '</form>', $hidden . '</form>', $content );
 
 		return $content;
 	}
 );
+
+/**
+ * Normalize the event time filter ('upcoming', 'past', 'all').
+ *
+ * An empty search query should not force the "all" time view. Reverts to "upcoming"
+ * when search query is empty and time is "all".
+ *
+ * @param string      $time   The event time filter slug.
+ * @param string|null $search The search query string. If null, reads from $_GET['s'].
+ * @return string Normalized time filter.
+ */
+function normalize_event_time_filter( string $time, ?string $search = null ): string {
+	if ( null === $search ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : null;
+	}
+
+	if ( null !== $search && '' === trim( $search ) && 'all' === $time ) {
+		return 'upcoming';
+	}
+
+	return $time;
+}
 
 /**
  * Register query filter options for event archive filtering.
@@ -260,11 +333,12 @@ add_filter(
 	'wporg_query_filter_options_event_time',
 	static function (): array {
 		$current = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+		$current = normalize_event_time_filter( $current );
 
 		$options = array(
-			'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
-			'past'     => __( 'Past', 'wporg-groups-frontend' ),
-			'all'      => __( 'All events', 'wporg-groups-frontend' ),
+			'upcoming' => __( 'Upcoming', 'wordcamporg' ),
+			'past'     => __( 'Past', 'wordcamporg' ),
+			'all'      => __( 'All', 'wordcamporg' ),
 		);
 
 		if ( ! isset( $options[ $current ] ) ) {
@@ -272,26 +346,315 @@ add_filter(
 		}
 
 		$selected = array( $current );
-		$label    = __( 'Time', 'wporg-groups-frontend' );
-		if ( 'upcoming' !== $current ) {
 
-			// Single-select filters hide the wporg count badge, so carry the
-			// applied choice in the toggle text itself.
-			$label = sprintf(
-				/* translators: %s: the selected time filter, e.g. "Past". */
-				__( 'Time: %s', 'wporg-groups-frontend' ),
-				$options[ $current ]
-			);
-		}
+		/*
+		 * Name the applied view in the toggle, on the default view too. Single-
+		 * select filters get no count badge from the wporg block, so a bare
+		 * "Time" says only which axis the control filters on, not what picking
+		 * it will offer or what is already applied (#2059). "Time: Upcoming"
+		 * reads like the select it behaves as, and the reader can infer the
+		 * rest of the set from the value in front of them.
+		 */
+		$label = sprintf(
+			/* translators: %s: the selected time filter, e.g. "Past". */
+			__( 'Time: %s', 'wordcamporg' ),
+			$options[ $current ]
+		);
 
 		return array(
 			'label'    => $label,
-			'title'    => __( 'Filter by time', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by time', 'wordcamporg' ),
 			'key'      => 'event_time',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => $options,
 			'selected' => $selected,
 		);
+	}
+);
+
+/**
+ * The archive's format filter values, in the order they are offered.
+ *
+ * Keyed by the value that travels in the URL. "Format" rather than "Location"
+ * because the axis is how you take part, not where the group is: a group's
+ * country is site meta and identical for every event on its archive (#2035).
+ *
+ * @return array<string, string> Value => label.
+ */
+function get_event_format_filter_options(): array {
+	return array(
+		'all'       => __( 'All', 'wordcamporg' ),
+		'in-person' => __( 'In person', 'wordcamporg' ),
+		'online'    => __( 'Online', 'wordcamporg' ),
+	);
+}
+
+/**
+ * The format filter the current request asks for.
+ *
+ * Anything unrecognized falls back to `all`, which is also the default: the
+ * archive's job is to list the group's events, so an unreadable filter should
+ * widen the view rather than empty it.
+ *
+ * @return string One of the keys of `get_event_format_filter_options()`.
+ */
+function get_event_format_filter(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$format = isset( $_GET['event_format'] ) ? sanitize_text_field( wp_unslash( $_GET['event_format'] ) ) : 'all';
+
+	return isset( get_event_format_filter_options()[ $format ] ) ? $format : 'all';
+}
+
+/**
+ * The published events carrying GatherPress's `online-event` venue term.
+ *
+ * Both directions of the format filter are answered from this one list:
+ * "Online" is `post__in` it, "In person" is `post__not_in` it. An event with
+ * no venue at all is therefore in person, which is the right answer — it is
+ * certainly not online.
+ *
+ * Deliberately *not* a `tax_query` on the archive's own query. A tax query
+ * joins `term_relationships`, which makes WP_Query select `DISTINCT` — and
+ * that collapses the duplicate rows `gatherpress-recurring-events` adds
+ * through its `posts_clauses` LEFT JOIN to turn a series into one row per
+ * date. Filtering by format would then silently show a weekly series once
+ * instead of on each of its dates. Resolving the IDs in a separate query
+ * keeps the join off the archive's SQL.
+ *
+ * The separate query asks for `fields => ids`, which is also what makes it
+ * safe: `Query::clauses()` bails on ID queries, so it does not expand into
+ * occurrences itself.
+ *
+ * @return int[] Event post IDs, empty when the group runs nothing online.
+ */
+function get_online_event_ids(): array {
+	$online_ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see the docblock for why it cannot ride on the main query.
+				array(
+					'taxonomy' => Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE ),
+					'field'    => 'slug',
+					'terms'    => array( 'online-event' ),
+					'operator' => 'IN',
+				),
+			),
+		)
+	);
+
+	return array_map( 'intval', $online_ids );
+}
+
+/**
+ * Register the archive's format filter options.
+ */
+add_filter(
+	'wporg_query_filter_options_event_format',
+	static function (): array {
+		$options = get_event_format_filter_options();
+		$current = get_event_format_filter();
+
+		return array(
+			// Named the same way the Time filter is, and for the same reason
+			// (#2059): a single-select filter gets no count badge, so a bare
+			// "Format" would say which axis the control filters on but not
+			// what is already applied.
+			'label'    => sprintf(
+				/* translators: %s: the selected format filter, e.g. "Online". */
+				__( 'Format: %s', 'wordcamporg' ),
+				$options[ $current ]
+			),
+			'title'    => __( 'Filter by format', 'wordcamporg' ),
+			'key'      => 'event_format',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => $options,
+			'selected' => array( $current ),
+		);
+	}
+);
+
+/**
+ * The languages this group actually runs events in, as value => label.
+ *
+ * Built from the events rather than from the 593-entry language list: an
+ * archive control is for narrowing what is in front of you, and a group that
+ * meets in Spanish has no use for the other 592. Returns an empty array when
+ * the answer would not narrow anything — no language recorded anywhere, or a
+ * single one — and `wporg/query-filter` renders nothing for a filter with no
+ * options, so the control disappears on the groups it cannot help.
+ *
+ * @return array<string, string> Value => label, or an empty array to hide the filter.
+ */
+function get_event_language_filter_options(): array {
+	$named = array();
+
+	foreach ( get_language_tagged_event_ids() as $event_id ) {
+		$code = get_event_language( $event_id );
+		$name = '' === $code ? '' : get_language_name( $code );
+
+		if ( '' !== $name ) {
+			$named[ $code ] = $name;
+		}
+	}
+
+	// One language is not a choice: "All" and "Spanish" would select the same
+	// events, so the control would only ever cost the reader a click.
+	if ( count( $named ) < 2 ) {
+		return array();
+	}
+
+	uasort( $named, static fn( string $first, string $second ): int => strcasecmp( transliterate( $first ), transliterate( $second ) ) );
+
+	return array( 'all' => __( 'All', 'wordcamporg' ) ) + $named;
+}
+
+/**
+ * The language filter the current request asks for.
+ *
+ * Anything the group does not run events in falls back to `all`, for the same
+ * reason the format filter does: an unreadable filter should widen the archive
+ * rather than empty it.
+ *
+ * @return string A key of `get_event_language_filter_options()`, or 'all'.
+ */
+function get_event_language_filter(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$language = isset( $_GET['event_language'] ) ? sanitize_text_field( wp_unslash( $_GET['event_language'] ) ) : 'all';
+
+	return isset( get_event_language_filter_options()[ $language ] ) ? $language : 'all';
+}
+
+/**
+ * The published events that carry a language at all.
+ *
+ * Separate `fields => ids` query for the same two reasons `get_online_event_ids()`
+ * uses one: it keeps the `postmeta` join off the archive's own SQL, and
+ * `Query::clauses()` bails on ID queries, so it does not expand a series into
+ * one row per occurrence here.
+ *
+ * @return int[] Event post IDs.
+ */
+function get_language_tagged_event_ids(): array {
+	$ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- The archive filters on it; see the docblock.
+				array(
+					'key'     => LANGUAGE_META_KEY,
+					'compare' => 'EXISTS',
+				),
+			),
+		)
+	);
+
+	$ids = array_map( 'intval', $ids );
+
+	// One query for every language on the archive instead of one per event,
+	// since the options list and the filter both read each event's meta back.
+	if ( $ids ) {
+		update_meta_cache( 'post', $ids );
+	}
+
+	return $ids;
+}
+
+/**
+ * The published events run in one language.
+ *
+ * @param string $code Language subtag.
+ * @return int[] Event post IDs, empty when the group runs nothing in it.
+ */
+function get_event_ids_for_language( string $code ): array {
+	return array_values(
+		array_filter(
+			get_language_tagged_event_ids(),
+			static fn( int $event_id ): bool => get_event_language( $event_id ) === $code
+		)
+	);
+}
+
+/**
+ * Register the archive's language filter options.
+ */
+add_filter(
+	'wporg_query_filter_options_event_language',
+	static function (): array {
+		$options = get_event_language_filter_options();
+
+		if ( ! $options ) {
+			return array();
+		}
+
+		$current = get_event_language_filter();
+
+		return array(
+			// Named the way Time and Format are, and for the same reason
+			// (#2059): a single-select filter gets no count badge, so a bare
+			// "Language" would say which axis the control filters on but not
+			// what is already applied.
+			'label'    => sprintf(
+				/* translators: %s: the selected language filter, e.g. "Spanish". */
+				__( 'Language: %s', 'wordcamporg' ),
+				$options[ $current ]
+			),
+			'title'    => __( 'Filter by language', 'wordcamporg' ),
+			'key'      => 'event_language',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => $options,
+			'selected' => array( $current ),
+		);
+	}
+);
+
+/**
+ * Carry the archive's other view state through each filter's form.
+ *
+ * Every `wporg/query-filter` renders a form holding only its own control, so
+ * submitting one would otherwise drop every other parameter in the URL and
+ * silently reset the sibling filter and the search term. With one filter on
+ * the archive that only cost the search term; with two it would make them
+ * mutually exclusive, which is the whole point of having both.
+ */
+add_action(
+	'wporg_query_filter_in_form',
+	static function ( string $key ): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+		$carried = array();
+
+		if ( 'event_time' !== $key && isset( $_GET['event_time'] ) ) {
+			$carried['event_time'] = normalize_event_time_filter(
+				sanitize_text_field( wp_unslash( $_GET['event_time'] ) )
+			);
+		}
+
+		if ( 'event_format' !== $key && 'all' !== get_event_format_filter() ) {
+			$carried['event_format'] = get_event_format_filter();
+		}
+
+		if ( 'event_language' !== $key && 'all' !== get_event_language_filter() ) {
+			$carried['event_language'] = get_event_language_filter();
+		}
+
+		if ( isset( $_GET['s'] ) && '' !== trim( (string) wp_unslash( $_GET['s'] ) ) ) {
+			$carried['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		foreach ( $carried as $name => $value ) {
+			printf(
+				'<input type="hidden" name="%s" value="%s" />',
+				esc_attr( $name ),
+				esc_attr( $value )
+			);
+		}
 	}
 );
 
@@ -309,7 +672,7 @@ add_filter(
 		}
 
 		/* translators: %s: the number of events found. */
-		return _n( '%s event', '%s events', $found_posts, 'wporg-groups-frontend' );
+		return _n( '%s event', '%s events', $found_posts, 'wordcamporg' );
 	},
 	10,
 	3
@@ -322,6 +685,8 @@ add_filter(
 	'query_vars',
 	static function ( array $vars ): array {
 		$vars[] = 'event_time';
+		$vars[] = 'event_format';
+		$vars[] = 'event_language';
 		return $vars;
 	}
 );
@@ -348,6 +713,11 @@ add_filter(
 
 		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
 
+		// An empty search query should not force the "all" time view.
+		if ( isset( $_GET['s'] ) && '' === trim( (string) $_GET['s'] ) && 'all' === $time_filter ) {
+			$time_filter = 'upcoming';
+		}
+
 		if ( 'past' === $time_filter ) {
 			$query_vars['gatherpress_event_query'] = 'past';
 			$query_vars['include_unfinished']      = 0;
@@ -359,6 +729,41 @@ add_filter(
 			// filters, so use a stable core ordering when showing both.
 			$query_vars['orderby'] = 'date';
 			$query_vars['order']   = 'DESC';
+		}
+
+		$format_filter   = get_event_format_filter();
+		$language_filter = get_event_language_filter();
+
+		if ( 'all' !== $language_filter ) {
+			/*
+			 * Both ID filters have to resolve into the one `post__in`.
+			 * WP_Query treats `post__in` and `post__not_in` as an if/elseif
+			 * (see `parse_where()`), so the `post__not_in` the in-person
+			 * filter uses on its own would be dropped without a word the
+			 * moment a language was also picked. Narrowing the language's own
+			 * set in PHP keeps both applied, and costs nothing extra: it is a
+			 * set we have already resolved.
+			 */
+			$language_ids = get_event_ids_for_language( $language_filter );
+
+			if ( 'online' === $format_filter ) {
+				$language_ids = array_values( array_intersect( $language_ids, get_online_event_ids() ) );
+			} elseif ( 'in-person' === $format_filter ) {
+				$language_ids = array_values( array_diff( $language_ids, get_online_event_ids() ) );
+			}
+
+			// `array( 0 )` rather than an empty array: an empty `post__in` is
+			// ignored by WP_Query, which would show every event under a
+			// filter that matched none.
+			$query_vars['post__in'] = $language_ids ? $language_ids : array( 0 );
+		} elseif ( 'all' !== $format_filter ) {
+			$online_ids = get_online_event_ids();
+
+			if ( 'online' === $format_filter ) {
+				$query_vars['post__in'] = $online_ids ? $online_ids : array( 0 );
+			} else {
+				$query_vars['post__not_in'] = $online_ids;
+			}
 		}
 
 		// Pass through search if present.
@@ -420,6 +825,15 @@ add_filter(
 			return $content;
 		}
 
+		// GatherPress renders nothing when it cannot resolve a venue the
+		// viewer may see. Appending to that empty string would leave the
+		// description stranded in the event card with no heading, name or
+		// address around it, which reads as a stray sentence rather than a
+		// venue. Nothing to append to means nothing to append.
+		if ( '' === trim( $content ) ) {
+			return $content;
+		}
+
 		if ( ! is_singular( 'gatherpress_event' ) ) {
 			return $content;
 		}
@@ -434,8 +848,8 @@ add_filter(
 			return $content;
 		}
 
-		$venue_desc  = get_post_field( 'post_content', $venue_id );
-		$access      = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
+		$venue_desc = get_post_field( 'post_content', $venue_id );
+		$access     = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
 
 		$extra = '';
 
@@ -451,7 +865,7 @@ add_filter(
 
 		if ( $access ) {
 			$extra .= '<p class="wporg-venue-access"><strong>'
-				. esc_html__( 'Access:', 'wporg-groups-frontend' ) . '</strong> '
+				. esc_html__( 'Access:', 'wordcamporg' ) . '</strong> '
 				. esc_html( $access ) . '</p>';
 		}
 
@@ -482,6 +896,82 @@ add_filter(
 	10,
 	2
 );
+
+/**
+ * Report the gatherpress_venue post type as viewable.
+ *
+ * Only ever hooked for the duration of a `gatherpress/venue` block render;
+ * see {@see open_venue_block_visibility()}.
+ *
+ * @param bool          $viewable  Whether the post type is viewable.
+ * @param \WP_Post_Type $post_type The post type being tested.
+ *
+ * @return bool
+ */
+function treat_venue_post_type_as_viewable( bool $viewable, \WP_Post_Type $post_type ): bool {
+	return 'gatherpress_venue' === $post_type->name ? true : $viewable;
+}
+
+/**
+ * Let the venue block resolve its venue for logged-out visitors.
+ *
+ * GatherPress 0.35.4 gates the block's source post on
+ * `is_post_publicly_viewable( $venue ) || current_user_can( 'read_post', $venue )`
+ * (Blocks\Venue::get_viewable_source_post()). For a non-builtin post type
+ * `is_post_type_viewable()` reads `publicly_queryable`, which the tweak above
+ * deliberately turns off, so the first arm is always false here. Logged-in
+ * users pass the second arm, which is why this only ever broke for anonymous
+ * visitors: the whole Location section — label, venue name, address, website,
+ * map — silently rendered as nothing on every public event page and card.
+ *
+ * Venues still have no front-end URL of their own: routing keys off the
+ * registered `publicly_queryable`/`public` args, which stay false, and no
+ * rewrite rules are registered for the type. This only changes the answer
+ * `is_post_type_viewable()` gives, and only while the block is rendering, so
+ * callers that read it for other purposes are untouched — `WP_Sitemaps_Posts`
+ * above all, which would otherwise list venue URLs that 404.
+ *
+ * @param string|null $pre          Pre-render short-circuit value.
+ * @param array       $parsed_block The block about to be rendered.
+ *
+ * @return string|null Unchanged.
+ */
+function open_venue_block_visibility( $pre, array $parsed_block ) {
+	// A non-null $pre means an earlier callback short-circuited the render,
+	// so `render_block_gatherpress/venue` never fires and the override would
+	// have nothing to close it.
+	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
+		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
+	}
+
+	return $pre;
+}
+
+add_filter( 'pre_render_block', __NAMESPACE__ . '\open_venue_block_visibility', 10, 2 );
+
+/**
+ * Close the window opened by {@see open_venue_block_visibility()}.
+ *
+ * Priority 1 so the override is gone before any other callback on this filter
+ * runs. `render.php` has already resolved the venue by this point, so nothing
+ * downstream needs it.
+ *
+ * Venue blocks do not nest — GatherPress resolves one source post per block —
+ * but a venue post whose own content embeds one would re-enter here; removing
+ * an already-removed callback is a no-op, and the outer render has finished
+ * resolving either way.
+ *
+ * @param string $content Rendered block content.
+ *
+ * @return string Unchanged.
+ */
+function close_venue_block_visibility( string $content ): string {
+	remove_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10 );
+
+	return $content;
+}
+
+add_filter( 'render_block_gatherpress/venue', __NAMESPACE__ . '\close_venue_block_visibility', 1 );
 
 /**
  * Require an editing capability to read venues over the REST API.
@@ -535,7 +1025,7 @@ add_filter(
 					if ( ! current_user_can( 'edit_posts' ) ) {
 						return new \WP_Error(
 							'rest_forbidden',
-							__( 'Sorry, you are not allowed to view venues.', 'wporg-groups-frontend' ),
+							__( 'Sorry, you are not allowed to view venues.', 'wordcamporg' ),
 							array( 'status' => rest_authorization_required_code() )
 						);
 					}
@@ -548,3 +1038,113 @@ add_filter(
 		return $endpoints;
 	}
 );
+
+/**
+ * Generate venue static maps in the background instead of during the save.
+ *
+ * GatherPress renders a venue's static map from `wp_after_insert_post`, so
+ * every venue create/update pays for the OSM tile fetches and the GD
+ * composite inline - once for the 1x image and again for the 2x retina one.
+ * Each render is bounded by its own multi-second wall-clock budget, so a
+ * single save can sit there for a long time when the tile host is slow.
+ * Our front-end event form creates and updates venues over REST
+ * (`wporg-groups-frontend/inc/rest.php`), and bulk imports create many in a
+ * row, so that cost lands squarely on the organizer waiting for the form.
+ *
+ * Opting in here moves the render to a WP-Cron job a moment later and lets
+ * the save return immediately. The trade-off is that the map appears on the
+ * next cron tick rather than the instant the venue is saved, which is fine
+ * for an image nobody is looking at yet when the address is first entered.
+ *
+ * Needs GatherPress 0.36.0 or newer; on older versions the filter is simply
+ * never applied and generation stays synchronous. See
+ * https://github.com/WordPress/wordcamp.org/issues/1823.
+ */
+add_filter( 'gatherpress_static_map_generate_async', '__return_true' );
+
+/**
+ * Record whether a comment query explicitly requested GatherPress RSVPs.
+ *
+ * GatherPress's own exclusion filter runs at priority 10 and rewrites an
+ * explicit RSVP type query var to an empty string. Capturing the caller's
+ * original intent before priority 10 allows both GatherPress's exclusion
+ * opt-out filter and our own fallback exclusion to preserve legitimate RSVP
+ * queries (such as attendee exports).
+ *
+ * @param \WP_Comment_Query $query The comment query instance.
+ */
+function capture_explicit_rsvp_query( \WP_Comment_Query $query ): void {
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		$query->query_vars['_gatherpress_rsvp_explicit'] = true;
+	}
+}
+add_action( 'pre_get_comments', __NAMESPACE__ . '\capture_explicit_rsvp_query', 5 );
+
+/**
+ * Opt out of GatherPress's RSVP comment exclusion when RSVPs were explicitly requested.
+ *
+ * @param bool              $exclude Whether GatherPress should exclude RSVPs.
+ * @param \WP_Comment_Query $query   The comment query instance.
+ * @return bool False to skip GatherPress's exclusion, or original value.
+ */
+function skip_rsvp_exclusion_for_explicit_queries( bool $exclude, \WP_Comment_Query $query ): bool {
+	if ( ! empty( $query->query_vars['_gatherpress_rsvp_explicit'] ) ) {
+		return false;
+	}
+
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		return false;
+	}
+
+	return $exclude;
+}
+add_filter( 'gatherpress_rsvp_comment_query_exclusion', __NAMESPACE__ . '\skip_rsvp_exclusion_for_explicit_queries', 10, 2 );
+
+/**
+ * Ensure GatherPress RSVP comments never leak into discussion comment queries.
+ *
+ * When a group site has RSVPs but no regular comments yet, GatherPress's
+ * comment type exclusion leaves an empty array, which WP_Comment_Query
+ * interprets as "no type filter", leaking RSVPs into the Discussion section.
+ *
+ * @param \WP_Comment_Query $query The comment query instance.
+ */
+function exclude_rsvps_from_general_comment_queries( \WP_Comment_Query $query ): void {
+	if ( ! empty( $query->query_vars['_gatherpress_rsvp_explicit'] ) ) {
+		return;
+	}
+
+	if ( ! apply_filters( 'gatherpress_rsvp_comment_query_exclusion', true, $query ) ) {
+		return;
+	}
+
+	$type    = $query->query_vars['type'] ?? '';
+	$type_in = $query->query_vars['type__in'] ?? '';
+
+	// If the query specifically requests RSVPs, don't modify it.
+	if ( 'gatherpress_rsvp' === $type
+		|| ( is_array( $type ) && in_array( 'gatherpress_rsvp', $type, true ) )
+		|| ( is_array( $type_in ) && in_array( 'gatherpress_rsvp', $type_in, true ) )
+	) {
+		return;
+	}
+
+	$not_in = (array) ( $query->query_vars['type__not_in'] ?? array() );
+	if ( ! in_array( 'gatherpress_rsvp', $not_in, true ) ) {
+		$not_in[]                          = 'gatherpress_rsvp';
+		$query->query_vars['type__not_in'] = $not_in;
+	}
+}
+add_action( 'pre_get_comments', __NAMESPACE__ . '\exclude_rsvps_from_general_comment_queries', 20 );

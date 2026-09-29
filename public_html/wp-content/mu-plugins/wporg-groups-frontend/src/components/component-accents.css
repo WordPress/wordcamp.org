@@ -20,3 +20,14 @@
 	--wp-components-color-accent-darker-20: var(--wp--preset--color--dark-blueberry, #1d35b4);
 	--wp-components-color-accent-inverted: var(--wp--preset--color--white, #fff);
 }
+
+/**
+ * The block editor's inserter popover (`.block-editor-block-popover`,
+ * position: absolute, z-index: 31) draws over the modal header when the
+ * content scrolls, because the upstream header is z-index: 10 with no
+ * background. Opaque and one above the popover keeps the header on top.
+ */
+.wporg-groups-modal-accent .components-modal__header {
+	background: var(--wp--preset--color--white, #fff);
+	z-index: 32;
+}

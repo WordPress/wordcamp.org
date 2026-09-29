@@ -907,7 +907,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
-	 * Remove unconfirmed attendees from the [attendees] shortcode output.
+	 * Remove unconfirmed and unknown attendees from the [attendees] shortcode output.
+	 *
+	 * Unknown attendees are matched by email, not username, because the buyer's own row keeps the buyer's
+	 * username even when it was marked as unknown. See `add_username_to_attendee_object()`.
 	 *
 	 * @param array $query_args
 	 *
@@ -932,6 +935,12 @@ class CampTix_Require_Login extends CampTix_Addon {
 		} else {
 			$query_args['meta_query'] = array( $meta_query );
 		}
+
+		$query_args['meta_query'][] = array(
+			'key'     => 'tix_email',
+			'value'   => self::UNKNOWN_ATTENDEE_EMAIL,
+			'compare' => '!=',
+		);
 
 		return $query_args;
 	}

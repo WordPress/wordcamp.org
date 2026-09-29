@@ -96,6 +96,40 @@ class Test_Schedule_Shortcode extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The favourites email is `text/plain`, so entity-encoded titles are decoded
+	 * for it -- the speaker name the same way the session title beside it is.
+	 *
+	 * Submitted titles are stored entity-encoded, so `Ada &#91;Lovelace&#93;` in the
+	 * database has to read as `Ada [Lovelace]` in the mail rather than as its entities.
+	 *
+	 * @covers ::generate_email_body
+	 */
+	public function test_email_body_decodes_entities_in_titles(): void {
+		$speaker_id = self::factory()->post->create( array(
+			'post_type'  => 'wcb_speaker',
+			'post_title' => 'Ada &#91;Lovelace&#93;',
+		) );
+
+		$session_id = self::factory()->post->create( array(
+			'post_type'  => 'wcb_session',
+			'post_title' => 'Closing &#91;Remarks&#93;',
+			'meta_input' => array(
+				'_wcpt_session_time' => 1786791600,
+				'_wcpt_session_type' => 'session',
+				'_wcpt_speaker_id'   => $speaker_id,
+			),
+		) );
+
+		wp_set_object_terms( $session_id, array( self::$track_id ), 'wcb_track' );
+
+		$body = generate_email_body( 'WordCamp Test', array( $session_id => 1 ), 'https://example.org/schedule/' );
+
+		$this->assertStringContainsString( 'Closing [Remarks]', $body );
+		$this->assertStringContainsString( 'Ada [Lovelace]', $body );
+		$this->assertStringNotContainsString( '&#91;', $body );
+	}
+
+	/**
 	 * The track name lands in the `data-track-title` attribute, so a double
 	 * quote in it has to be encoded rather than closing the attribute early.
 	 *
@@ -185,5 +219,35 @@ class Test_Schedule_Shortcode extends WP_UnitTestCase {
 			'linked names'   => array( 'permalink' ),
 			'unlinked names' => array( 'none' ),
 		);
+	}
+
+	/**
+	 * A private session is left out of the grid whoever renders it. `[schedule]`
+	 * is not cached itself, but authored into a widgetised bio it renders into a
+	 * fragment the listing widgets serve to every visitor.
+	 *
+	 * @covers WordCamp_Post_Types_Plugin::shortcode_schedule
+	 */
+	public function test_private_session_is_omitted_for_an_administrator(): void {
+		$private_id = self::factory()->post->create( array(
+			'post_type'  => 'wcb_session',
+			'post_status' => 'private',
+			'post_title' => 'Unannounced Keynote',
+			'meta_input' => array(
+				'_wcpt_session_time' => 1786788000,
+				'_wcpt_session_type' => 'session',
+			),
+		) );
+		wp_set_object_terms( $private_id, array( self::$track_id ), 'wcb_track' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$html = $this->render_schedule();
+
+		$this->assertStringContainsString( 'Opening', $html );
+		$this->assertStringNotContainsString( 'Unannounced Keynote', $html );
+
+		wp_set_current_user( 0 );
+		wp_delete_post( $private_id, true );
 	}
 }

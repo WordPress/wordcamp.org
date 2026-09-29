@@ -197,7 +197,8 @@ class WordCamp_Application extends Event_Application {
 
 		$post = array(
 			'post_type'   => $this->get_event_type(),
-			'post_title'  => 'WordCamp ' . $data['q_1079103_wordcamp_location'],
+			// `sanitize_text_field()` is not enough on its own here. See `wcorg_sanitize_plain_text()`.
+			'post_title'  => 'WordCamp ' . wcorg_sanitize_plain_text( $data['q_1079103_wordcamp_location'] ),
 			'post_status' => WCPT_DEFAULT_STATUS,
 			'post_author' => $author_id ?: 7694169, // Fall back to the `wordcamp` account if there is somehow no current user.
 		);

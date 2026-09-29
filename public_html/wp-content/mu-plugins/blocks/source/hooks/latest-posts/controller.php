@@ -3,6 +3,8 @@ namespace WordCamp\Blocks\Hooks\Latest_Posts;
 
 defined( 'WPINC' ) || die();
 
+const POLL_CACHE_SECONDS = 60;
+
 /**
  * Check editor versions.
  *
@@ -56,8 +58,6 @@ function init() {
 		),
 		'before'
 	);
-
-	wp_set_script_translations( 'wordcamp-live-posts', 'wordcamporg' );
 
 	$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( 'core/latest-posts' );
 	if ( $block_type ) {
@@ -119,42 +119,57 @@ function safelist_block_renderer( $response, $handler, $request ) {
 		return $response;
 	}
 
-	return call_user_func( $handler['callback'], $request );
+	$response = call_user_func( $handler['callback'], $request );
+
+	/*
+	 * Everyone on a page polls the same URL, so let a shared cache answer most of
+	 * them. A minute is short against the five the block waits between polls, and core
+	 * only sends no-cache headers for a logged-in request, which this never is.
+	 *
+	 * `s-maxage` because all of the value is in a shared cache: a browser's own copy
+	 * expires long before that browser polls again. And every guard above has to have
+	 * run first, since this is the one response here that is safe to hold.
+	 */
+	if ( $response instanceof \WP_REST_Response ) {
+		$response->header( 'Cache-Control', 'public, s-maxage=' . POLL_CACHE_SECONDS );
+	}
+
+	return $response;
 }
 add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_renderer', 10, 3 );
 
 /**
- * Whether the markup is one `<ul>` container spanning the whole string.
+ * Drop the attributes the renderer route will not accept.
  *
- * The tag swap below renames the first `<ul` and the last `</ul>`, so both have to
- * belong to the same element. A sibling list would otherwise leave
- * `<div>…</ul><ul>…</div>`.
+ * The route validates `attributes` against the registered schema and rejects anything
+ * outside it, while the render path still honours older keys such as `postLayout`.
+ * Those only feed container classes, and the container on the page keeps its own, so
+ * dropping them here costs nothing and keeps the request valid.
  *
- * The nesting count reads the raw string. That is safe because `esc_attr()` escapes
- * `<`, so `<ul` and `</ul` cannot appear inside an attribute value. If that stops
- * being true the count goes wrong and the rewrite silently stops attaching.
+ * This filters keys, not values. A registered key with a stale value can still be
+ * refused, `categories` saved as a string being the one that used to be: it survives
+ * because core migrates it on `render_block_data`, before this filter runs.
  *
- * @param string $markup Rendered block markup.
- * @return bool
+ * @param array $attrs Saved block attributes.
+ * @return array
  */
-function is_swappable_container( $markup ) {
-	if ( ! preg_match( '#\A\s*<ul\b#', $markup ) || ! preg_match( '#</ul>\s*\z#', $markup ) ) {
-		return false;
+function pollable_attributes( $attrs ) {
+	$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( 'core/latest-posts' );
+
+	if ( ! $block_type || empty( $block_type->attributes ) ) {
+		return $attrs;
 	}
 
-	preg_match_all( '#<(/?)ul\b#', $markup, $matches );
-	$depth = 0;
+	$registered = array_intersect_key( $attrs, $block_type->attributes );
 
-	foreach ( $matches[1] as $index => $slash ) {
-		$depth += '' === $slash ? 1 : -1;
-
-		// The container closed, so it has to be the last `</ul>` in the markup.
-		if ( 0 === $depth ) {
-			return count( $matches[1] ) - 1 === $index;
+	// A null serialises into the query string as an empty value, which the route
+	// refuses for anything the schema does not type as a string.
+	return array_filter(
+		$registered,
+		static function ( $value ) {
+			return null !== $value;
 		}
-	}
-
-	return false;
+	);
 }
 
 /**
@@ -176,7 +191,7 @@ function render( $block_content, $block ) {
 	$enabled = isset( $block['attrs']['liveUpdateEnabled'] ) && $block['attrs']['liveUpdateEnabled'];
 	// Order by date, desc is the default, so these properties are not set.
 	$order_date_desc = ! isset( $block['attrs']['orderBy'] ) && ! isset( $block['attrs']['order'] );
-	if ( $enabled && $order_date_desc && is_swappable_container( $block_content ) ) {
+	if ( $enabled && $order_date_desc ) {
 		/*
 		 * Rewrite the container through the HTML API, not by string content:
 		 * `str_replace()` also matched its needle inside attribute values (the
@@ -186,28 +201,27 @@ function render( $block_content, $block ) {
 		 */
 		$processor = new \WP_HTML_Tag_Processor( $block_content );
 
-		if ( $processor->next_tag() && 'UL' === $processor->get_tag() ) {
+		// By what it is, not by what comes first: the markup can hold a list belonging
+		// to something else, and a container of ours can sit inside a group.
+		$found = $processor->next_tag(
+			array(
+				'tag_name'   => 'UL',
+				'class_name' => 'wp-block-latest-posts',
+			)
+		);
+
+		if ( $found ) {
 			$processor->add_class( 'has-live-update' );
 			$processor->add_class( 'is-loading' );
-			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( $block['attrs'] ) ) );
+			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( pollable_attributes( $block['attrs'] ) ) ) );
 
 			$block_content = $processor->get_updated_html();
-
-			/*
-			 * `render-frontend.js` renders the polled markup into this element, and that
-			 * markup has been through this filter too, so it arrives as a `<div>`. A
-			 * `<ul>` cannot hold it. Anchored to the ends of the string, where an
-			 * attribute value cannot match.
-			 */
-			$block_content = preg_replace( '#\A(\s*)<ul\b#', '$1<div', $block_content, 1 );
-			$block_content = preg_replace( '#</ul>(\s*)\z#', '</div>$1', $block_content, 1 );
 		}
 	}
 
 	return $block_content;
 }
 add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
-
 
 /**
  * Add data to be used by the JS scripts in the block editor.
@@ -218,7 +232,10 @@ add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
  */
 function add_script_data( array $data ) {
 	if ( check_version_support() ) {
-		$data['latest-posts'] = array();
+		$data['latest-posts'] = array(
+			// Root-relative, so the request stays same-origin on a non-canonical host.
+			'renderer' => wp_make_link_relative( rest_url( 'wp/v2/block-renderer/core/latest-posts' ) ),
+		);
 	}
 
 	return $data;

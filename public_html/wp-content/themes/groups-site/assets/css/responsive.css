@@ -51,7 +51,6 @@
 		row-gap: var(--wp--preset--spacing--20);
 	}
 
-	.groups-site-event-title,
 	.groups-site-event-sidebar,
 	.groups-site-event-content {
 		grid-column: 1;
@@ -87,9 +86,20 @@
 		grid-template-columns: 1fr !important;
 	}
 
-	/* Archive filters: stack search and filter vertically. */
+	/* Archive filters: stack search and filter vertically.
+
+	   The row is laid out `nowrap` so the filters read as one control group
+	   on a wide screen. Two of them fit a phone; three do not -- Time,
+	   Format and Language come to roughly 410px of nowrap toggles before a
+	   selected value lengthens any of them (#2035), against about 360px of
+	   usable width at 400px. Let them wrap instead of pushing the page into
+	   a horizontal scroll. `!important` because the block's own generated
+	   layout rule sets `flex-wrap` from the template's `flexWrap` attribute,
+	   the same reason the grid rules above need it. */
+
 	.wporg-query-filters {
 		width: 100%;
+		flex-wrap: wrap !important;
 	}
 
 	/* Members grid: single column on small phones. */
@@ -154,12 +164,29 @@
 	 * with the sponsors block below it, the card would slide down and cover
 	 * it. `align-self` stops the column stretching to the row's full height,
 	 * which would leave `sticky` no room to travel in.
+	 *
+	 * The `z-index` has to clear the page content but stay under the local
+	 * navigation bar, which sticks at `z-index: 10`. It can't be dropped
+	 * altogether: the column needs a stacking context of its own to trap the
+	 * venue map, whose Leaflet panes and controls run up to `z-index: 1000`
+	 * and would otherwise paint over the header.
 	 */
 
 	.groups-site-event-sidebar {
 		position: sticky;
 		top: 96px;
-		z-index: 100;
+		z-index: 1;
 		align-self: flex-start;
+	}
+
+	/*
+	 * When the RSVP modal inside the sidebar opens, elevate the sidebar's
+	 * stacking context so the full-screen modal and backdrop appear above all
+	 * page content and sibling elements (such as the event-date navigation
+	 * arrows in the main content column and the sticky navigation bar).
+	 */
+
+	.groups-site-event-sidebar:has(.wporg-event-rsvp__modal.is-open) {
+		z-index: 100000;
 	}
 }

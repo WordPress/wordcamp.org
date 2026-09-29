@@ -31,6 +31,7 @@ function manually_load_plugin() {
 	// autoloaded in the test environment the way it is on a real request.
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
+	require_once dirname( __DIR__ ) . '/front-end-locale.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';
 	require_once dirname( __DIR__ ) . '/wporg-groups-archive.php';
@@ -38,6 +39,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/network-messaging.php';
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer.php';
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
+	require_once dirname( __DIR__ ) . '/network-export.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

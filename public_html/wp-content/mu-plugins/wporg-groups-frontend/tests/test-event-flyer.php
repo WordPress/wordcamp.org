@@ -329,6 +329,12 @@ class Test_Event_Flyer extends Groups_TestCase {
 		$this->assertSame( 10, has_filter( 'wp_robots', 'wp_robots_no_robots' ) );
 		$this->assertTrue( apply_filters( 'wp_robots', array() )['noindex'] ?? false );
 		$this->assertFalse( apply_filters( 'show_admin_bar', true ) );
+
+		// Turned off before core decides whether to offset the page for it.
+		$this->assertLessThan(
+			has_action( 'template_redirect', '_wp_admin_bar_init' ),
+			has_action( 'template_redirect', 'WordCamp\\Groups\\Frontend\\Event_Flyer\\prepare_request' )
+		);
 	}
 
 	/**

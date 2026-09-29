@@ -32,7 +32,9 @@ function bootstrap(): void {
 	// slug the rules are built from.
 	add_action( 'init', __NAMESPACE__ . '\register_rewrite_rules', 20 );
 	add_filter( 'query_vars', __NAMESPACE__ . '\add_query_var' );
-	add_action( 'template_redirect', __NAMESPACE__ . '\prepare_request', 5 );
+	// Ahead of core's `_wp_admin_bar_init` (priority 0), which queues the
+	// toolbar's 32px page offset if the toolbar is still on at that point.
+	add_action( 'template_redirect', __NAMESPACE__ . '\prepare_request', -1 );
 
 	// After the recurring-events extension's own filter, which would send an
 	// occurrence's flyer back to the occurrence's event page.

@@ -1425,6 +1425,194 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A loop of other events on an event page (e.g. the groups theme's "More
+	 * events from this group") must hand the page its own date back when it
+	 * finishes. Block themes render the template before `wp_head`, so the RSVP
+	 * script data enqueued there reads the context after every loop has run.
+	 */
+	public function test_occurrence_loop_restores_the_context_active_before_it(): void {
+		set_current_screen( 'front' );
+		$this->create_projected_weekly_series( 'Weekly Series' );
+
+		$outer = (object) array(
+			'series_post_id' => PHP_INT_MAX,
+			'recurrence_id'  => '20260810T100000',
+		);
+
+		try {
+			Context::set( $outer );
+
+			$loop = new WP_Query(
+				array(
+					'post_type'               => 'gatherpress_event',
+					'orderby'                 => 'datetime',
+					'order'                   => 'ASC',
+					'gatherpress_event_query' => 'upcoming',
+					'include_unfinished'      => 1,
+					'posts_per_page'          => 3,
+				)
+			);
+
+			$this->assertTrue( (bool) $loop->get( 'gpre_occurrence_query' ), 'Precondition: the loop expands occurrences.' );
+
+			$seen = array();
+			while ( $loop->have_posts() ) {
+				$loop->the_post();
+				$seen[] = Context::recurrence_id();
+			}
+			wp_reset_postdata();
+
+			$this->assertNotContains( '20260810T100000', $seen, 'Precondition: each row had its own occurrence context.' );
+			$this->assertSame( $outer, Context::get() );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/** Outside any outer context, a finished loop still leaves none behind. */
+	public function test_occurrence_loop_clears_its_context_when_there_was_none_before(): void {
+		set_current_screen( 'front' );
+		$this->create_projected_weekly_series( 'Weekly Series' );
+
+		$loop = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 3,
+			)
+		);
+
+		while ( $loop->have_posts() ) {
+			$loop->the_post();
+		}
+		wp_reset_postdata();
+
+		$this->assertNull( Context::get() );
+	}
+
+	/**
+	 * On one series' undated page, another series listed below it links to
+	 * its own date, while the page's own series keeps its series URL.
+	 */
+	public function test_other_series_link_to_their_dates_on_a_series_page(): void {
+		$page_series  = $this->create_published_recurring_event();
+		$other_series = $this->create_published_recurring_event();
+		$series_url   = get_permalink( $page_series );
+
+		$main_query = $GLOBALS['wp_query'];
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the series page; restored below.
+		$GLOBALS['wp_query'] = new WP_Query(
+			array(
+				'p'         => $page_series,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Precondition: viewing the series page.' );
+
+		try {
+			Context::set(
+				(object) array(
+					'series_post_id' => $other_series,
+					'recurrence_id'  => '20261006T180000',
+				)
+			);
+			$this->assertStringContainsString( '20261006T180000', get_permalink( $other_series ) );
+
+			Context::set(
+				(object) array(
+					'series_post_id' => $page_series,
+					'recurrence_id'  => '20261006T180000',
+				)
+			);
+			$this->assertSame( $series_url, get_permalink( $page_series ) );
+		} finally {
+			Context::set( null );
+			$GLOBALS['wp_query'] = $main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the query this test replaced.
+		}
+	}
+
+	/**
+	 * Another series listed on a series page filters its excerpt through
+	 * `the_content` with its own occurrence active. Only the page's own event
+	 * gets the date selector.
+	 */
+	public function test_date_selector_is_only_added_to_the_pages_own_event(): void {
+		$page_series  = $this->create_projected_weekly_series( 'Page Series' );
+		$other_series = $this->create_projected_weekly_series( 'Other Series' );
+
+		$main_query      = $GLOBALS['wp_query'];
+		$main_main_query = $GLOBALS['wp_the_query'];
+		$page_query      = new WP_Query(
+			array(
+				'p'         => $page_series,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+
+		$page_query->in_the_loop = true;
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the series page; restored below.
+		$GLOBALS['wp_query']     = $page_query;
+		$GLOBALS['wp_the_query'] = $page_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		try {
+			Context::set( Occurrences::select_for_series( $page_series ) );
+			$this->assertNotSame( 'Body', Context::prepend_selector( 'Body' ), 'Precondition: the page\'s own event gets the selector.' );
+
+			Context::set( Occurrences::select_for_series( $other_series ) );
+			$this->assertSame( 'Body', Context::prepend_selector( 'Body' ) );
+		} finally {
+			Context::set( null );
+			// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the queries this test replaced.
+			$GLOBALS['wp_query']     = $main_query;
+			$GLOBALS['wp_the_query'] = $main_main_query;
+			// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
+	}
+
+	/**
+	 * Creates a published weekly series that started a week ago, with its
+	 * occurrences projected.
+	 *
+	 * @param string $title Event title.
+	 * @return int Event post ID.
+	 */
+	private function create_projected_weekly_series( string $title ): int {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'  => $title,
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		$start   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-7 days' )->setTime( 10, 0 );
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => $start->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 6 );
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		return $post_id;
+	}
+
+	/**
 	 * Creates a published weekly event with locked recurrence metadata.
 	 *
 	 * @return int Event post ID.

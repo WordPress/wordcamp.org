@@ -18,6 +18,9 @@ final class Query {
 	/** @var WeakMap<WP_Post, object>|null Occurrence context keyed by the exact cloned post object. */
 	private static ?WeakMap $contexts = null;
 
+	/** @var WeakMap<WP_Query, array{0: ?object}>|null Context that was active when each occurrence loop started. */
+	private static ?WeakMap $outer_contexts = null;
+
 	/**
 	 * Joins projected occurrences into GatherPress archive queries.
 	 *
@@ -144,14 +147,44 @@ final class Query {
 	}
 
 	/**
-	 * Deactivates occurrence context when the Query Loop finishes.
+	 * Remembers the context that was active before an occurrence loop starts.
+	 *
+	 * A loop of other events on a date's own page (e.g. "More events from
+	 * this group") would otherwise leave that page without its date once the
+	 * loop ends. Block themes render the whole template before `wp_head`, so
+	 * the RSVP script data enqueued there would lose the recurrence ID.
+	 *
+	 * @param WP_Query $query Post query instance.
+	 */
+	public static function remember( WP_Query $query ): void {
+		if ( ! $query->get( 'gpre_occurrence_query' ) ) {
+			return;
+		}
+
+		self::$outer_contexts ??= new WeakMap();
+
+		self::$outer_contexts[ $query ] = array( Context::get() );
+	}
+
+	/**
+	 * Deactivates occurrence context when the Query Loop finishes, restoring
+	 * whatever was active before it started.
 	 *
 	 * @param WP_Query|null $query Post query instance when invoked by loop_end action.
 	 */
 	public static function deactivate( ?WP_Query $query = null ): void {
-		if ( ! $query || $query->get( 'gpre_occurrence_query' ) ) {
-			Context::set( null );
+		if ( $query && ! $query->get( 'gpre_occurrence_query' ) ) {
+			return;
 		}
+
+		$outer = null;
+
+		if ( $query && null !== self::$outer_contexts && isset( self::$outer_contexts[ $query ] ) ) {
+			$outer = self::$outer_contexts[ $query ][0];
+			unset( self::$outer_contexts[ $query ] );
+		}
+
+		Context::set( $outer );
 	}
 
 	/**

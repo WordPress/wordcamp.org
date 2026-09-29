@@ -109,8 +109,15 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 			$this->markTestSkipped( 'GatherPress datetime table unavailable.' );
 		}
 
-		register_post_type( 'gatherpress_event', array( 'public' => true ) );
-		register_taxonomy( '_gatherpress_rsvp_status', 'comment', array( 'public' => false ) );
+		// Stand-ins for when GatherPress isn't loaded. Registering over the real
+		// post type would reset its rewrite slug to `gatherpress_event` for
+		// every suite that runs after this one.
+		if ( ! post_type_exists( 'gatherpress_event' ) ) {
+			register_post_type( 'gatherpress_event', array( 'public' => true ) );
+		}
+		if ( ! taxonomy_exists( '_gatherpress_rsvp_status' ) ) {
+			register_taxonomy( '_gatherpress_rsvp_status', 'comment', array( 'public' => false ) );
+		}
 	}
 
 	/**

@@ -42,10 +42,23 @@ class Test_Event_Flyer extends Groups_TestCase {
 	}
 
 	/**
+	 * PHP_SELF as the suite left it, restored after each test.
+	 *
+	 * @var string|null
+	 */
+	private $php_self;
+
+	/**
 	 * Pretty permalinks with the flyer rules in them, as on a group site.
 	 */
 	protected function setUp(): void {
 		parent::setUp();
+
+		// Another suite's bootstrap leaves PHP_SELF on a wp-admin URL, and
+		// WP::parse_request() drops every permalink query var for admin
+		// requests, so no pretty URL would route. Look like the front end.
+		$this->php_self      = $_SERVER['PHP_SELF'] ?? null;
+		$_SERVER['PHP_SELF'] = '/index.php';
 
 		$this->set_permalink_structure( '/%postname%/' );
 		register_rewrite_rules();
@@ -56,6 +69,7 @@ class Test_Event_Flyer extends Groups_TestCase {
 	 * Leave no occurrence behind for the next test.
 	 */
 	protected function tearDown(): void {
+		$_SERVER['PHP_SELF'] = $this->php_self;
 		Context::set( null );
 		delete_option( Event_Date_Format\DATE_OPTION );
 

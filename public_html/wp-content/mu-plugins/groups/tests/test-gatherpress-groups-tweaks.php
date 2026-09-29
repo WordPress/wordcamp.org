@@ -873,6 +873,22 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * `?event_topic[]=` sends an array. It falls back to "All" like any
+	 * other value the group has no events on, rather than fataling.
+	 */
+	public function test_event_topic_filter_ignores_an_array_value() {
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$_GET['event_topic'] = array( 'block-themes' );
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_topic', array() );
+
+		unset( $_GET['event_topic'] );
+
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
 	 * A topic with non-ASCII letters has a percent-encoded slug, and PHP
 	 * decodes the query arg. The filter has to match it either way.
 	 */

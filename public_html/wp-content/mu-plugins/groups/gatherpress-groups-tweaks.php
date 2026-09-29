@@ -669,7 +669,8 @@ function get_event_topic_filter_options(): array {
  */
 function get_event_topic_filter(): string {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
-	$topic = isset( $_GET['event_topic'] ) ? sanitize_title( wp_unslash( $_GET['event_topic'] ) ) : 'all';
+	// `?event_topic[]=` arrives as an array, which `sanitize_title()` can't take.
+	$topic = isset( $_GET['event_topic'] ) && is_string( $_GET['event_topic'] ) ? sanitize_title( wp_unslash( $_GET['event_topic'] ) ) : 'all';
 
 	return isset( get_event_topic_filter_options()[ $topic ] ) ? $topic : 'all';
 }

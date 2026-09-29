@@ -156,6 +156,12 @@ function prepare_request(): void {
 
 	// It prints as it's shown, so keep the toolbar off it.
 	add_filter( 'show_admin_bar', '__return_false' );
+
+	// The recurring-events extension puts a series' date picker at the top
+	// of its content, and the excerpt is built from that content, so the
+	// flyer would print every date in the series as its description. The
+	// flyer is for one date, already shown, and has no use for the picker.
+	remove_filter( 'the_content', array( 'WordPressdotorg\\GatherPress_Recurring_Events\\Context', 'prepend_selector' ), 3 );
 }
 
 /**

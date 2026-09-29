@@ -459,6 +459,37 @@ class Test_Event_Flyer extends Groups_TestCase {
 	}
 
 	/**
+	 * A series' date picker is part of its content on the event page. On the
+	 * flyer it would become the excerpt, so the flyer leaves it out.
+	 */
+	public function test_dated_flyer_excerpt_leaves_out_the_date_picker() {
+		$event_id = $this->create_recurring_event();
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_content' => '<!-- wp:paragraph --><p>Bring a laptop.</p><!-- /wp:paragraph -->',
+				// Generated from the content, as for an organizer who never writes one.
+				'post_excerpt' => '',
+			)
+		);
+		$second = Occurrences::all( $event_id, 'upcoming', 10 )[1];
+
+		$this->go_to( Context::occurrence_url( $event_id, $second->recurrence_id ) . 'flyer/' );
+		Context::resolve();
+
+		the_post();
+		$this->assertStringContainsString(
+			'gpre-occurrence-link',
+			apply_filters( 'the_content', get_the_content() ),
+			'Precondition: the picker is in the content before the flyer is set up.'
+		);
+
+		prepare_request();
+
+		$this->assertSame( 'Bring a laptop.', get_the_excerpt() );
+	}
+
+	/**
 	 * On a dated event page, the flyer link is for that date.
 	 */
 	public function test_dated_event_page_links_to_its_dated_flyer() {

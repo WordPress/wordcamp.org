@@ -131,12 +131,20 @@ final class Context {
 	/**
 	 * Uses an occurrence permalink while rendering a canonical occurrence.
 	 *
+	 * On a series' own undated page its links stay on the series URL. Other
+	 * events listed on that page (a loop below the event) are a different
+	 * post, so they link to their own dates like they would anywhere else.
+	 *
 	 * @param string $permalink Existing permalink.
 	 * @param object $post      Post object.
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( self::$occurrence && (int) self::$occurrence->series_post_id === (int) $post->ID && ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) ) ) {
+		if ( ! self::$occurrence || (int) self::$occurrence->series_post_id !== (int) $post->ID ) {
+			return $permalink;
+		}
+
+		if ( get_query_var( 'gpre_occurrence' ) || ! is_singular( 'gatherpress_event' ) || get_queried_object_id() !== (int) $post->ID ) {
 			return self::occurrence_url( (int) $post->ID, self::recurrence_id() );
 		}
 
@@ -146,11 +154,19 @@ final class Context {
 	/**
 	 * Prepends the date selector to singular event content.
 	 *
+	 * Only the page's own event gets it. Another series listed on the page
+	 * (a loop of other events below it) filters its excerpt through
+	 * `the_content` with its own occurrence active.
+	 *
 	 * @param string $content Event content.
 	 * @return string Filtered content.
 	 */
 	public static function prepend_selector( string $content ): string {
 		if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() || ! self::$occurrence ) {
+			return $content;
+		}
+
+		if ( get_queried_object_id() !== (int) self::$occurrence->series_post_id ) {
 			return $content;
 		}
 

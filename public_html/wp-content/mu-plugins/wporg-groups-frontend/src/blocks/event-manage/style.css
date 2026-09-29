@@ -201,8 +201,15 @@
 	color: #d63638;
 }
 
-/* === Draft picker === */
+/* === Template and draft pickers === */
 
+.wporg-groups-event-modal__pickers {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.wporg-groups-event-modal__template-picker,
 .wporg-groups-event-modal__draft-picker {
 	padding: 12px 14px;
 	border: 1px dashed #c3c4c7;

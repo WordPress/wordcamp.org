@@ -129,6 +129,8 @@
 			<!-- /wp:group -->
 
 			<!-- wp:wporg/sponsors {"lock":{"move":true,"remove":true},"limit":3,"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} /-->
+
+			<!-- wp:pattern {"slug":"groups-site/become-organizer"} /-->
 		</div>
 		<!-- /wp:column -->
 
@@ -202,6 +204,24 @@
 		<!-- /wp:column -->
 	</div>
 	<!-- /wp:columns -->
+
+	<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":3,"offset":0,"order":"asc","orderBy":"datetime","gatherpress_event_query":"upcoming","include_unfinished":1,"groups_site_exclude_current":true,"inherit":false},"namespace":"gatherpress-event-query","tagName":"section","className":"gatherpress-event-query groups-site-more-events","style":{"spacing":{"margin":{"top":"var:preset|spacing|60"}}}} -->
+	<section class="wp-block-query gatherpress-event-query groups-site-more-events" style="margin-top:var(--wp--preset--spacing--60)">
+		<!-- wp:group {"style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}}},"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
+		<div class="wp-block-group" style="margin-bottom:var(--wp--preset--spacing--30)">
+			<!-- wp:heading {"level":2,"fontSize":"heading-3","style":{"spacing":{"margin":{"bottom":"0"}}}} -->
+			<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:0">More events from this group</h2>
+			<!-- /wp:heading -->
+
+			<!-- wp:pattern {"slug":"groups-site/view-all-events-link"} /-->
+		</div>
+		<!-- /wp:group -->
+
+		<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+			<!-- wp:pattern {"slug":"groups-site/event-card"} /-->
+		<!-- /wp:post-template -->
+	</section>
+	<!-- /wp:query -->
 
 </main>
 <!-- /wp:group -->

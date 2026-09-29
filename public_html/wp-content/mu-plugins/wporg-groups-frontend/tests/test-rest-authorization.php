@@ -128,6 +128,19 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				$request->set_param( 'event_id', $this->event_id );
 				return $request;
 
+			case 'GET /event-form-data (template: someone else\'s event)':
+				$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+				$request->set_param( 'template_id', $this->event_id );
+				return $request;
+
+			case 'GET /event-form-data (template: a draft)':
+				$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+				$request->set_param( 'template_id', $this->draft_id );
+				return $request;
+
+			case 'GET /event-templates':
+				return new WP_REST_Request( 'GET', '/wporg-groups/v1/event-templates' );
+
 			case 'POST /event':
 				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event' );
 				$request->set_body_params( $event_payload );
@@ -248,6 +261,31 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				// Reading the form for an event they cannot edit is refused,
 				// which is what keeps one organiser out of another's draft.
 				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			// Templates (#1892): any event manager may start from any
+			// published event, including one they could not edit.
+			'GET /event-form-data (template: someone else\'s event)' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 200,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			// A draft is nobody's template, not even for an organiser who
+			// could edit it.
+			'GET /event-form-data (template: a draft)' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 403,
+				'outsider'        => 403,
+			),
+			'GET /event-templates' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 200,
 				'organiser'       => 200,
 				'outsider'        => 403,
 			),

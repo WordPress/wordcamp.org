@@ -10,6 +10,7 @@ const form = {
 	online_event_link: 'https://example.test/join',
 	timezone: 'Australia/Brisbane',
 	language: 'es',
+	topics: [ 'WordPress' ],
 	rsvp_questions: [],
 };
 
@@ -58,6 +59,12 @@ describe( 'buildEventPayload', () => {
 		expect( build().timezone ).toBe( 'Australia/Brisbane' );
 		expect( build( { form: { ...form, timezone: '' } } ).timezone ).toBe( '' );
 		expect( build( { form: { ...form, timezone: undefined } } ).timezone ).toBe( '' );
+	} );
+
+	test( 'sends the topics, and an empty list when they are unset', () => {
+		expect( build().topics ).toEqual( [ 'WordPress' ] );
+		expect( build( { form: { ...form, topics: [] } } ).topics ).toEqual( [] );
+		expect( build( { form: { ...form, topics: undefined } } ).topics ).toEqual( [] );
 	} );
 
 	test( 'sends the language, and an empty string when it is unset', () => {

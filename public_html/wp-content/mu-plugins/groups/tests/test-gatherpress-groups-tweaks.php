@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
 use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
@@ -403,8 +404,15 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 *
 	 * @param string|null $event_format   The `event_format` query arg to simulate.
 	 * @param string|null $event_language The `event_language` query arg to simulate.
+	 * @param string|null $event_topic    The `event_topic` query arg to simulate.
 	 */
-	private function get_archive_query_vars( ?string $event_format, ?string $event_language = null ): array {
+	private function get_archive_query_vars( ?string $event_format, ?string $event_language = null, ?string $event_topic = null ): array {
+		if ( null === $event_topic ) {
+			unset( $_GET['event_topic'] );
+		} else {
+			$_GET['event_topic'] = $event_topic;
+		}
+
 		if ( null === $event_format ) {
 			unset( $_GET['event_format'] );
 		} else {
@@ -438,7 +446,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$block
 		);
 
-		unset( $_GET['event_format'], $_GET['event_language'] );
+		unset( $_GET['event_format'], $_GET['event_language'], $_GET['event_topic'] );
 
 		return $query_vars;
 	}
@@ -785,6 +793,167 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 
 		$this->assertStringContainsString( 'name="event_language" value="es"', $output );
+	}
+
+	/**
+	 * Create a published event with topics, optionally in a language and
+	 * marked online.
+	 *
+	 * @param string   $title     Event title.
+	 * @param string[] $topics    Topic names.
+	 * @param string   $language  Language subtag, or '' to leave it unset.
+	 * @param bool     $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_topic_event( string $title, array $topics, string $language = '', bool $is_online = false ): int {
+		$event_id = $this->make_language_event( $title, $language, $is_online );
+
+		set_event_topics( $event_id, $topics );
+
+		return $event_id;
+	}
+
+	/**
+	 * Read the topic filter's registered options.
+	 *
+	 * @param string|null $event_topic The `event_topic` query arg to simulate.
+	 */
+	private function get_event_topic_filter( ?string $event_topic ): array {
+		if ( null === $event_topic ) {
+			unset( $_GET['event_topic'] );
+		} else {
+			$_GET['event_topic'] = $event_topic;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_topic', array() );
+
+		unset( $_GET['event_topic'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The control offers the topics on published events, keyed by slug, and
+	 * is hidden when no event has one. A topic that only lives on a draft
+	 * would be a filter that comes back empty.
+	 */
+	public function test_event_topic_filter_offers_only_topics_in_use() {
+		$this->assertSame( array(), $this->get_event_topic_filter( null ) );
+
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$draft = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		set_event_topics( $draft, array( 'Unpublished' ) );
+
+		$filter = $this->get_event_topic_filter( null );
+
+		$this->assertSame( array( 'all', 'block-themes' ), array_keys( $filter['options'] ) );
+		$this->assertSame( 'Block Themes', $filter['options']['block-themes'] );
+		$this->assertSame( 'Topic: All', $filter['label'] );
+		$this->assertSame( 'Topic: Block Themes', $this->get_event_topic_filter( 'block-themes' )['label'] );
+	}
+
+	/**
+	 * A topic the group has no events on widens the archive rather than
+	 * emptying it.
+	 */
+	public function test_event_topic_filter_ignores_an_unknown_value() {
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$filter = $this->get_event_topic_filter( 'nope' );
+
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+		$this->assertArrayNotHasKey( 'post__in', $this->get_archive_query_vars( null, null, 'nope' ) );
+	}
+
+	/**
+	 * A topic with non-ASCII letters has a percent-encoded slug, and PHP
+	 * decodes the query arg. The filter has to match it either way.
+	 */
+	public function test_event_topic_filter_matches_a_non_ascii_topic() {
+		$event = $this->make_topic_event( 'Вечер', array( 'Блокови' ) );
+
+		$slug = get_term_by( 'name', 'Блокови', 'gatherpress_topic' )->slug;
+
+		$this->assertSame( array( $event ), $this->get_archive_query_vars( null, null, rawurldecode( $slug ) )['post__in'] );
+		$this->assertSame( array( $event ), $this->get_archive_query_vars( null, null, $slug )['post__in'] );
+	}
+
+	/**
+	 * Picking a topic narrows the archive to the events tagged with it,
+	 * without a tax query on the archive's own SQL.
+	 */
+	public function test_event_topic_filter_narrows_to_one_topic() {
+		$themes = $this->make_topic_event( 'Theme night', array( 'Block Themes', 'Design' ) );
+		$this->make_topic_event( 'Plugin night', array( 'Plugins' ) );
+		$this->make_topic_event( 'Untagged meetup', array() );
+
+		$query_vars = $this->get_archive_query_vars( null, null, 'block-themes' );
+
+		$this->assertSame( array( $themes ), $query_vars['post__in'] );
+		$this->assertArrayNotHasKey( 'tax_query', $query_vars );
+	}
+
+	/**
+	 * Topic, language and format all narrow each other rather than the last
+	 * one applied winning.
+	 */
+	public function test_event_topic_language_and_format_filters_narrow_together() {
+		$match = $this->make_topic_event( 'Charla de temas', array( 'Block Themes' ), 'es', false );
+		$this->make_topic_event( 'Charla en linea', array( 'Block Themes' ), 'es', true );
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ), 'en', false );
+		$this->make_topic_event( 'Charla de plugins', array( 'Plugins' ), 'es', false );
+
+		$in_person = $this->get_archive_query_vars( 'in-person', 'es', 'block-themes' );
+		$this->assertSame( array( $match ), $in_person['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $in_person );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online', 'en', 'block-themes' )['post__in'] );
+	}
+
+	/**
+	 * Each filter's form and the search form carry the applied topic, so
+	 * submitting one does not reset it.
+	 */
+	public function test_filter_and_search_forms_carry_the_applied_topic() {
+		global $wp_query;
+
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$_GET['event_topic'] = 'block-themes';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_topic' );
+		$topic_form = ob_get_clean();
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$search_form = '<form role="search" method="get" action="https://example.org"><input type="search" name="s" /></form>';
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own block filter name.
+		$search = apply_filters( 'render_block_core/search', $search_form );
+
+		$wp_query = $original_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		unset( $_GET['event_topic'] );
+
+		$this->assertStringContainsString( 'name="event_topic" value="block-themes"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_topic"', $topic_form );
+		$this->assertStringContainsString( 'name="event_topic" value="block-themes"', $search );
 	}
 
 	/**

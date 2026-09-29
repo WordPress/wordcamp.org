@@ -20,6 +20,7 @@ require_once __DIR__ . '/inc/group-location.php';
 require_once __DIR__ . '/inc/event-date-format.php';
 require_once __DIR__ . '/inc/event-timezone.php';
 require_once __DIR__ . '/inc/event-language.php';
+require_once __DIR__ . '/inc/event-flyer.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
 require_once __DIR__ . '/inc/rsvp-confirmation.php';
@@ -59,6 +60,7 @@ function bootstrap(): void {
 	RSVP_Questions\bootstrap();
 	Event_Date_Format\bootstrap();
 	Event_Language\bootstrap();
+	Event_Flyer\bootstrap();
 	RSVP_Confirmation\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();

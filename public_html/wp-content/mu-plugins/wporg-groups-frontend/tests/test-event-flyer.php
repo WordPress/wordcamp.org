@@ -60,6 +60,11 @@ class Test_Event_Flyer extends Groups_TestCase {
 		$this->php_self      = $_SERVER['PHP_SELF'] ?? null;
 		$_SERVER['PHP_SELF'] = '/index.php';
 
+		// `WP_UnitTestCase` restores its per-process hook snapshot after each
+		// test, and `require_once` won't load the theme a second time, so
+		// its template filter has to be re-added here.
+		add_filter( 'single_template_hierarchy', 'WordCamp\\Groups\\Site\\single_template_hierarchy' );
+
 		$this->set_permalink_structure( '/%postname%/' );
 		register_rewrite_rules();
 		flush_rewrite_rules( false );

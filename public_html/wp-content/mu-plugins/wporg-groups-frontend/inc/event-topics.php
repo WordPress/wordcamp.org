@@ -173,9 +173,13 @@ function get_suggestions(): array {
 		return array();
 	}
 
-	return array_map(
-		static fn( WP_Term $term ): string => html_entity_decode( $term->name ),
-		$terms
+	// `hide_empty` unsets the empty terms of a hierarchical taxonomy and keeps
+	// the keys, which REST would then encode as an object instead of a list.
+	return array_values(
+		array_map(
+			static fn( WP_Term $term ): string => html_entity_decode( $term->name ),
+			$terms
+		)
 	);
 }
 

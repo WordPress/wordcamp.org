@@ -428,7 +428,8 @@ class MES_Sponsor {
 			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values['mes_regional_sponsorships'] );
 		}
 
-		if ( isset( $new_values['mes_group_sponsorships'] ) && is_array( $new_values['mes_group_sponsorships'] ) ) {
+		// Gated like the metabox itself, so a forged request can't write the map while the UI is off.
+		if ( MES_Sponsor_Group::is_enabled() && isset( $new_values['mes_group_sponsorships'] ) && is_array( $new_values['mes_group_sponsorships'] ) ) {
 			$clean = array();
 
 			foreach ( $new_values['mes_group_sponsorships'] as $group_id => $level_id ) {

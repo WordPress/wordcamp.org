@@ -56,6 +56,8 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	 * Group sponsorships save and read.
 	 */
 	public function test_group_sponsorships_save_and_read() {
+		$this->enable_groups();
+
 		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
 		$mes        = new MES_Sponsor();
 
@@ -343,6 +345,23 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 		unset( $_POST[ $post_key ] );
 
 		$this->assertSame( array(), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+	}
+
+	/**
+	 * While disabled, a posted sponsor-side group map is ignored.
+	 *
+	 * The metabox isn't offered, so the only way to post the field is a forged
+	 * request -- and it must not overwrite a map stored while the UI was on.
+	 */
+	public function test_sponsor_group_map_save_is_ignored_while_disabled() {
+		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
+		update_post_meta( $sponsor_id, 'mes_group_sponsorships', array( 11 => 501 ) );
+
+		$submitted = array( 'mes_group_sponsorships' => array( 99 => 502 ) );
+
+		$this->invoke( new MES_Sponsor(), 'save_post_meta', array( $sponsor_id, $submitted ) );
+
+		$this->assertSame( array( 11 => 501 ), MES_Sponsor::get_group_sponsorships( $sponsor_id ) );
 	}
 
 	/**

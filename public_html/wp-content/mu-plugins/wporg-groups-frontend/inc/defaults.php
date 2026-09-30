@@ -42,6 +42,7 @@ use WordCamp\Groups\Frontend\Event_Language;
  *     online_event_link:string,
  *     timezone:string
  *     language:string
+ *     topics:string[]
  * }
  */
 function get_default_event_data(): array {
@@ -56,6 +57,9 @@ function get_default_event_data(): array {
 		'online_event_link' => '',
 		'timezone'          => Event_Timezone\get_default(),
 		'language'          => Event_Language\get_default(),
+		// Unlike the language, not carried from the group's last event: topics
+		// describe what one event is about, not how the group runs.
+		'topics'            => array(),
 	);
 
 	$most_recent = get_most_recent_event_id();

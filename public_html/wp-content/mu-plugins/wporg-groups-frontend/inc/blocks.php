@@ -33,6 +33,7 @@ function register_blocks(): void {
 		'group-news',
 		'group-members',
 		'event-language',
+		'event-topics',
 		'event-speakers',
 		'my-events',
 		'page-content',

@@ -2,8 +2,14 @@
 
 namespace WordCamp\Groups\Tests;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_REST_Request;
 
 use function WordCamp\Groups\Frontend\Check_In\event_has_check_ins;
@@ -178,6 +184,112 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	}
 
 	/**
+	 * Someone who said they weren't coming isn't on the list, so they can't
+	 * be checked in: that would switch the date to check-in and drop every
+	 * yes RSVP from "Events I attended". A walk-in is how they're added.
+	 */
+	public function test_not_attending_rsvp_is_refused() {
+		$event_id                  = $this->create_event();
+		list( , $comment_id )      = $this->rsvp( $event_id, 'not_attending' );
+		list( $yes_id, $yes_rsvp ) = $this->rsvp( $event_id );
+
+		$this->assertSame( 404, $this->toggle( $event_id, $comment_id, true )->get_status() );
+		$this->assertFalse( is_checked_in( $comment_id ) );
+		$this->assertFalse( event_has_check_ins( $event_id ) );
+		$this->assertContains( $event_id, wp_list_pluck( get_past_events( $yes_id ), 'event_id' ) );
+		$this->assertFalse( is_checked_in( $yes_rsvp ) );
+	}
+
+	/**
+	 * An unapproved RSVP isn't on the list either.
+	 */
+	public function test_unapproved_rsvp_is_refused() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+		wp_set_comment_status( $comment_id, 'hold' );
+
+		$this->assertSame( 404, $this->toggle( $event_id, $comment_id, true )->get_status() );
+		$this->assertFalse( is_checked_in( $comment_id ) );
+	}
+
+	/**
+	 * On a series, the date in the request decides whether check-in is open,
+	 * so an RSVP for a different date must be refused. Otherwise a past date
+	 * would open check-in for a future one.
+	 */
+	public function test_rsvp_for_another_date_is_refused() {
+		Recurring_Events_Database::maybe_install();
+
+		$start    = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-8 days' )->setTime( 10, 0 );
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+				'post_author' => $this->author_id,
+			)
+		);
+
+		( new Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => $start->format( 'Y-m-d H:i:s' ),
+				'datetime_end'   => $start->modify( '+1 hour' )->format( 'Y-m-d H:i:s' ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		update_post_meta( $event_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $event_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $event_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
+		update_post_meta( $event_id, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $event_id, Rule::META_PREFIX . 'count', 3 );
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		// Dates at -8d, -1d and +6d.
+		$past   = Occurrences::get( $event_id, Rule::recurrence_id( $start ) );
+		$future = Occurrences::get( $event_id, Rule::recurrence_id( $start->modify( '+14 days' ) ) );
+		$this->assertNotNull( $past );
+		$this->assertNotNull( $future );
+
+		list( , $past_rsvp )   = $this->rsvp( $event_id );
+		list( , $future_rsvp ) = $this->rsvp( $event_id );
+		Recurring_Events_Database::map_comment( $past_rsvp, $event_id, $past->recurrence_id );
+		Recurring_Events_Database::map_comment( $future_rsvp, $event_id, $future->recurrence_id );
+
+		$request = new WP_REST_Request( 'POST', "/wporg-groups/v1/event/{$event_id}/check-in/{$future_rsvp}" );
+		$request->set_body_params(
+			array(
+				'checked_in'    => true,
+				'recurrence_id' => $past->recurrence_id,
+			)
+		);
+		$response = rest_do_request( $request );
+		Context::set( null );
+
+		$this->assertSame( 404, $response->get_status() );
+		$this->assertFalse( is_checked_in( $future_rsvp ) );
+
+		// The same request for the RSVP on that date goes through.
+		$request = new WP_REST_Request( 'POST', "/wporg-groups/v1/event/{$event_id}/check-in/{$past_rsvp}" );
+		$request->set_body_params(
+			array(
+				'checked_in'    => true,
+				'recurrence_id' => $past->recurrence_id,
+			)
+		);
+		$response = rest_do_request( $request );
+		Context::set( null );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertTrue( event_has_check_ins( $event_id, $past->recurrence_id ) );
+	}
+
+	/**
 	 * Before check-in opens, the list can be read but nothing can change.
 	 */
 	public function test_future_event_is_not_open() {
@@ -226,14 +338,18 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	}
 
 	/**
-	 * A walk-in can be found by email address.
+	 * Not by email: the list shows the username, so an email lookup would
+	 * reveal which account is behind an address.
 	 */
-	public function test_walk_in_by_email() {
+	public function test_walk_in_by_email_is_refused() {
 		$event_id = $this->create_event();
 		$user_id  = self::factory()->user->create( array( 'user_email' => 'walkin@example.org' ) );
 
-		$this->assertSame( 200, $this->walk_in( $event_id, 'walkin@example.org' )->get_status() );
-		$this->assertTrue( is_checked_in( (int) ( new Rsvp( $event_id ) )->get( $user_id )['comment_id'] ) );
+		$response = $this->walk_in( $event_id, 'walkin@example.org' );
+
+		$this->assertSame( 404, $response->get_status() );
+		$this->assertSame( 'wporg_groups_walk_in_not_found', $response->get_data()['code'] );
+		$this->assertNull( ( new Rsvp( $event_id ) )->get( $user_id )['comment_id'] ?? null );
 	}
 
 	/**

@@ -6,7 +6,7 @@
  * so an RSVP'd no-show and someone who was there look the same, and nobody
  * can record a walk-in who never RSVP'd. This lets whoever can edit an event
  * check attendees in at the door or afterwards, and add walk-ins by their
- * WordPress.org account (#2130).
+ * WordPress.org username (#2130).
  *
  * Storage:
  *
@@ -33,7 +33,7 @@
  *        Check one RSVP in, or undo it.
  *
  *   POST /event/{id}/walk-in
- *        Add someone by username or email and check them in.
+ *        Add someone by username and check them in.
  *
  * Every route takes an optional `recurrence_id`, resolved through the same
  * `wporg_groups_frontend_before_rsvp` filter as the RSVP route, so a series'
@@ -418,17 +418,25 @@ function update_check_in( WP_REST_Request $request ) {
 		return $open;
 	}
 
-	$comment = get_comment( (int) $request->get_param( 'comment_id' ) );
+	$comment_id = (int) $request->get_param( 'comment_id' );
+	$comment    = get_comment( $comment_id );
 
-	// The permission check was against the event in the URL, so the RSVP has
-	// to belong to that event, or an Event Organizer could check in (and
-	// thereby flag) RSVPs on events they can't edit.
-	if (
-		! $comment instanceof WP_Comment
-		|| Rsvp::COMMENT_TYPE !== $comment->comment_type
-		|| (int) $comment->comment_post_ID !== $event->event->ID
-		|| '1' !== (string) $comment->comment_approved
-	) {
+	/*
+	 * Only an RSVP the list offers can be checked in: attending or waiting
+	 * list, on this event, for the date in context. Anything else is refused.
+	 *
+	 *   - An RSVP on another event: the permission check was against the
+	 *     event in the URL, so an Event Organizer could otherwise flag RSVPs
+	 *     on events they can't edit.
+	 *   - An RSVP for another date of the series: the open gate reads the
+	 *     date in the request, so a past date would open check-in for a
+	 *     future one.
+	 *   - A "not attending" RSVP: it would switch the date to check-in,
+	 *     dropping everyone who RSVP'd yes from "Events I attended".
+	 */
+	$offered = wp_list_pluck( build_list( $event )['attendees'], 'commentId' );
+
+	if ( ! $comment instanceof WP_Comment || ! in_array( $comment_id, $offered, true ) ) {
 		return new WP_Error( 'wporg_groups_invalid_rsvp', 'Invalid RSVP.', array( 'status' => 404 ) );
 	}
 
@@ -438,12 +446,14 @@ function update_check_in( WP_REST_Request $request ) {
 }
 
 /**
- * Look up a walk-in's account by exact username or email.
+ * Look up a walk-in's account by exact username.
  *
  * Exact matches only, never a search, so the field can't be used to browse
- * WordPress.org accounts or fish for the email addresses behind them.
+ * WordPress.org accounts. Not by email either: the list shows each
+ * attendee's username, so an email lookup would tell an Event Organizer
+ * which account is behind any address they typed in.
  *
- * @param string $login Username or email address.
+ * @param string $login Username.
  * @return \WP_User|false
  */
 function find_walk_in_user( string $login ) {
@@ -451,10 +461,6 @@ function find_walk_in_user( string $login ) {
 
 	if ( '' === $login ) {
 		return false;
-	}
-
-	if ( is_email( $login ) ) {
-		return get_user_by( 'email', $login );
 	}
 
 	return get_user_by( 'login', $login );
@@ -482,7 +488,7 @@ function add_walk_in( WP_REST_Request $request ) {
 	if ( ! $user ) {
 		return new WP_Error(
 			'wporg_groups_walk_in_not_found',
-			__( 'No WordPress.org account matches that username or email address.', 'wordcamporg' ),
+			__( 'No WordPress.org account has that username.', 'wordcamporg' ),
 			array( 'status' => 404 )
 		);
 	}

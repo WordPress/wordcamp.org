@@ -3,7 +3,7 @@
  *
  * Each toggle saves straight away, updating the list first and rolling the
  * row back if the save fails, since this is used at the door with people
- * waiting. Walk-ins are added by their WordPress.org username or email.
+ * waiting. Walk-ins are added by their WordPress.org username.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -197,7 +197,7 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 				{ onSubmit: addWalkIn, className: 'wporg-groups-check-in-modal__walk-in' },
 				h( TextControl, {
 					label: __( 'Add a walk-in', 'wordcamporg' ),
-					help: __( 'Their WordPress.org username or email address.', 'wordcamporg' ),
+					help: __( 'Their WordPress.org username.', 'wordcamporg' ),
 					value: walkIn,
 					onChange: setWalkIn,
 					autoComplete: 'off',

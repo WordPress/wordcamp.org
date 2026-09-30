@@ -405,13 +405,14 @@ function add_local_navigation_menus( $menus ) {
 	 * and safe on cached views. It needs the published `members` page that
 	 * provisioning creates, since `page-members.html` only resolves there;
 	 * the item is left out where that page is missing rather than linking
-	 * to a 404.
+	 * to a 404. The URL is relative so the navigation extension resolves it
+	 * to the page and marks the item current on the member list.
 	 */
 	$members_page = get_page_by_path( 'members' );
 	if ( $members_page && 'publish' === $members_page->post_status ) {
 		$items[] = array(
 			'label' => __( 'Members', 'wordcamporg' ),
-			'url'   => get_permalink( $members_page ),
+			'url'   => '/members/',
 		);
 	}
 

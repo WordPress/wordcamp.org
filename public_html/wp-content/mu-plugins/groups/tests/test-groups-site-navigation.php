@@ -122,6 +122,10 @@ class Test_Groups_Site_Navigation extends Groups_TestCase {
 	/**
 	 * Every visitor gets "Members" once the page exists, logged out included:
 	 * the list is public, so the cached bar can carry it.
+	 *
+	 * The URL is relative because that's what the navigation extension
+	 * resolves through `get_page_by_path()` to mark the item current; an
+	 * absolute URL renders the link but never highlights it.
 	 */
 	public function test_logged_out_visitor_gets_members() {
 		$page_id = $this->create_members_page();
@@ -130,7 +134,9 @@ class Test_Groups_Site_Navigation extends Groups_TestCase {
 		$item  = $menus['local-navigation'][1];
 
 		$this->assertSame( array( 'All Events', 'Members', 'Log in' ), $this->get_labels() );
-		$this->assertSame( get_permalink( $page_id ), $item['url'] );
+		$this->assertStringStartsWith( '/', $item['url'] );
+		$this->assertSame( $page_id, get_page_by_path( $item['url'] )->ID );
+		$this->assertSame( get_permalink( $page_id ), home_url( $item['url'] ) );
 	}
 
 	/**

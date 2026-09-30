@@ -502,6 +502,12 @@ add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadc
  * `gatherpress_event` / `gatherpress_venue` post picks up `single-event` /
  * `single-venue` without anyone having to set it by hand.
  *
+ * An event's printable flyer (`…/flyer/`, routed by `wporg-groups-frontend`)
+ * is the same singular request, so it goes ahead of everything else,
+ * including a template picked for that one event. It isn't listed in
+ * `customTemplates`: it only makes sense as the flyer, never as an event's
+ * page.
+ *
  * Note: the archive template uses the standard slug `archive-gatherpress_event`
  * which WordPress resolves automatically for block themes.
  */
@@ -509,6 +515,13 @@ function single_template_hierarchy( $templates ) {
 	$post_type = get_post_type();
 	if ( 'gatherpress_event' === $post_type ) {
 		array_unshift( $templates, 'single-event' );
+
+		if (
+			function_exists( '\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request' ) &&
+			\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request()
+		) {
+			array_unshift( $templates, 'single-event-flyer' );
+		}
 	} elseif ( 'gatherpress_venue' === $post_type ) {
 		array_unshift( $templates, 'single-venue' );
 	}

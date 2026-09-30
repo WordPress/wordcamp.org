@@ -11,8 +11,8 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  *
  * The bar's items are hardcoded in the theme rather than provisioned as a nav
  * menu, so `add_local_navigation_menus()` is the whole definition of what a
- * visitor sees up there — and it is built per request, because two of the
- * three items depend on who is looking.
+ * visitor sees up there — and it is built per request, because some of the
+ * items depend on who is looking.
  *
  * @group groups
  */
@@ -100,6 +100,60 @@ class Test_Groups_Site_Navigation extends Groups_TestCase {
 
 		$this->assertSame( 'My events', $item['label'] );
 		$this->assertSame( home_url( '/#my-events' ), $item['url'] );
+	}
+
+	/**
+	 * Publish the group's `members` page, as provisioning does.
+	 *
+	 * @param string $status Post status to create it with.
+	 * @return int Page ID.
+	 */
+	protected function create_members_page( string $status = 'publish' ): int {
+		return self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'Members',
+				'post_name'   => 'members',
+				'post_status' => $status,
+			)
+		);
+	}
+
+	/**
+	 * Every visitor gets "Members" once the page exists, logged out included:
+	 * the list is public, so the cached bar can carry it.
+	 */
+	public function test_logged_out_visitor_gets_members() {
+		$page_id = $this->create_members_page();
+
+		$menus = \WordCamp\Groups\Site\add_local_navigation_menus( array() );
+		$item  = $menus['local-navigation'][1];
+
+		$this->assertSame( array( 'All Events', 'Members', 'Log in' ), $this->get_labels() );
+		$this->assertSame( get_permalink( $page_id ), $item['url'] );
+	}
+
+	/**
+	 * For a member it sits between "All Events" and "My events".
+	 */
+	public function test_member_gets_members_before_my_events() {
+		$this->create_members_page();
+
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
+
+		$this->assertSame( array( 'All Events', 'Members', 'My events', 'Log out' ), $this->get_labels() );
+	}
+
+	/**
+	 * An unpublished `members` page would 404 for visitors, so it is not
+	 * linked. (The missing-page case is every other test in this class.)
+	 */
+	public function test_unpublished_members_page_is_not_linked() {
+		$this->create_members_page( 'draft' );
+
+		$this->assertSame( array( 'All Events', 'Log in' ), $this->get_labels() );
 	}
 
 	/**

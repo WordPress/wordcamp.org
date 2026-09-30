@@ -399,6 +399,23 @@ function add_local_navigation_menus( $menus ) {
 	);
 
 	/*
+	 * The member list is otherwise reachable only through the small member
+	 * count under the group's title, which testers found too easy to miss
+	 * (#2037). The list is public, so the item is the same for every visitor
+	 * and safe on cached views. It needs the published `members` page that
+	 * provisioning creates, since `page-members.html` only resolves there;
+	 * the item is left out where that page is missing rather than linking
+	 * to a 404.
+	 */
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$items[] = array(
+			'label' => __( 'Members', 'wordcamporg' ),
+			'url'   => get_permalink( $members_page ),
+		);
+	}
+
+	/*
 	 * A direct route to the member's own events (#2060), which otherwise have
 	 * to be found by scrolling the group's front page. The destination is the
 	 * `wporg/my-events` section on that page rather than a page of its own,

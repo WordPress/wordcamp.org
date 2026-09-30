@@ -295,6 +295,23 @@ function resolve_event( WP_REST_Request $request ) {
 		return $context_error;
 	}
 
+	/*
+	 * A series is checked in one date at a time. Without a date in context
+	 * its list would merge the RSVPs of every date, and the open gate would
+	 * read the series start, so an RSVP for a future date could be checked
+	 * in. The event page always sends the date it shows.
+	 */
+	if (
+		apply_filters( 'wporg_groups_frontend_is_recurring_event', false, $event_id ) &&
+		'' === (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_id )
+	) {
+		return new WP_Error(
+			'wporg_groups_recurrence_required',
+			__( 'Pick a date of this series to check people in.', 'wordcamporg' ),
+			array( 'status' => 400 )
+		);
+	}
+
 	$event = new Event( $event_id );
 
 	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {

@@ -213,11 +213,13 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	}
 
 	/**
-	 * On a series, the date in the request decides whether check-in is open,
-	 * so an RSVP for a different date must be refused. Otherwise a past date
-	 * would open check-in for a future one.
+	 * Create a weekly series owned by the author, with dates at -8d, -1d and
+	 * +6d, and one attending RSVP on the first and last of them.
+	 *
+	 * @return array{0: int, 1: object, 2: int, 3: object, 4: int} Event ID, past
+	 *         occurrence and its RSVP, future occurrence and its RSVP.
 	 */
-	public function test_rsvp_for_another_date_is_refused() {
+	private function create_series(): array {
 		Recurring_Events_Database::maybe_install();
 
 		$start    = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-8 days' )->setTime( 10, 0 );
@@ -261,6 +263,17 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		Recurring_Events_Database::map_comment( $past_rsvp, $event_id, $past->recurrence_id );
 		Recurring_Events_Database::map_comment( $future_rsvp, $event_id, $future->recurrence_id );
 
+		return array( $event_id, $past, $past_rsvp, $future, $future_rsvp );
+	}
+
+	/**
+	 * On a series, the date in the request decides whether check-in is open,
+	 * so an RSVP for a different date must be refused. Otherwise a past date
+	 * would open check-in for a future one.
+	 */
+	public function test_rsvp_for_another_date_is_refused() {
+		list( $event_id, $past, $past_rsvp, , $future_rsvp ) = $this->create_series();
+
 		$request = new WP_REST_Request( 'POST', "/wporg-groups/v1/event/{$event_id}/check-in/{$future_rsvp}" );
 		$request->set_body_params(
 			array(
@@ -287,6 +300,34 @@ class Test_Groups_Check_In extends Groups_TestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertTrue( event_has_check_ins( $event_id, $past->recurrence_id ) );
+	}
+
+	/**
+	 * A series request with no date at all is refused too. Without a date its
+	 * list would hold every date's RSVPs and the open gate would read the
+	 * series start, so a future date's RSVP could be checked in.
+	 */
+	public function test_series_request_without_a_date_is_refused() {
+		list( $event_id, , , $future, $future_rsvp ) = $this->create_series();
+		$walk_in_login                               = get_userdata( self::factory()->user->create() )->user_login;
+
+		$list = rest_do_request( new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" ) );
+
+		$this->assertSame( 400, $list->get_status() );
+		$this->assertSame( 'wporg_groups_recurrence_required', $list->get_data()['code'] );
+		$this->assertSame( 400, $this->toggle( $event_id, $future_rsvp, true )->get_status() );
+		$this->assertSame( 400, $this->walk_in( $event_id, $walk_in_login )->get_status() );
+
+		$this->assertFalse( is_checked_in( $future_rsvp ) );
+		$this->assertFalse( event_has_check_ins( $event_id, $future->recurrence_id ) );
+		$this->assertEmpty(
+			get_comments(
+				array(
+					'post_id' => $event_id,
+					'user_id' => get_user_by( 'login', $walk_in_login )->ID,
+				)
+			)
+		);
 	}
 
 	/**

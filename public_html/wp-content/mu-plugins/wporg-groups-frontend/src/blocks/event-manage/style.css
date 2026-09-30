@@ -38,6 +38,72 @@
 	font-weight: 600;
 }
 
+/* === Check-in modal === */
+
+.wporg-groups-check-in-modal .components-modal__content {
+	padding: 24px 32px 32px;
+}
+
+.wporg-groups-check-in-modal__body,
+.wporg-groups-check-in-modal__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--20);
+	min-width: min(520px, 75vw);
+}
+
+.wporg-groups-check-in-modal__count {
+	margin: 0;
+	font-weight: 600;
+}
+
+.wporg-groups-check-in-modal__walk-in {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__walk-in .components-base-control {
+	flex: 1 1 240px;
+}
+
+/* Line the button up with the input rather than the label above it. */
+.wporg-groups-check-in-modal__walk-in .components-button {
+	margin-top: 24px;
+}
+
+.wporg-groups-check-in-modal__loading {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__attendees {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.wporg-groups-check-in-modal__attendee {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+	padding: 10px 0;
+	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.wporg-groups-check-in-modal__avatar {
+	flex: none;
+	border-radius: 50%;
+}
+
+.wporg-groups-check-in-modal__actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
 /* === Modal — override wp-components Modal defaults === */
 
 /* Prevent modal body scroll leak when editor is focused. */

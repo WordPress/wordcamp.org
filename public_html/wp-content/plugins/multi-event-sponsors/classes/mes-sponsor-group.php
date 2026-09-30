@@ -67,7 +67,12 @@ class MES_Sponsor_Group {
 			return $keys;
 		}
 
-		if ( ! in_array( $meta_group, array( 'wordcamp', 'all' ), true ) ) {
+		/*
+		 * `''` is the group wcpt's own save loop asks for -- `metabox_save()`
+		 * calls `meta_keys()` with no argument, which falls through to the
+		 * `all` list. Without it the field renders but is never saved.
+		 */
+		if ( ! in_array( $meta_group, array( 'wordcamp', 'all', '' ), true ) ) {
 			return $keys;
 		}
 

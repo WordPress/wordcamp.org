@@ -240,6 +240,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$this->assertSame( array(), $group->register_wcpt_field( array(), 'wordcamp' ) );
 		$this->assertSame( array(), $group->register_wcpt_field( array(), 'all' ) );
+		$this->assertSame( array(), $group->register_wcpt_field( array(), '' ) );
 	}
 
 	/**
@@ -250,11 +251,54 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$group = new MES_Sponsor_Group();
 
-		foreach ( array( 'wordcamp', 'all' ) as $meta_group ) {
+		foreach ( array( 'wordcamp', 'all', '' ) as $meta_group ) {
 			$keys = $group->register_wcpt_field( array(), $meta_group );
 
 			$this->assertSame( array( MES_Sponsor_Group::WCPT_FIELD => 'mes-groups' ), $keys );
 		}
+	}
+
+	/**
+	 * Once enabled, the field is in the key set wcpt's own save loop walks.
+	 *
+	 * `Event_Admin::metabox_save()` asks for `meta_keys()` with no group, so a
+	 * field offered only to `wordcamp` and `all` renders on the screen but is
+	 * never saved.
+	 */
+	public function test_wcpt_field_is_in_the_save_loop_keys_when_enabled() {
+		$this->assertArrayNotHasKey( MES_Sponsor_Group::WCPT_FIELD, WordCamp_Admin::meta_keys() );
+
+		$this->enable_groups();
+
+		$this->assertArrayHasKey( MES_Sponsor_Group::WCPT_FIELD, WordCamp_Admin::meta_keys() );
+	}
+
+	/**
+	 * A wrangler's selection is saved through wcpt's real metabox save.
+	 */
+	public function test_wrangler_selection_saves_through_wcpt_metabox_save() {
+		$this->enable_groups();
+
+		$this->set_current_user_as_wrangler();
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+
+		$_POST = array(
+			'action'   => 'editpost',
+			'_wpnonce' => wp_create_nonce( 'update-post_' . $wordcamp_id ),
+			$post_key  => array( '7', '9' ),
+		);
+
+		// Only the per-field loop is under test. The after-save handlers geocode
+		// the venue over HTTP and read form fields this request doesn't post.
+		remove_all_actions( 'wcpt_metabox_save_done' );
+
+		$GLOBALS['wordcamp_admin']->metabox_save( $wordcamp_id, get_post( $wordcamp_id ) );
+
+		$_POST = array();
+
+		$this->assertSame( array( 7, 9 ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
 	}
 
 	/**

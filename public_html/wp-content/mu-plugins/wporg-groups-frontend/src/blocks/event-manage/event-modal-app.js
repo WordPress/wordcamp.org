@@ -25,6 +25,7 @@ import { __ } from '@wordpress/i18n';
  */
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
+import CheckInModal from './check-in-modal';
 import EventForm, { NS } from '../../components/event-form/event-form';
 
 	const AUTOSAVE_INTERVAL_MS = 5000;
@@ -351,7 +352,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				ev.preventDefault();
 				const mode = trigger.getAttribute( 'data-wporg-groups-modal' );
 				const eventId = parseInt( trigger.getAttribute( 'data-wporg-groups-event-id' ) || '0', 10 );
-				setState( { open: true, mode: mode, eventId: eventId } );
+				const recurrenceId = trigger.getAttribute( 'data-wporg-groups-recurrence-id' ) || '';
+				setState( { open: true, mode: mode, eventId: eventId, recurrenceId: recurrenceId } );
 			};
 			document.addEventListener( 'click', onClick );
 			return () => {
@@ -361,6 +363,14 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 
 		if ( ! state.open ) {
 			return null;
+		}
+
+		if ( 'check-in' === state.mode ) {
+			return h( CheckInModal, {
+				eventId: state.eventId,
+				recurrenceId: state.recurrenceId,
+				onClose: () => setState( { open: false, mode: 'create', eventId: 0 } ),
+			} );
 		}
 
 		if ( [ 'message-all', 'message-attendees' ].includes( state.mode ) ) {

@@ -24,6 +24,7 @@ namespace WordCamp\Groups\Frontend\Export;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use WordCamp\Groups\Frontend\Check_In;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -55,6 +56,10 @@ const CSV_COLUMNS = array(
 	'rsvp_status',
 	'rsvp_timestamp_gmt',
 	'rsvp_guests',
+	// Appended rather than placed with their neighbours, so spreadsheets
+	// built on the earlier column positions keep working.
+	'checked_in_count',
+	'checked_in',
 );
 
 /**
@@ -360,6 +365,7 @@ function collect_export_data( array $filters = array() ) {
 		'attending'     => 0,
 		'waiting_list'  => 0,
 		'not_attending' => 0,
+		'checked_in'    => 0,
 	);
 
 	$export_events = array();
@@ -394,6 +400,11 @@ function collect_export_data( array $filters = array() ) {
 			$zero_counts
 		);
 
+		// Check-in is per date (#2130): on a date nobody was checked in on,
+		// "not checked in" says nothing about attendance, so it's exported
+		// as unknown (null, a blank cell) rather than as a no.
+		$check_in_scopes = Check_In\get_check_in_scopes( $event_id );
+
 		$export_rsvps = array();
 		foreach ( $rsvps_by_event[ $event_id ] ?? array() as $rsvp ) {
 			$occurrence_key  = $occurrence['map'][ $rsvp['comment_id'] ] ?? '';
@@ -410,6 +421,16 @@ function collect_export_data( array $filters = array() ) {
 
 				if ( '' !== $recurrence_id ) {
 					++$occurrence_counts[ $recurrence_id ][ $rsvp['status'] ];
+				}
+			}
+
+			$uses_check_in = in_array( $recurrence_id, $check_in_scopes, true );
+
+			if ( $uses_check_in && $rsvp['checked_in'] ) {
+				++$counts['checked_in'];
+
+				if ( '' !== $recurrence_id ) {
+					++$occurrence_counts[ $recurrence_id ]['checked_in'];
 				}
 			}
 
@@ -430,6 +451,7 @@ function collect_export_data( array $filters = array() ) {
 				'status'               => $rsvp['status'],
 				'timestamp_gmt'        => $rsvp['timestamp_gmt'],
 				'guests'               => $rsvp['guests'],
+				'checked_in'           => $uses_check_in ? $rsvp['checked_in'] : null,
 				'occurrence_id'        => $recurrence_id,
 				'occurrence_start_gmt' => $rsvp_occurrence['start_gmt'] ?? null,
 				'occurrence_end_gmt'   => $rsvp_occurrence['end_gmt'] ?? null,
@@ -439,7 +461,17 @@ function collect_export_data( array $filters = array() ) {
 		// Counts belong to the occurrence, not the series: repeating series
 		// totals on every occurrence row makes any sum over the file wrong.
 		foreach ( $event_occurrences as $index => $event_occurrence ) {
-			$event_occurrences[ $index ]['counts'] = $occurrence_counts[ $event_occurrence['recurrence_id'] ];
+			$occurrence_count = $occurrence_counts[ $event_occurrence['recurrence_id'] ];
+
+			if ( ! in_array( $event_occurrence['recurrence_id'], $check_in_scopes, true ) ) {
+				$occurrence_count['checked_in'] = null;
+			}
+
+			$event_occurrences[ $index ]['counts'] = $occurrence_count;
+		}
+
+		if ( ! $check_in_scopes ) {
+			$counts['checked_in'] = null;
 		}
 
 		$export_events[] = array(
@@ -598,6 +630,7 @@ function filter_json_fields( array $data, array $columns ): array {
 		'attending'     => 'attending_count',
 		'waiting_list'  => 'waiting_list_count',
 		'not_attending' => 'not_attending_count',
+		'checked_in'    => 'checked_in_count',
 	);
 
 	$rsvp_fields = array(
@@ -607,6 +640,7 @@ function filter_json_fields( array $data, array $columns ): array {
 		'status'               => 'rsvp_status',
 		'timestamp_gmt'        => 'rsvp_timestamp_gmt',
 		'guests'               => 'rsvp_guests',
+		'checked_in'           => 'checked_in',
 		'occurrence_start_gmt' => 'occurrence_start_gmt',
 		'occurrence_end_gmt'   => 'occurrence_end_gmt',
 	);
@@ -811,7 +845,7 @@ function get_event_venue_names( array $event_ids ): array {
  *
  * @param int[] $event_ids Event post IDs.
  *
- * @return array<int, array{comment_id: int, event_id: int, user_id: int, status: string, timestamp_gmt: string, guests: int, anonymous: bool}>|WP_Error
+ * @return array<int, array{comment_id: int, event_id: int, user_id: int, status: string, timestamp_gmt: string, guests: int, anonymous: bool, checked_in: bool}>|WP_Error
  */
 function get_event_rsvps( array $event_ids ) {
 	if ( empty( $event_ids ) ) {
@@ -865,6 +899,7 @@ function get_event_rsvps( array $event_ids ) {
 			'timestamp_gmt' => $comment->comment_date_gmt,
 			'guests'        => (int) get_comment_meta( $comment_id, 'gatherpress_rsvp_guests', true ),
 			'anonymous'     => (bool) get_comment_meta( $comment_id, 'gatherpress_rsvp_anonymous', true ),
+			'checked_in'    => Check_In\is_checked_in( $comment_id ),
 		);
 	}
 
@@ -1100,8 +1135,11 @@ function csv_row_cells( array $event, ?array $rsvp, ?array $occurrence = null ):
 			'attending'     => '',
 			'waiting_list'  => '',
 			'not_attending' => '',
+			'checked_in'    => '',
 		);
 	}
+
+	$checked_in = $rsvp['checked_in'] ?? null;
 
 	return array(
 		'event_id'             => $event['id'],
@@ -1120,6 +1158,8 @@ function csv_row_cells( array $event, ?array $rsvp, ?array $occurrence = null ):
 		'rsvp_status'          => $rsvp['status'] ?? '',
 		'rsvp_timestamp_gmt'   => $rsvp['timestamp_gmt'] ?? '',
 		'rsvp_guests'          => $rsvp['guests'] ?? '',
+		'checked_in_count'     => $counts['checked_in'] ?? '',
+		'checked_in'           => null === $checked_in ? '' : ( $checked_in ? 'yes' : 'no' ),
 	);
 }
 

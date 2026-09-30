@@ -51,6 +51,7 @@ add_action(
 		add_action( 'wporg_groups_frontend_event_draft_saved', __NAMESPACE__ . '\\save_recurring_event_draft', 10, 2 );
 		add_action( 'wporg_groups_frontend_event_saved', __NAMESPACE__ . '\\save_recurring_event', 10, 3 );
 		add_filter( 'wporg_groups_frontend_before_rsvp', __NAMESPACE__ . '\\set_rsvp_occurrence_context', 10, 3 );
+		add_filter( 'wporg_groups_frontend_current_recurrence_id', array( Context::class, 'recurrence_id' ), 10, 0 );
 	},
 	30
 );

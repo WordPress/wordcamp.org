@@ -30,6 +30,7 @@ require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/event-email.php';
 require_once __DIR__ . '/inc/my-events.php';
+require_once __DIR__ . '/inc/check-in.php';
 require_once __DIR__ . '/inc/leave-cleanup.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
@@ -57,6 +58,7 @@ function bootstrap(): void {
 	Post_Titles\bootstrap();
 	Export\bootstrap();
 	RSVP_Questions\bootstrap();
+	Check_In\bootstrap();
 	Event_Date_Format\bootstrap();
 	Event_Language\bootstrap();
 	RSVP_Confirmation\bootstrap();

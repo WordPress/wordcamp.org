@@ -17,14 +17,20 @@ const VERSION = '0.2.0';
 require_once __DIR__ . '/inc/capabilities.php';
 require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/group-location.php';
+require_once __DIR__ . '/inc/event-date-format.php';
+require_once __DIR__ . '/inc/event-timezone.php';
+require_once __DIR__ . '/inc/event-language.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
+require_once __DIR__ . '/inc/rsvp-confirmation.php';
 require_once __DIR__ . '/inc/rest.php';
 require_once __DIR__ . '/inc/post-titles.php';
 require_once __DIR__ . '/inc/export.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
+require_once __DIR__ . '/inc/event-email.php';
 require_once __DIR__ . '/inc/my-events.php';
+require_once __DIR__ . '/inc/leave-cleanup.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
@@ -51,8 +57,12 @@ function bootstrap(): void {
 	Post_Titles\bootstrap();
 	Export\bootstrap();
 	RSVP_Questions\bootstrap();
+	Event_Date_Format\bootstrap();
+	Event_Language\bootstrap();
+	RSVP_Confirmation\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();
+	Event_Email\bootstrap();
 
 	add_action(
 		'rest_api_init',

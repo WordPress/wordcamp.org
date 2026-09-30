@@ -14,21 +14,21 @@ import { createElement as h } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 const WEEKDAYS = [
-	{ value: 'MO', label: __( 'Mon', 'wporg-groups-frontend' ) },
-	{ value: 'TU', label: __( 'Tue', 'wporg-groups-frontend' ) },
-	{ value: 'WE', label: __( 'Wed', 'wporg-groups-frontend' ) },
-	{ value: 'TH', label: __( 'Thu', 'wporg-groups-frontend' ) },
-	{ value: 'FR', label: __( 'Fri', 'wporg-groups-frontend' ) },
-	{ value: 'SA', label: __( 'Sat', 'wporg-groups-frontend' ) },
-	{ value: 'SU', label: __( 'Sun', 'wporg-groups-frontend' ) },
+	{ value: 'MO', label: __( 'Mon', 'wordcamporg' ) },
+	{ value: 'TU', label: __( 'Tue', 'wordcamporg' ) },
+	{ value: 'WE', label: __( 'Wed', 'wordcamporg' ) },
+	{ value: 'TH', label: __( 'Thu', 'wordcamporg' ) },
+	{ value: 'FR', label: __( 'Fri', 'wordcamporg' ) },
+	{ value: 'SA', label: __( 'Sat', 'wordcamporg' ) },
+	{ value: 'SU', label: __( 'Sun', 'wordcamporg' ) },
 ];
 
 const ORDERS = [
-	{ value: 'first', label: __( 'First', 'wporg-groups-frontend' ) },
-	{ value: 'second', label: __( 'Second', 'wporg-groups-frontend' ) },
-	{ value: 'third', label: __( 'Third', 'wporg-groups-frontend' ) },
-	{ value: 'fourth', label: __( 'Fourth', 'wporg-groups-frontend' ) },
-	{ value: 'last', label: __( 'Last', 'wporg-groups-frontend' ) },
+	{ value: 'first', label: __( 'First', 'wordcamporg' ) },
+	{ value: 'second', label: __( 'Second', 'wordcamporg' ) },
+	{ value: 'third', label: __( 'Third', 'wordcamporg' ) },
+	{ value: 'fourth', label: __( 'Fourth', 'wordcamporg' ) },
+	{ value: 'last', label: __( 'Last', 'wordcamporg' ) },
 ];
 
 /**
@@ -110,40 +110,40 @@ export default function RecurrenceControls( { value, eventDate, onChange } ) {
 
 	return h( 'div', { className: 'wporg-event-recurrence' },
 		locked && h( Notice, { status: 'info', isDismissible: false },
-			__( 'The recurrence schedule is locked after publication.', 'wporg-groups-frontend' )
+			__( 'The recurrence schedule is locked after publication.', 'wordcamporg' )
 		),
 		h( SelectControl, {
-			label: __( 'Repeats', 'wporg-groups-frontend' ),
+			label: __( 'Repeats', 'wordcamporg' ),
 			value: value.frequency,
 			disabled: locked,
 			options: [
-				{ label: __( 'Does not repeat', 'wporg-groups-frontend' ), value: '' },
-				{ label: __( 'Weekly', 'wporg-groups-frontend' ), value: 'weekly' },
-				{ label: __( 'Monthly', 'wporg-groups-frontend' ), value: 'monthly' },
-				{ label: __( 'Yearly', 'wporg-groups-frontend' ), value: 'yearly' },
+				{ label: __( 'Does not repeat', 'wordcamporg' ), value: '' },
+				{ label: __( 'Weekly', 'wordcamporg' ), value: 'weekly' },
+				{ label: __( 'Monthly', 'wordcamporg' ), value: 'monthly' },
+				{ label: __( 'Yearly', 'wordcamporg' ), value: 'yearly' },
 			],
 			onChange: setFrequency,
 			__nextHasNoMarginBottom: true,
 		} ),
 		value.frequency && h( 'div', { className: 'wporg-event-recurrence__row' },
 			h( TextControl, {
-				label: __( 'Repeat every', 'wporg-groups-frontend' ),
+				label: __( 'Repeat every', 'wordcamporg' ),
 				type: 'number', min: 1, value: value.interval, disabled: locked,
 				onChange: ( interval ) => update( { interval: Math.max( 1, Number( interval ) || 1 ) } ),
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( 'span', { className: 'wporg-event-recurrence__unit components-checkbox-control__label' },
-				value.frequency === 'weekly' ? __( 'week(s)', 'wporg-groups-frontend' ) :
-				value.frequency === 'monthly' ? __( 'month(s)', 'wporg-groups-frontend' ) :
-				__( 'year(s)', 'wporg-groups-frontend' )
+				value.frequency === 'weekly' ? __( 'week(s)', 'wordcamporg' ) :
+				value.frequency === 'monthly' ? __( 'month(s)', 'wordcamporg' ) :
+				__( 'year(s)', 'wordcamporg' )
 			)
 		),
 		value.frequency === 'weekly' && h( 'div', {
 			className: 'wporg-event-recurrence__weekdays',
 			role: 'group',
-			'aria-label': __( 'Repeat on', 'wporg-groups-frontend' ),
+			'aria-label': __( 'Repeat on', 'wordcamporg' ),
 		},
-			h( 'span', { className: 'wporg-event-recurrence__label' }, __( 'Repeat on', 'wporg-groups-frontend' ) ),
+			h( 'span', { className: 'wporg-event-recurrence__label' }, __( 'Repeat on', 'wordcamporg' ) ),
 			...WEEKDAYS.map( ( day ) => h( CheckboxControl, {
 				key: day.value,
 				label: day.label,
@@ -156,48 +156,48 @@ export default function RecurrenceControls( { value, eventDate, onChange } ) {
 			} ) )
 		),
 		value.frequency === 'monthly' && h( SelectControl, {
-			label: __( 'Monthly pattern', 'wporg-groups-frontend' ),
+			label: __( 'Monthly pattern', 'wordcamporg' ),
 			value: value.monthly_mode,
 			disabled: locked,
 			options: [
-				{ label: sprintf( __( 'Day %d of the month', 'wporg-groups-frontend' ), value.monthly_day ), value: 'day' },
-				{ label: __( 'Weekday pattern', 'wporg-groups-frontend' ), value: 'weekday' },
+				{ label: sprintf( __( 'Day %d of the month', 'wordcamporg' ), value.monthly_day ), value: 'day' },
+				{ label: __( 'Weekday pattern', 'wordcamporg' ), value: 'weekday' },
 			],
 			onChange: ( monthly_mode ) => update( { monthly_mode } ),
 			__nextHasNoMarginBottom: true,
 		} ),
 		value.frequency === 'monthly' && value.monthly_mode === 'weekday' && h( 'div', { className: 'wporg-event-recurrence__row' },
 			h( SelectControl, {
-				label: __( 'Order', 'wporg-groups-frontend' ), value: value.monthly_order, disabled: locked,
+				label: __( 'Order', 'wordcamporg' ), value: value.monthly_order, disabled: locked,
 				options: ORDERS, onChange: ( monthly_order ) => update( { monthly_order } ),
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( SelectControl, {
-				label: __( 'Weekday', 'wporg-groups-frontend' ), value: value.monthly_weekday, disabled: locked,
+				label: __( 'Weekday', 'wordcamporg' ), value: value.monthly_weekday, disabled: locked,
 				options: WEEKDAYS, onChange: ( monthly_weekday ) => update( { monthly_weekday } ),
 				__nextHasNoMarginBottom: true,
 			} )
 		),
 		value.frequency && h( SelectControl, {
-			label: __( 'Ends', 'wporg-groups-frontend' ),
+			label: __( 'Ends', 'wordcamporg' ),
 			value: value.end_type,
 			disabled: locked,
 			options: [
-				{ label: __( 'Never', 'wporg-groups-frontend' ), value: 'never' },
-				{ label: __( 'On date', 'wporg-groups-frontend' ), value: 'until' },
-				{ label: __( 'After occurrences', 'wporg-groups-frontend' ), value: 'count' },
+				{ label: __( 'Never', 'wordcamporg' ), value: 'never' },
+				{ label: __( 'On date', 'wordcamporg' ), value: 'until' },
+				{ label: __( 'After occurrences', 'wordcamporg' ), value: 'count' },
 			],
 			onChange: ( end_type ) => update( { end_type } ),
 			__nextHasNoMarginBottom: true,
 		} ),
 		value.frequency && value.end_type === 'until' && h( TextControl, {
-			label: __( 'End date', 'wporg-groups-frontend' ),
+			label: __( 'End date', 'wordcamporg' ),
 			type: 'date', min: eventDate, value: value.until, disabled: locked, required: ! locked,
 			onChange: ( until ) => update( { until } ),
 			__nextHasNoMarginBottom: true,
 		} ),
 		value.frequency && value.end_type === 'count' && h( TextControl, {
-			label: __( 'Occurrences', 'wporg-groups-frontend' ),
+			label: __( 'Occurrences', 'wordcamporg' ),
 			type: 'number', min: 1, value: value.count, disabled: locked,
 			onChange: ( count ) => update( { count: Math.max( 1, Number( count ) || 1 ) } ),
 			__nextHasNoMarginBottom: true,

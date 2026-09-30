@@ -155,6 +155,29 @@ class Test_Content_Appenders extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The spliced speaker name is appended as text, not run through the shortcode parser.
+	 *
+	 * These callbacks are registered on `the_content` at priority 10 and core parses
+	 * shortcodes at 11, so whatever they append is handed to the parser afterwards.
+	 */
+	public function test_appended_speaker_name_is_text() {
+		$session_id = $this->go_to_session();
+
+		$speaker_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'publish',
+			'post_title'  => 'Escaped [caption width=1 caption=x]y[/caption] Speaker',
+		) );
+		add_post_meta( $session_id, '_wcpt_speaker_id', $speaker_id );
+
+		$output = $this->apply_session_appenders( $session_id, 'Session body.' );
+
+		$this->assertStringContainsString( 'Escaped', $output );
+		$this->assertStringNotContainsString( '[caption', $output );
+		$this->assertSame( $output, do_shortcode( $output ) );
+	}
+
+	/**
 	 * A protected session keeps the password form on its own. Core has already
 	 * replaced the body by the time these run, so appending would put the
 	 * session's own material back beneath the form.

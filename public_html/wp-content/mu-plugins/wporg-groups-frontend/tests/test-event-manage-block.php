@@ -124,4 +124,18 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 
 		$this->assertSame( '', trim( (string) $output ) );
 	}
+
+	/**
+	 * Supplementary assets for the modal include wp-format-library styles.
+	 */
+	public function test_supplementary_assets_enqueue_format_library() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		\WordCamp\Groups\Frontend\Modal\enqueue_supplementary_assets();
+
+		$this->assertTrue( wp_style_is( 'wp-format-library', 'enqueued' ) );
+		$this->assertTrue( wp_style_is( 'wp-block-editor', 'enqueued' ) );
+		$this->assertTrue( wp_style_is( 'wp-components', 'enqueued' ) );
+	}
 }

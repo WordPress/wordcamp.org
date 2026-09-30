@@ -43,16 +43,24 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `Members_Controller` role rules, REST permission/IDOR checks, draft flow,
   block registration.
 - **E2E (Playwright)** — `npx playwright test` (or trigger the
-  `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
+  `e2e-tests.yml` GitHub Action manually; it also runs on any PR touching
+  the paths that workflow lists). **Check it actually ran before trusting a
+  green PR.** The path list is hand-maintained and has already lagged behind
+  what the specs assert on: they reach the recurring-events plugin's
+  occurrence pages and match `groups-site-*` class names only the theme
+  emits, so a change confined to either used to skip E2E entirely. When a
+  spec starts depending on a new path, add it there in the same PR.
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, per-event messaging, the
   auto-publish-notification email, the member directory, and Reply →
   Cancel on a group news post's comment form. Needs
-  `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
-  `eventorganiser4`/`eventorganiser5`/`eventorganiser6`/`member1` (all
-  `password`) — **every
+  `organiser1`/`organiser2`/`organiser3`/`organiser4`/`eventorganiser1`/
+  `eventorganiser2`/`eventorganiser3`/`eventorganiser4`/`eventorganiser5`/
+  `eventorganiser6`/`member1` (all `password`) — **every
   individual test that logs in as an author has its own dedicated
-  `eventorganiser*` account, not just every spec *file*.**
+  `eventorganiser*` account, not just every spec *file*.** `organiser2`/
+  `3`/`4` (editor tier) are `event-form.spec.js`'s own, one per test, for
+  the same reason.
   `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
   its own three tests also run concurrently against each other under
   `fullyParallel`, not just against other files. Don't consolidate any of
@@ -647,6 +655,165 @@ caught automatically, before moving on:
    tracking issue, and — if it changes the shape of *how* this integration
    should be tested going forward, not just *what* — issue #1863 too.
 
+## 10. Event email rewrites (mandatory, run after every version bump)
+
+GatherPress renders every event email (the publish notification, "Message
+all members", "Message attendees") from
+`includes/templates/admin/emails/event-email.php`. That template is neither
+filterable nor theme-overridable: `Rest_Api::send_event_email_to_recipient()`
+renders it from a hardcoded path. So this integration corrects the rendered
+body on its way out, with `wp_mail` filters keyed off the template's own
+marker comments (`<!-- Featured Image -->`, `<!-- Event Title -->`,
+`<!-- RSVP Button -->`):
+
+- `wporg-groups-frontend/inc/event-email.php` gives the featured image
+  `height: auto` (it ships real `width`/`height` attributes and a
+  `max-width: 100%` cap, so phones squash it) and rebuilds the RSVP button
+  as a table (an inline `<a>` carrying its own padding overlaps the line
+  above it in clients that ignore padding on inline elements, e.g. Help
+  Scout, Outlook).
+- `wporg-groups-frontend/inc/notifications.php` tailors the publish
+  notification per recipient, stripping that same button from the author's
+  own copy.
+
+**A bump can break all of this silently**, because a marker that no longer
+matches produces a correct-looking email with the old bug back. After every
+bump, diff the template (`git diff <old-tag> <new-tag> -- includes/templates/admin/emails/event-email.php`)
+and confirm the three marker comments and the button's wrapper `<div>` are
+still there and still that shape. `test-event-email.php` and
+`test-notifications.php` pin the interaction between the two rewrites, so
+run them before trusting a bump.
+
+Two rules for writing any filter of this kind, both learned the hard way:
+
+- **Bound it to the template, not just to the send.** Scoping a `wp_mail`
+  filter to one `send_emails()` call with `add_filter`/`finally` is not
+  enough on its own: anything else that sends mail inside that window (a
+  plugin acting on a hook GatherPress fires per recipient) gets rewritten
+  too. A password-reset email came out subjected "Your event has been
+  published". Require a template marker in the body before touching
+  anything.
+- **A regex over rendered HTML must fail closed.** Matching
+  `<div\b[^>]*>.*?</div>` stops at the *first* `</div>`, so a nested one
+  would cut the match short and leave a dangling closing tag: a broken
+  email rather than the old one. Exclude the tag from the body of the
+  match (`(?:(?!</?div\b).)*?`) so an unexpected shape declines to match
+  instead.
+
+To check email locally: MailCatcher runs in the dev stack on
+`http://localhost:1080` (`curl -s http://localhost:1080/messages` for the
+list, `/messages/<id>.html` for a body, `curl -X DELETE .../messages` to
+clear). Publishing through the real front-end dialog exercises the true
+path; `do_action( 'shutdown' )` after a `wp_update_post()` in `wp eval`
+flushes the notification queue when driving it headlessly. To read a
+delivered body at phone width, open it in the browser and measure:
+`getBoundingClientRect()` on the `img` catches an aspect-ratio regression
+that eyeballing will not.
+
+## 11. Timezones, and series-level data reaching its occurrences
+
+Three traps, all found by a browser pass that the automated suites had passed
+clean (#2021).
+
+- **GatherPress spells a UTC offset two ways.** The choices core builds
+  (`Utility::timezone_choices()`, parsed out of `wp_timezone_choice()`) say
+  `UTC+10`; the events table, `wp_timezone_string()` and
+  `Utility::list_timezone_and_utc_offsets()` all say `+10:00`.
+  `Utility::normalize_timezone_string()` maps the first onto the second, except
+  at zero, which it collapses to `UTC` while `wp_timezone_string()` keeps
+  saying `+00:00`. Anything round-tripping a zone between a form and the events
+  table has to canonicalize both sides (see
+  `wporg-groups-frontend/inc/event-timezone.php`). The failure is silent and
+  destructive: a `<select>` whose `value` matches no option falls back to its
+  first one, so an organizer opening an event and pressing save rescheduled it
+  into Africa/Abidjan.
+- **`show_timezone` is read before the block attribute**, so the block's own
+  `showTimezone` does nothing until the global setting is on. Section 13 has
+  the detail, alongside the format filters, which resolve the opposite way
+  round.
+- **Series-level data does not reach already-projected occurrences unless the
+  projection updates them.** `Occurrences::project()` upserts rather than
+  `INSERT IGNORE`s for this reason, updating the schedule columns while leaving
+  `status` and `created_gmt` alone so a cancelled occurrence survives. Anything
+  else that becomes series-level later needs the same treatment, and a test
+  that cancels an occurrence and re-projects.
+- **`save_post` is the wrong moment to project from.** GatherPress writes the
+  schedule on `wp_after_insert_post` (or, for a brand-new post, at `shutdown`),
+  and the front-end event form writes it directly after `wp_update_post()` has
+  returned. Either way `save_post_gatherpress_event` runs first and projects
+  the *previous* schedule, then sets the 6-hour `gpre_projected_` freshness
+  marker that stops `maybe_project()` repairing it — so a changed zone sat
+  stale until the daily cron. `Occurrences::reproject_on_schedule_write()`
+  watches the per-field meta `Event::save_datetimes()` writes instead, which is
+  the only thing it makes observable: it fires no action of its own. Verify a
+  schedule change by reading the occurrence rows back after a plain save, never
+  by calling `project()` yourself — an explicit call passes whether or not the
+  hook works.
+
+An occurrence page reads its date through `Context::metadata()`, which serves
+the occurrence row's own columns, so checking the series post's meta is not a
+check that the page will render what you expect. Look at the
+`{prefix}gatherpress_occurrences` row.
+
+## 12. Adding an events-archive filter
+
+The archive's filters (`event_time`, `event_format`, `event_language`) all
+live in `gatherpress-groups-tweaks.php` and share three constraints that are
+easy to break one at a time.
+
+- **Resolve every ID-based filter into one `post__in`.** WP_Query's
+  `parse_where()` treats `post__in` and `post__not_in` as an if/elseif, so a
+  filter expressed as `post__not_in` (the in-person view, since an event with
+  no venue is in person) is dropped without a word the moment another filter
+  sets `post__in`. Narrow one filter's own ID set in PHP rather than giving
+  each filter its own query var. An empty result must be `array( 0 )`, since
+  WP_Query ignores an empty `post__in` and would show the whole archive.
+- **Keep the join off the archive's own query.** A `tax_query` or
+  `meta_query` on the main query makes WP_Query select `DISTINCT`, which
+  collapses the duplicate rows `gatherpress-recurring-events` adds in
+  `Query::clauses()` to turn a series into one row per date — a weekly series
+  then appears once instead of on each of its dates, silently and only while
+  a filter is applied. Resolve the IDs in a separate `fields => ids` query
+  (which `Query::clauses()` bails on, so it does not expand occurrences
+  either), and prime the meta cache once for the set.
+- **Each `wporg/query-filter` renders a form holding only its own control**,
+  so every filter must carry the others' state, and the search form must
+  carry all of them, or submitting one silently resets the rest.
+
+Two more things to check before adding a fourth: the filter row is laid out
+`nowrap`, and three toggles already come to roughly 410px against about
+360px of usable width at 400px (it wraps below 781px in `responsive.css` for
+exactly that reason); and a control whose options come from the data should
+return an empty options array when there is nothing to choose between, which
+is what makes `wporg/query-filter` render nothing at all.
+
+## 13. Influencing how a GatherPress date renders
+
+Which lever works depends on which half of the format you are after, and the
+two answers are opposites — worth checking rather than assuming (#2033, #2021).
+
+- **An explicit block format beats the filters.**
+  `Event::get_display_datetime()` resolves `gatherpress_date_format` and
+  `gatherpress_time_format` only when the block passed no format of its own,
+  and the groups-site templates pass explicit ones. Reaching those blocks means
+  rewriting the attribute in a `render_block_data` filter; the two GatherPress
+  filters then cover only what has no explicit format, which is every event
+  email. `wporg-groups-frontend/inc/event-date-format.php` needs both for that
+  reason.
+- **`show_timezone` is the other way round.** The same method resolves the
+  global setting *before* the block's `showTimezone` attribute and formats the
+  zone with an empty string when the setting is off, so the attribute alone
+  does nothing. Turning the global on is therefore the only lever that reaches
+  the event emails, which call `get_display_datetime()` with no arguments at
+  all; a block that wants to stay quiet then opts out with
+  `showTimezone: "no"`, which does win once the global is on.
+
+When a template block has to carry a marker for one of these filters, put it in
+`className` rather than in a block attribute the block does not declare in its
+`block.json`. Gutenberg drops undeclared attributes when someone opens the
+template in the Site Editor and saves, and the marker goes with them silently;
+a class name survives.
+
 ## Known-issues appendix
 
 Use this to distinguish "this checklist found something new" from
@@ -660,4 +827,5 @@ current status before treating any of these as new bugs:
 | `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organisers manage events fine via wp-admin. |
 | `/members` fully public with no membership/auth requirement | Section 5 | Open product/privacy question, not a bug in itself — confirm current decision, don't assume it's wrong. |
 | `my-events` block empty for a user who created events but never RSVP'd | Section 3, per-role browser pass as an event creator | RSVP-attendance based by design — confirm this still matches the current product decision. |
+| A departing member's RSVP row still in `wp_comments` after leaving, with `comment_approved = trash` | Section 3, leave-group click-through, then inspect the comment rows | Expected, not a leak. `Leave_Cleanup\cancel_future_rsvps()` cancels future RSVPs with `wp_delete_comment()` and no force flag, matching GatherPress's own `no_status` path (`Rsvp\Storage::save()`); with a trash configured, which is the default, that trashes rather than deletes. The seat is released either way, since everything counting an RSVP reads approved comments only. Consequence to know: `deleted_comment` does not fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied, not at once. Past RSVPs are kept on purpose (attendance history). |
 | `groups-site` theme activatable on non-groups-network sites | Not covered by this checklist (network-admin action, not a groups-site page) | If auditing this, attempt `wp theme activate groups-site --url=<non-groups-network-site>` and confirm it's blocked. |

@@ -44,6 +44,8 @@ const COLUMN_OPTIONS = [
 	{ key: 'rsvp_status', label: __( 'RSVP status', 'wordcamporg' ) },
 	{ key: 'rsvp_timestamp_gmt', label: __( 'RSVP timestamp (GMT)', 'wordcamporg' ) },
 	{ key: 'rsvp_guests', label: __( 'RSVP guests', 'wordcamporg' ) },
+	{ key: 'checked_in_count', label: __( 'Checked-in count', 'wordcamporg' ) },
+	{ key: 'checked_in', label: __( 'Checked in', 'wordcamporg' ) },
 ];
 
 const RANGE_OPTIONS = [

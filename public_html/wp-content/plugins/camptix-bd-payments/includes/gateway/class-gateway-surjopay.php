@@ -191,7 +191,11 @@ class SurjoPay extends Base_Gateway {
 		// Validate the checkout URL host is a known shurjoPay domain before redirecting.
 		$checkout_url = esc_url_raw( $response->checkout_url );
 		if ( ! $this->is_allowed_https_host( $checkout_url, array( 'shurjopayment.com' ) ) ) {
-			$this->log( 'Surjo Pay: Unexpected redirect host.', null, array( 'url' => $checkout_url ) );
+			$this->log(
+				'Surjo Pay: Unexpected redirect host.',
+				$attendees[0]->ID,
+				array( 'host' => wp_parse_url( $checkout_url, PHP_URL_HOST ) )
+			);
 			$camptix->error( 'Payment gateway returned an invalid redirect URL.' );
 			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
@@ -225,7 +229,7 @@ class SurjoPay extends Base_Gateway {
 			)
 		);
 
-		wp_redirect( $checkout_url );
+		wp_redirect( $checkout_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Scheme and allowed domain are validated above.
 		exit;
 	}
 
@@ -716,10 +720,10 @@ class SurjoPay extends Base_Gateway {
 	public function validate_options( $input ) {
 		$output = $this->get_payment_options();
 
-		$output['username']     = sanitize_text_field( $input['username'] ?? '' );
-		$output['password']     = sanitize_text_field( $input['password'] ?? '' );
-		$output['prefix']       = sanitize_text_field( $input['prefix'] ?? 'WC' );
-		$output['sandbox']      = absint( $input['sandbox'] ?? 0 );
+		$output['username'] = sanitize_text_field( $input['username'] ?? '' );
+		$output['password'] = sanitize_text_field( $input['password'] ?? '' );
+		$output['prefix']   = sanitize_text_field( $input['prefix'] ?? 'WC' );
+		$output['sandbox']  = absint( $input['sandbox'] ?? 0 );
 
 		return $output;
 	}

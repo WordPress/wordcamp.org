@@ -35,6 +35,7 @@ function register_blocks(): void {
 		'event-language',
 		'event-flyer-link',
 		'event-flyer-qr',
+		'event-topics',
 		'event-speakers',
 		'my-events',
 		'page-content',

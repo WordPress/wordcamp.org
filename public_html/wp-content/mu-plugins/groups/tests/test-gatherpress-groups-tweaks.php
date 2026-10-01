@@ -987,6 +987,20 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * The venue taxonomy has no public archive either, so it cannot list the
+	 * events at a venue - protected ones included - under the venue's name. Its
+	 * REST exposure stays on, since the REST surfaces are gated separately.
+	 */
+	public function test_gatherpress_venue_taxonomy_is_not_publicly_queryable() {
+		$taxonomy = get_taxonomy( '_gatherpress_venue' );
+
+		$this->assertNotFalse( $taxonomy, 'GatherPress must be active for this assertion to be meaningful.' );
+		$this->assertFalse( $taxonomy->publicly_queryable );
+		$this->assertFalse( $taxonomy->query_var );
+		$this->assertTrue( $taxonomy->show_in_rest );
+	}
+
+	/**
 	 * Create a published event with a published venue attached to it.
 	 *
 	 * GatherPress links the two with a shadow term in `_gatherpress_venue`

@@ -1064,6 +1064,32 @@ add_filter(
 );
 
 /**
+ * Make the `_gatherpress_venue` taxonomy non-public, like the venue post type.
+ *
+ * Otherwise its front-end archive (`?_gatherpress_venue=<slug>` or
+ * `/venue/<slug>/`) lists every event with that venue — including
+ * password-protected ones — under the venue's name, naming the venue the
+ * password exists to withhold. The taxonomy only links events to venues
+ * internally and is never meant to be browsed, so drop its public query var
+ * and rewrite. `show_in_rest` stays on (the REST surfaces are gated above), and
+ * internal term lookups are unaffected.
+ */
+add_filter(
+	'register_taxonomy_args',
+	static function ( array $args, string $taxonomy ): array {
+		if ( '_gatherpress_venue' === $taxonomy ) {
+			$args['publicly_queryable'] = false;
+			$args['query_var']          = false;
+			$args['rewrite']            = false;
+		}
+
+		return $args;
+	},
+	10,
+	2
+);
+
+/**
  * Report the gatherpress_venue post type as viewable.
  *
  * Only ever hooked for the duration of a `gatherpress/venue` block render;

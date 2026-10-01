@@ -232,14 +232,8 @@ function register_event_speakers_meta(): void {
 			'default'       => array(),
 			'show_in_rest'  => array(
 				'schema' => array(
-					'type'    => 'array',
-					'items'   => array( 'type' => 'integer' ),
-					// The speaker list follows the event's password gate when
-					// rendered (see the event-speakers block). Restrict the
-					// REST field to the edit context so the raw roster is not
-					// served in the default view response for an event whose
-					// body is withheld.
-					'context' => array( 'edit' ),
+					'type'  => 'array',
+					'items' => array( 'type' => 'integer' ),
 				),
 			),
 			'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
@@ -1217,27 +1211,29 @@ add_filter(
 );
 
 /**
- * Keep a password-protected event's venue out of its REST item.
+ * Keep a password-protected event's venue and speakers out of its REST item.
  *
- * The event page hides the venue behind the password, but the REST response
- * still carried the `_gatherpress_venue` term, the venue's entry in
- * `class_list` (which spells out the venue slug) and the venue term link —
- * naming the often-private venue to anyone. Strip those while the event
- * requires its password, the same way core blanks its protected content.
+ * The event page hides these behind the password, but the REST response still
+ * named them: the `_gatherpress_venue` term, the venue's entry in `class_list`
+ * (which spells out the venue slug), the venue term link, and the
+ * `_event_speakers` roster meta. Strip them while the event requires its
+ * password for a caller who cannot edit it, the same way core blanks the
+ * protected content; an editor (the event form) still gets them, and a public
+ * event is untouched.
  *
  * @param \WP_REST_Response $response The response object.
  * @param \WP_Post          $post     The event being prepared.
  *
- * @return \WP_REST_Response The response, with venue details removed when gated.
+ * @return \WP_REST_Response The response, with the details removed when gated.
  */
-function hide_event_venue_in_rest( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
-	if ( ! post_password_required( $post ) ) {
+function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
+	if ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) ) {
 		return $response;
 	}
 
 	$data = $response->get_data();
 
-	unset( $data['_gatherpress_venue'] );
+	unset( $data['_gatherpress_venue'], $data['meta']['_event_speakers'] );
 
 	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
 		$data['class_list'] = array_values(
@@ -1262,7 +1258,7 @@ function hide_event_venue_in_rest( \WP_REST_Response $response, \WP_Post $post )
 	return $response;
 }
 
-add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_venue_in_rest', 10, 2 );
+add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 10, 2 );
 
 /**
  * Generate venue static maps in the background instead of during the save.

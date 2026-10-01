@@ -43,10 +43,7 @@ function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 	useEffect( () => {
 		Promise.all( [
 			eventId
-				// `_event_speakers` is only exposed in the edit context, so the
-				// form must request that context; a view-context read returns no
-				// speakers and the save below would clear them.
-				? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?context=edit&_fields=meta` } )
+				? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?_fields=meta` } )
 					.then( ( ev ) => ev.meta?._event_speakers || [] )
 					.catch( () => [] )
 				: Promise.resolve( [] ),

@@ -1217,6 +1217,54 @@ add_filter(
 );
 
 /**
+ * Keep a password-protected event's venue out of its REST item.
+ *
+ * The event page hides the venue behind the password, but the REST response
+ * still carried the `_gatherpress_venue` term, the venue's entry in
+ * `class_list` (which spells out the venue slug) and the venue term link —
+ * naming the often-private venue to anyone. Strip those while the event
+ * requires its password, the same way core blanks its protected content.
+ *
+ * @param \WP_REST_Response $response The response object.
+ * @param \WP_Post          $post     The event being prepared.
+ *
+ * @return \WP_REST_Response The response, with venue details removed when gated.
+ */
+function hide_event_venue_in_rest( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
+	if ( ! post_password_required( $post ) ) {
+		return $response;
+	}
+
+	$data = $response->get_data();
+
+	unset( $data['_gatherpress_venue'] );
+
+	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
+		$data['class_list'] = array_values(
+			array_filter(
+				$data['class_list'],
+				static function ( string $class ): bool {
+					return ! str_starts_with( $class, '_gatherpress_venue-' );
+				}
+			)
+		);
+	}
+
+	$response->set_data( $data );
+
+	// Drop the venue term link while leaving other taxonomies' links in place.
+	foreach ( $response->get_links()['https://api.w.org/term'] ?? array() as $link ) {
+		if ( '_gatherpress_venue' === ( $link['attributes']['taxonomy'] ?? '' ) ) {
+			$response->remove_link( 'https://api.w.org/term', $link['href'] );
+		}
+	}
+
+	return $response;
+}
+
+add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_venue_in_rest', 10, 2 );
+
+/**
  * Generate venue static maps in the background instead of during the save.
  *
  * GatherPress renders a venue's static map from `wp_after_insert_post`, so

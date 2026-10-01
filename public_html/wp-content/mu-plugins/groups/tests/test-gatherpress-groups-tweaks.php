@@ -1200,45 +1200,135 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * The REST item for a password-protected event names neither its venue nor
-	 * its speakers to a caller who cannot edit it, but someone who can edit it
-	 * still gets both so the event form keeps working.
+	 * The REST filter strips a protected event's venue and speakers for a
+	 * caller who cannot edit it, and keeps both (and the venue term link) for
+	 * one who can.
+	 *
+	 * Exercised against the filter directly rather than the full REST pipeline,
+	 * whose taxonomy and meta fields depend on registration order and so are
+	 * flaky in isolation.
 	 */
-	public function test_rest_item_hides_venue_and_speakers_for_protected_event() {
-		$event_id = $this->create_event_with_venue();
-		update_post_meta( $event_id, '_event_speakers', array( 101, 102 ) );
-		wp_update_post(
+	public function test_rest_filter_hides_venue_and_speakers_for_protected_event() {
+		$event = self::factory()->post->create_and_get(
 			array(
-				'ID'            => $event_id,
+				'post_type'     => 'gatherpress_event',
 				'post_password' => 'secret-pass',
 			)
 		);
 
-		// Anonymous: both are stripped.
-		wp_set_current_user( 0 );
-		$data = $this->rest_event_item( $event_id );
+		$build_response = static function (): \WP_REST_Response {
+			$response = new \WP_REST_Response(
+				array(
+					'content'            => array( 'protected' => true ),
+					'meta'               => array( '_event_speakers' => array( 101, 102 ) ),
+					'_gatherpress_venue' => array( 8 ),
+					'class_list'         => array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' ),
+				)
+			);
+			$response->add_link( 'https://api.w.org/term', 'https://example.org/venue', array( 'taxonomy' => '_gatherpress_venue' ) );
+			$response->add_link( 'https://api.w.org/term', 'https://example.org/topic', array( 'taxonomy' => 'gatherpress_topic' ) );
 
-		$this->assertTrue( $data['content']['protected'] );
+			return $response;
+		};
+
+		// A caller who cannot edit the event: venue and speakers are stripped,
+		// the venue term link too, while another taxonomy's link stays.
+		wp_set_current_user( 0 );
+		$response = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event );
+		$data     = $response->get_data();
+		$hrefs    = wp_list_pluck( $response->get_links()['https://api.w.org/term'] ?? array(), 'href' );
+
 		$this->assertArrayNotHasKey( '_event_speakers', $data['meta'] );
 		$this->assertArrayNotHasKey( '_gatherpress_venue', $data );
-		if ( isset( $data['class_list'] ) ) {
-			$venue_classes = array_filter(
-				$data['class_list'],
-				static function ( string $class ): bool {
-					return str_starts_with( $class, '_gatherpress_venue-' );
-				}
-			);
-			$this->assertEmpty( $venue_classes, 'The venue term class leaked in class_list.' );
+		$this->assertNotContains( '_gatherpress_venue-_salty-spaces', $data['class_list'] );
+		$this->assertNotContains( 'https://example.org/venue', $hrefs );
+		$this->assertContains( 'https://example.org/topic', $hrefs );
+
+		// Someone who can edit it keeps everything.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$kept = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
+
+		$this->assertSame( array( 101, 102 ), $kept['meta']['_event_speakers'] );
+		$this->assertSame( array( 8 ), $kept['_gatherpress_venue'] );
+		$this->assertContains( '_gatherpress_venue-_salty-spaces', $kept['class_list'] );
+	}
+
+	/**
+	 * `post_class()` drops the venue term class for a password-protected event.
+	 */
+	public function test_post_class_drops_venue_class_for_protected_event() {
+		$public_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		$classes = array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' );
+
+		$this->assertContains(
+			'_gatherpress_venue-_salty-spaces',
+			\WordCamp\Groups\GatherPress_Tweaks\hide_venue_class_for_protected_event( $classes, array(), $public_id )
+		);
+		$this->assertNotContains(
+			'_gatherpress_venue-_salty-spaces',
+			\WordCamp\Groups\GatherPress_Tweaks\hide_venue_class_for_protected_event( $classes, array(), $protected_id )
+		);
+	}
+
+	/**
+	 * The venue filter on the events collection drops protected events for a
+	 * caller who cannot read private events, for both the include and exclude
+	 * params, and leaves an unfiltered query alone.
+	 */
+	public function test_venue_filter_excludes_protected_events_for_anonymous() {
+		wp_set_current_user( 0 );
+
+		foreach ( array( '_gatherpress_venue', '_gatherpress_venue_exclude' ) as $param ) {
+			$request = new \WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
+			$request->set_param( $param, array( 8 ) );
+
+			$args = \WordCamp\Groups\GatherPress_Tweaks\hide_protected_events_in_venue_filter( array(), $request );
+
+			$this->assertFalse( $args['has_password'], "The {$param} filter did not drop protected events." );
 		}
 
-		// Someone who can edit the event still receives both, so editing it
-		// does not clear them.
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$data = $this->rest_event_item( $event_id );
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
+		$args    = \WordCamp\Groups\GatherPress_Tweaks\hide_protected_events_in_venue_filter( array(), $request );
 
-		$this->assertArrayHasKey( '_event_speakers', $data['meta'] );
-		$this->assertSame( array( 101, 102 ), $data['meta']['_event_speakers'] );
-		$this->assertNotEmpty( $data['_gatherpress_venue'] );
+		$this->assertArrayNotHasKey( 'has_password', $args );
+	}
+
+	/**
+	 * The venue terms route returns no venue for a protected event the caller
+	 * cannot edit, and is left alone for a public event.
+	 */
+	public function test_terms_route_hides_venue_for_protected_event() {
+		$public_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		wp_set_current_user( 0 );
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/_gatherpress_venue' );
+
+		$public = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_terms_for_protected_event(
+			array( 'post' => array( $public_id ) ),
+			$request
+		);
+		$this->assertSame( array( $public_id ), $public['post'] );
+
+		$protected = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_terms_for_protected_event(
+			array( 'post' => array( $protected_id ) ),
+			$request
+		);
+		$this->assertSame( array( 0 ), $protected['post'] );
 	}
 
 	/**
@@ -1247,8 +1337,18 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 * form.
 	 */
 	public function test_meta_link_block_is_hidden_for_a_password_protected_post() {
+		// The block lives in the blocks mu-plugin, which this suite does not
+		// load; pull in its controller so the gate can be exercised here.
 		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
-			$this->markTestSkipped( 'The wordcamp/meta-link block is not loaded in this suite.' );
+			$controller = dirname( __DIR__, 2 ) . '/blocks/source/blocks/meta-link/controller.php';
+
+			if ( is_readable( $controller ) ) {
+				require_once $controller;
+			}
+		}
+
+		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
+			$this->markTestSkipped( 'The wordcamp/meta-link block could not be loaded.' );
 		}
 
 		register_post_meta(
@@ -1261,7 +1361,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 
-		$event_id = $this->create_event_with_venue();
+		$event_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
 		update_post_meta( $event_id, '_test_meta_link_url', 'https://example.org/slides' );
 
 		$block = (object) array(
@@ -1292,20 +1392,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 		$this->assertSame( '', \WordCamp\Blocks\MetaLink\render( $attributes, '', $block ) );
-	}
-
-	/**
-	 * Fetch an event's REST representation as the current user.
-	 *
-	 * @param int $event_id The event.
-	 *
-	 * @return array The prepared response data.
-	 */
-	private function rest_event_item( int $event_id ): array {
-		$request  = new \WP_REST_Request( 'GET', "/wp/v2/gatherpress_events/{$event_id}" );
-		$response = rest_do_request( $request );
-
-		return rest_get_server()->response_to_data( $response, false );
 	}
 
 	/**

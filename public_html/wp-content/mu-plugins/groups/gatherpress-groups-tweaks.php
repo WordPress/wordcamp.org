@@ -1294,11 +1294,11 @@ add_filter( 'post_class', __NAMESPACE__ . '\hide_venue_class_for_protected_event
 /**
  * Keep password-protected events out of venue-filtered event queries.
  *
- * `GET /wp/v2/gatherpress_events?_gatherpress_venue=<term>` otherwise returns a
- * protected event under its venue, naming the venue it uses. For a caller who
- * cannot read private events, drop password-protected events from the result
- * whenever the query filters by venue, the same way the session collection
- * drops them.
+ * `GET /wp/v2/gatherpress_events?_gatherpress_venue[_exclude]=<term>` otherwise
+ * returns (or omits) a protected event by its venue, naming the venue it uses.
+ * For a caller who cannot read private events, drop password-protected events
+ * from the result whenever the query filters by venue — include or exclude —
+ * the same way the session collection drops them.
  *
  * @param array            $args    WP_Query args.
  * @param \WP_REST_Request $request The REST request.
@@ -1306,7 +1306,10 @@ add_filter( 'post_class', __NAMESPACE__ . '\hide_venue_class_for_protected_event
  * @return array The query args.
  */
 function hide_protected_events_in_venue_filter( array $args, \WP_REST_Request $request ): array {
-	if ( empty( $request['_gatherpress_venue'] ) ) {
+	// Both the include and exclude venue params narrow the result by venue, so
+	// either one reveals a protected event's venue (excluding a venue leaves
+	// the event in or out depending on whether it uses that venue).
+	if ( empty( $request['_gatherpress_venue'] ) && empty( $request['_gatherpress_venue_exclude'] ) ) {
 		return $args;
 	}
 

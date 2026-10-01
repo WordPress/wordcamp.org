@@ -29,6 +29,9 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'get_post_metadata',          array( $this, 'jetpack_dont_email_post_to_subs' ), 10, 4 );
 		add_filter( 'publicize_should_publicize_published_post', array( $this, 'jetpack_prevent_publicize' ) );
 		add_filter( 'document_title_parts',       array( $this, 'force_empty_tagline' ) );
+		add_filter( 'pre_get_document_title',     array( $this, 'force_placeholder_document_title' ) );
+		add_filter( 'redirect_canonical',         array( $this, 'disable_canonical_redirect' ) );
+		add_filter( 'body_class',                 array( $this, 'remove_identifying_body_classes' ) );
 
 		add_image_size( 'wccsp_image_medium_rectangle', 500, 300 );
 	}
@@ -643,6 +646,76 @@ class WordCamp_Coming_Soon_Page {
 		}
 
 		return $parts;
+	}
+
+	/**
+	 * Show the site name as the document title while the placeholder is active.
+	 *
+	 * `force_empty_tagline()` only blanks the tagline. On a block theme the
+	 * document title is still rendered from the resolved query, so the real
+	 * post title (an organizer or sponsor name, say) would appear in the
+	 * placeholder's <title>. Short-circuiting the title to the site name keeps
+	 * the placeholder standing in for the real page.
+	 *
+	 * @param string $title The pre-filtered title (empty by default).
+	 *
+	 * @return string The site name while the placeholder is active, else $title.
+	 */
+	public function force_placeholder_document_title( $title ) {
+		if ( ! $this->override_theme_template ) {
+			return $title;
+		}
+
+		return get_bloginfo( 'name' );
+	}
+
+	/**
+	 * Do not redirect an individual post's URL while the placeholder is active.
+	 *
+	 * `redirect_canonical()` runs before the template is swapped and 301s a
+	 * `?p=<id>` request to the real permalink, whose slug names the post. While
+	 * the placeholder stands in for every route there is no canonical target to
+	 * honor, so serve the placeholder at the requested URL instead.
+	 *
+	 * @param string $redirect_url The canonical URL core wants to redirect to.
+	 *
+	 * @return string|false The URL unchanged, or false to cancel the redirect.
+	 */
+	public function disable_canonical_redirect( $redirect_url ) {
+		return $this->override_theme_template ? false : $redirect_url;
+	}
+
+	/**
+	 * Drop body classes that spell out the resolved post's slug.
+	 *
+	 * The placeholder renders over the resolved query, so `body_class()` still
+	 * emits classes built from the post slug (e.g. `wcb_organizer-slug-<name>`),
+	 * naming the post the placeholder is meant to stand in for. Strip any class
+	 * that contains the slug while the placeholder is active.
+	 *
+	 * @param string[] $classes The body classes.
+	 *
+	 * @return string[] The classes, without slug-bearing ones while active.
+	 */
+	public function remove_identifying_body_classes( $classes ) {
+		if ( ! $this->override_theme_template ) {
+			return $classes;
+		}
+
+		$slug = (string) get_post_field( 'post_name', get_queried_object_id() );
+
+		if ( '' === $slug ) {
+			return $classes;
+		}
+
+		return array_values(
+			array_filter(
+				$classes,
+				static function ( $class ) use ( $slug ) {
+					return false === strpos( (string) $class, $slug );
+				}
+			)
+		);
 	}
 
 } // end WordCamp_Coming_Soon_Page.

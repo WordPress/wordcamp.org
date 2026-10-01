@@ -959,12 +959,22 @@ function open_venue_block_visibility( $pre, array $parsed_block ) {
 	// asking, so it must not run while the event that hosts the block is
 	// behind its post password: the venue is part of the gated event and
 	// should follow the same gate the event body does.
-	if (
-		is_null( $pre )
-		&& 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' )
-		&& ! ( is_singular( 'gatherpress_event' ) && post_password_required() )
-	) {
-		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
+	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
+		// Gate on the event that hosts this block, so a protected event's
+		// venue follows the same gate its body does — on the event's own page
+		// and on list and home cards alike. Both loops set the current post to
+		// the card's event as each venue block renders, so the no-argument
+		// check tracks it; a block query loop that passes the event as `postId`
+		// context instead is covered by the second check.
+		$gated = post_password_required();
+
+		if ( ! $gated && isset( $parsed_block['context']['postId'] ) ) {
+			$gated = post_password_required( $parsed_block['context']['postId'] );
+		}
+
+		if ( ! $gated ) {
+			add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
+		}
 	}
 
 	return $pre;

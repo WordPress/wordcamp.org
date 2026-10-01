@@ -986,14 +986,6 @@ add_filter(
 			return $content;
 		}
 
-		// The event body honours its own post password, so the appended venue
-		// description and access notes must follow it too. Without this they
-		// render beneath the password form while every sibling block on the
-		// page stays hidden.
-		if ( post_password_required( $event_id ) ) {
-			return $content;
-		}
-
 		$venue_id = get_event_venue_post_id( $event_id );
 		if ( ! $venue_id ) {
 			return $content;
@@ -1028,6 +1020,35 @@ add_filter(
 	},
 	20
 );
+
+/**
+ * Hide a venue block when the event that hosts it is password-protected.
+ *
+ * The venue is part of the event, so it must follow the event's password
+ * wherever the block renders — the event's own page (including the sidebar
+ * details card), a list card, or a home-page card. This runs at render time,
+ * where the hosting event is reliably known: GatherPress passes it as the
+ * block's `postId` context, and the current post is it otherwise. Blanking the
+ * whole block output (priority 5, before the append filter above) also stops
+ * that filter adding the description and access notes.
+ *
+ * @param string    $content  Rendered block content.
+ * @param array     $block    Parsed block (unused).
+ * @param \WP_Block $instance Block instance, carrying the `postId` context.
+ *
+ * @return string The content, or an empty string for a protected event.
+ */
+function hide_venue_block_for_protected_event( string $content, array $block, \WP_Block $instance ): string {
+	$event_id = $instance->context['postId'] ?? get_the_ID();
+
+	if ( $event_id && post_password_required( $event_id ) ) {
+		return '';
+	}
+
+	return $content;
+}
+
+add_filter( 'render_block_gatherpress/venue', __NAMESPACE__ . '\hide_venue_block_for_protected_event', 5, 3 );
 
 /**
  * Make the gatherpress_venue post type non-public so it has no front-end
@@ -1092,26 +1113,12 @@ function open_venue_block_visibility( $pre, array $parsed_block ) {
 	// so `render_block_gatherpress/venue` never fires and the override would
 	// have nothing to close it.
 	//
-	// The override forces the venue post type viewable regardless of who is
-	// asking, so it must not run while the event that hosts the block is
-	// behind its post password: the venue is part of the gated event and
-	// should follow the same gate the event body does.
+	// This only makes the venue type viewable so GatherPress will render the
+	// block at all; the post-password gate lives in the render filter below
+	// ({@see hide_venue_block_for_protected_event()}), which blanks the block
+	// for a protected event wherever it appears.
 	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
-		// Gate on the event that hosts this block, so a protected event's
-		// venue follows the same gate its body does — on the event's own page
-		// and on list and home cards alike. Both loops set the current post to
-		// the card's event as each venue block renders, so the no-argument
-		// check tracks it; a block query loop that passes the event as `postId`
-		// context instead is covered by the second check.
-		$gated = post_password_required();
-
-		if ( ! $gated && isset( $parsed_block['context']['postId'] ) ) {
-			$gated = post_password_required( $parsed_block['context']['postId'] );
-		}
-
-		if ( ! $gated ) {
-			add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
-		}
+		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
 	}
 
 	return $pre;

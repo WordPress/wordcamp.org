@@ -1170,6 +1170,117 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * A password-protected event's venue block is blanked until the password
+	 * is entered, so the venue does not show on the event's own page or card.
+	 */
+	public function test_venue_block_is_hidden_for_a_password_protected_event() {
+		$event_id = $this->create_event_with_venue();
+		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+
+		wp_set_current_user( 0 );
+
+		$gated = $this->render_venue_block( $event_id );
+		$this->assertStringNotContainsString( 'Salty Spaces', $gated );
+		$this->assertStringNotContainsString( 'Mooloolaba', $gated );
+
+		// Entering the password reveals the venue again.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret-pass' );
+
+		$revealed = $this->render_venue_block( $event_id );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Salty Spaces', $revealed );
+	}
+
+	/**
+	 * The REST item for a password-protected event names neither its venue nor
+	 * its speakers to a caller who cannot edit it, but an editor still gets
+	 * both so the event form keeps working.
+	 */
+	public function test_rest_item_hides_venue_and_speakers_for_protected_event() {
+		$event_id = $this->create_event_with_venue();
+		update_post_meta( $event_id, '_event_speakers', array( 101, 102 ) );
+		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+
+		// Anonymous: both are stripped.
+		wp_set_current_user( 0 );
+		$data = $this->rest_event_item( $event_id );
+
+		$this->assertTrue( $data['content']['protected'] );
+		$this->assertArrayNotHasKey( '_event_speakers', $data['meta'] );
+		$this->assertArrayNotHasKey( '_gatherpress_venue', $data );
+		if ( isset( $data['class_list'] ) ) {
+			$venue_classes = array_filter(
+				$data['class_list'],
+				static function ( string $class ): bool {
+					return str_starts_with( $class, '_gatherpress_venue-' );
+				}
+			);
+			$this->assertEmpty( $venue_classes, 'The venue term class leaked in class_list.' );
+		}
+
+		// An editor still receives both, so editing the event does not clear them.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$data = $this->rest_event_item( $event_id );
+
+		$this->assertSame( array( 101, 102 ), $data['meta']['_event_speakers'] );
+		$this->assertNotEmpty( $data['_gatherpress_venue'] );
+	}
+
+	/**
+	 * The meta-link block (session video and slides links) returns nothing for
+	 * a password-protected post, so the links do not show above the password
+	 * form.
+	 */
+	public function test_meta_link_block_is_hidden_for_a_password_protected_post() {
+		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
+			$this->markTestSkipped( 'The wordcamp/meta-link block is not loaded in this suite.' );
+		}
+
+		register_post_meta(
+			'gatherpress_event',
+			'_test_meta_link_url',
+			array( 'type' => 'string', 'single' => true, 'show_in_rest' => true )
+		);
+
+		$event_id = $this->create_event_with_venue();
+		update_post_meta( $event_id, '_test_meta_link_url', 'https://example.org/slides' );
+
+		$block      = (object) array(
+			'context' => array( 'postId' => $event_id, 'postType' => 'gatherpress_event' ),
+		);
+		$attributes = array( 'key' => '_test_meta_link_url', 'text' => 'View slides' );
+
+		wp_set_current_user( 0 );
+
+		// Public post: the link renders.
+		$this->assertStringContainsString(
+			'https://example.org/slides',
+			\WordCamp\Blocks\MetaLink\render( $attributes, '', $block )
+		);
+
+		// Password-protected: nothing.
+		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+		$this->assertSame( '', \WordCamp\Blocks\MetaLink\render( $attributes, '', $block ) );
+	}
+
+	/**
+	 * Fetch an event's REST representation as the current user.
+	 *
+	 * @param int $event_id The event.
+	 *
+	 * @return array The prepared response data.
+	 */
+	private function rest_event_item( int $event_id ): array {
+		$request  = new \WP_REST_Request( 'GET', "/wp/v2/gatherpress_events/{$event_id}" );
+		$response = rest_do_request( $request );
+
+		return rest_get_server()->response_to_data( $response, false );
+	}
+
+	/**
 	 * Search block on the events archive rewrites form action, removes required,
 	 * adds the event_time hidden input, and marks the form for events search clear.
 	 */

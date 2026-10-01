@@ -10,6 +10,7 @@
 namespace WordCamp\Groups\GatherPress_Tweaks;
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Topic;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
@@ -300,6 +301,15 @@ add_filter(
 			$hidden .= sprintf(
 				'<input type="hidden" name="event_language" value="%s" />',
 				esc_attr( $language )
+			);
+		}
+
+		$topic = get_event_topic_filter();
+
+		if ( 'all' !== $topic ) {
+			$hidden .= sprintf(
+				'<input type="hidden" name="event_topic" value="%s" />',
+				esc_attr( $topic )
 			);
 		}
 
@@ -621,6 +631,120 @@ add_filter(
 );
 
 /**
+ * The topics this group has tagged a published event with, as slug => name.
+ *
+ * Keyed by slug because that is what the event page links with. Unlike the
+ * language control, one topic is still a choice: plenty of events carry no
+ * topic at all, so "All" and that topic select different events. Empty when
+ * no event has a topic, which hides the control.
+ *
+ * @return array<string, string> Value => label, or an empty array to hide the filter.
+ */
+function get_event_topic_filter_options(): array {
+	$terms = get_terms(
+		array(
+			'taxonomy'   => Topic::TAXONOMY,
+			// Counts published events only, so a topic that lives on a draft
+			// is not offered as a filter that would come back empty.
+			'hide_empty' => true,
+			'orderby'    => 'name',
+		)
+	);
+
+	if ( ! is_array( $terms ) || ! $terms ) {
+		return array();
+	}
+
+	$named = array();
+
+	foreach ( $terms as $term ) {
+		$named[ $term->slug ] = html_entity_decode( $term->name );
+	}
+
+	return array( 'all' => __( 'All', 'wordcamporg' ) ) + $named;
+}
+
+/**
+ * The topic filter the current request asks for.
+ *
+ * Run through `sanitize_title()` because a topic with non-ASCII letters has
+ * a percent-encoded slug, and PHP hands the query arg back decoded. Anything
+ * the group has no events on falls back to `all`, like the other filters.
+ *
+ * @return string A key of `get_event_topic_filter_options()`, or 'all'.
+ */
+function get_event_topic_filter(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	// `?event_topic[]=` arrives as an array, which `sanitize_title()` can't take.
+	$topic = isset( $_GET['event_topic'] ) && is_string( $_GET['event_topic'] ) ? sanitize_title( wp_unslash( $_GET['event_topic'] ) ) : 'all';
+
+	return isset( get_event_topic_filter_options()[ $topic ] ) ? $topic : 'all';
+}
+
+/**
+ * The published events tagged with one topic.
+ *
+ * A separate `fields => ids` query for the reasons `get_online_event_ids()`
+ * gives: a tax query on the archive's own SQL would collapse a recurring
+ * series into one row.
+ *
+ * @param string $slug Topic slug.
+ * @return int[] Event post IDs.
+ */
+function get_event_ids_for_topic( string $slug ): array {
+	$ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see the docblock.
+				array(
+					'taxonomy'         => Topic::TAXONOMY,
+					'field'            => 'slug',
+					'terms'            => array( $slug ),
+					// A topic filter means that topic, not its children too.
+					'include_children' => false,
+				),
+			),
+		)
+	);
+
+	return array_map( 'intval', $ids );
+}
+
+/**
+ * Register the archive's topic filter options.
+ */
+add_filter(
+	'wporg_query_filter_options_event_topic',
+	static function (): array {
+		$options = get_event_topic_filter_options();
+
+		if ( ! $options ) {
+			return array();
+		}
+
+		$current = get_event_topic_filter();
+
+		return array(
+			// Named the way the other filters are (#2059).
+			'label'    => sprintf(
+				/* translators: %s: the selected topic filter, e.g. "Accessibility". */
+				__( 'Topic: %s', 'wordcamporg' ),
+				$options[ $current ]
+			),
+			'title'    => __( 'Filter by topic', 'wordcamporg' ),
+			'key'      => 'event_topic',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => $options,
+			'selected' => array( $current ),
+		);
+	}
+);
+
+/**
  * Carry the archive's other view state through each filter's form.
  *
  * Every `wporg/query-filter` renders a form holding only its own control, so
@@ -647,6 +771,10 @@ add_action(
 
 		if ( 'event_language' !== $key && 'all' !== get_event_language_filter() ) {
 			$carried['event_language'] = get_event_language_filter();
+		}
+
+		if ( 'event_topic' !== $key && 'all' !== get_event_topic_filter() ) {
+			$carried['event_topic'] = get_event_topic_filter();
 		}
 
 		if ( isset( $_GET['s'] ) && '' !== trim( (string) wp_unslash( $_GET['s'] ) ) ) {
@@ -693,6 +821,7 @@ add_filter(
 		$vars[] = 'event_time';
 		$vars[] = 'event_format';
 		$vars[] = 'event_language';
+		$vars[] = 'event_topic';
 		return $vars;
 	}
 );
@@ -739,37 +868,45 @@ add_filter(
 
 		$format_filter   = get_event_format_filter();
 		$language_filter = get_event_language_filter();
+		$topic_filter    = get_event_topic_filter();
+
+		/*
+		 * Every ID filter has to resolve into the one `post__in`. WP_Query
+		 * treats `post__in` and `post__not_in` as an if/elseif (see
+		 * `parse_where()`), so a `post__not_in` left beside a `post__in`
+		 * would be dropped without a word. Each filter that narrows to a set
+		 * adds it to `$included`, and the sets are intersected in PHP; the
+		 * in-person filter's exclusion is subtracted from the result. Only
+		 * when nothing narrows to a set does the exclusion ride on
+		 * `post__not_in`.
+		 */
+		$included = array();
+		$excluded = array();
 
 		if ( 'all' !== $language_filter ) {
-			/*
-			 * Both ID filters have to resolve into the one `post__in`.
-			 * WP_Query treats `post__in` and `post__not_in` as an if/elseif
-			 * (see `parse_where()`), so the `post__not_in` the in-person
-			 * filter uses on its own would be dropped without a word the
-			 * moment a language was also picked. Narrowing the language's own
-			 * set in PHP keeps both applied, and costs nothing extra: it is a
-			 * set we have already resolved.
-			 */
-			$language_ids = get_event_ids_for_language( $language_filter );
+			$included[] = get_event_ids_for_language( $language_filter );
+		}
 
-			if ( 'online' === $format_filter ) {
-				$language_ids = array_values( array_intersect( $language_ids, get_online_event_ids() ) );
-			} elseif ( 'in-person' === $format_filter ) {
-				$language_ids = array_values( array_diff( $language_ids, get_online_event_ids() ) );
-			}
+		if ( 'all' !== $topic_filter ) {
+			$included[] = get_event_ids_for_topic( $topic_filter );
+		}
+
+		if ( 'online' === $format_filter ) {
+			$included[] = get_online_event_ids();
+		} elseif ( 'in-person' === $format_filter ) {
+			$excluded = get_online_event_ids();
+		}
+
+		if ( $included ) {
+			$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
+			$ids = array_values( array_diff( $ids, $excluded ) );
 
 			// `array( 0 )` rather than an empty array: an empty `post__in` is
 			// ignored by WP_Query, which would show every event under a
 			// filter that matched none.
-			$query_vars['post__in'] = $language_ids ? $language_ids : array( 0 );
-		} elseif ( 'all' !== $format_filter ) {
-			$online_ids = get_online_event_ids();
-
-			if ( 'online' === $format_filter ) {
-				$query_vars['post__in'] = $online_ids ? $online_ids : array( 0 );
-			} else {
-				$query_vars['post__not_in'] = $online_ids;
-			}
+			$query_vars['post__in'] = $ids ? $ids : array( 0 );
+		} elseif ( $excluded ) {
+			$query_vars['post__not_in'] = $excluded;
 		}
 
 		// Pass through search if present.

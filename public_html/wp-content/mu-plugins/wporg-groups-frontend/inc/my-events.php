@@ -12,6 +12,8 @@ namespace WordCamp\Groups\Frontend\My_Events;
 
 defined( 'WPINC' ) || die();
 
+use WordCamp\Groups\Frontend\Check_In;
+
 /**
  * How many past dates the block lists.
  *
@@ -71,7 +73,12 @@ function get_upcoming_events( int $user_id ): array {
  * Dates the member has already been to, most recent first.
  *
  * "Attended" means they RSVP'd as attending and the date has since finished,
- * so — unlike `get_upcoming_events()` — authored events are not unioned in:
+ * unless the organizer checked people in on that date (#2130): then it means
+ * they were checked in, whatever their RSVP said, so a no-show drops out and
+ * a walk-in who ended up on the waiting list counts. Dates nobody checked
+ * anyone in on keep the RSVP as the best record there is.
+ *
+ * Unlike `get_upcoming_events()`, authored events are not unioned in:
  * creating an event is not the same as going to it, and an organizer who
  * wants the full history of what they ran has the events archive for that.
  *
@@ -91,13 +98,46 @@ function get_past_events( int $user_id, int $limit = PAST_EVENTS_LIMIT ): array 
 		return array();
 	}
 
-	$candidates = get_attending_candidates( $user_id );
+	$candidates = filter_to_attended(
+		get_attending_candidates( $user_id, array( 'attending', 'waiting_list' ) )
+	);
 
 	if ( empty( $candidates ) ) {
 		return array();
 	}
 
 	return filter_to_past( $candidates, $limit );
+}
+
+/**
+ * Apply check-in to RSVP candidates for past dates.
+ *
+ * On a date with check-ins, keep exactly the checked-in RSVPs. On a date
+ * without, keep the attending ones, as before check-in existed.
+ *
+ * @param array<int, array{event_id: int, recurrence_id: string, comment_id: int, status: string}> $candidates RSVP candidates.
+ *
+ * @return array<int, array{event_id: int, recurrence_id: string, comment_id: int, status: string}>
+ */
+function filter_to_attended( array $candidates ): array {
+	if ( empty( $candidates ) ) {
+		return array();
+	}
+
+	update_meta_cache( 'comment', array_column( $candidates, 'comment_id' ) );
+
+	return array_values(
+		array_filter(
+			$candidates,
+			static function ( array $candidate ): bool {
+				if ( Check_In\event_has_check_ins( $candidate['event_id'], $candidate['recurrence_id'] ) ) {
+					return Check_In\is_checked_in( $candidate['comment_id'] );
+				}
+
+				return 'attending' === $candidate['status'];
+			}
+		)
+	);
 }
 
 /**
@@ -185,11 +225,13 @@ function filter_to_past( array $candidates, int $limit ): array {
 /**
  * Dates the member has RSVP'd to as attending.
  *
- * @param int $user_id Member to resolve RSVPs for.
+ * @param int      $user_id  Member to resolve RSVPs for.
+ * @param string[] $statuses RSVP statuses to include. Past dates also want
+ *                           the waiting list, for walk-ins checked in there.
  *
- * @return array<int, array{event_id: int, recurrence_id: string}> Unordered.
+ * @return array<int, array{event_id: int, recurrence_id: string, comment_id: int, status: string}> Unordered.
  */
-function get_attending_candidates( int $user_id ): array {
+function get_attending_candidates( int $user_id, array $statuses = array( 'attending' ) ): array {
 	/*
 	 * Uncapped, deliberately. A cap here is not a cap on the list -- it is a
 	 * cap on the *candidates*, applied before anything knows which of them are
@@ -229,10 +271,11 @@ function get_attending_candidates( int $user_id ): array {
 		return array();
 	}
 
-	// Filter to attending RSVPs without re-querying per event.
+	// Filter to the wanted statuses without re-querying per event.
 	$attending = array();
+	$status_of = array();
 	foreach ( $rsvp_terms as $rsvp_term ) {
-		if ( 'attending' !== $rsvp_term->slug ) {
+		if ( ! in_array( $rsvp_term->slug, $statuses, true ) ) {
 			continue;
 		}
 
@@ -241,6 +284,7 @@ function get_attending_candidates( int $user_id ): array {
 
 		if ( $event_id ) {
 			$attending[ $comment_id ] = $event_id;
+			$status_of[ $comment_id ] = $rsvp_term->slug;
 		}
 	}
 
@@ -251,6 +295,8 @@ function get_attending_candidates( int $user_id ): array {
 		$candidates[] = array(
 			'event_id'      => $event_id,
 			'recurrence_id' => $recurrence_ids[ $comment_id ] ?? '',
+			'comment_id'    => $comment_id,
+			'status'        => $status_of[ $comment_id ],
 		);
 	}
 

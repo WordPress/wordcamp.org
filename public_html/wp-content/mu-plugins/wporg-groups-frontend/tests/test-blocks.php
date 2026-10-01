@@ -12,10 +12,13 @@ require_once __DIR__ . '/class-groups-testcase.php';
 class Test_Groups_Blocks extends Groups_TestCase {
 
 	const EXPECTED_BLOCKS = array(
+		'wporg/event-flyer-link',
+		'wporg/event-flyer-qr',
 		'wporg/event-language',
 		'wporg/event-manage',
 		'wporg/event-rsvp',
 		'wporg/event-speakers',
+		'wporg/event-topics',
 		'wporg/group-members',
 		'wporg/group-membership',
 		'wporg/group-location',
@@ -27,7 +30,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 12 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 15 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's

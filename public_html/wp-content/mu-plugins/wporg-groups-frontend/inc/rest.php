@@ -62,6 +62,9 @@ use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Topics\get_event_topics;
+use function WordCamp\Groups\Frontend\Event_Topics\get_suggestions as get_topic_suggestions;
+use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
 use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize as canonicalize_timezone;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
@@ -798,6 +801,14 @@ function event_args_schema(): array {
 			'default'           => '',
 			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Language\\sanitize_code',
 		),
+		// Topic names, free-form. No `default`, for the same reason the
+		// questions below have none: an absent parameter leaves the event's
+		// topics alone. `set_event_topics()` trims, dedupes and caps them.
+		'topics'            => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array( 'type' => 'string' ),
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -834,6 +845,20 @@ function maybe_save_rsvp_questions( int $event_id, WP_REST_Request $request ): v
 
 	if ( is_array( $questions ) ) {
 		save_questions( $event_id, $questions );
+	}
+}
+
+/**
+ * Write the event's topics, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_topics( int $event_id, WP_REST_Request $request ): void {
+	$topics = $request->get_param( 'topics' );
+
+	if ( is_array( $topics ) ) {
+		set_event_topics( $event_id, $topics );
 	}
 }
 
@@ -893,6 +918,10 @@ function get_existing_event_fields( int $event_id ): array {
 	// prefilling it would turn "unset" into a value the organizer never
 	// chose on the next save.
 	$fields['language'] = get_event_language( $event_id );
+
+	// Carried into a new event started from this one too, like the venue:
+	// a group's recurring talk night is usually about the same things.
+	$fields['topics'] = get_event_topics( $event_id );
 
 	$thumb_id = (int) get_post_thumbnail_id( $event_id );
 	if ( $thumb_id ) {
@@ -1021,6 +1050,7 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
 	$fields['rsvp_questions']     = $fields['rsvp_questions'] ?? array();
+	$fields['topics']             = $fields['topics'] ?? array();
 
 	/**
 	 * Filters the fields returned to the frontend event form.
@@ -1073,6 +1103,9 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 				array_keys( get_language_options() ),
 				array_values( get_language_options() )
 			),
+			// The topics the group already uses, so organizers pick an
+			// existing one rather than coining a near-duplicate.
+			'topics'     => get_topic_suggestions(),
 		)
 	);
 }
@@ -1195,6 +1228,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	);
 
 	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
+	maybe_save_topics( $saved_id, $request );
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -1403,6 +1437,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
 
 	set_event_language( $saved_id, $fields['language'] );
+	maybe_save_topics( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

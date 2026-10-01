@@ -399,6 +399,24 @@ function add_local_navigation_menus( $menus ) {
 	);
 
 	/*
+	 * The member list is otherwise reachable only through the small member
+	 * count under the group's title, which testers found too easy to miss
+	 * (#2037). The list is public, so the item is the same for every visitor
+	 * and safe on cached views. It needs the published `members` page that
+	 * provisioning creates, since `page-members.html` only resolves there;
+	 * the item is left out where that page is missing rather than linking
+	 * to a 404. The URL is relative so the navigation extension resolves it
+	 * to the page and marks the item current on the member list.
+	 */
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$items[] = array(
+			'label' => __( 'Members', 'wordcamporg' ),
+			'url'   => '/members/',
+		);
+	}
+
+	/*
 	 * A direct route to the member's own events (#2060), which otherwise have
 	 * to be found by scrolling the group's front page. The destination is the
 	 * `wporg/my-events` section on that page rather than a page of its own,
@@ -484,6 +502,12 @@ add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadc
  * `gatherpress_event` / `gatherpress_venue` post picks up `single-event` /
  * `single-venue` without anyone having to set it by hand.
  *
+ * An event's printable flyer (`…/flyer/`, routed by `wporg-groups-frontend`)
+ * is the same singular request, so it goes ahead of everything else,
+ * including a template picked for that one event. It isn't listed in
+ * `customTemplates`: it only makes sense as the flyer, never as an event's
+ * page.
+ *
  * Note: the archive template uses the standard slug `archive-gatherpress_event`
  * which WordPress resolves automatically for block themes.
  */
@@ -491,6 +515,13 @@ function single_template_hierarchy( $templates ) {
 	$post_type = get_post_type();
 	if ( 'gatherpress_event' === $post_type ) {
 		array_unshift( $templates, 'single-event' );
+
+		if (
+			function_exists( '\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request' ) &&
+			\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request()
+		) {
+			array_unshift( $templates, 'single-event-flyer' );
+		}
 	} elseif ( 'gatherpress_venue' === $post_type ) {
 		array_unshift( $templates, 'single-venue' );
 	}

@@ -25,7 +25,9 @@ test.describe( 'event form edit mode', () => {
 	 * @return {Promise<Object>} The event's `meta`.
 	 */
 	async function fetchMeta( page, slug ) {
-		const response = await page.request.get( `wp-json/wp/v2/gatherpress_events?slug=${ slug }&_fields=meta` );
+		// `_event_speakers` is exposed only in the edit context; the logged-in
+		// organiser can read it there, the same context the event form uses.
+		const response = await page.request.get( `wp-json/wp/v2/gatherpress_events?slug=${ slug }&context=edit&_fields=meta` );
 		expect( response.ok() ).toBe( true );
 		const [ event ] = await response.json();
 		return event.meta;

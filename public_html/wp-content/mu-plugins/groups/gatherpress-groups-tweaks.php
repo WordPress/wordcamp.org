@@ -1032,14 +1032,14 @@ add_filter(
  * whole block output (priority 5, before the append filter above) also stops
  * that filter adding the description and access notes.
  *
- * @param string    $content  Rendered block content.
- * @param array     $block    Parsed block (unused).
- * @param \WP_Block $instance Block instance, carrying the `postId` context.
+ * @param string         $content  Rendered block content.
+ * @param array          $block    Parsed block (unused).
+ * @param \WP_Block|null $instance Block instance, carrying the `postId` context, or null when the filter is applied without one.
  *
  * @return string The content, or an empty string for a protected event.
  */
-function hide_venue_block_for_protected_event( string $content, array $block, \WP_Block $instance ): string {
-	$event_id = $instance->context['postId'] ?? get_the_ID();
+function hide_venue_block_for_protected_event( string $content, array $block = array(), ?\WP_Block $instance = null ): string {
+	$event_id = $instance?->context['postId'] ?? get_the_ID();
 
 	if ( $event_id && post_password_required( $event_id ) ) {
 		return '';

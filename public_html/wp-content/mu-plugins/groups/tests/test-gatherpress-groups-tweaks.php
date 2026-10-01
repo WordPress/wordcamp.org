@@ -1175,7 +1175,12 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 */
 	public function test_venue_block_is_hidden_for_a_password_protected_event() {
 		$event_id = $this->create_event_with_venue();
-		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
 
 		wp_set_current_user( 0 );
 
@@ -1196,13 +1201,18 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
 	 * The REST item for a password-protected event names neither its venue nor
-	 * its speakers to a caller who cannot edit it, but an editor still gets
-	 * both so the event form keeps working.
+	 * its speakers to a caller who cannot edit it, but someone who can edit it
+	 * still gets both so the event form keeps working.
 	 */
 	public function test_rest_item_hides_venue_and_speakers_for_protected_event() {
 		$event_id = $this->create_event_with_venue();
 		update_post_meta( $event_id, '_event_speakers', array( 101, 102 ) );
-		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
 
 		// Anonymous: both are stripped.
 		wp_set_current_user( 0 );
@@ -1221,10 +1231,12 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$this->assertEmpty( $venue_classes, 'The venue term class leaked in class_list.' );
 		}
 
-		// An editor still receives both, so editing the event does not clear them.
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		// Someone who can edit the event still receives both, so editing it
+		// does not clear them.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$data = $this->rest_event_item( $event_id );
 
+		$this->assertArrayHasKey( '_event_speakers', $data['meta'] );
 		$this->assertSame( array( 101, 102 ), $data['meta']['_event_speakers'] );
 		$this->assertNotEmpty( $data['_gatherpress_venue'] );
 	}
@@ -1242,16 +1254,27 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		register_post_meta(
 			'gatherpress_event',
 			'_test_meta_link_url',
-			array( 'type' => 'string', 'single' => true, 'show_in_rest' => true )
+			array(
+				'type'         => 'string',
+				'single'       => true,
+				'show_in_rest' => true,
+			)
 		);
 
 		$event_id = $this->create_event_with_venue();
 		update_post_meta( $event_id, '_test_meta_link_url', 'https://example.org/slides' );
 
-		$block      = (object) array(
-			'context' => array( 'postId' => $event_id, 'postType' => 'gatherpress_event' ),
+		$block = (object) array(
+			'context' => array(
+				'postId'   => $event_id,
+				'postType' => 'gatherpress_event',
+			),
 		);
-		$attributes = array( 'key' => '_test_meta_link_url', 'text' => 'View slides' );
+
+		$attributes = array(
+			'key'  => '_test_meta_link_url',
+			'text' => 'View slides',
+		);
 
 		wp_set_current_user( 0 );
 
@@ -1262,7 +1285,12 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		);
 
 		// Password-protected: nothing.
-		wp_update_post( array( 'ID' => $event_id, 'post_password' => 'secret-pass' ) );
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
 		$this->assertSame( '', \WordCamp\Blocks\MetaLink\render( $attributes, '', $block ) );
 	}
 

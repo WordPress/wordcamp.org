@@ -22,6 +22,11 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 	protected static $organizer_id;
 
 	/**
+	 * @var WordCamp_Coming_Soon_Page
+	 */
+	protected static $plugin;
+
+	/**
 	 * Set up shared fixtures.
 	 */
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ): void {
@@ -33,6 +38,10 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 				'post_name'   => 'secret-organizer-name',
 			)
 		);
+
+		// The plugin's bootstrap global is not populated in the test suite, so
+		// instantiate it once here (the class itself is loaded).
+		self::$plugin = new WordCamp_Coming_Soon_Page();
 	}
 
 	/**
@@ -62,10 +71,9 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 
 		wp_set_current_user( 0 );
 
-		$plugin = $GLOBALS['WordCamp_Coming_Soon_Page'];
-		$plugin->init();
+		self::$plugin->init();
 
-		return $plugin;
+		return self::$plugin;
 	}
 
 	/**

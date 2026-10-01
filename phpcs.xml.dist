@@ -127,6 +127,8 @@
 		<exclude name="WordPress.Arrays.ArrayDeclarationSpacing.ArrayItemNoNewLine" />
 		<exclude name="PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket" />
 		<exclude name="PEAR.Functions.FunctionCallSignature.CloseBracketLine" />
+		<exclude name="Squiz.Functions.MultiLineFunctionDeclaration.SpaceAfterFunction" />
+		<exclude name="PEAR.Functions.FunctionCallSignature.MultipleArguments" />
 
 		<!-- Exclude short array syntax as it is consistently already in the codebase :) -->
 		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>

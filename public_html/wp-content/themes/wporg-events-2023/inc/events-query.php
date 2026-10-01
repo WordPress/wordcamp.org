@@ -10,6 +10,7 @@ defined( 'WPINC' ) || die();
 // This intentionally doesn't have the starting/ending delimiters and flags, so that it can be used with
 // `add_rewrite_rule()`.
 const FILTERED_URL_PATTERN       = '([\w-]+)/filtered/(.+)';
+const FILTERED_URL_PATTERN_FEED  = FILTERED_URL_PATTERN . '/feed/?';
 const PRETTY_URL_VALUE_DELIMITER = '-';
 
 // Misc.
@@ -21,6 +22,7 @@ add_action( 'init', __NAMESPACE__ . '\add_rewrite_rules' );
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 add_action( 'parse_request', __NAMESPACE__ . '\set_query_vars_from_pretty_url' );
 add_action( 'wp', __NAMESPACE__ . '\redirect_to_pretty_query_vars' );
+add_action( 'parse_query', __NAMESPACE__ . '\feed_parse_query' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 add_filter( 'document_title_parts', __NAMESPACE__ . '\add_filters_to_page_title' );
 add_filter( 'wporg_query_total_label', __NAMESPACE__ . '\update_query_total_label', 10, 3 );
@@ -62,8 +64,13 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 
 	global $wp;
 
-	$posts  = array();
-	$facets = get_query_var_facets();
+	$posts           = array();
+	$facets          = get_query_var_facets();
+	$facets['limit'] = $query->get( 'posts_per_page' );
+	if ( is_feed() ) {
+		$facets['include_description'] = true;
+	}
+
 	$events = Google_Map\get_events( 'all-upcoming', 0, 0, $facets );
 
 	// Simulate an ID that won't collide with a real post.
@@ -87,6 +94,13 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 			'post_name'      => 'wporg-event-' . $event->id,
 			'guid'           => $event->url,
 			'post_type'      => 'wporg_event',
+
+			// For feeds.
+			'post_date'         => gmdate( 'Y-m-d H:i:s', $event->timestamp + $event->tz_offset ),
+			'post_date_gmt'     => gmdate( 'Y-m-d H:i:s', $event->timestamp ),
+			'post_content'      => wp_kses_post( $event->description ?? '' ),
+			'comment_status'    => 'closed',
+			'comment_count'     => 0,
 
 			// This makes Core create a new post object, rather than trying to get an instance.
 			// See https://github.com/WordPress/WordPress/blob/7926dbb4d5392c870ccbc3ec6019c002feed904c/wp-includes/post.php#L1030-L1033.
@@ -193,6 +207,7 @@ function add_rewrite_rules(): void {
 	// predictable. Instead, this just matches all the facets into a single var, and they'll be parsed out of that
 	// into individual facets later.
 	// @see set_query_vars_from_pretty_url().
+	add_rewrite_rule( FILTERED_URL_PATTERN_FEED, 'index.php?pagename=$matches[1]&event_facets=$matches[2]&feed=feed', 'top' );
 	add_rewrite_rule( FILTERED_URL_PATTERN, 'index.php?pagename=$matches[1]&event_facets=$matches[2]', 'top' );
 }
 
@@ -220,7 +235,7 @@ function add_query_vars( array $query_vars ): array {
  * @see add_rewrite_rules()
  * @see add_query_vars()
  */
-function set_query_vars_from_pretty_url( WP $wp ): void {
+function set_query_vars_from_pretty_url( WP|WP_Query $wp ): void {
 	$facets = get_query_var_facets();
 
 	foreach ( $facets as $key => $value ) {
@@ -291,6 +306,72 @@ function sort_facets( array $facets ): array {
 	);
 
 	return $facets;
+}
+
+/**
+ * Adjust the query for feeds on the upcoming-events page.
+ *
+ * @param WP_Query $wp_query The WP_Query instance.
+ */
+function feed_parse_query( $wp_query ) {
+	global $wp;
+
+	if (
+		'upcoming-events' !== $wp_query->get( 'pagename' ) ||
+		! $wp_query->is_feed()
+	) {
+		return;
+	}
+
+	// Fix the feed link to use the correct URL.
+	$pagelink = home_url( preg_replace( '#/feed/?$#i', '/', $wp->request ) );
+	add_filter( 'bloginfo_rss', function( $value, $show ) use ( $pagelink ) {
+		if ( 'url' === $show ) {
+			return $pagelink;
+		}
+
+		return $value;
+	}, 10, 2 );
+
+	// The feed is built now.
+	add_filter( 'get_feed_build_date', function() {
+		return gmdate( 'r' );
+	} );
+
+	// Query for events.
+	$wp_query->parse_query( [
+		'post_type'      => 'wporg_events',
+		'feed'           => $wp_query->get( 'feed' ),
+		'posts_per_page' => 50,
+		'posts_per_rss'  => 50,
+	] );
+
+	// Permalinks should use the Guid.
+	add_filter( 'the_permalink_rss', function () {
+		return get_post()->guid;
+	} );
+
+	// Set the author to the meetup group.
+	add_filter( 'the_author', function () {
+		return get_post()->meetup;
+	} );
+
+	// Body should be prefixed with Location & Time. RSS Dates can't be in the future.
+	add_filter( 'the_content_feed', function ( $content ) {
+		$event = get_post();
+		$time  = gmdate( 'F j, Y g:ia', strtotime( $event->post_date ) ); // This is not in UTC, but the timestamps is.
+
+		$prefix = sprintf(
+			'<p><strong>Location:</strong> %s<br/><strong>Time:</strong> %s</p>',
+			$event->location,
+			$time
+		);
+
+		return $prefix . $content;
+	} );
+
+	// Body doesn't need to staticize the emojis.
+	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
 }
 
 /**

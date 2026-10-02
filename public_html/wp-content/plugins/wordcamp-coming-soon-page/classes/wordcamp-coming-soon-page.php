@@ -54,13 +54,22 @@ class WordCamp_Coming_Soon_Page {
 	 * while the placeholder is active, so its permalink is not disclosed.
 	 */
 	protected function suppress_identifying_links() {
-		remove_action( 'wp_head', 'rel_canonical' );
-		remove_action( 'wp_head', 'wp_shortlink_wp_head' );
-		remove_action( 'wp_head', 'wp_oembed_add_discovery_links' );
-		remove_action( 'wp_head', 'rest_output_link_wp_head' );
-		remove_action( 'template_redirect', 'rest_output_link_header', 11 );
-		remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
-		remove_action( 'template_redirect', 'wp_old_slug_redirect' );
+		$actions = array(
+			'wp_head'           => array( 'rel_canonical', 'wp_shortlink_wp_head', 'wp_oembed_add_discovery_links', 'rest_output_link_wp_head' ),
+			'template_redirect' => array( 'rest_output_link_header', 'wp_shortlink_header', 'wp_old_slug_redirect' ),
+		);
+
+		foreach ( $actions as $hook => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				// Remove at whatever priority core registered the callback,
+				// rather than assuming the default.
+				$priority = has_action( $hook, $callback );
+
+				if ( false !== $priority ) {
+					remove_action( $hook, $callback, $priority );
+				}
+			}
+		}
 	}
 
 	/**

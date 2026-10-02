@@ -164,6 +164,18 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 	 * site name while active, not just the callback in isolation.
 	 */
 	public function test_document_title_through_the_real_path() {
+		$settings            = get_option( 'wccsp_settings' );
+		$settings            = is_array( $settings ) ? $settings : array();
+		$settings['enabled'] = 'on';
+		update_option( 'wccsp_settings', $settings );
+		wp_set_current_user( 0 );
+
+		// A fresh instance registers the plugin's filters in the current hook
+		// state, so this exercises the real `pre_get_document_title` wiring and
+		// would fail if that `add_filter()` were missing or wrong.
+		$plugin = new WordCamp_Coming_Soon_Page();
+		$plugin->init();
+
 		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
 		global $wp_query, $post;
 		$original_query = $wp_query;
@@ -178,7 +190,6 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 		$wp_query->the_post();
 		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 
-		$this->set_coming_soon( 'on' );
 		$title = wp_get_document_title();
 
 		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -187,12 +198,14 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 		$post     = $original_post;
 		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 
+		remove_filter( 'pre_get_document_title', array( $plugin, 'force_placeholder_document_title' ) );
+
 		$this->assertSame( get_bloginfo( 'name' ), $title );
 	}
 
 	/**
 	 * While active, the head tags, headers and slug redirects that name the
-	 * real post are unhooked.
+	 * real post are unhooked, whatever priority core registered them at.
 	 */
 	public function test_identifying_links_are_unhooked_while_active() {
 		$hooks = array(
@@ -201,11 +214,11 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 			array( 'template_redirect', 'wp_old_slug_redirect' ),
 		);
 
-		// Normalise to exactly one registration each, so the assertions reflect
-		// this plugin's removal rather than leftover state from another test.
+		// Make sure each is present before asserting the placeholder removes it.
 		foreach ( $hooks as $hook ) {
-			remove_action( $hook[0], $hook[1] );
-			add_action( $hook[0], $hook[1] );
+			if ( false === has_action( $hook[0], $hook[1] ) ) {
+				add_action( $hook[0], $hook[1] );
+			}
 		}
 
 		$this->set_coming_soon( 'on' );

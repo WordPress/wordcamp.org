@@ -940,14 +940,16 @@ add_action(
  * filter adds the venue post content (description) and the
  * accessRequirements field from the venue information meta.
  *
- * Priority 20: GatherPress\Core\Blocks\Venue::render_block() hooks this same
- * filter at the default priority 10 and rebuilds $content from scratch
- * (ignoring whatever was passed in), discarding anything appended by a
- * same-priority callback registered earlier. Because mu-plugins load before
- * regular plugins, our default-priority add_filter() call was always first
- * in the queue, so GatherPress's callback ran after us and silently dropped
- * this append. Running after it (priority 20) is the only way our content
- * survives.
+ * Priority 20 so this runs after the password gate at priority 5
+ * ({@see hide_venue_block_for_protected_event()}): for a protected event the
+ * gate has already blanked $content, and the empty-content guard below then
+ * bails rather than stranding the description under a withheld venue.
+ *
+ * GatherPress 0.35.x renders the venue block through its `render.php`
+ * render_callback, which runs before any `render_block` filter, and registers
+ * no `render_block_gatherpress/venue` callback of its own. So nothing competes
+ * for this filter or rebuilds $content after us; the content we append to is
+ * what render.php produced.
  */
 add_filter(
 	'render_block_gatherpress/venue',
@@ -1016,6 +1018,35 @@ add_filter(
 );
 
 /**
+ * Hide a venue block when the event that hosts it is password-protected.
+ *
+ * The venue is part of the event, so it must follow the event's password
+ * wherever the block renders — the event's own page (including the sidebar
+ * details card), a list card, or a home-page card. This runs at render time,
+ * where the hosting event is reliably known: GatherPress passes it as the
+ * block's `postId` context, and the current post is it otherwise. Blanking the
+ * whole block output (priority 5, before the append filter above) also stops
+ * that filter adding the description and access notes.
+ *
+ * @param string         $content  Rendered block content.
+ * @param array          $block    Parsed block (unused).
+ * @param \WP_Block|null $instance Block instance, carrying the `postId` context, or null when the filter is applied without one.
+ *
+ * @return string The content, or an empty string for a protected event.
+ */
+function hide_venue_block_for_protected_event( string $content, array $block = array(), ?\WP_Block $instance = null ): string {
+	$event_id = $instance?->context['postId'] ?? get_the_ID();
+
+	if ( $event_id && post_password_required( $event_id ) ) {
+		return '';
+	}
+
+	return $content;
+}
+
+add_filter( 'render_block_gatherpress/venue', __NAMESPACE__ . '\hide_venue_block_for_protected_event', 5, 3 );
+
+/**
  * Make the gatherpress_venue post type non-public so it has no front-end
  * archive or singular URLs. Venues are only used as metadata on events.
  */
@@ -1026,6 +1057,32 @@ add_filter(
 			$args['public']             = false;
 			$args['publicly_queryable'] = false;
 			$args['has_archive']        = false;
+		}
+
+		return $args;
+	},
+	10,
+	2
+);
+
+/**
+ * Make the `_gatherpress_venue` taxonomy non-public, like the venue post type.
+ *
+ * Otherwise its front-end archive (`?_gatherpress_venue=<slug>` or
+ * `/venue/<slug>/`) lists every event with that venue — including
+ * password-protected ones — under the venue's name, naming the venue the
+ * password exists to withhold. The taxonomy only links events to venues
+ * internally and is never meant to be browsed, so drop its public query var
+ * and rewrite. `show_in_rest` stays on (the REST surfaces are gated above), and
+ * internal term lookups are unaffected.
+ */
+add_filter(
+	'register_taxonomy_args',
+	static function ( array $args, string $taxonomy ): array {
+		if ( '_gatherpress_venue' === $taxonomy ) {
+			$args['publicly_queryable'] = false;
+			$args['query_var']          = false;
+			$args['rewrite']            = false;
 		}
 
 		return $args;
@@ -1077,6 +1134,11 @@ function open_venue_block_visibility( $pre, array $parsed_block ) {
 	// A non-null $pre means an earlier callback short-circuited the render,
 	// so `render_block_gatherpress/venue` never fires and the override would
 	// have nothing to close it.
+	//
+	// This only makes the venue type viewable so GatherPress will render the
+	// block at all; the post-password gate lives in the render filter below
+	// ({@see hide_venue_block_for_protected_event()}), which blanks the block
+	// for a protected event wherever it appears.
 	if ( is_null( $pre ) && 'gatherpress/venue' === ( $parsed_block['blockName'] ?? '' ) ) {
 		add_filter( 'is_post_type_viewable', __NAMESPACE__ . '\treat_venue_post_type_as_viewable', 10, 2 );
 	}
@@ -1175,6 +1237,209 @@ add_filter(
 		return $endpoints;
 	}
 );
+
+/**
+ * Keep a password-protected event's venue and speakers out of its REST item.
+ *
+ * The event page hides these behind the password, but the REST response still
+ * named them: the `_gatherpress_venue` term, the venue's entry in `class_list`
+ * (which spells out the venue slug), the venue term link, and the
+ * `_event_speakers` roster meta. Strip them while the event requires its
+ * password for a caller who cannot edit it, the same way core blanks the
+ * protected content; an editor (the event form) still gets them, and a public
+ * event is untouched.
+ *
+ * @param \WP_REST_Response $response The response object.
+ * @param \WP_Post          $post     The event being prepared.
+ *
+ * @return \WP_REST_Response The response, with the details removed when gated.
+ */
+function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
+	if ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) ) {
+		return $response;
+	}
+
+	$data = $response->get_data();
+
+	unset( $data['_gatherpress_venue'], $data['meta']['_event_speakers'] );
+
+	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
+		$data['class_list'] = array_values(
+			array_filter(
+				$data['class_list'],
+				static function ( string $class ): bool {
+					return ! str_starts_with( $class, '_gatherpress_venue-' );
+				}
+			)
+		);
+	}
+
+	$response->set_data( $data );
+
+	// Drop the venue term link while leaving other taxonomies' links in place.
+	foreach ( $response->get_links()['https://api.w.org/term'] ?? array() as $link ) {
+		if ( '_gatherpress_venue' === ( $link['attributes']['taxonomy'] ?? '' ) ) {
+			$response->remove_link( 'https://api.w.org/term', $link['href'] );
+		}
+	}
+
+	return $response;
+}
+
+add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 10, 2 );
+
+/**
+ * Strip the venue term class from a password-protected event's markup.
+ *
+ * `post_class()` adds a `_gatherpress_venue-<slug>` class to the event's card
+ * in list and archive markup, naming the venue in the HTML even when the venue
+ * block itself is gated. Remove it so the card follows the password like the
+ * REST `class_list` does.
+ *
+ * @param string[] $classes The post classes.
+ * @param string[] $css_class Additional classes passed to get_post_class() (unused).
+ * @param int      $post_id The post the classes are for.
+ *
+ * @return string[] The classes, without the venue term class when gated.
+ */
+function hide_venue_class_for_protected_event( array $classes, $css_class, $post_id ): array {
+	if ( 'gatherpress_event' !== get_post_type( $post_id ) || ! post_password_required( $post_id ) ) {
+		return $classes;
+	}
+
+	return array_values(
+		array_filter(
+			$classes,
+			static function ( string $class ): bool {
+				return ! str_starts_with( $class, '_gatherpress_venue-' );
+			}
+		)
+	);
+}
+
+add_filter( 'post_class', __NAMESPACE__ . '\hide_venue_class_for_protected_event', 10, 3 );
+
+/**
+ * Keep password-protected events out of venue-filtered event queries.
+ *
+ * `GET /wp/v2/gatherpress_events?_gatherpress_venue[_exclude]=<term>` otherwise
+ * returns (or omits) a protected event by its venue, naming the venue it uses.
+ * For a caller who cannot read private events, drop password-protected events
+ * from the result whenever the query filters by venue — include or exclude —
+ * the same way the session collection drops them.
+ *
+ * @param array            $args    WP_Query args.
+ * @param \WP_REST_Request $request The REST request.
+ *
+ * @return array The query args.
+ */
+function hide_protected_events_in_venue_filter( array $args, \WP_REST_Request $request ): array {
+	// Both the include and exclude venue params narrow the result by venue, so
+	// either one reveals a protected event's venue (excluding a venue leaves
+	// the event in or out depending on whether it uses that venue).
+	if ( empty( $request['_gatherpress_venue'] ) && empty( $request['_gatherpress_venue_exclude'] ) ) {
+		return $args;
+	}
+
+	$post_type = get_post_type_object( 'gatherpress_event' );
+
+	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
+		return $args;
+	}
+
+	$args['has_password'] = false;
+
+	return $args;
+}
+
+add_filter( 'rest_gatherpress_event_query', __NAMESPACE__ . '\hide_protected_events_in_venue_filter', 10, 2 );
+
+/**
+ * Do not reveal a password-protected event's venue through the terms route.
+ *
+ * `GET /wp/v2/_gatherpress_venue?post=<id>` returns the venue term assigned to
+ * a post. Drop any requested event that requires its password from a caller
+ * who cannot edit it, so the route returns no venue for a protected event.
+ *
+ * @param array            $args    WP_Term_Query args.
+ * @param \WP_REST_Request $request The REST request.
+ *
+ * @return array The term query args.
+ */
+function hide_venue_terms_for_protected_event( array $args, \WP_REST_Request $request ): array {
+	if ( empty( $args['post'] ) ) {
+		return $args;
+	}
+
+	$visible = array_filter(
+		(array) $args['post'],
+		static function ( $post_id ): bool {
+			return ! post_password_required( (int) $post_id ) || current_user_can( 'edit_post', (int) $post_id );
+		}
+	);
+
+	// `array( 0 )` matches no post, so a request for only gated events returns
+	// no terms rather than the event's venue.
+	$args['post'] = $visible ? array_values( $visible ) : array( 0 );
+
+	return $args;
+}
+
+add_filter( 'rest__gatherpress_venue_query', __NAMESPACE__ . '\hide_venue_terms_for_protected_event', 10, 2 );
+
+/**
+ * Keep a password-protected event's venue out of its RSS feed item.
+ *
+ * GatherPress builds the event feed excerpt and content at priority 10 and
+ * appends the venue name to the metadata line with no password check
+ * ({@see \GatherPress\Core\Feed::get_default_event_excerpt()} and
+ * `get_default_event_content()`). Running later (priority 20), strip the venue
+ * segment for a protected event so the feed follows the password like the page
+ * does. This is coupled to GatherPress's feed markup on purpose; if that markup
+ * changes the venue simply stays, it is never newly exposed.
+ *
+ * @param string $text The feed excerpt or content GatherPress built.
+ *
+ * @return string The text with the venue segment removed for a protected event.
+ */
+function hide_venue_in_protected_event_feed( string $text ): string {
+	$event_id = get_the_ID();
+
+	if ( ! $event_id || ! post_password_required( $event_id ) ) {
+		return $text;
+	}
+
+	if ( ! class_exists( '\GatherPress\Core\Venue' ) || ! class_exists( '\GatherPress\Core\Utility' ) ) {
+		return $text;
+	}
+
+	$label = \GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue::POST_TYPE );
+
+	if ( ! $label ) {
+		return $text;
+	}
+
+	$label  = preg_quote( $label, '/' );
+	$marker = $label . ':\s*[^<|]*';
+
+	// The venue is the last ` | `-joined token inside the metadata `<strong>`,
+	// so it sits just before the closing tag. Remove it with its separator, or
+	// on its own when it is the only token.
+	$patterns = array(
+		'/\s*\|\s*' . $marker . '(<\/strong>)/' => '$1',
+		'/(<strong>)' . $marker . '\s*\|\s*/'   => '$1',
+		'/(<strong>)' . $marker . '(<\/strong>)/' => '$1$2',
+	);
+
+	foreach ( $patterns as $pattern => $replacement ) {
+		$text = preg_replace( $pattern, $replacement, $text, 1 );
+	}
+
+	return $text;
+}
+
+add_filter( 'gatherpress_event_feed_excerpt', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
+add_filter( 'gatherpress_event_feed_content', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
 
 /**
  * Generate venue static maps in the background instead of during the save.

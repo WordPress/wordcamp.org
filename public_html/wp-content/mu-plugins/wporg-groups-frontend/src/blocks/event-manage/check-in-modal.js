@@ -164,7 +164,10 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 						variant: 'secondary',
 						label: __( 'One fewer walk-in', 'wordcamporg' ),
 						onClick: () => changeWalkIns( -1 ),
+						// Stay focusable while saving, so a keyboard user pressing
+						// again isn't dropped back to the page.
 						disabled: savingWalkIns || 0 === count,
+						accessibleWhenDisabled: true,
 						__next40pxDefaultSize: true,
 					},
 					'\u2212'
@@ -177,6 +180,7 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 						label: __( 'One more walk-in', 'wordcamporg' ),
 						onClick: () => changeWalkIns( 1 ),
 						disabled: savingWalkIns,
+						accessibleWhenDisabled: true,
 						isBusy: savingWalkIns,
 						__next40pxDefaultSize: true,
 					},

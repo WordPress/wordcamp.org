@@ -940,14 +940,16 @@ add_action(
  * filter adds the venue post content (description) and the
  * accessRequirements field from the venue information meta.
  *
- * Priority 20: GatherPress\Core\Blocks\Venue::render_block() hooks this same
- * filter at the default priority 10 and rebuilds $content from scratch
- * (ignoring whatever was passed in), discarding anything appended by a
- * same-priority callback registered earlier. Because mu-plugins load before
- * regular plugins, our default-priority add_filter() call was always first
- * in the queue, so GatherPress's callback ran after us and silently dropped
- * this append. Running after it (priority 20) is the only way our content
- * survives.
+ * Priority 20 so this runs after the password gate at priority 5
+ * ({@see hide_venue_block_for_protected_event()}): for a protected event the
+ * gate has already blanked $content, and the empty-content guard below then
+ * bails rather than stranding the description under a withheld venue.
+ *
+ * GatherPress 0.35.x renders the venue block through its `render.php`
+ * render_callback, which runs before any `render_block` filter, and registers
+ * no `render_block_gatherpress/venue` callback of its own. So nothing competes
+ * for this filter or rebuilds $content after us; the content we append to is
+ * what render.php produced.
  */
 add_filter(
 	'render_block_gatherpress/venue',

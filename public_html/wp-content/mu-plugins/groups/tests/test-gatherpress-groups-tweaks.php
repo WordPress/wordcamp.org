@@ -1409,6 +1409,43 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * The protection callbacks are hooked to the filters that actually fire.
+	 *
+	 * The behavioural tests above call each callback directly, so they would
+	 * stay green even if a registration named the wrong hook. Assert the wiring
+	 * so a typo in a hook name cannot pass unnoticed.
+	 */
+	public function test_protection_callbacks_are_hooked() {
+		$ns = 'WordCamp\Groups\GatherPress_Tweaks\\';
+
+		$this->assertSame(
+			5,
+			has_filter( 'render_block_gatherpress/venue', $ns . 'hide_venue_block_for_protected_event' ),
+			'The venue render gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest_prepare_gatherpress_event', $ns . 'hide_event_details_in_rest' ),
+			'The REST item gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'post_class', $ns . 'hide_venue_class_for_protected_event' ),
+			'The venue class gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest_gatherpress_event_query', $ns . 'hide_protected_events_in_venue_filter' ),
+			'The venue-filtered events query gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest__gatherpress_venue_query', $ns . 'hide_venue_terms_for_protected_event' ),
+			'The venue terms query gate is not hooked where it fires.'
+		);
+	}
+
+	/**
 	 * Search block on the events archive rewrites form action, removes required,
 	 * adds the event_time hidden input, and marks the form for events search clear.
 	 */

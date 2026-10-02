@@ -61,11 +61,10 @@ class WordCamp_Coming_Soon_Page {
 
 		foreach ( $actions as $hook => $callbacks ) {
 			foreach ( $callbacks as $callback ) {
-				// Remove at whatever priority core registered the callback,
-				// rather than assuming the default.
-				$priority = has_action( $hook, $callback );
-
-				if ( false !== $priority ) {
+				// Remove the callback at every priority it is registered at,
+				// rather than assuming the default — `wp_oembed_add_discovery_links`,
+				// for one, is hooked at both 4 and 10.
+				while ( false !== ( $priority = has_action( $hook, $callback ) ) ) {
 					remove_action( $hook, $callback, $priority );
 				}
 			}

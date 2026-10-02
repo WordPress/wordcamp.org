@@ -1409,6 +1409,35 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Once anyone is checked in on a past event, "Attended" lists only the
+	 * people checked in, so the no-shows aren't credited.
+	 */
+	public function test_event_attendees_follows_check_ins_on_past_events() {
+		$event_id = $this->create_event_with_attendees( 3 );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$records = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->responses()['attending']['records'];
+		$came    = $records[1]['name'];
+		\WordCamp\Groups\Frontend\Check_In\set_checked_in( get_comment( (int) $records[1]['commentId'] ), true );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Attended (1)', $output );
+		$this->assertSame( 1, substr_count( $output, 'class="wporg-event-attendees__item"' ) );
+		$this->assertStringContainsString( $came, $output );
+		$this->assertStringNotContainsString( $records[0]['name'], $output );
+	}
+
+	/**
 	 * Past the first 12, attendees move behind a "Show all" disclosure, and
 	 * every attendee is still in the page exactly once.
 	 */

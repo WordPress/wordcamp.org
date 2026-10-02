@@ -43,6 +43,24 @@ class WordCamp_Coming_Soon_Page {
 		$settings                      = $GLOBALS['WCCSP_Settings']->get_settings();
 		$show_page                     = 'on' === $settings['enabled'] && ! current_user_can( 'edit_posts' );
 		$this->override_theme_template = $show_page || $this->is_coming_soon_preview();
+
+		if ( $this->override_theme_template ) {
+			$this->suppress_identifying_links();
+		}
+	}
+
+	/**
+	 * Remove the head tags, headers and slug redirects that name the real post
+	 * while the placeholder is active, so its permalink is not disclosed.
+	 */
+	protected function suppress_identifying_links() {
+		remove_action( 'wp_head', 'rel_canonical' );
+		remove_action( 'wp_head', 'wp_shortlink_wp_head' );
+		remove_action( 'wp_head', 'wp_oembed_add_discovery_links' );
+		remove_action( 'wp_head', 'rest_output_link_wp_head' );
+		remove_action( 'template_redirect', 'rest_output_link_header', 11 );
+		remove_action( 'template_redirect', 'wp_shortlink_header', 11 );
+		remove_action( 'template_redirect', 'wp_old_slug_redirect' );
 	}
 
 	/**
@@ -689,7 +707,16 @@ class WordCamp_Coming_Soon_Page {
 			return $classes;
 		}
 
-		$slug = (string) get_post_field( 'post_name', get_queried_object_id() );
+		$object = get_queried_object();
+		$slug   = '';
+
+		if ( $object instanceof \WP_Post ) {
+			$slug = $object->post_name;
+		} elseif ( $object instanceof \WP_Term ) {
+			$slug = $object->slug;
+		} elseif ( $object instanceof \WP_User ) {
+			$slug = $object->user_nicename;
+		}
 
 		if ( '' === $slug ) {
 			return $classes;

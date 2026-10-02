@@ -158,4 +158,60 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 		$this->assertNotContains( 'wcb_organizer-slug-secret-organizer-name', $filtered );
 		$this->assertContains( 'single', $filtered );
 	}
+
+	/**
+	 * The title filter is wired up: `wp_get_document_title()` itself returns the
+	 * site name while active, not just the callback in isolation.
+	 */
+	public function test_document_title_through_the_real_path() {
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		global $wp_query, $post;
+		$original_query = $wp_query;
+		$original_post  = $post;
+
+		$wp_query = new \WP_Query(
+			array(
+				'p'         => self::$organizer_id,
+				'post_type' => 'wcb_organizer',
+			)
+		);
+		$wp_query->the_post();
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->set_coming_soon( 'on' );
+		$title = wp_get_document_title();
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+		$wp_query = $original_query;
+		$post     = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertSame( get_bloginfo( 'name' ), $title );
+	}
+
+	/**
+	 * While active, the head tags, headers and slug redirects that name the
+	 * real post are unhooked.
+	 */
+	public function test_identifying_links_are_unhooked_while_active() {
+		$hooks = array(
+			array( 'wp_head', 'rel_canonical' ),
+			array( 'wp_head', 'wp_oembed_add_discovery_links' ),
+			array( 'template_redirect', 'wp_old_slug_redirect' ),
+		);
+
+		// Normalise to exactly one registration each, so the assertions reflect
+		// this plugin's removal rather than leftover state from another test.
+		foreach ( $hooks as $hook ) {
+			remove_action( $hook[0], $hook[1] );
+			add_action( $hook[0], $hook[1] );
+		}
+
+		$this->set_coming_soon( 'on' );
+
+		foreach ( $hooks as $hook ) {
+			$this->assertFalse( has_action( $hook[0], $hook[1] ), "{$hook[1]} should be unhooked." );
+		}
+	}
 }

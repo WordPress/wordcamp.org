@@ -13,6 +13,7 @@ use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_REST_Request;
 
 use function WordCamp\Groups\Frontend\Check_In\event_has_check_ins;
+use function WordCamp\Groups\Frontend\Check_In\get_walk_in_count;
 use function WordCamp\Groups\Frontend\Check_In\is_checked_in;
 use function WordCamp\Groups\Frontend\Export\collect_export_data;
 use function WordCamp\Groups\Frontend\My_Events\get_past_events;
@@ -109,6 +110,28 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		$request->set_body_params( array( 'login' => $login ) );
 
 		return rest_do_request( $request );
+	}
+
+	/**
+	 * Dispatch a walk-in count.
+	 *
+	 * @param int        $event_id      Event post ID.
+	 * @param int|string $count         New total.
+	 * @param string     $recurrence_id Date of a series, or `''`.
+	 */
+	private function walk_in_count( int $event_id, $count, string $recurrence_id = '' ): \WP_REST_Response {
+		$request = new WP_REST_Request( 'POST', "/wporg-groups/v1/event/{$event_id}/walk-in-count" );
+		$params  = array( 'count' => $count );
+
+		if ( '' !== $recurrence_id ) {
+			$params['recurrence_id'] = $recurrence_id;
+		}
+
+		$request->set_body_params( $params );
+		$response = rest_do_request( $request );
+		Context::set( null );
+
+		return $response;
 	}
 
 	/**
@@ -538,5 +561,133 @@ class Test_Groups_Check_In extends Groups_TestCase {
 
 		$this->assertNull( $events[ $unchecked_event ]['counts']['checked_in'] );
 		$this->assertSame( array( null ), array_column( $events[ $unchecked_event ]['rsvps'], 'checked_in' ) );
+	}
+
+	/**
+	 * Walk-ins without an account are kept as a number on the event, which
+	 * the list reports alongside the RSVPs (#2138).
+	 */
+	public function test_walk_in_count_is_recorded() {
+		$event_id = $this->create_event();
+		$this->rsvp( $event_id );
+
+		$response = $this->walk_in_count( $event_id, 3 );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 3, get_walk_in_count( $event_id ) );
+		$this->assertSame( 3, $response->get_data()['walkInsWithoutAccount'] );
+		$this->assertSame( 0, $response->get_data()['checkedInCount'] );
+
+		$list = rest_do_request( new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" ) );
+		$this->assertSame( 3, $list->get_data()['walkInsWithoutAccount'] );
+	}
+
+	/**
+	 * The request sets the total, so repeating it doesn't add more people,
+	 * and setting zero clears it.
+	 */
+	public function test_walk_in_count_sets_the_total() {
+		$event_id = $this->create_event();
+
+		$this->walk_in_count( $event_id, 2 );
+		$this->walk_in_count( $event_id, 2 );
+		$this->assertSame( 2, get_walk_in_count( $event_id ) );
+
+		$this->walk_in_count( $event_id, 0 );
+		$this->assertSame( 0, get_walk_in_count( $event_id ) );
+		$this->assertSame( '', get_post_meta( $event_id, 'wporg_groups_walk_ins_without_account', true ) );
+	}
+
+	/**
+	 * Negative, oversized and non-numeric counts are refused.
+	 */
+	public function test_walk_in_count_rejects_bad_values() {
+		$event_id = $this->create_event();
+		$this->walk_in_count( $event_id, 4 );
+
+		foreach ( array( -1, 10000, 'lots' ) as $bad ) {
+			$this->assertSame( 400, $this->walk_in_count( $event_id, $bad )->get_status(), "Accepted {$bad}." );
+		}
+
+		$this->assertSame( 4, get_walk_in_count( $event_id ) );
+	}
+
+	/**
+	 * A count alone doesn't switch the event to check-in: nobody's RSVP was
+	 * marked, so "Events I attended" keeps following RSVPs.
+	 */
+	public function test_walk_in_count_leaves_attended_alone() {
+		$event_id             = $this->create_event();
+		list( $attendee_id, ) = $this->rsvp( $event_id );
+
+		$this->walk_in_count( $event_id, 5 );
+
+		$this->assertFalse( event_has_check_ins( $event_id ) );
+		$this->assertSame( array( $event_id ), array_column( get_past_events( $attendee_id ), 'event_id' ) );
+	}
+
+	/**
+	 * Same open gate as the rest of check-in.
+	 */
+	public function test_walk_in_count_waits_for_check_in_to_open() {
+		$event_id = $this->create_event( '+3 days' );
+
+		$this->assertSame( 400, $this->walk_in_count( $event_id, 1 )->get_status() );
+		$this->assertSame( 0, get_walk_in_count( $event_id ) );
+	}
+
+	/**
+	 * Each date of a series has its own count, and a series request needs
+	 * a date.
+	 */
+	public function test_walk_in_count_is_per_date() {
+		list( $event_id, $past, , $future ) = $this->create_series();
+
+		$this->assertSame( 400, $this->walk_in_count( $event_id, 2 )->get_status() );
+		$this->assertSame( 200, $this->walk_in_count( $event_id, 2, $past->recurrence_id )->get_status() );
+
+		$this->assertSame( 2, get_walk_in_count( $event_id, $past->recurrence_id ) );
+		$this->assertSame( 0, get_walk_in_count( $event_id, $future->recurrence_id ) );
+		$this->assertSame( 0, get_walk_in_count( $event_id ) );
+
+		// The future date isn't open yet.
+		$this->assertSame( 400, $this->walk_in_count( $event_id, 1, $future->recurrence_id )->get_status() );
+	}
+
+	/**
+	 * The export reports the count per event, alongside the check-ins,
+	 * without changing the per-person check-in columns.
+	 */
+	public function test_export_reports_walk_ins_without_account() {
+		$counted_event = $this->create_event( '-2 days' );
+		$this->rsvp( $counted_event );
+		$this->walk_in_count( $counted_event, 3 );
+		$plain_event = $this->create_event( '-1 day' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$events = array_column( collect_export_data()['events'], null, 'id' );
+
+		$this->assertSame( 3, $events[ $counted_event ]['counts']['walk_ins'] );
+		$this->assertNull( $events[ $counted_event ]['counts']['checked_in'] );
+		$this->assertSame( 0, $events[ $plain_event ]['counts']['walk_ins'] );
+	}
+
+	/**
+	 * On a series the count lands on its own date's row, and the series
+	 * total is the sum of its dates.
+	 */
+	public function test_export_reports_walk_ins_per_date() {
+		list( $event_id, $past ) = $this->create_series();
+		$this->walk_in_count( $event_id, 2, $past->recurrence_id );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$event       = array_column( collect_export_data()['events'], null, 'id' )[ $event_id ];
+		$occurrences = array_column( $event['occurrences'], null, 'recurrence_id' );
+
+		$this->assertSame( 2, $occurrences[ $past->recurrence_id ]['counts']['walk_ins'] );
+		$this->assertSame( 2, array_sum( array_column( array_column( $event['occurrences'], 'counts' ), 'walk_ins' ) ) );
+		$this->assertSame( 2, $event['counts']['walk_ins'] );
 	}
 }

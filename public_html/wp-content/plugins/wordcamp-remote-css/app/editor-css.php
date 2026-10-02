@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\RemoteCSS;
+use Exception;
 
 defined( 'WPINC' ) || die();
 
@@ -20,7 +21,12 @@ if ( is_configured() ) {
  * @return array
  */
 function add_cached_css_to_editor( $settings ) {
-	$safe_css = get_safe_css_post()->post_content;
+	try {
+		$safe_css = get_safe_css_post()->post_content;
+	} catch ( Exception $exception ) {
+		// Load the editor without the custom CSS, rather than failing to load it at all.
+		return $settings;
+	}
 
 	if ( ! empty( $safe_css ) ) {
 		$settings['styles'][] = array(

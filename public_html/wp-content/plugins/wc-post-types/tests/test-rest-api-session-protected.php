@@ -69,21 +69,21 @@ class Test_Session_Protected_REST extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The slide and video links are absent from an anonymous view response, so
-	 * they cannot render above a session's password form.
+	 * The slide and video fields are edit-only in the Sessions item schema, so
+	 * the endpoint never serves them in the default view context and they cannot
+	 * render above a session's password form.
+	 *
+	 * This asserts the schema contract rather than a dispatched view response:
+	 * the REST server caches one schema per process and other test classes in
+	 * the same run can prime it before this edit-only registration, which does
+	 * not happen in a real request where the schema is built fresh each time.
 	 */
-	public function test_slides_and_video_absent_in_view_context() {
-		$session_id = $this->make_session();
-		update_post_meta( $session_id, '_wcpt_session_slides', 'https://example.org/slides.pdf' );
-		update_post_meta( $session_id, '_wcpt_session_video', 'https://example.org/video' );
+	public function test_slides_and_video_are_edit_context_only() {
+		$meta_schema = ( new \WP_REST_Posts_Controller( 'wcb_session' ) )
+			->get_item_schema()['properties']['meta']['properties'];
 
-		wp_set_current_user( 0 );
-
-		$request = new WP_REST_Request( 'GET', "/wp/v2/sessions/{$session_id}" );
-		$meta    = rest_get_server()->dispatch( $request )->get_data()['meta'] ?? array();
-
-		$this->assertArrayNotHasKey( '_wcpt_session_slides', $meta );
-		$this->assertArrayNotHasKey( '_wcpt_session_video', $meta );
+		$this->assertSame( array( 'edit' ), $meta_schema['_wcpt_session_slides']['context'] ?? null );
+		$this->assertSame( array( 'edit' ), $meta_schema['_wcpt_session_video']['context'] ?? null );
 	}
 
 	/**
@@ -156,5 +156,95 @@ class Test_Session_Protected_REST extends WP_UnitTestCase {
 		$ids = wp_list_pluck( rest_get_server()->dispatch( $request )->get_data(), 'id' );
 
 		$this->assertContains( $protected_id, $ids );
+	}
+
+	/**
+	 * Create a published speaker.
+	 *
+	 * @param string $title Speaker title.
+	 *
+	 * @return int
+	 */
+	protected function make_speaker( string $title = 'Secret Speaker' ): int {
+		return self::factory()->post->create(
+			array(
+				'post_type'   => 'wcb_speaker',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+	}
+
+	/**
+	 * A protected session hides its speakers from an anonymous caller: the
+	 * speaker meta, the resolved `session_speakers` list and the speaker links
+	 * are all gone.
+	 */
+	public function test_protected_session_hides_its_speakers_from_anonymous() {
+		$speaker_id = $this->make_speaker();
+		$session_id = $this->make_session( array( 'post_password' => 'secret-pass' ) );
+		add_post_meta( $session_id, '_wcpt_speaker_id', $speaker_id );
+
+		wp_set_current_user( 0 );
+
+		$response = rest_get_server()->dispatch( new WP_REST_Request( 'GET', "/wp/v2/sessions/{$session_id}" ) );
+		$data     = $response->get_data();
+
+		$this->assertArrayNotHasKey( '_wcpt_speaker_id', $data['meta'] ?? array() );
+		$this->assertSame( array(), $data['session_speakers'] ?? 'missing' );
+		$this->assertArrayNotHasKey( 'speakers', $response->get_links() );
+	}
+
+	/**
+	 * An editor still gets a protected session's speakers.
+	 */
+	public function test_editor_still_sees_protected_session_speakers() {
+		$speaker_id = $this->make_speaker();
+		$session_id = $this->make_session(
+			array(
+				'post_password' => 'secret-pass',
+				'post_author'   => self::$admin_id,
+			)
+		);
+		add_post_meta( $session_id, '_wcpt_speaker_id', $speaker_id );
+
+		wp_set_current_user( self::$admin_id );
+
+		$request = new WP_REST_Request( 'GET', "/wp/v2/sessions/{$session_id}" );
+		$request->set_param( 'context', 'edit' );
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertContains( $speaker_id, array_map( 'intval', $data['meta']['_wcpt_speaker_id'] ?? array() ) );
+		$this->assertNotEmpty( $data['session_speakers'] ?? array() );
+		$this->assertArrayHasKey( 'speakers', $response->get_links() );
+	}
+
+	/**
+	 * The speaker endpoint does not link a protected session for an anonymous
+	 * caller, while a public session is still linked.
+	 */
+	public function test_protected_session_not_linked_from_speaker() {
+		$speaker_id        = $this->make_speaker();
+		$public_session    = $this->make_session( array( 'post_title' => 'Public Session' ) );
+		$protected_session = $this->make_session(
+			array(
+				'post_title'    => 'Protected Session',
+				'post_password' => 'secret-pass',
+			)
+		);
+		add_post_meta( $public_session, '_wcpt_speaker_id', $speaker_id );
+		add_post_meta( $protected_session, '_wcpt_speaker_id', $speaker_id );
+
+		wp_set_current_user( 0 );
+
+		$response = rest_get_server()->dispatch( new WP_REST_Request( 'GET', "/wp/v2/speakers/{$speaker_id}" ) );
+		$hrefs    = wp_list_pluck( $response->get_links()['sessions'] ?? array(), 'href' );
+		// The href may be a pretty path or a `rest_route` query, so decode and
+		// match the route segment either way.
+		$linked = urldecode( implode( ' ', $hrefs ) );
+
+		$this->assertStringContainsString( "/sessions/{$public_session}&", $linked );
+		$this->assertStringNotContainsString( "/sessions/{$protected_session}&", $linked );
 	}
 }

@@ -1388,6 +1388,60 @@ function hide_venue_terms_for_protected_event( array $args, \WP_REST_Request $re
 add_filter( 'rest__gatherpress_venue_query', __NAMESPACE__ . '\hide_venue_terms_for_protected_event', 10, 2 );
 
 /**
+ * Keep a password-protected event's venue out of its RSS feed item.
+ *
+ * GatherPress builds the event feed excerpt and content at priority 10 and
+ * appends the venue name to the metadata line with no password check
+ * ({@see \GatherPress\Core\Feed::get_default_event_excerpt()} and
+ * `get_default_event_content()`). Running later (priority 20), strip the venue
+ * segment for a protected event so the feed follows the password like the page
+ * does. This is coupled to GatherPress's feed markup on purpose; if that markup
+ * changes the venue simply stays, it is never newly exposed.
+ *
+ * @param string $text The feed excerpt or content GatherPress built.
+ *
+ * @return string The text with the venue segment removed for a protected event.
+ */
+function hide_venue_in_protected_event_feed( string $text ): string {
+	$event_id = get_the_ID();
+
+	if ( ! $event_id || ! post_password_required( $event_id ) ) {
+		return $text;
+	}
+
+	if ( ! class_exists( '\GatherPress\Core\Venue' ) || ! class_exists( '\GatherPress\Core\Utility' ) ) {
+		return $text;
+	}
+
+	$label = \GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue::POST_TYPE );
+
+	if ( ! $label ) {
+		return $text;
+	}
+
+	$label  = preg_quote( $label, '/' );
+	$marker = $label . ':\s*[^<|]*';
+
+	// The venue is the last ` | `-joined token inside the metadata `<strong>`,
+	// so it sits just before the closing tag. Remove it with its separator, or
+	// on its own when it is the only token.
+	$patterns = array(
+		'/\s*\|\s*' . $marker . '(<\/strong>)/' => '$1',
+		'/(<strong>)' . $marker . '\s*\|\s*/'   => '$1',
+		'/(<strong>)' . $marker . '(<\/strong>)/' => '$1$2',
+	);
+
+	foreach ( $patterns as $pattern => $replacement ) {
+		$text = preg_replace( $pattern, $replacement, $text, 1 );
+	}
+
+	return $text;
+}
+
+add_filter( 'gatherpress_event_feed_excerpt', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
+add_filter( 'gatherpress_event_feed_content', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
+
+/**
  * Generate venue static maps in the background instead of during the save.
  *
  * GatherPress renders a venue's static map from `wp_after_insert_post`, so

@@ -1346,6 +1346,40 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * The event RSS feed excerpt/content drops the venue for a protected event
+	 * and leaves a public event's untouched.
+	 */
+	public function test_feed_strips_venue_for_protected_event() {
+		$label = \GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue::POST_TYPE );
+		$built = '<p><strong>Date: Saturday, January 1 | ' . $label . ': Salty Spaces</strong></p><p>Body text.</p>';
+
+		$public_id    = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		global $post;
+		$original_post = $post;
+
+		$post = get_post( $protected_id );
+		$this->assertStringNotContainsString( 'Salty Spaces', \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built ) );
+		$protected_out = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built );
+		$this->assertStringNotContainsString( $label . ':', $protected_out );
+		$this->assertStringContainsString( 'Date: Saturday, January 1', $protected_out );
+		$this->assertStringContainsString( 'Body text.', $protected_out );
+
+		$post = get_post( $public_id );
+		$this->assertSame( $built, \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built ) );
+
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+
+	/**
 	 * The meta-link block (session video and slides links) returns nothing for
 	 * a password-protected post, so the links do not show above the password
 	 * form.
@@ -1442,6 +1476,16 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			10,
 			has_filter( 'rest__gatherpress_venue_query', $ns . 'hide_venue_terms_for_protected_event' ),
 			'The venue terms query gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			20,
+			has_filter( 'gatherpress_event_feed_excerpt', $ns . 'hide_venue_in_protected_event_feed' ),
+			'The feed excerpt venue gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			20,
+			has_filter( 'gatherpress_event_feed_content', $ns . 'hide_venue_in_protected_event_feed' ),
+			'The feed content venue gate is not hooked where it fires.'
 		);
 	}
 

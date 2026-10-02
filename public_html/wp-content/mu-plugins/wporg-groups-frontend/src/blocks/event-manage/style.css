@@ -73,6 +73,42 @@
 	margin-top: 24px;
 }
 
+.wporg-groups-check-in-modal__walk-in-count {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__walk-in-count-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.wporg-groups-check-in-modal__walk-in-count-help {
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wporg-groups-check-in-modal__stepper {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__stepper .components-button {
+	justify-content: center;
+	min-width: 40px;
+}
+
+.wporg-groups-check-in-modal__stepper-value {
+	min-width: 3ch;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+
 .wporg-groups-check-in-modal__loading {
 	display: flex;
 	align-items: center;

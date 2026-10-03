@@ -1781,6 +1781,230 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 		$this->assertSame( $before, get_option( 'camptix_options' ) );
 	}
 
+	/*
+	 * -------------------------------------------------------------------------
+	 * Regression tests for the 2026-10-01 browser pass — refund from the
+	 * Edit Attendee screen
+	 * -------------------------------------------------------------------------
+	 */
+
+	/**
+	 * A main attendee holding two flagged activity seats, an organiser-defined `vip`
+	 * flag, and both add-ons wired exactly as in wp-admin.
+	 *
+	 * Uses the instances CampTix loaded rather than new ones: the loaded Activity
+	 * Tickets instance already has its hooks live, so a second instance would track
+	 * flag removals separately from the one that acts on them. Re-running
+	 * `camptix_init()` as an administrator adds the hooks admin-flags only registers
+	 * for users who can manage attendees, with its flags config loaded.
+	 *
+	 * @return array{addon:CampTix_Companion_Tickets_Addon,flags_addon:\CampTix_Admin_Flags_Addon,main_id:int,seat_ids:int[],slugs:string[]}
+	 */
+	private function make_edit_screen_fixture() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$main   = $this->make_ticket( 'Main' );
+		$cd     = $this->make_ticket( 'Contributor Day' );
+		$dinner = $this->make_ticket( 'Social Dinner' );
+		$this->set_companion_config( array( $cd, $dinner ) );
+
+		$addon = $this->get_loaded_addon( 'CampTix_Companion_Tickets_Addon' );
+		$slugs = array( $addon->get_activity_flag_slug( $cd ), $addon->get_activity_flag_slug( $dinner ) );
+		$this->set_admin_flags_config( array(
+			'vip'     => 'VIP',
+			$slugs[0] => 'Contributor Day',
+			$slugs[1] => 'Social Dinner',
+		) );
+
+		$main_id   = $this->make_attendee( $main, 'jordan', 'publish' );
+		$cd_id     = $this->make_attendee( $cd, 'jordan', 'publish' );
+		$dinner_id = $this->make_attendee( $dinner, 'jordan', 'publish' );
+		update_post_meta( $cd_id, 'tix_companion_primary_attendee_id', $main_id );
+		update_post_meta( $dinner_id, 'tix_companion_primary_attendee_id', $main_id );
+		$addon->add_activity_admin_flag( $main_id, $cd, $cd_id );
+		$addon->add_activity_admin_flag( $main_id, $dinner, $dinner_id );
+		add_post_meta( $main_id, CampTix_Companion_Tickets_Addon::ADMIN_FLAG_META, 'vip' );
+
+		$flags_addon = $this->get_loaded_addon( 'CampTix_Admin_Flags_Addon' );
+		$flags_addon->camptix_init();
+		$addon->camptix_init();
+
+		return array(
+			'addon'       => $addon,
+			'flags_addon' => $flags_addon,
+			'main_id'     => $main_id,
+			'seat_ids'    => array( $cd_id, $dinner_id ),
+			'slugs'       => $slugs,
+		);
+	}
+
+	/**
+	 * The add-on instance CampTix loaded.
+	 *
+	 * @param string $class Add-on class name.
+	 * @return object
+	 */
+	private function get_loaded_addon( $class ) {
+		global $camptix;
+
+		foreach ( $camptix->addons_loaded as $loaded ) {
+			if ( $loaded instanceof $class ) {
+				return $loaded;
+			}
+		}
+
+		$this->fail( "{$class} is not loaded." );
+	}
+
+	/**
+	 * Put the Edit Attendee form for `$post_id` into `$_POST`, as rendered.
+	 *
+	 * The admin-flags fields come from the add-on's own metabox markup, so the nonce
+	 * and the checkboxes are exactly what the organiser's browser would submit.
+	 *
+	 * @param \CampTix_Admin_Flags_Addon $flags_addon The admin-flags add-on.
+	 * @param int                        $post_id     Attendee the form is for.
+	 * @param string[]                   $uncheck     Flags the organiser unticks before saving.
+	 */
+	private function post_edit_screen_form( $flags_addon, $post_id, $uncheck = array() ) {
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- `post.php` sets this before rendering the metabox.
+		$GLOBALS['post'] = get_post( $post_id );
+		ob_start();
+		$flags_addon->publish_metabox_actions();
+		$html = ob_get_clean();
+
+		preg_match( '/name="camptix-admin-flags-nonce" value="([^"]+)"/', $html, $nonce );
+		preg_match_all( '/name="camptix-admin-flags\[([^\]]+)\]" type="checkbox"\s+checked=/', $html, $checked );
+
+		$_POST = array(
+			'post_ID'                   => $post_id,
+			'camptix-admin-flags-nonce' => $nonce[1],
+			'camptix-admin-flags'       => array_fill_keys( array_diff( $checked[1], $uncheck ), '1' ),
+		);
+	}
+
+	/**
+	 * Refunding the main from its edit screen must take the activity flags off it.
+	 *
+	 * The seats' own cancellation removes them, but admin-flags' `save_post` then
+	 * rewrites the main's flags from checkboxes rendered before the refund, so they
+	 * came straight back. The organiser's own `vip` flag must survive.
+	 */
+	public function test_edit_screen_refund_removes_activity_flags_from_main() {
+		$f = $this->make_edit_screen_fixture();
+		$this->post_edit_screen_form( $f['flags_addon'], $f['main_id'] );
+
+		wp_update_post( array(
+			'ID'          => $f['main_id'],
+			'post_status' => 'refund',
+		) );
+		$_POST = array();
+
+		$this->assertSame( 'cancel', get_post_status( $f['seat_ids'][0] ) );
+		$this->assertSame( 'cancel', get_post_status( $f['seat_ids'][1] ) );
+		$this->assertSame( array( 'vip' ), $this->get_admin_flags( $f['main_id'] ) );
+	}
+
+	/**
+	 * The cancelled seats must not pick up the main's flags.
+	 *
+	 * Each seat's cancellation runs `save_post` inside the main's request, and
+	 * admin-flags applied the main's form to whichever attendee was being saved.
+	 */
+	public function test_edit_screen_refund_leaves_cancelled_seats_unflagged() {
+		$f = $this->make_edit_screen_fixture();
+		$this->post_edit_screen_form( $f['flags_addon'], $f['main_id'] );
+
+		wp_update_post( array(
+			'ID'          => $f['main_id'],
+			'post_status' => 'refund',
+		) );
+		$_POST = array();
+
+		$this->assertSame( array(), $this->get_admin_flags( $f['seat_ids'][0] ) );
+		$this->assertSame( array(), $this->get_admin_flags( $f['seat_ids'][1] ) );
+	}
+
+	/**
+	 * Guard: an edit-screen save that doesn't end the ticket keeps every flag.
+	 */
+	public function test_edit_screen_save_without_refund_keeps_activity_flags() {
+		$f = $this->make_edit_screen_fixture();
+		$this->post_edit_screen_form( $f['flags_addon'], $f['main_id'] );
+
+		wp_update_post( array(
+			'ID'           => $f['main_id'],
+			'post_excerpt' => 'Organiser note',
+		) );
+		$_POST = array();
+
+		$expected = array_merge( $f['slugs'], array( 'vip' ) );
+		$actual   = $this->get_admin_flags( $f['main_id'] );
+		sort( $expected );
+		sort( $actual );
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Guard: the edit screen still saves a flag the organiser unticks.
+	 */
+	public function test_edit_screen_save_still_applies_the_organisers_flag_changes() {
+		$f = $this->make_edit_screen_fixture();
+		$this->post_edit_screen_form( $f['flags_addon'], $f['main_id'], array( 'vip' ) );
+
+		wp_update_post( array(
+			'ID'           => $f['main_id'],
+			'post_excerpt' => 'Organiser note',
+		) );
+		$_POST = array();
+
+		$this->assertNotContains( 'vip', $this->get_admin_flags( $f['main_id'] ) );
+	}
+
+	/**
+	 * Guard: a flag removed and then legitimately re-added in the same request (a new
+	 * seat linking to the same main) is not stripped by a later save of the main.
+	 */
+	public function test_flag_re_added_in_the_same_request_survives_a_later_save() {
+		$f         = $this->make_edit_screen_fixture();
+		$cd_ticket = absint( get_post_meta( $f['seat_ids'][0], 'tix_ticket_id', true ) );
+
+		wp_update_post( array(
+			'ID'          => $f['seat_ids'][0],
+			'post_status' => 'cancel',
+		) );
+		$this->assertNotContains( $f['slugs'][0], $this->get_admin_flags( $f['main_id'] ) );
+
+		$new_seat_id = $this->make_attendee( $cd_ticket, 'jordan', 'publish' );
+		update_post_meta( $new_seat_id, 'tix_companion_primary_attendee_id', $f['main_id'] );
+		$f['addon']->add_activity_admin_flag( $f['main_id'], $cd_ticket, $new_seat_id );
+
+		wp_update_post( array(
+			'ID'           => $f['main_id'],
+			'post_excerpt' => 'Saved later in the same request',
+		) );
+
+		$this->assertContains( $f['slugs'][0], $this->get_admin_flags( $f['main_id'] ) );
+	}
+
+	/**
+	 * The admin-flags edit form applies only to the attendee it was rendered for.
+	 */
+	public function test_admin_flags_form_is_not_applied_to_another_attendee() {
+		$f        = $this->make_edit_screen_fixture();
+		$other_id = $this->make_attendee( $this->make_ticket( 'Other' ), 'kim', 'publish' );
+		$this->post_edit_screen_form( $f['flags_addon'], $f['main_id'] );
+
+		wp_update_post( array(
+			'ID'           => $other_id,
+			'post_excerpt' => 'Saved during the same request',
+		) );
+		$_POST = array();
+
+		$this->assertSame( array(), $this->get_admin_flags( $other_id ) );
+	}
+
 	/**
 	 * Replace the admin-flags parsed config.
 	 *

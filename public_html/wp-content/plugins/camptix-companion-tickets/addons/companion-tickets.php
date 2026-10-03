@@ -63,6 +63,16 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 	private $deferred_releases = array();
 
 	/**
+	 * Activity flags removed from a main attendee during this request.
+	 *
+	 * Re-applied after admin-flags saves the Edit Attendee form, which would
+	 * otherwise write them back (see reapply_activity_flag_removals()).
+	 *
+	 * @var array<int,array<string,bool>>
+	 */
+	private $removed_activity_flags = array();
+
+	/**
 	 * Register self with CampTix.
 	 */
 	public static function register_addon() {
@@ -126,6 +136,7 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 		// seat links to it (see link_companion_attendee); remove it again when
 		// that seat reaches any terminal status. Display needs camptix-admin-flags.
 		add_action( 'transition_post_status', array( $this, 'maybe_remove_activity_admin_flag' ), 12, 3 );
+		add_action( 'save_post', array( $this, 'reapply_activity_flag_removals' ), 20, 1 );
 
 		// Public Attendees page: list each person once. A companion seat's holder
 		// always also has a main-ticket listing, so hide the companion seats.
@@ -1026,6 +1037,7 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 		if ( ! in_array( $slug, $existing, true ) ) {
 			add_post_meta( $main_id, self::ADMIN_FLAG_META, $slug );
 		}
+		unset( $this->removed_activity_flags[ $main_id ][ $slug ] );
 
 		if ( $seat_id ) {
 			update_post_meta( absint( $seat_id ), self::ACTIVITY_FLAG_META, $slug );
@@ -1085,6 +1097,28 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 		}
 
 		delete_post_meta( $main_id, self::ADMIN_FLAG_META, $slug );
+		$this->removed_activity_flags[ $main_id ][ $slug ] = true;
+	}
+
+	/**
+	 * Re-apply this request's flag removals after admin-flags has saved its form.
+	 *
+	 * Refunding a main from the Edit Attendee screen cancels its seats during
+	 * `transition_post_status`, which removes their flags from the main. admin-flags
+	 * then rewrites the main's flags on `save_post` (priority 11) from checkboxes
+	 * rendered before the refund. This runs on every save of that main, because
+	 * CampTix's `save_attendee_post()` saves it a second time in the same request.
+	 *
+	 * @param int $post_id Post being saved.
+	 */
+	public function reapply_activity_flag_removals( $post_id ) {
+		if ( empty( $this->removed_activity_flags[ $post_id ] ) ) {
+			return;
+		}
+
+		foreach ( array_keys( $this->removed_activity_flags[ $post_id ] ) as $slug ) {
+			delete_post_meta( $post_id, self::ADMIN_FLAG_META, $slug );
+		}
 	}
 
 	/**

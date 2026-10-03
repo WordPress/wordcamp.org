@@ -639,6 +639,34 @@ function ctx_vl_register_data_exporter( $exporters ) {
 add_filter( 'wp_privacy_personal_data_exporters', 'ctx_vl_register_data_exporter' );
 
 /**
+ * Keeps the visa letter form fields out of the CampTix log.
+ *
+ * CampTix logs the raw checkout and edit-page `$_POST`, which carries this form's passport
+ * number, date of birth and address. That log is network-wide, shown in wp-admin, never
+ * purged and out of the eraser's reach, so the values are replaced before any logger sees them.
+ *
+ * @param mixed $data Data attached to a log entry.
+ *
+ * @return mixed
+ */
+function ctx_vl_redact_log_data( $data ) {
+	if ( ! is_array( $data ) ) {
+		return $data;
+	}
+
+	foreach ( $data as $key => $value ) {
+		if ( is_string( $key ) && str_starts_with( $key, 'visa-letter-' ) ) {
+			$data[ $key ] = '[redacted]';
+		} elseif ( is_array( $value ) ) {
+			$data[ $key ] = ctx_vl_redact_log_data( $value );
+		}
+	}
+
+	return $data;
+}
+add_filter( 'camptix_log_data', 'ctx_vl_redact_log_data' );
+
+/**
  * Finds and exports visa letter data associated with an email address.
  *
  * @param string $email_address

@@ -7731,6 +7731,19 @@ class CampTix_Plugin {
 	 * easy, check out the addons directory.
 	 */
 	function log( $message, $post_id = 0, $data = null, $module = 'general' ) {
+		/**
+		 * Filters the data attached to a log entry, before any logger receives it.
+		 *
+		 * Lets an add-on keep sensitive form fields out of the log, which stores some
+		 * entries' data as the raw `$_POST`.
+		 *
+		 * @param mixed  $data    Data attached to the entry.
+		 * @param string $message Log message.
+		 * @param int    $post_id Related post ID.
+		 * @param string $module  Log module.
+		 */
+		$data = apply_filters( 'camptix_log_data', $data, $message, $post_id, $module );
+
 		do_action( 'camptix_log_raw', $message, $post_id, $data, $module );
 	}
 

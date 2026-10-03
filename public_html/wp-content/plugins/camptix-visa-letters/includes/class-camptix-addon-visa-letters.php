@@ -747,7 +747,7 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 			$sealed = ctx_vl_seal_metas( $attendee->visa_letter );
 			update_post_meta( $post_id, 'visa_letter_metas', $sealed );
 			global $camptix;
-			$camptix->log( __( 'This attendee requested a visa letter.', 'wordcamporg' ), $post_id, $sealed );
+			$camptix->log( __( 'This attendee requested a visa letter.', 'wordcamporg' ), $post_id );
 		}//end if
 	}
 
@@ -853,7 +853,7 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 
 		$sealed = ctx_vl_seal_metas( $metas );
 		update_post_meta( $attendee->ID, 'visa_letter_metas', $sealed );
-		$camptix->log( __( 'Attendee requested a visa letter from the ticket edit page.', 'wordcamporg' ), $attendee->ID, $sealed );
+		$camptix->log( __( 'Attendee requested a visa letter from the ticket edit page.', 'wordcamporg' ), $attendee->ID );
 
 		if ( 'publish' !== $attendee->post_status ) {
 			$camptix->info( __( 'Your visa invitation letter will be emailed to you once your payment is confirmed.', 'wordcamporg' ) );

@@ -378,4 +378,36 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 			$this->assertSame( 're_batch', get_post_meta( $attendee_id, 'tix_refund_transaction_id', true ) );
 		}
 	}
+
+	/**
+	 * Every logger receives the log data as filtered by `camptix_log_data`.
+	 */
+	public function test_log_data_is_filtered_before_loggers_receive_it() {
+		global $camptix;
+
+		$received = array();
+		$logger   = function ( $message, $post_id, $data ) use ( &$received ) {
+			$received[] = $data;
+		};
+		$filter   = function ( $data, $message, $post_id, $module ) {
+			return array(
+				'filtered' => array( $data, $message, $post_id, $module ),
+			);
+		};
+
+		add_action( 'camptix_log_raw', $logger, 10, 3 );
+		add_filter( 'camptix_log_data', $filter, 10, 4 );
+		$camptix->log( 'Test entry.', 12, array( 'secret' => 'value' ), 'checkout' );
+		remove_filter( 'camptix_log_data', $filter, 10 );
+		remove_action( 'camptix_log_raw', $logger, 10 );
+
+		$this->assertSame(
+			array(
+				array(
+					'filtered' => array( array( 'secret' => 'value' ), 'Test entry.', 12, 'checkout' ),
+				),
+			),
+			$received
+		);
+	}
 }

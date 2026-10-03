@@ -45,7 +45,8 @@ class Test_CampTix_Visa_Letters_Checkout_Validation extends WP_UnitTestCase {
 	public function tear_down() {
 		global $camptix;
 
-		unset( $camptix->error_flags['visa_letter_nope'] );
+		unset( $camptix->error_flags['visa_letter_nope'], $camptix->error_flags['visa_letter_canadian_dates'] );
+		$this->camptix_errors( array() );
 
 		$this->tear_down_visa_fixtures();
 		parent::tear_down();
@@ -59,7 +60,39 @@ class Test_CampTix_Visa_Letters_Checkout_Validation extends WP_UnitTestCase {
 	protected function request_was_rejected() {
 		global $camptix;
 
-		return ! empty( $camptix->error_flags['visa_letter_nope'] );
+		return ! empty( $camptix->error_flags['visa_letter_nope'] ) || ! empty( $camptix->error_flags['visa_letter_canadian_dates'] );
+	}
+
+	/**
+	 * CampTix's buffered error messages, optionally replacing them first.
+	 *
+	 * No setAccessible() call: it is a no-op as of PHP 8.1 and deprecated in 8.5.
+	 *
+	 * @param array|null $replace Messages to store instead, or null to only read.
+	 * @return string[]
+	 */
+	protected function camptix_errors( $replace = null ) {
+		global $camptix;
+
+		$errors = new ReflectionProperty( 'CampTix_Plugin', 'errors' );
+		if ( null !== $replace ) {
+			$errors->setValue( $camptix, $replace );
+		}
+
+		return (array) $errors->getValue( $camptix );
+	}
+
+	/**
+	 * Render the checkout visa form.
+	 *
+	 * @param array $options CampTix options.
+	 * @return string
+	 */
+	protected function render_checkout_form( $options ) {
+		ob_start();
+		ctx_vl_letter_form( null, $options );
+
+		return ob_get_clean();
 	}
 
 	/**
@@ -260,5 +293,86 @@ class Test_CampTix_Visa_Letters_Checkout_Validation extends WP_UnitTestCase {
 		ctx_vl_letter_form( null, $options );
 
 		$this->assertSame( '', trim( ob_get_clean() ) );
+	}
+
+	/**
+	 * A checkout sent back with an error keeps the visa details the attendee typed.
+	 *
+	 * The form only prefilled from stored values, so after any error the box came back
+	 * unticked and every field empty, and the passport details had to be typed again.
+	 */
+	public function test_failed_checkout_keeps_the_submitted_visa_details() {
+		$options = $this->set_visa_options();
+		$_POST   = $this->posted_fields( array( 'visa-letter-nationality' => '' ) );
+
+		$html = $this->render_checkout_form( $options );
+
+		$this->assertMatchesRegularExpression( '/id="camptix-need-visa-letter"\s+checked=/', $html );
+		$this->assertStringContainsString( 'value="AB1234567"', $html );
+		$this->assertStringContainsString( 'value="1990-04-17"', $html );
+		$this->assertStringContainsString( '1 Example Street, Zagreb, Croatia</textarea>', $html );
+	}
+
+	/**
+	 * Guard: an untouched checkout form, or one sent with the box unticked, stays empty.
+	 */
+	public function test_checkout_form_without_a_request_stays_empty() {
+		$options = $this->set_visa_options();
+
+		$fresh = $this->render_checkout_form( $options );
+
+		$_POST    = $this->posted_fields( array( 'camptix-need-visa-letter' => null ) );
+		$unticked = $this->render_checkout_form( $options );
+
+		foreach ( array( $fresh, $unticked ) as $html ) {
+			$this->assertDoesNotMatchRegularExpression( '/id="camptix-need-visa-letter"\s+checked=/', $html );
+			$this->assertStringNotContainsString( 'AB1234567', $html );
+		}
+	}
+
+	/**
+	 * Exit-before-entry in Canadian mode shows the dates message, not "fill in all fields".
+	 */
+	public function test_canadian_dates_error_shows_its_own_message() {
+		$this->set_visa_options( array( 'visa-letter-canadian' => 1 ) );
+		$_POST = $this->posted_fields(
+			array(
+				'visa-letter-entry-date' => '2026-11-10',
+				'visa-letter-exit-date'  => '2026-11-03',
+			)
+		);
+
+		CampTix_Addon_Visa_Letters::attendee_info( array() );
+		CampTix_Addon_Visa_Letters::error_flag();
+
+		$this->assertTrue( $this->request_was_rejected() );
+		$this->assertSame( array( 'Please provide valid entry and exit dates for Canada.' ), $this->camptix_errors() );
+	}
+
+	/**
+	 * Guard: a missing required field still shows the general message.
+	 */
+	public function test_missing_fields_still_show_the_general_message() {
+		$_POST = $this->posted_fields( array( 'visa-letter-passport-number' => null ) );
+
+		CampTix_Addon_Visa_Letters::attendee_info( array() );
+		CampTix_Addon_Visa_Letters::error_flag();
+
+		$this->assertSame( array( 'As you have requested a visa letter, please fill in all required fields.' ), $this->camptix_errors() );
+	}
+
+	/**
+	 * The visa form is shared by the whole order, so a multi-ticket order shows the message once.
+	 */
+	public function test_canadian_dates_message_shows_once_for_a_multi_ticket_order() {
+		$this->set_visa_options( array( 'visa-letter-canadian' => 1 ) );
+		$_POST = $this->posted_fields();
+
+		CampTix_Addon_Visa_Letters::attendee_info( array() );
+		CampTix_Addon_Visa_Letters::attendee_info( array() );
+		CampTix_Addon_Visa_Letters::attendee_info( array() );
+		CampTix_Addon_Visa_Letters::error_flag();
+
+		$this->assertCount( 1, $this->camptix_errors() );
 	}
 }

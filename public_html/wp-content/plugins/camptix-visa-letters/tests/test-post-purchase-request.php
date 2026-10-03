@@ -90,6 +90,27 @@ class Test_CampTix_Visa_Letters_Post_Purchase extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A request the edit page refused comes back with what the attendee just typed,
+	 * not with the details stored before.
+	 */
+	public function test_refused_request_keeps_the_submitted_details() {
+		$attendee_id = $this->make_attendee( 'editretry', 'draft', $this->letter_details() );
+		$_POST       = $this->posted_fields(
+			array(
+				'visa-letter-passport-number' => 'CD7654321',
+				'visa-letter-nationality'     => '',
+			)
+		);
+
+		CampTix_Addon_Visa_Letters::edit_attendee_save( array(), get_post( $attendee_id ) );
+		$html = $this->render_form_for( $attendee_id );
+
+		$this->assertStringContainsString( 'value="CD7654321"', $html );
+		$this->assertStringNotContainsString( 'AB1234567', $html );
+		$this->assertMatchesRegularExpression( '/camptix-need-visa-letter[^>]*checked/', $html );
+	}
+
+	/**
 	 * Once a letter is issued the attendee sees its status, not a second request form.
 	 */
 	public function test_form_shows_status_instead_of_a_second_request() {

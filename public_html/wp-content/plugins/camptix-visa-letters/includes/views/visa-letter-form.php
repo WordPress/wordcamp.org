@@ -4,12 +4,16 @@ defined( 'WPINC' ) || die();
 
 /**
  * @var array $visa_prefill Optional stored values (post-purchase edit page); empty on checkout.
+ *                          Values submitted in this request take precedence, so a form sent back
+ *                          with an error keeps what the attendee typed.
  * @var array $options      CampTix options (passed by both render contexts).
  */
-$visa_prefill  = isset( $visa_prefill ) && is_array( $visa_prefill ) ? $visa_prefill : array();
-$visa_checked  = ! empty( array_filter( $visa_prefill ) );
-$visa_options  = isset( $options ) && is_array( $options ) ? $options : get_option( 'camptix_options' );
-$visa_canadian = ! empty( $visa_options['visa-letter-canadian'] );
+$visa_submitted = ctx_vl_submitted_details();
+$visa_prefill   = isset( $visa_prefill ) && is_array( $visa_prefill ) ? $visa_prefill : array();
+$visa_prefill   = $visa_submitted ? $visa_submitted : $visa_prefill;
+$visa_checked   = ! empty( array_filter( $visa_prefill ) );
+$visa_options   = isset( $options ) && is_array( $options ) ? $options : get_option( 'camptix_options' );
+$visa_canadian  = ! empty( $visa_options['visa-letter-canadian'] );
 
 ?>
 

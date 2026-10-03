@@ -657,7 +657,7 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 
 		$canadian = self::validate_canadian_fields();
 		if ( is_wp_error( $canadian ) ) {
-			$camptix->error_flag( 'visa_letter_nope' );
+			$camptix->error_flag( 'visa_letter_canadian_dates' );
 		} elseif ( is_array( $canadian ) ) {
 			$attendee_info = array_merge( $attendee_info, $canadian );
 		}//end if
@@ -687,7 +687,7 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 		$exit_ts  = $exit ? strtotime( $exit ) : false;
 
 		if ( ! $entry_ts || ! $exit_ts || $exit_ts < $entry_ts ) {
-			return new WP_Error( 'visa_letter_canadian_dates', __( 'Please provide valid entry and exit dates for Canada.', 'wordcamporg' ) );
+			return new WP_Error( 'visa_letter_canadian_dates', self::canadian_dates_message() );
 		}//end if
 
 		$fields = array(
@@ -701,6 +701,15 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 		// phpcs:enable
 
 		return $fields;
+	}
+
+	/**
+	 * The message for missing or out-of-order Canadian entry and exit dates.
+	 *
+	 * @return string
+	 */
+	public static function canadian_dates_message() {
+		return __( 'Please provide valid entry and exit dates for Canada.', 'wordcamporg' );
 	}
 
 	/**
@@ -875,6 +884,12 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 		global $camptix;
 		if ( ! empty( $camptix->error_flags['visa_letter_nope'] ) ) {
 			$camptix->error( __( 'As you have requested a visa letter, please fill in all required fields.', 'wordcamporg' ) );
+		}//end if
+
+		// A flag rather than a message from attendee_info(), which runs once per attendee: the
+		// visa form is shared by the whole order, so the message must show once.
+		if ( ! empty( $camptix->error_flags['visa_letter_canadian_dates'] ) ) {
+			$camptix->error( self::canadian_dates_message() );
 		}//end if
 	}
 

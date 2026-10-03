@@ -165,7 +165,7 @@ if ( function_exists( 'get_wordcamp_post' ) ) {
 			<?php
 			printf(
 				/* translators: 1: first name, 2: last name, 3: nationality (adjective), 4: passport number, 5: passport issuing country, 6: event name */
-				esc_html__( 'This letter is to confirm that %1$s %2$s, a %3$s citizen, holding passport number %4$s issued by %5$s, has purchased a ticket to attend %6$s, a community-organized event focusing on WordPress development and technology.', 'wordcamporg' ),
+				esc_html__( 'This letter is to confirm that %1$s %2$s, who holds %3$s citizenship and passport number %4$s issued by %5$s, has purchased a ticket to attend %6$s, a community-organized event focusing on WordPress development and technology.', 'wordcamporg' ),
 				esc_html( $first_name ),
 				esc_html( $last_name ),
 				esc_html( $nationality ),

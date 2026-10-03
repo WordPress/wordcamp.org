@@ -521,6 +521,36 @@ function ctx_vl_letter_form( $order, $options ) {
 add_action( 'camptix_form_attendee_after_registration_information', 'ctx_vl_letter_form', 10, 2 );
 
 /**
+ * The visa letter details submitted in this request, keyed like the stored metas.
+ *
+ * A checkout or edit-page request that comes back with an error renders the form again,
+ * and it should show what the attendee typed instead of making them re-enter it.
+ *
+ * @return array Empty unless the visa letter box was ticked in this request.
+ */
+function ctx_vl_submitted_details() {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- only re-displayed, escaped, in the form it came from.
+	if ( empty( $_POST['camptix-need-visa-letter'] ) ) {
+		return array();
+	}
+
+	$details = array();
+	$keys    = array( 'email', 'first_name', 'last_name', 'passport_country', 'passport_number', 'date_of_birth', 'nationality', 'mailing_address', 'entry_date', 'exit_date', 'accommodation' );
+	foreach ( $keys as $key ) {
+		$field = 'visa-letter-' . str_replace( '_', '-', $key );
+		if ( ! isset( $_POST[ $field ] ) ) {
+			continue;
+		}
+
+		$value           = wp_unslash( $_POST[ $field ] );
+		$details[ $key ] = in_array( $key, array( 'mailing_address', 'accommodation' ), true ) ? sanitize_textarea_field( $value ) : sanitize_text_field( $value );
+	}
+	// phpcs:enable
+
+	return $details;
+}
+
+/**
  * Resolve the path to a visa letter's PDF, without ending the request.
  *
  * Quiet counterpart to `ctx_vl_get_letter()`, so callers on the payment-completion

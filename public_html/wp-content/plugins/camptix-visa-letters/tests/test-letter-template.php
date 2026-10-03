@@ -60,9 +60,23 @@ class Test_CampTix_Visa_Letters_Template extends WP_UnitTestCase {
 
 		$html = CampTix_Addon_Visa_Letters::render_letter_html( $letter_id );
 
-		$this->assertStringContainsString( 'a Croatian citizen', $html );
+		$this->assertStringContainsString( 'who holds Croatian citizenship', $html );
 		$this->assertStringContainsString( 'issued by Croatia', $html );
 		$this->assertStringNotContainsString( 'a citizen of Croatian', $html );
+	}
+
+	/**
+	 * A nationality that starts with a vowel needs no article fix-up.
+	 *
+	 * The sentence hardcoded "a %s citizen", so the letter read "a Indian citizen".
+	 */
+	public function test_nationality_starting_with_a_vowel_reads_correctly() {
+		list( , $letter_id ) = $this->make_paid_letter( 'vowel', array( 'nationality' => 'Indian' ) );
+
+		$html = CampTix_Addon_Visa_Letters::render_letter_html( $letter_id );
+
+		$this->assertStringContainsString( 'who holds Indian citizenship', $html );
+		$this->assertStringNotContainsString( 'a Indian', $html );
 	}
 
 	/**

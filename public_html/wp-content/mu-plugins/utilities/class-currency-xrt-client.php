@@ -14,7 +14,8 @@ defined( 'WPINC' ) || die();
  */
 class Currency_XRT_Client {
 	/**
-	 * @var \WP_Error|null Container for errors.
+	 * @var \WP_Error|null Every error the client has met in its lifetime. Methods return only the
+	 *                     error from their own call, never this one.
 	 */
 	public $error = null;
 
@@ -120,9 +121,10 @@ class Currency_XRT_Client {
 		try {
 			$date = new \DateTime( $date );
 		} catch ( \Exception $e ) {
-			$this->error->add( $e->getCode(), $e->getMessage() );
+			$error = new \WP_Error();
+			$error->add( $e->getCode(), $e->getMessage() );
 
-			return $this->error;
+			return $this->record_error( $error );
 		}
 
 		$cached_rates = get_transient( $cache_key );
@@ -185,15 +187,15 @@ class Currency_XRT_Client {
 		}
 
 		if ( ! isset( $rates[ $from_currency ] ) ) {
-			$this->error->add(
-				'unknown_currency',
-				sprintf(
-					'%s is not an available currency to convert from.',
-					esc_html( $from_currency )
+			return $this->record_error(
+				new \WP_Error(
+					'unknown_currency',
+					sprintf(
+						'%s is not an available currency to convert from.',
+						esc_html( $from_currency )
+					)
 				)
 			);
-
-			return $this->error;
 		}
 
 		$rate = $rates[ $from_currency ];
@@ -201,12 +203,13 @@ class Currency_XRT_Client {
 		try {
 			$converted_amount = $amount / $rate;
 		} catch ( \Exception $e ) {
-			$this->error->add(
+			$error = new \WP_Error();
+			$error->add(
 				$e->getCode(),
 				$e->getMessage()
 			);
 
-			return $this->error;
+			return $this->record_error( $error );
 		}
 
 		return (object) [
@@ -223,7 +226,8 @@ class Currency_XRT_Client {
 	 * @return array|\WP_Error An array of rates, or an error.
 	 */
 	protected function send_fixer_request( \DateTime $date ) {
-		$data = array();
+		$data  = array();
+		$error = new \WP_Error();
 
 		$api_endpoint = $date->format( 'Y-m-d' );
 		$now = new \DateTime();
@@ -248,7 +252,7 @@ class Currency_XRT_Client {
 			if ( isset( $response_body['rates'] ) ) {
 				$data = $response_body['rates'];
 			} elseif ( isset( $response_body['error'] ) ) {
-				$this->error->add(
+				$error->add(
 					'request_error',
 					sprintf(
 						'%s: %s',
@@ -257,14 +261,14 @@ class Currency_XRT_Client {
 					)
 				);
 			} else {
-				$this->error->add(
+				$error->add(
 					'unexpected_response_data',
 					'The API response did not provide the expected data.'
 				);
 			}
 		} else {
 			if ( isset( $response_body['error'] ) ) {
-				$this->error->add(
+				$error->add(
 					'request_error',
 					sprintf(
 						'%s: %s',
@@ -273,15 +277,15 @@ class Currency_XRT_Client {
 					)
 				);
 			} else {
-				$this->error->add(
+				$error->add(
 					'http_response_code',
 					$response_code . ': ' . print_r( $response_body, true )
 				);
 			}
 		}
 
-		if ( ! empty( $this->error->get_error_messages() ) ) {
-			return $this->error;
+		if ( $error->has_errors() ) {
+			return $this->record_error( $error );
 		}
 
 		return $data;
@@ -295,7 +299,8 @@ class Currency_XRT_Client {
 	 * @return array|\WP_Error An array of rates, or an error.
 	 */
 	protected function send_oxr_request( \DateTime $date ) {
-		$data = array();
+		$data  = array();
+		$error = new \WP_Error();
 
 		$api_endpoint = 'historical/' . $date->format( 'Y-m-d' );
 		$now = new \DateTime();
@@ -320,29 +325,45 @@ class Currency_XRT_Client {
 			if ( isset( $response_body['rates'] ) ) {
 				$data = $response_body['rates'];
 			} else {
-				$this->error->add(
+				$error->add(
 					'unexpected_response_data',
 					'The API response did not provide the expected data.'
 				);
 			}
 		} else {
 			if ( isset( $response_body['error'], $response_body['message'], $response_body['description'] ) ) {
-				$this->error->add(
+				$error->add(
 					esc_html( $response_body['message'] ),
 					esc_html( $response_body['description'] )
 				);
 			} else {
-				$this->error->add(
+				$error->add(
 					'http_response_code',
 					$response_code . ': ' . print_r( $response_body, true )
 				);
 			}
 		}
 
-		if ( ! empty( $this->error->get_error_messages() ) ) {
-			return $this->error;
+		if ( $error->has_errors() ) {
+			return $this->record_error( $error );
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Add a call's error to the client's lifetime record, and return it on its own.
+	 *
+	 * Returning only the call's own error keeps one failure from making later, successful calls
+	 * look failed, and lets a caller act on the code of the failure that call actually hit.
+	 *
+	 * @param \WP_Error $error The error from one call.
+	 *
+	 * @return \WP_Error The same error.
+	 */
+	protected function record_error( \WP_Error $error ) {
+		$this->error->merge_from( $error );
+
+		return $error;
 	}
 }

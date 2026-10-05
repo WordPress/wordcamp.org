@@ -68,6 +68,8 @@ function render( $attributes, $content, $block ) {
 		'orderby'        => 'title',
 		'order'          => 'asc',
 		'post_status'    => get_readable_session_statuses(),
+		// A password-protected session withholds its speakers, so don't list it under one.
+		'has_password'   => false,
 	);
 
 	$sessions = get_posts( $session_args );

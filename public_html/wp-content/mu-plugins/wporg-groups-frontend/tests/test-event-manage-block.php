@@ -138,4 +138,65 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		$this->assertTrue( wp_style_is( 'wp-block-editor', 'enqueued' ) );
 		$this->assertTrue( wp_style_is( 'wp-components', 'enqueued' ) );
 	}
+
+	/**
+	 * Visit an event owned by the given user, dated relative to now.
+	 *
+	 * @param int    $author_id Event author.
+	 * @param string $starts    `strtotime()` offset for the start.
+	 */
+	private function go_to_dated_event_owned_by( int $author_id, string $starts ): int {
+		$event_id = $this->go_to_event_owned_by( $author_id );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $starts ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $starts . ' +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * The check-in button (#2130) shows for whoever can edit the event once
+	 * check-in has opened, including after the event.
+	 */
+	public function test_check_in_button_on_past_event() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$this->go_to_dated_event_owned_by( $author_id, '-1 day' );
+		wp_set_current_user( $author_id );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
+
+		$this->assertStringContainsString( 'data-wporg-groups-modal="check-in"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-recurrence-id=""', $output );
+	}
+
+	/**
+	 * Before check-in opens there is nothing to check in, so no button.
+	 */
+	public function test_check_in_button_absent_before_it_opens() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$this->go_to_dated_event_owned_by( $author_id, '+3 days' );
+		wp_set_current_user( $author_id );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
+
+		$this->assertStringContainsString( 'data-wporg-groups-modal="message-attendees"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="check-in"', $output );
+	}
+
+	/**
+	 * An Event Organizer doesn't get it on someone else's event.
+	 */
+	public function test_check_in_button_absent_on_others_event() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->go_to_dated_event_owned_by( $owner_id, '-1 day' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="check-in"', do_blocks( '<!-- wp:wporg/event-manage /-->' ) );
+	}
 }

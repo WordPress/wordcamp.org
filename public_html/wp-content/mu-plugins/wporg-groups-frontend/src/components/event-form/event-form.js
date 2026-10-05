@@ -38,6 +38,7 @@ import DurationField from './duration-field';
 import VenueField from './venue-field';
 import TimezoneField from './timezone-field';
 import LanguageField from './language-field';
+import TopicsField from './topics-field';
 
 export const NS =
 	( window.wporgGroupsEventModal &&
@@ -55,6 +56,7 @@ const EMPTY_FORM = {
 	online_event_link: '',
 	timezone: '',
 	language: '',
+	topics: [],
 	rsvp_questions: [],
 };
 
@@ -114,6 +116,7 @@ function EventForm(
 	const [ venues, setVenues ] = useState( [] );
 	const [ timezones, setTimezones ] = useState( {} );
 	const [ languages, setLanguages ] = useState( [] );
+	const [ topicSuggestions, setTopicSuggestions ] = useState( [] );
 	const descriptionRef = useRef( () => '' );
 	const cancelLoadRef = useRef( () => {} );
 
@@ -162,6 +165,7 @@ function EventForm(
 				setVenues( res.venues || [] );
 				setTimezones( res.timezones || {} );
 				setLanguages( res.languages || [] );
+				setTopicSuggestions( res.topics || [] );
 				setIsExistingPost( !! res.is_editing );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
@@ -179,6 +183,7 @@ function EventForm(
 					online_event_link: res.fields.online_event_link || '',
 					timezone: res.fields.timezone || '',
 					language: res.fields.language || '',
+					topics: res.fields.topics || [],
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -368,6 +373,13 @@ function EventForm(
 				languages={ languages }
 				value={ form.language }
 				onChange={ ( v ) => updateField( 'language', v ) }
+				classPrefix={ classPrefix }
+			/>
+
+			<TopicsField
+				suggestions={ topicSuggestions }
+				value={ form.topics }
+				onChange={ ( v ) => updateField( 'topics', v ) }
 				classPrefix={ classPrefix }
 			/>
 

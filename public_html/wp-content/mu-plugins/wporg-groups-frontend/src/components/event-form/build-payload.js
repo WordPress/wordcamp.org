@@ -25,6 +25,7 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		featured_image_id: featuredImageId,
 		timezone: form.timezone || '',
 		language: form.language || '',
+		topics: form.topics || [],
 		// Include recurrence while the schedule is editable, including for drafts.
 		// Published schedules are locked, so omit it from later updates.
 		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),

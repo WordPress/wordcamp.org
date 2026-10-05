@@ -399,6 +399,24 @@ function add_local_navigation_menus( $menus ) {
 	);
 
 	/*
+	 * The member list is otherwise reachable only through the small member
+	 * count under the group's title, which testers found too easy to miss
+	 * (#2037). The list is public, so the item is the same for every visitor
+	 * and safe on cached views. It needs the published `members` page that
+	 * provisioning creates, since `page-members.html` only resolves there;
+	 * the item is left out where that page is missing rather than linking
+	 * to a 404. The URL is relative so the navigation extension resolves it
+	 * to the page and marks the item current on the member list.
+	 */
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$items[] = array(
+			'label' => __( 'Members', 'wordcamporg' ),
+			'url'   => '/members/',
+		);
+	}
+
+	/*
 	 * A direct route to the member's own events (#2060), which otherwise have
 	 * to be found by scrolling the group's front page. The destination is the
 	 * `wporg/my-events` section on that page rather than a page of its own,
@@ -484,6 +502,12 @@ add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadc
  * `gatherpress_event` / `gatherpress_venue` post picks up `single-event` /
  * `single-venue` without anyone having to set it by hand.
  *
+ * An event's printable flyer (`…/flyer/`, routed by `wporg-groups-frontend`)
+ * is the same singular request, so it goes ahead of everything else,
+ * including a template picked for that one event. It isn't listed in
+ * `customTemplates`: it only makes sense as the flyer, never as an event's
+ * page.
+ *
  * Note: the archive template uses the standard slug `archive-gatherpress_event`
  * which WordPress resolves automatically for block themes.
  */
@@ -491,6 +515,13 @@ function single_template_hierarchy( $templates ) {
 	$post_type = get_post_type();
 	if ( 'gatherpress_event' === $post_type ) {
 		array_unshift( $templates, 'single-event' );
+
+		if (
+			function_exists( '\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request' ) &&
+			\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request()
+		) {
+			array_unshift( $templates, 'single-event-flyer' );
+		}
 	} elseif ( 'gatherpress_venue' === $post_type ) {
 		array_unshift( $templates, 'single-venue' );
 	}
@@ -500,41 +531,86 @@ add_filter( 'single_template_hierarchy', __NAMESPACE__ . '\single_template_hiera
 
 
 /**
- * Strip GatherPress metadata blocks from `the_content` on the single-event view.
+ * GatherPress blocks the single-event template already renders itself.
  *
- * GatherPress seeds new events with starter blocks (event-date, venue, RSVP,
- * add-to-calendar, etc.) baked into `post_content`. The `single-event.html`
- * template renders those exact same blocks in the sidebar info card, so we
- * end up with each one twice. Strip the metadata blocks here so `post-content`
- * only renders the user's actual description prose.
+ * GatherPress seeds new events with starter blocks baked into `post_content`.
+ * `single-event.html` renders each of these in its own place: date, venue,
+ * online link and calendar in the sidebar info card, RSVP through
+ * `wporg/event-rsvp`, and who is going through `wporg/event-attendees` in the
+ * main column. Left in the content, they showed up twice.
+ */
+const EVENT_TEMPLATE_BLOCKS = array(
+	'gatherpress/event-date',
+	'gatherpress/venue',
+	'gatherpress/add-to-calendar',
+	'gatherpress/online-event',
+	'gatherpress/rsvp',
+	'gatherpress/rsvp-response',
+);
+
+/**
+ * Strip GatherPress metadata blocks from `the_content` on the single-event view,
+ * so `post-content` only renders the organizer's description.
  */
 function strip_event_metadata_blocks( $content ) {
 	if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
 
-	// Only strip the static metadata blocks we re-render in the sidebar info
-	// card. Leave `gatherpress/rsvp` and `gatherpress/rsvp-response` in place:
-	// those are inner-block wrappers (save: <InnerBlocks.Content />) and only
-	// render when their inner blocks are present in `post_content`. They're
-	// part of the default GatherPress event template, and need to live in the
-	// main column where users interact with them.
-	$strip = array(
-		'gatherpress/event-date',
-		'gatherpress/venue',
-		'gatherpress/add-to-calendar',
-		'gatherpress/online-event',
-	);
+	return serialize_blocks( strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS ) );
+}
 
-	$blocks = parse_blocks( $content );
-	$kept   = array_filter(
-		$blocks,
-		static function ( $block ) use ( $strip ) {
-			return ! in_array( $block['blockName'], $strip, true );
+/**
+ * Remove the named blocks from a parsed block tree, at any depth.
+ *
+ * Organizers rearrange the seeded blocks in wp-admin, so they're not always
+ * top level: putting the online link and calendar side by side nests them in
+ * a group. A group left empty by that goes too, rather than leaving a gap.
+ *
+ * @param array    $blocks Parsed blocks, as `parse_blocks()` returns them.
+ * @param string[] $names  Block names to remove.
+ * @return array The blocks that remain.
+ */
+function strip_blocks( array $blocks, array $names ): array {
+	$kept = array();
+
+	foreach ( $blocks as $block ) {
+		if ( in_array( $block['blockName'], $names, true ) ) {
+			continue;
 		}
-	);
 
-	return serialize_blocks( $kept );
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			$inner_blocks  = array();
+			$inner_content = array();
+			$index         = 0;
+
+			// `innerContent` holds a `null` where each inner block goes, so
+			// it has to lose the same placeholders the inner blocks do.
+			foreach ( $block['innerContent'] as $chunk ) {
+				if ( null !== $chunk ) {
+					$inner_content[] = $chunk;
+					continue;
+				}
+
+				$child = strip_blocks( array( $block['innerBlocks'][ $index++ ] ), $names );
+				if ( $child ) {
+					$inner_blocks[]  = $child[0];
+					$inner_content[] = null;
+				}
+			}
+
+			if ( ! $inner_blocks && 'core/group' === $block['blockName'] ) {
+				continue;
+			}
+
+			$block['innerBlocks']  = $inner_blocks;
+			$block['innerContent'] = $inner_content;
+		}
+
+		$kept[] = $block;
+	}
+
+	return $kept;
 }
 add_filter( 'the_content', __NAMESPACE__ . '\strip_event_metadata_blocks', 5 );
 

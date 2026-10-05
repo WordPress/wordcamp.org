@@ -561,6 +561,41 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
+	/**
+	 * Calendar links on an occurrence name the occurrence once.
+	 *
+	 * GatherPress builds them from `get_permalink()`, which already points at
+	 * the occurrence, so prepending it again produced
+	 * `…/{occurrence}/{occurrence}/ical/` and every link 404'd.
+	 */
+	public function test_calendar_urls_name_the_occurrence_once(): void {
+		$this->set_permalink_structure( '/%postname%/' );
+		$post_id = $this->create_published_recurring_event();
+		Context::set(
+			(object) array(
+				'series_post_id'     => $post_id,
+				'recurrence_id'      => '20260810T100000',
+				'datetime_start'     => '2026-08-10 10:00:00',
+				'datetime_start_gmt' => '2026-08-10 10:00:00',
+				'datetime_end'       => '2026-08-10 11:00:00',
+				'datetime_end_gmt'   => '2026-08-10 11:00:00',
+				'timezone'           => 'UTC',
+			)
+		);
+		set_query_var( 'gpre_occurrence', '20260810T100000' );
+
+		try {
+			$calendar   = new \GatherPress\Core\Calendar\Calendar( $post_id );
+			$occurrence = Context::occurrence_url( $post_id, '20260810T100000' );
+
+			$this->assertSame( $occurrence . 'google-calendar/', $calendar->get_google_url() );
+			$this->assertSame( $occurrence . 'ical/', $calendar->get_ical_url() );
+		} finally {
+			set_query_var( 'gpre_occurrence', '' );
+			Context::set( null );
+		}
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();

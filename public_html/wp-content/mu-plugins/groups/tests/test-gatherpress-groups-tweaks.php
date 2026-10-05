@@ -1550,6 +1550,131 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			has_filter( 'gatherpress_event_feed_content', $ns . 'hide_venue_in_protected_event_feed' ),
 			'The feed content venue gate is not hooked where it fires.'
 		);
+		$this->assertSame(
+			10,
+			has_filter( 'get_the_terms', $ns . 'hide_venue_in_protected_event_calendar' ),
+			'The calendar venue gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'get_terms', $ns . 'hide_venue_feed_link_for_protected_event' ),
+			'The venue feed link gate is not hooked where it fires.'
+		);
+	}
+
+	/**
+	 * Create a dated event with a venue, optionally password-protected.
+	 *
+	 * @param string $password The event's password, if any.
+	 *
+	 * @return int The event's post ID.
+	 */
+	private function create_dated_event_with_venue( string $password = '' ): int {
+		$event_id = $this->create_event_with_venue();
+
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => $password,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * The calendar endpoints (iCal, Google and Yahoo) leave a protected event's
+	 * venue out, keep a public event's, and keep it for an editor. Outside a
+	 * calendar request (the RSVP and organiser emails) the venue is untouched.
+	 */
+	public function test_calendar_withholds_protected_event_venue() {
+		$public_id    = $this->create_dated_event_with_venue();
+		$protected_id = $this->create_dated_event_with_venue( 'secret-pass' );
+
+		wp_set_current_user( 0 );
+		set_query_var( 'gatherpress_calendar', 'ical' );
+
+		$protected = new \GatherPress\Core\Calendar\Calendar( $protected_id );
+		$public    = new \GatherPress\Core\Calendar\Calendar( $public_id );
+
+		$this->assertStringNotContainsString( 'Salty Spaces', $protected->get_ical_event_string() );
+		$this->assertStringNotContainsString( 'Salty', $protected->get_google_destination_url() );
+		$this->assertStringNotContainsString( 'Salty', $protected->get_yahoo_destination_url() );
+		$this->assertStringContainsString( 'Salty Spaces', $public->get_ical_event_string() );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertStringContainsString( 'Salty Spaces', $protected->get_ical_event_string(), 'An editor lost the venue.' );
+
+		wp_set_current_user( 0 );
+		set_query_var( 'gatherpress_calendar', '' );
+
+		$this->assertSame(
+			'Salty Spaces',
+			( new \GatherPress\Core\Event\Event( $protected_id ) )->get_venue_information()['name'],
+			'The venue was withheld outside a calendar request.'
+		);
+	}
+
+	/**
+	 * While the head prints, a protected event's term lookup leaves out its
+	 * venue, so GatherPress doesn't link the venue's iCal feed (titled with the
+	 * venue's name). A public event keeps it, and outside the head nothing
+	 * changes.
+	 */
+	public function test_head_term_lookup_omits_protected_event_venue() {
+		$public_id    = $this->create_dated_event_with_venue();
+		$protected_id = $this->create_dated_event_with_venue( 'secret-pass' );
+
+		wp_set_current_user( 0 );
+
+		$found = array();
+
+		// GatherPress builds its links from this same lookup. The hook registry
+		// is restored after each test.
+		remove_all_actions( 'wp_head' );
+		add_action(
+			'wp_head',
+			static function () use ( $public_id, $protected_id, &$found ) {
+				foreach ( array( $public_id, $protected_id ) as $event_id ) {
+					$found[ $event_id ] = wp_list_pluck(
+						get_terms(
+							array(
+								'taxonomy'   => array( 'gatherpress_topic', '_gatherpress_venue' ),
+								'object_ids' => $event_id,
+							)
+						),
+						'taxonomy'
+					);
+				}
+			}
+		);
+		do_action( 'wp_head' );
+
+		$this->assertContains( '_gatherpress_venue', $found[ $public_id ] );
+		$this->assertNotContains( '_gatherpress_venue', $found[ $protected_id ] );
+
+		$this->assertContains(
+			'_gatherpress_venue',
+			wp_list_pluck(
+				get_terms(
+					array(
+						'taxonomy'   => '_gatherpress_venue',
+						'object_ids' => $protected_id,
+					)
+				),
+				'taxonomy'
+			),
+			'The venue was withheld outside the head.'
+		);
 	}
 
 	/**

@@ -1441,6 +1441,86 @@ add_filter( 'gatherpress_event_feed_excerpt', __NAMESPACE__ . '\hide_venue_in_pr
 add_filter( 'gatherpress_event_feed_content', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
 
 /**
+ * Whether the current viewer is kept from a password-protected event's venue.
+ *
+ * Mirrors the REST gate: the event requires its password and the viewer
+ * cannot edit it. A visitor who has entered the password is let through.
+ *
+ * @param int $event_id The event.
+ *
+ * @return bool
+ */
+function is_event_venue_withheld( int $event_id ): bool {
+	return 'gatherpress_event' === get_post_type( $event_id )
+		&& post_password_required( $event_id )
+		&& ! current_user_can( 'edit_post', $event_id );
+}
+
+/**
+ * Keep a password-protected event's venue out of its calendar output.
+ *
+ * GatherPress's calendar endpoints (the iCal and Outlook downloads, the Google
+ * and Yahoo redirects, and every iCal feed) put the venue name and address in
+ * the event's LOCATION or redirect URL, with no password check. They read the
+ * venue through {@see \GatherPress\Core\Event\Event::get_venue_information()},
+ * which takes it from get_the_terms(), so drop the venue term there.
+ *
+ * Only on calendar requests: the same lookup builds the RSVP confirmation and
+ * organiser emails, which go to people the event was shared with.
+ *
+ * @param \WP_Term[]|false|\WP_Error $terms    The post's terms.
+ * @param int                        $post_id  The post.
+ * @param string                     $taxonomy The taxonomy.
+ *
+ * @return \WP_Term[]|false|\WP_Error The terms, without the venue for a protected event.
+ */
+function hide_venue_in_protected_event_calendar( $terms, $post_id, $taxonomy ) {
+	// Every GatherPress calendar endpoint is routed through this query var.
+	if ( '_gatherpress_venue' !== $taxonomy || ! is_array( $terms ) || ! get_query_var( 'gatherpress_calendar' ) ) {
+		return $terms;
+	}
+
+	return is_event_venue_withheld( (int) $post_id ) ? array() : $terms;
+}
+
+add_filter( 'get_the_terms', __NAMESPACE__ . '\hide_venue_in_protected_event_calendar', 10, 3 );
+
+/**
+ * Don't advertise a password-protected event's venue feed in its page head.
+ *
+ * GatherPress adds an iCal `<link rel="alternate">` for each term on the event
+ * ({@see \GatherPress\Core\Calendar\Setup::alternate_links()}), titled with the
+ * venue's name. Drop the venue from that term lookup while the head prints.
+ *
+ * @param \WP_Term[]|int[]|string[] $terms      The terms found.
+ * @param string[]|null             $taxonomies The taxonomies queried.
+ * @param array                     $args       The term query args.
+ *
+ * @return array The terms, without the venue for a protected event.
+ */
+function hide_venue_feed_link_for_protected_event( $terms, $taxonomies, $args ) {
+	if (
+		! doing_action( 'wp_head' )
+		|| empty( $args['object_ids'] )
+		|| ! in_array( '_gatherpress_venue', (array) $taxonomies, true )
+		|| ! array_filter( array_map( 'intval', (array) $args['object_ids'] ), __NAMESPACE__ . '\is_event_venue_withheld' )
+	) {
+		return $terms;
+	}
+
+	return array_values(
+		array_filter(
+			$terms,
+			static function ( $term ): bool {
+				return ! ( $term instanceof \WP_Term && '_gatherpress_venue' === $term->taxonomy );
+			}
+		)
+	);
+}
+
+add_filter( 'get_terms', __NAMESPACE__ . '\hide_venue_feed_link_for_protected_event', 10, 3 );
+
+/**
  * Generate venue static maps in the background instead of during the save.
  *
  * GatherPress renders a venue's static map from `wp_after_insert_post`, so

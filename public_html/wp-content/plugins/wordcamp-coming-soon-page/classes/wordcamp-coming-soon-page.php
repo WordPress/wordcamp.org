@@ -29,6 +29,9 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'get_post_metadata',          array( $this, 'jetpack_dont_email_post_to_subs' ), 10, 4 );
 		add_filter( 'publicize_should_publicize_published_post', array( $this, 'jetpack_prevent_publicize' ) );
 		add_filter( 'document_title_parts',       array( $this, 'force_empty_tagline' ) );
+		add_filter( 'pre_get_document_title',     array( $this, 'force_placeholder_document_title' ) );
+		add_filter( 'redirect_canonical',         array( $this, 'disable_canonical_redirect' ) );
+		add_filter( 'body_class',                 array( $this, 'remove_identifying_body_classes' ) );
 
 		add_image_size( 'wccsp_image_medium_rectangle', 500, 300 );
 	}
@@ -40,6 +43,33 @@ class WordCamp_Coming_Soon_Page {
 		$settings                      = $GLOBALS['WCCSP_Settings']->get_settings();
 		$show_page                     = 'on' === $settings['enabled'] && ! current_user_can( 'edit_posts' );
 		$this->override_theme_template = $show_page || $this->is_coming_soon_preview();
+
+		if ( $this->override_theme_template ) {
+			$this->suppress_identifying_links();
+		}
+	}
+
+	/**
+	 * Remove the head tags, headers and slug redirects that name the real post
+	 * while the placeholder is active, so its permalink is not disclosed.
+	 */
+	protected function suppress_identifying_links() {
+		$actions = array(
+			// `feed_links_extra` prints the post's comments feed, named after its title and URL.
+			'wp_head'           => array( 'rel_canonical', 'wp_shortlink_wp_head', 'wp_oembed_add_discovery_links', 'rest_output_link_wp_head', 'feed_links_extra' ),
+			'template_redirect' => array( 'rest_output_link_header', 'wp_shortlink_header', 'wp_old_slug_redirect' ),
+		);
+
+		foreach ( $actions as $hook => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				// Remove the callback at every priority it is registered at,
+				// rather than assuming the default — `wp_oembed_add_discovery_links`,
+				// for one, is hooked at both 4 and 10.
+				while ( false !== ( $priority = has_action( $hook, $callback ) ) ) {
+					remove_action( $hook, $callback, $priority );
+				}
+			}
+		}
 	}
 
 	/**
@@ -643,6 +673,72 @@ class WordCamp_Coming_Soon_Page {
 		}
 
 		return $parts;
+	}
+
+	/**
+	 * Use the site name as the document title while the placeholder is active,
+	 * so the resolved post's own title is not rendered.
+	 *
+	 * @param string $title The pre-filtered title.
+	 *
+	 * @return string
+	 */
+	public function force_placeholder_document_title( $title ) {
+		if ( ! $this->override_theme_template ) {
+			return $title;
+		}
+
+		return get_bloginfo( 'name' );
+	}
+
+	/**
+	 * Cancel canonical redirects while the placeholder is active, so `?p=<id>`
+	 * is not redirected to the real permalink.
+	 *
+	 * @param string $redirect_url The canonical URL.
+	 *
+	 * @return string|false
+	 */
+	public function disable_canonical_redirect( $redirect_url ) {
+		return $this->override_theme_template ? false : $redirect_url;
+	}
+
+	/**
+	 * Drop body classes that contain the resolved post's slug while the
+	 * placeholder is active.
+	 *
+	 * @param string[] $classes The body classes.
+	 *
+	 * @return string[]
+	 */
+	public function remove_identifying_body_classes( $classes ) {
+		if ( ! $this->override_theme_template ) {
+			return $classes;
+		}
+
+		$object = get_queried_object();
+		$slug   = '';
+
+		if ( $object instanceof \WP_Post ) {
+			$slug = $object->post_name;
+		} elseif ( $object instanceof \WP_Term ) {
+			$slug = $object->slug;
+		} elseif ( $object instanceof \WP_User ) {
+			$slug = $object->user_nicename;
+		}
+
+		if ( '' === $slug ) {
+			return $classes;
+		}
+
+		return array_values(
+			array_filter(
+				$classes,
+				static function ( $class ) use ( $slug ) {
+					return false === strpos( (string) $class, $slug );
+				}
+			)
+		);
 	}
 
 } // end WordCamp_Coming_Soon_Page.

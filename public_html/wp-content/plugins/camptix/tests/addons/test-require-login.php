@@ -24,6 +24,43 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * E-mails CampTix tried to send during the current test.
+	 *
+	 * @var array
+	 */
+	protected $sent_mail = array();
+
+	/**
+	 * CampTix properties changed by set_camptix_property(), with their values before the test.
+	 *
+	 * @var array
+	 */
+	protected $camptix_properties = array();
+
+	/**
+	 * Clean up after each test.
+	 */
+	public function tear_down() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		foreach ( $this->camptix_properties as $name => $value ) {
+			( new ReflectionProperty( 'CampTix_Plugin', $name ) )->setValue( $camptix, $value );
+		}
+		$this->camptix_properties = array();
+
+		remove_filter( 'camptix_wp_mail_override', array( $this, 'capture_mail' ) );
+		remove_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );
+		$camptix->release_checkout_rows();
+		$this->sent_mail = array();
+		wp_set_current_user( 0 );
+
+		unset( $_GET['tix_action'], $_POST['tix_attendee_info'], $_POST['tix_receipt_email'], $GLOBALS['post'] );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Locate a running addon instance from $camptix->addons_loaded.
 	 *
 	 * @param string $class_name
@@ -218,5 +255,310 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 		$mailer = tests_retrieve_phpmailer_instance();
 		$this->assertSame( 'pat@example.org', $mailer->get_recipient( 'to' )->address );
 		$this->assertStringContainsString( 'purchased for you by Jane Buyer.', $mailer->get_sent()->body );
+	}
+
+	/**
+	 * The row's pre-filled email doesn't survive when the buyer doesn't know who the attendee is.
+	 *
+	 * The buyer's row comes pre-filled with the buyer's own email, and the form only hides it
+	 * when the box is ticked.
+	 *
+	 * @see https://github.com/WordPress/wordcamp.org/issues/2114
+	 *
+	 * @covers CampTix_Require_Login::add_unknown_attendee_info_stubs
+	 */
+	public function test_unknown_attendee_gets_placeholder_email_over_prefilled_email() {
+		$attendee_info = array(
+			'first_name'       => '',
+			'last_name'        => '',
+			'email'            => 'buyer@example.org',
+			'unknown_attendee' => '1',
+		);
+
+		$attendee_info = apply_filters( 'camptix_checkout_attendee_info', $attendee_info );
+
+		$this->assertSame( CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, $attendee_info['email'] );
+	}
+
+	/**
+	 * The row's pre-filled name doesn't survive when the buyer doesn't know who the attendee is.
+	 *
+	 * @covers CampTix_Require_Login::add_unknown_attendee_info_stubs
+	 */
+	public function test_unknown_attendee_gets_placeholder_name_over_prefilled_name() {
+		$attendee_info = array(
+			'first_name'       => 'Jane',
+			'last_name'        => 'Buyer',
+			'email'            => 'buyer@example.org',
+			'unknown_attendee' => '1',
+		);
+
+		$attendee_info = apply_filters( 'camptix_checkout_attendee_info', $attendee_info );
+
+		$this->assertSame( 'Unknown', $attendee_info['first_name'] );
+		$this->assertSame( 'Attendee', $attendee_info['last_name'] );
+	}
+
+	/**
+	 * An unknown attendee on the buyer's row isn't assigned to the buyer's account.
+	 *
+	 * @covers CampTix_Require_Login::add_username_to_attendee_object
+	 */
+	public function test_unknown_attendee_on_buyer_row_is_unconfirmed() {
+		$this->log_in_buyer();
+
+		$attendee = apply_filters( 'camptix_form_register_complete_attendee_object', new stdClass(), array( 'unknown_attendee' => '1' ), 1 );
+
+		$this->assertSame( CampTix_Require_Login::UNCONFIRMED_USERNAME, $attendee->username );
+	}
+
+	/**
+	 * The buyer's row is still assigned to the buyer when the attendee is known.
+	 *
+	 * @covers CampTix_Require_Login::add_username_to_attendee_object
+	 */
+	public function test_buyer_row_is_assigned_to_buyer() {
+		$buyer = $this->log_in_buyer();
+
+		$attendee = apply_filters( 'camptix_form_register_complete_attendee_object', new stdClass(), array(), 1 );
+
+		$this->assertSame( $buyer->user_login, $attendee->username );
+	}
+
+	/**
+	 * A one-ticket order for an unknown attendee is stored as an unknown attendee, so it isn't listed.
+	 *
+	 * @see https://github.com/WordPress/wordcamp.org/issues/2114#issuecomment-5812433412
+	 *
+	 * @covers CampTix_Require_Login::add_unknown_attendee_info_stubs
+	 * @covers CampTix_Require_Login::add_username_to_attendee_object
+	 */
+	public function test_checkout_stores_unknown_attendee_on_buyer_row_as_unknown() {
+		$this->log_in_buyer();
+
+		$attendee_id = $this->check_out_one_ticket_for_unknown_attendee();
+
+		$this->assertSame( CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, get_post_meta( $attendee_id, 'tix_email', true ) );
+		$this->assertSame( CampTix_Require_Login::UNCONFIRMED_USERNAME, get_post_meta( $attendee_id, 'tix_username', true ) );
+		$this->assertStringNotContainsString( '<span class="tix-first">Unknown</span>', $this->render_attendees_shortcode() );
+	}
+
+	/**
+	 * The buyer still gets the receipt when the ticket's own email is the placeholder.
+	 *
+	 * @covers CampTix_Require_Login::send_receipt_to_buyer_instead_of_unknown_attendee
+	 */
+	public function test_checkout_sends_receipt_to_buyer_when_buyer_row_is_unknown() {
+		$this->log_in_buyer();
+
+		$attendee_id = $this->check_out_one_ticket_for_unknown_attendee();
+
+		$this->assertSame( 'buyer@example.org', get_post_meta( $attendee_id, 'tix_receipt_email', true ) );
+		$this->assertSame( array( 'buyer@example.org' ), wp_list_pluck( $this->sent_mail, 'to' ) );
+	}
+
+	/**
+	 * The buyer's own abandoned order is still theirs when their row is an unknown attendee.
+	 *
+	 * CampTix finds a buyer's own orders by the buyer's username on the buyer row, so it can leave
+	 * their abandoned drafts out of their counts. An unknown attendee on that row has no username.
+	 *
+	 * @covers CampTix_Require_Login::add_username_to_attendee_object
+	 * @covers CampTix_Require_Login::save_checkout_username_meta
+	 */
+	public function test_buyers_abandoned_order_is_found_when_buyer_row_is_unknown() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$this->log_in_buyer();
+		$draft_id = $this->insert_abandoned_order_for_unknown_attendee();
+
+		$this->assertSame( array( $draft_id ), $camptix->get_abandoned_draft_attendee_ids() );
+	}
+
+	/**
+	 * Someone else's abandoned order isn't treated as the buyer's own when its buyer row is an unknown attendee.
+	 *
+	 * @covers CampTix_Require_Login::add_username_to_attendee_object
+	 * @covers CampTix_Require_Login::save_checkout_username_meta
+	 */
+	public function test_someone_elses_abandoned_order_is_not_found_when_buyer_row_is_unknown() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$this->log_in_buyer();
+		$this->insert_abandoned_order_for_unknown_attendee();
+
+		wp_set_current_user( self::factory()->user->create() );
+
+		$this->assertSame( array(), $camptix->get_abandoned_draft_attendee_ids() );
+	}
+
+	/**
+	 * Write the draft of a one-ticket order for an unknown attendee on the buyer's row, as checkout
+	 * does, and let its payment session expire long enough ago to count as abandoned.
+	 *
+	 * @return int The draft attendee ID.
+	 */
+	protected function insert_abandoned_order_for_unknown_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$attendee             = new stdClass();
+		$attendee->ticket_id  = self::factory()->post->create( array( 'post_type' => 'tix_ticket' ) );
+		$attendee->first_name = 'Unknown';
+		$attendee->last_name  = 'Attendee';
+		$attendee->email      = CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL;
+		$attendee->answers    = array();
+
+		$attendee = apply_filters( 'camptix_form_register_complete_attendee_object', $attendee, array( 'unknown_attendee' => '1' ), 1 );
+		$drafts   = $camptix->insert_attendee_drafts( array( $attendee ), 'stripe', 'buyer@example.org', wp_generate_password( 12, false ), wp_generate_password( 12, false ) );
+		$draft_id = $drafts[0]->post_id;
+
+		update_post_meta( $draft_id, 'tix_session_expires_at', time() - CampTix_Plugin::DRAFT_LIFETIME_GRACE - MINUTE_IN_SECONDS );
+
+		return $draft_id;
+	}
+
+	/**
+	 * Log in a buyer whose profile has an email but no name, like many WordPress.org profiles.
+	 *
+	 * @return WP_User
+	 */
+	protected function log_in_buyer() {
+		$user_id = self::factory()->user->create( array(
+			'user_email' => 'buyer@example.org',
+			'first_name' => '',
+			'last_name'  => '',
+		) );
+
+		wp_set_current_user( $user_id );
+
+		return get_userdata( $user_id );
+	}
+
+	/**
+	 * Check out one free ticket with "I don't know who will use this ticket yet" ticked on the buyer's row.
+	 *
+	 * The row is submitted as the form sends it: the buyer's pre-filled email is still in the hidden field.
+	 *
+	 * @return int The attendee ID.
+	 */
+	protected function check_out_one_ticket_for_unknown_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$ticket_id = self::factory()->post->create( array(
+			'post_type'   => 'tix_ticket',
+			'post_status' => 'publish',
+			'post_title'  => 'Free',
+		) );
+		update_post_meta( $ticket_id, 'tix_price', 0 );
+		update_post_meta( $ticket_id, 'tix_quantity', 10 );
+
+		$ticket                       = get_post( $ticket_id );
+		$ticket->tix_price            = 0;
+		$ticket->tix_remaining        = 10;
+		$ticket->tix_coupon_applied   = false;
+		$ticket->tix_discounted_price = 0;
+
+		// What template_redirect() would have set up for this order.
+		$this->set_camptix_property( 'error_flags', array() );
+		$this->set_camptix_property( 'shortcode_str', '[camptix]' );
+		$this->set_camptix_property( 'tickets', array( $ticket_id => $ticket ) );
+		$this->set_camptix_property( 'tickets_selected', array( $ticket_id => 1 ) );
+		$this->set_camptix_property( 'tickets_selected_count', 1 );
+		$order = array(
+			'items' => array(
+				array(
+					'id'          => $ticket_id,
+					'name'        => 'Free',
+					'description' => '',
+					'quantity'    => 1,
+					'price'       => 0,
+				),
+			),
+			'total' => 0,
+		);
+
+		$this->set_camptix_property( 'order', $order );
+
+		$GLOBALS['post'] = get_post( self::factory()->post->create( array(
+			'post_type'    => 'page',
+			'post_content' => '[camptix]',
+		) ) );
+
+		$_GET['tix_action']         = 'checkout';
+		$_POST['tix_receipt_email'] = 1;
+		$_POST['tix_attendee_info'] = array(
+			1 => array(
+				'ticket_id'        => $ticket_id,
+				'first_name'       => '',
+				'last_name'        => '',
+				'email'            => 'buyer@example.org',
+				'unknown_attendee' => '1',
+			),
+		);
+
+		add_filter( 'camptix_wp_mail_override', array( $this, 'capture_mail' ), 10, 2 );
+		add_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );
+
+		try {
+			$camptix->form_checkout();
+			$this->fail( 'Checkout did not complete.' );
+		} catch ( WPDieException $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		}
+
+		$attendee_ids = get_posts( array(
+			'post_type'   => 'tix_attendee',
+			'post_status' => 'publish',
+			'fields'      => 'ids',
+			'meta_key'    => 'tix_ticket_id',
+			'meta_value'  => $ticket_id,
+		) );
+
+		$this->assertCount( 1, $attendee_ids );
+
+		return $attendee_ids[0];
+	}
+
+	/**
+	 * Set one of CampTix's protected properties.
+	 *
+	 * @param string $name
+	 * @param mixed  $value
+	 */
+	protected function set_camptix_property( $name, $value ) {
+		$property = new ReflectionProperty( 'CampTix_Plugin', $name );
+
+		if ( ! array_key_exists( $name, $this->camptix_properties ) ) {
+			$this->camptix_properties[ $name ] = $property->getValue( $GLOBALS['camptix'] );
+		}
+
+		$property->setValue( $GLOBALS['camptix'], $value );
+	}
+
+	/**
+	 * Record an outgoing CampTix e-mail instead of sending it.
+	 *
+	 * @param bool  $override
+	 * @param array $mail
+	 *
+	 * @return bool
+	 */
+	public function capture_mail( $override, $mail ) {
+		$this->sent_mail[] = $mail;
+
+		return true;
+	}
+
+	/**
+	 * End the request where checkout redirects to the purchased tickets, before it calls die().
+	 *
+	 * @throws WPDieException Always.
+	 */
+	public function stop_redirect() {
+		throw new WPDieException( 'redirect' );
 	}
 }

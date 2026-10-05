@@ -23,6 +23,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_get_attendee_email',                     array( $this, 'redirect_unknown_attendee_emails_to_buyer' ), 10, 2 );
 		add_action( 'camptix_attendee_form_before_input',             array( $this, 'inject_unknown_attendee_checkbox' ), 10, 3 );
 		add_filter( 'camptix_checkout_attendee_info',                 array( $this, 'add_unknown_attendee_info_stubs' ) );
+		add_filter( 'camptix_checkout_receipt_email',                 array( $this, 'send_receipt_to_buyer_instead_of_unknown_attendee' ) );
 		add_filter( 'camptix_edit_info_cell_content',                 array( $this, 'show_buyer_attendee_status_instead_of_edit_link' ), 10, 2 );
 		add_filter( 'camptix_attendee_info_default_value',            array( $this, 'prepopulate_known_fields' ), 10, 5 );
 
@@ -330,7 +331,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * Add the value of the username to the Attendee object used during checkout
 	 *
 	 * The current logged in user's username will be assigned to the first ticket and the other tickets will have
-	 * an empty field because it will be filled in later when each individual confirms their registration.
+	 * an empty field because it will be filled in later when each individual confirms their registration. The first
+	 * ticket is left unconfirmed too when the buyer doesn't know who will use it, and the buyer's username is kept
+	 * separately, so CampTix still knows whose order it is.
 	 *
 	 * @param stdClass $attendee
 	 * @param array $attendee_info
@@ -340,8 +343,14 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function add_username_to_attendee_object( $attendee, $attendee_info, $attendee_order ) {
 		if ( 1 === $attendee_order ) {
-			$current_user       = wp_get_current_user();
-			$attendee->username = $current_user->user_login;
+			$current_user = wp_get_current_user();
+
+			if ( isset( $attendee_info['unknown_attendee'] ) ) {
+				$attendee->username       = self::UNCONFIRMED_USERNAME;
+				$attendee->buyer_username = $current_user->user_login;
+			} else {
+				$attendee->username = $current_user->user_login;
+			}
 		} else {
 			$attendee->username = self::UNCONFIRMED_USERNAME;
 		}
@@ -357,6 +366,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function save_checkout_username_meta( $attendee_id, $attendee ) {
 		update_post_meta( $attendee_id, 'tix_username', $attendee->username );
+
+		if ( ! empty( $attendee->buyer_username ) ) {
+			update_post_meta( $attendee_id, 'tix_buyer_username', $attendee->buyer_username );
+		}
 	}
 
 	/**
@@ -591,30 +604,39 @@ class CampTix_Require_Login extends CampTix_Addon {
 	/**
 	 * Populate unknown attendee fields with stubbed values.
 	 *
-	 * Otherwise they would be empty and the checkout form would fail with errors.
+	 * Otherwise they would be empty and the checkout form would fail with errors. The stubs replace
+	 * whatever the fields hold, because the form only hides them: the buyer's own row is pre-filled
+	 * with the buyer's name and email, and those would otherwise be stored on the unknown ticket.
 	 *
 	 * @param array $attendee_info
 	 *
 	 * @return array
 	 */
 	public function add_unknown_attendee_info_stubs( $attendee_info ) {
-		$unknown_attendee_info = $this->get_unknown_attendee_info();
-
 		if ( isset( $attendee_info['unknown_attendee'] ) ) {
-			if ( empty( $attendee_info['first_name'] ) ) {
-				$attendee_info['first_name'] = $unknown_attendee_info['first_name'];
-			}
-
-			if ( empty( $attendee_info['last_name'] ) ) {
-				$attendee_info['last_name'] = $unknown_attendee_info['last_name'];
-			}
-
-			if ( ! is_email( $attendee_info['email'] ) ) {
-				$attendee_info['email'] = $unknown_attendee_info['email'];
-			}
+			$attendee_info = array_merge( $attendee_info, $this->get_unknown_attendee_info() );
 		}
 
 		return $attendee_info;
+	}
+
+	/**
+	 * Send the receipt to the buyer when it would go to an unknown attendee.
+	 *
+	 * The receipt goes to the email of the attendee the buyer picked, which is their own row by default.
+	 * An unknown attendee's email is the placeholder, and e-mails for unknown attendees are redirected to
+	 * the receipt address, so otherwise the buyer would get neither the receipt nor the ticket.
+	 *
+	 * @param string|false $receipt_email
+	 *
+	 * @return string|false
+	 */
+	public function send_receipt_to_buyer_instead_of_unknown_attendee( $receipt_email ) {
+		if ( self::UNKNOWN_ATTENDEE_EMAIL === $receipt_email ) {
+			$receipt_email = wp_get_current_user()->user_email;
+		}
+
+		return $receipt_email;
 	}
 
 	/**

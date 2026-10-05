@@ -269,8 +269,9 @@ class Multi_Event_Sponsors {
 	 * the legacy region.
 	 *
 	 * A group match takes precedence over the legacy region. When a camp is in
-	 * multiple groups the sponsor targets, the highest-ordered sponsorship level
-	 * wins (by menu_order); ties fall to the lowest level post ID for determinism.
+	 * multiple groups the sponsor targets, the level with the highest contribution
+	 * per attendee wins, the same ranking uksort_sponsorship_levels() applies; ties
+	 * fall to the lowest level post ID for determinism.
 	 *
 	 * @param int   $sponsor_id
 	 * @param int   $wordcamp_region Legacy region term ID (0 if none).
@@ -292,10 +293,7 @@ class Multi_Event_Sponsors {
 			usort(
 				$matches,
 				function ( $a, $b ) {
-					$order_a = (int) get_post_field( 'menu_order', $a );
-					$order_b = (int) get_post_field( 'menu_order', $b );
-
-					return ( $order_b <=> $order_a ) ?: ( $a <=> $b );
+					return $this->uksort_sponsorship_levels( $a, $b ) ?: ( $a <=> $b );
 				}
 			);
 

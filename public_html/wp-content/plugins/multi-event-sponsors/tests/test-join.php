@@ -149,18 +149,20 @@ class Test_MES_Join extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Multiple matching groups pick highest ordered level.
+	 * Multiple matching groups pick the level with the highest contribution per attendee.
+	 *
+	 * That's how the rest of MES ranks levels. Levels have no settable menu_order,
+	 * and the lower level is created first, so a fallback to post ID would pick it.
 	 */
-	public function test_multiple_matching_groups_pick_highest_ordered_level() {
+	public function test_multiple_matching_groups_pick_highest_contribution_level() {
 		$group_a = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 		$group_b = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 
-		$low_level  = self::factory()->post->create( array(
-			'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG, 'menu_order' => 1,
-		) );
-		$high_level = self::factory()->post->create( array(
-			'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG, 'menu_order' => 9,
-		) );
+		$low_level  = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+		$high_level = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+
+		update_post_meta( $low_level, 'mes_contribution_per_attendee', 1.5 );
+		update_post_meta( $high_level, 'mes_contribution_per_attendee', 4 );
 
 		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
 

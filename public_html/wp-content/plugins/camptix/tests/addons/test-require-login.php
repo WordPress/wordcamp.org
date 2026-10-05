@@ -191,4 +191,32 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'title=', $content );
 		$this->assertStringNotContainsString( 'tabindex=', $content );
 	}
+
+	/**
+	 * The re-sent claim email names the buyer, like the first send does.
+	 *
+	 * @covers CampTix_Require_Login::resend_claim_links
+	 */
+	public function test_resend_claim_links_names_the_buyer() {
+		$buyer_id    = $this->create_attendee( 'Jane', 'Buyer', 'jane@example.org', 'jane' );
+		$attendee_id = $this->create_attendee( 'Pat', 'Guest', 'pat@example.org', CampTix_Require_Login::UNCONFIRMED_USERNAME );
+
+		foreach ( array( $buyer_id, $attendee_id ) as $id ) {
+			update_post_meta( $id, 'tix_access_token', 'resendorder' );
+			update_post_meta( $id, 'tix_receipt_email', 'jane@example.org' );
+			update_post_meta( $id, 'tix_edit_token', 'edittoken' . $id );
+		}
+
+		reset_phpmailer_instance();
+
+		/** @var CampTix_Require_Login $addon */
+		$addon   = $this->get_addon( 'CampTix_Require_Login' );
+		$summary = $addon->resend_claim_links( 'resendorder' );
+
+		$this->assertCount( 1, $summary['sent'] );
+
+		$mailer = tests_retrieve_phpmailer_instance();
+		$this->assertSame( 'pat@example.org', $mailer->get_recipient( 'to' )->address );
+		$this->assertStringContainsString( 'purchased for you by Jane Buyer.', $mailer->get_sent()->body );
+	}
 }

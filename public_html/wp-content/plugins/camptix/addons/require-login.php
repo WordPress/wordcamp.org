@@ -1177,6 +1177,43 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
+		set_transient(
+			'camptix_rl_resend_summary_' . $access_token,
+			$this->resend_claim_links( $access_token ),
+			MINUTE_IN_SECONDS * 5
+		);
+
+		$redirect = add_query_arg(
+			array(
+				'tix_action'       => 'access_tickets',
+				'tix_access_token' => $access_token,
+				'tix_resend_done'  => 1,
+			),
+			$camptix->get_tickets_url()
+		) . '#tix';
+
+		wp_safe_redirect( esc_url_raw( $redirect ) );
+		die();
+	}
+
+	/**
+	 * Re-send the claim email for every Unconfirmed/Unknown ticket on an order.
+	 *
+	 * Each ticket is sent at most once an hour. The caller is responsible for
+	 * checking that the buyer may act on the order.
+	 *
+	 * @param string $access_token The order's access token.
+	 *
+	 * @return array {
+	 *     @type string[] $sent      Masked addresses the emails went to.
+	 *     @type int      $throttled Tickets skipped because they were re-sent within the hour.
+	 *     @type int      $failed    Tickets whose email could not be sent.
+	 * }
+	 */
+	public function resend_claim_links( $access_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
 		$attendees = $this->get_attendees_by_access_token( $access_token );
 
 		$sent          = array();
@@ -1191,6 +1228,16 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$saved_shortcode_tags = $shortcode_tags;
 		remove_all_shortcodes();
 		do_action( 'camptix_init_email_templates_shortcodes' );
+
+		// The unconfirmed-attendee template says who bought the ticket. Find the buyer's
+		// name the same way CampTix_Plugin::email_tickets() does for the first send.
+		$receipt_email = $attendees ? get_post_meta( $attendees[0]->ID, 'tix_receipt_email', true ) : '';
+		foreach ( $attendees as $attendee ) {
+			if ( $camptix->get_attendee_email( $attendee->ID ) == $receipt_email ) {
+				$camptix->tmp( 'buyer_full_name', get_post_meta( $attendee->ID, 'tix_first_name', true ) . ' ' . get_post_meta( $attendee->ID, 'tix_last_name', true ) );
+				break;
+			}
+		}
 
 		foreach ( $attendees as $attendee ) {
 			$username       = get_post_meta( $attendee->ID, 'tix_username', true );
@@ -1224,27 +1271,15 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring the value saved above, the same restore CampTix_Plugin::restore_shortcodes() performs.
 		$shortcode_tags = $saved_shortcode_tags;
 
-		set_transient(
-			'camptix_rl_resend_summary_' . $access_token,
-			array(
-				'sent'      => $sent,
-				'throttled' => $throttled,
-				'failed'    => $failed,
-			),
-			MINUTE_IN_SECONDS * 5
+		$camptix->tmp( 'attendee_id', false );
+		$camptix->tmp( 'ticket_url', false );
+		$camptix->tmp( 'buyer_full_name', false );
+
+		return array(
+			'sent'      => $sent,
+			'throttled' => $throttled,
+			'failed'    => $failed,
 		);
-
-		$redirect = add_query_arg(
-			array(
-				'tix_action'       => 'access_tickets',
-				'tix_access_token' => $access_token,
-				'tix_resend_done'  => 1,
-			),
-			$camptix->get_tickets_url()
-		) . '#tix';
-
-		wp_safe_redirect( esc_url_raw( $redirect ) );
-		die();
 	}
 
 	/**

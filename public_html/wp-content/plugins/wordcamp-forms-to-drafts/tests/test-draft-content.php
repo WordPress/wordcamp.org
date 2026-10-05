@@ -368,13 +368,14 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Formatting and percent-encoded URLs a submitter typed still reach the draft body.
+	 * A draft body keeps the submitter's text, paragraphs and percent-encoded URLs.
 	 *
-	 * Jetpack runs `wp_kses_post()` over these values before the handler sees them, so the
-	 * allow-listed markup is deliberate and is left alone here.
+	 * The body is stored as plain text, like the titles: markup a submitter typed is kept as
+	 * its text, line breaks still become paragraphs, and a percent-encoded URL is left intact
+	 * (which is why the plain-text helper avoids `sanitize_text_field()`).
 	 */
 	public function test_body_keeps_formatting_and_percent_encoding() {
-		$body = 'Bio with <strong>bold</strong>. See https://example.org/My%20Notes.pdf';
+		$body = "Bio with bold text. See https://example.org/My%20Notes.pdf\n\nSecond paragraph.";
 
 		$this->plugin->call_for_speakers(
 			$this->make_submission( 'call-for-speakers' ),
@@ -395,8 +396,10 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $speaker );
-		$this->assertStringContainsString( '<strong>bold</strong>', $speaker[0]->post_content );
+		$this->assertStringContainsString( 'bold text', $speaker[0]->post_content );
 		$this->assertStringContainsString( 'My%20Notes.pdf', $speaker[0]->post_content );
+		// The two submitted paragraphs survive as two paragraph blocks.
+		$this->assertSame( 2, substr_count( $speaker[0]->post_content, '<!-- wp:paragraph -->' ) );
 	}
 
 	/**
@@ -423,5 +426,82 @@ class Test_Draft_Content extends WP_UnitTestCase {
 		) );
 		$this->assertNotEmpty( $sponsor );
 		$this->assertTitleIsText( $sponsor[0]->post_title, 'Test Co' );
+	}
+
+	/**
+	 * A submitted value whose `<` is followed by a space -- which `sanitize_text_field()` leaves
+	 * in place and `content_save_pre` would otherwise rebuild into a real element.
+	 *
+	 * @var string
+	 */
+	const SPACED_TAG_BODY = 'Intro < math data-wp-interactive="core/navigation" >x< /math > outro';
+
+	/**
+	 * Assert a draft body keeps the submission as text, with no `<` left that could be read as a tag.
+	 *
+	 * @param string $content The stored draft content.
+	 */
+	protected function assertBodyKeepsTextNotTag( $content ) {
+		$this->assertStringNotContainsString( '< math', $content, 'A spaced tag residue was stored.' );
+		$this->assertStringNotContainsString( '<math', $content, 'A reconstructed element was stored.' );
+		$this->assertStringContainsString( '&lt;', $content, 'The submitted "<" was not encoded.' );
+		$this->assertStringContainsString( 'outro', $content, 'The submission text was not preserved.' );
+	}
+
+	/**
+	 * A spaced tag in a Company Description is stored as text, not rebuilt into an element.
+	 */
+	public function test_sponsor_description_spaced_tag_is_text() {
+		$this->plugin->call_for_sponsors(
+			$this->make_submission( 'call-for-sponsors' ),
+			array(
+				'Company Name'        => 'Test Co',
+				'Company Description' => self::SPACED_TAG_BODY,
+				'Website'             => 'https://example.org',
+			),
+			array()
+		);
+
+		$sponsor = get_posts( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $sponsor );
+		$this->assertBodyKeepsTextNotTag( $sponsor[0]->post_content );
+	}
+
+	/**
+	 * A spaced tag in a speaker Bio and a session Topic Description is stored as text.
+	 */
+	public function test_speaker_and_session_body_spaced_tag_is_text() {
+		$this->plugin->call_for_speakers(
+			$this->make_submission( 'call-for-speakers' ),
+			array(
+				'Name'                   => 'Test Speaker',
+				'Email Address'          => 'speaker@example.org',
+				'WordPress.org Username' => 'nonexistent-user-for-tests',
+				'Your Bio'               => self::SPACED_TAG_BODY,
+				'Topic Title'            => 'A talk',
+				'Topic Description'      => self::SPACED_TAG_BODY,
+			),
+			array()
+		);
+
+		$speaker = get_posts( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $speaker );
+		$this->assertBodyKeepsTextNotTag( $speaker[0]->post_content );
+
+		$session = get_posts( array(
+			'post_type'   => 'wcb_session',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $session );
+		$this->assertBodyKeepsTextNotTag( $session[0]->post_content );
 	}
 }

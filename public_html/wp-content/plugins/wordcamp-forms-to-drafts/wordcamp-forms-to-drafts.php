@@ -444,7 +444,7 @@ class WordCamp_Forms_To_Drafts {
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
 			'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ) ),
-			'post_content' => $this->escape_shortcodes( $all_values['Company Description'] ?? '' ),
+			'post_content' => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Description'] ?? '', true ) ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -666,8 +666,10 @@ class WordCamp_Forms_To_Drafts {
 	 * than executed. Titles need this as much as bodies do -- the WordCamp blocks and
 	 * `wc-post-types` both concatenate a title into post content.
 	 *
-	 * Tags are not a concern here: Jetpack has already run these values through `wp_kses_post()`,
-	 * and `content_save_pre` runs them through it again on the way into the database.
+	 * This only handles the shortcode delimiters, not tags. Jetpack sanitises form fields with
+	 * `sanitize_text_field()`, so callers that store free text run the value through
+	 * `wcorg_sanitize_plain_text()` first -- every title, and the description/bio fields -- which
+	 * encodes a stray `<` so it stays text.
 	 *
 	 * @param string $content Submitted title or body.
 	 *
@@ -685,7 +687,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_speaker( $speaker ) {
-		$content = $this->escape_shortcodes( $speaker['Your Bio'] ?? '' );
+		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $speaker['Your Bio'] ?? '', true ) );
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -736,7 +738,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_session( $session, $speaker ) {
-		$content = $this->escape_shortcodes( $session['Topic Description'] ?? '' );
+		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $session['Topic Description'] ?? '', true ) );
 
 		if ( $content ) {
 			$content = wpautop( $content );

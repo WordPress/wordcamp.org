@@ -12,10 +12,14 @@ require_once __DIR__ . '/class-groups-testcase.php';
 class Test_Groups_Blocks extends Groups_TestCase {
 
 	const EXPECTED_BLOCKS = array(
+		'wporg/event-attendees',
+		'wporg/event-flyer-link',
+		'wporg/event-flyer-qr',
 		'wporg/event-language',
 		'wporg/event-manage',
 		'wporg/event-rsvp',
 		'wporg/event-speakers',
+		'wporg/event-topics',
 		'wporg/group-members',
 		'wporg/group-membership',
 		'wporg/group-location',
@@ -27,7 +31,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 12 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 16 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -1319,5 +1323,213 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'About this group', $header_row );
 		$this->assertStringContainsString( 'wporg-page-content__edit', $header_row );
 		$this->assertStringContainsString( 'Edit this content', $header_row );
+	}
+
+	/**
+	 * Create a published event with the given number of attendees.
+	 *
+	 * @param int   $attendees Number of attending users to create.
+	 * @param array $args      Extra post arguments.
+	 *
+	 * @return int Event post ID.
+	 */
+	private function create_event_with_attendees( int $attendees, array $args = array() ): int {
+		$event_id = self::factory()->post->create(
+			array_merge(
+				array(
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'publish',
+					'post_title'  => 'Attendee List Event',
+				),
+				$args
+			)
+		);
+
+		$rsvp = new \GatherPress\Core\Rsvp\Rsvp( $event_id );
+		for ( $i = 1; $i <= $attendees; $i++ ) {
+			$user_id = self::factory()->user->create( array( 'display_name' => "Listed Attendee {$i}" ) );
+			$rsvp->save( $user_id, 'attending' );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * Every attendee is listed with a profile link, under a heading that
+	 * carries the count.
+	 */
+	public function test_event_attendees_lists_attendees_with_profile_links() {
+		$event_id = $this->create_event_with_attendees( 3 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Attendees (3)', $output );
+		$this->assertSame( 3, substr_count( $output, 'class="wporg-event-attendees__item"' ) );
+		$this->assertStringContainsString( 'Listed Attendee 1', $output );
+		$this->assertStringContainsString( 'Listed Attendee 3', $output );
+
+		// Same link the sidebar modal uses for each attendee.
+		$records = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->responses()['attending']['records'];
+		$this->assertStringContainsString( 'href="' . esc_url( $records[0]['profile'] ) . '"', $output );
+		$this->assertStringNotContainsString( 'wporg-event-attendees__more', $output );
+	}
+
+	/**
+	 * With nobody attending, the section is left out; the sidebar already
+	 * covers the empty state.
+	 */
+	public function test_event_attendees_renders_nothing_without_attendees() {
+		$event_id = $this->create_event_with_attendees( 0 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/event-attendees /-->' ) ) );
+	}
+
+	/**
+	 * Past events say "Attended" rather than "Attendees".
+	 */
+	public function test_event_attendees_uses_past_tense_for_past_events() {
+		$event_id = $this->create_event_with_attendees( 1 );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Attended (1)', $output );
+	}
+
+	/**
+	 * Once anyone is checked in on a past event, "Attended" lists only the
+	 * people checked in, so the no-shows aren't credited.
+	 */
+	public function test_event_attendees_follows_check_ins_on_past_events() {
+		$event_id = $this->create_event_with_attendees( 3 );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$records = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->responses()['attending']['records'];
+		$came    = $records[1]['name'];
+		\WordCamp\Groups\Frontend\Check_In\set_checked_in( get_comment( (int) $records[1]['commentId'] ), true );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Attended (1)', $output );
+		$this->assertSame( 1, substr_count( $output, 'class="wporg-event-attendees__item"' ) );
+		$this->assertStringContainsString( $came, $output );
+		$this->assertStringNotContainsString( $records[0]['name'], $output );
+	}
+
+	/**
+	 * Past the first 12, attendees move behind a "Show all" disclosure, and
+	 * every attendee is still in the page exactly once.
+	 */
+	public function test_event_attendees_puts_overflow_behind_a_disclosure() {
+		$event_id = $this->create_event_with_attendees( 14 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertSame( 14, substr_count( $output, 'class="wporg-event-attendees__item"' ) );
+		$this->assertStringContainsString( 'Show all 14 attendees', $output );
+
+		$details = substr( $output, strpos( $output, '<details' ) );
+		$this->assertSame( 2, substr_count( $details, 'class="wporg-event-attendees__item"' ) );
+	}
+
+	/**
+	 * Drafts don't list anyone.
+	 */
+	public function test_event_attendees_renders_nothing_for_unpublished_events() {
+		$event_id = $this->create_event_with_attendees( 1, array( 'post_status' => 'draft' ) );
+
+		// A draft 404s for a visitor, so point the global post at it directly
+		// to make the block reach its own status check.
+		global $post;
+		$post = get_post( $event_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		setup_postdata( $post );
+
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		wp_reset_postdata();
+
+		$this->assertStringNotContainsString( 'Listed Attendee 1', $output );
+	}
+
+	/**
+	 * The list follows the event's password gate, including with the
+	 * visitor-settable `preview` query var.
+	 */
+	public function test_event_attendees_hides_attendees_behind_the_password_gate() {
+		$event_id = $this->create_event_with_attendees( 1, array( 'post_password' => 'secret-pass' ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$this->assertStringNotContainsString( 'Listed Attendee 1', do_blocks( '<!-- wp:wporg/event-attendees /-->' ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event&preview=1" ) );
+		$this->assertTrue( is_preview() );
+		$this->assertStringNotContainsString( 'Listed Attendee 1', do_blocks( '<!-- wp:wporg/event-attendees /-->' ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$hasher                                 = new \PasswordHash( 8, true );
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = $hasher->HashPassword( 'secret-pass' );
+
+		$unlocked = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Listed Attendee 1', $unlocked );
+	}
+
+	/**
+	 * Registration answers are organizer-only; the public list must never
+	 * print them, even for an organizer.
+	 */
+	public function test_event_attendees_never_prints_registration_answers() {
+		$event_id = $this->create_event_with_attendees( 1 );
+
+		\WordCamp\Groups\Frontend\RSVP_Questions\save_questions(
+			$event_id,
+			array(
+				array(
+					'label'    => 'Dietary needs',
+					'required' => false,
+				),
+			)
+		);
+		$question = \WordCamp\Groups\Frontend\RSVP_Questions\get_questions( $event_id )[0];
+		$records  = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->responses()['attending']['records'];
+		\WordCamp\Groups\Frontend\RSVP_Questions\save_answers(
+			(int) $records[0]['commentId'],
+			array( $question['id'] => 'Private answer text' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Listed Attendee 1', $output );
+		$this->assertStringNotContainsString( 'Dietary needs', $output );
+		$this->assertStringNotContainsString( 'Private answer text', $output );
 	}
 }

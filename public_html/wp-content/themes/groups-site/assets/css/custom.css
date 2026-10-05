@@ -396,6 +396,7 @@ body.error404 .site-content-container h1 {
 
 .groups-site-sidebar .wporg-sponsors__heading,
 .groups-site-event-sidebar .wporg-sponsors__heading,
+.groups-site-become-organizer__heading,
 .groups-site-sidebar .wporg-group-membership__heading,
 .groups-site-sidebar .wporg-group-membership__preference-heading {
 	box-sizing: border-box;
@@ -895,9 +896,15 @@ body.error404 .site-content-container h1 {
 .groups-site-event-info-card .gatherpress--has-venue-phone .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
 .groups-site-event-info-card .groups-site-online-event .wp-block-icon,
-.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-icon {
+.groups-site-event-info-card .groups-site-add-to-calendar .wp-block-icon,
+.groups-site-event-info-card .groups-site-print-flyer .wp-block-icon {
 	color: var(--wp--preset--color--charcoal-4);
 	flex: 0 0 auto;
+}
+
+/* The flyer link stays out on a password-protected event; its icon goes too. */
+.groups-site-event-info-card .groups-site-print-flyer:not(:has(.wporg-event-flyer-link)) {
+	display: none;
 }
 
 /*
@@ -1387,6 +1394,97 @@ body.error404 .site-content-container h1 {
 .entry-content ul ul ul,
 .wp-block-post-content ul ul ul {
 	list-style: square outside;
+}
+
+/* ==========================================================================
+   Event flyer
+   ========================================================================== */
+
+/*
+ * `single-event-flyer.html`: one sheet, shown on a grey desk on screen and
+ * printed alone on paper. It carries no site header or footer, so what's on
+ * screen is what prints, bar the toolbar above the sheet.
+ */
+
+.groups-site-flyer__group {
+	margin: 0;
+}
+
+.groups-site-flyer__title {
+	overflow-wrap: break-word;
+}
+
+.groups-site-flyer__excerpt p {
+	margin: 0;
+}
+
+.groups-site-flyer__details {
+	align-items: flex-start;
+	margin-bottom: 0;
+}
+
+.groups-site-flyer__location .groups-site-event-format {
+	margin: 0;
+}
+
+/* The venue block renders an empty wrapper for an online-only event. */
+.groups-site-flyer__location .wp-block-gatherpress-venue:empty {
+	display: none;
+}
+
+/*
+ * The details and the code sit side by side on paper, whatever the page
+ * width a printer reports, so the columns aren't stacked by core's mobile
+ * rule. On a narrow screen they stack here instead, the code under the
+ * details it belongs to.
+ */
+@media screen and (max-width: 599px) {
+	.wp-block-columns.groups-site-flyer__details {
+		flex-wrap: wrap !important;
+	}
+
+	.wp-block-columns.groups-site-flyer__details > .wp-block-column {
+		flex-basis: 100% !important;
+	}
+}
+
+@media print {
+
+	@page {
+		margin: 12mm;
+	}
+
+	/* Blueberry text and the format badge are part of the design, not
+	   decoration a printer should drop to save ink. */
+
+	.groups-site-flyer-page {
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+	}
+
+	.groups-site-flyer-page.wp-block-group,
+	.groups-site-flyer.wp-block-group {
+		background: none !important;
+		border: 0 !important;
+		padding: 0 !important;
+	}
+
+	.groups-site-flyer {
+		break-inside: avoid;
+	}
+
+	/* Sized so a long title, the image, the excerpt and the details still
+	   fit one Letter page, the shorter of Letter and A4. */
+
+	.groups-site-flyer__image {
+		max-height: 85mm;
+		overflow: hidden;
+	}
+
+	.groups-site-flyer__image img {
+		max-height: 85mm;
+		object-fit: cover;
+	}
 }
 
 /* ==========================================================================

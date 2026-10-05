@@ -62,6 +62,9 @@ use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Topics\get_event_topics;
+use function WordCamp\Groups\Frontend\Event_Topics\get_suggestions as get_topic_suggestions;
+use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
 use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize as canonicalize_timezone;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_choices as get_timezone_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
@@ -100,12 +103,27 @@ function register_routes(): void {
 			'callback'            => __NAMESPACE__ . '\get_event_form_data',
 			'permission_callback' => __NAMESPACE__ . '\event_form_data_permissions_check',
 			'args'                => array(
-				'event_id' => array(
+				'event_id'    => array(
+					'type'              => 'integer',
+					'required'          => false,
+					'sanitize_callback' => 'absint',
+				),
+				'template_id' => array(
 					'type'              => 'integer',
 					'required'          => false,
 					'sanitize_callback' => 'absint',
 				),
 			),
+		)
+	);
+
+	register_rest_route(
+		NAMESPACE_V1,
+		'/event-templates',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => __NAMESPACE__ . '\list_event_templates',
+			'permission_callback' => __NAMESPACE__ . '\event_templates_permissions_check',
 		)
 	);
 
@@ -419,19 +437,56 @@ function manage_events_permissions_check(): bool {
 }
 
 /**
- * Capability check for reading form defaults or an existing event.
+ * Capability check for reading form defaults, an existing event, or a
+ * template for a new one.
+ *
+ * A template only needs to be an event the user can read, not edit: any
+ * organizer in the group can start from any published event (#1892). The
+ * result is a new event, so it needs the same capability as creating one.
  */
 function event_form_data_permissions_check( WP_REST_Request $request ): bool {
 	if ( ! current_user_can_manage_events() ) {
 		return false;
 	}
 
-	$event_id = (int) $request->get_param( 'event_id' );
+	$event_id    = (int) $request->get_param( 'event_id' );
+	$template_id = (int) $request->get_param( 'template_id' );
+
+	if ( $event_id > 0 && $template_id > 0 ) {
+		return false;
+	}
+
 	if ( $event_id > 0 ) {
 		return current_user_can_edit_event( $event_id );
 	}
 
+	if ( $template_id > 0 ) {
+		return current_user_can_create_event() && is_event_template( $template_id );
+	}
+
 	return current_user_can_create_event();
+}
+
+/**
+ * Capability check for listing the events a new one can start from.
+ */
+function event_templates_permissions_check(): bool {
+	return current_user_can_manage_events() && current_user_can_create_event();
+}
+
+/**
+ * Whether an event can be used as a template for a new one.
+ *
+ * Only published events: a draft is someone's unfinished work, and the
+ * modal already offers the user's own drafts separately.
+ */
+function is_event_template( int $event_id ): bool {
+	$post = get_post( $event_id );
+
+	return $post
+		&& Event::POST_TYPE === $post->post_type
+		&& 'publish' === $post->post_status
+		&& current_user_can( 'read_post', $event_id );
 }
 
 /**
@@ -746,6 +801,14 @@ function event_args_schema(): array {
 			'default'           => '',
 			'sanitize_callback' => 'WordCamp\\Groups\\Frontend\\Event_Language\\sanitize_code',
 		),
+		// Topic names, free-form. No `default`, for the same reason the
+		// questions below have none: an absent parameter leaves the event's
+		// topics alone. `set_event_topics()` trims, dedupes and caps them.
+		'topics'            => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array( 'type' => 'string' ),
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -786,6 +849,177 @@ function maybe_save_rsvp_questions( int $event_id, WP_REST_Request $request ): v
 }
 
 /**
+ * Write the event's topics, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_topics( int $event_id, WP_REST_Request $request ): void {
+	$topics = $request->get_param( 'topics' );
+
+	if ( is_array( $topics ) ) {
+		set_event_topics( $event_id, $topics );
+	}
+}
+
+/**
+ * Read an existing event's values into the event form's fields.
+ *
+ * @param int $event_id The event post ID.
+ *
+ * @return array Form fields; keys the event has no value for are left out.
+ */
+function get_existing_event_fields( int $event_id ): array {
+	$fields = array();
+
+	// Decoded because the stored title is entity-encoded (see `wcorg_sanitize_plain_text()`) and
+	// this pre-fills a text input, not HTML. Matches the other two read sites, `list_drafts()`
+	// and the venue list below. Re-saving the decoded value encodes it back to the same bytes.
+	$fields['title'] = html_entity_decode( (string) get_post_field( 'post_title', $event_id ) );
+	// Hand the editor only the description-prose blocks so it doesn't
+	// trip on the GatherPress metadata blocks (event-date, venue, RSVP,
+	// etc.) it has no way to render. The save path puts the metadata
+	// blocks back in `build_post_content()`.
+	$fields['description'] = extract_description_blocks( $event_id );
+
+	$start = (string) get_post_meta( $event_id, 'gatherpress_datetime_start', true );
+	$end   = (string) get_post_meta( $event_id, 'gatherpress_datetime_end', true );
+
+	if ( preg_match( '/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/', $start, $m ) ) {
+		$fields['date']       = $m[1];
+		$fields['time_start'] = $m[2];
+	}
+	if ( preg_match( '/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/', $end, $m ) ) {
+		$fields['time_end'] = $m[1];
+	}
+
+	$fields['venue_id'] = get_event_venue_post_id( $event_id );
+
+	$venue_taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+	$venue_terms    = get_the_terms( $event_id, $venue_taxonomy );
+
+	$fields['is_online']         = is_array( $venue_terms )
+		&& in_array( 'online-event', wp_list_pluck( $venue_terms, 'slug' ), true );
+	$fields['online_event_link'] = (string) get_post_meta(
+		$event_id,
+		'gatherpress_online_event_link',
+		true
+	);
+
+	// An event with no usable stored zone reads back as '', which the
+	// form shows as the site default rather than as a blank option.
+	$stored_timezone = get_event_timezone( $event_id );
+	if ( '' !== $stored_timezone ) {
+		$fields['timezone'] = $stored_timezone;
+	}
+
+	// Not defaulted from the group's last event when editing: an existing
+	// event with no language set has had that answered already, and
+	// prefilling it would turn "unset" into a value the organizer never
+	// chose on the next save.
+	$fields['language'] = get_event_language( $event_id );
+
+	// Carried into a new event started from this one too, like the venue:
+	// a group's recurring talk night is usually about the same things.
+	$fields['topics'] = get_event_topics( $event_id );
+
+	$thumb_id = (int) get_post_thumbnail_id( $event_id );
+	if ( $thumb_id ) {
+		$fields['featured_image_id']  = $thumb_id;
+		$fields['featured_image_url'] = (string) wp_get_attachment_image_url( $thumb_id, 'medium' );
+	}
+
+	$fields['rsvp_questions'] = get_questions( $event_id );
+
+	return $fields;
+}
+
+/**
+ * Read a template event's values into the fields for a new event.
+ *
+ * Everything carries over except when it happens (#1892): the date and
+ * start time stay the new-event defaults, and the template contributes only
+ * its duration, applied to the default start.
+ *
+ * @param int   $template_id The event to start from.
+ * @param array $defaults    The new-event defaults.
+ *
+ * @return array Form fields.
+ */
+function get_template_event_fields( int $template_id, array $defaults ): array {
+	$fields = get_existing_event_fields( $template_id );
+
+	$duration = get_event_duration_minutes( $template_id );
+
+	unset( $fields['date'], $fields['time_start'], $fields['time_end'] );
+
+	if ( null !== $duration && preg_match( '/^(\d{2}):(\d{2})$/', (string) $defaults['time_start'], $m ) ) {
+		$end_minutes        = ( (int) $m[1] * 60 + (int) $m[2] + $duration ) % ( 24 * 60 );
+		$fields['time_end'] = sprintf( '%02d:%02d', intdiv( $end_minutes, 60 ), $end_minutes % 60 );
+	}
+
+	// A template's language is a choice its organizer made, so it carries
+	// over like the venue does. With none set, the new-event default stands.
+	if ( '' === $fields['language'] ) {
+		unset( $fields['language'] );
+	}
+
+	return $fields;
+}
+
+/**
+ * An event's length in minutes, or null when its times can't be read.
+ *
+ * @param int $event_id The event post ID.
+ */
+function get_event_duration_minutes( int $event_id ): ?int {
+	$start = strtotime( (string) get_post_meta( $event_id, 'gatherpress_datetime_start_gmt', true ) . ' UTC' );
+	$end   = strtotime( (string) get_post_meta( $event_id, 'gatherpress_datetime_end_gmt', true ) . ' UTC' );
+
+	if ( ! $start || ! $end || $end <= $start ) {
+		return null;
+	}
+
+	return intdiv( $end - $start, 60 );
+}
+
+/**
+ * GET /event-templates
+ *
+ * The group's published events for the create form's "Start from a past
+ * event" picker, most recently set up first. Ordered by when they were
+ * created rather than when they happen, like `get_most_recent_event_id()`:
+ * a few events scheduled far ahead would otherwise push every event the
+ * group actually ran off the list. Summaries only: the chosen one is loaded
+ * through `GET /event-form-data?template_id=`.
+ */
+function list_event_templates(): WP_REST_Response {
+	$events = get_posts(
+		array(
+			'post_type'     => Event::POST_TYPE,
+			'post_status'   => 'publish',
+			'numberposts'   => 30,
+			'orderby'       => 'date',
+			'order'         => 'DESC',
+			'no_found_rows' => true,
+		)
+	);
+
+	$out = array_map(
+		static function ( $post ) {
+			return array(
+				'id'         => (int) $post->ID,
+				'title'      => $post->post_title ? html_entity_decode( $post->post_title ) : '',
+				'event_date' => (string) get_post_meta( $post->ID, 'gatherpress_datetime_start', true ),
+			);
+		},
+		array_values( array_filter( $events, static fn( $post ) => is_event_template( (int) $post->ID ) ) )
+	);
+
+	return new WP_REST_Response( $out );
+}
+
+/**
  * GET /event-form-data
  *
  * Returns one combined payload so the modal only needs a single fetch on
@@ -793,65 +1027,17 @@ function maybe_save_rsvp_questions( int $event_id, WP_REST_Request $request ): v
  * the dropdown.
  */
 function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
-	$event_id = (int) $request->get_param( 'event_id' );
+	$event_id    = (int) $request->get_param( 'event_id' );
+	$template_id = (int) $request->get_param( 'template_id' );
 
 	$fields = get_default_event_data();
 
 	$is_editing = $event_id > 0 && Event::POST_TYPE === get_post_type( $event_id );
 
 	if ( $is_editing ) {
-		// Decoded because the stored title is entity-encoded (see `wcorg_sanitize_plain_text()`) and
-		// this pre-fills a text input, not HTML. Matches the other two read sites, `list_drafts()`
-		// and the venue list below. Re-saving the decoded value encodes it back to the same bytes.
-		$fields['title'] = html_entity_decode( (string) get_post_field( 'post_title', $event_id ) );
-		// Hand the editor only the description-prose blocks so it doesn't
-		// trip on the GatherPress metadata blocks (event-date, venue, RSVP,
-		// etc.) it has no way to render. The save path puts the metadata
-		// blocks back in `build_post_content()`.
-		$fields['description'] = extract_description_blocks( $event_id );
-
-		$start = (string) get_post_meta( $event_id, 'gatherpress_datetime_start', true );
-		$end   = (string) get_post_meta( $event_id, 'gatherpress_datetime_end', true );
-
-		if ( preg_match( '/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/', $start, $m ) ) {
-			$fields['date']       = $m[1];
-			$fields['time_start'] = $m[2];
-		}
-		if ( preg_match( '/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/', $end, $m ) ) {
-			$fields['time_end'] = $m[1];
-		}
-
-		$fields['venue_id'] = get_event_venue_post_id( $event_id );
-
-		$venue_taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
-		$venue_terms    = get_the_terms( $event_id, $venue_taxonomy );
-
-		$fields['is_online']         = is_array( $venue_terms )
-			&& in_array( 'online-event', wp_list_pluck( $venue_terms, 'slug' ), true );
-		$fields['online_event_link'] = (string) get_post_meta(
-			$event_id,
-			'gatherpress_online_event_link',
-			true
-		);
-
-		// An event with no usable stored zone reads back as '', which the
-		// form shows as the site default rather than as a blank option.
-		$stored_timezone = get_event_timezone( $event_id );
-		if ( '' !== $stored_timezone ) {
-			$fields['timezone'] = $stored_timezone;
-		}
-
-		// Not defaulted from the group's last event when editing: an existing
-		// event with no language set has had that answered already, and
-		// prefilling it would turn "unset" into a value the organizer never
-		// chose on the next save.
-		$fields['language'] = get_event_language( $event_id );
-
-		$thumb_id = (int) get_post_thumbnail_id( $event_id );
-		if ( $thumb_id ) {
-			$fields['featured_image_id']  = $thumb_id;
-			$fields['featured_image_url'] = (string) wp_get_attachment_image_url( $thumb_id, 'medium' );
-		}
+		$fields = array_merge( $fields, get_existing_event_fields( $event_id ) );
+	} elseif ( $template_id > 0 ) {
+		$fields = array_merge( $fields, get_template_event_fields( $template_id, $fields ) );
 	} else {
 		// On create, prefill the description with an empty paragraph block so
 		// the inline editor opens with a usable starting point rather than a
@@ -863,7 +1049,8 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	// `undefined` checks.
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
-	$fields['rsvp_questions']     = $is_editing ? get_questions( $event_id ) : array();
+	$fields['rsvp_questions']     = $fields['rsvp_questions'] ?? array();
+	$fields['topics']             = $fields['topics'] ?? array();
 
 	/**
 	 * Filters the fields returned to the frontend event form.
@@ -916,6 +1103,9 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 				array_keys( get_language_options() ),
 				array_values( get_language_options() )
 			),
+			// The topics the group already uses, so organizers pick an
+			// existing one rather than coining a near-duplicate.
+			'topics'     => get_topic_suggestions(),
 		)
 	);
 }
@@ -1038,6 +1228,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	);
 
 	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
+	maybe_save_topics( $saved_id, $request );
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -1246,6 +1437,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
 
 	set_event_language( $saved_id, $fields['language'] );
+	maybe_save_topics( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

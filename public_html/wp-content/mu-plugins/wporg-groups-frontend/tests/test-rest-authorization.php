@@ -128,6 +128,19 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				$request->set_param( 'event_id', $this->event_id );
 				return $request;
 
+			case 'GET /event-form-data (template: someone else\'s event)':
+				$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+				$request->set_param( 'template_id', $this->event_id );
+				return $request;
+
+			case 'GET /event-form-data (template: a draft)':
+				$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+				$request->set_param( 'template_id', $this->draft_id );
+				return $request;
+
+			case 'GET /event-templates':
+				return new WP_REST_Request( 'GET', '/wporg-groups/v1/event-templates' );
+
 			case 'POST /event':
 				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event' );
 				$request->set_body_params( $event_payload );
@@ -141,6 +154,29 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 			case 'POST /event/{id}/rsvp':
 				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $this->event_id . '/rsvp' );
 				$request->set_body_params( array( 'status' => 'attending' ) );
+				return $request;
+
+			case 'GET /event/{id}/check-in':
+				$this->make_event_past();
+				return new WP_REST_Request( 'GET', '/wporg-groups/v1/event/' . $this->event_id . '/check-in' );
+
+			case 'POST /event/{id}/check-in/{comment_id}':
+				$this->make_event_past();
+				$rsvp    = ( new \GatherPress\Core\Rsvp\Rsvp( $this->event_id ) )->save( $this->actors['member'], 'attending' );
+				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $this->event_id . '/check-in/' . $rsvp['comment_id'] );
+				$request->set_body_params( array( 'checked_in' => true ) );
+				return $request;
+
+			case 'POST /event/{id}/walk-in':
+				$this->make_event_past();
+				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $this->event_id . '/walk-in' );
+				$request->set_body_params( array( 'login' => get_userdata( $this->actors['member'] )->user_login ) );
+				return $request;
+
+			case 'POST /event/{id}/walk-in-count':
+				$this->make_event_past();
+				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $this->event_id . '/walk-in-count' );
+				$request->set_body_params( array( 'count' => 2 ) );
 				return $request;
 
 			case 'GET /drafts':
@@ -221,6 +257,21 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 	}
 
 	/**
+	 * Give the fixture event a date that has passed, so check-in is open on
+	 * it and an allowed request gets as far as the handler.
+	 */
+	private function make_event_past(): void {
+		( new \GatherPress\Core\Event\Event( $this->event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $this->event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+	}
+
+	/**
 	 * Every route, every actor, and the status each one gets today.
 	 *
 	 * `DENIED` means "this actor must not reach the handler" — the exact code
@@ -251,6 +302,31 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				'organiser'       => 200,
 				'outsider'        => 403,
 			),
+			// Templates (#1892): any event manager may start from any
+			// published event, including one they could not edit.
+			'GET /event-form-data (template: someone else\'s event)' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 200,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			// A draft is nobody's template, not even for an organiser who
+			// could edit it.
+			'GET /event-form-data (template: a draft)' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 403,
+				'outsider'        => 403,
+			),
+			'GET /event-templates' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 200,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
 			'POST /event' => array(
 				'anonymous'       => 401,
 				'member'          => 403,
@@ -259,6 +335,37 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				'outsider'        => 403,
 			),
 			'POST /event/{id}' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+
+			// Check-in (#2130): whoever can edit the event, so an Event
+			// Organiser is refused on someone else's.
+			'GET /event/{id}/check-in' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			'POST /event/{id}/check-in/{comment_id}' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			'POST /event/{id}/walk-in' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			'POST /event/{id}/walk-in-count' => array(
 				'anonymous'       => 401,
 				'member'          => 403,
 				'event_organiser' => 403,

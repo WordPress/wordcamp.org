@@ -38,6 +38,7 @@ import DurationField from './duration-field';
 import VenueField from './venue-field';
 import TimezoneField from './timezone-field';
 import LanguageField from './language-field';
+import TopicsField from './topics-field';
 
 export const NS =
 	( window.wporgGroupsEventModal &&
@@ -55,6 +56,7 @@ const EMPTY_FORM = {
 	online_event_link: '',
 	timezone: '',
 	language: '',
+	topics: [],
 	rsvp_questions: [],
 };
 
@@ -73,7 +75,7 @@ const EMPTY_FORM = {
  * @param {*}        props.header            Rendered above the fields.
  * @param {*}        props.footerStart       Rendered at the start of the actions row.
  * @param {*}        props.children          Rendered after the RSVP questions.
- * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
+ * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `loadTemplate( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
  */
 function EventForm(
 	{
@@ -114,6 +116,7 @@ function EventForm(
 	const [ venues, setVenues ] = useState( [] );
 	const [ timezones, setTimezones ] = useState( {} );
 	const [ languages, setLanguages ] = useState( [] );
+	const [ topicSuggestions, setTopicSuggestions ] = useState( [] );
 	const descriptionRef = useRef( () => '' );
 	const cancelLoadRef = useRef( () => {} );
 
@@ -138,7 +141,7 @@ function EventForm(
 		markChanged();
 	};
 
-	const loadFormData = ( id ) => {
+	const loadFormData = ( id, templateId = 0 ) => {
 		cancelLoadRef.current();
 		let cancelled = false;
 		cancelLoadRef.current = () => {
@@ -147,9 +150,12 @@ function EventForm(
 		setLoading( true );
 		setError( '' );
 
-		const path = id
-			? `/${ NS }/event-form-data?event_id=${ id }`
-			: `/${ NS }/event-form-data`;
+		let path = `/${ NS }/event-form-data`;
+		if ( id ) {
+			path += `?event_id=${ id }`;
+		} else if ( templateId ) {
+			path += `?template_id=${ templateId }`;
+		}
 
 		apiFetch( { path } )
 			.then( ( res ) => {
@@ -159,6 +165,7 @@ function EventForm(
 				setVenues( res.venues || [] );
 				setTimezones( res.timezones || {} );
 				setLanguages( res.languages || [] );
+				setTopicSuggestions( res.topics || [] );
 				setIsExistingPost( !! res.is_editing );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
@@ -176,6 +183,7 @@ function EventForm(
 					online_event_link: res.fields.online_event_link || '',
 					timezone: res.fields.timezone || '',
 					language: res.fields.language || '',
+					topics: res.fields.topics || [],
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -212,6 +220,9 @@ function EventForm(
 		getPayload: buildPayload,
 		loadEvent: ( id ) => {
 			loadFormData( id );
+		},
+		loadTemplate: ( templateId ) => {
+			loadFormData( 0, templateId );
 		},
 		selectVenue: ( venue ) => {
 			updateField( 'venue_select', String( venue.id ) );
@@ -362,6 +373,13 @@ function EventForm(
 				languages={ languages }
 				value={ form.language }
 				onChange={ ( v ) => updateField( 'language', v ) }
+				classPrefix={ classPrefix }
+			/>
+
+			<TopicsField
+				suggestions={ topicSuggestions }
+				value={ form.topics }
+				onChange={ ( v ) => updateField( 'topics', v ) }
 				classPrefix={ classPrefix }
 			/>
 

@@ -178,6 +178,7 @@ final class Plugin {
 		add_filter( 'posts_clauses', array( Query::class, 'clauses' ), 30, 2 );
 		add_filter( 'the_posts', array( Query::class, 'posts' ), 20, 2 );
 		add_action( 'the_post', array( Query::class, 'activate' ), 10, 2 );
+		add_action( 'loop_start', array( Query::class, 'remember' ), 10, 1 );
 		add_action( 'loop_end', array( Query::class, 'deactivate' ), 10, 1 );
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
@@ -317,7 +318,17 @@ final class Plugin {
 			return $url;
 		}
 
-		$base = trailingslashit( get_permalink( $post ) );
+		/*
+		 * GatherPress builds the endpoint from `get_permalink()`, which
+		 * `Context::post_link()` already points at the occurrence here.
+		 * Prepending the occurrence again gave `…/{occurrence}/{occurrence}/ical/`,
+		 * which 404s.
+		 */
+		if ( str_starts_with( $url, Context::occurrence_url( (int) $post->ID, Context::recurrence_id() ) ) ) {
+			return $url;
+		}
+
+		$base = Context::series_url( (int) $post->ID );
 		if ( str_starts_with( $url, $base ) ) {
 			return $base . Context::recurrence_id() . '/' . substr( $url, strlen( $base ) );
 		}

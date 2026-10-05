@@ -121,11 +121,21 @@ final class Context {
 	 * @return string Occurrence URL.
 	 */
 	public static function occurrence_url( int $post_id, string $recurrence_id ): string {
+		return self::series_url( $post_id ) . $recurrence_id . '/';
+	}
+
+	/**
+	 * Builds the series' own undated URL, ignoring the active occurrence.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return string Series URL, with a trailing slash.
+	 */
+	public static function series_url( int $post_id ): string {
 		remove_filter( 'post_type_link', array( self::class, 'post_link' ), 10 );
 		$series_url = get_permalink( $post_id );
 		add_filter( 'post_type_link', array( self::class, 'post_link' ), 10, 2 );
 
-		return trailingslashit( $series_url ) . $recurrence_id . '/';
+		return trailingslashit( $series_url );
 	}
 
 	/**

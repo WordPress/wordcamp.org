@@ -60,6 +60,7 @@ const CSV_COLUMNS = array(
 	// built on the earlier column positions keep working.
 	'checked_in_count',
 	'checked_in',
+	'walk_ins_without_account',
 );
 
 /**
@@ -366,6 +367,7 @@ function collect_export_data( array $filters = array() ) {
 		'waiting_list'  => 0,
 		'not_attending' => 0,
 		'checked_in'    => 0,
+		'walk_ins'      => 0,
 	);
 
 	$export_events = array();
@@ -404,6 +406,19 @@ function collect_export_data( array $filters = array() ) {
 		// "not checked in" says nothing about attendance, so it's exported
 		// as unknown (null, a blank cell) rather than as a no.
 		$check_in_scopes = Check_In\get_check_in_scopes( $event_id );
+
+		// Walk-ins without an account (#2138) have no RSVP to count, so their
+		// number comes straight from the event, per date like everything else.
+		$walk_in_counts = Check_In\get_walk_in_counts( $event_id );
+
+		if ( $is_recurring ) {
+			foreach ( $occurrence_counts as $occurrence_id => $occurrence_count ) {
+				$occurrence_counts[ $occurrence_id ]['walk_ins'] = $walk_in_counts[ $occurrence_id ] ?? 0;
+				$counts['walk_ins']                             += $occurrence_counts[ $occurrence_id ]['walk_ins'];
+			}
+		} else {
+			$counts['walk_ins'] = $walk_in_counts[''] ?? 0;
+		}
 
 		$export_rsvps = array();
 		foreach ( $rsvps_by_event[ $event_id ] ?? array() as $rsvp ) {
@@ -631,6 +646,7 @@ function filter_json_fields( array $data, array $columns ): array {
 		'waiting_list'  => 'waiting_list_count',
 		'not_attending' => 'not_attending_count',
 		'checked_in'    => 'checked_in_count',
+		'walk_ins'      => 'walk_ins_without_account',
 	);
 
 	$rsvp_fields = array(
@@ -1136,6 +1152,7 @@ function csv_row_cells( array $event, ?array $rsvp, ?array $occurrence = null ):
 			'waiting_list'  => '',
 			'not_attending' => '',
 			'checked_in'    => '',
+			'walk_ins'      => '',
 		);
 	}
 
@@ -1160,6 +1177,7 @@ function csv_row_cells( array $event, ?array $rsvp, ?array $occurrence = null ):
 		'rsvp_guests'          => $rsvp['guests'] ?? '',
 		'checked_in_count'     => $counts['checked_in'] ?? '',
 		'checked_in'           => null === $checked_in ? '' : ( $checked_in ? 'yes' : 'no' ),
+		'walk_ins_without_account' => $counts['walk_ins'] ?? '',
 	);
 }
 

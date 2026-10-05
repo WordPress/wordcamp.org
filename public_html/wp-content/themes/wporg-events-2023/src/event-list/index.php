@@ -9,10 +9,11 @@
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
 
 use WordPressdotorg\Events_2023;
-use WP_Block;
+use WP_Block, WP_Error, WP_REST_Server;
 use WordPressdotorg\MU_Plugins\Google_Map;
 
 add_action( 'init', __NAMESPACE__ . '\init' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_routes' );
 
 
 /**
@@ -41,6 +42,10 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
+	if ( 'nearby' === $attributes['events'] ) {
+		return get_nearby_events_markup();
+	}
+
 	$attributes['id'] ??= wp_unique_id('events');
 
 	$facets = Events_2023\get_query_var_facets();
@@ -193,4 +198,179 @@ function get_no_result_view() {
 	$content .= '</div><!-- /wp:group -->';
 
 	return do_blocks( $content );
+}
+
+/**
+ * Get markup for the list of events near the visitor.
+ *
+ * The front page is page-cached, so nothing here can depend on the visitor. `view.js` fills it in, either from the
+ * `nearby` REST endpoint (approximate location, which needs the visitor's IP) or straight from the Events API (a
+ * city they searched for).
+ *
+ * @return string
+ */
+function get_nearby_events_markup() {
+	$wrapper_attributes = get_block_wrapper_attributes( array(
+		'class'         => 'wporg-event-list__nearby',
+		'data-rest-url' => rest_url( 'wporg-events/v1/nearby' ),
+	) );
+
+	ob_start();
+
+	?>
+
+	<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by `get_block_wrapper_attributes()`. ?>>
+		<div class="wporg-event-list__nearby-header">
+			<h2 class="wp-block-heading has-inter-font-family has-medium-font-size" style="font-style:normal;font-weight:700">
+				<?php esc_html_e( 'Events near you', 'wporg' ); ?>
+			</h2>
+
+			<p class="wporg-event-list__nearby-location">
+				<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24">
+					<path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+				</svg>
+				<span class="wporg-event-list__nearby-location-name"><?php esc_html_e( 'Near you', 'wporg' ); ?></span>
+				<button type="button" class="wporg-event-list__nearby-change">
+					<?php esc_html_e( 'Change', 'wporg' ); ?>
+				</button>
+			</p>
+
+			<form class="wporg-event-list__nearby-form wporg-events__hidden" role="search">
+				<label class="screen-reader-text" for="wporg-event-list__nearby-city">
+					<?php esc_html_e( 'City', 'wporg' ); ?>
+				</label>
+				<input
+					type="text"
+					id="wporg-event-list__nearby-city"
+					class="wporg-event-list__nearby-city"
+					placeholder="<?php esc_attr_e( 'City', 'wporg' ); ?>"
+					autocomplete="address-level2"
+					maxlength="100"
+					required
+				/>
+				<button type="submit" class="wp-element-button">
+					<?php esc_html_e( 'Search', 'wporg' ); ?>
+				</button>
+			</form>
+		</div>
+
+		<p class="wporg-event-list__nearby-description">
+			<?php esc_html_e( 'Based on your approximate location, the same way the WordPress dashboard finds events near you.', 'wporg' ); ?>
+		</p>
+
+		<p class="wporg-marker-list__loading">
+			<?php esc_html_e( 'Loading events near you...', 'wporg' ); ?>
+			<img
+				src="<?php echo esc_url( includes_url( 'images/spinner-2x.gif' ) ); ?>"
+				width="20"
+				height="20"
+				alt=""
+			/>
+		</p>
+
+		<div class="wporg-event-list__nearby-results" aria-live="polite"></div>
+
+		<div class="wporg-event-list__nearby-empty wporg-events__hidden">
+			<p>
+				<?php
+				printf(
+					/* translators: %s: The place the visitor searched for, or "you". */
+					esc_html__( "There aren't any WordPress events scheduled near %s right now.", 'wporg' ),
+					'<strong class="wporg-event-list__nearby-empty-place"></strong>'
+				);
+				?>
+				<br />
+				<?php
+				printf(
+					wp_kses_post(
+						/* translators: %s: URL of the Organize an Event page. */
+						__( 'Want to be the one who starts something? <a href="%s">Organize an event</a>, or browse every upcoming event below.', 'wporg' )
+					),
+					esc_url( home_url( '/organize-an-event/' ) )
+				);
+				?>
+			</p>
+		</div>
+	</div>
+
+	<?php
+
+	return ob_get_clean();
+}
+
+/**
+ * Register REST API routes.
+ */
+function register_routes() {
+	register_rest_route(
+		'wporg-events/v1',
+		'/nearby',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => __NAMESPACE__ . '\get_nearby_events',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'timezone' => array(
+					'type'              => 'string',
+					'default'           => '',
+					'validate_callback' => function ( $timezone ) {
+						return '' === $timezone || in_array( $timezone, timezone_identifiers_list(), true );
+					},
+				),
+			),
+		)
+	);
+}
+
+/**
+ * Get upcoming events near the visitor's approximate location.
+ *
+ * This only ever geolocates the visitor's IP. Searching for a different city happens in the browser, straight
+ * against the Events API, so this endpoint never forwards arbitrary input there.
+ *
+ * @param \WP_REST_Request $request
+ *
+ * @return array|WP_Error
+ */
+function get_nearby_events( $request ) {
+	require_once dirname( __DIR__, 2 ) . '/inc/class-nearby-community-events.php';
+
+	$ip = Events_2023\Nearby_Community_Events::get_unsafe_client_ip();
+
+	if ( ! $ip ) {
+		return new WP_Error( 'nearby_events_no_location', 'Could not determine your location.', array( 'status' => 400 ) );
+	}
+
+	$community_events = new Events_2023\Nearby_Community_Events( 0, array( 'ip' => $ip ) );
+	$response         = $community_events->get_events( '', $request['timezone'] );
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error( 'nearby_events_unavailable', 'Events near you are not available right now.', array( 'status' => 502 ) );
+	}
+
+	return array(
+		'events' => prepare_nearby_events( $response['events'] ),
+	);
+}
+
+/**
+ * Reduce Events API results to the fields the list displays, in the shape the global events use.
+ *
+ * @param array $events
+ *
+ * @return array
+ */
+function prepare_nearby_events( array $events ) {
+	return array_values( array_map(
+		function ( $event ) {
+			return array(
+				'title'     => (string) ( $event['title'] ?? '' ),
+				'url'       => (string) ( $event['url'] ?? '' ),
+				'location'  => (string) ( $event['location']['location'] ?? '' ),
+				'timestamp' => (int) ( $event['start_unix_timestamp'] ?? 0 ),
+				'type'      => (string) ( $event['type'] ?? '' ),
+			);
+		},
+		$events
+	) );
 }

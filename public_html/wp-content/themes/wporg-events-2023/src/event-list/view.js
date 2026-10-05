@@ -7,11 +7,16 @@ import { escapeAttribute, escapeHTML } from '@wordpress/escape-html';
 
 document.addEventListener( 'DOMContentLoaded', function () {
 	const speak = wp.a11y.speak;
+	const NEARBY_LOCATION_KEY = 'wporg-events-nearby-location';
 
 	/**
 	 * Initialize the component.
 	 */
 	function init() {
+		document
+			.querySelectorAll( '.wporg-event-list__nearby[data-rest-url]' )
+			.forEach( initNearby );
+
 		if ( 'undefined' === typeof globalEventsPayload ) {
 			// eslint-disable-next-line no-console
 			console.error( 'Missing globalEventsPayload' );
@@ -79,6 +84,262 @@ document.addEventListener( 'DOMContentLoaded', function () {
 
 		loadingElement.classList.add( 'wporg-events__hidden' );
 		speak( 'Global events loaded.' );
+	}
+
+	/**
+	 * Set up a list of events near the visitor.
+	 *
+	 * @param {Element} container
+	 */
+	function initNearby( container ) {
+		const changeButton = container.querySelector(
+			'.wporg-event-list__nearby-change'
+		);
+		const locationPill = container.querySelector(
+			'.wporg-event-list__nearby-location'
+		);
+		const form = container.querySelector(
+			'.wporg-event-list__nearby-form'
+		);
+		const cityInput = container.querySelector(
+			'.wporg-event-list__nearby-city'
+		);
+		const savedLocation = getSavedLocation();
+
+		/**
+		 * Go back from the search form to the location pill.
+		 */
+		function closeForm() {
+			form.classList.add( 'wporg-events__hidden' );
+			locationPill.classList.remove( 'wporg-events__hidden' );
+			changeButton.focus();
+		}
+
+		changeButton.addEventListener( 'click', () => {
+			locationPill.classList.add( 'wporg-events__hidden' );
+			form.classList.remove( 'wporg-events__hidden' );
+			cityInput.focus();
+			cityInput.select();
+		} );
+
+		form.addEventListener( 'keydown', ( event ) => {
+			if ( 'Escape' === event.key ) {
+				closeForm();
+			}
+		} );
+
+		cityInput.addEventListener( 'input', () =>
+			cityInput.setCustomValidity( '' )
+		);
+
+		form.addEventListener( 'submit', async ( event ) => {
+			event.preventDefault();
+
+			const city = cityInput.value.trim();
+
+			if ( ! city ) {
+				return;
+			}
+
+			if ( ! ( await loadNearbyEvents( container, city ) ) ) {
+				cityInput.setCustomValidity(
+					`Couldn't find a place called "${ city }". Try a nearby city.`
+				);
+				cityInput.reportValidity();
+				return;
+			}
+
+			closeForm();
+		} );
+
+		loadNearbyEvents( container, savedLocation ).then( ( loaded ) => {
+			// Fall back to the approximate location if the saved place no longer works.
+			if ( ! loaded && savedLocation ) {
+				loadNearbyEvents( container, '' );
+			}
+		} );
+	}
+
+	/**
+	 * Fetch and render events near a place.
+	 *
+	 * Searching for a city goes straight to the Events API, which allows any origin. Without a city, the visitor's
+	 * approximate location comes from their IP, which only the server knows, so that goes through our endpoint.
+	 * The front page is page-cached, so it can't be rendered into the HTML.
+	 *
+	 * @param {Element} container
+	 * @param {string}  city      Optional. A place the visitor searched for.
+	 *
+	 * @return {Promise<boolean>} Whether the events could be loaded.
+	 */
+	async function loadNearbyEvents( container, city ) {
+		const loadingElement = container.querySelector(
+			'.wporg-marker-list__loading'
+		);
+		const results = container.querySelector(
+			'.wporg-event-list__nearby-results'
+		);
+		const emptyMessage = container.querySelector(
+			'.wporg-event-list__nearby-empty'
+		);
+		const timezone = window.Intl
+			? window.Intl.DateTimeFormat().resolvedOptions().timeZone
+			: '';
+		let url, events, place;
+
+		if ( city ) {
+			url = `https://api.wordpress.org/events/1.0/?${ new URLSearchParams(
+				{
+					location: city,
+					number: 10,
+				}
+			) }`;
+		} else {
+			url = new URL( container.dataset.restUrl );
+
+			if ( timezone ) {
+				url.searchParams.set( 'timezone', timezone );
+			}
+		}
+
+		loadingElement.classList.remove( 'wporg-events__hidden' );
+
+		try {
+			/*
+			 * This uses `fetch()` directly instead of `apiFetch()`, because the latter is only intended for
+			 * interacting with WP REST API endpoints, and there are lots of difficulties making it work with
+			 * other APIs.
+			 *
+			 * See https://github.com/WordPress/gutenberg/pull/15900#issuecomment-497139968.
+			 */
+			const response = await fetch( url, { credentials: 'omit' } );
+
+			if ( ! response.ok ) {
+				throw new Error( `HTTP ${ response.status }` );
+			}
+
+			const body = await response.json();
+
+			if ( city ) {
+				// The API didn't recognize the place, which is different from there being nothing there.
+				if ( ! body.location?.description ) {
+					throw new Error( body.error || 'Unknown location' );
+				}
+
+				events = normalizeApiEvents( body.events );
+				place = body.location.description;
+			} else {
+				events = body.events;
+			}
+		} catch ( error ) {
+			loadingElement.classList.add( 'wporg-events__hidden' );
+
+			if ( city ) {
+				return false;
+			}
+
+			// eslint-disable-next-line no-console
+			console.error( error );
+
+			// Better to show nothing than a section that's stuck loading.
+			container.classList.add( 'wporg-events__hidden' );
+			return false;
+		}
+
+		if ( city ) {
+			saveLocation( city );
+		}
+
+		container.querySelector(
+			'.wporg-event-list__nearby-location-name'
+		).textContent = place || 'Near you';
+
+		container.querySelector(
+			'.wporg-event-list__nearby-empty-place'
+		).textContent = place || 'you';
+
+		// The approximate-location explanation doesn't apply to a place the visitor chose.
+		container
+			.querySelector( '.wporg-event-list__nearby-description' )
+			.classList.toggle( 'wporg-events__hidden', !! place );
+
+		results.innerHTML = events.length ? renderEventList( events ) : '';
+		emptyMessage.classList.toggle(
+			'wporg-events__hidden',
+			events.length > 0
+		);
+		loadingElement.classList.add( 'wporg-events__hidden' );
+
+		speak(
+			events.length
+				? `Showing events near ${ place || 'you' }.`
+				: `No events found near ${ place || 'you' }.`
+		);
+
+		return true;
+	}
+
+	/**
+	 * Reduce Events API results to the shape the global events use.
+	 *
+	 * Keep in sync with `prepare_nearby_events()` in `index.php`, which does the same for the REST endpoint.
+	 *
+	 * @param {Array} events
+	 *
+	 * @return {Array} Events with `title`, `url`, `location`, `timestamp` and `type`.
+	 */
+	function normalizeApiEvents( events ) {
+		const now = Date.now() / 1000;
+
+		return ( events || [] )
+			.filter( ( event ) => event.end_unix_timestamp > now )
+			.map( ( event ) => ( {
+				title: decodeEntities( event.title ),
+				url: event.url,
+				location: event.location?.location ?? '',
+				timestamp: event.start_unix_timestamp,
+				type: event.type,
+			} ) );
+	}
+
+	/**
+	 * Decode HTML entities in an API value, like Core's widget does, so they aren't double-encoded when escaped.
+	 *
+	 * @param {string} text
+	 *
+	 * @return {string} The decoded text.
+	 */
+	function decodeEntities( text ) {
+		return new window.DOMParser().parseFromString(
+			String( text ?? '' ),
+			'text/html'
+		).documentElement.textContent;
+	}
+
+	/**
+	 * Get the place the visitor last searched for.
+	 *
+	 * @return {string} The place, or an empty string.
+	 */
+	function getSavedLocation() {
+		try {
+			return window.localStorage.getItem( NEARBY_LOCATION_KEY ) || '';
+		} catch {
+			return '';
+		}
+	}
+
+	/**
+	 * Remember the place the visitor searched for, so it's still there next visit.
+	 *
+	 * @param {string} city
+	 */
+	function saveLocation( city ) {
+		try {
+			window.localStorage.setItem( NEARBY_LOCATION_KEY, city );
+		} catch {
+			// Storage may be disabled, which only means the search isn't remembered.
+		}
 	}
 
 	/**
@@ -157,16 +418,24 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	 * @param {string} event.url
 	 * @param {string} event.location
 	 * @param {number} event.timestamp
+	 * @param {string} event.type      Optional. Only nearby events have one.
 	 *
 	 * @return {string}
 	 */
-	function renderEvent( { title, url, location, timestamp } ) {
+	function renderEvent( { title, url, location, timestamp, type } ) {
 		const markup = `
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
 					<a class="external-link" href="${ escapeUrl( url ) }">
 						${ escapeHTML( title ) }
 					</a>
+					${
+						type
+							? `<span class="wporg-marker-list-item__type">${ escapeHTML(
+									type
+							  ) }</span>`
+							: ''
+					}
 				</h3>
 
 				<div class="wporg-marker-list-item__location">

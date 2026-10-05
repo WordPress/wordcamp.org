@@ -173,6 +173,25 @@ class Test_Speaker_Sessions_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A password-protected session withholds its speakers, so the speaker's page
+	 * doesn't list it.
+	 */
+	public function test_password_protected_session_is_not_listed() {
+		$session_id = $this->add_session( 'Protected session', 'publish', 0 );
+		wp_update_post( array(
+			'ID'            => $session_id,
+			'post_password' => 'secret-pass',
+		) );
+
+		wp_set_current_user( 0 );
+
+		$rendered = $this->render_block();
+
+		$this->assertStringNotContainsString( 'Protected session', $rendered );
+		$this->assertStringContainsString( 'Published session', $rendered );
+	}
+
+	/**
 	 * Test that a user with read_private_posts still sees every session.
 	 */
 	public function test_editor_sees_all_sessions() {

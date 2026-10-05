@@ -1006,15 +1006,17 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 * GatherPress links the two with a shadow term in `_gatherpress_venue`
 	 * whose slug is the venue's `post_name` prefixed with an underscore.
 	 *
+	 * @param string $venue_name The venue's title.
+	 *
 	 * @return int The event's post ID.
 	 */
-	private function create_event_with_venue(): int {
+	private function create_event_with_venue( string $venue_name = 'Salty Spaces' ): int {
 		$venue_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_venue',
 				'post_status' => 'publish',
-				'post_title'  => 'Salty Spaces',
-				'post_name'   => 'salty-spaces',
+				'post_title'  => $venue_name,
+				'post_name'   => sanitize_title( $venue_name ),
 			)
 		);
 
@@ -1032,7 +1034,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$term = get_term_by( 'slug', $slug, '_gatherpress_venue' );
 
 		if ( ! $term ) {
-			$inserted = wp_insert_term( 'Salty Spaces', '_gatherpress_venue', array( 'slug' => $slug ) );
+			$inserted = wp_insert_term( $venue_name, '_gatherpress_venue', array( 'slug' => $slug ) );
 			$this->assertNotWPError( $inserted, 'Could not create the venue shadow term.' );
 			$term = get_term( $inserted['term_id'], '_gatherpress_venue' );
 		}
@@ -1346,37 +1348,98 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * The event RSS feed excerpt/content drops the venue for a protected event
-	 * and leaves a public event's untouched.
+	 * Build an event's feed excerpt and content through GatherPress's filters,
+	 * the way the feed template does.
+	 *
+	 * @param int $event_id The event.
+	 *
+	 * @return string The excerpt followed by the content.
 	 */
-	public function test_feed_strips_venue_for_protected_event() {
-		$label = \GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue::POST_TYPE );
-		$built = '<p><strong>Date: Saturday, January 1 | ' . $label . ': Salty Spaces</strong></p><p>Body text.</p>';
+	private function get_event_feed_text( int $event_id ): string {
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		global $post;
+		$original_post = $post;
+		$post          = get_post( $event_id );
+		setup_postdata( $post );
 
-		$public_id    = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
-		$protected_id = self::factory()->post->create(
+		$text = apply_filters( 'gatherpress_event_feed_excerpt', '' ) . apply_filters( 'gatherpress_event_feed_content', 'Body text.' );
+
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+
+		return $text;
+	}
+
+	/**
+	 * Data provider for test_feed_strips_venue_for_protected_event().
+	 *
+	 * @return array[]
+	 */
+	public function data_feed_venue_formats(): array {
+		return array(
+			'venue only'                => array( 'Salty Spaces', '%1$s: %2$s', false ),
+			'after the date'            => array( 'Salty Spaces', '%1$s: %2$s', true ),
+			'name with a pipe'          => array( 'Bar | Grill', '%1$s: %2$s', true ),
+			// GatherPress's French translation puts a space before the colon.
+			'french punctuation'        => array( 'Salty Spaces', '%1$s : %2$s', true ),
+			'french punctuation, alone' => array( 'Salty Spaces', '%1$s : %2$s', false ),
+			'regex metacharacters'      => array( 'Café (Rooftop) $1 / [B]', '%1$s: %2$s', true ),
+		);
+	}
+
+	/**
+	 * The event RSS feed excerpt/content drops the venue for a protected event
+	 * and leaves a public event's untouched, whatever the venue is called and
+	 * however the locale punctuates the label.
+	 *
+	 * @dataProvider data_feed_venue_formats
+	 *
+	 * @param string $venue_name The venue's title.
+	 * @param string $format     The translated `%1$s: %2$s` format.
+	 * @param bool   $has_date   Whether the event has a date, which precedes the venue on the metadata line.
+	 */
+	public function test_feed_strips_venue_for_protected_event( string $venue_name, string $format, bool $has_date ) {
+		$translate = static function ( $translation, $text, $domain ) use ( $format ) {
+			return ( 'gatherpress' === $domain && '%1$s: %2$s' === $text ) ? $format : $translation;
+		};
+		add_filter( 'gettext', $translate, 10, 3 );
+
+		$public_id    = $this->create_event_with_venue( $venue_name );
+		$protected_id = $this->create_event_with_venue( $venue_name );
+		wp_update_post(
 			array(
-				'post_type'     => 'gatherpress_event',
+				'ID'            => $protected_id,
 				'post_password' => 'secret-pass',
 			)
 		);
 
-		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
-		global $post;
-		$original_post = $post;
+		if ( $has_date ) {
+			foreach ( array( $public_id, $protected_id ) as $event_id ) {
+				( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+					array(
+						'post_id'        => $event_id,
+						'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+						'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+						'timezone'       => 'UTC',
+					)
+				);
+			}
+		}
 
-		$post = get_post( $protected_id );
-		$this->assertStringNotContainsString( 'Salty Spaces', \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built ) );
-		$protected_out = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built );
-		$this->assertStringNotContainsString( $label . ':', $protected_out );
-		$this->assertStringContainsString( 'Date: Saturday, January 1', $protected_out );
+		$public_out    = $this->get_event_feed_text( $public_id );
+		$protected_out = $this->get_event_feed_text( $protected_id );
+
+		remove_filter( 'gettext', $translate, 10 );
+
+		$this->assertStringContainsString( $venue_name, $public_out, 'The public event lost its venue.' );
+		$this->assertStringNotContainsString( $venue_name, $protected_out );
+		$this->assertStringNotContainsString( '|', $protected_out, 'A stray separator was left behind.' );
 		$this->assertStringContainsString( 'Body text.', $protected_out );
 
-		$post = get_post( $public_id );
-		$this->assertSame( $built, \WordCamp\Groups\GatherPress_Tweaks\hide_venue_in_protected_event_feed( $built ) );
-
-		$post = $original_post;
-		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		if ( $has_date ) {
+			$this->assertStringContainsString( '<strong>Date: ', $protected_out, 'The date was removed along with the venue.' );
+		}
 	}
 
 	/**

@@ -68,3 +68,20 @@ export function filterAttendees( attendees, query ) {
 			attendee.name.toLowerCase().includes( needle ) || attendee.login.toLowerCase().includes( needle )
 	);
 }
+
+/**
+ * Most walk-ins without an account one date can record. Mirrors
+ * `Check_In\MAX_WALK_INS` on the server.
+ */
+export const MAX_WALK_INS = 9999;
+
+/**
+ * The walk-in count after a step, kept within what the server accepts.
+ *
+ * @param {number} current Current count.
+ * @param {number} step    Change, e.g. `1` or `-1`.
+ * @return {number} New count.
+ */
+export function stepWalkInCount( current, step ) {
+	return Math.min( MAX_WALK_INS, Math.max( 0, ( Number( current ) || 0 ) + step ) );
+}

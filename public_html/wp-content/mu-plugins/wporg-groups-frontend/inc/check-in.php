@@ -19,6 +19,10 @@
  *     with at least one check-in. Consumers deciding what "attended" means
  *     need to know whether the organizer checked anyone in at all, and this
  *     answers that without reading every attendee's meta.
+ *   - **Walk-ins without an account** live in one
+ *     `wporg_groups_walk_ins_without_account` post meta on the event: a
+ *     count per date, keyed like the scopes above. Only a number, never a
+ *     name, so nothing is kept about people who never signed up (#2138).
  *
  * A walk-in gets an ordinary RSVP, made on their behalf, which is then
  * checked in. They are not added to the group: joining, and the group email
@@ -34,6 +38,9 @@
  *
  *   POST /event/{id}/walk-in
  *        Add someone by username and check them in.
+ *
+ *   POST /event/{id}/walk-in-count
+ *        Set how many walk-ins without an account came.
  *
  * Every route takes an optional `recurrence_id`, resolved through the same
  * `wporg_groups_frontend_before_rsvp` filter as the RSVP route, so a series'
@@ -62,6 +69,13 @@ use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
 
 const CHECKED_IN_META = 'wporg_groups_checked_in';
 const SCOPES_META     = 'wporg_groups_check_in_scopes';
+const WALK_INS_META   = 'wporg_groups_walk_ins_without_account';
+
+/**
+ * Upper bound for walk-ins without an account on one date. Far above any
+ * meetup, low enough that a typo can't make the export meaningless.
+ */
+const MAX_WALK_INS = 9999;
 
 /**
  * How long before the start check-in opens, in minutes. Early enough for an
@@ -139,6 +153,28 @@ function register_routes(): void {
 					'type'              => 'string',
 					'required'          => true,
 					'sanitize_callback' => 'sanitize_text_field',
+				),
+				'recurrence_id' => $recurrence_arg,
+			),
+		)
+	);
+
+	register_rest_route(
+		NAMESPACE_V1,
+		'/event/(?P<id>\d+)/walk-in-count',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => __NAMESPACE__ . '\update_walk_in_count',
+			'permission_callback' => __NAMESPACE__ . '\permissions_check',
+			'args'                => array(
+				'id'            => $id_arg,
+				// The total, not a change to it, so a retried request can't
+				// count the same people twice.
+				'count'         => array(
+					'type'     => 'integer',
+					'required' => true,
+					'minimum'  => 0,
+					'maximum'  => MAX_WALK_INS,
 				),
 				'recurrence_id' => $recurrence_arg,
 			),
@@ -275,6 +311,74 @@ function event_has_check_ins( int $event_id, string $recurrence_id = '' ): bool 
 }
 
 /**
+ * How many walk-ins without an account came to each date of an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return array<string, int> Counts keyed by recurrence ID, `''` for a plain event.
+ */
+function get_walk_in_counts( int $event_id ): array {
+	$counts = get_post_meta( $event_id, WALK_INS_META, true );
+
+	if ( ! is_array( $counts ) ) {
+		return array();
+	}
+
+	$clean = array();
+	foreach ( $counts as $scope => $count ) {
+		$clean[ (string) $scope ] = max( 0, (int) $count );
+	}
+
+	return $clean;
+}
+
+/**
+ * How many walk-ins without an account came to one date of an event.
+ *
+ * @param int    $event_id      Event post ID.
+ * @param string $recurrence_id Recurrence ID, or `''` for a plain event.
+ */
+function get_walk_in_count( int $event_id, string $recurrence_id = '' ): int {
+	return get_walk_in_counts( $event_id )[ $recurrence_id ] ?? 0;
+}
+
+/**
+ * Record how many walk-ins without an account came to one date.
+ *
+ * Deliberately left out of the check-in scopes: a count says nothing about
+ * which RSVPs came, so it mustn't switch "attended" over to check-ins and
+ * turn every RSVP on that date into a no-show.
+ *
+ * @param int    $event_id      Event post ID.
+ * @param string $recurrence_id Recurrence ID, or `''` for a plain event.
+ * @param int    $count         Number of people.
+ */
+function set_walk_in_count( int $event_id, string $recurrence_id, int $count ): void {
+	$counts = get_walk_in_counts( $event_id );
+	$count  = min( MAX_WALK_INS, max( 0, $count ) );
+
+	if ( $count ) {
+		$counts[ $recurrence_id ] = $count;
+	} else {
+		unset( $counts[ $recurrence_id ] );
+	}
+
+	if ( $counts ) {
+		update_post_meta( $event_id, WALK_INS_META, $counts );
+	} else {
+		delete_post_meta( $event_id, WALK_INS_META );
+	}
+}
+
+/**
+ * The date of the event in context, or `''` for a plain event.
+ *
+ * @param Event $event The event, after `resolve_event()`.
+ */
+function current_scope( Event $event ): string {
+	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', (int) $event->event->ID );
+}
+
+/**
  * Resolve the event a check-in request is for, with its occurrence in context.
  *
  * @param WP_REST_Request $request REST request.
@@ -346,7 +450,7 @@ function assert_open( Event $event ) {
  * added back through the walk-in field if they turn up anyway.
  *
  * @param Event $event The event, with its occurrence in context.
- * @return array{attendees: array, checkedInCount: int, isOpen: bool}
+ * @return array{attendees: array, checkedInCount: int, walkInsWithoutAccount: int, isOpen: bool}
  */
 function build_list( Event $event ): array {
 	$responses = $event->rsvp->responses();
@@ -397,9 +501,10 @@ function build_list( Event $event ): array {
 	);
 
 	return array(
-		'attendees'      => $attendees,
-		'checkedInCount' => $checked,
-		'isOpen'         => is_open( $event ),
+		'attendees'             => $attendees,
+		'checkedInCount'        => $checked,
+		'walkInsWithoutAccount' => get_walk_in_count( (int) $event->event->ID, current_scope( $event ) ),
+		'isOpen'                => is_open( $event ),
 	);
 }
 
@@ -542,4 +647,26 @@ function add_walk_in( WP_REST_Request $request ) {
 	);
 
 	return new WP_REST_Response( $response );
+}
+
+/**
+ * POST /event/{id}/walk-in-count
+ *
+ * @param WP_REST_Request $request REST request.
+ * @return WP_REST_Response|WP_Error
+ */
+function update_walk_in_count( WP_REST_Request $request ) {
+	$event = resolve_event( $request );
+	if ( is_wp_error( $event ) ) {
+		return $event;
+	}
+
+	$open = assert_open( $event );
+	if ( is_wp_error( $open ) ) {
+		return $open;
+	}
+
+	set_walk_in_count( (int) $event->event->ID, current_scope( $event ), (int) $request->get_param( 'count' ) );
+
+	return new WP_REST_Response( build_list( $event ) );
 }

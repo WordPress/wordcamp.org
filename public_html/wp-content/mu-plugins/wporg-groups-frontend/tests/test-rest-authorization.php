@@ -173,6 +173,12 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				$request->set_body_params( array( 'login' => get_userdata( $this->actors['member'] )->user_login ) );
 				return $request;
 
+			case 'POST /event/{id}/walk-in-count':
+				$this->make_event_past();
+				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $this->event_id . '/walk-in-count' );
+				$request->set_body_params( array( 'count' => 2 ) );
+				return $request;
+
 			case 'GET /drafts':
 				return new WP_REST_Request( 'GET', '/wporg-groups/v1/drafts' );
 
@@ -353,6 +359,13 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				'outsider'        => 403,
 			),
 			'POST /event/{id}/walk-in' => array(
+				'anonymous'       => 401,
+				'member'          => 403,
+				'event_organiser' => 403,
+				'organiser'       => 200,
+				'outsider'        => 403,
+			),
+			'POST /event/{id}/walk-in-count' => array(
 				'anonymous'       => 401,
 				'member'          => 403,
 				'event_organiser' => 403,

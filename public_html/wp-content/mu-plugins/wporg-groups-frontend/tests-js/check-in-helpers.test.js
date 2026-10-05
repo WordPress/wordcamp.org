@@ -1,4 +1,4 @@
-import { checkInPath, filterAttendees, withCheckIn } from '../src/blocks/event-manage/check-in-helpers';
+import { checkInPath, filterAttendees, MAX_WALK_INS, stepWalkInCount, withCheckIn } from '../src/blocks/event-manage/check-in-helpers';
 
 const list = {
 	attendees: [
@@ -17,6 +17,7 @@ describe( 'check-in helpers', () => {
 			'/wporg-groups/v1/event/5/check-in?recurrence_id=2026-10-01%2018%3A00'
 		);
 		expect( checkInPath( 5, '', '', 'walk-in' ) ).toBe( '/wporg-groups/v1/event/5/walk-in' );
+		expect( checkInPath( 5, '', '', 'walk-in-count' ) ).toBe( '/wporg-groups/v1/event/5/walk-in-count' );
 	} );
 
 	it( 'checks one attendee in and keeps the count in step', () => {
@@ -43,5 +44,13 @@ describe( 'check-in helpers', () => {
 		expect( filterAttendees( list.attendees, 'HOP' ).map( ( row ) => row.commentId ) ).toEqual( [ 2 ] );
 		expect( filterAttendees( list.attendees, 'ada' ).map( ( row ) => row.commentId ) ).toEqual( [ 1 ] );
 		expect( filterAttendees( list.attendees, '  ' ) ).toBe( list.attendees );
+	} );
+
+	it( 'steps the walk-in count within what the server accepts', () => {
+		expect( stepWalkInCount( 2, 1 ) ).toBe( 3 );
+		expect( stepWalkInCount( 2, -1 ) ).toBe( 1 );
+		expect( stepWalkInCount( 0, -1 ) ).toBe( 0 );
+		expect( stepWalkInCount( MAX_WALK_INS, 1 ) ).toBe( MAX_WALK_INS );
+		expect( stepWalkInCount( undefined, 1 ) ).toBe( 1 );
 	} );
 } );

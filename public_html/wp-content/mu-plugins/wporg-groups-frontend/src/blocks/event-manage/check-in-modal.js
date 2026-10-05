@@ -3,7 +3,8 @@
  *
  * Each toggle saves straight away, updating the list first and rolling the
  * row back if the save fails, since this is used at the door with people
- * waiting. Walk-ins are added by their WordPress.org username.
+ * waiting. Walk-ins are added by their WordPress.org username, and those
+ * without an account are only counted (#2138).
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -11,12 +12,12 @@
 import apiFetch from '@wordpress/api-fetch';
 import { Button, CheckboxControl, Modal, Notice, Spinner, TextControl } from '@wordpress/components';
 import { createElement as h, useEffect, useRef, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 
 /**
  * Internal dependencies.
  */
-import { checkInPath, filterAttendees, withCheckIn } from './check-in-helpers';
+import { checkInPath, filterAttendees, stepWalkInCount, withCheckIn } from './check-in-helpers';
 
 export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 	const [ list, setList ] = useState( null );
@@ -26,6 +27,7 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 	const [ pending, setPending ] = useState( [] );
 	const [ walkIn, setWalkIn ] = useState( '' );
 	const [ addingWalkIn, setAddingWalkIn ] = useState( false );
+	const [ savingWalkIns, setSavingWalkIns ] = useState( false );
 
 	// The latest list, for rolling a failed toggle back against whatever
 	// other toggles have landed since it started.
@@ -101,6 +103,91 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 				} );
 			} )
 			.finally( () => setAddingWalkIn( false ) );
+	};
+
+	// Sends the new total rather than the step, so a retried request can't
+	// count the same people twice.
+	const changeWalkIns = ( step ) => {
+		const count = stepWalkInCount( list.walkInsWithoutAccount, step );
+
+		setNotice( null );
+		setSavingWalkIns( true );
+
+		apiFetch( {
+			path: checkInPath( eventId, '', recurrenceId, 'walk-in-count' ),
+			method: 'POST',
+			data: { count },
+		} )
+			.then( setList )
+			.catch( ( error ) => {
+				setNotice( {
+					status: 'error',
+					message: error?.message || __( 'The walk-in count could not be saved.', 'wordcamporg' ),
+				} );
+			} )
+			.finally( () => setSavingWalkIns( false ) );
+	};
+
+	const renderWalkInCount = () => {
+		const count = list.walkInsWithoutAccount || 0;
+
+		return h(
+			'div',
+			{
+				className: 'wporg-groups-check-in-modal__walk-in-count',
+				role: 'group',
+				'aria-labelledby': 'wporg-groups-check-in-walk-in-count-label',
+			},
+			h(
+				'div',
+				{ className: 'wporg-groups-check-in-modal__walk-in-count-text' },
+				h(
+					'span',
+					{
+						id: 'wporg-groups-check-in-walk-in-count-label',
+						className: 'wporg-groups-check-in-modal__walk-in-count-label',
+					},
+					__( 'Walk-ins without an account', 'wordcamporg' )
+				),
+				h(
+					'span',
+					{ className: 'wporg-groups-check-in-modal__walk-in-count-help' },
+					__( 'Only the number is kept, no names.', 'wordcamporg' )
+				)
+			),
+			h(
+				'div',
+				{ className: 'wporg-groups-check-in-modal__stepper' },
+				h(
+					Button,
+					{
+						variant: 'secondary',
+						label: __( 'One fewer walk-in', 'wordcamporg' ),
+						onClick: () => changeWalkIns( -1 ),
+						// Stay focusable while saving, so a keyboard user pressing
+						// again isn't dropped back to the page.
+						disabled: savingWalkIns || 0 === count,
+						accessibleWhenDisabled: true,
+						__next40pxDefaultSize: true,
+					},
+					'\u2212'
+				),
+				h( 'span', { className: 'wporg-groups-check-in-modal__stepper-value' }, count ),
+				h(
+					Button,
+					{
+						variant: 'secondary',
+						label: __( 'One more walk-in', 'wordcamporg' ),
+						onClick: () => changeWalkIns( 1 ),
+						disabled: savingWalkIns,
+						accessibleWhenDisabled: true,
+						isBusy: savingWalkIns,
+						__next40pxDefaultSize: true,
+					},
+					'+'
+				)
+			)
+		);
 	};
 
 	const renderList = () => {
@@ -184,12 +271,25 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 				h(
 					'p',
 					{ className: 'wporg-groups-check-in-modal__count', role: 'status', 'aria-live': 'polite' },
-					sprintf(
-						/* translators: 1: number checked in, 2: number of attendees. */
-						__( '%1$d of %2$d checked in', 'wordcamporg' ),
-						list.checkedInCount,
-						list.attendees.length
-					)
+					list.walkInsWithoutAccount
+						? sprintf(
+								/* translators: 1: checked in, 2: attendees, 3: walk-ins without an account. */
+								_n(
+									'%1$d of %2$d checked in, plus %3$d walk-in without an account',
+									'%1$d of %2$d checked in, plus %3$d walk-ins without an account',
+									list.walkInsWithoutAccount,
+									'wordcamporg'
+								),
+								list.checkedInCount,
+								list.attendees.length,
+								list.walkInsWithoutAccount
+						  )
+						: sprintf(
+								/* translators: 1: number checked in, 2: number of attendees. */
+								__( '%1$d of %2$d checked in', 'wordcamporg' ),
+								list.checkedInCount,
+								list.attendees.length
+						  )
 				),
 			notice && h( Notice, { status: notice.status, isDismissible: false }, notice.message ),
 			h(
@@ -216,6 +316,7 @@ export default function CheckInModal( { eventId, recurrenceId, onClose } ) {
 					__( 'Check in', 'wordcamporg' )
 				)
 			),
+			list && renderWalkInCount(),
 			renderList(),
 			h(
 				'div',

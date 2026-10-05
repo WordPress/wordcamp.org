@@ -1255,6 +1255,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$protected_fields,
 					array(
 						'Multi-Event Sponsor Region',
+						'Multi-Event Sponsor Groups',
 						'Series Event',
 					)
 				);

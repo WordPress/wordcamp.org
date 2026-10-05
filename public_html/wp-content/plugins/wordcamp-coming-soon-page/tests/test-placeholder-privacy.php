@@ -272,6 +272,22 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * WordPress.org's `wporg-seo` canonical tag, which stands in for core's on
+	 * production, gets no URL while active and keeps it while inactive.
+	 */
+	public function test_wporg_canonical_url_is_withheld_only_while_active() {
+		$url = 'https://example.org/organizer/secret-organizer-name/';
+
+		$this->set_coming_soon( 'off' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wporg-seo's filter.
+		$this->assertSame( $url, apply_filters( 'wporg_canonical_url', $url ) );
+
+		$this->set_coming_soon( 'on' );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wporg-seo's filter.
+		$this->assertFalse( apply_filters( 'wporg_canonical_url', $url ) );
+	}
+
+	/**
 	 * Build a fresh plugin instance with Coming Soon on, so its filters are
 	 * registered in the current hook state and a test exercises the real wiring.
 	 *

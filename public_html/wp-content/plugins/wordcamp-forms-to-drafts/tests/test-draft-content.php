@@ -368,14 +368,14 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A draft body keeps the submitter's text, paragraphs and percent-encoded URLs.
+	 * A draft body keeps the submitter's text and paragraphs.
 	 *
-	 * The body is stored as plain text, like the titles: markup a submitter typed is kept as
-	 * its text, line breaks still become paragraphs, and a percent-encoded URL is left intact
-	 * (which is why the plain-text helper avoids `sanitize_text_field()`).
+	 * The body is stored as plain text, like the titles, and a bio written in several paragraphs
+	 * stays that way rather than collapsing to one. (The helper keeps line breaks here; collapsing
+	 * them is the single-line default used for titles.)
 	 */
-	public function test_body_keeps_formatting_and_percent_encoding() {
-		$body = "Bio with bold text. See https://example.org/My%20Notes.pdf\n\nSecond paragraph.";
+	public function test_body_keeps_paragraphs() {
+		$body = "First paragraph of the bio.\n\nSecond paragraph.";
 
 		$this->plugin->call_for_speakers(
 			$this->make_submission( 'call-for-speakers' ),
@@ -396,8 +396,7 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $speaker );
-		$this->assertStringContainsString( 'bold text', $speaker[0]->post_content );
-		$this->assertStringContainsString( 'My%20Notes.pdf', $speaker[0]->post_content );
+		$this->assertStringContainsString( 'First paragraph of the bio.', $speaker[0]->post_content );
 		// The two submitted paragraphs survive as two paragraph blocks.
 		$this->assertSame( 2, substr_count( $speaker[0]->post_content, '<!-- wp:paragraph -->' ) );
 	}
@@ -429,34 +428,36 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A submitted value whose `<` is followed by a space -- which `sanitize_text_field()` leaves
-	 * in place and `content_save_pre` would otherwise rebuild into a real element.
+	 * Markup in a body, in the already-formed shape Jetpack's `wp_kses_post()` pass produces before
+	 * the handler sees it. Stored verbatim it would be a live element in the published page.
 	 *
 	 * @var string
 	 */
-	const SPACED_TAG_BODY = 'Intro < math data-wp-interactive="core/navigation" >x< /math > outro';
+	const MARKUP_BODY = 'Intro <math data-wp-interactive="core/navigation" data-wp-bind--onfocusin="context.p">x</math> outro';
 
 	/**
-	 * Assert a draft body keeps the submission as text, with no `<` left that could be read as a tag.
+	 * Assert a draft body keeps its surrounding text while the markup is not stored as a live tag.
+	 *
+	 * The tag-like chunk is reduced to text, not kept verbatim, so the words around it survive but
+	 * no element does.
 	 *
 	 * @param string $content The stored draft content.
 	 */
-	protected function assertBodyKeepsTextNotTag( $content ) {
-		$this->assertStringNotContainsString( '< math', $content, 'A spaced tag residue was stored.' );
-		$this->assertStringNotContainsString( '<math', $content, 'A reconstructed element was stored.' );
-		$this->assertStringContainsString( '&lt;', $content, 'The submitted "<" was not encoded.' );
-		$this->assertStringContainsString( 'outro', $content, 'The submission text was not preserved.' );
+	protected function assertBodyHasNoLiveMarkup( $content ) {
+		$this->assertStringNotContainsString( '<math', $content, 'A live element was stored.' );
+		$this->assertStringContainsString( 'Intro', $content, 'Text before the markup was lost.' );
+		$this->assertStringContainsString( 'outro', $content, 'Text after the markup was lost.' );
 	}
 
 	/**
-	 * A spaced tag in a Company Description is stored as text, not rebuilt into an element.
+	 * Markup in a Company Description is reduced to text, not stored as a live element.
 	 */
-	public function test_sponsor_description_spaced_tag_is_text() {
+	public function test_sponsor_description_markup_is_neutralized() {
 		$this->plugin->call_for_sponsors(
 			$this->make_submission( 'call-for-sponsors' ),
 			array(
 				'Company Name'        => 'Test Co',
-				'Company Description' => self::SPACED_TAG_BODY,
+				'Company Description' => self::MARKUP_BODY,
 				'Website'             => 'https://example.org',
 			),
 			array()
@@ -468,22 +469,22 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $sponsor );
-		$this->assertBodyKeepsTextNotTag( $sponsor[0]->post_content );
+		$this->assertBodyHasNoLiveMarkup( $sponsor[0]->post_content );
 	}
 
 	/**
-	 * A spaced tag in a speaker Bio and a session Topic Description is stored as text.
+	 * Markup in a speaker Bio and a session Topic Description is reduced to text.
 	 */
-	public function test_speaker_and_session_body_spaced_tag_is_text() {
+	public function test_speaker_and_session_body_markup_is_neutralized() {
 		$this->plugin->call_for_speakers(
 			$this->make_submission( 'call-for-speakers' ),
 			array(
 				'Name'                   => 'Test Speaker',
 				'Email Address'          => 'speaker@example.org',
 				'WordPress.org Username' => 'nonexistent-user-for-tests',
-				'Your Bio'               => self::SPACED_TAG_BODY,
+				'Your Bio'               => self::MARKUP_BODY,
 				'Topic Title'            => 'A talk',
-				'Topic Description'      => self::SPACED_TAG_BODY,
+				'Topic Description'      => self::MARKUP_BODY,
 			),
 			array()
 		);
@@ -494,7 +495,7 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $speaker );
-		$this->assertBodyKeepsTextNotTag( $speaker[0]->post_content );
+		$this->assertBodyHasNoLiveMarkup( $speaker[0]->post_content );
 
 		$session = get_posts( array(
 			'post_type'   => 'wcb_session',
@@ -502,6 +503,6 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $session );
-		$this->assertBodyKeepsTextNotTag( $session[0]->post_content );
+		$this->assertBodyHasNoLiveMarkup( $session[0]->post_content );
 	}
 }

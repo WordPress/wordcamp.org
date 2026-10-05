@@ -666,10 +666,11 @@ class WordCamp_Forms_To_Drafts {
 	 * than executed. Titles need this as much as bodies do -- the WordCamp blocks and
 	 * `wc-post-types` both concatenate a title into post content.
 	 *
-	 * This only handles the shortcode delimiters, not tags. Jetpack sanitises form fields with
-	 * `sanitize_text_field()`, so callers that store free text run the value through
-	 * `wcorg_sanitize_plain_text()` first -- every title, and the description/bio fields -- which
-	 * encodes a stray `<` so it stays text.
+	 * This only handles the shortcode delimiters, not tags. Jetpack runs a submission through
+	 * `wp_kses_post()` before this hook (see `Contact_Form_Plugin::strip_tags()`), so allow-listed
+	 * markup is kept, not removed. Callers that store free text therefore run the value through
+	 * `wcorg_sanitize_plain_text()` first -- every title, and the description/bio fields -- to keep
+	 * it as text.
 	 *
 	 * @param string $content Submitted title or body.
 	 *

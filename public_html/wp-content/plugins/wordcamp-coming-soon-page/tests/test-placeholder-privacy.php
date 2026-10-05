@@ -45,9 +45,34 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The `PHP_SELF` in effect before the test.
+	 *
+	 * @var string|null
+	 */
+	protected $original_php_self;
+
+	/**
+	 * Make `go_to()` route the way a front-end request does.
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		// `go_to()` fires `wp`, where `maybe_add_latest_site_hints()` switches to a
+		// central blog the suite doesn't provision and logs DB errors. Nothing here
+		// needs it. `WP_UnitTestCase` restores the hook registry after each test.
+		remove_action( 'wp', 'WordCamp\\Latest_Site_Hints\\maybe_add_latest_site_hints' );
+
+		// Another suite can leave a `wp-admin/` PHP_SELF behind, which makes
+		// `WP::parse_request()` drop the query vars `go_to()` relies on.
+		$this->original_php_self = $_SERVER['PHP_SELF'] ?? null;
+		$_SERVER['PHP_SELF']     = '/index.php';
+	}
+
+	/**
 	 * Restore state after each test.
 	 */
 	public function tear_down(): void {
+		$_SERVER['PHP_SELF'] = $this->original_php_self;
 		$this->set_coming_soon( 'off' );
 		wp_set_current_user( 0 );
 		wp_reset_postdata();
@@ -210,7 +235,12 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 	public function test_identifying_links_are_unhooked_while_active() {
 		$hooks = array(
 			array( 'wp_head', 'rel_canonical' ),
+			array( 'wp_head', 'wp_shortlink_wp_head' ),
 			array( 'wp_head', 'wp_oembed_add_discovery_links' ),
+			array( 'wp_head', 'rest_output_link_wp_head' ),
+			array( 'wp_head', 'feed_links_extra' ),
+			array( 'template_redirect', 'rest_output_link_header' ),
+			array( 'template_redirect', 'wp_shortlink_header' ),
 			array( 'template_redirect', 'wp_old_slug_redirect' ),
 		);
 
@@ -226,5 +256,71 @@ class Test_Placeholder_Privacy extends WP_UnitTestCase {
 		foreach ( $hooks as $hook ) {
 			$this->assertFalse( has_action( $hook[0], $hook[1] ), "{$hook[1]} should be unhooked." );
 		}
+	}
+
+	/**
+	 * While inactive, the head tags, headers and slug redirects stay hooked.
+	 */
+	public function test_identifying_links_stay_hooked_while_inactive() {
+		add_action( 'wp_head', 'feed_links_extra', 3 );
+		add_action( 'template_redirect', 'wp_shortlink_header', 11 );
+
+		$this->set_coming_soon( 'off' );
+
+		$this->assertSame( 3, has_action( 'wp_head', 'feed_links_extra' ) );
+		$this->assertSame( 11, has_action( 'template_redirect', 'wp_shortlink_header' ) );
+	}
+
+	/**
+	 * Build a fresh plugin instance with Coming Soon on, so its filters are
+	 * registered in the current hook state and a test exercises the real wiring.
+	 *
+	 * @return WordCamp_Coming_Soon_Page
+	 */
+	protected function fresh_active_plugin(): WordCamp_Coming_Soon_Page {
+		$this->set_coming_soon( 'on' );
+
+		$plugin = new WordCamp_Coming_Soon_Page();
+		$plugin->init();
+
+		return $plugin;
+	}
+
+	/**
+	 * The canonical redirect filter is wired up, not just the callback in
+	 * isolation.
+	 *
+	 * Core's `redirect_canonical()` returns early under `is_admin()`, and the
+	 * Remote CSS test bootstrap defines `WP_ADMIN` for the whole run, so this
+	 * applies the filter core would apply rather than calling it.
+	 */
+	public function test_canonical_redirect_filter_is_wired_up() {
+		$redirect = 'https://example.org/organizer/secret-organizer-name/';
+		$request  = 'https://example.org/?p=' . self::$organizer_id;
+
+		$this->assertSame( $redirect, apply_filters( 'redirect_canonical', $redirect, $request ), 'Nothing else should cancel the redirect.' );
+
+		$this->fresh_active_plugin();
+
+		$this->assertFalse( apply_filters( 'redirect_canonical', $redirect, $request ) );
+	}
+
+	/**
+	 * The body class filter is wired up: `get_body_class()` itself carries no
+	 * slug while active. Core spells out a term's slug on its archive.
+	 */
+	public function test_body_classes_through_the_real_path() {
+		$term_id = self::factory()->category->create( array( 'slug' => 'secret-category-slug' ) );
+		self::factory()->post->create( array( 'post_category' => array( $term_id ) ) );
+
+		$this->go_to( add_query_arg( 'cat', $term_id, home_url( '/' ) ) );
+		$this->assertContains( 'category-secret-category-slug', get_body_class(), 'Core should name the slug before the placeholder is on.' );
+
+		$this->fresh_active_plugin();
+
+		$classes = get_body_class();
+
+		$this->assertEmpty( preg_grep( '/secret-category-slug/', $classes ) );
+		$this->assertContains( 'category-' . $term_id, $classes );
 	}
 }

@@ -55,7 +55,8 @@ class WordCamp_Coming_Soon_Page {
 	 */
 	protected function suppress_identifying_links() {
 		$actions = array(
-			'wp_head'           => array( 'rel_canonical', 'wp_shortlink_wp_head', 'wp_oembed_add_discovery_links', 'rest_output_link_wp_head' ),
+			// `feed_links_extra` prints the post's comments feed, named after its title and URL.
+			'wp_head'           => array( 'rel_canonical', 'wp_shortlink_wp_head', 'wp_oembed_add_discovery_links', 'rest_output_link_wp_head', 'feed_links_extra' ),
 			'template_redirect' => array( 'rest_output_link_header', 'wp_shortlink_header', 'wp_old_slug_redirect' ),
 		);
 

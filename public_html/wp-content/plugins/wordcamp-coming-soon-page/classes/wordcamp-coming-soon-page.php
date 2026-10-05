@@ -70,6 +70,10 @@ class WordCamp_Coming_Soon_Page {
 				}
 			}
 		}
+
+		// On production, WordPress.org's `wporg-seo` mu-plugin replaces `rel_canonical`
+		// with its own canonical tag and header. Both read their URL through this filter.
+		add_filter( 'wporg_canonical_url', '__return_false' );
 	}
 
 	/**

@@ -32,7 +32,13 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
-	$post_ID  = $block->context['postId'];
+	$post_ID = $block->context['postId'];
+
+	// A password-protected session withholds its speakers along with its content.
+	if ( post_password_required( $post_ID ) ) {
+		return '';
+	}
+
 	$speaker_ids = get_post_meta( $post_ID, '_wcpt_speaker_id' );
 
 	// Session has no published speakers.
@@ -82,9 +88,13 @@ function render( $attributes, $content, $block ) {
 	foreach ( $speakers as $speaker ) {
 		$content .= '<span class="wp-block-wordcamp-session-speakers__name">';
 		if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
-			$content .= sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $speaker->ID ), get_the_title( $speaker->ID ) );
+			$content .= sprintf(
+				'<a href="%1$s">%2$s</a>',
+				esc_url( get_the_permalink( $speaker->ID ) ),
+				wcorg_escape_shortcodes( get_the_title( $speaker->ID ) )
+			);
 		} else {
-			$content .= get_the_title( $speaker->ID );
+			$content .= wcorg_escape_shortcodes( get_the_title( $speaker->ID ) );
 		}
 		$content .= '</span>';
 	}

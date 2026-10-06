@@ -25,9 +25,9 @@ import { __ } from '@wordpress/i18n';
 import OwnershipTransferPanel from './ownership-transfer-panel';
 
 const ROLE_OPTIONS = [
-	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
-	{ label: __( 'Event Organizer', 'wporg-groups-frontend' ), value: 'author' },
-	{ label: __( 'Organizer', 'wporg-groups-frontend' ), value: 'editor' },
+	{ label: __( 'Member', 'wordcamporg' ), value: 'subscriber' },
+	{ label: __( 'Event Organizer', 'wordcamporg' ), value: 'author' },
+	{ label: __( 'Organizer', 'wordcamporg' ), value: 'editor' },
 ];
 
 const PER_PAGE = 20;
@@ -79,7 +79,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 				setMembers( [] );
 				setTotal( 0 );
 				setTotalPages( 1 );
-				setNotice( err.message || __( 'Could not load members.', 'wporg-groups-frontend' ) );
+				setNotice( err.message || __( 'Could not load members.', 'wordcamporg' ) );
 				setLoading( false );
 			}
 		} );
@@ -105,9 +105,9 @@ export default function MembersTab( { canManageRoles = false } ) {
 						: m
 				)
 			);
-			setNotice( __( 'Role updated.', 'wporg-groups-frontend' ) );
+			setNotice( __( 'Role updated.', 'wordcamporg' ) );
 		} catch ( err ) {
-			setNotice( err.message || __( 'Could not update role.', 'wporg-groups-frontend' ) );
+			setNotice( err.message || __( 'Could not update role.', 'wordcamporg' ) );
 		}
 	}, [] );
 
@@ -132,12 +132,12 @@ export default function MembersTab( { canManageRoles = false } ) {
 			h( SearchControl, {
 				value: search,
 				onChange: onSearchChange,
-				placeholder: __( 'Search members\u2026', 'wporg-groups-frontend' ),
+				placeholder: __( 'Search members\u2026', 'wordcamporg' ),
 				className: 'wporg-members-tab__search',
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( 'span', { className: 'wporg-members-tab__count' },
-				total.toLocaleString() + ' ' + ( total === 1 ? __( 'member', 'wporg-groups-frontend' ) : __( 'members', 'wporg-groups-frontend' ) )
+				total.toLocaleString() + ' ' + ( total === 1 ? __( 'member', 'wordcamporg' ) : __( 'members', 'wordcamporg' ) )
 			),
 		),
 		h(
@@ -168,7 +168,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 							className: 'wporg-members-tab__role-select',
 						} )
 						: h( 'span', { className: 'wporg-members-tab__role-readonly' },
-							member.roleLabel || __( 'Organizer', 'wporg-groups-frontend' )
+							member.roleLabel || __( 'Organizer', 'wordcamporg' )
 						)
 				);
 			} )
@@ -185,7 +185,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 						disabled: page <= 1,
 						onClick: () => setPage( ( currentPage ) => Math.max( 1, currentPage - 1 ) ),
 					},
-					__( 'Previous', 'wporg-groups-frontend' )
+					__( 'Previous', 'wordcamporg' )
 				),
 				h( 'span', {},
 					page.toLocaleString() + ' / ' + totalPages.toLocaleString()
@@ -198,7 +198,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 						disabled: page >= totalPages,
 						onClick: () => setPage( ( currentPage ) => Math.min( totalPages, currentPage + 1 ) ),
 					},
-					__( 'Next', 'wporg-groups-frontend' )
+					__( 'Next', 'wordcamporg' )
 				)
 			)
 	);

@@ -106,6 +106,24 @@ class Test_Speaker_Sessions_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A session title is listed as text, not run through the shortcode parser.
+	 *
+	 * The block's output is concatenated into post content, which core parses at
+	 * `the_content` priority 11.
+	 */
+	public function test_session_title_is_listed_as_text() {
+		wp_set_current_user( 0 );
+
+		$this->add_session( 'Escaped [caption width=1]x[/caption] session', 'publish', 0 );
+
+		$output = $this->render_block();
+
+		$this->assertStringContainsString( 'Escaped', $output );
+		$this->assertStringNotContainsString( '[caption', $output );
+		$this->assertSame( $output, do_shortcode( $output ) );
+	}
+
+	/**
 	 * Test that a logged out visitor is only asked about published sessions.
 	 */
 	public function test_logged_out_gets_published_status_only() {
@@ -152,6 +170,25 @@ class Test_Speaker_Sessions_Block extends WP_UnitTestCase {
 		wp_set_current_user( 0 );
 
 		$this->assertStringNotContainsString( 'Unowned private session', $this->render_block() );
+	}
+
+	/**
+	 * A password-protected session withholds its speakers, so the speaker's page
+	 * doesn't list it.
+	 */
+	public function test_password_protected_session_is_not_listed() {
+		$session_id = $this->add_session( 'Protected session', 'publish', 0 );
+		wp_update_post( array(
+			'ID'            => $session_id,
+			'post_password' => 'secret-pass',
+		) );
+
+		wp_set_current_user( 0 );
+
+		$rendered = $this->render_block();
+
+		$this->assertStringNotContainsString( 'Protected session', $rendered );
+		$this->assertStringContainsString( 'Published session', $rendered );
 	}
 
 	/**

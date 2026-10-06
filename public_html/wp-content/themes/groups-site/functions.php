@@ -47,7 +47,28 @@ function enqueue_assets() {
 		array( 'groups-site-custom' ),
 		filemtime( get_theme_file_path( 'assets/css/responsive.css' ) )
 	);
+
+	if ( is_post_type_archive( 'gatherpress_event' ) ) {
+		wp_enqueue_script(
+			'groups-site-events-search',
+			get_theme_file_uri( 'assets/js/events-search.js' ),
+			array(),
+			filemtime( get_theme_file_path( 'assets/js/events-search.js' ) ),
+			true
+		);
+	}
+
+	if ( is_singular( 'gatherpress_event' ) ) {
+		wp_enqueue_script(
+			'groups-site-online-event-link',
+			get_theme_file_uri( 'assets/js/online-event-link.js' ),
+			array(),
+			filemtime( get_theme_file_path( 'assets/js/online-event-link.js' ) ),
+			true
+		);
+	}
 }
+
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
@@ -96,7 +117,11 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  *     row of three used to start its date where its neighbours started their
  *     image — the cards shared a grid row but no baseline. The placeholder
  *     holds the same 16:9 region; `custom.css` fills it with flat
- *     Blueberry 4 rather than invented artwork.
+ *     Blueberry 4 rather than invented artwork. It carries the same link
+ *     core gives a real thumbnail, so the region opens the event whether or
+ *     not the event has an image. The link is decorative — it duplicates the
+ *     title link, so it stays out of the tab order and inside the
+ *     `aria-hidden` wrapper rather than announcing itself twice.
  *
  * @param string $content The rendered featured-image block.
  * @param array  $block   The parsed block, including its context.
@@ -109,7 +134,12 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 	}
 
 	if ( '' === trim( $content ) ) {
-		return '<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"></div>';
+		$permalink = get_permalink( $block['context']['postId'] ?? get_the_ID() );
+
+		return sprintf(
+			'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true">%s</div>',
+			$permalink ? sprintf( '<a tabindex="-1" href="%s"></a>', esc_url( $permalink ) ) : ''
+		);
 	}
 
 	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
@@ -149,8 +179,66 @@ function prime_event_card_thumbnails( $query ) {
 	}
 
 	update_post_thumbnail_cache( $query );
+
+	if ( ! empty( $query->posts ) ) {
+		update_object_term_cache( wp_list_pluck( $query->posts, 'ID' ), 'gatherpress_event' );
+	}
 }
 add_action( 'loop_start', __NAMESPACE__ . '\prime_event_card_thumbnails' );
+
+/**
+ * Leave the event being viewed out of the "More events from this group" grid.
+ *
+ * The grid in `templates/single-event.html` opts in with a
+ * `groups_site_exclude_current` key on its query; the Query Loop block has no
+ * attribute for "not this post". Excluding the post drops every date of a
+ * recurring series along with it, which is intended: the next date of the
+ * same meetup isn't another event.
+ *
+ * @param array     $query_vars The query variables built from the block.
+ * @param \WP_Block $block      The post template block.
+ *
+ * @return array The query variables.
+ */
+function exclude_current_event_from_query( array $query_vars, \WP_Block $block ): array {
+	if ( empty( $block->context['query']['groups_site_exclude_current'] ) || ! is_singular( 'gatherpress_event' ) ) {
+		return $query_vars;
+	}
+
+	$query_vars['post__not_in'] = array_merge(
+		(array) ( $query_vars['post__not_in'] ?? array() ),
+		array( get_queried_object_id() )
+	);
+
+	return $query_vars;
+}
+add_filter( 'query_loop_block_query_vars', __NAMESPACE__ . '\exclude_current_event_from_query', 10, 2 );
+
+/**
+ * Drop the "More events from this group" section when it has nothing to show.
+ *
+ * The Post Template renders nothing for an empty query, but the section's
+ * heading and "View all events" link would still render around it.
+ *
+ * @param string $block_content The rendered Query Loop block.
+ * @param array  $parsed_block  The block that produced it.
+ *
+ * @return string The block, or an empty string.
+ */
+function hide_empty_more_events_section( $block_content, $parsed_block ) {
+	$class_name = $parsed_block['attrs']['className'] ?? '';
+
+	if ( ! in_array( 'groups-site-more-events', explode( ' ', $class_name ), true ) ) {
+		return $block_content;
+	}
+
+	if ( false === strpos( $block_content, 'wp-block-post-template' ) ) {
+		return '';
+	}
+
+	return $block_content;
+}
+add_filter( 'render_block_core/query', __NAMESPACE__ . '\hide_empty_more_events_section', 10, 2 );
 
 /**
  * Describe the events archive's view state on `<body>` so the stylesheet can
@@ -168,6 +256,11 @@ function event_archive_body_classes( array $classes ): array {
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
 	$time = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+	if ( function_exists( '\WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter' ) ) {
+		$time = \WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter( $time );
+	} elseif ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time ) {
+		$time = 'upcoming';
+	}
 	if ( ! in_array( $time, array( 'upcoming', 'past', 'all' ), true ) ) {
 		$time = 'upcoming';
 	}
@@ -224,7 +317,7 @@ function register_pattern_category() {
 	register_block_pattern_category(
 		'groups-site',
 		array(
-			'label' => __( 'Groups Site', 'groups-site' ),
+			'label' => __( 'Groups Site', 'wordcamporg' ),
 		)
 	);
 }
@@ -281,10 +374,10 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
  * resolves through this filter — hardcoded items, no per-site nav menu to
  * provision.
  *
- * Built at render time, so the account item can react to the visitor:
+ * Built at render time, so the member-facing items can react to the visitor:
  * logged-out visitors — the ones served from the page cache — all get the
- * same "Log in" link, while logged-in views bypass the cache, so the
- * per-user nonce in the logout URL is safe.
+ * same "Log in" link and no "My events", while logged-in views bypass the
+ * cache, so the per-user nonce in the logout URL is safe.
  *
  * @param array $menus Menus keyed by slug, each an array of label/url items.
  * @return array
@@ -298,21 +391,56 @@ function add_local_navigation_menus( $menus ) {
 	// where the fallback is harmless.
 	$current_url = home_url( empty( $wp->request ) ? '/' : trailingslashit( $wp->request ) );
 
-	$menus['local-navigation'] = array(
+	$items = array(
 		array(
-			'label' => __( 'All Events', 'groups-site' ),
+			'label' => __( 'All Events', 'wordcamporg' ),
 			'url'   => get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' ),
 		),
-		is_user_logged_in()
-			? array(
-				'label' => __( 'Log out', 'groups-site' ),
-				'url'   => wp_logout_url( $current_url ),
-			)
-			: array(
-				'label' => __( 'Log in', 'groups-site' ),
-				'url'   => wp_login_url( $current_url ),
-			),
 	);
+
+	/*
+	 * The member list is otherwise reachable only through the small member
+	 * count under the group's title, which testers found too easy to miss
+	 * (#2037). The list is public, so the item is the same for every visitor
+	 * and safe on cached views. It needs the published `members` page that
+	 * provisioning creates, since `page-members.html` only resolves there;
+	 * the item is left out where that page is missing rather than linking
+	 * to a 404. The URL is relative so the navigation extension resolves it
+	 * to the page and marks the item current on the member list.
+	 */
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$items[] = array(
+			'label' => __( 'Members', 'wordcamporg' ),
+			'url'   => '/members/',
+		);
+	}
+
+	/*
+	 * A direct route to the member's own events (#2060), which otherwise have
+	 * to be found by scrolling the group's front page. The destination is the
+	 * `wporg/my-events` section on that page rather than a page of its own,
+	 * and the item is offered on the same terms the block renders on: members
+	 * of this group, since that's who the block has anything to show.
+	 */
+	if ( is_user_member_of_blog() ) {
+		$items[] = array(
+			'label' => __( 'My events', 'wordcamporg' ),
+			'url'   => home_url( '/#my-events' ),
+		);
+	}
+
+	$items[] = is_user_logged_in()
+		? array(
+			'label' => __( 'Log out', 'wordcamporg' ),
+			'url'   => wp_logout_url( $current_url ),
+		)
+		: array(
+			'label' => __( 'Log in', 'wordcamporg' ),
+			'url'   => wp_login_url( $current_url ),
+		);
+
+	$menus['local-navigation'] = $items;
 
 	return $menus;
 }
@@ -348,13 +476,13 @@ function filter_site_breadcrumbs( $breadcrumbs ) {
 	$title = '';
 
 	if ( is_post_type_archive( 'gatherpress_event' ) ) {
-		$title = __( 'Events', 'groups-site' );
+		$title = __( 'Events', 'wordcamporg' );
 	} elseif ( is_home() ) {
-		$title = __( 'Latest posts', 'groups-site' );
+		$title = __( 'Latest posts', 'wordcamporg' );
 	} elseif ( is_search() ) {
-		$title = __( 'Search results', 'groups-site' );
+		$title = __( 'Search results', 'wordcamporg' );
 	} elseif ( is_404() ) {
-		$title = __( 'Page not found', 'groups-site' );
+		$title = __( 'Page not found', 'wordcamporg' );
 	}
 
 	if ( $title ) {
@@ -374,6 +502,12 @@ add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\filter_site_breadc
  * `gatherpress_event` / `gatherpress_venue` post picks up `single-event` /
  * `single-venue` without anyone having to set it by hand.
  *
+ * An event's printable flyer (`…/flyer/`, routed by `wporg-groups-frontend`)
+ * is the same singular request, so it goes ahead of everything else,
+ * including a template picked for that one event. It isn't listed in
+ * `customTemplates`: it only makes sense as the flyer, never as an event's
+ * page.
+ *
  * Note: the archive template uses the standard slug `archive-gatherpress_event`
  * which WordPress resolves automatically for block themes.
  */
@@ -381,6 +515,13 @@ function single_template_hierarchy( $templates ) {
 	$post_type = get_post_type();
 	if ( 'gatherpress_event' === $post_type ) {
 		array_unshift( $templates, 'single-event' );
+
+		if (
+			function_exists( '\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request' ) &&
+			\WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request()
+		) {
+			array_unshift( $templates, 'single-event-flyer' );
+		}
 	} elseif ( 'gatherpress_venue' === $post_type ) {
 		array_unshift( $templates, 'single-venue' );
 	}
@@ -390,41 +531,86 @@ add_filter( 'single_template_hierarchy', __NAMESPACE__ . '\single_template_hiera
 
 
 /**
- * Strip GatherPress metadata blocks from `the_content` on the single-event view.
+ * GatherPress blocks the single-event template already renders itself.
  *
- * GatherPress seeds new events with starter blocks (event-date, venue, RSVP,
- * add-to-calendar, etc.) baked into `post_content`. The `single-event.html`
- * template renders those exact same blocks in the sidebar info card, so we
- * end up with each one twice. Strip the metadata blocks here so `post-content`
- * only renders the user's actual description prose.
+ * GatherPress seeds new events with starter blocks baked into `post_content`.
+ * `single-event.html` renders each of these in its own place: date, venue,
+ * online link and calendar in the sidebar info card, RSVP through
+ * `wporg/event-rsvp`, and who is going through `wporg/event-attendees` in the
+ * main column. Left in the content, they showed up twice.
+ */
+const EVENT_TEMPLATE_BLOCKS = array(
+	'gatherpress/event-date',
+	'gatherpress/venue',
+	'gatherpress/add-to-calendar',
+	'gatherpress/online-event',
+	'gatherpress/rsvp',
+	'gatherpress/rsvp-response',
+);
+
+/**
+ * Strip GatherPress metadata blocks from `the_content` on the single-event view,
+ * so `post-content` only renders the organizer's description.
  */
 function strip_event_metadata_blocks( $content ) {
 	if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
 
-	// Only strip the static metadata blocks we re-render in the sidebar info
-	// card. Leave `gatherpress/rsvp` and `gatherpress/rsvp-response` in place:
-	// those are inner-block wrappers (save: <InnerBlocks.Content />) and only
-	// render when their inner blocks are present in `post_content`. They're
-	// part of the default GatherPress event template, and need to live in the
-	// main column where users interact with them.
-	$strip = array(
-		'gatherpress/event-date',
-		'gatherpress/venue',
-		'gatherpress/add-to-calendar',
-		'gatherpress/online-event',
-	);
+	return serialize_blocks( strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS ) );
+}
 
-	$blocks = parse_blocks( $content );
-	$kept   = array_filter(
-		$blocks,
-		static function ( $block ) use ( $strip ) {
-			return ! in_array( $block['blockName'], $strip, true );
+/**
+ * Remove the named blocks from a parsed block tree, at any depth.
+ *
+ * Organizers rearrange the seeded blocks in wp-admin, so they're not always
+ * top level: putting the online link and calendar side by side nests them in
+ * a group. A group left empty by that goes too, rather than leaving a gap.
+ *
+ * @param array    $blocks Parsed blocks, as `parse_blocks()` returns them.
+ * @param string[] $names  Block names to remove.
+ * @return array The blocks that remain.
+ */
+function strip_blocks( array $blocks, array $names ): array {
+	$kept = array();
+
+	foreach ( $blocks as $block ) {
+		if ( in_array( $block['blockName'], $names, true ) ) {
+			continue;
 		}
-	);
 
-	return serialize_blocks( $kept );
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			$inner_blocks  = array();
+			$inner_content = array();
+			$index         = 0;
+
+			// `innerContent` holds a `null` where each inner block goes, so
+			// it has to lose the same placeholders the inner blocks do.
+			foreach ( $block['innerContent'] as $chunk ) {
+				if ( null !== $chunk ) {
+					$inner_content[] = $chunk;
+					continue;
+				}
+
+				$child = strip_blocks( array( $block['innerBlocks'][ $index++ ] ), $names );
+				if ( $child ) {
+					$inner_blocks[]  = $child[0];
+					$inner_content[] = null;
+				}
+			}
+
+			if ( ! $inner_blocks && 'core/group' === $block['blockName'] ) {
+				continue;
+			}
+
+			$block['innerBlocks']  = $inner_blocks;
+			$block['innerContent'] = $inner_content;
+		}
+
+		$kept[] = $block;
+	}
+
+	return $kept;
 }
 add_filter( 'the_content', __NAMESPACE__ . '\strip_event_metadata_blocks', 5 );
 
@@ -478,13 +664,13 @@ function compact_comment_form_defaults( $defaults ) {
 	$defaults['cancel_reply_before'] = '';
 	$defaults['cancel_reply_after']  = '';
 
-	$defaults['label_submit'] = __( 'Post comment', 'groups-site' );
+	$defaults['label_submit'] = __( 'Post comment', 'wordcamporg' );
 	$defaults['class_submit'] = 'submit wp-element-button';
 
 	$defaults['comment_field'] = sprintf(
 		'<p class="comment-form-comment"><label class="screen-reader-text" for="comment">%1$s</label><textarea id="comment" name="comment" cols="45" rows="3" maxlength="65525" required placeholder="%2$s"></textarea></p>',
-		esc_html__( 'Comment', 'groups-site' ),
-		esc_attr__( 'Add a comment&hellip;', 'groups-site' )
+		esc_html__( 'Comment', 'wordcamporg' ),
+		esc_attr__( 'Add a comment&hellip;', 'wordcamporg' )
 	);
 
 	return $defaults;
@@ -497,9 +683,349 @@ add_filter( 'comment_form_defaults', __NAMESPACE__ . '\compact_comment_form_defa
  */
 function compact_comment_reply_link_args( $args ) {
 	if ( has_compact_comment_form() ) {
-		$args['reply_text'] = __( 'Reply', 'groups-site' );
-		$args['login_text'] = __( 'Log in to comment', 'groups-site' );
+		$args['reply_text'] = __( 'Reply', 'wordcamporg' );
+		$args['login_text'] = __( 'Log in to comment', 'wordcamporg' );
 	}
 	return $args;
 }
 add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\compact_comment_reply_link_args' );
+
+/**
+ * Block attribute carrying the online-event label for the state a render is
+ * *not* in — see `label_the_online_event_link()`. Deliberately not registered
+ * with the block, so it never reaches GatherPress's own render.
+ */
+const ONLINE_EVENT_LINK_TEXT_ATTR = 'groupsSiteDescriptionLinkText';
+
+/**
+ * Say "Join event" once the online-event link is one.
+ *
+ * GatherPress renders the online-event label in a `<span>` until the viewer
+ * is attending an event that hasn't happened yet, and in an `<a>` to the
+ * meeting URL after that. Both states carried the same words, which
+ * `single-event.html` supplies: "Online event", wrapped in a tooltip saying
+ * the link is for attendees only. That describes the event's format rather
+ * than offering an action — right while there is nothing to click, wrong
+ * once there is, and the attendees-only tooltip is stale by then too
+ * (#2057).
+ *
+ * Chosen here rather than in the template because the template holds one
+ * string and the right one depends on the viewer. This settles the page load;
+ * an RSVP made in place is `assets/js/online-event-link.js`, which needs both
+ * strings and gets them from `label_the_online_event_link()`.
+ *
+ * @param array          $parsed_block The block about to render.
+ * @param array          $source_block The block as it was parsed.
+ * @param \WP_Block|null $parent_block The parent block, if any.
+ *
+ * @return array The block, with the label replaced where it links.
+ */
+function name_the_online_event_link_action( $parsed_block, $source_block, $parent_block ) {
+	if ( 'gatherpress/online-event-link' !== ( $parsed_block['blockName'] ?? '' ) ) {
+		return $parsed_block;
+	}
+
+	// The theme is expected to survive GatherPress being deactivated.
+	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
+		return $parsed_block;
+	}
+
+	// Resolve the event the same way the block's own render does: its
+	// explicit override first, then the context its `online-event` parent
+	// provides, then the post in the loop.
+	$post_id = (int) ( $parsed_block['attrs']['postId'] ?? 0 );
+
+	if ( ! $post_id && $parent_block instanceof \WP_Block ) {
+		$post_id = (int) ( $parent_block->context['postId'] ?? 0 );
+	}
+
+	if ( ! $post_id ) {
+		$post_id = (int) get_the_ID();
+	}
+
+	if ( 'gatherpress_event' !== get_post_type( $post_id ) ) {
+		return $parsed_block;
+	}
+
+	$event = new \GatherPress\Core\Event\Event( $post_id );
+
+	// Empty for everyone the link isn't for: non-attendees, and attendees of
+	// an event that has already happened. Those keep the description and its
+	// tooltip, because there is still nothing to click.
+	if ( '' === $event->maybe_get_online_event_link() ) {
+		return $parsed_block;
+	}
+
+	// Kept so `label_the_online_event_link()` can hand the browser the words
+	// for the state this render isn't in.
+	$parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] = (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
+	$parsed_block['attrs']['linkText'] = __( 'Join event', 'wordcamporg' );
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', __NAMESPACE__ . '\name_the_online_event_link_action', 10, 3 );
+
+/**
+ * Put both online-event labels on the rendered element.
+ *
+ * `name_the_online_event_link_action()` picks the right words for the viewer
+ * this page load has. An RSVP made without a reload moves the viewer to the
+ * other state, and `assets/js/online-event-link.js` rewrites the element in
+ * place — so it needs the words for both states, not just the rendered one
+ * (#2094). They ride on the element because that is where the script finds
+ * them, and because the "attendees only" wording lives in
+ * `templates/single-event.html` rather than in this file.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The block that produced it.
+ *
+ * @return string The block, with its two labels attached.
+ */
+function label_the_online_event_link( $block_content, $parsed_block ) {
+	if ( '' === trim( (string) $block_content ) ) {
+		return $block_content;
+	}
+
+	$linking     = isset( $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ] );
+	$join        = $linking ? (string) ( $parsed_block['attrs']['linkText'] ?? '' ) : __( 'Join event', 'wordcamporg' );
+	$description = $linking
+		? (string) $parsed_block['attrs'][ ONLINE_EVENT_LINK_TEXT_ATTR ]
+		: (string) ( $parsed_block['attrs']['linkText'] ?? '' );
+
+	$tags = new \WP_HTML_Tag_Processor( $block_content );
+
+	if ( ! $tags->next_tag() ) {
+		return $block_content;
+	}
+
+	$tags->set_attribute( 'data-groups-site-join-label', $join );
+	$tags->set_attribute( 'data-groups-site-description-label', $description );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
+
+/**
+ * Determine the event format: 'hybrid', 'online', or 'in-person'.
+ *
+ * GatherPress assigns the `online-event` sentinel term to `_gatherpress_venue`
+ * for online and hybrid events. A hybrid event has both `online-event` and
+ * a physical venue term; an online event has only `online-event`; and an
+ * in-person event has no `online-event` term.
+ *
+ * @param int $event_id Event post ID.
+ * @return string 'hybrid', 'online', or 'in-person'.
+ */
+function get_event_format( int $event_id ): string {
+	$terms = get_the_terms( $event_id, '_gatherpress_venue' );
+
+	$has_online   = false;
+	$has_physical = false;
+
+	if ( is_array( $terms ) && ! empty( $terms ) ) {
+		foreach ( $terms as $term ) {
+			if ( 'online-event' === $term->slug ) {
+				$has_online = true;
+			} else {
+				$has_physical = true;
+			}
+		}
+	}
+
+	if ( ! $has_online ) {
+		$online_link = get_post_meta( $event_id, 'gatherpress_online_event_link', true );
+		if ( ! empty( $online_link ) ) {
+			$has_online = true;
+		}
+	}
+
+	if ( $has_online && $has_physical ) {
+		return 'hybrid';
+	}
+
+	if ( $has_online ) {
+		return 'online';
+	}
+
+	return 'in-person';
+}
+
+/**
+ * Retrieve human-readable label for an event format.
+ *
+ * @param string $format Event format slug ('hybrid', 'online', or 'in-person').
+ * @return string Localized label.
+ */
+function get_event_format_label( string $format ): string {
+	switch ( $format ) {
+		case 'hybrid':
+			return __( 'Hybrid', 'wordcamporg' );
+		case 'online':
+			return __( 'Online', 'wordcamporg' );
+		case 'in-person':
+		default:
+			return __( 'In person', 'wordcamporg' );
+	}
+}
+
+/**
+ * Render callback for the `groups-site/event-format` block.
+ *
+ * @param array          $attributes Block attributes.
+ * @param string         $content    Block inner content.
+ * @param \WP_Block|null $block      Block instance.
+ * @return string Rendered HTML.
+ */
+function render_event_format_block( array $attributes, string $content = '', ?\WP_Block $block = null ): string {
+	$post_id = ( $block instanceof \WP_Block && isset( $block->context['postId'] ) )
+		? (int) $block->context['postId']
+		: (int) get_the_ID();
+	if ( ! $post_id ) {
+		return '';
+	}
+
+	$post_type = ( $block instanceof \WP_Block && isset( $block->context['postType'] ) )
+		? (string) $block->context['postType']
+		: (string) get_post_type( $post_id );
+	if ( 'gatherpress_event' !== $post_type ) {
+		return '';
+	}
+
+	$format = get_event_format( (int) $post_id );
+	$label  = get_event_format_label( $format );
+
+	$wrapper_classes = array(
+		'wp-block-groups-site-event-format',
+		'groups-site-event-format',
+		'is-format-' . sanitize_html_class( $format ),
+	);
+
+	if ( ! empty( $attributes['className'] ) ) {
+		$wrapper_classes[] = $attributes['className'];
+	}
+
+	return sprintf(
+		'<div class="%1$s"><span class="groups-site-event-format__badge">%2$s</span></div>',
+		esc_attr( implode( ' ', $wrapper_classes ) ),
+		esc_html( $label )
+	);
+}
+
+/**
+ * Render callback for the `groups-site/event-cancelled` block.
+ *
+ * A recurring series is one post with many dates, and cancelling one of them
+ * cancels only that date. The archive and the front page list those dates
+ * individually, but nothing on the card said which of them were off, so a
+ * cancelled date advertised itself as an ordinary upcoming event (#2023).
+ *
+ * The occurrence is read from `Context`, which `Query::posts()` has already
+ * populated for the exact row this iteration of the loop is on -- the same
+ * source the occurrence selector reads, so a card and the selector cannot
+ * disagree. A non-recurring event has no occurrence and renders nothing, which
+ * is correct: cancelling one of those is unpublishing it.
+ *
+ * @param array          $attributes Block attributes.
+ * @param string         $content    Block inner content.
+ * @param \WP_Block|null $block      Block instance.
+ * @return string Rendered HTML.
+ */
+function render_event_cancelled_block( array $attributes, string $content = '', ?\WP_Block $block = null ): string {
+	$post_id = ( $block instanceof \WP_Block && isset( $block->context['postId'] ) )
+		? (int) $block->context['postId']
+		: (int) get_the_ID();
+	if ( ! $post_id ) {
+		return '';
+	}
+
+	$post_type = ( $block instanceof \WP_Block && isset( $block->context['postType'] ) )
+		? (string) $block->context['postType']
+		: (string) get_post_type( $post_id );
+	if ( 'gatherpress_event' !== $post_type ) {
+		return '';
+	}
+
+	if ( ! class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Context' ) ) {
+		return '';
+	}
+
+	$occurrence = \WordPressdotorg\GatherPress_Recurring_Events\Context::get();
+
+	if ( ! $occurrence || 'cancelled' !== ( $occurrence->status ?? '' ) ) {
+		return '';
+	}
+
+	$wrapper_classes = array(
+		'wp-block-groups-site-event-cancelled',
+		'groups-site-event-cancelled',
+	);
+
+	if ( ! empty( $attributes['className'] ) ) {
+		$wrapper_classes[] = $attributes['className'];
+	}
+
+	return sprintf(
+		'<div class="%1$s"><span class="groups-site-event-cancelled__badge">%2$s</span></div>',
+		esc_attr( implode( ' ', $wrapper_classes ) ),
+		esc_html__( 'Cancelled', 'wordcamporg' )
+	);
+}
+
+/**
+ * Register the event-cancelled block for event card grids.
+ */
+function register_event_cancelled_block(): void {
+	if ( \WP_Block_Type_Registry::get_instance()->is_registered( 'groups-site/event-cancelled' ) ) {
+		return;
+	}
+
+	register_block_type(
+		'groups-site/event-cancelled',
+		array(
+			'api_version'     => 3,
+			'title'           => __( 'Event Cancelled', 'wordcamporg' ),
+			'category'        => 'groups-site',
+			'description'     => __( 'Marks an event card whose date has been cancelled.', 'wordcamporg' ),
+			'uses_context'    => array( 'postId', 'postType' ),
+			'supports'        => array(
+				'html' => false,
+			),
+			'render_callback' => __NAMESPACE__ . '\render_event_cancelled_block',
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_cancelled_block' );
+
+if ( did_action( 'init' ) ) {
+	register_event_cancelled_block();
+}
+
+/**
+ * Register the event-format block for event card grids.
+ */
+function register_event_format_block(): void {
+	if ( \WP_Block_Type_Registry::get_instance()->is_registered( 'groups-site/event-format' ) ) {
+		return;
+	}
+
+	register_block_type(
+		'groups-site/event-format',
+		array(
+			'api_version'     => 3,
+			'title'           => __( 'Event Format', 'wordcamporg' ),
+			'category'        => 'groups-site',
+			'description'     => __( 'Displays the event format (in person, online, or hybrid).', 'wordcamporg' ),
+			'uses_context'    => array( 'postId', 'postType' ),
+			'supports'        => array(
+				'html' => false,
+			),
+			'render_callback' => __NAMESPACE__ . '\render_event_format_block',
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_format_block' );
+
+if ( did_action( 'init' ) ) {
+	register_event_format_block();
+}

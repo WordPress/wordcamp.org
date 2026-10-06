@@ -123,7 +123,7 @@ function rsvp_answers_satisfied( $request ) {
 		'wporg_groups_missing_answers',
 		sprintf(
 			/* translators: %s: comma-separated list of question labels. */
-			__( 'Please answer: %s', 'wporg-groups-frontend' ),
+			__( 'Please answer: %s', 'wordcamporg' ),
 			implode( ', ', $missing )
 		),
 		array( 'status' => 400 )

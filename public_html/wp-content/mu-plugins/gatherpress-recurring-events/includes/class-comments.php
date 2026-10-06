@@ -8,6 +8,7 @@
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use GatherPress\Core\Rsvp\Cache;
+use GatherPress\Core\Rsvp\Rsvp;
 use WP_Comment;
 use WP_Comment_Query;
 
@@ -21,6 +22,15 @@ final class Comments {
 	 * @param WP_Comment_Query $query Comment query.
 	 */
 	public static function prepare_query( WP_Comment_Query $query ): void {
+		$post_id = (int) ( $query->query_vars['post_id'] ?? 0 );
+
+		// Every unscoped roster GatherPress caches is computed from a query
+		// like this one, so this is the one place all of them pass through,
+		// whatever asked for it -- REST, cron, an email.
+		if ( $post_id && Rsvp::COMMENT_TYPE === ( $query->query_vars['type'] ?? '' ) ) {
+			Rsvp_Cache::guard( $post_id );
+		}
+
 		$occurrence = Context::get();
 		if ( $occurrence && self::targets_series( $query, $occurrence ) ) {
 			$query->query_vars['gpre_occurrence'] = $occurrence->recurrence_id;

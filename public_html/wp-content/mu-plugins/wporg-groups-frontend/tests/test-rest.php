@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Admin as Recurring_Events_Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
@@ -231,6 +232,38 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A bare draft gets its recurrence from the registered meta defaults.
+	 * The modal sends that back unchanged on publish, so it has to pass the
+	 * endpoint's own schema.
+	 */
+	public function test_publish_draft_round_trips_default_recurrence(): void {
+		// The test framework unregisters all meta keys after each test.
+		Recurring_Events_Admin::register_meta();
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$save = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$save->set_param( 'title', 'Bare draft' );
+		$draft_id = save_draft( $save )->get_data()['id'];
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $draft_id );
+		$recurrence = get_event_form_data( $load )->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( rest_validate_value_from_schema( $recurrence, event_args_schema()['recurrence'], 'recurrence' ) );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/draft/{$draft_id}/publish",
+			array( 'recurrence' => $recurrence ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'publish', get_post_status( $draft_id ) );
+	}
+
+	/**
 	 * A new event cannot be created with a past date.
 	 */
 	public function test_create_event_rejects_past_date() {
@@ -244,6 +277,29 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertWPError( $response );
 		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
+	}
+
+	/**
+	 * A draft whose date has passed cannot be published, and stays a draft
+	 * so the organiser can correct the date and try again.
+	 */
+	public function test_publish_draft_rejects_past_date() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$save = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$save->set_param( 'title', 'Stale draft' );
+		$draft_id = save_draft( $save )->get_data()['id'];
+
+		$params         = $this->base_event_params();
+		$params['id']   = $draft_id;
+		$params['date'] = current_datetime()->modify( '-1 day' )->format( 'Y-m-d' );
+
+		$response = publish_draft( $this->event_request( $params ) );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
+		$this->assertSame( 'draft', get_post_status( $draft_id ) );
 	}
 
 	/**
@@ -579,6 +635,141 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A block the editor cannot render never reaches `post_content` (#2042).
+	 *
+	 * The editor's `allowedBlockTypes` only ever constrained what the UI would
+	 * *insert*, and `wp_kses_post()` -- the only thing the server ran -- knows
+	 * nothing about block names: a block delimiter is an HTML comment, which
+	 * kses passes through untouched. So anything POSTing this route directly
+	 * could store a block the editor has no way to show, and then
+	 * `extract_description_blocks()` hid it on load while `build_post_content()`
+	 * re-appended it on save -- exactly the "cannot see it, cannot remove it"
+	 * the issue describes.
+	 */
+	public function test_event_description_drops_blocks_the_editor_cannot_render() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$description = implode(
+			"\n\n",
+			array(
+				'<!-- wp:paragraph --><p>Kept.</p><!-- /wp:paragraph -->',
+				'<!-- wp:embed {"url":"https://example.org/x"} --><figure class="wp-block-embed"></figure><!-- /wp:embed -->',
+				'<!-- wp:html --><div>raw</div><!-- /wp:html -->',
+			)
+		);
+
+		$response = create_event(
+			$this->event_request( $this->base_event_params() + array( 'description' => $description ) )
+		);
+
+		$this->assertNotWPError( $response );
+
+		$content = (string) get_post_field( 'post_content', (int) $response->get_data()['id'] );
+
+		$this->assertStringContainsString( 'wp:paragraph', $content );
+		$this->assertStringContainsString( 'Kept.', $content );
+		$this->assertStringNotContainsString( 'wp:embed', $content );
+		$this->assertStringNotContainsString( 'wp:html', $content );
+	}
+
+	/**
+	 * A disallowed block nested inside an allowed container comes out too.
+	 *
+	 * `core/group` and `core/columns` are on the allowed list and carry inner
+	 * blocks, so filtering only the top level would let a container smuggle
+	 * anything at all back in.
+	 */
+	public function test_event_description_filters_nested_blocks() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$description = '<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:paragraph --><p>Inside.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:embed {"url":"https://example.org/x"} --><figure></figure><!-- /wp:embed -->'
+			. '</div><!-- /wp:group -->';
+
+		$response = create_event(
+			$this->event_request( $this->base_event_params() + array( 'description' => $description ) )
+		);
+
+		$this->assertNotWPError( $response );
+
+		$content = (string) get_post_field( 'post_content', (int) $response->get_data()['id'] );
+
+		$this->assertStringContainsString( 'wp:group', $content );
+		$this->assertStringContainsString( 'Inside.', $content );
+		$this->assertStringNotContainsString( 'wp:embed', $content );
+	}
+
+	/**
+	 * A description that is plain HTML rather than blocks survives.
+	 *
+	 * The block filter is about block *names*; what may be in the markup is
+	 * `wp_kses_post()`'s question, and it has already answered it. Dropping
+	 * unnamed content here would have silently emptied any description that
+	 * was never blocks to begin with.
+	 */
+	public function test_event_description_keeps_plain_html() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = create_event(
+			$this->event_request(
+				$this->base_event_params() + array( 'description' => '<p>Just some markup.</p>' )
+			)
+		);
+
+		$this->assertNotWPError( $response );
+
+		$this->assertStringContainsString(
+			'Just some markup.',
+			(string) get_post_field( 'post_content', (int) $response->get_data()['id'] )
+		);
+	}
+
+	/**
+	 * Editing an event still preserves the GatherPress metadata blocks the
+	 * editor never sees -- the filter must not take those with it.
+	 */
+	public function test_event_description_edit_preserves_metadata_blocks() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = create_event(
+			$this->event_request(
+				$this->base_event_params() + array( 'description' => '<!-- wp:paragraph --><p>First.</p><!-- /wp:paragraph -->' )
+			)
+		);
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_content' => (string) get_post_field( 'post_content', $event_id )
+					. "\n\n" . '<!-- wp:gatherpress/rsvp /-->',
+			)
+		);
+
+		$update = new WP_REST_Request( 'POST', '/wporg-groups/v1/event/' . $event_id );
+		foreach ( $this->base_event_params() + array(
+			'id'          => $event_id,
+			'description' => '<!-- wp:paragraph --><p>Second.</p><!-- /wp:paragraph -->',
+		) as $key => $value ) {
+			$update->set_param( $key, $value );
+		}
+
+		$this->assertNotWPError( update_event( $update ) );
+
+		$content = (string) get_post_field( 'post_content', $event_id );
+
+		$this->assertStringContainsString( 'Second.', $content );
+		$this->assertStringNotContainsString( 'First.', $content );
+		$this->assertStringContainsString( 'wp:gatherpress/rsvp', $content );
+	}
+
+	/**
 	 * Saving an unrelated field leaves a location with a stale country intact.
 	 */
 	public function test_group_info_update_without_location_preserves_stale_country() {
@@ -783,5 +974,44 @@ class Test_Groups_REST extends Groups_TestCase {
 		);
 
 		$this->assertSame( $stored_before, (string) get_post_field( 'post_title', $event_id, 'raw' ) );
+	}
+
+	/**
+	 * The form marks a published event's recurrence as locked. The frontend relies on this flag to leave
+	 * recurrence out of the edit payload.
+	 */
+	public function test_event_form_locks_recurrence_for_published_event(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$event_id = create_event( $this->event_request( $this->base_event_params() ) )->get_data()['id'];
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $event_id );
+		$recurrence = get_event_form_data( $load )->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( $recurrence['locked'] );
+	}
+
+	/**
+	 * An online event can be created without an online event link.
+	 */
+	public function test_create_online_event_without_link(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$params = array_merge(
+			$this->base_event_params(),
+			array(
+				'is_online'         => true,
+				'online_event_link' => '',
+			)
+		);
+
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
 	}
 }

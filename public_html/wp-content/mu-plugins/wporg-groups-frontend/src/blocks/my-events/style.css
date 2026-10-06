@@ -11,6 +11,17 @@
 @import "../../components/section-heading.css";
 
 /*
+ * The block renders up to two lists — upcoming, then attended (#2061) — so
+ * every heading after the first needs to clear the list above it. The shared
+ * `.wporg-section-heading` sets `margin: 0 0 …!important`, hence the
+ * `!important` here; `:not(:first-child)` rather than a modifier class so a
+ * member with no upcoming events still gets a heading flush with the section.
+ */
+.wporg-my-events__heading:not(:first-child) {
+	margin-top: var(--wp--preset--spacing--50) !important;
+}
+
+/*
  * One card per row, full width of the column, so the serif title fits on one
  * line — in the "Upcoming events" grid the same title wraps to three. Also
  * keeps this list visually distinct from that grid despite the shared card

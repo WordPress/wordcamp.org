@@ -239,6 +239,11 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$_REQUEST['tix_stripe_session'] = $stripe_session_id;
 
 		$http_stub = function () use ( $session ) {
+			// A WP_Error stands in for Stripe not answering at all.
+			if ( is_wp_error( $session ) ) {
+				return $session;
+			}
+
 			return array(
 				'response' => array(
 					'code'    => 200,
@@ -395,6 +400,24 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$this->assertNotNull( $died );
 		$this->assertStringContainsString( 'contact the event organizers', $died );
 		$this->assertSame( 'pending', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * When Stripe can't be reached on return, the buyer is told not to pay again and the
+	 * order is left for the webhook or the timeout sweep, instead of a fatal error.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_return
+	 */
+	public function test_payment_return_leaves_order_when_stripe_cannot_be_reached() {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_return_down', 500 );
+
+		$down = new WP_Error( 'http_request_failed', 'Connection timed out' );
+		$died = $this->drive_payment_return( $stripe, $token, 'cs_return_down', $down );
+
+		$this->assertNotNull( $died );
+		$this->assertStringContainsString( 'Please do not pay again', $died );
+		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
 	}
 
 	/**

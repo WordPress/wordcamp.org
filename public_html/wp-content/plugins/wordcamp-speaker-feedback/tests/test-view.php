@@ -70,6 +70,18 @@ class Test_SpeakerFeedback_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Answers are plain text, so they're shown exactly as typed.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\View\sanitize_answer_for_display()
+	 */
+	public function test_sanitize_answer_for_display_shows_the_answer_as_text() {
+		$this->assertSame(
+			'Use &lt;b&gt; for bold &amp; &lt;i&gt; for italics',
+			sanitize_answer_for_display( 'Use <b> for bold & <i> for italics' )
+		);
+	}
+
+	/**
 	 * @covers \WordCamp\SpeakerFeedback\View\render_feedback_comment()
 	 */
 	public function test_rendered_answers_survive_a_later_shortcode_pass() {

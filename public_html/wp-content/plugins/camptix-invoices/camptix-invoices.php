@@ -192,8 +192,8 @@ function ctx_append_post_status_list() {
 	$refunded_selected  = '';
 	$cancelled_selected = '';
 	$status             = '';
-	$refunded           = __( 'refunded', 'wordcamporg' );
-	$cancelled          = __( 'canceled', 'wordcamporg' );
+	$refunded           = 'refunded';
+	$cancelled          = 'cancelled';
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
 	$cancelled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
 
@@ -258,8 +258,8 @@ function ctx_append_post_status_bulk_edit() {
 	?>
 	<script>
 		jQuery( document ).ready( function($) {
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'canceled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'refunded' ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'cancelled' ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php

@@ -721,7 +721,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Canceled',                 'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                  'campus connect status', 'wordcamporg' ),
 		);
 	}
 

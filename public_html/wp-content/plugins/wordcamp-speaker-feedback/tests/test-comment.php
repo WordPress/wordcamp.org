@@ -178,10 +178,29 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * The assertions here assume that a filter has been applied to the comment query
 	 * to exclude feedback comments unless they are specifically requested.
 	 *
+	 * The shared PHPUnit bootstrap (`phpunit-bootstrap.php`) loads every plugin's
+	 * bootstrapper into one process regardless of which `--testsuite` is running,
+	 * so GatherPress's `Rsvp\Query::exclude_rsvp_from_comment_query()` (default
+	 * priority 10 on `pre_get_comments`) is active here even though this suite has
+	 * nothing to do with GatherPress. When the caller's `type` is empty, that
+	 * callback expands it into an explicit list of every comment_type present in
+	 * the table — which would make this test's feedback comments look like an
+	 * explicit request for them, defeating the exclusion this test is checking.
+	 * GatherPress and Speaker Feedback aren't expected to run against the same
+	 * query in production, so rather than reordering `pre_get_comments` priorities
+	 * for real requests, neutralize that one callback for the scope of this test.
+	 *
 	 * @covers \WordCamp\SpeakerFeedback\Comment\get_feedback()
 	 * @covers \WordCamp\SpeakerFeedback\Query\pre_get_comments()
 	 */
 	public function test_get_feedback_exclude_other_comments() {
+		if ( class_exists( '\GatherPress\Core\Rsvp\Query' ) ) {
+			remove_action(
+				'pre_get_comments',
+				array( \GatherPress\Core\Rsvp\Query::get_instance(), 'exclude_rsvp_from_comment_query' )
+			);
+		}
+
 		self::factory()->comment->create_many( 3 );
 		self::factory()->comment->create_many(
 			3,

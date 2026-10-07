@@ -4,16 +4,17 @@
 	"description": "Description: Landing page for flagship WordCamps",
 	"license": "GPL-2.0-or-later",
 	"devDependencies": {
-		"@wordpress/scripts": "^26.18.0",
-		"cssnano": "^6.0.1",
-		"postcss": "^8.4.31",
-		"postcss-cli": "^10.1.0",
-		"postcss-custom-media": "^10.0.2",
-		"postcss-import": "^15.1.0",
-		"postcss-preset-env": "^9.3.0"
-	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
+		"@wordpress/block-editor": "15.21.0",
+		"@wordpress/blocks": "15.21.0",
+		"@wordpress/components": "35.0.0",
+		"@wordpress/scripts": "^32.4.0",
+		"@wordpress/server-side-render": "6.24.0",
+		"cssnano": "^7.1.2",
+		"postcss": "^8.5.3",
+		"postcss-cli": "^11.0.1",
+		"postcss-custom-media": "^12.0.0",
+		"postcss-import": "^16.1.1",
+		"postcss-preset-env": "^11.1.3"
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"scripts": {
@@ -21,7 +22,7 @@
 		"watch": "wp-scripts start & npm run build:css -- --watch",
 		"build": "wp-scripts build && npm run build:css",
 		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
-		"lint:js": "wp-scripts lint-js 'src/**/*.js'",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs 'src/**/*.js'",
 		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
 	}
 }

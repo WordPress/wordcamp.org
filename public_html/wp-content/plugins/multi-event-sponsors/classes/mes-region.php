@@ -8,7 +8,7 @@
  */
 
 class MES_Region {
-	const TAXONOMY_SLUG = 'mes-regions';
+	public const TAXONOMY_SLUG = 'mes-regions';
 
 	/**
 	 * Constructor

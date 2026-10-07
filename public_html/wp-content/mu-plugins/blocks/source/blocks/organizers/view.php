@@ -11,7 +11,9 @@ defined( 'WPINC' ) || die();
 /** @var array   $attributes */
 /** @var WP_Post $organizer */
 
-// Note that organizer posts are not 'public', so there are no permalinks.
+// This block doesn't link organizer titles, unlike the sibling blocks.
+// The post type gained permalinks when it became 'public' in 2020; the
+// block was never changed to use them.
 
 setup_postdata( $organizer ); // This is necessary for generating an excerpt from content if the excerpt field is empty.
 ?>

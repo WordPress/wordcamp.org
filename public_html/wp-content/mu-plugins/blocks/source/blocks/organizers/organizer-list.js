@@ -45,7 +45,8 @@ class OrganizerList extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter = [
 				{
-					fieldName: mode === 'wcb_organizer' ? 'id' : 'organizer_team',
+					fieldName:
+						mode === 'wcb_organizer' ? 'id' : 'organizer_team',
 					fieldValue: item_ids,
 				},
 			];
@@ -63,7 +64,13 @@ class OrganizerList extends Component {
 	 */
 	render() {
 		const { attributes } = this.props;
-		const { avatar_size, avatar_align, content, headingAlign, show_avatars } = attributes;
+		const {
+			avatar_size,
+			avatar_align,
+			content,
+			headingAlign,
+			show_avatars,
+		} = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -77,7 +84,10 @@ class OrganizerList extends Component {
 		return (
 			<PostList attributes={ attributes } className="wordcamp-organizers">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ `wordcamp-organizers__post slug-${ post.slug.trim() }` }>
+					<div
+						key={ post.slug }
+						className={ `wordcamp-organizers__post slug-${ post.slug.trim() }` }
+					>
 						<ItemTitle
 							className="wordcamp-organizers__title"
 							align={ headingAlign }
@@ -97,7 +107,11 @@ class OrganizerList extends Component {
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-organizers__content is-${ content }` }
-								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								content={
+									'full' === content
+										? post.content.rendered.trim()
+										: post.excerpt.rendered.trim()
+								}
 							/>
 						) }
 					</div>

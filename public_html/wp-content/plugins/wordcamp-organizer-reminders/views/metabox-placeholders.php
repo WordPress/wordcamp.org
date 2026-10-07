@@ -15,6 +15,7 @@
 	<li>[wordcamp_hashtag]</li>
 	<li>[wordcamp_anticipated_attendees]</li>
 	<li>[multi_event_sponsor_region]</li>
+	<li>[event_type]</li>
 </ul>
 
 <h5>The organizing team:</h5>
@@ -55,6 +56,13 @@
 	<li>[travel_wrangler_email]</li>
 	<li>[safety_wrangler_name]</li>
 	<li>[safety_wrangler_email]</li>
+</ul>
+
+<h5>Mentor:</h5>
+
+<ul class="ul-disc">
+	<li>[mentor_name]</li>
+	<li>[mentor_email]</li>
 </ul>
 
 <h5>Venue</h5>

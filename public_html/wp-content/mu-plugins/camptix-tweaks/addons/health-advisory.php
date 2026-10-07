@@ -5,7 +5,7 @@ use CampTix_Addon;
 defined( 'WPINC' ) || die();
 
 class Health_Advisory_Field extends CampTix_Addon {
-	const SLUG = 'health-advisory';
+	public const SLUG = 'health-advisory';
 
 	/**
 	 * Hook into WordPress and Camptix.

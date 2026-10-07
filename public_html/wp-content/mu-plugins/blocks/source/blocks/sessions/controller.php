@@ -287,6 +287,8 @@ function get_session_speakers( array $session_ids ) {
 	$session_args = array(
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',
+		// A password-protected session withholds its speakers.
+		'has_password'   => false,
 		'posts_per_page' => -1,
 		'post__in'       => $session_ids,
 	);

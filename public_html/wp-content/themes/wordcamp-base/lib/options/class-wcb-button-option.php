@@ -34,7 +34,7 @@ class WCB_Button_Option extends WCB_Array_Option {
 						$this->name('visible');
 						checked( $this->get_option('visible') );
 					?> />
-					<?php echo esc_html_e( 'Show a featured button in the menu.', 'wordcamporg' ); ?>
+					<?php esc_html_e( 'Show a featured button in the menu.', 'wordcamporg' ); ?>
 				</label><br />
 				<label class="description text-field" for="<?php echo $ids['text']; ?>">
 					<span><?php esc_html_e( 'Text:', 'wordcamporg' ); ?></span>

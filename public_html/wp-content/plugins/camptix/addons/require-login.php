@@ -1030,28 +1030,32 @@ class CampTix_Require_Login extends CampTix_Addon {
 			if ( 'ticket_status' === $condition['field'] ) {
 				if ( 'unconfirmed' === $condition['value'] ) {
 					$query['meta_query'][] = array(
-						// All of these are unconfirmed.
-						'relation' => 'or',
-						// Unconfirmed username listed.
+						'relation' => 'and',
 						array(
-							'key' => 'tix_username',
-							'value' => self::UNCONFIRMED_USERNAME,
-							'compare' => '=',
+							// Either of these is unconfirmed.
+							'relation' => 'or',
+							// Unconfirmed username listed.
+							array(
+								'key' => 'tix_username',
+								'value' => self::UNCONFIRMED_USERNAME,
+								'compare' => '=',
+							),
+							// Has no username linked.
+							array(
+								'key' => 'tix_username',
+								'compare' => 'NOT EXISTS',
+							),
 						),
-						// Has no username linked.
-						array(
-							'key' => 'tix_username',
-							'compare' => 'NOT EXISTS',
-						),
-						// The email is the standard unknown attendee.
+						// An unknown attendee has no real email address to send to.
 						array(
 							'key' => 'tix_email',
 							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
-							'compare' => '=',
+							'compare' => '!=',
 						),
 					);
 				} elseif ( 'confirmed' === $condition['value'] ) {
 					// The inverse of the above, so no attendee is in both segments.
+					// Unknown attendees are in neither, as there's no one to email.
 					$query['meta_query'][] = array(
 						'relation' => 'and',
 						// Has a username other than the unconfirmed username.

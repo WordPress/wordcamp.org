@@ -999,7 +999,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function camptix_notify_segment_fields( $segments ) {
 		$segments[] = [
-			'caption'      => 'Ticket Status',
+			'caption'      => __( 'Ticket Status', 'wordcamporg' ),
 			'option_value' => 'ticket_status',
 			'type'         => 'select',
 			'ops'          => [ 'is' ],
@@ -1046,16 +1046,26 @@ class CampTix_Require_Login extends CampTix_Addon {
 						// The email is the standard unknown attendee.
 						array(
 							'key' => 'tix_email',
-							'value' => $this->get_unknown_attendee_info()['email'],
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
 							'compare' => '=',
 						),
 					);
 				} elseif ( 'confirmed' === $condition['value'] ) {
-					// Username is something other than the unconfirmed username.
+					// The inverse of the above, so no attendee is in both segments.
 					$query['meta_query'][] = array(
-						'key' => 'tix_username',
-						'value' => self::UNCONFIRMED_USERNAME,
-						'compare' => '!=',
+						'relation' => 'and',
+						// Has a username other than the unconfirmed username.
+						array(
+							'key' => 'tix_username',
+							'value' => self::UNCONFIRMED_USERNAME,
+							'compare' => '!=',
+						),
+						// The email is not the standard unknown attendee.
+						array(
+							'key' => 'tix_email',
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
+							'compare' => '!=',
+						),
 					);
 				}
 			}

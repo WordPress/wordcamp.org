@@ -2651,6 +2651,12 @@ class CampTix_Plugin {
 		// Allow others to filter the query as needed.
 		$query = apply_filters( 'camptix_notify_segment_query', $query, $conditions, $relation );
 
+		// A filter that added a meta or date condition makes this a non-empty query, so an "or"
+		// relation still gets the second pass for the post-query conditions below.
+		if ( count( $query['meta_query'] ) > 1 || ! empty( $query['date_query'] ) ) {
+			$empty_query = false;
+		}
+
 		$post_query_segment = get_posts( $query );
 
 		// If the initial query was not a generic "empty" query, and we have an "or" relation,

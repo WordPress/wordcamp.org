@@ -2557,8 +2557,9 @@ class CampTix_Plugin {
 		$post_query_conditions = array();
 
 		$relation = strtolower( $relation );
-		if ( ! in_array( $relation, array( 'and', 'or' ) ) )
+		if ( ! in_array( $relation, array( 'and', 'or' ) ) ) {
 			return $segment;
+		}
 
 		$query = array(
 			'post_type' => 'tix_attendee',
@@ -2645,6 +2646,15 @@ class CampTix_Plugin {
 				$post_query_conditions[] = $condition;
 				continue;
 			}
+		}
+
+		// Allow others to filter the query as needed.
+		$query = apply_filters( 'camptix_notify_segment_query', $query, $conditions, $relation );
+
+		// A filter that added a meta or date condition makes this a non-empty query, so an "or"
+		// relation still gets the second pass for the post-query conditions below.
+		if ( count( $query['meta_query'] ) > 1 || ! empty( $query['date_query'] ) ) {
+			$empty_query = false;
 		}
 
 		$post_query_segment = get_posts( $query );

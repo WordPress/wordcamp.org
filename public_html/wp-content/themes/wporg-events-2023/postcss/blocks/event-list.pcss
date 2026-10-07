@@ -110,3 +110,96 @@ body.page-slug-upcoming-events .wporg-marker-list__loading {
 	/* Take up most of the viewport to avoid a large layout shift. We know this list will have a lot of entries. */
 	height: 90vh;
 }
+
+.wporg-event-list__nearby {
+	margin-bottom: var(--wp--preset--spacing--50);
+
+	& .wporg-event-list__nearby-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--wp--preset--spacing--10) var(--wp--preset--spacing--20);
+		margin-bottom: var(--wp--preset--spacing--10);
+
+		& h2 {
+			margin: 0;
+		}
+	}
+
+	& .wporg-event-list__nearby-location {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin: 0;
+		padding: 4px 14px 4px 10px;
+		border: 1px solid var(--wp--preset--color--blueberry-1);
+		border-radius: 999px;
+		font-size: var(--wp--preset--font-size--small);
+
+		& svg {
+			color: var(--wp--preset--color--blueberry-1);
+		}
+	}
+
+	& .wporg-event-list__nearby-change {
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--wp--preset--color--blueberry-1);
+		font: inherit;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+
+	& .wporg-event-list__nearby-form {
+		display: flex;
+		gap: var(--wp--preset--spacing--10);
+
+		& input {
+			padding: 6px 10px;
+			border: 1px solid var(--wp--preset--color--charcoal-4);
+			border-radius: 2px;
+			font-size: var(--wp--preset--font-size--small);
+		}
+
+		& button {
+			padding: 6px 16px;
+			font-size: var(--wp--preset--font-size--small);
+		}
+	}
+
+	& .wporg-event-list__nearby-description {
+		margin-top: 0;
+		color: var(--wp--preset--color--charcoal-4);
+		font-size: var(--wp--preset--font-size--x-small);
+	}
+
+	& .wporg-marker-list__loading {
+		/* Nearby lists are short, so reserve less room than the global list does. */
+		height: 200px;
+	}
+
+	& .wporg-marker-list-item__type {
+		margin-left: 6px;
+		color: var(--wp--preset--color--charcoal-4);
+		font-size: var(--wp--preset--font-size--x-small);
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	& .wporg-event-list__nearby-empty {
+		padding: var(--wp--preset--spacing--20);
+		border: 1px solid var(--wp--preset--color--light-grey-1);
+		border-radius: 2px;
+
+		& p {
+			margin: 0;
+		}
+	}
+
+	/* The rules above set `display`, which would otherwise win over the global helper. */
+	&.wporg-events__hidden,
+	& .wporg-events__hidden {
+		display: none;
+	}
+}

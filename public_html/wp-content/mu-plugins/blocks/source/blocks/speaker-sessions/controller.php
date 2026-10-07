@@ -68,6 +68,8 @@ function render( $attributes, $content, $block ) {
 		'orderby'        => 'title',
 		'order'          => 'asc',
 		'post_status'    => get_readable_session_statuses(),
+		// A password-protected session withholds its speakers, so don't list it under one.
+		'has_password'   => false,
 	);
 
 	$sessions = get_posts( $session_args );
@@ -100,9 +102,13 @@ function render( $attributes, $content, $block ) {
 	foreach ( $sessions as $session ) {
 		$session_li = '<li><p>';
 		if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
-			$session_li .= sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $session->ID ), get_the_title( $session->ID ) );
+			$session_li .= sprintf(
+				'<a href="%1$s">%2$s</a>',
+				esc_url( get_the_permalink( $session->ID ) ),
+				wcorg_escape_shortcodes( get_the_title( $session->ID ) )
+			);
 		} else {
-			$session_li .= get_the_title( $session->ID );
+			$session_li .= wcorg_escape_shortcodes( get_the_title( $session->ID ) );
 		}
 		$session_li .= '</p>';
 

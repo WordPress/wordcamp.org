@@ -8,8 +8,11 @@
  * @package WordCamp\Groups\Frontend
  */
 
+use GatherPress\Core\Event\Event;
+
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
+use function WordCamp\Groups\Frontend\Check_In\is_open as check_in_is_open;
 use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
 
 if ( ! current_user_can_manage_events() ) {
@@ -45,6 +48,24 @@ if ( $show_edit && ( ! $event_post_id || ! current_user_can_edit_event( $event_p
 
 $show_edit_button = $show_edit && ! current_user_can_manage_group_settings();
 
+/*
+ * Check-in (#2130) is offered from shortly before the start, when there's
+ * someone to check in, and stays for past events so the list can be caught
+ * up afterwards. On a recurring series it's for the date being viewed, which
+ * the recurring-events integration supplies through the filter.
+ */
+$show_check_in       = false;
+$check_in_recurrence = '';
+
+if ( $show_edit && $is_single_event && $event_post_id ) {
+	$check_in_event = new Event( $event_post_id );
+	$show_check_in  = $check_in_event->rsvp
+		&& $check_in_event->rsvp->is_enabled()
+		&& check_in_is_open( $check_in_event );
+
+	$check_in_recurrence = (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_post_id );
+}
+
 if ( ! $show_edit && ! $show_create ) {
 	return;
 }
@@ -61,7 +82,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="edit"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+			>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 
@@ -72,7 +93,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="message-all"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			><?php esc_html_e( 'Message all members', 'wporg-groups-frontend' ); ?></button>
+			><?php esc_html_e( 'Message all members', 'wordcamporg' ); ?></button>
 		</div>
 
 		<div class="wp-block-button is-style-outline">
@@ -81,8 +102,20 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="message-attendees"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-			><?php esc_html_e( 'Message attendees', 'wporg-groups-frontend' ); ?></button>
+			><?php esc_html_e( 'Message attendees', 'wordcamporg' ); ?></button>
 		</div>
+
+		<?php if ( $show_check_in ) : ?>
+			<div class="wp-block-button is-style-outline">
+				<button
+					type="button"
+					class="wp-block-button__link wp-element-button"
+					data-wporg-groups-modal="check-in"
+					data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+					data-wporg-groups-recurrence-id="<?php echo esc_attr( $check_in_recurrence ); ?>"
+				><?php esc_html_e( 'Check in attendees', 'wordcamporg' ); ?></button>
+			</div>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( $show_create ) : ?>
@@ -91,7 +124,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				type="button"
 				class="wp-block-button__link wp-element-button"
 				data-wporg-groups-modal="create"
-			>+ <?php esc_html_e( 'Create event', 'wporg-groups-frontend' ); ?></button>
+			>+ <?php esc_html_e( 'Create event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 

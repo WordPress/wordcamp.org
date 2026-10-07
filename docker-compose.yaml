@@ -16,10 +16,22 @@ services:
             - ".docker/wp-cli.yml:/usr/src/public_html/wp-cli.yml"
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
+        # Host-side bindings are overridable so this stack can coexist with
+        # another local dev environment that wants 80/443 -- either move this
+        # one to a different port (WORDCAMP_HTTPS_PORT) or to a different
+        # address (WORDCAMP_BIND_IP). See `.env.example` and "Running alongside
+        # another local environment" in `.docker/readme.md`.
+        #
+        # WORDCAMP_BIND_IP defaults to empty rather than 0.0.0.0 on purpose:
+        # an unqualified mapping binds IPv4 *and* IPv6 (`[::]:443`), while an
+        # explicit `0.0.0.0:` prefix would bind IPv4 only -- enough to break
+        # anything that resolves `localhost` to `::1` first. Empty keeps the
+        # resolved config identical to the hardcoded mappings this replaced,
+        # which is what CI (`.github/workflows/e2e-tests.yml`) runs against.
         ports:
-            - "80:80"
-            - "443:443"
-            - "1080:1080"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_HTTP_PORT:-80}:80"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_HTTPS_PORT:-443}:443"
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_MAILCATCHER_PORT:-1080}:1080"
         environment:
             - IS_LOCAL_DEV=1
             - WP_CLI_ALLOW_ROOT=true
@@ -31,5 +43,6 @@ services:
             - ".docker/mariadb-database:/var/lib/mysql"
             - ".docker/bin:/var/scripts"
         ports:
-            # todo document that 3307 to avoid conflicts w/ host mariadb/mysql server?
-            - "3307:3306"
+            # 3307 rather than 3306 so this doesn't collide with a MariaDB/MySQL
+            # server running directly on the host.
+            - "${WORDCAMP_BIND_IP:-}:${WORDCAMP_DB_PORT:-3307}:3306"

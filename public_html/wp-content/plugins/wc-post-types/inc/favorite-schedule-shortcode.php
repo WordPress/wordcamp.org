@@ -190,6 +190,8 @@ function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $t
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'meta_query'     => array(
 			'relation' => 'AND',
 			array(
@@ -371,7 +373,8 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 
 			$speakers_names = array();
 			foreach ( $speakers as $speaker ) {
-				$speaker_name     = apply_filters( 'the_title', $speaker->post_title );
+				// Decoded for the same reason the session title above is: this is a plain-text mail.
+				$speaker_name     = html_entity_decode( apply_filters( 'the_title', $speaker->post_title ) );
 				$speakers_names[] = $speaker_name;
 			}
 

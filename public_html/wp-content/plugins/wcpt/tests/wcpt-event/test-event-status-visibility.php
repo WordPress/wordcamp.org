@@ -369,7 +369,10 @@ class Test_Event_Status_Visibility extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A cancelled camp keeps resolving for everyone, so the v2 REST API keeps serving it.
+	 * A camp that reached the schedule and was then cancelled keeps resolving for everyone,
+	 * so the v2 REST API keeps serving it. The ones cancelled while still an application
+	 * are withheld by `WordCamp_Loader::hide_unscheduled_cancellations()`, which
+	 * `Test_Cancelled_Camp_Visibility` covers.
 	 *
 	 * @covers WordCamp_Loader::get_publicly_viewable_post_statuses
 	 */
@@ -378,6 +381,7 @@ class Test_Event_Status_Visibility extends WP_UnitTestCase {
 			array(
 				'post_type'   => WCPT_POST_TYPE_ID,
 				'post_status' => 'wcpt-cancelled',
+				'menu_order'  => 1560293422,
 			)
 		);
 

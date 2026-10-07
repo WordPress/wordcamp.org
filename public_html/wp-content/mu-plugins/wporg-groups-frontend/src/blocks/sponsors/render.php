@@ -36,7 +36,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 >
 	<div class="wporg-sponsors__header">
 		<<?php echo esc_html( $wporg_heading ); ?> class="wporg-section-heading wporg-sponsors__heading">
-			<?php esc_html_e( 'Sponsors', 'wporg-groups-frontend' ); ?>
+			<?php esc_html_e( 'Sponsors', 'wordcamporg' ); ?>
 		</<?php echo esc_html( $wporg_heading ); ?>>
 
 		<?php if ( $wporg_has_more ) : ?>
@@ -54,7 +54,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 				data-wp-bind--hidden="context.isExpanded"
 				data-wp-on--click="actions.expand"
 			>
-				<?php esc_html_e( 'Show all', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'Show all', 'wordcamporg' ); ?>
 			</button>
 		<?php endif; ?>
 	</div>
@@ -106,7 +106,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 							echo esc_html(
 								sprintf(
 									/* translators: %s: sponsor name. */
-									__( 'Visit %s (opens in a new tab)', 'wporg-groups-frontend' ),
+									__( 'Visit %s (opens in a new tab)', 'wordcamporg' ),
 									$wporg_sponsor['name']
 								)
 							);

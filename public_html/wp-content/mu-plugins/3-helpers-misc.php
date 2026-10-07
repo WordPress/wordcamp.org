@@ -34,9 +34,11 @@ function is_wordcamp_type( $type ) {
  * @return bool Returns true if the url matches events url structure.
  */
 function is_event_url( $url ) {
-	$url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
-	$tld = get_top_level_domain();
-	return "events.wordpress.$tld" === $url['host'];
+	// `filter_var()` returns false for anything unparseable, which has no host.
+	$host = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ), PHP_URL_HOST );
+	$tld  = get_top_level_domain();
+
+	return "events.wordpress.$tld" === $host;
 }
 
 /**
@@ -428,6 +430,34 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
 }
 
 /**
+ * Encode the shortcode delimiters in submitted text.
+ *
+ * Submitted free-text is stored and later rendered inside post content, where core parses shortcodes.
+ * Encoding the `[` and `]` delimiters keeps that text as literal characters, so a submission is shown
+ * as written rather than run. The result reads as `[` and `]` to a human.
+ *
+ * Applying this twice is a no-op: `&#91;` and `&#93;` contain no delimiter of their own. The result is
+ * HTML-encoded, so decode it for a plain-text medium the same way `wcorg_sanitize_plain_text()` output
+ * is decoded.
+ *
+ * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
+ *                     scalar becomes `''`.
+ *
+ * @return string|array A string, or an array of strings when `$value` is an array.
+ */
+function wcorg_escape_shortcodes( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wcorg_escape_shortcodes', $value );
+	}
+
+	if ( ! is_scalar( $value ) ) {
+		return '';
+	}
+
+	return str_replace( array( '[', ']' ), array( '&#91;', '&#93;' ), (string) $value );
+}
+
+/**
  * Reduce a submitted value to text that stays text once WordPress saves it.
  *
  * `strip_tags()` wants a letter, `/`, `!` or `?` after a `<` before it counts as a tag, but `wp_kses()`
@@ -442,14 +472,22 @@ function wcorg_json_encode_attr_i18n( $raw_value ) {
  * The result is HTML-encoded. Decode it for a plain-text medium -- the organizer reminder mails
  * (`wcor-mailer.php`) are the case already in the tree.
  *
- * @param mixed $value Arrays are handled recursively, with keys left alone. Anything neither array nor
- *                     scalar becomes `''`, as `sanitize_text_field()` does.
+ * @param mixed $value               Arrays are handled recursively, with keys left alone. Anything neither
+ *                                    array nor scalar becomes `''`, as `sanitize_text_field()` does.
+ * @param bool  $preserve_line_breaks Keep line breaks instead of collapsing them to spaces. Default false,
+ *                                    which suits single-line values like titles. Pass true for a multi-line
+ *                                    value such as a description or bio, so its paragraphs survive.
  *
  * @return string|array A string, or an array of strings when `$value` is an array.
  */
-function wcorg_sanitize_plain_text( $value ) {
+function wcorg_sanitize_plain_text( $value, $preserve_line_breaks = false ) {
 	if ( is_array( $value ) ) {
-		return array_map( 'wcorg_sanitize_plain_text', $value );
+		return array_map(
+			function ( $item ) use ( $preserve_line_breaks ) {
+				return wcorg_sanitize_plain_text( $item, $preserve_line_breaks );
+			},
+			$value
+		);
 	}
 
 	if ( ! is_scalar( $value ) ) {
@@ -460,7 +498,7 @@ function wcorg_sanitize_plain_text( $value ) {
 	// case first -- `Rated <A best` should keep its text, not become `Rated`.
 	$value = wp_check_invalid_utf8( (string) $value );
 	$value = wp_pre_kses_less_than( $value );
-	$value = wp_strip_all_tags( $value, true );
+	$value = wp_strip_all_tags( $value, ! $preserve_line_breaks );
 
 	return str_replace( '<', '&lt;', $value );
 }

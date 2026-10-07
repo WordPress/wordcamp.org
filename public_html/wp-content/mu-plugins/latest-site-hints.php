@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Latest_Site_Hints;
-use function WordCamp\Sunrise\get_flagship_canonical_url;
+use function WordCamp\Sunrise\{ get_flagship_canonical_url, get_url_port };
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
@@ -238,5 +238,5 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
-	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . $latest_site[0]->path ) );
+	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . get_url_port() . $latest_site[0]->path ) );
 }

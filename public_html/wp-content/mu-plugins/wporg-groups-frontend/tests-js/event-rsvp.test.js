@@ -34,7 +34,7 @@ function createContext() {
 		labels: {
 			rsvpError: 'Your RSVP could not be updated. Please try again.',
 			rsvpSuccessAttending: 'You are now attending this event.',
-			rsvpSuccessNotAttending: 'Your RSVP has been cancelled.',
+			rsvpSuccessNotAttending: 'Your RSVP has been canceled.',
 		},
 		modalOpen: false,
 		rsvpLoading: false,

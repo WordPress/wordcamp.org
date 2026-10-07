@@ -67,6 +67,6 @@ test.describe( 'cancelling an RSVP', () => {
 
 		await expect( rsvpButton ).toHaveText( /^RSVP$/ );
 		await expect( cancel ).toBeHidden();
-		await expect( page.getByRole( 'status' ) ).toHaveText( /cancelled/i );
+		await expect( page.getByRole( 'status' ) ).toHaveText( /canceled/i );
 	} );
 } );

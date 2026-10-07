@@ -968,7 +968,7 @@ function render_event_cancelled_block( array $attributes, string $content = '', 
 	return sprintf(
 		'<div class="%1$s"><span class="groups-site-event-cancelled__badge">%2$s</span></div>',
 		esc_attr( implode( ' ', $wrapper_classes ) ),
-		esc_html__( 'Cancelled', 'wordcamporg' )
+		esc_html__( 'Canceled', 'wordcamporg' )
 	);
 }
 
@@ -984,9 +984,9 @@ function register_event_cancelled_block(): void {
 		'groups-site/event-cancelled',
 		array(
 			'api_version'     => 3,
-			'title'           => __( 'Event Cancelled', 'wordcamporg' ),
+			'title'           => __( 'Event Canceled', 'wordcamporg' ),
 			'category'        => 'groups-site',
-			'description'     => __( 'Marks an event card whose date has been cancelled.', 'wordcamporg' ),
+			'description'     => __( 'Marks an event card whose date has been canceled.', 'wordcamporg' ),
 			'uses_context'    => array( 'postId', 'postType' ),
 			'supports'        => array(
 				'html' => false,

@@ -54,6 +54,13 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	const PHONE_CANARY = '555-0100-canary';
 
 	/**
+	 * The organiser's name, which is personal data and must not ship either.
+	 *
+	 * @var string
+	 */
+	const ORGANIZER_CANARY = 'Organizer Canary Name';
+
+	/**
 	 * A user with no report capability.
 	 *
 	 * @var int
@@ -103,6 +110,7 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 		// Canaries: private fields that are in the safelist but must not ship.
 		update_post_meta( self::$event_id, 'E-mail Address', self::EMAIL_CANARY );
 		update_post_meta( self::$event_id, 'Telephone', self::PHONE_CANARY );
+		update_post_meta( self::$event_id, 'Organizer Name', self::ORGANIZER_CANARY );
 	}
 
 	/**
@@ -277,9 +285,10 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Contact details sit in the private safelist, so nothing but the explicit
-	 * field list keeps them off the wire. Check the whole serialised response,
-	 * not just the row keys, so a value leaking through some other field fails.
+	 * Contact details and the organiser's name sit in the private safelist, so
+	 * nothing but the explicit field list keeps them off the wire. Check the
+	 * whole serialised response, not just the row keys, so a value leaking
+	 * through some other field fails.
 	 */
 	public function test_contact_details_never_reach_the_response() {
 		foreach ( array( 'report_viewer', 'administrator' ) as $persona ) {
@@ -297,10 +306,12 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 			$row = $this->fixture_row( $response );
 			$this->assertArrayNotHasKey( 'E-mail Address', $row, "$persona received an e-mail column." );
 			$this->assertArrayNotHasKey( 'Telephone', $row, "$persona received a telephone column." );
+			$this->assertArrayNotHasKey( 'Organizer Name', $row, "$persona received an organiser name column." );
 
 			$serialised = wp_json_encode( $response->get_data() );
 			$this->assertStringNotContainsString( self::EMAIL_CANARY, $serialised, "$persona: e-mail canary leaked." );
 			$this->assertStringNotContainsString( self::PHONE_CANARY, $serialised, "$persona: telephone canary leaked." );
+			$this->assertStringNotContainsString( self::ORGANIZER_CANARY, $serialised, "$persona: organiser name canary leaked." );
 		}
 	}
 
@@ -330,6 +341,14 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	 */
 	public function test_tracker_url_is_not_published() {
 		$this->assertNotContains( 'Tracker URL', CampusConnect_Details::get_rest_fields() );
+	}
+
+	/**
+	 * `Organizer Name` names a person, including the organiser behind an
+	 * application Central never lists publicly, so it is deliberately unpublished.
+	 */
+	public function test_organizer_name_is_not_published() {
+		$this->assertNotContains( 'Organizer Name', CampusConnect_Details::get_rest_fields() );
 	}
 
 	/**

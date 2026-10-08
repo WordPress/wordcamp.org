@@ -61,9 +61,35 @@ class WCOR_Mailer {
 					),
 				),
 			),
+
+			'wcor_mentor_assigned_or_changed' => array(
+				'name'       => 'When Mentor is assigned / changed',
+				'repeatable' => true,
+				'actions'    => array(
+					array(
+						'name'       => 'wcor_mentor_assigned_or_changed',
+						'callback'   => 'send_trigger_mentor_assigned_or_changed',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
+
+			'wcor_cc_needs_orientation' => array(
+				'name'    => 'Campus Connect application needs orientation',
+				'actions' => array(
+					array(
+						'name'       => 'wcpt_cc_needs_orientation',
+						'callback'   => 'send_trigger_cc_needs_orientation',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
 		);
 
 		add_action( 'wcor_send_timed_emails', array( $this, 'send_timed_emails' ) );
+		add_action( 'phpmailer_init', array( $this, 'maybe_send_html_email' ) );
 
 		foreach ( $this->triggers as $trigger_id => $trigger ) {
 			foreach( $trigger['actions'] as $action ) {
@@ -113,15 +139,24 @@ class WCOR_Mailer {
 	 */
 	protected function mail( $to, $subject, $body, $headers, $email, $wordcamp ) {
 		if ( ! $this->validate_email_addresses( $to ) ) {
-			log( 'Message not sent because of invalid recipients.', compact( 'email', 'wordcamp' ) );
+			log( 'Message not sent because of invalid recipients.', compact( 'to', 'email', 'wordcamp' ) );
 			return false;
 		}
 
 		$status  = true;
 		$subject = $this->replace_placeholders( $wordcamp, $email, $subject );
 		$body    = $this->replace_placeholders( $wordcamp, $email, $body );
+
+		// Sanitize subject (no HTML allowed).
 		$subject = html_entity_decode( strip_tags( $subject ), ENT_QUOTES, 'UTF-8' );
-		$body    = html_entity_decode( strip_tags( $body ), ENT_QUOTES, 'UTF-8' );
+
+		// Sanitize body with email-safe HTML tags only.
+		$body = wp_kses( $body, $this->get_allowed_html_tags() );
+		$body = wpautop( $body );
+		$body = make_clickable( $body );
+
+		// Mark that we're sending an organizer reminder email.
+		add_filter( 'wcor_sending_email', '__return_true' );
 
 		$headers = array_merge( $headers, array(
 			'From: WordCamp Central <support@wordcamp.org>',
@@ -144,7 +179,111 @@ class WCOR_Mailer {
 			}
 		}
 
+		// Remove the filter after sending.
+		remove_filter( 'wcor_sending_email', '__return_true' );
+
 		return $status;
+	}
+
+	/**
+	 * Send the message as HTML with plain-text fallback
+	 *
+	 * This hooks into PHPMailer to set up multipart emails with both HTML and plain-text versions.
+	 * The plain-text version includes URLs in markdown-style format for accessibility.
+	 *
+	 * @param \PHPMailer\PHPMailer\PHPMailer $phpmailer
+	 */
+	public function maybe_send_html_email( $phpmailer ) {
+		// Only process emails sent by this plugin.
+		if ( ! apply_filters( 'wcor_sending_email', false ) ) {
+			return;
+		}
+
+		// Skip if the body is empty.
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		if ( empty( $phpmailer->Body ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$html_body = $phpmailer->Body;
+
+		// Create plain-text version with URLs preserved in markdown-style format.
+		// Convert <a href="URL">text</a> to [text](URL) for better readability.
+		$plain_text = preg_replace(
+			'/<a\s+(?:[^>]*?\s+)?href=(["\'])(.*?)\1[^>]*>(.*?)<\/a>/i',
+			'[$3]($2)',
+			$html_body
+		);
+
+		// Strip remaining HTML tags.
+		$plain_text = wp_strip_all_tags( $plain_text );
+
+		// Configure PHPMailer for HTML email.
+		$phpmailer->isHTML( true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$phpmailer->Body = $html_body;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$phpmailer->AltBody = $plain_text;
+	}
+
+	/**
+	 * Get the list of HTML tags allowed in e-mails
+	 *
+	 * This filters out email-unsafe tags while preserving formatting and links.
+	 *
+	 * @return array Allowed HTML tags formatted for wp_kses().
+	 */
+	protected function get_allowed_html_tags() {
+		$tags = array(
+			'a' => array(
+				'href' => true,
+				'title' => true,
+			),
+			'b' => array(),
+			'blockquote' => array(),
+			'br' => array(),
+			'div' => array(
+				'align' => true,
+			),
+			'em' => array(),
+			'h1' => array(
+				'align' => true,
+			),
+			'h2' => array(
+				'align' => true,
+			),
+			'h3' => array(
+				'align' => true,
+			),
+			'h4' => array(
+				'align' => true,
+			),
+			'h5' => array(
+				'align' => true,
+			),
+			'h6' => array(
+				'align' => true,
+			),
+			'hr' => array(),
+			'i' => array(),
+			'img' => array(
+				'alt' => true,
+				'src' => true,
+				'width' => true,
+				'height' => true,
+			),
+			'li' => array(),
+			'ol' => array(),
+			'p' => array(
+				'align' => true,
+			),
+			'span' => array(),
+			'strong' => array(),
+			'ul' => array(),
+		);
+
+		return $tags;
 	}
 
 	/**
@@ -238,6 +377,10 @@ class WCOR_Mailer {
 			'[venue_contact_info]',
 			'[venue_exhibition_space_message]',
 
+			// Mentor.
+			'[mentor_name]',
+			'[mentor_email]',
+
 			// Miscellaneous
 			'[multi_event_sponsor_info]',
 			'[session_feedback_list_url]',
@@ -258,7 +401,7 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['Twitter'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/' . $wordcamp_meta['Twitter'][0] ),
 			empty( $wordcamp_meta['WordCamp Hashtag'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/hashtag/' . $wordcamp_meta['WordCamp Hashtag'][0] ),
 			empty( $wordcamp_meta['Number of Anticipated Attendees'][0] ) ? '' : absint( $wordcamp_meta['Number of Anticipated Attendees'][0] ),
-			empty( $wordcamp_meta['Multi-Event Sponsor Region'][0] ) ? '' : get_term( $wordcamp_meta['Multi-Event Sponsor Region'][0], MES_Region::TAXONOMY_SLUG )->name,
+			$this->get_mes_audience_label( $wordcamp->ID, $wordcamp_meta['Multi-Event Sponsor Region'][0] ?? '' ),
 			$event_subtype_name,
 
 			// The organizing team
@@ -307,6 +450,10 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['Contact Information'][0] ) ? 'N/A' : $wordcamp_meta['Contact Information'][0],
 			empty( $wordcamp_meta['Exhibition Space Available'][0] ) ? 'This event has no exhibition space.' : 'This event might have exhibition space available, please check with the organizers for more information.',
 
+			// Mentor.
+			$wordcamp_meta['Mentor Name'][0] ?? '',
+			$wordcamp_meta['Mentor E-mail Address'][0] ?? '',
+
 			// Miscellaneous
 			$this->get_mes_info( $wordcamp->ID ),
 			$this->get_feedback_list_table_url( $wordcamp ),
@@ -326,9 +473,12 @@ class WCOR_Mailer {
 		/** @var $multi_event_sponsors Multi_Event_Sponsors */
 		global $multi_event_sponsors;
 
-		$sponsors     = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id );
-		$sponsor_info = $multi_event_sponsors->get_sponsor_info( $sponsors );
-		$region_id    = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+		// The 'sponsor_level' shape attaches each sponsor's resolved level, which
+		// covers both group-matched and legacy region-matched sponsors (a camp may
+		// have no region at all when it's targeted via groups).
+		$sponsors_by_level = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
+		$sponsors          = $sponsors_by_level ? array_merge( ...array_values( $sponsors_by_level ) ) : array();
+		$sponsor_info      = $multi_event_sponsors->get_sponsor_info( $sponsors );
 
 		if ( ! $sponsors || ! $sponsor_info ) {
 			return '';
@@ -336,14 +486,14 @@ class WCOR_Mailer {
 
 		ob_start();
 
-		foreach ( $sponsor_info as $sponsor ) {
-			$sponsorship_level = get_post( $sponsor['sponsorship_levels'][ $region_id ] ); // we can assume this exists because otherwise the sponsor wouldn't be in $sponsors / $sponsor_info
+		foreach ( $sponsors as $sponsor_post ) {
+			$sponsor = $sponsor_info[ $sponsor_post->ID ];
 
 			?>
 
 			Company: <?php echo esc_html( $sponsor['company_name'] ); ?>
 
-			Sponsorship Level: <?php echo esc_html( $sponsorship_level->post_title ); ?>
+			Sponsorship Level: <?php echo esc_html( $sponsor_post->sponsorship_level->post_title ); ?>
 
 			Contact: <?php echo sprintf(
 				'%s %s, %s',
@@ -356,6 +506,44 @@ class WCOR_Mailer {
 		}
 
 		return trim( str_replace( "\t", '', ob_get_clean() ) );
+	}
+
+	/**
+	 * Human-readable label for the audience a camp's Multi-Event Sponsors target.
+	 *
+	 * The legacy region name when one is set; otherwise the camp's sponsor-group
+	 * names (comma-separated), so group-only camps don't render an empty
+	 * [multi_event_sponsor_region] placeholder.
+	 *
+	 * @param int        $wordcamp_id
+	 * @param int|string $region_id   The camp's legacy region term ID ('' if none).
+	 *
+	 * @return string
+	 */
+	protected function get_mes_audience_label( $wordcamp_id, $region_id ) {
+		if ( $region_id ) {
+			$region = get_term( $region_id, MES_Region::TAXONOMY_SLUG );
+
+			if ( $region && ! is_wp_error( $region ) ) {
+				return $region->name;
+			}
+		}
+
+		if ( ! class_exists( 'MES_Sponsor_Group' ) ) {
+			return '';
+		}
+
+		$names = array();
+
+		foreach ( MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) as $group_id ) {
+			$group = get_term( $group_id, MES_Sponsor_Group::TAXONOMY_SLUG );
+
+			if ( $group && ! is_wp_error( $group ) ) {
+				$names[] = $group->name;
+			}
+		}
+
+		return implode( ', ', $names );
 	}
 
 	/**
@@ -458,6 +646,21 @@ class WCOR_Mailer {
 			$recipients[] = MES_Region::get_camera_wranger_from_region( $region_id );
 		}
 
+		if ( in_array( 'wcor_send_mentor', $send_where ) ) {
+			$mentor_email = get_post_meta( $wordcamp_id, 'Mentor E-mail Address', true );
+
+			if ( is_email( $mentor_email ) ) {
+				$recipients[] = $mentor_email;
+			} else {
+				$mentor_username = get_post_meta( $wordcamp_id, 'Mentor WordPress.org User Name', true );
+				$mentor_user     = wcorg_get_user_by_canonical_names( $mentor_username );
+
+				if ( $mentor_user && is_email( $mentor_user->user_email ) ) {
+					$recipients[] = $mentor_user->user_email;
+				}
+			}
+		}
+
 		if ( in_array( 'wcor_send_organizers', $send_where ) ) {
 			$email_address_key = wcpt_key_to_str( 'E-mail Address', 'wcpt_' ); // Team address.
 
@@ -470,9 +673,12 @@ class WCOR_Mailer {
 			} else {
 				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) ); // Team address.
 			}
+
+			// Also send to the lead organizer's personal email address ("Email" = Lead organizer email, "E-mail" = team email).
+			$recipients[] = get_post_meta( $wordcamp_id, 'Email Address', true );
 		}
 
-		$recipients = array_unique( $recipients );
+		$recipients = array_unique( array_filter( $recipients ) );
 		return $recipients;
 	}
 
@@ -760,6 +966,20 @@ class WCOR_Mailer {
 	}
 
 	/**
+	 * Sends e-mails hooked to the wcor_cc_needs_orientation trigger.
+	 *
+	 * This fires when a Campus Connect application transitions to wcpt-needs-orientati
+	 * status. A dedicated action is used (rather than reusing wcpt_approved_for_pre_planning)
+	 * so that CC status changes do not trigger the non-CC hooks that listen on that action
+	 * (e.g. add_organizer_to_central, mark_date_added_to_planning_schedule).
+	 *
+	 * @param WP_Post $wordcamp The Campus Connect post that needs orientation.
+	 */
+	public function send_trigger_cc_needs_orientation( $wordcamp ) {
+		$this->send_triggered_emails( $wordcamp, 'wcor_cc_needs_orientation' );
+	}
+
+	/**
 	 * Sends e-mails hooked to the wcor_added_to_schedule trigger.
 	 *
 	 * This fires when a WordCamp is added to the final schedule.
@@ -800,6 +1020,17 @@ class WCOR_Mailer {
 	}
 
 	/**
+	 * Sends e-mails hooked to the wcor_mentor_assigned_or_changed trigger.
+	 *
+	 * This fires when a mentor is assigned or changed on a WordCamp.
+	 *
+	 * @param WP_Post $wordcamp
+	 */
+	public function send_trigger_mentor_assigned_or_changed( $wordcamp ) {
+		$this->send_triggered_emails( $wordcamp, 'wcor_mentor_assigned_or_changed' );
+	}
+
+	/**
 	 * Send emails associated with the given trigger.
 	 *
 	 * This will save a record of which e-mails have already been sent and avoid sending duplicates.
@@ -810,15 +1041,22 @@ class WCOR_Mailer {
 	protected function send_triggered_emails( $wordcamp, $trigger ) {
 		$sent_email_ids = (array) get_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', true );
 		$emails         = $this->get_triggered_posts( $trigger );
+		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
 		foreach( $emails as $email ) {
+			if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
+				continue;
+			}
+
+			if ( ! $is_repeatable && in_array( $email->ID, $sent_email_ids ) ) {
+				continue;
+			}
+
 			$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
 
-			if ( ! in_array( $email->ID, $sent_email_ids ) ) {
-				if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
-					$sent_email_ids[] = $email->ID;
-					update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
-				}
+			if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
+				$sent_email_ids[] = $email->ID;
+				update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
 			}
 		}
 	}

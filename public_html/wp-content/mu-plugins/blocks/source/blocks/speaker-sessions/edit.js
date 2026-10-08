@@ -7,7 +7,12 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { AlignmentControl, BlockControls, InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import {
+	AlignmentControl,
+	BlockControls,
+	InspectorControls,
+	useBlockProps,
+} from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
@@ -17,33 +22,39 @@ import { useSelect } from '@wordpress/data';
  */
 import { getSessionDetails, sortSessionByTime } from '../sessions/utils';
 
-export default function( { attributes, setAttributes, context: { postId } } ) {
+export default function ( { attributes, setAttributes, context: { postId } } ) {
 	const { hasSessionDetails, isLink, textAlign } = attributes;
-	const sessions = useSelect( ( select ) => {
-		if ( ! postId ) {
-			return [
-				{
-					id: 1,
-					title: { rendered: 'Session Name' },
-					link: '#',
-					session_date_time: { date: 'November 1, 2023', time: '10:15 am' },
-					session_track: [],
-				},
-			];
-		}
+	const sessions = useSelect(
+		( select ) => {
+			if ( ! postId ) {
+				return [
+					{
+						id: 1,
+						title: { rendered: 'Session Name' },
+						link: '#',
+						session_date_time: {
+							date: 'November 1, 2023',
+							time: '10:15 am',
+						},
+						session_track: [],
+					},
+				];
+			}
 
-		const { getEntityRecords } = select( coreStore );
-		const _sessions =
-			getEntityRecords( 'postType', 'wcb_session', {
-				wc_meta_key: '_wcpt_speaker_id',
-				wc_meta_value: postId,
-				_embed: true,
-			} ) || [];
+			const { getEntityRecords } = select( coreStore );
+			const _sessions =
+				getEntityRecords( 'postType', 'wcb_session', {
+					wc_meta_key: '_wcpt_speaker_id',
+					wc_meta_value: postId,
+					_embed: true,
+				} ) || [];
 
-		_sessions.sort( sortSessionByTime );
+			_sessions.sort( sortSessionByTime );
 
-		return _sessions;
-	}, [] );
+			return _sessions;
+		},
+		[ postId ]
+	);
 
 	const blockProps = useBlockProps( {
 		className: classnames( {
@@ -57,8 +68,15 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 				<PanelBody title={ __( 'Settings', 'wordcamporg' ) }>
 					<ToggleControl
 						label={ __( 'Show session details', 'wordcamporg' ) }
-						help={ __( 'Show the date, time, and track (if set).', 'wordcamporg' ) }
-						onChange={ () => setAttributes( { hasSessionDetails: ! hasSessionDetails } ) }
+						help={ __(
+							'Show the date, time, and track (if set).',
+							'wordcamporg'
+						) }
+						onChange={ () =>
+							setAttributes( {
+								hasSessionDetails: ! hasSessionDetails,
+							} )
+						}
 						checked={ hasSessionDetails }
 					/>
 					<ToggleControl
@@ -81,7 +99,9 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 					<li key={ session.id }>
 						<p>
 							{ isLink ? (
-								<a href={ session.link }>{ session.title.rendered }</a>
+								<a href={ session.link }>
+									{ session.title.rendered }
+								</a>
 							) : (
 								session.title.rendered
 							) }

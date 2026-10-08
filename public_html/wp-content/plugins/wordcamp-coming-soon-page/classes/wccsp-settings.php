@@ -8,7 +8,7 @@
 
 class WCCSP_Settings {
 	protected $settings;
-	const REQUIRED_CAPABILITY = 'edit_theme_options';
+	public const REQUIRED_CAPABILITY = 'edit_theme_options';
 
 	/**
 	 * Constructor.

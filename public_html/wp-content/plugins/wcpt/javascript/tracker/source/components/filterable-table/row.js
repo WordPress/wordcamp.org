@@ -18,7 +18,9 @@ function TableRow( { columns = {}, row = {}, customRender = {} } ) {
 		}
 
 		if ( row[ columnName + 'Url' ] ) {
-			cellContent = <a href={ row[ columnName + 'Url' ] }>{ row[ columnName ] }</a>;
+			cellContent = (
+				<a href={ row[ columnName + 'Url' ] }>{ row[ columnName ] }</a>
+			);
 		} else if ( customRender[ columnName ] ) {
 			cellContent = customRender[ columnName ]( row, row[ columnName ] );
 		} else {

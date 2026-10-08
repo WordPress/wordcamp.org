@@ -1,7 +1,6 @@
 {
 	"extends": "@wordpress/stylelint-config",
 	"rules": {
-		"max-line-length": null,
 		"no-duplicate-selectors": null,
 		"no-descending-specificity": null,
 		"rule-empty-line-before": [

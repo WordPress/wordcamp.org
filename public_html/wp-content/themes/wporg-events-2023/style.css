@@ -74,14 +74,14 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 	flex: 1;
 }
 
-.wporg-events__filters__no-count .wporg-events__filters__search form {
+:is(.wporg-events__filters__no-count .wporg-events__filters__search) form {
 		flex: 1;
 		min-width: 240px;
 	}
 
 @media (min-width: 663px) {
 
-.wporg-events__filters__no-count .wporg-events__filters__search form {
+:is(.wporg-events__filters__no-count .wporg-events__filters__search) form {
 			max-width: 240px;
 	}
 		}
@@ -92,11 +92,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 /* Ensure Contact form fields have an outline */
 
-.wp-block-jetpack-contact-form input[type="text"],
-	.wp-block-jetpack-contact-form input[type="email"],
-	.wp-block-jetpack-contact-form input[type="tel"],
-	.wp-block-jetpack-contact-form textarea,
-	.wp-block-jetpack-contact-form select {
+.wp-block-jetpack-contact-form input[type="text"],.wp-block-jetpack-contact-form input[type="email"],.wp-block-jetpack-contact-form input[type="tel"],.wp-block-jetpack-contact-form textarea,.wp-block-jetpack-contact-form select {
 		outline: 1px solid var(--wp--preset--color--charcoal-5);
 	}
 
@@ -122,45 +118,45 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 	}
 		}
 
-.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column):first-child {
 				padding-left: var(--wp--preset--spacing--edge-space);
 				padding-right: var(--wp--preset--spacing--edge-space);
 			}
 
 @media (min-width: 960px) {
 
-.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column):first-child {
 					padding-left: 0;
 					padding-right: 0;
 			}
 
-					.wporg-events__cover .wp-block-columns .wp-block-column:first-child > p {
+					:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column):first-child > p {
 						max-width: 460px;
 					}
 				}
 
 @media (min-width: 1440px) {
 
-.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column):first-child {
 					flex-basis: 33% !important;
 			}
 				}
 
 @media (min-width: 1440px) {
 
-.wporg-events__cover .wp-block-columns .wp-block-column:last-child {
+:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column):last-child {
 					flex-basis: 66.665% !important;
 			}
 				}
 
 @media (min-width: 782px) {
 
-.wporg-events__cover .wp-block-columns .wp-block-column {
+:is(.wporg-events__cover .wp-block-columns) .wp-block-column {
 				flex-grow: 1 !important;
 		}
 			}
 
-.wporg-events__cover .wp-block-columns .wp-block-column .wp-block-heading em {
+:is(:is(.wporg-events__cover .wp-block-columns) .wp-block-column) .wp-block-heading em {
 				display: block;
 			}
 
@@ -175,7 +171,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 	}
 		}
 
-.wporg-events__cover .wp-block-wporg-google-map .wporg-google-map__container {
+:is(.wporg-events__cover .wp-block-wporg-google-map) .wporg-google-map__container {
 			height: 100%;
 		}
 
@@ -186,19 +182,19 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 }
 	}
 
-.wporg-events__contributors .is-style-links-list li {
+:is(.wporg-events__contributors .is-style-links-list) li {
 			border-color: var(--wp--preset--color--light-grey-1);
 		}
 
-.wporg-events__contributors .is-style-links-list li a {
+:is(:is(.wporg-events__contributors .is-style-links-list) li) a {
 				color: var(--wp--preset--color--charcoal-0);
 			}
 
-.wporg-events__contributors .is-style-links-list li:first-child {
+:is(:is(.wporg-events__contributors .is-style-links-list) li):first-child {
 				border-top: none;
 			}
 
-.wporg-events__contributors .is-style-links-list li:last-child {
+:is(:is(.wporg-events__contributors .is-style-links-list) li):last-child {
 				border-bottom: none;
 			}
 
@@ -230,7 +226,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 		gap: 0;
 	}
 
-.wp-block-wporg-google-map .wporg-marker-list-item__date-time .wporg-google-map__date-time-separator {
+:is(.wp-block-wporg-google-map .wporg-marker-list-item__date-time) .wporg-google-map__date-time-separator {
 			display: none;
 		}
 
@@ -261,11 +257,11 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 		font-size: var(--wp--preset--font-size--small);
 	}
 
-.wporg-marker-list__container .wporg-marker-list-item:first-child {
+:is(.wporg-marker-list__container .wporg-marker-list-item):first-child {
 			border-radius: 2px 2px 0 0;
 		}
 
-.wporg-marker-list__container .wporg-marker-list-item:last-child {
+:is(.wporg-marker-list__container .wporg-marker-list-item):last-child {
 			border-radius: 0 0 2px 2px;
 			border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 		}
@@ -294,7 +290,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 	}
 		}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__title {
 			margin: 0;
 			font-family: var(--wp--preset--font-family--inter);
 			font-size: var(--wp--preset--font-size--small);
@@ -302,25 +298,25 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 			--wp--preset--spacing--30: 0;
 		}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title a {
+:is(:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__title) a {
 				-webkit-text-decoration: none;
 				text-decoration: none;
 			}
 
 @media (min-width: 1080px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__title {
 				font-size: var(--wp--preset--font-size--normal);
 		}
 			}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
+:is(:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__location)::first-letter {
 			    text-transform: capitalize;
 			}
 
 @media (max-width: 781px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__location {
 				margin-top: 2px;
 				margin-bottom: -2px;
 		}
@@ -328,14 +324,14 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 @media (min-width: 600px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__location {
 				display: inline;
 		}
 			}
 
 @media (min-width: 600px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__date-time {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__date-time {
 				display: inline-flex;
 				justify-content: flex-end;
 				white-space: nowrap;
@@ -345,13 +341,12 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 @media (min-width: 1280px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__date-time {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__date-time {
 				display: flex;
 		}
 			}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::after,
-		.wporg-marker-list__container .wporg-marker-list-item .wporg-google-map__date::after {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__location::after,:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-google-map__date::after {
 			content: "";
 			margin-top: -1px; /* vertical-middle doesn't subtract the size of the element */
 			margin-left: 10px;
@@ -366,7 +361,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 @media (max-width: 599px),(min-width: 960px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::after {
+:is(.wporg-marker-list__container .wporg-marker-list-item) .wporg-marker-list-item__location::after {
 				display: none;
 		}
 			}

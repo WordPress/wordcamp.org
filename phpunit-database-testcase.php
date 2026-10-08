@@ -23,6 +23,7 @@ class Database_TestCase extends WP_UnitTestCase {
 	protected static $slash_year_2020_site_id;
 	protected static $yearless_site_id;
 	protected static $slash_year_with_yearless_site_id;
+	protected static $events_rome_training_site_id;
 
 	/**
 	 * Create sites we'll need for the tests.
@@ -113,11 +114,15 @@ class Database_TestCase extends WP_UnitTestCase {
 			'network_id' => WORDCAMP_NETWORK_ID,
 		) );
 
-		self::$slash_year_with_yearless_site_id = $factory->blog->create( array(
+		self::$events_rome_training_site_id = $factory->blog->create( array(
 			'domain'     => 'events.wordpress.test',
 			'path'       => '/rome/2024/training/',
 			'network_id' => EVENTS_NETWORK_ID,
 		) );
+
+		// Simulate renamed sites by adding old_home_url blogmeta.
+		add_site_meta( self::$slash_year_2020_site_id, 'old_home_url', 'https://vancouver.wordcamp.test/2019/' );
+		add_site_meta( self::$events_rome_training_site_id, 'old_home_url', 'https://events.wordpress.test/rome/2023/training/' );
 	}
 
 	/**
@@ -134,6 +139,7 @@ class Database_TestCase extends WP_UnitTestCase {
 		wp_delete_site( self::$slash_year_2016_site_id );
 		wp_delete_site( self::$slash_year_2018_dev_site_id );
 		wp_delete_site( self::$slash_year_2020_site_id );
+		wp_delete_site( self::$events_rome_training_site_id );
 
 		foreach ( [ WORDCAMP_NETWORK_ID, EVENTS_NETWORK_ID ] as $network_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", $network_id ) );

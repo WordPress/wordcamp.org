@@ -7,7 +7,12 @@ import PropTypes from 'prop-types';
 /**
  * WordPress dependencies
  */
-import { BaseControl, Button, ButtonGroup, RangeControl } from '@wordpress/components';
+import {
+	BaseControl,
+	Button,
+	ButtonGroup,
+	RangeControl,
+} from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
@@ -52,7 +57,13 @@ class ImageSizeControl extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, help, sizePresets = [], initialPosition, rangeProps } = this.props;
+		const {
+			label,
+			help,
+			sizePresets = [],
+			initialPosition,
+			rangeProps,
+		} = this.props;
 		const { value } = this.state;
 
 		return (
@@ -71,7 +82,9 @@ class ImageSizeControl extends Component {
 										isPrimary={ isCurrent }
 										aria-label={ name }
 										aria-pressed={ isCurrent }
-										onClick={ () => this.onChange( Number( size ) ) }
+										onClick={ () =>
+											this.onChange( Number( size ) )
+										}
 									>
 										{ shortName || name }
 									</Button>
@@ -82,7 +95,9 @@ class ImageSizeControl extends Component {
 
 					<Button
 						className="wordcamp-image__size-button-reset"
-						onClick={ () => this.onChange( Number( initialPosition ) ) }
+						onClick={ () =>
+							this.onChange( Number( initialPosition ) )
+						}
 					>
 						{ __( 'Reset', 'wordcamporg' ) }
 					</Button>

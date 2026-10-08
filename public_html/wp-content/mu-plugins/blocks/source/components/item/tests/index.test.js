@@ -10,27 +10,37 @@ import { ItemTitle } from '../';
 
 describe( 'ItemTitle', () => {
 	test( 'should render a heading tag with the default level.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" /> );
+		const component = renderer.create(
+			<ItemTitle title="Example Title" />
+		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 
 	test( 'should render a heading tag of level 1.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" headingLevel={ 1 } /> );
+		const component = renderer.create(
+			<ItemTitle title="Example Title" headingLevel={ 1 } />
+		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 
 	test( 'should render a heading tag with a custom class.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" className="my-test-heading" /> );
+		const component = renderer.create(
+			<ItemTitle title="Example Title" className="my-test-heading" />
+		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 
 	test( 'should render a heading tag with a set alignment.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" align="right" /> );
+		const component = renderer.create(
+			<ItemTitle title="Example Title" align="right" />
+		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 
 	test( 'should render a heading tag with a link.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" link="https://wordpress.org" /> );
+		const component = renderer.create(
+			<ItemTitle title="Example Title" link="https://wordpress.org" />
+		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 

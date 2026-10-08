@@ -963,8 +963,8 @@ function render_wordcamp_application_form( $countries, $prefilled_fields ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_1046007_how_many_attendees" class="large"
-								   type="text" title="How many people do you think would attend?"/>
+							<input value="" name="q_1046007_how_many_attendees" class="large"
+								   type="number" min="1" step="1" title="How many people do you think would attend?"/>
 						</div>
 					</div>
 				</div>

@@ -159,14 +159,27 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 		// WP_Posts_List_Table checks the `edit_post` cap regardless of post type.
 		case 'edit_post':
 			if ( ! empty( $args ) ) {
+				$post      = get_post( $args[0] );
 				$post_type = get_post_type( $args[0] );
 			} else {
+				$post      = get_post();
 				$post_type = get_post_type();
 			}
 
 			if ( defined( 'WCPT_POST_TYPE_ID' ) && WCPT_POST_TYPE_ID === $post_type ) {
 				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
 					$required_caps[] = 'wordcamp_wrangle_wordcamps';
+				}
+
+				// Mentors can edit their mentee WordCamp posts.
+				if ( $post && $current_user ) {
+					$mentor = wcorg_get_user_by_canonical_names( $post->{'Mentor WordPress.org User Name'} );
+
+					if ( $mentor && $current_user->ID === $mentor->ID ) {
+						// Note: `edit_posts` is only granted to users with at least Contributor-level access.
+						// This mapping is intentional and assumes mentors already have contributor+ access.
+						$required_caps[] = 'edit_posts';
+					}
 				}
 			}
 

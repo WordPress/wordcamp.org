@@ -17,12 +17,6 @@ function wpcache_broken_message() {
 	}
 }
 
-// Jetpack 15.2 hotfix - https://github.com/Automattic/jetpack/issues/45784
-// Load the Jetpack version before WP Super Caches's outdated one.
-if ( ! class_exists( '\Automattic\Jetpack\Device_Detection' ) ) {
-	include_once __DIR__ . '/plugins/jetpack/jetpack_vendor/automattic/jetpack-device-detection/src/class-device-detection.php';
-}
-
 /*
  * Don't load during command line scripts
  *

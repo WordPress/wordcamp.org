@@ -2,7 +2,7 @@
 
 class WordCamp_Coming_Soon_Page {
 	protected $override_theme_template;
-	const VERSION = '0.2';
+	public const VERSION = '0.2';
 
 	/**
 	 * Constructor
@@ -10,10 +10,19 @@ class WordCamp_Coming_Soon_Page {
 	public function __construct() {
 		add_action( 'init',                       array( $this, 'init'                            ), 11    );  // After WCCSP_Settings::init().
 		add_action( 'wp_enqueue_scripts',         array( $this, 'manage_plugin_theme_stylesheets' ), 99    );  // (Hopefully) after all plugins/themes have enqueued their styles.
+		add_action( 'wp_enqueue_scripts',         array( $this, 'disable_jetpack_instant_search' ), 99 );  // After Jetpack Search has enqueued it at the default priority.
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
+		add_action( 'template_redirect',          array( $this, 'disable_feeds' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
+		// Again after the callbacks, since `before_callbacks` only sets a response and a
+		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
+		add_filter( 'rest_request_after_callbacks', array( $this, 'disable_rest_endpoints' ), PHP_INT_MAX, 3 );
+		// Both sitemap filters have to be registered here rather than in `init()`, because the
+		// generators decide whether to run before `init` priority 11.
+		add_filter( 'wp_sitemaps_enabled',        array( $this, 'disable_core_sitemaps' ) );
+		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_sitemaps' ) );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
@@ -21,6 +30,9 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'get_post_metadata',          array( $this, 'jetpack_dont_email_post_to_subs' ), 10, 4 );
 		add_filter( 'publicize_should_publicize_published_post', array( $this, 'jetpack_prevent_publicize' ) );
 		add_filter( 'document_title_parts',       array( $this, 'force_empty_tagline' ) );
+		add_filter( 'pre_get_document_title',     array( $this, 'force_placeholder_document_title' ) );
+		add_filter( 'redirect_canonical',         array( $this, 'disable_canonical_redirect' ) );
+		add_filter( 'body_class',                 array( $this, 'remove_identifying_body_classes' ) );
 
 		add_image_size( 'wccsp_image_medium_rectangle', 500, 300 );
 	}
@@ -32,6 +44,37 @@ class WordCamp_Coming_Soon_Page {
 		$settings                      = $GLOBALS['WCCSP_Settings']->get_settings();
 		$show_page                     = 'on' === $settings['enabled'] && ! current_user_can( 'edit_posts' );
 		$this->override_theme_template = $show_page || $this->is_coming_soon_preview();
+
+		if ( $this->override_theme_template ) {
+			$this->suppress_identifying_links();
+		}
+	}
+
+	/**
+	 * Remove the head tags, headers and slug redirects that name the real post
+	 * while the placeholder is active, so its permalink is not disclosed.
+	 */
+	protected function suppress_identifying_links() {
+		$actions = array(
+			// `feed_links_extra` prints the post's comments feed, named after its title and URL.
+			'wp_head'           => array( 'rel_canonical', 'wp_shortlink_wp_head', 'wp_oembed_add_discovery_links', 'rest_output_link_wp_head', 'feed_links_extra' ),
+			'template_redirect' => array( 'rest_output_link_header', 'wp_shortlink_header', 'wp_old_slug_redirect' ),
+		);
+
+		foreach ( $actions as $hook => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				// Remove the callback at every priority it is registered at,
+				// rather than assuming the default — `wp_oembed_add_discovery_links`,
+				// for one, is hooked at both 4 and 10.
+				while ( false !== ( $priority = has_action( $hook, $callback ) ) ) {
+					remove_action( $hook, $callback, $priority );
+				}
+			}
+		}
+
+		// On production, WordPress.org's `wporg-seo` mu-plugin replaces `rel_canonical`
+		// with its own canonical tag and header. Both read their URL through this filter.
+		add_filter( 'wporg_canonical_url', '__return_false' );
 	}
 
 	/**
@@ -70,6 +113,26 @@ class WordCamp_Coming_Soon_Page {
 			array( 'open-sans' ),
 			2
 		);
+
+		// Jetpack Contact Form module. Should be enqueued by rendering, but a change in core rendering has caused it to not apply.
+		wp_enqueue_style( 'grunion.css' );
+	}
+
+	/**
+	 * Keep Jetpack's Instant Search overlay off the Coming Soon page.
+	 *
+	 * Instant Search renders its overlay with JavaScript and relies on its own stylesheet to keep it hidden
+	 * until a visitor opens a search. `dequeue_all_stylesheets()` removes that stylesheet, so the overlay would
+	 * render unstyled at the bottom of the page. The template has no search UI at all, so drop the script and
+	 * the widget area it prints in the footer instead.
+	 */
+	public function disable_jetpack_instant_search() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		wp_dequeue_script( 'jetpack-instant-search' );
+		remove_action( 'wp_footer', array( 'Automattic\Jetpack\Search\Helper', 'print_instant_search_sidebar' ) );
 	}
 
 	/**
@@ -124,6 +187,94 @@ class WordCamp_Coming_Soon_Page {
 		if ( $this->override_theme_template ) {
 			add_filter( 'jetpack_enable_open_graph', '__return_false' );
 		}
+	}
+
+	/**
+	 * Prevent feeds from leaking content while the Coming Soon page is active.
+	 *
+	 * Core dispatches feed requests in `wp-includes/template-loader.php` and returns before the
+	 * `template_include` filter runs, so `override_theme_template()` never fires for them and posts
+	 * stay readable at `/feed/`, `/comments/feed/`, etc. `template_redirect` does fire for feeds, so
+	 * refuse them here, and strip the feed discovery links from the Coming Soon page so the blocked
+	 * feeds aren't advertised. Gated like the page and REST locks, so logged-in editors keep access.
+	 *
+	 * @see https://github.com/WordPress/wordcamp.org/issues/600
+	 */
+	public function disable_feeds() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		if ( is_feed() ) {
+			wp_die(
+				esc_html__( 'Feeds are not available while the site is in Coming Soon mode.', 'wordcamporg' ),
+				'',
+				array( 'response' => 403 )
+			);
+		}
+
+		remove_action( 'wp_head', 'feed_links', 2 );
+	}
+
+	/**
+	 * Keep Core's XML sitemaps off while Coming Soon is active.
+	 *
+	 * Sitemaps render on `template_redirect`, which Core dispatches before it applies
+	 * `template_include`, so `override_theme_template()` does not cover them.
+	 *
+	 * Core decides whether sitemaps are enabled during `wp_sitemaps_get_server()` on `init` at
+	 * priority 10, before this plugin's `init()` at priority 11, so `$this->override_theme_template`
+	 * is not populated yet and the condition is recomputed here. `WP_Sitemaps::render_sitemaps()`
+	 * re-checks this filter and sends a 404, so disabling it covers the index, the individual
+	 * sitemaps and the stylesheet routes alike.
+	 *
+	 * The settings lookup is deliberately first: on the overwhelming majority of sites Coming Soon
+	 * is off, and short-circuiting there avoids resolving the current user on every front end
+	 * request just to answer this filter.
+	 *
+	 * @param bool $enabled Whether XML sitemaps are enabled.
+	 *
+	 * @return bool
+	 */
+	public function disable_core_sitemaps( $enabled ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' === $settings['enabled'] && ! current_user_can( 'edit_posts' ) ) {
+			return false;
+		}
+
+		return $enabled;
+	}
+
+	/**
+	 * Keep Jetpack's sitemaps off while Coming Soon is active.
+	 *
+	 * Jetpack serves its sitemaps from `wp_loaded`, even earlier than Core's `template_redirect`,
+	 * and exposes no filter for declining an individual request, so the module is switched off
+	 * instead and the URLs 404 like any other unrecognised route.
+	 *
+	 * Unlike `disable_core_sitemaps()` this gates on the setting alone. Jetpack loads its modules
+	 * on `after_setup_theme` at priority -2, and calling `current_user_can()` that early would
+	 * resolve the current user well before WordPress otherwise does. Editors give up nothing for
+	 * it, because a sitemap is only of use to a crawler and `mu-plugins/robots.php` already leaves
+	 * Coming Soon sites out of robots.txt entirely.
+	 *
+	 * Most sites no longer run this module - `mu-plugins/jetpack-tweaks/modules.php` drops it from
+	 * the defaults for new sites in favour of Core's - but sites created before that still have it
+	 * active.
+	 *
+	 * @param array $modules Slugs of the active Jetpack modules.
+	 *
+	 * @return array
+	 */
+	public function disable_jetpack_sitemaps( $modules ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' !== $settings['enabled'] ) {
+			return $modules;
+		}
+
+		return array_values( array_diff( (array) $modules, array( 'sitemaps' ) ) );
 	}
 
 	/**
@@ -284,7 +435,7 @@ class WordCamp_Coming_Soon_Page {
 	 */
 	public function get_dates() {
 		if ( 'wcpt-cancelled' === $this->get_status() ) {
-			return esc_html__( 'Cancelled', 'wordcamporg' );
+			return esc_html__( 'Canceled', 'wordcamporg' );
 		}
 
 		$dates         = false;
@@ -554,6 +705,72 @@ class WordCamp_Coming_Soon_Page {
 		}
 
 		return $parts;
+	}
+
+	/**
+	 * Use the site name as the document title while the placeholder is active,
+	 * so the resolved post's own title is not rendered.
+	 *
+	 * @param string $title The pre-filtered title.
+	 *
+	 * @return string
+	 */
+	public function force_placeholder_document_title( $title ) {
+		if ( ! $this->override_theme_template ) {
+			return $title;
+		}
+
+		return get_bloginfo( 'name' );
+	}
+
+	/**
+	 * Cancel canonical redirects while the placeholder is active, so `?p=<id>`
+	 * is not redirected to the real permalink.
+	 *
+	 * @param string $redirect_url The canonical URL.
+	 *
+	 * @return string|false
+	 */
+	public function disable_canonical_redirect( $redirect_url ) {
+		return $this->override_theme_template ? false : $redirect_url;
+	}
+
+	/**
+	 * Drop body classes that contain the resolved post's slug while the
+	 * placeholder is active.
+	 *
+	 * @param string[] $classes The body classes.
+	 *
+	 * @return string[]
+	 */
+	public function remove_identifying_body_classes( $classes ) {
+		if ( ! $this->override_theme_template ) {
+			return $classes;
+		}
+
+		$object = get_queried_object();
+		$slug   = '';
+
+		if ( $object instanceof \WP_Post ) {
+			$slug = $object->post_name;
+		} elseif ( $object instanceof \WP_Term ) {
+			$slug = $object->slug;
+		} elseif ( $object instanceof \WP_User ) {
+			$slug = $object->user_nicename;
+		}
+
+		if ( '' === $slug ) {
+			return $classes;
+		}
+
+		return array_values(
+			array_filter(
+				$classes,
+				static function ( $class ) use ( $slug ) {
+					return false === strpos( (string) $class, $slug );
+				}
+			)
+		);
 	}
 
 } // end WordCamp_Coming_Soon_Page.

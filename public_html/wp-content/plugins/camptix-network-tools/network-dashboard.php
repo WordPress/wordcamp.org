@@ -3,6 +3,7 @@
 class CampTix_Network_Dashboard {
 	public static $attendee_search_limit;
 	protected $debug = false;
+	protected $list_table;
 
 	function __construct() {
 		self::$attendee_search_limit = apply_filters( 'camptix_nt_attendee_list_blog_limit', 700 ); // PHP times out around 900 sites.

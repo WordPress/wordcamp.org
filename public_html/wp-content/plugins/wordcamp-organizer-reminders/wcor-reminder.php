@@ -6,8 +6,8 @@
  */
 
 class WCOR_Reminder {
-	const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
-	const REQUIRED_CAPABILITY      = 'manage_options';
+	public const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
+	public const REQUIRED_CAPABILITY      = 'manage_options';
 
 	/**
 	 * Constructor
@@ -51,6 +51,27 @@ class WCOR_Reminder {
 			'show_in_nav_menus'   => false,
 			'hierarchical'        => false,
 			'capability_type'     => 'post',
+
+			/*
+			 * The menu page these live under requires `manage_options`, but the post type accepted
+			 * core's generic `edit_posts`, so `post-new.php`, which does not consult the menu, opened
+			 * without it. `map_meta_cap` needs setting here because it only defaults to true while
+			 * `capabilities` is empty.
+			 */
+			'capabilities'        => array(
+				'create_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_others_posts'    => self::REQUIRED_CAPABILITY,
+				'delete_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_private_posts'   => self::REQUIRED_CAPABILITY,
+				'delete_published_posts' => self::REQUIRED_CAPABILITY,
+				'edit_others_posts'      => self::REQUIRED_CAPABILITY,
+				'edit_posts'             => self::REQUIRED_CAPABILITY,
+				'edit_private_posts'     => self::REQUIRED_CAPABILITY,
+				'edit_published_posts'   => self::REQUIRED_CAPABILITY,
+				'publish_posts'          => self::REQUIRED_CAPABILITY,
+				'read_private_posts'     => self::REQUIRED_CAPABILITY,
+			),
+			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'rewrite'             => false,
 			'query_var'           => false,
@@ -185,7 +206,7 @@ class WCOR_Reminder {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_posts', $post_id ) ) {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
 
@@ -204,7 +225,7 @@ class WCOR_Reminder {
 	 * @param array $new_meta
 	 */
 	protected function save_post_meta( $post, $new_meta ) {
-		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_custom' );
+		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_mentor', 'wcor_send_custom' );
 
 		delete_post_meta( $post->ID, 'wcor_send_where' );
 		if ( isset( $new_meta['wcor_send_where'] ) ) {

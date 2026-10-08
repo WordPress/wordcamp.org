@@ -5,7 +5,7 @@
  * column selection, event selection, and date-range filtering — same shape
  * as WooCommerce's product exporter. Empty selections mean "everything".
  * Access is enforced server-side; anyone who can open this modal is an
- * Organiser.
+ * Organizer.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -33,7 +33,7 @@ const COLUMN_OPTIONS = [
 	{ key: 'event_start_gmt', label: __( 'Event start (GMT)', 'wordcamporg' ) },
 	{ key: 'event_end_gmt', label: __( 'Event end (GMT)', 'wordcamporg' ) },
 	{ key: 'venue', label: __( 'Venue', 'wordcamporg' ) },
-	{ key: 'organiser', label: __( 'Organiser', 'wordcamporg' ) },
+	{ key: 'organiser', label: __( 'Organizer', 'wordcamporg' ) },
 	{ key: 'attending_count', label: __( 'Attending count', 'wordcamporg' ) },
 	{ key: 'waiting_list_count', label: __( 'Waiting list count', 'wordcamporg' ) },
 	{ key: 'not_attending_count', label: __( 'Not attending count', 'wordcamporg' ) },

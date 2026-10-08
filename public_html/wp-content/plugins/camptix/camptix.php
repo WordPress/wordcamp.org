@@ -1271,8 +1271,8 @@ class CampTix_Plugin {
 
 	function register_post_statuses() {
 		register_post_status( 'cancel', array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,
@@ -1317,7 +1317,7 @@ class CampTix_Plugin {
 			$states['failed'] = __( 'Failed', 'wordcamporg' );
 
 		if ( $post->post_status == 'cancel' && get_query_var( 'post_status' ) != 'cancel' )
-			$states['cancelled'] = __( 'Cancelled', 'wordcamporg' );
+			$states['cancelled'] = __( 'Canceled', 'wordcamporg' );
 
 		if ( $post->post_status == 'refund' && get_query_var( 'post_status' ) != 'refund' )
 			$states['cancelled'] = __( 'Refunded', 'wordcamporg' );
@@ -2557,8 +2557,9 @@ class CampTix_Plugin {
 		$post_query_conditions = array();
 
 		$relation = strtolower( $relation );
-		if ( ! in_array( $relation, array( 'and', 'or' ) ) )
+		if ( ! in_array( $relation, array( 'and', 'or' ) ) ) {
 			return $segment;
+		}
 
 		$query = array(
 			'post_type' => 'tix_attendee',
@@ -2645,6 +2646,15 @@ class CampTix_Plugin {
 				$post_query_conditions[] = $condition;
 				continue;
 			}
+		}
+
+		// Allow others to filter the query as needed.
+		$query = apply_filters( 'camptix_notify_segment_query', $query, $conditions, $relation );
+
+		// A filter that added a meta or date condition makes this a non-empty query, so an "or"
+		// relation still gets the second pass for the post-query conditions below.
+		if ( count( $query['meta_query'] ) > 1 || ! empty( $query['date_query'] ) ) {
+			$empty_query = false;
 		}
 
 		$post_query_segment = get_posts( $query );
@@ -2957,7 +2967,7 @@ class CampTix_Plugin {
 								<?php endif; ?>
 								<option <?php selected( $post->post_status, 'publish' ); ?> value="publish"><?php _e( 'Published', 'wordcamporg' ); ?></option>
 								<option <?php selected( $post->post_status, 'refund' ); ?> value="refund"><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
-								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Canceled', 'wordcamporg' ); ?></option>
 							</select>
 							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
 							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
@@ -3046,7 +3056,7 @@ class CampTix_Plugin {
 		$statuses = array(
 			'publish' => _x( 'Published', 'post', 'wordcamporg' ),
 			'refund'  => _x( 'Refunded', 'post', 'wordcamporg' ),
-			'cancel'  => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'cancel'  => _x( 'Canceled', 'post', 'wordcamporg' ),
 		);
 
 		?>
@@ -4021,7 +4031,7 @@ class CampTix_Plugin {
 					update_post_meta( $post_id, 'tix_quantity', $ticket_quantity );
 
 					delete_post_meta( $post_id, 'tix_reservation', $reservations[$cancel_token] );
-					$this->log( 'Cancelled a reservation.', $post_id, $reservations[$cancel_token] );
+					$this->log( 'Canceled a reservation.', $post_id, $reservations[$cancel_token] );
 				}
 			}
 		}
@@ -4565,7 +4575,7 @@ class CampTix_Plugin {
 		}
 
 		if ( isset( $redirected_error_flags['payment_cancelled'] ) ) {
-			$this->error( __( 'Your payment has been cancelled. Feel free to try again!', 'wordcamporg' ) );
+			$this->error( __( 'Your payment has been canceled. Feel free to try again!', 'wordcamporg' ) );
 		}
 
 		if ( isset( $redirected_error_flags['invalid_edit_token'] ) ) {
@@ -4577,7 +4587,7 @@ class CampTix_Plugin {
 		}
 
 		if ( isset( $redirected_error_flags['invalid_reservation'] ) ) {
-			$this->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
+			$this->error( __( 'Sorry, but the reservation you are trying to use has been canceled or has expired.', 'wordcamporg' ) );
 		}
 
 		do_action( 'camptix_form_start_errors', $redirected_error_flags );
@@ -5703,7 +5713,7 @@ class CampTix_Plugin {
 
 					</tbody>
 				</table>
-				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be cancelled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
+				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be canceled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
 				<p class="tix-submit">
 					<label><input type="checkbox" name="tix_refund_request_confirmed" value="1"> <?php _e( 'I agree to the above terms', 'wordcamporg' ); ?></label>
 					<input type="submit" value="<?php esc_attr_e( 'Send Request', 'wordcamporg' ); ?>" />

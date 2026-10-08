@@ -49,6 +49,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// Buyer-side claim-link recovery (issue #1721).
 		add_action( 'template_redirect',                              array( $this, 'process_resend_claim_links' ), 8 );
 		add_action( 'camptix_notices',                                array( $this, 'render_resend_claim_links_ui' ), 9 );
+
+		// Camptix Notify.
+		add_filter( 'camptix_notify_segment_fields',                  array( $this, 'camptix_notify_segment_fields' ) );
+		add_filter( 'camptix_notify_segment_query',                   array( $this, 'camptix_notify_segment_query' ), 10, 2 );
 	}
 
 	/**
@@ -985,6 +989,93 @@ class CampTix_Require_Login extends CampTix_Addon {
 		);
 
 		return $query_args;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $segments
+	 * @return array
+	 */
+	public function camptix_notify_segment_fields( $segments ) {
+		$segments[] = [
+			'caption'      => __( 'Ticket Status', 'wordcamporg' ),
+			'option_value' => 'ticket_status',
+			'type'         => 'select',
+			'ops'          => [ 'is' ],
+			'values'       => [
+				[
+					'caption' => __( 'Confirmed', 'wordcamporg' ),
+					'value'   => 'confirmed',
+				],
+				[
+					'caption' => __( 'Unconfirmed', 'wordcamporg' ),
+					'value'   => 'unconfirmed',
+				],
+			],
+		];
+
+		return $segments;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $query      The posts query arguments.
+	 * @param array $conditions The conditions to filter by.
+	 * @return array
+	 */
+	public function camptix_notify_segment_query( $query, $conditions ) {
+		foreach ( $conditions as $condition ) {
+			if ( 'ticket_status' === $condition['field'] ) {
+				if ( 'unconfirmed' === $condition['value'] ) {
+					$query['meta_query'][] = array(
+						'relation' => 'and',
+						array(
+							// Either of these is unconfirmed.
+							'relation' => 'or',
+							// Unconfirmed username listed.
+							array(
+								'key' => 'tix_username',
+								'value' => self::UNCONFIRMED_USERNAME,
+								'compare' => '=',
+							),
+							// Has no username linked.
+							array(
+								'key' => 'tix_username',
+								'compare' => 'NOT EXISTS',
+							),
+						),
+						// An unknown attendee has no real email address to send to.
+						array(
+							'key' => 'tix_email',
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
+							'compare' => '!=',
+						),
+					);
+				} elseif ( 'confirmed' === $condition['value'] ) {
+					// The inverse of the above, so no attendee is in both segments.
+					// Unknown attendees are in neither, as there's no one to email.
+					$query['meta_query'][] = array(
+						'relation' => 'and',
+						// Has a username other than the unconfirmed username.
+						array(
+							'key' => 'tix_username',
+							'value' => self::UNCONFIRMED_USERNAME,
+							'compare' => '!=',
+						),
+						// The email is not the standard unknown attendee.
+						array(
+							'key' => 'tix_email',
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
+							'compare' => '!=',
+						),
+					);
+				}
+			}
+		}
+
+		return $query;
 	}
 
 	/*

@@ -674,6 +674,16 @@ class CampTix_Admin_Tools {
 				?>
 			}));
 
+			<?php
+				// Allow other code to add additional segmentation fields.
+				$additional_segments = apply_filters( 'camptix_notify_segment_fields', array() );
+				foreach ( $additional_segments as $segment ) {
+					printf(
+						'camptix.collections.segmentFields.add( new camptix.models.SegmentField( %s ) );',
+						wp_json_encode( $segment )
+					);
+				}
+			?>
 
 			// Add POST'ed conditions.
 			<?php if ( ! empty( $conditions ) ) : ?>

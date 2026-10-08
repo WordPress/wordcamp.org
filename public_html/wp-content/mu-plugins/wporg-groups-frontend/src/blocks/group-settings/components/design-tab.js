@@ -166,7 +166,7 @@ export default function DesignTab() {
 			__( 'Everything else', 'wordcamporg' )
 		),
 		h( 'p', {},
-			__( 'Use the WordPress Site Editor to customise your group site — change colors, fonts, the hero image, page layouts, and more.', 'wordcamporg' )
+			__( 'Use the WordPress Site Editor to customize your group site — change colors, fonts, the hero image, page layouts, and more.', 'wordcamporg' )
 		),
 		h(
 			Button,

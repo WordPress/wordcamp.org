@@ -219,4 +219,116 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 		$this->assertSame( 'pat@example.org', $mailer->get_recipient( 'to' )->address );
 		$this->assertStringContainsString( 'purchased for you by Jane Buyer.', $mailer->get_sent()->body );
 	}
+
+	/**
+	 * Create one attendee of each ticket status shape, for the Notify segment tests.
+	 *
+	 * @return int[] Attendee IDs, keyed by shape.
+	 */
+	protected function create_segment_attendees() {
+		$ids = array(
+			'confirmed'        => $this->create_attendee( 'Confirmed', 'Person', 'confirmed@example.org', 'confirmed-person' ),
+			'unconfirmed'      => $this->create_attendee( 'Unconfirmed', 'Person', 'unconfirmed@example.org', CampTix_Require_Login::UNCONFIRMED_USERNAME ),
+			'no_username'      => $this->create_attendee( 'Unlinked', 'Person', 'unlinked@example.org', '' ),
+			'unknown'          => $this->create_attendee( 'Unknown', 'Attendee', CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, CampTix_Require_Login::UNCONFIRMED_USERNAME ),
+			'unknown_realuser' => $this->create_attendee( 'Unknown', 'Attendee', CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, 'buyer-username' ),
+		);
+
+		delete_post_meta( $ids['no_username'], 'tix_username' );
+
+		return $ids;
+	}
+
+	/**
+	 * Build an "is" condition, as posted by the Notify form.
+	 *
+	 * @param string $field
+	 * @param string $value
+	 *
+	 * @return array
+	 */
+	protected function segment_condition( $field, $value ) {
+		return array(
+			'field' => $field,
+			'op'    => 'is',
+			'value' => $value,
+		);
+	}
+
+	/**
+	 * Run a Notify segment and name the attendees it matched.
+	 *
+	 * @param string $relation   'and' or 'or'.
+	 * @param array  $conditions Segment conditions, as posted by the Notify form.
+	 * @param int[]  $ids        Attendee IDs, keyed by shape.
+	 *
+	 * @return string[] The matched shapes, sorted.
+	 */
+	protected function get_segment_shapes( $relation, $conditions, $ids ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$shapes = array_keys( array_intersect( $ids, $camptix->get_segment( $relation, $conditions ) ) );
+		sort( $shapes );
+
+		return $shapes;
+	}
+
+	/**
+	 * The Notify screen offers ticket status as a segment field.
+	 *
+	 * @covers CampTix_Require_Login::camptix_notify_segment_fields
+	 */
+	public function test_notify_segment_fields_include_ticket_status() {
+		$fields = apply_filters( 'camptix_notify_segment_fields', array() );
+
+		$this->assertContains( 'ticket_status', wp_list_pluck( $fields, 'option_value' ) );
+	}
+
+	/**
+	 * Confirmed and Unconfirmed don't overlap, and unknown attendees are in neither, as they have no email to send to.
+	 *
+	 * @covers CampTix_Require_Login::camptix_notify_segment_query
+	 */
+	public function test_notify_ticket_status_segments() {
+		$ids = $this->create_segment_attendees();
+
+		$this->assertSame(
+			array( 'confirmed' ),
+			$this->get_segment_shapes( 'and', array( $this->segment_condition( 'ticket_status', 'confirmed' ) ), $ids )
+		);
+
+		$this->assertSame(
+			array( 'no_username', 'unconfirmed' ),
+			$this->get_segment_shapes( 'and', array( $this->segment_condition( 'ticket_status', 'unconfirmed' ) ), $ids )
+		);
+	}
+
+	/**
+	 * "Any of" a ticket status and a question answer matches either one, not both.
+	 *
+	 * @covers CampTix_Plugin::get_segment
+	 */
+	public function test_notify_ticket_status_segment_with_or_relation() {
+		$ids = $this->create_segment_attendees();
+
+		$question_id = self::factory()->post->create( array(
+			'post_type'   => 'tix_question',
+			'post_status' => 'publish',
+		) );
+		update_post_meta( $question_id, 'tix_type', 'select' );
+		update_post_meta( $question_id, 'tix_values', array( 'S', 'L' ) );
+
+		foreach ( $ids as $shape => $attendee_id ) {
+			update_post_meta( $attendee_id, 'tix_questions', array( $question_id => 'unconfirmed' === $shape ? 'L' : 'S' ) );
+		}
+
+		$conditions = array(
+			$this->segment_condition( 'ticket_status', 'confirmed' ),
+			$this->segment_condition( "tix-question-$question_id", 'L' ),
+		);
+
+		$this->assertSame( array( 'confirmed', 'unconfirmed' ), $this->get_segment_shapes( 'or', $conditions, $ids ) );
+		$this->assertSame( array(), $this->get_segment_shapes( 'and', $conditions, $ids ) );
+	}
 }

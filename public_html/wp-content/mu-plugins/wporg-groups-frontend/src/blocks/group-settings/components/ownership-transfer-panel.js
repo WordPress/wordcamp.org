@@ -36,7 +36,7 @@ const STATUS_LABELS = {
 // PHP side ever writes — see `group-ownership-transfer.php`.
 const FINAL_STATUS_LABELS = {
 	declined: __( 'Declined', 'wordcamporg' ),
-	cancelled: __( 'Cancelled', 'wordcamporg' ),
+	cancelled: __( 'Canceled', 'wordcamporg' ),
 	completed: __( 'Completed', 'wordcamporg' ),
 	rejected: __( 'Rejected', 'wordcamporg' ),
 };
@@ -208,7 +208,7 @@ export default function OwnershipTransferPanel() {
 					? h(
 						'p',
 						{ className: 'wporg-settings-tab__empty' },
-						__( 'No members are eligible to receive ownership yet — only existing Organisers (editor tier) can be nominated.', 'wordcamporg' )
+						__( 'No members are eligible to receive ownership yet — only existing Organizers (editor tier) can be nominated.', 'wordcamporg' )
 					)
 					: [
 						needsFromUser &&

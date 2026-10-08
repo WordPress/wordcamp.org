@@ -6385,6 +6385,14 @@ class CampTix_Plugin {
 		if ( isset( $_POST['tix_receipt_email_js'] ) && is_email( $_POST['tix_receipt_email_js'] ) )
 			$receipt_email = wp_unslash( $_POST['tix_receipt_email_js'] );
 
+		/**
+		 * Filter: Modify the address the receipt is sent to.
+		 *
+		 * @param string|false $receipt_email The email of the attendee the buyer picked, or false if none was picked.
+		 * @param array        $attendees     The attendees being checked out.
+		 */
+		$receipt_email = apply_filters( 'camptix_checkout_receipt_email', $receipt_email, $attendees );
+
 		if ( ! is_email( $receipt_email ) )
 			$this->error_flags['no_receipt_email'] = true;
 
@@ -6529,7 +6537,9 @@ class CampTix_Plugin {
 	 * Attendee ids of the buyer's own abandoned draft orders: drafts on the payment token of a
 	 * buyer row, whose release time has passed. The buyer row is the one require-login stamps
 	 * with the buyer's tix_username: the first attendee of the order, the rest carrying its
-	 * unconfirmed placeholder until each confirms. Without require-login nothing is stamped
+	 * unconfirmed placeholder until each confirms. When the buyer doesn't know who will use
+	 * the first ticket either, it carries the placeholder too, and the buyer's username is in
+	 * tix_buyer_username instead. Without require-login nothing is stamped
 	 * and this is always empty, as it is when logged out. Their sessions are dead, so they can
 	 * be left out of the buyer's own counts without any risk of two seats; the sweep times
 	 * them out.
@@ -6559,8 +6569,13 @@ class CampTix_Plugin {
 			'posts_per_page' => -1,
 			'cache_results'  => ! $this->checkout_lock_open,
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'   => 'tix_username',
+					'value' => $login,
+				),
+				array(
+					'key'   => 'tix_buyer_username',
 					'value' => $login,
 				),
 			),
@@ -7411,6 +7426,16 @@ class CampTix_Plugin {
 				$this->wp_mail( $receipt_email, $subject, $content );
 
 				do_action( 'camptix_ticket_emailed', $receipt_attendee->ID );
+
+				/**
+				 * Filter: Also send the attendee their own ticket e-mail, as multiple purchases do.
+				 *
+				 * @param bool    $send     Whether to send it. Default false.
+				 * @param WP_Post $attendee The only attendee in the order.
+				 */
+				if ( apply_filters( 'camptix_email_single_purchase_attendee_ticket', false, $attendees[0] ) ) {
+					$this->email_attendee_ticket_multiple_template( $attendees[0] );
+				}
 
 			} elseif ( count( $attendees ) > 1 ) {
 

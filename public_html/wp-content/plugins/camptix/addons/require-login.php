@@ -1649,9 +1649,11 @@ class CampTix_Require_Login extends CampTix_Addon {
 	/**
 	 * Retrieve the orders the given user bought that still have unconfirmed tickets.
 	 *
-	 * The buyer is the first attendee of an order. Checkout gives that row the buyer's username, or keeps
-	 * it in tix_buyer_username when the buyer didn't know who would use the ticket. The attendee's email
-	 * isn't used, because whoever holds a ticket can change it.
+	 * The buyer is recorded on the first attendee of an order. When the buyer didn't know who would use that
+	 * ticket, tix_buyer_username names them, whoever claims the ticket later. Otherwise checkout gives the
+	 * ticket the buyer's username, but the buyer can pass the ticket on, and claiming it changes the username.
+	 * So the receipt has to have gone to this account's email too. The attendee's own email isn't used,
+	 * because whoever holds a ticket can change it.
 	 *
 	 * @param WP_User $user The user object for whom to retrieve the orders.
 	 * @return WP_Post[] The buyer row of each order, keyed by payment token.
@@ -1698,20 +1700,36 @@ class CampTix_Require_Login extends CampTix_Addon {
 				),
 			) );
 
-			// Someone who was bought a ticket isn't the buyer of the order.
-			if ( ! $order_attendees || $order_attendees[0]->ID !== $candidate->ID ) {
+			if ( ! $order_attendees || ! $this->user_bought_order( $user, $order_attendees[0] ) ) {
 				continue;
 			}
 
 			foreach ( $order_attendees as $attendee ) {
 				if ( self::UNCONFIRMED_USERNAME === $attendee->tix_username ) {
-					$orders[ $candidate->tix_payment_token ] = $candidate;
+					$orders[ $candidate->tix_payment_token ] = $order_attendees[0];
 					break;
 				}
 			}
 		}
 
 		return $orders;
+	}
+
+	/**
+	 * Whether the given user bought the order whose first attendee is given.
+	 *
+	 * @param WP_User $user
+	 * @param WP_Post $buyer_row The first attendee of the order.
+	 * @return bool
+	 */
+	protected function user_bought_order( WP_User $user, WP_Post $buyer_row ) {
+		if ( $buyer_row->tix_buyer_username ) {
+			return $buyer_row->tix_buyer_username === $user->user_login;
+		}
+
+		return $buyer_row->tix_username === $user->user_login
+			&& $user->user_email
+			&& 0 === strcasecmp( (string) $buyer_row->tix_receipt_email, $user->user_email );
 	}
 
 	/**

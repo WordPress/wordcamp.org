@@ -611,6 +611,47 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Claiming the buyer's unknown ticket doesn't make you the buyer. The buyer keeps the order link.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_has_no_order_link_for_whoever_claims_unknown_buyer_row() {
+		$buyer  = $this->create_user( 'uma@example.org' );
+		$friend = $this->create_user( 'carol@example.org' );
+		$order  = $this->create_order( $buyer, array( array( 'Unknown', 'Attendee', CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, true ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		// The buyer forwards the first ticket's claim link, and Carol claims it.
+		update_post_meta( $order[0], 'tix_username', $friend->user_login );
+		update_post_meta( $order[0], 'tix_email', $friend->user_email );
+
+		$message = $this->get_your_tickets_message( $friend );
+
+		$this->assertStringContainsString( $this->edit_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( $this->access_query( $order[0] ), $message );
+		$this->assertStringContainsString( $this->access_query( $order[0] ), $this->get_your_tickets_message( $buyer ) );
+	}
+
+	/**
+	 * Being given the buyer's own ticket doesn't make you the buyer.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_has_no_order_link_for_whoever_is_given_buyers_ticket() {
+		$buyer  = $this->create_user( 'alice@example.org' );
+		$friend = $this->create_user( 'carol@example.org' );
+		$order  = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		// The buyer can't attend and passes their ticket on, and the friend saves it as theirs.
+		update_post_meta( $order[0], 'tix_username', $friend->user_login );
+		update_post_meta( $order[0], 'tix_email', $friend->user_email );
+
+		$message = $this->get_your_tickets_message( $friend );
+
+		$this->assertStringContainsString( $this->edit_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( $this->access_query( $order[0] ), $message );
+	}
+
+	/**
 	 * A ticket someone else has claimed isn't listed for the user whose email it has.
 	 *
 	 * @covers CampTix_Require_Login::ticket_form_message

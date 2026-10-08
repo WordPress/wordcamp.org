@@ -23,6 +23,7 @@ add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 add_action( 'parse_request', __NAMESPACE__ . '\set_query_vars_from_pretty_url' );
 add_action( 'wp', __NAMESPACE__ . '\redirect_to_pretty_query_vars' );
 add_action( 'parse_query', __NAMESPACE__ . '\feed_parse_query' );
+add_action( 'wp_head', __NAMESPACE__ . '\print_feed_link' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 add_filter( 'document_title_parts', __NAMESPACE__ . '\add_filters_to_page_title' );
 add_filter( 'wporg_query_total_label', __NAMESPACE__ . '\update_query_total_label', 10, 3 );
@@ -235,7 +236,7 @@ function add_query_vars( array $query_vars ): array {
  * @see add_rewrite_rules()
  * @see add_query_vars()
  */
-function set_query_vars_from_pretty_url( WP|WP_Query $wp ): void {
+function set_query_vars_from_pretty_url( WP $wp ): void {
 	$facets = get_query_var_facets();
 
 	foreach ( $facets as $key => $value ) {
@@ -314,64 +315,144 @@ function sort_facets( array $facets ): array {
  * @param WP_Query $wp_query The WP_Query instance.
  */
 function feed_parse_query( $wp_query ) {
-	global $wp;
-
-	if (
-		'upcoming-events' !== $wp_query->get( 'pagename' ) ||
-		! $wp_query->is_feed()
-	) {
+	if ( ! is_upcoming_events_request( $wp_query ) || ! $wp_query->is_feed() ) {
 		return;
 	}
 
-	// Fix the feed link to use the correct URL.
-	$pagelink = home_url( preg_replace( '#/feed/?$#i', '/', $wp->request ) );
-	add_filter( 'bloginfo_rss', function( $value, $show ) use ( $pagelink ) {
-		if ( 'url' === $show ) {
-			return $pagelink;
-		}
-
-		return $value;
-	}, 10, 2 );
-
-	// The feed is built now.
-	add_filter( 'get_feed_build_date', function() {
-		return gmdate( 'r' );
-	} );
-
-	// Query for events.
-	$wp_query->parse_query( [
-		'post_type'      => 'wporg_events',
-		'feed'           => $wp_query->get( 'feed' ),
-		'posts_per_page' => 50,
-		'posts_per_rss'  => 50,
-	] );
-
-	// Permalinks should use the Guid.
-	add_filter( 'the_permalink_rss', function () {
-		return get_post()->guid;
-	} );
-
-	// Set the author to the meetup group.
-	add_filter( 'the_author', function () {
-		return get_post()->meetup;
-	} );
-
-	// Body should be prefixed with Location & Time. RSS Dates can't be in the future.
-	add_filter( 'the_content_feed', function ( $content ) {
-		$event = get_post();
-		$time  = gmdate( 'F j, Y g:ia', strtotime( $event->post_date ) ); // This is not in UTC, but the timestamps is.
-
-		$prefix = sprintf(
-			'<p><strong>Location:</strong> %s<br/><strong>Time:</strong> %s</p>',
-			$event->location,
-			$time
-		);
-
-		return $prefix . $content;
-	} );
+	add_filter( 'bloginfo_rss', __NAMESPACE__ . '\feed_link_to_page', 10, 2 );
+	add_filter( 'get_feed_build_date', __NAMESPACE__ . '\feed_build_date' );
+	add_filter( 'document_title_parts', __NAMESPACE__ . '\feed_title', 5 );
+	add_filter( 'the_permalink_rss', __NAMESPACE__ . '\feed_item_permalink' );
+	add_filter( 'the_author', __NAMESPACE__ . '\feed_item_author' );
+	add_filter( 'the_content_feed', __NAMESPACE__ . '\feed_item_content' );
 
 	// Body doesn't need to staticize the emojis.
 	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
+
+	// Query for events.
+	$wp_query->parse_query(
+		array(
+			'post_type'      => 'wporg_events',
+			'feed'           => $wp_query->get( 'feed' ),
+			'posts_per_page' => 50,
+			'posts_per_rss'  => 50,
+		)
+	);
+}
+
+/**
+ * Check if a query is for the upcoming-events page, or one of its filtered views.
+ *
+ * @param WP_Query $wp_query The WP_Query instance.
+ */
+function is_upcoming_events_request( WP_Query $wp_query ): bool {
+	return 'upcoming-events' === $wp_query->get( 'pagename' );
+}
+
+/**
+ * Get the URL of the current upcoming-events page, without the feed suffix.
+ */
+function get_upcoming_events_page_url(): string {
+	global $wp;
+
+	return trailingslashit( home_url( preg_replace( '#/feed/?$#i', '', $wp->request ) ) );
+}
+
+/**
+ * Point the feed's channel link at the page it was built from, rather than the home page.
+ *
+ * @param string $value The requested bloginfo value.
+ * @param string $show  The bloginfo key.
+ */
+function feed_link_to_page( $value, $show ) {
+	if ( 'url' === $show ) {
+		return get_upcoming_events_page_url();
+	}
+
+	return $value;
+}
+
+/**
+ * The feed is generated on every request, so it was built now.
+ */
+function feed_build_date(): string {
+	return gmdate( 'r' );
+}
+
+/**
+ * Name the feed after the page, rather than the post type.
+ *
+ * This runs before `add_filters_to_page_title()`, so the filters are still appended.
+ *
+ * @param array $parts The document title parts.
+ */
+function feed_title( array $parts ): array {
+	$parts['title'] = __( 'Upcoming Events', 'wordcamporg' );
+
+	return $parts;
+}
+
+/**
+ * Link items to the event itself.
+ */
+function feed_item_permalink(): string {
+	return get_post()->guid;
+}
+
+/**
+ * Credit items to the meetup group.
+ */
+function feed_item_author(): string {
+	return (string) get_post()->meetup;
+}
+
+/**
+ * Prefix the item body with the event's location and time.
+ *
+ * RSS dates can't be in the future, so the item date alone doesn't tell readers when the event is.
+ *
+ * @param string $content The item content.
+ */
+function feed_item_content( $content ): string {
+	return get_feed_item_details( get_post() ) . $content;
+}
+
+/**
+ * Get the location and local time of an event, for the top of its feed item.
+ *
+ * @param WP_Post $event The event.
+ */
+function get_feed_item_details( WP_Post $event ): string {
+	$offset = (int) $event->tz_offset;
+	$time   = sprintf(
+		'%s (UTC%s%s)',
+		gmdate( 'F j, Y g:ia', (int) $event->timestamp + $offset ),
+		$offset < 0 ? '-' : '+',
+		gmdate( 'G:i', abs( $offset ) )
+	);
+
+	return sprintf(
+		'<p><strong>%s</strong> %s<br/><strong>%s</strong> %s</p>',
+		esc_html__( 'Location:', 'wordcamporg' ),
+		esc_html( $event->location ),
+		esc_html__( 'Time:', 'wordcamporg' ),
+		esc_html( $time )
+	);
+}
+
+/**
+ * Let browsers and feed readers find the feed for the page being viewed.
+ */
+function print_feed_link(): void {
+	if ( ! is_upcoming_events_request( $GLOBALS['wp_query'] ) || is_feed() ) {
+		return;
+	}
+
+	printf(
+		'<link rel="alternate" type="application/rss+xml" title="%s" href="%s" />' . "\n",
+		esc_attr( wp_get_document_title() ),
+		esc_url( get_upcoming_events_page_url() . 'feed/' )
+	);
 }
 
 /**

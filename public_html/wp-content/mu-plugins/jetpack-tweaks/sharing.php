@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 
 add_filter( 'jetpack_open_graph_image_default', __NAMESPACE__ . '\default_og_image'               );
 add_filter( 'jetpack_images_get_images',        __NAMESPACE__ . '\default_single_og_image', 10, 3 );
-add_filter( 'jetpack_open_graph_tags',          __NAMESPACE__ . '\add_og_twitter_summary'         );
+add_filter( 'jetpack_open_graph_tags',          __NAMESPACE__ . '\add_og_twitter_summary', 12     );
 add_filter( 'jetpack_twitter_cards_site_tag',   __NAMESPACE__ . '\twitter_sitetag'                );
 
 /**
@@ -58,9 +58,12 @@ function default_single_og_image( $media, $post_id, $args ) {
  * Add Twitter Card type.
  *
  * Added the twitter:card = summary OG tag for the home page and other ! is_singular() pages, which is not added by default by Jetpack.
+ *
+ * This runs after Jetpack's own Twitter Card tags, and only adds a card when Jetpack didn't. Setting one earlier would
+ * stop Jetpack from picking its own, like summary_large_image on a static front page with a big enough image.
  */
 function add_og_twitter_summary( $og_tags ) {
-	if ( is_home() || is_front_page() ) {
+	if ( empty( $og_tags['twitter:card'] ) && ( is_home() || is_front_page() ) ) {
 		$og_tags['twitter:card'] = 'summary';
 	}
 

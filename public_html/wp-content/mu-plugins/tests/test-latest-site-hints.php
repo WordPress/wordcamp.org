@@ -5,6 +5,7 @@ use WP_UnitTest_Factory;
 use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Latest_Site_Hints\get_latest_home_url;
+use function WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints;
 
 defined( 'WPINC' ) || die();
 
@@ -38,6 +39,79 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$actual = get_latest_home_url( $current_domain, $current_path );
 
 		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
+	 *
+	 * Verify that the banner hooks are registered and comments/pings are closed on past WordCamp sites.
+	 */
+	public function test_comments_closed_on_past_site() {
+		global $current_blog;
+
+		// Save original state.
+		$original_blog = $current_blog;
+
+		// Set current blog to a past site (2018 seattle has a newer 2019 site).
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
+		$current_blog = get_site( self::$year_dot_2018_site_id );
+		switch_to_blog( self::$year_dot_2018_site_id );
+
+		// Remove any previously added filters to start clean.
+		remove_filter( 'comments_open', '__return_false' );
+		remove_filter( 'pings_open', '__return_false' );
+
+		maybe_add_latest_site_hints();
+
+		$this->assertNotFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should be registered on past sites.' );
+		$this->assertNotFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should be registered on past sites.' );
+
+		// The banner prints in the normal flow at `wp_body_open`, with a `wp_footer` fallback. Locking
+		// both hooks in guards against a future refactor silently dropping one of the two paths.
+		$this->assertNotFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should be hooked to wp_body_open on past sites.' );
+		$this->assertNotFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should be hooked to wp_footer on past sites.' );
+
+		// Clean up.
+		remove_filter( 'comments_open', '__return_false' );
+		remove_filter( 'pings_open', '__return_false' );
+		remove_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' );
+		remove_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' );
+		restore_current_blog();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
+		$current_blog = $original_blog;
+	}
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
+	 *
+	 * Verify that comments and pings remain open on the latest WordCamp site.
+	 */
+	public function test_comments_open_on_latest_site() {
+		global $current_blog;
+
+		// Save original state.
+		$original_blog = $current_blog;
+
+		// Set current blog to the latest site (2019 seattle is the newest).
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
+		$current_blog = get_site( self::$year_dot_2019_site_id );
+		switch_to_blog( self::$year_dot_2019_site_id );
+
+		// Remove any previously added filters to start clean.
+		remove_filter( 'comments_open', '__return_false' );
+		remove_filter( 'pings_open', '__return_false' );
+
+		maybe_add_latest_site_hints();
+
+		$this->assertFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should not be registered on the latest site.' );
+		$this->assertFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should not be registered on the latest site.' );
+		$this->assertFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should not be hooked to wp_body_open on the latest site.' );
+		$this->assertFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should not be hooked to wp_footer on the latest site.' );
+
+		// Clean up.
+		restore_current_blog();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
+		$current_blog = $original_blog;
 	}
 
 	/**

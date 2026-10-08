@@ -17,11 +17,18 @@
 					'meta_key'       => 'Start Date (YYYY-mm-dd)',
 					'orderby'        => 'meta_value',
 					'order'          => 'ASC',
-					'meta_query'     => array( array(
-						'key'        => 'Start Date (YYYY-mm-dd)',
-						'value'      => 1,
-						'compare'    => '>' // Only with dates
-					) )
+					'meta_query'     => array(
+						array(
+							'key'        => 'Start Date (YYYY-mm-dd)',
+							'value'      => 1,
+							'compare'    => '>', // Only with dates.
+						),
+						'relation' => 'AND',
+						array(
+							'key'     => 'Hide from Event Feeds',
+							'compare' => 'NOT EXISTS',
+						),
+					),
 				);
 			?>
 

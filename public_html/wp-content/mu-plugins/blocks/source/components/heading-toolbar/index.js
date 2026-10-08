@@ -1,4 +1,3 @@
-/* eslint-disable require-jsdoc */
 /**
  * External dependencies
  */
@@ -20,7 +19,7 @@ class HeadingToolbar extends Component {
 	createLevelControl( targetLevel, selectedLevel, onChange ) {
 		return {
 			icon: <HeadingLevelIcon level={ targetLevel } />,
-			// translators: %s: heading level e.g: "1", "2", "3"
+			// translators: %d: heading level e.g: "1", "2", "3"
 			title: sprintf( __( 'Heading %d', 'wordcamporg' ), targetLevel ),
 			isActive: targetLevel === selectedLevel,
 			onClick: () => onChange( targetLevel ),
@@ -28,15 +27,22 @@ class HeadingToolbar extends Component {
 	}
 
 	render() {
-		const { isCollapsed = true, minLevel, maxLevel, selectedLevel, onChange } = this.props;
+		const {
+			isCollapsed = true,
+			minLevel,
+			maxLevel,
+			selectedLevel,
+			onChange,
+		} = this.props;
 
 		return (
 			<Toolbar
 				isCollapsed={ isCollapsed }
 				icon={ <HeadingLevelIcon level={ selectedLevel } /> }
-				controls={ range( minLevel, maxLevel ).map(
-					( index ) => this.createLevelControl( index, selectedLevel, onChange )
-				) } />
+				controls={ range( minLevel, maxLevel ).map( ( index ) =>
+					this.createLevelControl( index, selectedLevel, onChange )
+				) }
+			/>
 		);
 	}
 }

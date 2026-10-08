@@ -9,12 +9,21 @@ import { Fragment } from '@wordpress/element';
  */
 import Session from './session';
 
-export default function( { attributes, isFetching, sessions } ) {
+export default function ( { attributes, isFetching, sessions } ) {
 	// A session track is "running" if there is a talk either now or next.
-	const runningSessions = sessions.filter( ( session ) => ( !! session.now || !! session.next ) );
+	const runningSessions = sessions.filter(
+		( session ) => !! session.now || !! session.next
+	);
 
 	if ( ! isFetching && ! runningSessions.length ) {
-		return <p>{ __( 'No WordCamp events are scheduled today :(', 'wordcamporg' ) }</p>;
+		return (
+			<p>
+				{ __(
+					'No WordCamp events are scheduled today :(',
+					'wordcamporg'
+				) }
+			</p>
+		);
 	}
 
 	if ( isFetching ) {
@@ -30,13 +39,17 @@ export default function( { attributes, isFetching, sessions } ) {
 	return (
 		<Fragment>
 			{ hasNow && (
-				<Heading className="wordcamp-live-schedule__title">{ attributes.now }</Heading>
+				<Heading className="wordcamp-live-schedule__title">
+					{ attributes.now }
+				</Heading>
 			) }
 
 			{ sessions.map( ( trackPair, index ) => {
 				const session = trackPair.now;
 				const track = trackPair.track;
-				const sessionKey = `${ session ? session.id : index }-${ track.id }`;
+				const sessionKey = `${ session ? session.id : index }-${
+					track.id
+				}`;
 
 				return (
 					<Session
@@ -49,13 +62,17 @@ export default function( { attributes, isFetching, sessions } ) {
 			} ) }
 
 			{ hasNext && (
-				<Heading className="wordcamp-live-schedule__title">{ attributes.next }</Heading>
+				<Heading className="wordcamp-live-schedule__title">
+					{ attributes.next }
+				</Heading>
 			) }
 
 			{ sessions.map( ( trackPair, index ) => {
 				const session = trackPair.next;
 				const track = trackPair.track;
-				const sessionKey = `${ session ? session.id : index }-${ track.id }`;
+				const sessionKey = `${ session ? session.id : index }-${
+					track.id
+				}`;
 
 				return (
 					<Session
@@ -66,7 +83,6 @@ export default function( { attributes, isFetching, sessions } ) {
 					/>
 				);
 			} ) }
-
 		</Fragment>
 	);
 }

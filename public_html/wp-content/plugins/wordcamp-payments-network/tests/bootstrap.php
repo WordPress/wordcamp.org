@@ -10,13 +10,27 @@ if ( 'cli' !== php_sapi_name() ) {
  * Load the plugins that we'll need to be active for the tests.
  */
 function manually_load_plugin() {
-	// @todo switch to `require_once` once it's accessible in all local environments.
-	// @link https://github.com/WordPress/wordcamp.org/issues/769
-	include_once SUT_WP_CONTENT_DIR . '/mu-plugins-private/wporg-mu-plugins/pub-sync/utilities/class-export-csv.php';
+	require_once SUT_WP_CONTENT_DIR . '/mu-plugins-private/wporg-mu-plugins/pub-sync/utilities/class-export-csv.php';
 
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/wordcamp-budgets.php';
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
+	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/reimbursement-request.php';
+	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/sponsor-invoice.php';
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/encryption.php';
+
+	// Registers the `wcp_payment_request` post type on `init`. Without this,
+	// the dashboard tests create posts of that type before it's registered,
+	// which trips a "map_meta_cap called incorrectly" notice. Store it in the
+	// same global the plugin uses at runtime so tests can invoke its methods.
+	//
+	// `reimbursement-request.php` and `sponsor-invoice.php` register their post
+	// types and status filters on `require`, so tests can exercise all three
+	// budget CPTs.
+	$GLOBALS['wcp_payment_request'] = new \WCP_Payment_Request();
+
+	// The shared `wcb-*` statuses are registered by `WordCamp_Budgets`' constructor, which the plugin only
+	// instantiates in the admin. Register them on their own so posts can be stored at those statuses.
+	add_action( 'init', array( '\WordCamp_Budgets', 'register_post_statuses' ) );
 
 	require_once dirname( __DIR__ )  . '/includes/payment-requests-dashboard.php';
 	require_once dirname( __DIR__ )  . '/includes/wordcamp-budgets-dashboard.php';

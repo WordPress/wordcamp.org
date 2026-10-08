@@ -11,9 +11,7 @@ jQuery(document).ready(function ($) {
 	var razorpay_handler = [],
 		$container       = $('#tix'),
 		$form            = $('form', $container),
-		ticket_quantity  = $('.tix_tickets_table td.tix-column-quantity', $container).text(),
-		order_id         = $('input[name="razorpay_order_id"]', $form).val(),
-		receipt_id       = $('input[name="razorpay_receipt_id"]', $form).val();
+		ticket_quantity  = $('.tix_tickets_table td.tix-column-quantity', $container).text();
 
 	/**
 	 * Validate extra attendee information fields.
@@ -160,7 +158,7 @@ jQuery(document).ready(function ($) {
 
 				razorpay_handler = new Razorpay({
 					'key'     : camptix_inr_vars.merchant_key_id,
-					'order_id': order_id,
+					'order_id': $response.data.razorpay_order_id,
 					'name'    : $response.data.popup_title,
 					'image'   : camptix_inr_vars.popup.image,
 					// 'description' : '',
@@ -170,9 +168,14 @@ jQuery(document).ready(function ($) {
 						// Disable form submit button.
 						$submit_button.prop('disabled', true);
 
-						// Submit form after charge token brought back from Razorpay.
-						// Redirect to success page.
-						window.location.assign($response.data.return_url + '&transaction_id=' + order_id + '&receipt_id=' + receipt_id);
+						// Hand the payment id and signature back to the server, which
+						// verifies them before the ticket order is completed.
+						window.location.assign(
+							$response.data.return_url
+							+ '&transaction_id=' + encodeURIComponent(response.razorpay_order_id)
+							+ '&razorpay_payment_id=' + encodeURIComponent(response.razorpay_payment_id)
+							+ '&razorpay_signature=' + encodeURIComponent(response.razorpay_signature)
+						);
 					},
 
 					// You can add custom data here and fields limited to 15.

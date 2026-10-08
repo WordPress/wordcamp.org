@@ -32,7 +32,7 @@ function GridInspectorPanel( { attributes, blockData, setAttributes } ) {
 
 	return (
 		<Fragment>
-			{ 'grid' === layout &&
+			{ 'grid' === layout && (
 				<PanelBody
 					title={ __( 'Grid Layout', 'wordcamporg' ) }
 					initialOpen={ true }
@@ -43,10 +43,12 @@ function GridInspectorPanel( { attributes, blockData, setAttributes } ) {
 						min={ minimum }
 						max={ maximum }
 						initialPosition={ defaultValue }
-						onChange={ ( value ) => setAttributes( { grid_columns: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { grid_columns: value } )
+						}
 					/>
 				</PanelBody>
-			}
+			) }
 		</Fragment>
 	);
 }

@@ -1,0 +1,110 @@
+name: E2E Docker Image
+
+# Builds and publishes prebuilt ghcr.io images for the containers the
+# Playwright E2E workflow (e2e-tests.yml) provisions. `docker compose up
+# --build` there used to rebuild both from scratch every run -- most
+# notably wordcamp.test, a dozen apt-get packages plus compiling PHP
+# extensions, ~1m45s with zero layer caching on ephemeral GitHub-hosted
+# runners. Publishing them here instead lets the E2E workflow just pull
+# pinned tags. Local dev is unaffected -- it still builds from the
+# Dockerfiles directly, via docker-compose.override.yml.
+on:
+  push:
+    branches: [production]
+    paths:
+    - .docker/Dockerfile.php-fpm
+    - .docker/Dockerfile.mariadb
+    # Only the config files actually COPY'd into an image belong here --
+    # nginx.conf, php-fpm.conf, and wp-cli.yml are bind-mounted at runtime
+    # (see docker-compose.yaml's volumes) and take effect without a rebuild.
+    - .docker/config/opcache-recommended.ini
+    - .docker/config/error-logging.ini
+    - .docker/config/uploads.ini
+    - .docker/config/msmtprc
+    - .docker/data/wordcamp_dev.sql
+    - .github/workflows/e2e-image.yml
+  schedule:
+    # Weekly, to pick up upstream base-image security patches even when
+    # nothing here has changed.
+    - cron: '17 4 * * 1'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build & publish (${{ matrix.name }})
+
+    # `schedule` and the `push` above always run against `production`, but
+    # `workflow_dispatch` doesn't have a built-in branch restriction -- it
+    # can be fired against any ref. Without this guard, a manual dispatch
+    # of unmerged code would still publish to (and overwrite) the shared
+    # `:latest` tag that every E2E run pulls. This keeps dispatch usable
+    # (e.g. forcing a rebuild without waiting for the weekly cron) while
+    # requiring it to target production.
+    if: github.ref == 'refs/heads/production'
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: e2e-php-fpm
+          dockerfile: Dockerfile.php-fpm
+          needs-cert: true
+        - name: e2e-mariadb
+          dockerfile: Dockerfile.mariadb
+          needs-cert: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate a self-signed TLS cert for local hostnames
+      # Only wordcamp.test's Dockerfile COPYs this in. Baked into the image
+      # (rather than generated per E2E run) since Playwright's
+      # `ignoreHTTPSErrors: true` (see playwright.config.js) means this
+      # only needs to satisfy nginx, not a trust store -- a long-lived cert
+      # is fine, and this way the image is fully self contained.
+      if: matrix.needs-cert
+      run: |
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+          -keyout .docker/wordcamp.test.key.pem \
+          -out .docker/wordcamp.test.pem \
+          -subj "/CN=wordcamp.test" \
+          -addext "subjectAltName=DNS:wordcamp.test,DNS:*.wordcamp.test,DNS:events.wordpress.test,DNS:*.wordpress.test"
+
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      id: image
+      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Docker Buildx
+      # The default `docker` driver can't export a cache (needed for
+      # cache-to below) -- this switches to the `docker-container` driver.
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .docker
+        file: .docker/${{ matrix.dockerfile }}
+        push: true
+        tags: |
+          ghcr.io/${{ steps.image.outputs.repo }}/${{ matrix.name }}:latest
+          ghcr.io/${{ steps.image.outputs.repo }}/${{ matrix.name }}:${{ github.sha }}
+        cache-from: type=gha,scope=${{ matrix.name }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.name }}

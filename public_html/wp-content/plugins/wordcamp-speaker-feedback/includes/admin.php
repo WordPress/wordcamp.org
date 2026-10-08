@@ -385,17 +385,17 @@ function render_subpage() {
 	}
 
 	$post_id        = filter_input( INPUT_GET, 'p', FILTER_VALIDATE_INT );
-	$search         = wp_unslash( filter_input( INPUT_GET, 's' ) );
+	$search         = wp_unslash( $_GET['s'] ?? '' );
 	$paged          = filter_input( INPUT_GET, 'paged', FILTER_VALIDATE_INT );
-	$comment_status = wp_unslash( filter_input( INPUT_GET, 'comment_status' ) );
+	$comment_status = wp_unslash( $_GET['comment_status'] ?? '' );
 	$list_table     = get_feedback_list_table();
 	$messages       = array();
 
-	$action = wp_unslash( filter_input( INPUT_GET, 'action' ) );
-	$nonce  = wp_unslash( filter_input( INPUT_GET, 'bulk_edit_nonce' ) );
+	$action = wp_unslash( $_GET['action'] ?? '' );
+	$nonce  = wp_unslash( $_GET['bulk_edit_nonce'] ?? '' );
 
 	if ( ! $action || '-1' === $action ) {
-		$action = wp_unslash( filter_input( INPUT_GET, 'action2' ) );
+		$action = wp_unslash( $_GET['action2'] ?? '' );
 	}
 
 	if ( $action && '-1' !== $action ) {
@@ -681,7 +681,7 @@ function toggle_list_table_filters() {
 function filter_list_table_query_args( $args ) {
 	global $comment_status;
 
-	$requested_status = filter_input( INPUT_GET, 'comment_status' );
+	$requested_status = wp_unslash( $_GET['comment_status'] ?? '' );
 	if ( 'inappropriate' === $requested_status ) {
 		$comment_status = 'inappropriate'; // phpcs:ignore -- The parent class overrides statuses it doesn't recognize.
 		$args['status'] = 'inappropriate';
@@ -689,7 +689,7 @@ function filter_list_table_query_args( $args ) {
 
 	$args['type'] = COMMENT_TYPE;
 
-	$helpful = filter_input( INPUT_GET, 'helpful' );
+	$helpful = wp_unslash( $_GET['helpful'] ?? '' );
 	if ( $helpful ) {
 		$meta_query = array(
 			'key'   => 'helpful',
@@ -755,29 +755,29 @@ function filter_list_table_views( $views ) {
 	// Feedback from an admin of the event site would probably be rare, so this one is unnecessary.
 	unset( $views['mine'] );
 
-	foreach ( $views as $status => $view ) {
-		// Note that the HTML here is wrapping href attributes with single quotes.
-		preg_match( '#href=[\'"]+([^\'"]+)[\'"]+#', $view, $orig_url );
-		$parsed_url = wp_parse_url( $orig_url[1] );
-		wp_parse_str( $parsed_url['query'], $query_args );
-
-		$new_url = add_query_arg( $query_args, get_subpage_url( $typenow ) );
-
-		$views[ $status ] = str_replace(
-			$orig_url[1],
-			$new_url,
-			$view
-		);
-	}
-
 	$link_base = get_subpage_url( $typenow );
 	if ( $post_id ) {
 		$link_base = add_query_arg( 'p', $post_id, $link_base );
 	}
 
+	// Core renders these status views pointing at the default comments screen; repoint each one
+	// at our subpage. A view's array key is its comment_status, so rebuild the href from that
+	// known-safe value rather than reflecting the request's query string: the previous code
+	// carried the unvalidated comment_type parameter through unescaped, which was reflected XSS.
+	// esc_url() re-escapes the result before it is spliced back into core's markup.
+	foreach ( $views as $status => $view ) {
+		if ( ! preg_match( '#href=[\'"]+([^\'"]+)[\'"]+#', $view, $orig_url ) ) {
+			continue;
+		}
+
+		$new_url = esc_url( add_query_arg( 'comment_status', $status, $link_base ) );
+
+		$views[ $status ] = str_replace( $orig_url[1], $new_url, $view );
+	}
+
 	$current_link_attributes = ' class="current" aria-current="page"';
 
-	$helpful       = filter_input( INPUT_GET, 'helpful' );
+	$helpful       = wp_unslash( $_GET['helpful'] ?? '' );
 	$helpful_count = ( $post_id ) ? count_helpful_feedback( $post_id ) : count_helpful_feedback();
 
 	$views['helpful'] = sprintf(
@@ -794,7 +794,7 @@ function filter_list_table_views( $views ) {
 		)
 	);
 
-	$status          = filter_input( INPUT_GET, 'comment_status' );
+	$status          = wp_unslash( $_GET['comment_status'] ?? '' );
 	$feedback_counts = ( $post_id ) ? maybe_get_cached_feedback_count( $post_id ) : maybe_get_cached_feedback_count();
 
 	$view_inappropriate = array(

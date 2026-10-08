@@ -13,7 +13,7 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\CampTix_Tweaks
  */
 class Privacy_Field extends Extra_Fields {
-	const SLUG = 'privacy';
+	public const SLUG = 'privacy';
 
 	public $question_order = 11;
 	public $enable_summary = false;

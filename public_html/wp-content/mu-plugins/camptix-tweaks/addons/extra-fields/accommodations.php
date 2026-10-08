@@ -16,20 +16,17 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\CampTix_Tweaks
  */
 class Accommodations_Field extends Extra_Fields {
-	const SLUG = 'accommodations';
+	public const SLUG = 'accommodations';
 
-	public $label          = '';
-	public $question       = '';
-	public $options        = array();
 	public $question_order = 30;
 
 	/**
 	 * Setup the question & options.
 	 */
 	public function init() {
-		$this->label    = __( 'Accessibility needs', 'wordcamporg' );
-		$this->question = __( 'Do you have any accessibility needs, such as a sign language interpreter or wheelchair access, to participate in WordCamp?', 'wordcamporg' );
-		$this->options  = array(
+		$this->column_label = __( 'Accessibility needs', 'wordcamporg' );
+		$this->question     = __( 'Do you have any accessibility needs, such as a sign language interpreter or wheelchair access, to participate in WordCamp?', 'wordcamporg' );
+		$this->options      = array(
 			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);

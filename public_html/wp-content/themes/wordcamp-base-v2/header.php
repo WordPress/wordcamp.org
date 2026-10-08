@@ -52,6 +52,7 @@ if ( $paged >= 2 || $page >= 2 ) {
 </head>
 
 <body <?php body_class(); ?>>
+<?php wp_body_open(); ?>
 
 <div id="page" class="hfeed site">
 	<?php do_action( 'before' ); ?>
@@ -71,8 +72,8 @@ if ( $paged >= 2 || $page >= 2 ) {
 		</hgroup>
 
 		<nav role="navigation" class="site-navigation main-navigation">
-			<h1 class="assistive-text"><?php _e( 'Menu', 'wordcamporg' ); ?></h1>
-			<div class="assistive-text skip-link"><a href="#content" title="<?php esc_attr_e( 'Skip to content', 'wordcamporg' ); ?>"><?php _e( 'Skip to content', 'wordcamporg' ); ?></a></div>
+			<h1 class="assistive-text"><?php esc_html_e( 'Menu', 'wordcamporg' ); ?></h1>
+			<div class="assistive-text skip-link"><a href="#content" title="<?php esc_attr_e( 'Skip to content', 'wordcamporg' ); ?>"><?php esc_html_e( 'Skip to content', 'wordcamporg' ); ?></a></div>
 
 			<?php wp_nav_menu( array( 'theme_location' => 'primary' ) ); ?>
 		</nav>

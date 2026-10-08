@@ -9,7 +9,7 @@ use WordCamp\Quickbooks;
 use WordCamp\Logger;
 
 class WordCamp_QBO {
-	const REMOTE_REQUEST_TIMEOUT = 45; // seconds
+	public const REMOTE_REQUEST_TIMEOUT = 45; // Seconds.
 
 	private static $hmac_key;
 	private static $sandbox_mode;
@@ -72,6 +72,18 @@ class WordCamp_QBO {
 	 * Runs during rest_api_init.
 	 */
 	public static function rest_api_init() {
+		/*
+		 * The routes below are authenticated solely by an HMAC signature. Every input to that signature comes
+		 * from the request itself, so without a secret `is_valid_request()` would be comparing digests that any
+		 * caller can compute for themselves. Withhold the routes entirely until the secret is provisioned, so
+		 * that an unconfigured host serves a 404 rather than an endpoint whose authentication is a no-op.
+		 */
+		if ( empty( self::$hmac_key ) ) {
+			Logger\log( 'qbo_hmac_key_missing' );
+
+			return;
+		}
+
 		register_rest_route(
 			'wordcamp-qbo/v1',
 			'/expense',
@@ -247,8 +259,7 @@ class WordCamp_QBO {
 		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$args = array(
-			'query'        => 'SELECT * FROM Class MAXRESULTS 1000',
-			'minorversion' => 4,
+			'query' => 'SELECT * FROM Class MAXRESULTS 1000',
 		);
 
 		$request_url = esc_url_raw( sprintf(
@@ -389,16 +400,35 @@ class WordCamp_QBO {
 		$oauth_header = self::qbo_client()->get_oauth_header();
 		$realm_id     = self::qbo_client()->get_realm_id();
 
-		// Note: This has a character limit when combined with $description; see $customer_memo
-		$payment_instructions = trim( str_replace( "\t", '', '
-			Please indicate the invoice number in the memo field when making your payment.
-
-			To pay via credit card, please fill out the payment form at https://central.wordcamp.org/sponsorship-payment/
-			An additional 2.9% to cover processing fees on credit card payments is highly appreciated but not required.
+		// Note: This has a character limit when combined with $description; see $customer_memo below.
+		if ( 'EUR' === $currency_code ) {
+			$payment_instructions = '
+			Please include the invoice number in the memo field when making your payment.
 
 			For International Wire Transfers:
 			Beneficiary Name: WordPress Community Support, PBC
-			Banking Address: 132 Hawthorne St, San Francisco, CA 94107-1308, USA
+			Mailing Address: 660 4th St #119, San Francisco, CA 94107, USA
+
+			If paying in EUR:
+			Bank Name: J.P. Morgan Chase Bank N.A., London
+			Bank Address: 25 Bank Street, Canary Wharf, London, E14 5JP, U.K.
+			Account Number: 0076907354
+			IBAN: GB12CHAS60924276907354
+			SWIFT BIC: CHASGB2L
+
+			For other payment options, including Credit Card, please see:
+			https://central.wordcamp.org/sponsorship-payment-options/
+			';
+		} else {
+			// Non-EUR payments.
+			$payment_instructions = '
+			Please include the invoice number in the memo field when making your payment.
+
+			For International Wire Transfers:
+			Beneficiary Name: WordPress Community Support, PBC
+			Mailing Address: 660 4th St #119, San Francisco, CA 94107, USA
+
+			If paying in any currency other than EUR:
 			Bank Name: JPMorgan Chase Bank, N.A.
 			Bank Address: 270 Park Ave, New York, NY 10017, USA
 			Bank Routing and Transit Number: 021000021
@@ -409,8 +439,13 @@ class WordCamp_QBO {
 			Bank Routing & Transit Number: 322271627
 			Account Number: 157120285
 
-			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768'
-		) );
+			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768
+
+			For other payment options, including Credit Card and EUR-specific instructions, please see:
+			https://central.wordcamp.org/sponsorship-payment-options/
+			';
+		}
+		$payment_instructions = trim( str_replace( "\t", '', $payment_instructions ) );
 
 		/*
 		 * The API limits CustomerMemo to 1,000 characters. We use 995 to allow for newlines between the two
@@ -1240,6 +1275,11 @@ class WordCamp_QBO {
 	 * @return bool True if valid, false if invalid.
 	 */
 	public static function is_valid_request( $request ) {
+		// Fail closed rather than validating against a key that every caller knows. See `rest_api_init()`.
+		if ( empty( self::$hmac_key ) ) {
+			return false;
+		}
+
 		if ( ! $request->get_header( 'authorization' ) ) {
 			return false;
 		}

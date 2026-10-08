@@ -1,0 +1,18 @@
+/**
+ * Shared "Heading 3" treatment for a main-column section heading.
+ *
+ * Used by `my-events`, `group-members`, `group-news`, and `sponsors` — each
+ * imports this file into its own block style.css and adds the class
+ * alongside its own `__heading` class, so the four never have to be kept in
+ * step by hand.
+ */
+
+.wporg-section-heading {
+	margin: 0 0 var(--wp--preset--spacing--30) !important;
+	padding: 0 !important;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-3);
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--wp--preset--color--charcoal-0);
+}

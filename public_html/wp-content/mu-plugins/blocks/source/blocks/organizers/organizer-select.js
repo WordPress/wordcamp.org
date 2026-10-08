@@ -75,7 +75,9 @@ class OrganizerSelect extends Component {
 
 		if ( mode && item_ids.length ) {
 			value = options.filter( ( option ) => {
-				return mode === option.type && includes( item_ids, option.value );
+				return (
+					mode === option.type && includes( item_ids, option.value )
+				);
 			} );
 		}
 

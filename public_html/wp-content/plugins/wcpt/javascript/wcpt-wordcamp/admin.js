@@ -9,15 +9,17 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	 * Initialize
 	 */
 	self.initialize = function() {
-		var createSiteCheckbox = $( '#wcpt_create-site-in-network' ),
+		var createSiteCheckboxes = $( '.create-site-checkbox' ),
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
 			hasContributor = $( '#wcpt_contributor_day' ),
 			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' ),
-			$streamingSelection = $( '.field__type-select-streaming' );
+			$streamingSelection = $( '.field__type-select-streaming' ),
+			$wcUrlFields = $('input.field-wc-url-input'),
+			$secondarySiteWrap = $( 'input[name*="wcpt_secondary_site"]' ).parent();
 
 		// Sponsor region
-		createSiteCheckbox.change( self.toggleSponsorRegionRequired );
-		createSiteCheckbox.trigger( 'change' );
+		createSiteCheckboxes.change( self.toggleSponsorRegionRequired );
+		createSiteCheckboxes.trigger( 'change' );
 
 		// Contributor day info
 		hasContributor.change( self.toggleContributorInfo );
@@ -46,6 +48,26 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			}
 		} );
 		$streamingSelection.find( 'select' ).trigger( 'change' );
+
+		// If the value has changed, mark it as dirty and disable the checkbox.
+		$wcUrlFields.on( 'change', function() {
+			var $this = $(this),
+			    origValue = $this.data( 'orig-value' ),
+			    newValue = $this.val();
+
+			$this.toggleClass( 'has-changed', origValue !== newValue );
+			$this.parent().find( 'input.has-changed + label input[type=checkbox]:checked' ).prop('checked', false );
+		} );
+
+		// Allow adding additional secondary sites fields.
+		$secondarySiteWrap.find( 'a.add' ).on( 'click', function( event ) {
+			event.preventDefault();
+			var inputNumber = $secondarySiteWrap.find( 'input[type=text]' ).length;
+			var $newField = $secondarySiteWrap.find( 'input[type=text]' ).first().clone();
+			$newField.val( '' );
+			$newField.attr( 'name', $newField.attr( 'name' ).replace( /\[.+\]/g, '[]' ) );
+			$newField.insertBefore( $( this ) ).focus();
+		} );
 	};
 
 	/**
@@ -72,14 +94,14 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.
 	 *
-	 * \WordCamp_New_Site::maybe_create_new_site() requires it to be set to create a new site.
+	 * \WordCamp_New_Site::maybe_create_new_sites() requires it to be set to create a new site.
 	 *
 	 * @param {object} event
 	 */
 	self.toggleSponsorRegionRequired = function( event ) {
 		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' );
 
-		if ( $( this ).is( ':checked' ) ) {
+		if ( $( '.create-site-checkbox:checked' ) ) {
 			sponsorRegion.prop( 'required', true );
 		} else {
 			sponsorRegion.prop( 'required', false );

@@ -99,7 +99,7 @@ if ( have_posts() )
 								}
 							?>
 							<p class="attachment">
-								<a href="<?php echo esc_url( $next_attachment_url ); ?>" title="<?php esc_attr( the_title_attribute( array( 'echo' => false ) ) ); ?>" rel="attachment">
+								<a href="<?php echo esc_url( $next_attachment_url ); ?>" title="<?php the_title_attribute(); ?>" rel="attachment">
 									<?php
 									$attachment_width  = apply_filters( 'twentyten_attachment_size', 900 );
 									$attachment_height = apply_filters( 'twentyten_attachment_height', 900 );
@@ -113,7 +113,7 @@ if ( have_posts() )
 								<div class="nav-next"><?php next_image_link( false ); ?></div>
 							</div><!-- #nav-below -->
 	<?php else : ?>
-							<a href="<?php echo esc_url( wp_get_attachment_url() ); ?>" title="<?php esc_attr( the_title_attribute( array( 'echo' => false ) ) ); ?>" rel="attachment">
+							<a href="<?php echo esc_url( wp_get_attachment_url() ); ?>" title="<?php the_title_attribute(); ?>" rel="attachment">
 								<?php echo esc_html( basename( get_permalink() ) ); ?>
 							</a>
 <?php endif; ?>

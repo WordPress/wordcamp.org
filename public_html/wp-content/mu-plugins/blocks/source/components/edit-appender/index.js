@@ -23,15 +23,17 @@ import './edit.scss';
  * @return {Element}
  */
 function EditAppender( { className, content, appender } ) {
-	const classes = [ 'wordcamp-edit-appender', 'has-specific-mode', className ];
+	const classes = [
+		'wordcamp-edit-appender',
+		'has-specific-mode',
+		className,
+	];
 
 	return (
 		<Fragment>
 			{ content }
 			{ appender && (
-				<div className={ classnames( classes ) }>
-					{ appender }
-				</div>
+				<div className={ classnames( classes ) }>{ appender }</div>
 			) }
 		</Fragment>
 	);

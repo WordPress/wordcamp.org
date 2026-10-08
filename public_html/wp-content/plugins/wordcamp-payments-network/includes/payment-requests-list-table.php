@@ -225,7 +225,7 @@ class Payment_Requests_List_Table extends WP_List_Table {
 	public function column_method( $request ) {
 		$method = get_post_meta( $request->ID, '_camppayments_payment_method', true );
 
-		return esc_html( $method );
+		return esc_html( \WordCamp_Budgets::get_payment_method_label( $method ) );
 	}
 
 	/**

@@ -149,10 +149,11 @@ class Camptix_Indian_Payments {
 				'class'     => 'CampTix_Payment_Method_Instamojo',
 				'file_path' => plugin_dir_path( __FILE__ ) . 'inc/instamojo/class-camptix-payment-method-instamojo.php',
 			),
+			/* // Razorpay is disabled here as it's known to be broken. Enabling it on a WordCamp site causes broken payments.
 			array(
 				'class'     => 'CampTix_Payment_Method_RazorPay',
 				'file_path' => plugin_dir_path( __FILE__ ) . 'inc/razorpay/class-camptix-payment-method-razorpay.php',
-			),
+			), */
 		);
 
 

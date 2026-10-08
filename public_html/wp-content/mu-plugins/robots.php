@@ -62,7 +62,9 @@ function template_redirect() {
 		$sitemaps .= 'Sitemap: ' . esc_url( site_url( $using_jetpack_sitemaps ? 'sitemap.xml' : 'wp-sitemap.xml' ) ) . "\n";
 	}
 
-	header( 'Content-Type: text/plain; charset=utf-8' );
+	header( 'Content-Type: text/plain; charset=utf-8', true, 200 );
+	header( 'Expires: ' . gmdate( 'D, d M Y H:i:s', time() + DAY_IN_SECONDS ) . ' GMT' );
+	header( 'Cache-Control: public, max-age=' . DAY_IN_SECONDS );
 
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	echo "{$sitemaps}\nUser-agent: *\n{$path_allow_disallow}";

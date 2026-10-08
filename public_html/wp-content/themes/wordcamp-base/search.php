@@ -24,9 +24,9 @@ get_header(); ?>
 				?>
 <?php else : ?>
 				<div id="post-0" class="post no-results not-found">
-					<h2 class="entry-title"><?php _e( 'Nothing Found', 'wordcamporg' ); ?></h2>
+					<h2 class="entry-title"><?php esc_html_e( 'Nothing Found', 'wordcamporg' ); ?></h2>
 					<div class="entry-content">
-						<p><?php _e( 'Sorry, but nothing matched your search criteria. Please try again with some different keywords.', 'wordcamporg' ); ?></p>
+						<p><?php esc_html_e( 'Sorry, but nothing matched your search criteria. Please try again with some different keywords.', 'wordcamporg' ); ?></p>
 						<?php get_search_form(); ?>
 					</div><!-- .entry-content -->
 				</div><!-- #post-0 -->

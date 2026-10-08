@@ -39,7 +39,7 @@ get_header();
 									)
 								);
 							?>
-							<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span> <span class="edit-link">', '</span>' ); ?>
+							<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span> <span class="edit-link">', '</span>' ); ?>
 						</div><!-- .entry-meta -->
 
 						<nav id="image-navigation">
@@ -97,21 +97,37 @@ get_header();
 						</div><!-- .entry-attachment -->
 
 						<?php the_content(); ?>
-						<?php wp_link_pages( array( 'before' => '<div class="page-links">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+						<?php
+						wp_link_pages(
+							array(
+								'before' => '<div class="page-links">' . esc_html__( 'Pages:', 'wordcamporg' ),
+								'after'  => '</div>',
+							)
+						);
+						?>
 
 					</div><!-- .entry-content -->
 
 					<footer class="entry-meta">
 						<?php if ( comments_open() && pings_open() ) : // Comments and trackbacks open ?>
-							<?php printf( __( '<a class="comment-link" href="#respond" title="Post a comment">Post a comment</a> or leave a trackback: <a class="trackback-link" href="%s" title="Trackback URL for your post" rel="trackback">Trackback URL</a>.', 'wordcamporg' ), get_trackback_url() ); ?>
+							<?php
+							/* translators: %s - trackback URL. The string carries links the translator has to keep, so kses filters the result. */
+							echo wp_kses_post( sprintf( __( '<a class="comment-link" href="#respond" title="Post a comment">Post a comment</a> or leave a trackback: <a class="trackback-link" href="%s" title="Trackback URL for your post" rel="trackback">Trackback URL</a>.', 'wordcamporg' ), esc_url( get_trackback_url() ) ) );
+							?>
 						<?php elseif ( ! comments_open() && pings_open() ) : // Only trackbacks open ?>
-							<?php printf( __( 'Comments are closed, but you can leave a trackback: <a class="trackback-link" href="%s" title="Trackback URL for your post" rel="trackback">Trackback URL</a>.', 'wordcamporg' ), get_trackback_url() ); ?>
+							<?php
+							/* translators: %s - trackback URL. The string carries a link the translator has to keep, so kses filters the result. */
+							echo wp_kses_post( sprintf( __( 'Comments are closed, but you can leave a trackback: <a class="trackback-link" href="%s" title="Trackback URL for your post" rel="trackback">Trackback URL</a>.', 'wordcamporg' ), esc_url( get_trackback_url() ) ) );
+							?>
 						<?php elseif ( comments_open() && ! pings_open() ) : // Only comments open ?>
-							<?php _e( 'Trackbacks are closed, but you can <a class="comment-link" href="#respond" title="Post a comment">post a comment</a>.', 'wordcamporg' ); ?>
+							<?php
+							// The string carries a link the translator has to keep, so kses filters it rather than escaping.
+							echo wp_kses_post( __( 'Trackbacks are closed, but you can <a class="comment-link" href="#respond" title="Post a comment">post a comment</a>.', 'wordcamporg' ) );
+							?>
 						<?php elseif ( ! comments_open() && ! pings_open() ) : // Comments and trackbacks closed ?>
-							<?php _e( 'Both comments and trackbacks are currently closed.', 'wordcamporg' ); ?>
+							<?php esc_html_e( 'Both comments and trackbacks are currently closed.', 'wordcamporg' ); ?>
 						<?php endif; ?>
-						<?php edit_post_link( __( 'Edit', 'wordcamporg' ), ' <span class="edit-link">', '</span>' ); ?>
+						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), ' <span class="edit-link">', '</span>' ); ?>
 					</footer><!-- .entry-meta -->
 				</article><!-- #post-<?php the_ID(); ?> -->
 

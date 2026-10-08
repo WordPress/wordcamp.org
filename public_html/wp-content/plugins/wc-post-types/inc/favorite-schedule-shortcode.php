@@ -1,7 +1,7 @@
 <?php
 
 /**
- * [schedule] shortcode building blocks and favourite session picker support.
+ * [schedule] shortcode building blocks and favorite session picker support.
  */
 
 defined( 'WPINC' ) || die();
@@ -15,7 +15,7 @@ function enqueue_favorite_sessions_dependencies() {
 	wp_enqueue_script(
 		'favourite-sessions',
 		plugin_dir_url( __DIR__ ) . 'js/favourite-sessions.js',
-		array( 'jquery' ),
+		array( 'jquery', 'wp-api-fetch' ),
 		filemtime( plugin_dir_path( __DIR__ ) . 'js/favourite-sessions.js' ),
 		true
 	);
@@ -24,8 +24,8 @@ function enqueue_favorite_sessions_dependencies() {
 		'favourite-sessions',
 		'favSessionsPhpObject',
 		array(
-			'root' => esc_url_raw( rest_url() ),
-			'i18n' => array(
+			'isLoggedIn'            => is_user_logged_in(),
+			'i18n'                  => array(
 				'reqTimeOut'           => esc_html__( 'Sorry, the email request timed out.', 'wordcamporg' ),
 				'otherError'           => esc_html__( 'Sorry, the email request failed.',    'wordcamporg' ),
 				'overwriteFavSessions' => esc_html__( 'You already have some sessions saved. Would you like to overwrite those with the shared sessions that you are viewing?', 'wordcamporg' ),
@@ -34,6 +34,24 @@ function enqueue_favorite_sessions_dependencies() {
 			),
 		)
 	);
+
+	// Preload the fav-sessions endpoint so wp.apiFetch serves it from cache on first request.
+	if ( is_user_logged_in() ) {
+		$preload_data = array_reduce(
+			array( '/wc-post-types/v1/fav-sessions/' ),
+			'rest_preload_api_request',
+			array()
+		);
+
+		wp_add_inline_script(
+			'wp-api-fetch',
+			sprintf(
+				'wp.apiFetch.use( wp.apiFetch.createPreloadingMiddleware( %s ) );',
+				wp_json_encode( $preload_data )
+			),
+			'after'
+		);
+	}
 
 	wp_enqueue_style(
 		'favorite-sessions',
@@ -44,7 +62,7 @@ function enqueue_favorite_sessions_dependencies() {
 }
 
 /**
- * Return HTML code for email form used to send/share favourite sessions over email.
+ * Return HTML code for email form used to send/share favorite sessions over email.
  *
  * Both form and button/link to show/hide the form can be styled using classes email-form
  * and show-email-form, respectively.
@@ -172,6 +190,8 @@ function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $t
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,
+		'post_status'    => 'publish',
+		'has_password'   => false,
 		'meta_query'     => array(
 			'relation' => 'AND',
 			array(
@@ -315,13 +335,13 @@ function preprocess_schedule_attributes( $attr ) {
 }
 
 /**
- * Return plain text list of sessions marked as favourite sessions.
+ * Return plain text list of sessions marked as favorite sessions.
  *
  * Format of each list item:
  * Time of session | Session title [by Speaker] | Track name(s).
  *
  * @param array $sessions_rev        Array of sessions with reversed subarray track_id->session_id.
- * @param array $fav_sessions_lookup Mapping session _id -> 1 for favourite sessions.
+ * @param array $fav_sessions_lookup Mapping session _id -> 1 for favorite sessions.
  *
  * @return string List of sessions.
  */
@@ -331,7 +351,7 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 	// timestamp -> session_id -> track_id.
 	foreach ( $sessions_rev as $timestamp => $sessions_at_time ) {
 		foreach ( $sessions_at_time as $session_id => $track_ids ) {
-			// Skip sessions which are not marked favourite.
+			// Skip sessions which are not marked favorite.
 			if ( ! isset( $fav_sessions_lookup[ $session_id ] ) ) {
 				continue;
 			}
@@ -353,7 +373,8 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 
 			$speakers_names = array();
 			foreach ( $speakers as $speaker ) {
-				$speaker_name     = apply_filters( 'the_title', $speaker->post_title );
+				// Decoded for the same reason the session title above is: this is a plain-text mail.
+				$speaker_name     = html_entity_decode( apply_filters( 'the_title', $speaker->post_title ) );
 				$speakers_names[] = $speaker_name;
 			}
 
@@ -399,7 +420,7 @@ function get_sessions_dates( $sessions, $date_format ) {
  * Return true if any of the sessions from $session_rev is in $fav_session_ids,
  * false otherwise.
  *
- * @param array $fav_session_ids Array with favourite sessions as keys.
+ * @param array $fav_session_ids Array with favorite sessions as keys.
  * @param array $sessions_rev    Array of sessions from flip_sessions_subarrays().
  *
  * @return bool true if there is any intersection, false otherwise.
@@ -438,11 +459,11 @@ function flip_sessions_subarrays( $sessions ) {
 }
 
 /**
- * Return plain text email message body for sharing favourite sessions email.
+ * Return plain text email message body for sharing favorite sessions email.
  *
  * @param string $wordcamp_name       WordCamp name to be used in the email.
- * @param array  $fav_sessions_lookup Mapping session _id -> 1 for favourite sessions.
- * @param string $url_base            The URL for schedule page, into which favourite sessions parameter will be added.
+ * @param array  $fav_sessions_lookup Mapping session _id -> 1 for favorite sessions.
+ * @param string $url_base            The URL for schedule page, into which favorite sessions parameter will be added.
  *
  * @return string                     Plain text body of the email.
  */
@@ -471,7 +492,7 @@ function generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base ) 
 
 		$email_message .= $current_day . "\n";
 
-		// Skip days when there's no session marked as favourite.
+		// Skip days when there's no session marked as favorite.
 		if ( ! includes_fav_session( $fav_sessions_lookup, $sessions_for_current_day ) ) {
 			$email_message .= "\n";
 			continue;
@@ -488,7 +509,7 @@ function generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base ) 
 }
 
 /**
- * Return true if the email favourite sessions feature should be disabled,
+ * Return true if the email favorite sessions feature should be disabled,
  * false otherwise.
  *
  * Kill switch for sharing schedule over email -- both for REST API endpoint and UI
@@ -501,7 +522,7 @@ function email_fav_sessions_disabled() {
 }
 
 /**
- * Send favourite sessions email to address specified in the REST request.
+ * Send favorite sessions email to address specified in the REST request.
  *
  * REST API handler for 'wc-post-types/v1/email-fav-sessions' endpoint.
  *
@@ -528,7 +549,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	$fav_sessions  = $params['session-list'];
 	$page_slug     = $params['page-slug'];
 
-	// Don't send the email if no sessions were marked as favourite.
+	// Don't send the email if no sessions were marked as favorite.
 	if ( count( explode( ',', $fav_sessions ) ) === 0 ) {
 		return new WP_Error(
 			'fav_sessions_no_sessions',
@@ -571,7 +592,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	// Email was not sent successfully.
 	return new WP_Error(
 		'fav_sessions_email_failed',
-		esc_html__( 'Favourite sessions email failed.', 'wordcamporg' ),
+		esc_html__( 'Favorite sessions email failed.', 'wordcamporg' ),
 		array(
 			'status' => 500,
 		)

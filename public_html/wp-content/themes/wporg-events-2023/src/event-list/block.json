@@ -20,6 +20,11 @@
 		"limit": {
 			"type": "number",
 			"default": 100
+		},
+		"order": {
+			"type": "string",
+			"enum": [ "asc", "desc" ],
+			"default": "asc"
 		}
 	},
 	"supports": {

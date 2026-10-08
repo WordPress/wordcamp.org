@@ -6,8 +6,8 @@
  * todo add a detailed explanation of the goals, workflow, etc
  */
 class CampTix_Require_Login extends CampTix_Addon {
-	const UNCONFIRMED_USERNAME = '[[ unconfirmed ]]';
-	const UNKNOWN_ATTENDEE_EMAIL = 'unknown.attendee@example.org';
+	public const UNCONFIRMED_USERNAME = '[[ unconfirmed ]]';
+	public const UNKNOWN_ATTENDEE_EMAIL = 'unknown.attendee@example.org';
 
 	/**
 	 * Register hook callbacks
@@ -23,6 +23,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_get_attendee_email',                     array( $this, 'redirect_unknown_attendee_emails_to_buyer' ), 10, 2 );
 		add_action( 'camptix_attendee_form_before_input',             array( $this, 'inject_unknown_attendee_checkbox' ), 10, 3 );
 		add_filter( 'camptix_checkout_attendee_info',                 array( $this, 'add_unknown_attendee_info_stubs' ) );
+		add_filter( 'camptix_checkout_receipt_email',                 array( $this, 'send_receipt_to_buyer_instead_of_unknown_attendee' ) );
+		add_filter( 'camptix_email_single_purchase_attendee_ticket',  array( $this, 'send_claim_link_for_single_unknown_attendee' ), 10, 2 );
 		add_filter( 'camptix_edit_info_cell_content',                 array( $this, 'show_buyer_attendee_status_instead_of_edit_link' ), 10, 2 );
 		add_filter( 'camptix_attendee_info_default_value',            array( $this, 'prepopulate_known_fields' ), 10, 5 );
 
@@ -45,6 +47,14 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_action( 'template_redirect',                              array( $this, 'block_unauthenticated_actions' ), 7 );    // before CampTix_Plugin->template_redirect()
 		add_filter( 'camptix_attendees_shortcode_query_args',         array( $this, 'hide_unconfirmed_attendees' ) );
 		add_filter( 'camptix_private_attendees_parameters',           array( $this, 'prevent_unknown_attendees_viewing_private_content' ) );
+
+		// Buyer-side claim-link recovery (issue #1721).
+		add_action( 'template_redirect',                              array( $this, 'process_resend_claim_links' ), 8 );
+		add_action( 'camptix_notices',                                array( $this, 'render_resend_claim_links_ui' ), 9 );
+
+		// Camptix Notify.
+		add_filter( 'camptix_notify_segment_fields',                  array( $this, 'camptix_notify_segment_fields' ) );
+		add_filter( 'camptix_notify_segment_query',                   array( $this, 'camptix_notify_segment_query' ), 10, 2 );
 	}
 
 	/**
@@ -365,7 +375,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * Add the value of the username to the Attendee object used during checkout
 	 *
 	 * The current logged in user's username will be assigned to the first ticket and the other tickets will have
-	 * an empty field because it will be filled in later when each individual confirms their registration.
+	 * an empty field because it will be filled in later when each individual confirms their registration. The first
+	 * ticket is left unconfirmed too when the buyer doesn't know who will use it, and the buyer's username is kept
+	 * separately, so CampTix still knows whose order it is.
 	 *
 	 * @param stdClass $attendee
 	 * @param array $attendee_info
@@ -375,8 +387,14 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function add_username_to_attendee_object( $attendee, $attendee_info, $attendee_order ) {
 		if ( 1 === $attendee_order ) {
-			$current_user       = wp_get_current_user();
-			$attendee->username = $current_user->user_login;
+			$current_user = wp_get_current_user();
+
+			if ( isset( $attendee_info['unknown_attendee'] ) ) {
+				$attendee->username       = self::UNCONFIRMED_USERNAME;
+				$attendee->buyer_username = $current_user->user_login;
+			} else {
+				$attendee->username = $current_user->user_login;
+			}
 		} else {
 			$attendee->username = self::UNCONFIRMED_USERNAME;
 		}
@@ -392,6 +410,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function save_checkout_username_meta( $attendee_id, $attendee ) {
 		update_post_meta( $attendee_id, 'tix_username', $attendee->username );
+
+		if ( ! empty( $attendee->buyer_username ) ) {
+			update_post_meta( $attendee_id, 'tix_buyer_username', $attendee->buyer_username );
+		}
 	}
 
 	/**
@@ -428,7 +450,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return string
 	 */
 	public function get_attendee_username_meta( $data, $attendee ) {
-		return get_post_meta( $attendee->ID, 'tix_username', true );
+		$username = get_post_meta( $attendee->ID, 'tix_username', true );
+		return $this->format_admin_username_display( $username, $attendee->ID, 'text' );
 	}
 
 	/**
@@ -463,7 +486,11 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return array
 	 */
 	public function get_attendee_metabox_rows( $rows, $post ) {
-		$rows[] = array( __( 'Username', 'wordcamporg' ), esc_html( get_post_meta( $post->ID, 'tix_username', true ) ) );
+		$username = get_post_meta( $post->ID, 'tix_username', true );
+		$rows[]   = array(
+			__( 'Username', 'wordcamporg' ),
+			$this->format_admin_username_display( $username, $post->ID ),
+		);
 
 		return $rows;
 	}
@@ -621,30 +648,59 @@ class CampTix_Require_Login extends CampTix_Addon {
 	/**
 	 * Populate unknown attendee fields with stubbed values.
 	 *
-	 * Otherwise they would be empty and the checkout form would fail with errors.
+	 * Otherwise they would be empty and the checkout form would fail with errors. The stubs replace
+	 * whatever the fields hold, because the form only hides them: the buyer's own row is pre-filled
+	 * with the buyer's name and email, and those would otherwise be stored on the unknown ticket.
 	 *
 	 * @param array $attendee_info
 	 *
 	 * @return array
 	 */
 	public function add_unknown_attendee_info_stubs( $attendee_info ) {
-		$unknown_attendee_info = $this->get_unknown_attendee_info();
-
 		if ( isset( $attendee_info['unknown_attendee'] ) ) {
-			if ( empty( $attendee_info['first_name'] ) ) {
-				$attendee_info['first_name'] = $unknown_attendee_info['first_name'];
-			}
-
-			if ( empty( $attendee_info['last_name'] ) ) {
-				$attendee_info['last_name'] = $unknown_attendee_info['last_name'];
-			}
-
-			if ( ! is_email( $attendee_info['email'] ) ) {
-				$attendee_info['email'] = $unknown_attendee_info['email'];
-			}
+			$attendee_info = array_merge( $attendee_info, $this->get_unknown_attendee_info() );
 		}
 
 		return $attendee_info;
+	}
+
+	/**
+	 * Send the receipt to the buyer when it would go to an unknown attendee.
+	 *
+	 * The receipt goes to the email of the attendee the buyer picked, which is their own row by default.
+	 * An unknown attendee's email is the placeholder, and e-mails for unknown attendees are redirected to
+	 * the receipt address, so otherwise the buyer would get neither the receipt nor the ticket.
+	 *
+	 * @param string|false $receipt_email
+	 *
+	 * @return string|false
+	 */
+	public function send_receipt_to_buyer_instead_of_unknown_attendee( $receipt_email ) {
+		if ( self::UNKNOWN_ATTENDEE_EMAIL === $receipt_email ) {
+			$receipt_email = wp_get_current_user()->user_email;
+		}
+
+		return $receipt_email;
+	}
+
+	/**
+	 * Send the claim link e-mail for a one-ticket order whose attendee is unknown.
+	 *
+	 * Multiple purchases send each unknown attendee's ticket e-mail to the buyer, with the claim link to
+	 * forward. A one-ticket order only gets the receipt, whose link is the buyer's own order page, so the
+	 * buyer would have no claim link to pass on.
+	 *
+	 * @param bool    $send
+	 * @param WP_Post $attendee
+	 *
+	 * @return bool
+	 */
+	public function send_claim_link_for_single_unknown_attendee( $send, $attendee ) {
+		if ( self::UNKNOWN_ATTENDEE_EMAIL === get_post_meta( $attendee->ID, 'tix_email', true ) ) {
+			$send = true;
+		}
+
+		return $send;
 	}
 
 	/**
@@ -666,16 +722,33 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$unknown_attendee_info = $this->get_unknown_attendee_info();
 		$is_unknown_attendee   = ( get_post_meta( $attendee->ID, 'tix_email', true ) == $unknown_attendee_info['email'] );
 
-		// Display the ticket status.
+		// Display the ticket status using buyer-friendly labels (issue #1721).
 		if ( $is_unknown_attendee ) {
-			$content = _x( 'Status: Unknown', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = __( 'This ticket is fully paid for. It has not been assigned to a specific attendee yet — forward the claim link to whoever will use it.', 'wordcamporg' );
 		} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
-			$content = _x( 'Status: Unconfirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = __( 'This ticket is fully paid for. The attendee has not yet logged in with their WordPress.org account to claim it.', 'wordcamporg' );
 		} else {
-			$content = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = esc_html_x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = '';
 		}
-		// Use a non-breaking space to prevent the text from wrapping.
-		$content = str_replace( ' ', '&nbsp;', $content );
+
+		// Use a non-breaking space to prevent the status text from wrapping. The text is already
+		// escaped, so the entity is added after escaping.
+		$content = str_replace( ' ', '&nbsp;', $status_text );
+
+		// For non-confirmed tickets, add a help toggle so buyers can see the status is not a
+		// payment issue. A native disclosure works with a keyboard, screen readers and touch,
+		// which a `title` tooltip doesn't.
+		if ( $status_help ) {
+			$content .= sprintf(
+				' <details class="tix-status-help"><summary aria-label="%1$s">%2$s</summary><span class="tix-status-help__text">%3$s</span></details>',
+				esc_attr__( 'What does this status mean?', 'wordcamporg' ),
+				esc_html_x( '(?)', 'CampTix help icon', 'wordcamporg' ),
+				esc_html( $status_help )
+			);
+		}
 
 		// Redirect back to this same overview, as they may not login with the correct username.
 		$args        = $this->get_sanitized_tix_parameters( $_REQUEST );
@@ -720,6 +793,22 @@ class CampTix_Require_Login extends CampTix_Addon {
 			// 6 - Current user owns ticket, edit away.
 		} elseif ( $can_claim_ticket || $current_user_ticket ) {
 			$content .= '<br>' . $edit_link_html;
+		}
+
+		// Per-row "Copy claim link" control for unclaimed tickets (issue #1721).
+		if ( $is_unknown_attendee || self::UNCONFIRMED_USERNAME == $attendee_username ) {
+			$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
+			if ( $edit_token ) {
+				$claim_url = $camptix->get_edit_attendee_link( $attendee->ID, $edit_token );
+				$content  .= sprintf(
+					'<br><button type="button" class="tix-copy-claim-link" data-claim-url="%1$s" data-copied-label="%2$s" data-prompt-label="%3$s" aria-label="%4$s">%5$s</button>',
+					esc_url( $claim_url ),
+					esc_attr__( 'Copied!', 'wordcamporg' ),
+					esc_attr__( 'Copy this link:', 'wordcamporg' ),
+					esc_attr__( "Copy this attendee's claim link to your clipboard", 'wordcamporg' ),
+					esc_html__( 'Copy claim link', 'wordcamporg' )
+				);
+			}
 		}
 
 		return $content;
@@ -946,7 +1035,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
-	 * Remove unconfirmed attendees from the [attendees] shortcode output.
+	 * Remove unconfirmed and unknown attendees from the [attendees] shortcode output.
+	 *
+	 * Unknown attendees are matched by email, not username, because the buyer's own row keeps the buyer's
+	 * username even when it was marked as unknown. See `add_username_to_attendee_object()`.
 	 *
 	 * @param array $query_args
 	 *
@@ -972,7 +1064,100 @@ class CampTix_Require_Login extends CampTix_Addon {
 			$query_args['meta_query'] = array( $meta_query );
 		}
 
+		$query_args['meta_query'][] = array(
+			'key'     => 'tix_email',
+			'value'   => self::UNKNOWN_ATTENDEE_EMAIL,
+			'compare' => '!=',
+		);
+
 		return $query_args;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $segments
+	 * @return array
+	 */
+	public function camptix_notify_segment_fields( $segments ) {
+		$segments[] = [
+			'caption'      => __( 'Ticket Status', 'wordcamporg' ),
+			'option_value' => 'ticket_status',
+			'type'         => 'select',
+			'ops'          => [ 'is' ],
+			'values'       => [
+				[
+					'caption' => __( 'Confirmed', 'wordcamporg' ),
+					'value'   => 'confirmed',
+				],
+				[
+					'caption' => __( 'Unconfirmed', 'wordcamporg' ),
+					'value'   => 'unconfirmed',
+				],
+			],
+		];
+
+		return $segments;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $query      The posts query arguments.
+	 * @param array $conditions The conditions to filter by.
+	 * @return array
+	 */
+	public function camptix_notify_segment_query( $query, $conditions ) {
+		foreach ( $conditions as $condition ) {
+			if ( 'ticket_status' === $condition['field'] ) {
+				if ( 'unconfirmed' === $condition['value'] ) {
+					$query['meta_query'][] = array(
+						'relation' => 'and',
+						array(
+							// Either of these is unconfirmed.
+							'relation' => 'or',
+							// Unconfirmed username listed.
+							array(
+								'key' => 'tix_username',
+								'value' => self::UNCONFIRMED_USERNAME,
+								'compare' => '=',
+							),
+							// Has no username linked.
+							array(
+								'key' => 'tix_username',
+								'compare' => 'NOT EXISTS',
+							),
+						),
+						// An unknown attendee has no real email address to send to.
+						array(
+							'key' => 'tix_email',
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
+							'compare' => '!=',
+						),
+					);
+				} elseif ( 'confirmed' === $condition['value'] ) {
+					// The inverse of the above, so no attendee is in both segments.
+					// Unknown attendees are in neither, as there's no one to email.
+					$query['meta_query'][] = array(
+						'relation' => 'and',
+						// Has a username other than the unconfirmed username.
+						array(
+							'key' => 'tix_username',
+							'value' => self::UNCONFIRMED_USERNAME,
+							'compare' => '!=',
+						),
+						// The email is not the standard unknown attendee.
+						array(
+							'key' => 'tix_email',
+							'value' => self::UNKNOWN_ATTENDEE_EMAIL,
+							'compare' => '!=',
+						),
+					);
+				}
+			}
+		}
+
+		return $query;
 	}
 
 	/*
@@ -1036,6 +1221,375 @@ class CampTix_Require_Login extends CampTix_Addon {
 		) );
 
 		return $ticket ? reset( $ticket ) : false;
+	}
+
+	/**
+	 * Render the username field for admin views, with a friendly label for
+	 * unclaimed/unknown tickets while keeping the raw value visible (issue #1721).
+	 *
+	 * @param string $username    Stored username (may be UNCONFIRMED_USERNAME).
+	 * @param int    $attendee_id Attendee post ID, used to detect Unknown tickets.
+	 * @param string $context     'html' for admin UI (default), 'text' for CSV/XML exports.
+	 * @return string Escaped HTML when $context is 'html', plain text otherwise.
+	 */
+	protected function format_admin_username_display( $username, $attendee_id, $context = 'html' ) {
+		$unknown_email = $this->get_unknown_attendee_info()['email'];
+		$is_unknown    = ( get_post_meta( $attendee_id, 'tix_email', true ) == $unknown_email );
+
+		if ( $is_unknown ) {
+			$label = _x( 'Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
+		} elseif ( self::UNCONFIRMED_USERNAME == $username ) {
+			$label = _x( 'Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
+		} else {
+			return ( 'html' == $context ) ? esc_html( $username ) : $username;
+		}
+
+		if ( 'html' == $context ) {
+			return sprintf(
+				'<span class="tix-status-pill">%1$s</span> <code class="tix-status-raw">%2$s</code>',
+				esc_html( $label ),
+				esc_html( $username )
+			);
+		}
+
+		/* translators: 1: friendly status label, 2: raw stored username placeholder. */
+		return sprintf( _x( '%1$s (%2$s)', 'CampTix attendee export username column.', 'wordcamporg' ), $label, $username );
+	}
+
+	/**
+	 * Mask an email address for display in buyer-facing confirmation notices.
+	 *
+	 * Example: jane.doe@example.com → j***@e****.com
+	 *
+	 * @param string $email
+	 * @return string
+	 */
+	protected function mask_email_for_notice( $email ) {
+		if ( ! is_email( $email ) ) {
+			return '';
+		}
+
+		list( $local, $domain ) = explode( '@', $email, 2 );
+		$tld_pos = strrpos( $domain, '.' );
+		if ( false === $tld_pos ) {
+			return '';
+		}
+
+		$domain_name = substr( $domain, 0, $tld_pos );
+		$tld         = substr( $domain, $tld_pos );
+
+		return mb_substr( $local, 0, 1 ) . '***@' . mb_substr( $domain_name, 0, 1 ) . '****' . $tld;
+	}
+
+	/**
+	 * Get every attendee on an order.
+	 *
+	 * Queries in batches of 200, like CampTix_Plugin::form_access_tickets(), so
+	 * orders with more tickets than one batch are covered too.
+	 *
+	 * @param string $access_token The order's access token.
+	 *
+	 * @return WP_Post[]
+	 */
+	public function get_attendees_by_access_token( $access_token ) {
+		$per_page  = 200;
+		$paged     = 1;
+		$attendees = array();
+
+		do {
+			$batch = get_posts( array(
+				'posts_per_page' => $per_page,
+				'paged'          => $paged++,
+				'post_type'      => 'tix_attendee',
+				'post_status'    => array( 'publish', 'pending' ),
+				'meta_query'     => array(
+					array(
+						'key'     => 'tix_access_token',
+						'value'   => $access_token,
+						'compare' => '=',
+						'type'    => 'CHAR',
+					),
+				),
+				'cache_results'  => false,
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			) );
+
+			$attendees   = array_merge( $attendees, $batch );
+			$batch_count = count( $batch );
+		} while ( $batch_count === $per_page );
+
+		return $attendees;
+	}
+
+	/**
+	 * Process the "Email me my claim links" form submission (issue #1721).
+	 *
+	 * Hooked on template_redirect (priority 8, after block_unauthenticated_actions
+	 * at 7 and before CampTix shortcode rendering). Walks every attendee on the
+	 * access-token order, re-sends the appropriate multiple-purchase template to
+	 * each Unconfirmed/Unknown ticket, and rate-limits to one resend per ticket
+	 * per hour. Stores a transient with the result summary for the follow-up GET
+	 * request to render via camptix_notices.
+	 */
+	public function process_resend_claim_links() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $_POST['tix_resend_claim_links'] ) ) {
+			return;
+		}
+
+		$access_token = isset( $_POST['tix_access_token'] ) ? sanitize_text_field( wp_unslash( $_POST['tix_access_token'] ) ) : '';
+		if ( ! $access_token || ! ctype_alnum( $access_token ) ) {
+			return;
+		}
+
+		$nonce = isset( $_POST['tix_resend_nonce'] ) ? wp_unslash( $_POST['tix_resend_nonce'] ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'tix_resend_claim_links_' . $access_token ) ) {
+			return;
+		}
+
+		set_transient(
+			'camptix_rl_resend_summary_' . $access_token,
+			$this->resend_claim_links( $access_token ),
+			MINUTE_IN_SECONDS * 5
+		);
+
+		$redirect = add_query_arg(
+			array(
+				'tix_action'       => 'access_tickets',
+				'tix_access_token' => $access_token,
+				'tix_resend_done'  => 1,
+			),
+			$camptix->get_tickets_url()
+		) . '#tix';
+
+		wp_safe_redirect( esc_url_raw( $redirect ) );
+		die();
+	}
+
+	/**
+	 * Re-send the claim email for every Unconfirmed/Unknown ticket on an order.
+	 *
+	 * Each ticket is sent at most once an hour. The caller is responsible for
+	 * checking that the buyer may act on the order.
+	 *
+	 * @param string $access_token The order's access token.
+	 *
+	 * @return array {
+	 *     @type string[] $sent      Masked addresses the emails went to.
+	 *     @type int      $throttled Tickets skipped because they were re-sent within the hour.
+	 *     @type int      $failed    Tickets whose email could not be sent.
+	 * }
+	 */
+	public function resend_claim_links( $access_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$attendees = $this->get_attendees_by_access_token( $access_token );
+
+		$sent          = array();
+		$throttled     = 0;
+		$failed        = 0;
+		$unknown_email = $this->get_unknown_attendee_info()['email'];
+
+		// email_attendee_ticket_multiple_template() runs do_shortcode() on an email template
+		// and expects only the email-template shortcodes to be registered. Replicate the
+		// remove/restore dance that the core send paths use (see CampTix_Plugin::email_attendees).
+		global $shortcode_tags;
+		$saved_shortcode_tags = $shortcode_tags;
+		remove_all_shortcodes();
+		do_action( 'camptix_init_email_templates_shortcodes' );
+
+		// The unconfirmed-attendee template says who bought the ticket. Find the buyer's
+		// name the same way CampTix_Plugin::email_tickets() does for the first send.
+		$receipt_email = $attendees ? get_post_meta( $attendees[0]->ID, 'tix_receipt_email', true ) : '';
+		foreach ( $attendees as $attendee ) {
+			if ( $camptix->get_attendee_email( $attendee->ID ) == $receipt_email ) {
+				$camptix->tmp( 'buyer_full_name', get_post_meta( $attendee->ID, 'tix_first_name', true ) . ' ' . get_post_meta( $attendee->ID, 'tix_last_name', true ) );
+				break;
+			}
+		}
+
+		foreach ( $attendees as $attendee ) {
+			$username       = get_post_meta( $attendee->ID, 'tix_username', true );
+			$email          = get_post_meta( $attendee->ID, 'tix_email', true );
+			$is_unknown     = ( $email == $unknown_email );
+			$is_unconfirmed = ( self::UNCONFIRMED_USERNAME == $username );
+
+			if ( ! $is_unknown && ! $is_unconfirmed ) {
+				continue;
+			}
+
+			$throttle_key = 'camptix_rl_resend_' . $attendee->ID;
+			if ( get_transient( $throttle_key ) ) {
+				$throttled++;
+				continue;
+			}
+
+			// Reuse CampTix's existing send pipeline — runs through use_custom_email_templates()
+			// which already picks the unknown/unconfirmed variant and redirects unknown-attendee
+			// mail to the buyer.
+			$result = $camptix->email_attendee_ticket_multiple_template( $attendee );
+
+			if ( $result ) {
+				set_transient( $throttle_key, time(), HOUR_IN_SECONDS );
+				$sent[] = $this->mask_email_for_notice( $camptix->get_attendee_email( $attendee->ID ) );
+			} else {
+				$failed++;
+			}
+		}
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring the value saved above, the same restore CampTix_Plugin::restore_shortcodes() performs.
+		$shortcode_tags = $saved_shortcode_tags;
+
+		$camptix->tmp( 'attendee_id', false );
+		$camptix->tmp( 'ticket_url', false );
+		$camptix->tmp( 'buyer_full_name', false );
+
+		return array(
+			'sent'      => $sent,
+			'throttled' => $throttled,
+			'failed'    => $failed,
+		);
+	}
+
+	/**
+	 * Render the "Email me my claim links" form and any post-resend notices on
+	 * the ticket overview page (issue #1721).
+	 *
+	 * Hooked on camptix_notices. Active only when viewing the access_tickets
+	 * screen with a valid access token AND the order has at least one
+	 * Unconfirmed/Unknown ticket.
+	 */
+	public function render_resend_claim_links_ui() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$tix_action   = isset( $_GET['tix_action'] ) ? sanitize_text_field( wp_unslash( $_GET['tix_action'] ) ) : '';
+		$access_token = isset( $_GET['tix_access_token'] ) ? sanitize_text_field( wp_unslash( $_GET['tix_access_token'] ) ) : '';
+
+		if ( 'access_tickets' !== $tix_action || ! $access_token || ! ctype_alnum( $access_token ) ) {
+			return;
+		}
+
+		if ( ! empty( $_GET['tix_resend_done'] ) ) {
+			$this->render_resend_summary_notice( $access_token );
+		}
+
+		$unclaimed = get_posts( array(
+			'posts_per_page' => 1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => array( 'publish', 'pending' ),
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'tix_access_token',
+					'value'   => $access_token,
+					'compare' => '=',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'   => 'tix_username',
+						'value' => self::UNCONFIRMED_USERNAME,
+					),
+					array(
+						'key'   => 'tix_email',
+						'value' => $this->get_unknown_attendee_info()['email'],
+					),
+				),
+			),
+			'cache_results'  => false,
+		) );
+
+		if ( empty( $unclaimed ) ) {
+			return;
+		}
+
+		// Keep tix_action + token in the form URL so that if the handler returns early
+		// (bad nonce, etc.) the buyer lands back on access_tickets, not the purchase form.
+		$action_url = add_query_arg(
+			array(
+				'tix_action'       => 'access_tickets',
+				'tix_access_token' => $access_token,
+			),
+			$camptix->get_tickets_url()
+		);
+		?>
+		<form method="post" action="<?php echo esc_url( $action_url ); ?>#tix" class="tix-resend-claim-links">
+			<input type="hidden" name="tix_access_token" value="<?php echo esc_attr( $access_token ); ?>">
+			<?php wp_nonce_field( 'tix_resend_claim_links_' . $access_token, 'tix_resend_nonce' ); ?>
+			<p class="tix-resend-claim-links__help">
+				<?php esc_html_e( 'Lost the ticket emails? Re-send the claim link for every ticket in this order that has not been claimed or assigned yet.', 'wordcamporg' ); ?>
+			</p>
+			<p>
+				<button type="submit" name="tix_resend_claim_links" value="1" class="tix-resend-claim-links__button">
+					<?php esc_html_e( 'Email me my claim links', 'wordcamporg' ); ?>
+				</button>
+			</p>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render the result notice after a resend submission.
+	 *
+	 * @param string $access_token
+	 */
+	protected function render_resend_summary_notice( $access_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$summary = get_transient( 'camptix_rl_resend_summary_' . $access_token );
+		if ( ! $summary ) {
+			return;
+		}
+		delete_transient( 'camptix_rl_resend_summary_' . $access_token );
+
+		$sent_count = count( $summary['sent'] );
+
+		if ( $sent_count > 0 ) {
+			$camptix->notice( sprintf(
+				/* translators: 1) count of emails sent, 2) comma-separated masked addresses */
+				_n(
+					'Re-sent %1$d claim email to: %2$s. Please allow a few minutes for delivery and check your spam folder.',
+					'Re-sent %1$d claim emails to: %2$s. Please allow a few minutes for delivery and check your spam folder.',
+					$sent_count,
+					'wordcamporg'
+				),
+				$sent_count,
+				implode( ', ', array_map( 'esc_html', $summary['sent'] ) )
+			) );
+		}
+
+		if ( $summary['throttled'] > 0 ) {
+			$camptix->notice( sprintf(
+				/* translators: %d: count of tickets skipped due to rate-limit */
+				_n(
+					'%d ticket was re-sent within the last hour and was skipped — check your inbox and spam folder before re-trying.',
+					'%d tickets were re-sent within the last hour and were skipped — check your inbox and spam folder before re-trying.',
+					$summary['throttled'],
+					'wordcamporg'
+				),
+				$summary['throttled']
+			) );
+		}
+
+		if ( $summary['failed'] > 0 ) {
+			$camptix->error( sprintf(
+				/* translators: %d: count of tickets that failed to send */
+				_n(
+					'%d claim email could not be sent. Please contact the event organisers.',
+					'%d claim emails could not be sent. Please contact the event organisers.',
+					$summary['failed'],
+					'wordcamporg'
+				),
+				$summary['failed']
+			) );
+		}
 	}
 
 	/**

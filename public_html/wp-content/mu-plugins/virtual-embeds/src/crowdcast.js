@@ -28,7 +28,10 @@ export const settings = {
 			className={ className }
 			icon="format-video"
 			label={ __( 'CrowdCast Event', 'wordcamporg' ) }
-			instructions={ __( 'Enter the channel name to embed a stream on your site.', 'wordcamporg' ) }
+			instructions={ __(
+				'Enter the channel name to embed a stream on your site.',
+				'wordcamporg'
+			) }
 			value={ attributes.channel }
 			onChange={ ( newValue ) => setAttributes( { channel: newValue } ) }
 		/>

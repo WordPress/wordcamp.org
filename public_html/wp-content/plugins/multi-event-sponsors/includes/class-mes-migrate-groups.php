@@ -79,7 +79,7 @@ class MES_Migrate_Groups {
 				continue;
 			}
 
-			$existing = MES_Sponsor_Group::get_camp_groups( $camp_id );
+			$existing = MES_Sponsor_Group::get_stored_camp_groups( $camp_id );
 
 			if ( ! in_array( $region_map[ $region ], $existing, true ) ) {
 				if ( ! $dry_run ) {
@@ -106,7 +106,7 @@ class MES_Migrate_Groups {
 				continue;
 			}
 
-			$group_map = MES_Sponsor::get_group_sponsorships( $sponsor_id );
+			$group_map = MES_Sponsor::get_stored_group_sponsorships( $sponsor_id );
 			$changed   = false;
 
 			foreach ( $regional as $region_id => $level_id ) {

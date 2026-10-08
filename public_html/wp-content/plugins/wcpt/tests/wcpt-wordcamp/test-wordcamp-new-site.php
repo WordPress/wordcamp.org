@@ -572,6 +572,8 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 	 * @covers WordCamp_New_Site::maybe_create_new_sites
 	 */
 	public function test_maybe_create_new_sites_creates_a_site_for_a_group_only_event() {
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+
 		$group_id = self::factory()->term->create( array( 'taxonomy' => \MES_Sponsor_Group::TAXONOMY_SLUG ) );
 		$event    = $this->create_event( array(
 			'URL'                                => 'https://groupcamp.wordcamp.test/2027/',
@@ -579,6 +581,21 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 		) );
 
 		$this->assertSame( array( 'https://groupcamp.wordcamp.test/2027/' ), $this->attempted_site_urls( $event ) );
+	}
+
+	/**
+	 * While the sponsor-groups flag is off, a group doesn't count, so a group-only event gets no site.
+	 *
+	 * @covers WordCamp_New_Site::maybe_create_new_sites
+	 */
+	public function test_maybe_create_new_sites_skips_a_group_only_event_while_groups_are_disabled() {
+		$group_id = self::factory()->term->create( array( 'taxonomy' => \MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$event    = $this->create_event( array(
+			'URL'                                => 'https://groupcamp.wordcamp.test/2027/',
+			\MES_Sponsor_Group::CAMP_META_KEY => array( $group_id ),
+		) );
+
+		$this->assertSame( array(), $this->attempted_site_urls( $event ) );
 	}
 
 	/**

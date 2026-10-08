@@ -11,6 +11,15 @@ defined( 'WPINC' ) || die();
  */
 class Test_MES_Consumers extends WP_UnitTestCase {
 	/**
+	 * Groups only count while the flag is on. Tests of the flag-off state switch it back off.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+	}
+
+	/**
 	 * Invoke a protected/private method for testing.
 	 *
 	 * @param object $object The object to invoke the method on.
@@ -78,6 +87,25 @@ class Test_MES_Consumers extends WP_UnitTestCase {
 	}
 
 	/**
+	 * While the flag is off, the shortcode gets no group sections to list.
+	 *
+	 * Asserts on the data the view is given rather than the rendered output: the view is loaded with
+	 * `require_once`, so only the first render in a process prints anything.
+	 */
+	public function test_shortcode_has_no_group_section_while_disabled() {
+		list( , $sponsor_id ) = $this->make_group_only_setup();
+
+		$mes      = new Multi_Event_Sponsors();
+		$sponsors = array( $sponsor_id => get_post( $sponsor_id ) );
+
+		$this->assertNotEmpty( $this->invoke( $mes, 'group_sponsors_by_group_and_level', array( $sponsors ) ) );
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$this->assertSame( array(), $this->invoke( $mes, 'group_sponsors_by_group_and_level', array( $sponsors ) ) );
+	}
+
+	/**
 	 * Mailer mes info resolves level for group only camp.
 	 */
 	public function test_mailer_mes_info_resolves_level_for_group_only_camp() {
@@ -107,5 +135,16 @@ class Test_MES_Consumers extends WP_UnitTestCase {
 		) );
 
 		$this->assertSame( 'Europe', $this->invoke( $mailer, 'get_mes_audience_label', array( $wordcamp_id, $region_id ) ) );
+	}
+
+	/**
+	 * While the flag is off, the mailer doesn't name a camp's groups.
+	 */
+	public function test_mailer_audience_label_ignores_groups_while_disabled() {
+		list( $wordcamp_id ) = $this->make_group_only_setup();
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$this->assertSame( '', $this->invoke( $this->bare_mailer(), 'get_mes_audience_label', array( $wordcamp_id, '' ) ) );
 	}
 }

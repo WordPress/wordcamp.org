@@ -36,7 +36,9 @@ class MES_Sponsor_Group {
 	 *
 	 *     add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
 	 *
-	 * once the read path is deployed and the migration has been dry-run.
+	 * once the migration has run. It also decides whether groups count at all: while it's off,
+	 * get_camp_groups() and MES_Sponsor::get_group_sponsorships() return nothing, so sponsors
+	 * come from the regions alone, and switching it off again is a rollback.
 	 *
 	 * Deliberately checked inside each callback rather than around the
 	 * `add_action()` calls, so the answer doesn't depend on whether a filter was
@@ -108,13 +110,31 @@ class MES_Sponsor_Group {
 	}
 
 	/**
-	 * Get the group term IDs a WordCamp belongs to.
+	 * Get the group term IDs a WordCamp belongs to, for deciding its sponsors.
+	 *
+	 * Empty while the flag is off, so groups only count once they're switched on, and switching
+	 * them off goes back to the regions. Use get_stored_camp_groups() for the saved value itself.
 	 *
 	 * @param int $wordcamp_id WordCamp post ID (on central).
 	 *
 	 * @return int[] Unique, non-zero group term IDs.
 	 */
 	public static function get_camp_groups( $wordcamp_id ) {
+		if ( ! self::is_enabled() ) {
+			return array();
+		}
+
+		return self::get_stored_camp_groups( $wordcamp_id );
+	}
+
+	/**
+	 * Get the group term IDs saved for a WordCamp, whether or not the flag is on.
+	 *
+	 * @param int $wordcamp_id WordCamp post ID (on central).
+	 *
+	 * @return int[] Unique, non-zero group term IDs.
+	 */
+	public static function get_stored_camp_groups( $wordcamp_id ) {
 		$raw = get_post_meta( $wordcamp_id, self::CAMP_META_KEY, true );
 
 		if ( ! is_array( $raw ) ) {

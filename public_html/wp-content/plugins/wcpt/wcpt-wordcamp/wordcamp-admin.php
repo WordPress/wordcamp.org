@@ -1129,6 +1129,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
 					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
+					// A sponsor group stands in for the region while groups are on, as it does for creating the site.
+					if ( 'Multi-Event Sponsor Region' === $field && $this->has_posted_sponsor_groups() ) {
+						continue;
+					}
+
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
@@ -1142,6 +1147,22 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $post_data;
+		}
+
+		/**
+		 * Whether the WordCamp screen posted at least one sponsor group, while sponsor groups are on.
+		 *
+		 * @return bool
+		 */
+		protected function has_posted_sponsor_groups() {
+			if ( ! class_exists( 'MES_Sponsor_Group' ) || ! MES_Sponsor_Group::is_enabled() ) {
+				return false;
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+			$groups = (array) ( $_POST[ wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' ) ] ?? array() );
+
+			return (bool) array_filter( array_map( 'absint', $groups ) );
 		}
 
 		/**

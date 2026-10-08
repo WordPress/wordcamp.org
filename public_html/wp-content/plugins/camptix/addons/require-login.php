@@ -198,13 +198,15 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		// Remind the logged in user about their tickets.
 		if ( is_user_logged_in() && ! $this->user_is_editing_ticket() && empty( $_REQUEST['tix_action'] ) ) {
-			$user_tickets = $this->get_tickets_of_user( wp_get_current_user() );
+			$current_user = wp_get_current_user();
+			$user_tickets = $this->get_tickets_of_user( $current_user );
+			$user_orders  = $this->get_orders_with_unconfirmed_tickets_bought_by( $current_user );
 
 			$ticket_links = [];
 			foreach ( $user_tickets as $ticket ) {
 				$ticket_link = sprintf(
 					'%s (%s). %s.', // "Name (Ticket Type). Edit.".
-					esc_html( $camptix->format_name_string( "%first% %last%", $ticket->tix_first_name, $ticket->tix_last_name ) ),
+					esc_html( $camptix->format_name_string( '%first% %last%', $ticket->tix_first_name, $ticket->tix_last_name ) ),
 					esc_html( get_the_title( $ticket->tix_ticket_id ) ),
 					sprintf(
 						'<a href="%s">%s</a>',
@@ -213,25 +215,29 @@ class CampTix_Require_Login extends CampTix_Addon {
 					),
 				);
 
-				if ( $this->get_unconfirmed_tickets_purchased_with( $ticket ) ) {
-					$ticket_link .= sprintf(
-						'<ul><li>%s</li></ul>',
-						sprintf(
-							__( 'One or more tickets are unconfirmed. <a href="%s">View tickets</a>.', 'wordcamporg' ),
-							esc_url( $camptix->get_access_tickets_link( $ticket->tix_access_token ) )
-						)
-					);
+				// Only the buyer's own ticket links to the order, under the ticket.
+				$order = $user_orders[ $ticket->tix_payment_token ] ?? null;
+				if ( $order && $order->ID === $ticket->ID ) {
+					$ticket_link .= '<ul><li>' . $this->get_unconfirmed_tickets_message( $order ) . '</li></ul>';
+					unset( $user_orders[ $ticket->tix_payment_token ] );
 				}
 
 				$ticket_links[] = $ticket_link;
 			}
 
+			$message = '';
 			if ( $ticket_links ) {
-				$camptix->info( apply_filters(
-					'camptix_require_login_your_tickets_message',
-					'<p>' . __( 'The following tickets are assigned to you:', 'wordcamporg' ) . '</p>' .
-					'<ul><li>' . implode( '</li><li>', $ticket_links ) . '</li></ul>'
-				) );
+				$message .= '<p>' . __( 'The following tickets are assigned to you:', 'wordcamporg' ) . '</p>' .
+					'<ul><li>' . implode( '</li><li>', $ticket_links ) . '</li></ul>';
+			}
+
+			// Orders whose buyer row isn't the buyer's own ticket, because the buyer didn't know who would use it.
+			foreach ( $user_orders as $order ) {
+				$message .= '<p>' . $this->get_unconfirmed_tickets_message( $order ) . '</p>';
+			}
+
+			if ( $message ) {
+				$camptix->info( apply_filters( 'camptix_require_login_your_tickets_message', $message ) );
 			}
 		}
 
@@ -1593,64 +1599,135 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
-	 * Retrieve any tickets associated with the given user.
+	 * Retrieve the tickets assigned to the given user.
+	 *
+	 * That's the tickets confirmed with their username, and the unconfirmed tickets bought for their email
+	 * address. A ticket someone else has confirmed isn't theirs, even if it has their email address.
 	 *
 	 * @param WP_User $user The user object for whom to retrieve the tickets.
-	 * @return array An array of ticket post objects.
+	 * @return WP_Post[] The attendee posts.
 	 */
 	protected function get_tickets_of_user( WP_User $user ) {
 		if ( empty( $user->user_login ) ) {
 			return [];
 		}
 
-		return get_posts( array(
-			'posts_per_page' => -1,
-			'post_type'      => 'tix_attendee',
-			'post_status'    => 'publish',
-			'meta_query'     => array(
-				array(
-					'key'   => 'tix_username',
-					'value' => $user->user_login,
-				),
-				'relation' => 'OR',
+		$meta_query = array(
+			'relation' => 'OR',
+			array(
+				'key'   => 'tix_username',
+				'value' => $user->user_login,
+			),
+		);
+
+		// Every unknown attendee has the placeholder address, so it doesn't belong to anyone. Emails are
+		// compared case-insensitively by the database, so compare them the same way here.
+		if ( $user->user_email && 0 !== strcasecmp( $user->user_email, self::UNKNOWN_ATTENDEE_EMAIL ) ) {
+			$meta_query[] = array(
+				'relation' => 'AND',
 				array(
 					'key'   => 'tix_email',
 					'value' => $user->user_email,
-				),
-			),
-		) );
-	}
-
-	/**
-	 * Retrieve any unconfirmed tickets associated with the given ticket.
-	 *
-	 * @param WP_Post $ticket The ticket post object.
-	 * @return array An array of unconfirmed ticket post objects.
-	 */
-	protected function get_unconfirmed_tickets_purchased_with( WP_Post $ticket ) {
-		$unconfirmed_tickets = get_posts( array(
-			'posts_per_page' => -1,
-			'post_type'      => 'tix_attendee',
-			'post_status'    => 'publish',
-			'post_not_in'    => array( $ticket->ID ),
-			'meta_query'     => array(
-				'relation' => 'AND',
-				array(
-					'key'   => 'tix_payment_token',
-					'value' => $ticket->tix_payment_token,
 				),
 				array(
 					'key'   => 'tix_username',
 					'value' => self::UNCONFIRMED_USERNAME,
 				),
+			);
+		}
+
+		return get_posts( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'meta_query'     => $meta_query,
+		) );
+	}
+
+	/**
+	 * Retrieve the orders the given user bought that still have unconfirmed tickets.
+	 *
+	 * The buyer is the first attendee of an order. Checkout gives that row the buyer's username, or keeps
+	 * it in tix_buyer_username when the buyer didn't know who would use the ticket. The attendee's email
+	 * isn't used, because whoever holds a ticket can change it.
+	 *
+	 * @param WP_User $user The user object for whom to retrieve the orders.
+	 * @return WP_Post[] The buyer row of each order, keyed by payment token.
+	 */
+	protected function get_orders_with_unconfirmed_tickets_bought_by( WP_User $user ) {
+		if ( empty( $user->user_login ) ) {
+			return [];
+		}
+
+		$candidates = get_posts( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
-					'key'   => 'tix_receipt_email',
-					'value' => $ticket->tix_email, // May differ from the user email.
+					'key'   => 'tix_username',
+					'value' => $user->user_login,
+				),
+				array(
+					'key'   => 'tix_buyer_username',
+					'value' => $user->user_login,
 				),
 			),
 		) );
 
-		return $unconfirmed_tickets;
+		$orders = [];
+		foreach ( $candidates as $candidate ) {
+			if ( ! $candidate->tix_payment_token || isset( $orders[ $candidate->tix_payment_token ] ) ) {
+				continue;
+			}
+
+			$order_attendees = get_posts( array(
+				'posts_per_page' => -1,
+				'post_type'      => 'tix_attendee',
+				'post_status'    => 'publish',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'meta_query'     => array(
+					array(
+						'key'   => 'tix_payment_token',
+						'value' => $candidate->tix_payment_token,
+					),
+				),
+			) );
+
+			// Someone who was bought a ticket isn't the buyer of the order.
+			if ( ! $order_attendees || $order_attendees[0]->ID !== $candidate->ID ) {
+				continue;
+			}
+
+			foreach ( $order_attendees as $attendee ) {
+				if ( self::UNCONFIRMED_USERNAME === $attendee->tix_username ) {
+					$orders[ $candidate->tix_payment_token ] = $candidate;
+					break;
+				}
+			}
+		}
+
+		return $orders;
+	}
+
+	/**
+	 * The notice that an order has unconfirmed tickets, linking to the order.
+	 *
+	 * @param WP_Post $buyer_row The first attendee of the order.
+	 * @return string HTML.
+	 */
+	protected function get_unconfirmed_tickets_message( WP_Post $buyer_row ) {
+		/** @var $camptix CampTix_Plugin */
+		global $camptix;
+
+		return sprintf(
+			__( 'One or more tickets are unconfirmed. <a href="%s">View tickets</a>.', 'wordcamporg' ),
+			esc_url( $camptix->get_access_tickets_link( $buyer_row->tix_access_token ) )
+		);
 	}
 } // CampTix_Require_Login
 

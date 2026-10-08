@@ -540,6 +540,242 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The buyer sees their own ticket, and a link to the order while other tickets in it are unconfirmed.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_lists_buyers_ticket_with_order_link() {
+		$buyer = $this->create_user( 'alice@example.org' );
+		$order = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		$message = $this->get_your_tickets_message( $buyer );
+
+		$this->assertStringContainsString( 'Alice Buyer', $message );
+		$this->assertStringContainsString( $this->edit_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( $this->edit_query( $order[1] ), $message );
+		$this->assertStringContainsString( $this->access_query( $order[0] ), $message );
+	}
+
+	/**
+	 * There's no order link once every ticket in the order is confirmed.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_has_no_order_link_when_order_is_confirmed() {
+		$buyer = $this->create_user( 'alice@example.org' );
+		$order = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ) ) );
+
+		$message = $this->get_your_tickets_message( $buyer );
+
+		$this->assertStringContainsString( $this->edit_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( $this->access_query( $order[0] ), $message );
+	}
+
+	/**
+	 * Someone a ticket was bought for sees it, by their email, before they've claimed it.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_lists_unclaimed_ticket_bought_for_users_email() {
+		$buyer  = $this->create_user( 'alice@example.org' );
+		$friend = $this->create_user( 'bob@example.org' );
+		$order  = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		$message = $this->get_your_tickets_message( $friend );
+
+		$this->assertStringContainsString( $this->edit_query( $order[1] ), $message );
+		$this->assertStringNotContainsString( $this->edit_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( $this->access_query( $order[0] ), $message );
+	}
+
+	/**
+	 * Changing a ticket's email to the buyer's doesn't make its holder the buyer.
+	 *
+	 * The order link lets whoever has it copy the claim links of the other tickets in the order.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_has_no_order_link_for_attendee_using_buyers_email() {
+		$buyer  = $this->create_user( 'alice@example.org' );
+		$friend = $this->create_user( 'bob@example.org' );
+		$order  = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ), array( 'Cat', 'Friend', 'cat@example.org' ) ) );
+
+		// Bob claims his ticket and gives it the buyer's email, which the edit form allows.
+		update_post_meta( $order[1], 'tix_username', $friend->user_login );
+		update_post_meta( $order[1], 'tix_email', 'alice@example.org' );
+
+		$message = $this->get_your_tickets_message( $friend );
+
+		$this->assertStringContainsString( $this->edit_query( $order[1] ), $message );
+		$this->assertStringNotContainsString( $this->access_query( $order[0] ), $message );
+	}
+
+	/**
+	 * A ticket someone else has claimed isn't listed for the user whose email it has.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_ignores_ticket_claimed_by_someone_else() {
+		$buyer  = $this->create_user( 'alice@example.org' );
+		$friend = $this->create_user( 'bob@example.org' );
+		$order  = $this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		update_post_meta( $order[1], 'tix_username', $this->create_user( 'someone@example.org' )->user_login );
+
+		$this->assertSame( '', $this->get_your_tickets_message( $friend ) );
+	}
+
+	/**
+	 * Unknown attendees all share the placeholder email, so they aren't listed for an account that has it.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_ignores_unknown_attendee_placeholder_email() {
+		$buyer = $this->create_user( 'alice@example.org' );
+		$this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Unknown', 'Attendee', CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, true ) ) );
+
+		// The database compares emails case-insensitively.
+		$placeholder_user = $this->create_user( strtoupper( CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL ) );
+
+		$this->assertSame( '', $this->get_your_tickets_message( $placeholder_user ) );
+	}
+
+	/**
+	 * A buyer who didn't know who would use their only ticket still gets the order link.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_links_order_when_buyer_row_is_unknown() {
+		$buyer = $this->create_user( 'uma@example.org' );
+		$order = $this->create_order( $buyer, array( array( 'Unknown', 'Attendee', CampTix_Require_Login::UNKNOWN_ATTENDEE_EMAIL, true ) ) );
+
+		$message = $this->get_your_tickets_message( $buyer );
+
+		$this->assertStringContainsString( $this->access_query( $order[0] ), $message );
+		$this->assertStringNotContainsString( 'assigned to you', $message );
+	}
+
+	/**
+	 * Nothing is shown to a user without tickets.
+	 *
+	 * @covers CampTix_Require_Login::ticket_form_message
+	 */
+	public function test_your_tickets_not_shown_to_user_without_tickets() {
+		$buyer = $this->create_user( 'alice@example.org' );
+		$this->create_order( $buyer, array( array( 'Alice', 'Buyer', 'alice@example.org' ), array( 'Bob', 'Friend', 'bob@example.org' ) ) );
+
+		$this->assertSame( '', $this->get_your_tickets_message( $this->create_user( 'xavier@example.org' ) ) );
+	}
+
+	/**
+	 * Create a user with the given email.
+	 *
+	 * @param string $email
+	 *
+	 * @return WP_User
+	 */
+	protected function create_user( $email ) {
+		return get_userdata( self::factory()->user->create( array( 'user_email' => $email ) ) );
+	}
+
+	/**
+	 * Check out and publish an order, through the same CampTix calls as checkout.
+	 *
+	 * @param WP_User $buyer
+	 * @param array   $rows  One row per ticket: first name, last name, email, and whether the attendee is unknown.
+	 *
+	 * @return int[] The attendee IDs, in order.
+	 */
+	protected function create_order( WP_User $buyer, array $rows ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$previous_user = get_current_user_id();
+		wp_set_current_user( $buyer->ID );
+
+		$ticket_id = self::factory()->post->create( array(
+			'post_type'   => 'tix_ticket',
+			'post_status' => 'publish',
+			'post_title'  => 'General',
+		) );
+
+		$attendees = array();
+		foreach ( array_values( $rows ) as $i => $row ) {
+			$attendee             = new stdClass();
+			$attendee->ticket_id  = $ticket_id;
+			$attendee->first_name = $row[0];
+			$attendee->last_name  = $row[1];
+			$attendee->email      = $row[2];
+			$attendee->answers    = array();
+
+			$attendee_info = empty( $row[3] ) ? array() : array( 'unknown_attendee' => '1' );
+			$attendees[]   = apply_filters( 'camptix_form_register_complete_attendee_object', $attendee, $attendee_info, $i + 1 );
+		}
+
+		$drafts = $camptix->insert_attendee_drafts( $attendees, 'stripe', $buyer->user_email, wp_generate_password( 32, false ), wp_generate_password( 32, false ) );
+		$ids    = array();
+		foreach ( $drafts as $draft ) {
+			wp_update_post( array(
+				'ID'          => $draft->post_id,
+				'post_status' => 'publish',
+			) );
+			$ids[] = $draft->post_id;
+		}
+
+		wp_set_current_user( $previous_user );
+
+		return $ids;
+	}
+
+	/**
+	 * Render the ticket form notices as the given user, and return the "your tickets" notice.
+	 *
+	 * @param WP_User $user
+	 *
+	 * @return string The notice, or an empty string if there isn't one.
+	 */
+	protected function get_your_tickets_message( WP_User $user ) {
+		$message = '';
+		$capture = function ( $text ) use ( &$message ) {
+			$message = $text;
+
+			return $text;
+		};
+
+		wp_set_current_user( $user->ID );
+		$this->set_camptix_property( 'infos', array() );
+		add_filter( 'camptix_require_login_your_tickets_message', $capture );
+
+		$this->get_addon( 'CampTix_Require_Login' )->ticket_form_message();
+
+		remove_filter( 'camptix_require_login_your_tickets_message', $capture );
+
+		return $message;
+	}
+
+	/**
+	 * The part of an attendee's edit link that identifies it.
+	 *
+	 * @param int $attendee_id
+	 *
+	 * @return string
+	 */
+	protected function edit_query( $attendee_id ) {
+		return 'tix_attendee_id=' . $attendee_id . '&#038;tix_edit_token=' . get_post_meta( $attendee_id, 'tix_edit_token', true );
+	}
+
+	/**
+	 * The part of an order's access link that identifies it.
+	 *
+	 * @param int $attendee_id Any attendee of the order.
+	 *
+	 * @return string
+	 */
+	protected function access_query( $attendee_id ) {
+		return 'tix_access_token=' . get_post_meta( $attendee_id, 'tix_access_token', true );
+	}
+
+	/**
 	 * Write the draft of a one-ticket order for an unknown attendee on the buyer's row, as checkout
 	 * does, and let its payment session expire long enough ago to count as abandoned.
 	 *

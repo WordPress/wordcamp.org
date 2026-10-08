@@ -149,6 +149,29 @@ class Test_MES_Join extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A camp in a group still gets the sponsors that only target its region.
+	 *
+	 * The group decides the level only for sponsors that target that group. Everyone else falls back to
+	 * the region, so the camp keeps both kinds of sponsor.
+	 */
+	public function test_group_camp_keeps_region_only_sponsors() {
+		list( $group_sponsor_id, $wordcamp_id, $group_level_id ) = $this->make_group_pair();
+
+		$region_id         = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+		$region_level_id   = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+		$region_sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
+
+		update_post_meta( $region_sponsor_id, 'mes_regional_sponsorships', array( $region_id => $region_level_id ) );
+		update_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', $region_id );
+
+		$mes      = new Multi_Event_Sponsors();
+		$by_level = $mes->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
+
+		$this->assertSame( array( $group_sponsor_id ), wp_list_pluck( $by_level[ $group_level_id ] ?? array(), 'ID' ) );
+		$this->assertSame( array( $region_sponsor_id ), wp_list_pluck( $by_level[ $region_level_id ] ?? array(), 'ID' ) );
+	}
+
+	/**
 	 * Multiple matching groups pick the level with the highest contribution per attendee.
 	 *
 	 * That's how the rest of MES ranks levels. Levels have no settable menu_order,

@@ -42,8 +42,17 @@ class Multi_Event_Sponsors {
 	public function shortcode_multi_event_sponsors( $parameters ) {
 		$sponsors           = $this->reindex_array_by_object_id( get_posts( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG, 'numberposts' => -1 ) ) );
 		$regions            = $this->reindex_array_by_object_id( get_terms( MES_Region::TAXONOMY_SLUG, array( 'hide_empty' => false ) ) );
+		$groups             = $this->reindex_array_by_object_id(
+			get_terms(
+				array(
+					'taxonomy'   => MES_Sponsor_Group::TAXONOMY_SLUG,
+					'hide_empty' => false,
+				)
+			)
+		);
 		$sponsorship_levels = $this->reindex_array_by_object_id( get_posts( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG, 'numberposts' => -1 ) ) );
 		$grouped_sponsors   = $this->group_sponsors_by_region_and_level( $sponsors );
+		$sponsors_by_group  = $this->group_sponsors_by_group_and_level( $sponsors );
 
 		ob_start();
 		require_once( dirname( __DIR__ ) . '/views/shortcode-multi-event-sponsors.php' );
@@ -98,6 +107,11 @@ class Multi_Event_Sponsors {
 		foreach ( $sponsors as $sponsor ) {
 			$regional_sponsorships = get_post_meta( $sponsor->ID, 'mes_regional_sponsorships', true );
 
+			// Group-only sponsors have no regional map at all.
+			if ( ! is_array( $regional_sponsorships ) ) {
+				continue;
+			}
+
 			foreach ( $regional_sponsorships as $region_id => $level_id ) {
 				if ( 'null' != $level_id ) {
 					$grouped_sponsors[ $region_id ][ $level_id ][] = $sponsor->ID;
@@ -113,6 +127,53 @@ class Multi_Event_Sponsors {
 		}
 
 		return $grouped_sponsors;
+	}
+
+	/**
+	 * Create a multidimensional array that groups sponsors by sponsor group and level.
+	 *
+	 * The group-based analogue of group_sponsors_by_region_and_level(), reading the
+	 * mes_group_sponsorships map instead of the legacy regional one.
+	 *
+	 * @param array $sponsors
+	 *
+	 * @return array
+	 */
+	protected function group_sponsors_by_group_and_level( $sponsors ) {
+		$grouped_sponsors = array();
+
+		foreach ( $sponsors as $sponsor ) {
+			foreach ( MES_Sponsor::get_group_sponsorships( $sponsor->ID ) as $group_id => $level_id ) {
+				if ( $group_id && $level_id ) {
+					$grouped_sponsors[ $group_id ][ $level_id ][] = $sponsor->ID;
+				}
+			}
+		}
+
+		uksort( $grouped_sponsors, array( $this, 'uksort_groups' ) );
+
+		foreach ( $grouped_sponsors as &$group ) {
+			uksort( $group, array( $this, 'uksort_sponsorship_levels' ) );
+		}
+
+		return $grouped_sponsors;
+	}
+
+	/**
+	 * Sort sponsor groups by their name
+	 *
+	 * This is a callback for uksort().
+	 *
+	 * @param int $group_a_id
+	 * @param int $group_b_id
+	 *
+	 * @return int
+	 */
+	protected function uksort_groups( $group_a_id, $group_b_id ) {
+		$group_a = get_term( $group_a_id, MES_Sponsor_Group::TAXONOMY_SLUG );
+		$group_b = get_term( $group_b_id, MES_Sponsor_Group::TAXONOMY_SLUG );
+
+		return strcmp( $group_a->name ?? '', $group_b->name ?? '' );
 	}
 
 	/**
@@ -170,11 +231,14 @@ class Multi_Event_Sponsors {
 	public function get_wordcamp_me_sponsors( $wordcamp_id, $grouped_by = 'ungrouped' ) {
 		$wordcamp_sponsors = array();
 
+		// Legacy single region (kept for back-compat until the groups migration completes).
 		if ( ! empty( $_POST[ wcpt_key_to_str( 'Multi-Event Sponsor Region', 'wcpt_' ) ] ) ) {
 			$wordcamp_region = absint( $_POST[ wcpt_key_to_str( 'Multi-Event Sponsor Region', 'wcpt_' ) ] );
 		} else {
-			$wordcamp_region = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+			$wordcamp_region = absint( get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true ) );
 		}
+
+		$camp_groups = MES_Sponsor_Group::get_camp_groups( $wordcamp_id );
 
 		$all_me_sponsors = get_posts( array(
 			'post_type'   => MES_Sponsor::POST_TYPE_SLUG,
@@ -182,20 +246,70 @@ class Multi_Event_Sponsors {
 		) );
 
 		foreach ( $all_me_sponsors as $sponsor ) {
-			$regional_sponsorships = get_post_meta( $sponsor->ID, 'mes_regional_sponsorships', true );
+			$level_id = $this->get_sponsor_level_for_camp( $sponsor->ID, $wordcamp_region, $camp_groups );
 
-			if ( ! empty( $regional_sponsorships[ $wordcamp_region ] ) && is_numeric( $regional_sponsorships[ $wordcamp_region ] ) ) {
-				if ( 'sponsor_level' == $grouped_by ) {
-					$sponsorship_level = get_post( $regional_sponsorships[ $wordcamp_region ] );
-					$sponsor->sponsorship_level = $sponsorship_level;
-					$wordcamp_sponsors[ $sponsorship_level->ID ][] = $sponsor;
-				} else {
-					$wordcamp_sponsors[] = $sponsor;
-				}
+			if ( ! $level_id ) {
+				continue;
+			}
+
+			if ( 'sponsor_level' == $grouped_by ) {
+				$sponsorship_level = get_post( $level_id );
+				$sponsor->sponsorship_level = $sponsorship_level;
+				$wordcamp_sponsors[ $sponsorship_level->ID ][] = $sponsor;
+			} else {
+				$wordcamp_sponsors[] = $sponsor;
 			}
 		}
 
 		return $wordcamp_sponsors;
+	}
+
+	/**
+	 * Resolve the sponsorship level a sponsor gets at a camp, via a group match or
+	 * the legacy region.
+	 *
+	 * A group match takes precedence over the legacy region. When a camp is in
+	 * multiple groups the sponsor targets, the level with the highest contribution
+	 * per attendee wins, the same ranking uksort_sponsorship_levels() applies; ties
+	 * fall to the lowest level post ID for determinism.
+	 *
+	 * @param int   $sponsor_id
+	 * @param int   $wordcamp_region Legacy region term ID (0 if none).
+	 * @param int[] $camp_groups     Group term IDs the camp belongs to.
+	 *
+	 * @return int Sponsorship level post ID, or 0 if the sponsor doesn't apply.
+	 */
+	protected function get_sponsor_level_for_camp( $sponsor_id, $wordcamp_region, array $camp_groups ) {
+		$group_map = MES_Sponsor::get_group_sponsorships( $sponsor_id );
+		$matches   = array();
+
+		foreach ( $camp_groups as $group_id ) {
+			if ( ! empty( $group_map[ $group_id ] ) && is_numeric( $group_map[ $group_id ] ) ) {
+				$matches[] = absint( $group_map[ $group_id ] );
+			}
+		}
+
+		if ( $matches ) {
+			usort(
+				$matches,
+				function ( $a, $b ) {
+					return $this->uksort_sponsorship_levels( $a, $b ) ?: ( $a <=> $b );
+				}
+			);
+
+			return $matches[0];
+		}
+
+		// Legacy region fallback.
+		if ( $wordcamp_region ) {
+			$regional_sponsorships = get_post_meta( $sponsor_id, 'mes_regional_sponsorships', true );
+
+			if ( ! empty( $regional_sponsorships[ $wordcamp_region ] ) && is_numeric( $regional_sponsorships[ $wordcamp_region ] ) ) {
+				return absint( $regional_sponsorships[ $wordcamp_region ] );
+			}
+		}
+
+		return 0;
 	}
 
 	/**

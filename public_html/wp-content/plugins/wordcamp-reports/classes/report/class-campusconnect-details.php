@@ -225,10 +225,15 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * ones, and exposes private post meta such as `Actual Attendees`. It must
 	 * therefore never be readable anonymously.
 	 *
+	 * `view_campus_connect_report` (the `campus_connect_viewer` subrole) opens
+	 * this endpoint and nothing else. It is deliberately not accepted by the
+	 * admin screen, which builds the report in private context from any
+	 * requested fields, organiser contact details included.
+	 *
 	 * @return bool
 	 */
 	public static function rest_permission_callback() {
-		return current_user_can( CAPABILITY );
+		return current_user_can( CAPABILITY ) || current_user_can( 'view_campus_connect_report' );
 	}
 
 	/**

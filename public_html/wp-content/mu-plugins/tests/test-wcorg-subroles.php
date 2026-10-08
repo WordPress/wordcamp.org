@@ -92,6 +92,37 @@ class Test_SubRoles extends Database_TestCase {
 	}
 
 	/**
+	 * `campus_connect_viewer` exists to be narrower than `report_viewer`, so it must not
+	 * grant the capability that opens every private report, nor anything off Central.
+	 *
+	 * @covers \WordCamp\SubRoles\add_subrole_caps()
+	 */
+	public function test_campus_connect_viewer_is_narrower_than_report_viewer() {
+		global $wcorg_subroles;
+
+		$user = self::factory()->user->create_and_get( array(
+			'role' => 'subscriber',
+		) );
+
+		$wcorg_subroles = array(
+			$user->ID => array( 'campus_connect_viewer' ),
+		);
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		$this->assertTrue( user_can( $user->ID, 'view_campus_connect_report' ) );
+		$this->assertFalse( user_can( $user->ID, 'view_wordcamp_reports' ) );
+
+		restore_current_blog();
+
+		switch_to_blog( self::factory()->blog->create() );
+
+		$this->assertFalse( user_can( $user->ID, 'view_campus_connect_report' ) );
+
+		restore_current_blog();
+	}
+
+	/**
 	 * @covers \WordCamp\SubRoles\map_subrole_caps()
 	 */
 	public function test_mentor_can_edit_their_wordcamp_post() {
@@ -202,6 +233,12 @@ class Test_SubRoles extends Database_TestCase {
 				'subrole'       => 'report_viewer',
 				'primitive_cap' => 'view_wordcamp_reports',
 				'meta_cap'      => 'view_wordcamp_reports',
+			),
+
+			'campus_connect_viewer' => array(
+				'subrole'       => 'campus_connect_viewer',
+				'primitive_cap' => 'view_campus_connect_report',
+				'meta_cap'      => 'view_campus_connect_report',
 			),
 		);
 	}

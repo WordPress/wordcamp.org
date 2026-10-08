@@ -130,6 +130,7 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		remove_filter( 'user_has_cap', array( $this, 'grant_caps' ), 10 );
+		remove_filter( 'user_has_cap', array( $this, 'grant_campus_connect_cap' ), 10 );
 		wp_set_current_user( 0 );
 
 		parent::tear_down();
@@ -150,6 +151,28 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 		}
 
 		return $allcaps;
+	}
+
+	/**
+	 * Grant only the Campus Connect capability, as the `campus_connect_viewer`
+	 * subrole does.
+	 *
+	 * @param bool[] $allcaps All capabilities for the user.
+	 *
+	 * @return bool[]
+	 */
+	public function grant_campus_connect_cap( $allcaps ) {
+		$allcaps['view_campus_connect_report'] = true;
+
+		return $allcaps;
+	}
+
+	/**
+	 * Sign in as a subscriber holding only the Campus Connect capability.
+	 */
+	protected function act_as_campus_connect_viewer() {
+		wp_set_current_user( self::$subscriber_id );
+		add_filter( 'user_has_cap', array( $this, 'grant_campus_connect_cap' ) );
 	}
 
 	/**
@@ -235,6 +258,29 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertNotEmpty( $this->fixture_row( $response ) );
+	}
+
+	/**
+	 * The narrower `campus_connect_viewer` capability opens this endpoint, with
+	 * the same field set a `report_viewer` gets and no contact details.
+	 */
+	public function test_allows_user_with_only_the_campus_connect_capability() {
+		$this->act_as_campus_connect_viewer();
+
+		$response = $this->dispatch();
+		$this->assertSame( 200, $response->get_status() );
+
+		$expected = array_values( array_diff( CampusConnect_Details::get_rest_fields(), array( 'Series Event' ) ) );
+
+		sort( $expected );
+		$actual = array_keys( $this->fixture_row( $response ) );
+		sort( $actual );
+
+		$this->assertSame( $expected, $actual );
+
+		$serialised = wp_json_encode( $response->get_data() );
+		$this->assertStringNotContainsString( self::EMAIL_CANARY, $serialised );
+		$this->assertStringNotContainsString( self::PHONE_CANARY, $serialised );
 	}
 
 	/**
@@ -346,5 +392,17 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 
 		$this->act_as_report_viewer();
 		$this->assertTrue( default_rest_permission_callback() );
+	}
+
+	/**
+	 * The Campus Connect capability opens that one route, not the fallback every
+	 * other report route would use.
+	 */
+	public function test_default_permission_callback_rejects_the_campus_connect_capability() {
+		$this->act_as_campus_connect_viewer();
+
+		$this->assertTrue( CampusConnect_Details::rest_permission_callback() );
+		$this->assertFalse( default_rest_permission_callback() );
+		$this->assertFalse( current_user_can( CAPABILITY ) );
 	}
 }

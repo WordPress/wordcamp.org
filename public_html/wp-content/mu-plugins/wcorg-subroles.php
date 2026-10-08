@@ -105,6 +105,23 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 					);
 				}
 				break;
+
+			/**
+			 * Campus Connect Viewer
+			 *
+			 * - Read the Campus Connect Details report through the REST API on Central.
+			 *
+			 * Narrower than `report_viewer`, which opens every private report. This grants no `read`, because
+			 * the holder only needs the REST endpoint, not wp-admin.
+			 */
+			case 'campus_connect_viewer':
+				// These capabilities only apply on central.wordcamp.org.
+				if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
+					$newcaps = array(
+						'view_campus_connect_report' => true,
+					);
+				}
+				break;
 		}
 
 		$allcaps = array_merge( $allcaps, $newcaps );

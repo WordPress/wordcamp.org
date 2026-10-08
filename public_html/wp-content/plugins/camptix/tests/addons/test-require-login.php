@@ -466,6 +466,39 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 		$attendee_id = $this->check_out_one_ticket_for_unknown_attendee();
 
 		$this->assertSame( 'buyer@example.org', get_post_meta( $attendee_id, 'tix_receipt_email', true ) );
+		$this->assertSame( array( 'buyer@example.org', 'buyer@example.org' ), wp_list_pluck( $this->sent_mail, 'to' ) );
+	}
+
+	/**
+	 * The buyer of a one-ticket order for an unknown attendee gets the claim link to forward, as on multiple purchases.
+	 *
+	 * The receipt only links to the buyer's own order, which shouldn't be forwarded.
+	 *
+	 * @covers CampTix_Require_Login::send_claim_link_for_single_unknown_attendee
+	 */
+	public function test_checkout_sends_claim_link_to_buyer_when_buyer_row_is_unknown() {
+		$this->log_in_buyer();
+
+		$attendee_id = $this->check_out_one_ticket_for_unknown_attendee();
+		$claim_query = 'tix_edit_token=' . get_post_meta( $attendee_id, 'tix_edit_token', true );
+
+		$this->assertCount( 2, $this->sent_mail );
+		$this->assertStringNotContainsString( $claim_query, $this->sent_mail[0]['message'] );
+		$this->assertSame( 'buyer@example.org', $this->sent_mail[1]['to'] );
+		$this->assertStringContainsString( 'please forward the link below', $this->sent_mail[1]['message'] );
+		$this->assertStringContainsString( $claim_query, $this->sent_mail[1]['message'] );
+	}
+
+	/**
+	 * A one-ticket order for the buyer themselves still only gets the receipt.
+	 *
+	 * @covers CampTix_Require_Login::send_claim_link_for_single_unknown_attendee
+	 */
+	public function test_checkout_sends_only_receipt_when_buyer_row_is_known() {
+		$this->log_in_buyer();
+
+		$this->check_out_one_ticket_for_unknown_attendee( false );
+
 		$this->assertSame( array( 'buyer@example.org' ), wp_list_pluck( $this->sent_mail, 'to' ) );
 	}
 
@@ -554,9 +587,11 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	 *
 	 * The row is submitted as the form sends it: the buyer's pre-filled email is still in the hidden field.
 	 *
+	 * @param bool $unknown_attendee Whether the box is ticked. If it isn't, the buyer fills in their own name.
+	 *
 	 * @return int The attendee ID.
 	 */
-	protected function check_out_one_ticket_for_unknown_attendee() {
+	protected function check_out_one_ticket_for_unknown_attendee( $unknown_attendee = true ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -611,6 +646,12 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 				'unknown_attendee' => '1',
 			),
 		);
+
+		if ( ! $unknown_attendee ) {
+			unset( $_POST['tix_attendee_info'][1]['unknown_attendee'] );
+			$_POST['tix_attendee_info'][1]['first_name'] = 'Jane';
+			$_POST['tix_attendee_info'][1]['last_name']  = 'Buyer';
+		}
 
 		add_filter( 'camptix_wp_mail_override', array( $this, 'capture_mail' ), 10, 2 );
 		add_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );

@@ -7427,6 +7427,16 @@ class CampTix_Plugin {
 
 				do_action( 'camptix_ticket_emailed', $receipt_attendee->ID );
 
+				/**
+				 * Filter: Also send the attendee their own ticket e-mail, as multiple purchases do.
+				 *
+				 * @param bool    $send     Whether to send it. Default false.
+				 * @param WP_Post $attendee The only attendee in the order.
+				 */
+				if ( apply_filters( 'camptix_email_single_purchase_attendee_ticket', false, $attendees[0] ) ) {
+					$this->email_attendee_ticket_multiple_template( $attendees[0] );
+				}
+
 			} elseif ( count( $attendees ) > 1 ) {
 
 				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase_receipt', $attendees[0] );

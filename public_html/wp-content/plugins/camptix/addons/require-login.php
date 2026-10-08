@@ -24,6 +24,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_action( 'camptix_attendee_form_before_input',             array( $this, 'inject_unknown_attendee_checkbox' ), 10, 3 );
 		add_filter( 'camptix_checkout_attendee_info',                 array( $this, 'add_unknown_attendee_info_stubs' ) );
 		add_filter( 'camptix_checkout_receipt_email',                 array( $this, 'send_receipt_to_buyer_instead_of_unknown_attendee' ) );
+		add_filter( 'camptix_email_single_purchase_attendee_ticket',  array( $this, 'send_claim_link_for_single_unknown_attendee' ), 10, 2 );
 		add_filter( 'camptix_edit_info_cell_content',                 array( $this, 'show_buyer_attendee_status_instead_of_edit_link' ), 10, 2 );
 		add_filter( 'camptix_attendee_info_default_value',            array( $this, 'prepopulate_known_fields' ), 10, 5 );
 
@@ -641,6 +642,26 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		return $receipt_email;
+	}
+
+	/**
+	 * Send the claim link e-mail for a one-ticket order whose attendee is unknown.
+	 *
+	 * Multiple purchases send each unknown attendee's ticket e-mail to the buyer, with the claim link to
+	 * forward. A one-ticket order only gets the receipt, whose link is the buyer's own order page, so the
+	 * buyer would have no claim link to pass on.
+	 *
+	 * @param bool    $send
+	 * @param WP_Post $attendee
+	 *
+	 * @return bool
+	 */
+	public function send_claim_link_for_single_unknown_attendee( $send, $attendee ) {
+		if ( self::UNKNOWN_ATTENDEE_EMAIL === get_post_meta( $attendee->ID, 'tix_email', true ) ) {
+			$send = true;
+		}
+
+		return $send;
 	}
 
 	/**

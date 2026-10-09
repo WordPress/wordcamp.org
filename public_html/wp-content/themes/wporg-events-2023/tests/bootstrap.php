@@ -15,5 +15,7 @@ if ( 'cli' !== php_sapi_name() ) {
  */
 function load_theme_files() {
 	require_once dirname( __DIR__ ) . '/inc/feeds.php';
+	require_once dirname( __DIR__ ) . '/inc/stats.php';
+	require_once dirname( __DIR__ ) . '/src/events-stat/index.php';
 }
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\load_theme_files' );

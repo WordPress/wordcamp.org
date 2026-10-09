@@ -1,0 +1,31 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/events-stat",
+	"version": "0.1.0",
+	"title": "Events Stat",
+	"category": "design",
+	"icon": "chart-bar",
+	"description": "One of the homepage stats: events, local groups or meetup members, kept current from cron.",
+	"textdomain": "wporg",
+	"attributes": {
+		"stat": {
+			"type": "string",
+			"enum": [ "events", "groups", "members" ],
+			"default": "events"
+		}
+	},
+	"supports": {
+		"html": false,
+		"color": {
+			"background": true,
+			"text": true,
+			"link": true
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		}
+	},
+	"editorScript": "file:./index.js"
+}

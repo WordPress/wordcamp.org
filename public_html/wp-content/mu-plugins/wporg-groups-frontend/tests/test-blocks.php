@@ -57,6 +57,31 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Block stylesheets are versioned by file, not by `block.json`, so a
+	 * deploy that changes the CSS also changes its URL (#2153).
+	 */
+	public function test_block_styles_are_versioned_by_file() {
+		$build_dir = dirname( __DIR__ ) . '/build/blocks';
+		$checked   = 0;
+
+		foreach ( self::EXPECTED_BLOCKS as $name ) {
+			$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( $name );
+			$handles    = array_merge( (array) $block_type->style_handles, (array) $block_type->view_style_handles );
+
+			foreach ( $handles as $handle ) {
+				$style = wp_styles()->query( $handle, 'registered' );
+				$file  = $build_dir . '/' . substr( $name, strlen( 'wporg/' ) ) . '/' . wp_basename( wp_parse_url( $style->src, PHP_URL_PATH ) );
+
+				$this->assertFileExists( $file );
+				$this->assertSame( (string) filemtime( $file ), $style->ver, "$handle is not versioned by its file." );
+				++$checked;
+			}
+		}
+
+		$this->assertGreaterThan( 0, $checked );
+	}
+
+	/**
 	 * The `render_block_gatherpress/rsvp-count` filter should suppress the
 	 * block entirely when the resolved RSVP count is 0, so a "0 RSVPs" line
 	 * never shows on a public page. Mirrors the `wp eval` check from #1793's

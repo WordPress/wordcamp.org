@@ -230,7 +230,8 @@ function stripe_credentials( $credentials ) {
 function print_login_message_styles() {
 	global $post;
 
-	if ( $post && has_shortcode( $post->post_content, 'camptix' ) ) {
+	// Plugins and stray query vars can leave a non-post value in the global.
+	if ( $post instanceof WP_Post && has_shortcode( $post->post_content, 'camptix' ) ) {
 		wcorg_login_css();
 	}
 }

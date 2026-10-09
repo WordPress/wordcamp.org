@@ -234,4 +234,42 @@ class Test_MES_Join extends WP_UnitTestCase {
 		$this->assertArrayHasKey( $high_level, $by_level );
 		$this->assertArrayNotHasKey( $low_level, $by_level );
 	}
+
+	/**
+	 * Levels with the same contribution tie, and the tie goes to the lowest level post ID.
+	 *
+	 * The higher-ID level is mapped through the group listed first, so an "order of groups"
+	 * or "highest ID" rule would pick it instead.
+	 */
+	public function test_equal_contribution_levels_pick_the_lowest_level_id() {
+		$group_a = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_b = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+
+		$lower_id_level  = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+		$higher_id_level = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+
+		update_post_meta( $lower_id_level, 'mes_contribution_per_attendee', 2 );
+		update_post_meta( $higher_id_level, 'mes_contribution_per_attendee', 2 );
+
+		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
+
+		update_post_meta(
+			$sponsor_id,
+			'mes_group_sponsorships',
+			array(
+				$group_a => $higher_id_level,
+				$group_b => $lower_id_level,
+			)
+		);
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+
+		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( $group_a, $group_b ) );
+
+		$mes      = new Multi_Event_Sponsors();
+		$by_level = $mes->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
+
+		$this->assertArrayHasKey( $lower_id_level, $by_level );
+		$this->assertArrayNotHasKey( $higher_id_level, $by_level );
+	}
 }

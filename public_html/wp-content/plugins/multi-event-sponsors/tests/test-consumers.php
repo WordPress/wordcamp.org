@@ -147,4 +147,126 @@ class Test_MES_Consumers extends WP_UnitTestCase {
 
 		$this->assertSame( '', $this->invoke( $this->bare_mailer(), 'get_mes_audience_label', array( $wordcamp_id, '' ) ) );
 	}
+
+	/**
+	 * A reminder email post that goes to the camera kit wrangler.
+	 *
+	 * @return int Email post ID.
+	 */
+	protected function make_camera_wrangler_email() {
+		// get_recipients() only reads the email's meta, so the post type doesn't matter here and a plain
+		// post avoids depending on the reminders plugin's registration order.
+		$email_id = self::factory()->post->create();
+
+		add_post_meta( $email_id, 'wcor_send_where', 'wcor_send_camera_wrangler' );
+
+		return $email_id;
+	}
+
+	/**
+	 * The organizer email lists sponsors newest first, the way it did before groups, not grouped by level.
+	 *
+	 * Three sponsors at two levels: grouping by level would pull the oldest one up next to the newest.
+	 */
+	public function test_mailer_mes_info_lists_sponsors_newest_first_not_by_level() {
+		$group_id = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$gold     = self::factory()->post->create( array(
+			'post_type'  => MES_Sponsorship_Level::POST_TYPE_SLUG,
+			'post_title' => 'Gold',
+		) );
+		$silver   = self::factory()->post->create( array(
+			'post_type'  => MES_Sponsorship_Level::POST_TYPE_SLUG,
+			'post_title' => 'Silver',
+		) );
+
+		$sponsors = array(
+			'Oldest Co' => array(
+				'date'  => '2026-01-01 10:00:00',
+				'level' => $gold,
+			),
+			'Middle Co' => array(
+				'date'  => '2026-03-01 10:00:00',
+				'level' => $silver,
+			),
+			'Newest Co' => array(
+				'date'  => '2026-06-01 10:00:00',
+				'level' => $gold,
+			),
+		);
+
+		foreach ( $sponsors as $name => $sponsor ) {
+			$date  = $sponsor['date'];
+			$level = $sponsor['level'];
+			$sponsor_id = self::factory()->post->create( array(
+				'post_type'  => MES_Sponsor::POST_TYPE_SLUG,
+				'post_title' => $name,
+				'post_date'  => $date,
+			) );
+			update_post_meta( $sponsor_id, 'mes_group_sponsorships', array( $group_id => $level ) );
+			update_post_meta( $sponsor_id, 'mes_email_address', sanitize_title( $name ) . '@example.com' );
+		}
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( $group_id ) );
+
+		$info = $this->invoke( $this->bare_mailer(), 'get_mes_info', array( $wordcamp_id ) );
+
+		$newest = strpos( $info, 'Company: Newest Co' );
+		$middle = strpos( $info, 'Company: Middle Co' );
+		$oldest = strpos( $info, 'Company: Oldest Co' );
+
+		$this->assertNotFalse( $newest );
+		$this->assertNotFalse( $middle );
+		$this->assertNotFalse( $oldest );
+		$this->assertLessThan( $middle, $newest );
+		$this->assertLessThan( $oldest, $middle );
+		$this->assertMatchesRegularExpression( '/Company: Middle Co\s+Sponsorship Level: Silver/', $info );
+	}
+
+	/**
+	 * A group-only camp's reminder reaches the camera kit wrangler set on its group.
+	 */
+	public function test_mailer_camera_wrangler_recipient_comes_from_the_camps_groups() {
+		list( $wordcamp_id, , , $group_id ) = $this->make_group_only_setup();
+
+		update_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'camera@example.com' );
+
+		$recipients = $this->invoke( $this->bare_mailer(), 'get_recipients', array( $wordcamp_id, $this->make_camera_wrangler_email() ) );
+
+		$this->assertSame( array( 'camera@example.com' ), array_values( $recipients ) );
+	}
+
+	/**
+	 * A camp with a region and groups reaches both wranglers, once each.
+	 */
+	public function test_mailer_camera_wrangler_recipients_cover_region_and_groups_without_repeats() {
+		list( $wordcamp_id, , , $group_id ) = $this->make_group_only_setup();
+
+		$other_group = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$region_id   = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+
+		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( $group_id, $other_group ) );
+		update_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', $region_id );
+		update_option( 'mes_region_camera_wranglers', array( $region_id => 'region@example.com' ) );
+		update_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'group@example.com' );
+		update_term_meta( $other_group, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'region@example.com' );
+
+		$recipients = $this->invoke( $this->bare_mailer(), 'get_recipients', array( $wordcamp_id, $this->make_camera_wrangler_email() ) );
+
+		$this->assertSame( array( 'region@example.com', 'group@example.com' ), array_values( $recipients ) );
+	}
+
+	/**
+	 * While the flag is off, a group's camera kit wrangler isn't a recipient.
+	 */
+	public function test_mailer_camera_wrangler_from_groups_is_ignored_while_disabled() {
+		list( $wordcamp_id, , , $group_id ) = $this->make_group_only_setup();
+
+		update_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'camera@example.com' );
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$recipients = $this->invoke( $this->bare_mailer(), 'get_recipients', array( $wordcamp_id, $this->make_camera_wrangler_email() ) );
+
+		$this->assertSame( array(), array_values( $recipients ) );
+	}
 }

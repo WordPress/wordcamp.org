@@ -223,8 +223,10 @@ class Multi_Event_Sponsors {
 	 *
 	 * @param int $wordcamp_id
 	 * @param string $grouped_by
-	 *     'ungrouped' will return a one-dimensional array;
+	 *     'ungrouped' will return a one-dimensional array, newest sponsor first;
 	 *     'sponsor_level' will return an associative array with sponsors grouped by their level and indexed by level ID
+	 *
+	 * Either way each sponsor carries its resolved level for this camp as `->sponsorship_level`.
 	 *
 	 * @return array
 	 */
@@ -252,10 +254,10 @@ class Multi_Event_Sponsors {
 				continue;
 			}
 
+			$sponsor->sponsorship_level = get_post( $level_id );
+
 			if ( 'sponsor_level' == $grouped_by ) {
-				$sponsorship_level = get_post( $level_id );
-				$sponsor->sponsorship_level = $sponsorship_level;
-				$wordcamp_sponsors[ $sponsorship_level->ID ][] = $sponsor;
+				$wordcamp_sponsors[ $level_id ][] = $sponsor;
 			} else {
 				$wordcamp_sponsors[] = $sponsor;
 			}

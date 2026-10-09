@@ -112,7 +112,7 @@ defined( 'WPINC' ) || die();
 
 		<tr>
 			<th><input id="wcor_send_camera_wrangler" name="wcor_send_where[]" type="checkbox" value="wcor_send_camera_wrangler" <?php checked( in_array( 'wcor_send_camera_wrangler', $send_where ) ); ?>></th>
-			<td colspan="2"><label for="wcor_send_camera_wrangler">The Region's Camera Kit Wrangler</label></td>
+			<td colspan="2"><label for="wcor_send_camera_wrangler">The Camera Kit Wrangler for the camp's region or sponsor groups</label></td>
 		</tr>
 
 		<tr>

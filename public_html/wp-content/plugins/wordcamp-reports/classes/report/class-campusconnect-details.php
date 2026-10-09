@@ -260,6 +260,12 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * which returns null for callers who cannot edit the post -- precisely the
 	 * `report_viewer` audience this endpoint serves.
 	 *
+	 * `Organizer Name` is deliberately absent too. It names a person, and this
+	 * endpoint returns events in every status, so it would name the organiser
+	 * behind applications that are declined, cancelled or still being vetted,
+	 * which Central never lists publicly. The endpoint exists for automated
+	 * reporting on events, which needs no one's name.
+	 *
 	 * @return array
 	 */
 	public static function get_rest_fields() {
@@ -268,7 +274,6 @@ class CampusConnect_Details extends WordCamp_Details {
 			'End Date (YYYY-mm-dd)',
 			'Status',
 			'Name',
-			'Organizer Name',
 			'Venue Name',
 			'_venue_city',
 			'_venue_country_name',

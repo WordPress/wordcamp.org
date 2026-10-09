@@ -5,3 +5,4 @@ import './organizers-list';
 import './sessions-list';
 import './speakers-list';
 import './sponsors-list';
+import './volunteers-list';

@@ -39,11 +39,10 @@ import VenueField from './venue-field';
 import TimezoneField from './timezone-field';
 import LanguageField from './language-field';
 import TopicsField from './topics-field';
+import HostsField from './hosts-field';
+import { NS } from './constants';
 
-export const NS =
-	( window.wporgGroupsEventModal &&
-		window.wporgGroupsEventModal.restNamespace ) ||
-	'wporg-groups/v1';
+export { NS };
 const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
 const EMPTY_FORM = {
@@ -57,6 +56,7 @@ const EMPTY_FORM = {
 	timezone: '',
 	language: '',
 	topics: [],
+	hosts: [],
 	rsvp_questions: [],
 };
 
@@ -184,6 +184,7 @@ function EventForm(
 					timezone: res.fields.timezone || '',
 					language: res.fields.language || '',
 					topics: res.fields.topics || [],
+					hosts: res.fields.hosts || [],
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -380,6 +381,12 @@ function EventForm(
 				suggestions={ topicSuggestions }
 				value={ form.topics }
 				onChange={ ( v ) => updateField( 'topics', v ) }
+				classPrefix={ classPrefix }
+			/>
+
+			<HostsField
+				value={ form.hosts }
+				onChange={ ( v ) => updateField( 'hosts', v ) }
 				classPrefix={ classPrefix }
 			/>
 

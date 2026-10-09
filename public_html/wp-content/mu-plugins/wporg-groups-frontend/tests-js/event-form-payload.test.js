@@ -11,6 +11,7 @@ const form = {
 	timezone: 'Australia/Brisbane',
 	language: 'es',
 	topics: [ 'WordPress' ],
+	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
 	rsvp_questions: [],
 };
 
@@ -53,6 +54,11 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends the hosts as user ids, in order', () => {
+		expect( build().hosts ).toEqual( [ 3, 9 ] );
+		expect( build( { form: { ...form, hosts: [] } } ).hosts ).toEqual( [] );
 	} );
 
 	test( 'sends the timezone, and an empty string when it is unset', () => {

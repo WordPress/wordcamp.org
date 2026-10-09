@@ -17,6 +17,9 @@ class MES_Migrate_Groups {
 	/**
 	 * Seed a group per region, assign camps, and copy sponsor maps.
 	 *
+	 * The region's camera kit wrangler is copied to its group as well, unless the group already
+	 * has one, so reminders keep reaching them once groups take over.
+	 *
 	 * @param bool $dry_run If true, count what would change but write nothing.
 	 *
 	 * @return array { groups_created, camps_assigned, sponsors_migrated, regions_skipped }
@@ -74,6 +77,10 @@ class MES_Migrate_Groups {
 			}
 
 			$region_map[ $region->term_id ] = $group_id;
+
+			if ( ! $dry_run && $group_id > 0 ) {
+				self::copy_camera_wrangler( $region->term_id, $group_id );
+			}
 		}
 
 		// Assign each camp's region as a group membership.
@@ -147,6 +154,20 @@ class MES_Migrate_Groups {
 		}
 
 		return $summary;
+	}
+
+	/**
+	 * Give the group its region's camera kit wrangler, unless it already has one.
+	 *
+	 * @param int $region_id Region term ID.
+	 * @param int $group_id  Group term ID.
+	 */
+	protected static function copy_camera_wrangler( $region_id, $group_id ) {
+		$address = MES_Region::get_camera_wranger_from_region( $region_id );
+
+		if ( $address && ! get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) ) {
+			update_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, $address );
+		}
 	}
 
 	/**

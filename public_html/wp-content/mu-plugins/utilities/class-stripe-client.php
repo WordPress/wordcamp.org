@@ -17,6 +17,17 @@ defined( 'WPINC' ) || die();
  */
 class Stripe_Client {
 	public const API_URL = 'https://api.stripe.com';
+
+	/**
+	 * The Stripe API version every request is pinned to.
+	 *
+	 * Keep in step with `CampTix_Stripe_API_Client::API_VERSION`; CampTix ships separately, so it can't share
+	 * this constant. Review the changelog for breaking changes before moving to a new major release.
+	 *
+	 * @see https://docs.stripe.com/upgrades
+	 */
+	public const API_VERSION = '2026-09-30.endive';
+
 	public const AMOUNT_MAX = 99999999;
 	protected $secret_key;
 
@@ -62,7 +73,7 @@ class Stripe_Client {
 
 		$headers = array(
 			'Authorization'  => 'Bearer ' . $this->secret_key,
-			'Stripe-Version' => '2023-10-16',
+			'Stripe-Version' => self::API_VERSION,
 		);
 
 		$request_args = array(
@@ -98,7 +109,7 @@ class Stripe_Client {
 	public function retrieve_session( $session_id ) {
 		$headers = array(
 			'Authorization'  => 'Bearer ' . $this->secret_key,
-			'Stripe-Version' => '2023-10-16',
+			'Stripe-Version' => self::API_VERSION,
 		);
 
 		$request_args = array(

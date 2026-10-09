@@ -182,4 +182,19 @@ class Test_WordCamp_Scheduled_Meta extends WP_UnitTestCase {
 
 		$this->assertSame( 'wcpt-needs-schedule', $this->schedule() );
 	}
+
+	/**
+	 * A posted group ID that isn't a sponsor group doesn't stand in for the region.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_a_made_up_group_id_does_not_schedule_the_camp() {
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+
+		$this->post_every_scheduled_field_but_the_region();
+		$_POST['wcpt_multi-event_sponsor_region'] = '0';
+		$_POST['wcpt_multi-event_sponsor_groups'] = array( '999999' );
+
+		$this->assertSame( 'wcpt-needs-schedule', $this->schedule() );
+	}
 }

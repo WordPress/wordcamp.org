@@ -1172,7 +1172,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
 			$groups = (array) ( $_POST[ wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' ) ] ?? array() );
 
-			return (bool) array_filter( array_map( 'absint', $groups ) );
+			// Only a group that exists counts, the same way the picker's save keeps only those.
+			return (bool) MES_Sponsor_Group::sanitize_group_ids( $groups );
 		}
 
 		/**

@@ -35,6 +35,10 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			$dry_run = isset( $assoc_args['dry-run'] );
 			$summary = MES_Migrate_Groups::run( $dry_run );
 
+			foreach ( $summary['regions_skipped'] as $region_id => $region_name ) {
+				WP_CLI::warning( sprintf( 'Skipped region %d (%s): a sponsor group already has that name.', $region_id, $region_name ) );
+			}
+
 			WP_CLI::log( ( $dry_run ? '[dry-run] ' : '' ) . wp_json_encode( $summary ) );
 		}
 	);

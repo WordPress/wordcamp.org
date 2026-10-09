@@ -19,13 +19,16 @@ class MES_Migrate_Groups {
 	 *
 	 * @param bool $dry_run If true, count what would change but write nothing.
 	 *
-	 * @return array { groups_created, camps_assigned, sponsors_migrated }
+	 * @return array { groups_created, camps_assigned, sponsors_migrated, regions_skipped }
+	 *               `regions_skipped` lists region ID => name for regions left alone because a group
+	 *               already has their name. Their camps and sponsors aren't counted either.
 	 */
 	public static function run( $dry_run = false ) {
 		$summary = array(
 			'groups_created'    => 0,
 			'camps_assigned'    => 0,
 			'sponsors_migrated' => 0,
+			'regions_skipped'   => array(),
 		);
 
 		$regions = get_terms( array(
@@ -43,6 +46,14 @@ class MES_Migrate_Groups {
 			$group_id = self::find_group_for_region( $region->term_id );
 
 			if ( ! $group_id ) {
+				// A hand-made group with the region's name isn't this region's group, and
+				// wp_insert_term() would refuse the duplicate name. Leave the region alone
+				// and say so, in a dry run too, instead of counting a group that won't be made.
+				if ( term_exists( $region->name, MES_Sponsor_Group::TAXONOMY_SLUG ) ) {
+					$summary['regions_skipped'][ $region->term_id ] = $region->name;
+					continue;
+				}
+
 				if ( $dry_run ) {
 					// Virtual placeholder so the camp/sponsor passes below can still
 					// count what WOULD be assigned to the yet-uncreated group.
@@ -51,6 +62,7 @@ class MES_Migrate_Groups {
 					$created = wp_insert_term( $region->name, MES_Sponsor_Group::TAXONOMY_SLUG );
 
 					if ( is_wp_error( $created ) ) {
+						$summary['regions_skipped'][ $region->term_id ] = $region->name;
 						continue;
 					}
 

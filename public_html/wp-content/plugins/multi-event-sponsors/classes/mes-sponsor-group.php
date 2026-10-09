@@ -186,8 +186,29 @@ class MES_Sponsor_Group {
 
 		$post_key = wcpt_key_to_str( $key, 'wcpt_' );
 		$selected = isset( $_POST[ $post_key ] ) ? (array) $_POST[ $post_key ] : array();
-		$selected = array_values( array_unique( array_filter( array_map( 'absint', $selected ) ) ) );
 
-		update_post_meta( $post_id, self::CAMP_META_KEY, $selected );
+		update_post_meta( $post_id, self::CAMP_META_KEY, self::sanitize_group_ids( $selected ) );
+	}
+
+	/**
+	 * Reduce a posted list of group IDs to the ones that are sponsor groups.
+	 *
+	 * The picker only offers real groups, but the request can carry anything. A made-up ID or a
+	 * term from another taxonomy would otherwise be stored as a group, and count as one when the
+	 * camp is scheduled.
+	 *
+	 * @param array $ids Raw IDs, as posted.
+	 *
+	 * @return int[] Unique, existing group term IDs, in the order posted.
+	 */
+	public static function sanitize_group_ids( array $ids ) {
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+
+		return array_values( array_filter(
+			$ids,
+			function ( $id ) {
+				return (bool) term_exists( $id, self::TAXONOMY_SLUG );
+			}
+		) );
 	}
 } // end MES_Sponsor_Group

@@ -135,4 +135,51 @@ class Test_WordCamp_Scheduled_Meta extends WP_UnitTestCase {
 
 		$this->assertSame( 'wcpt-needs-schedule', $this->schedule() );
 	}
+
+	/**
+	 * Put the camp in the schedule directly, as if a wrangler had scheduled it earlier.
+	 */
+	protected function mark_scheduled() {
+		global $wpdb;
+
+		$wpdb->update( $wpdb->posts, array( 'post_status' => 'wcpt-scheduled' ), array( 'ID' => $this->camp ) );
+		clean_post_cache( $this->camp );
+	}
+
+	/**
+	 * Someone who can't change the groups (a mentor) gets a disabled picker that posts nothing, so the
+	 * saved groups count for them. Otherwise their save would take a group-only camp off the schedule.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_a_saved_group_keeps_the_camp_scheduled_when_the_user_cannot_change_groups() {
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+
+		update_post_meta( $this->camp, MES_Sponsor_Group::CAMP_META_KEY, array( self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) ) ) );
+		$this->mark_scheduled();
+		$this->become_contributor();
+
+		$this->post_every_scheduled_field_but_the_region();
+		$_POST['wcpt_multi-event_sponsor_region'] = '0';
+
+		$this->assertSame( 'wcpt-scheduled', $this->schedule() );
+	}
+
+	/**
+	 * Groups posted by someone who can't change them don't count: they'd never be saved.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_posted_groups_do_not_count_when_the_user_cannot_change_groups() {
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+
+		$this->mark_scheduled();
+		$this->become_contributor();
+
+		$this->post_every_scheduled_field_but_the_region();
+		$_POST['wcpt_multi-event_sponsor_region'] = '0';
+		$_POST['wcpt_multi-event_sponsor_groups'] = array( (string) self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) ) );
+
+		$this->assertSame( 'wcpt-needs-schedule', $this->schedule() );
+	}
 }

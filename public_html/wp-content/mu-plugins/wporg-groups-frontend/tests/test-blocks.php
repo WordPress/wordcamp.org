@@ -15,6 +15,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/event-attendees',
 		'wporg/event-flyer-link',
 		'wporg/event-flyer-qr',
+		'wporg/event-hosts',
 		'wporg/event-language',
 		'wporg/event-manage',
 		'wporg/event-rsvp',
@@ -31,7 +32,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 16 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 17 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's

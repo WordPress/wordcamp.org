@@ -16,3 +16,11 @@ export const ALLOWED_BLOCK_TYPES = [
 	'core/columns',
 	'core/column',
 ];
+
+/**
+ * REST namespace of the frontend endpoints.
+ */
+export const NS =
+	( window.wporgGroupsEventModal &&
+		window.wporgGroupsEventModal.restNamespace ) ||
+	'wporg-groups/v1';

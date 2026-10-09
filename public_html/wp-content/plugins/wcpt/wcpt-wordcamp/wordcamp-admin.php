@@ -1129,6 +1129,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
 					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
+					// A sponsor group stands in for the region while groups are on, as it does for creating the site.
+					if ( 'Multi-Event Sponsor Region' === $field && $this->has_sponsor_groups( $post_data_raw['ID'] ) ) {
+						continue;
+					}
+
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
@@ -1142,6 +1147,32 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $post_data;
+		}
+
+		/**
+		 * Whether the camp is in at least one sponsor group, while sponsor groups are on.
+		 *
+		 * Reads what the WordCamp screen posted, or what's saved when the current user can't change the
+		 * groups: the picker is disabled for them, so it posts nothing, and they can't change the saved
+		 * groups either.
+		 *
+		 * @param int $post_id
+		 *
+		 * @return bool
+		 */
+		protected function has_sponsor_groups( $post_id ) {
+			if ( ! class_exists( 'MES_Sponsor_Group' ) || ! MES_Sponsor_Group::is_enabled() ) {
+				return false;
+			}
+
+			if ( self::is_protected_field( MES_Sponsor_Group::WCPT_FIELD ) ) {
+				return (bool) MES_Sponsor_Group::get_stored_camp_groups( $post_id );
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+			$groups = (array) ( $_POST[ wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' ) ] ?? array() );
+
+			return (bool) array_filter( array_map( 'absint', $groups ) );
 		}
 
 		/**

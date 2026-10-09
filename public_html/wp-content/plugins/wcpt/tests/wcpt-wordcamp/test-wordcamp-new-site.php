@@ -507,4 +507,120 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 		$this->assertFalse( $rejected );
 		$this->assertEquals( self::$slash_year_2016_site_id, get_post_meta( $event, '_site_id', true ) );
 	}
+
+	/**
+	 * Run `maybe_create_new_sites()` as a network admin who ticked "create site", and report the URLs it tried.
+	 *
+	 * `_create_site()` is stubbed out, because these tests are about whether the event qualifies for a site,
+	 * not about provisioning one.
+	 *
+	 * @param int $wordcamp_id
+	 *
+	 * @return string[]
+	 */
+	protected function attempted_site_urls( $wordcamp_id ) {
+		global $wp_actions;
+
+		$new_site = new class() extends WordCamp_New_Site {
+			/**
+			 * The URLs `_create_site()` was called with.
+			 *
+			 * @var string[]
+			 */
+			public $attempted = array();
+
+			/**
+			 * Record the attempt instead of creating a site.
+			 *
+			 * @param WP_Post $wordcamp
+			 * @param string  $url
+			 */
+			protected function _create_site( $wordcamp, $url ) {
+				$this->attempted[] = $url;
+
+				return false;
+			}
+		};
+
+		$network_admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		// Set directly rather than through `site_admins`, which other tests in this suite can leave unusable.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- unset below.
+		$GLOBALS['super_admins'] = array( get_userdata( $network_admin )->user_login );
+		wp_set_current_user( $network_admin );
+
+		// `maybe_create_new_sites()` only runs on the first `wcpt_metabox_save_done` of a request.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- the test case restores hook globals.
+		$wp_actions['wcpt_metabox_save_done'] = 1;
+
+		$_POST[ wcpt_key_to_str( 'create-site-in-network-wcpt_url', 'wcpt_' ) ] = 'on';
+
+		try {
+			$new_site->maybe_create_new_sites( $wordcamp_id );
+		} finally {
+			unset( $_POST[ wcpt_key_to_str( 'create-site-in-network-wcpt_url', 'wcpt_' ) ], $GLOBALS['super_admins'] );
+		}
+
+		return $new_site->attempted;
+	}
+
+	/**
+	 * An event in a sponsor group but with no region still gets its site.
+	 *
+	 * The group is enough to import its multi-event sponsors, the same as `maybe_push_mes()` allows.
+	 *
+	 * @covers WordCamp_New_Site::maybe_create_new_sites
+	 */
+	public function test_maybe_create_new_sites_creates_a_site_for_a_group_only_event() {
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+
+		$group_id = self::factory()->term->create( array( 'taxonomy' => \MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$event    = $this->create_event( array(
+			'URL'                                => 'https://groupcamp.wordcamp.test/2027/',
+			\MES_Sponsor_Group::CAMP_META_KEY => array( $group_id ),
+		) );
+
+		$this->assertSame( array( 'https://groupcamp.wordcamp.test/2027/' ), $this->attempted_site_urls( $event ) );
+	}
+
+	/**
+	 * While the sponsor-groups flag is off, a group doesn't count, so a group-only event gets no site.
+	 *
+	 * @covers WordCamp_New_Site::maybe_create_new_sites
+	 */
+	public function test_maybe_create_new_sites_skips_a_group_only_event_while_groups_are_disabled() {
+		$group_id = self::factory()->term->create( array( 'taxonomy' => \MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$event    = $this->create_event( array(
+			'URL'                                => 'https://groupcamp.wordcamp.test/2027/',
+			\MES_Sponsor_Group::CAMP_META_KEY => array( $group_id ),
+		) );
+
+		$this->assertSame( array(), $this->attempted_site_urls( $event ) );
+	}
+
+	/**
+	 * An event with a sponsor region gets its site, as before groups existed.
+	 *
+	 * @covers WordCamp_New_Site::maybe_create_new_sites
+	 */
+	public function test_maybe_create_new_sites_creates_a_site_for_a_region_event() {
+		$region_id = self::factory()->term->create( array( 'taxonomy' => \MES_Region::TAXONOMY_SLUG ) );
+		$event     = $this->create_event( array(
+			'URL'                        => 'https://regioncamp.wordcamp.test/2027/',
+			'Multi-Event Sponsor Region' => $region_id,
+		) );
+
+		$this->assertSame( array( 'https://regioncamp.wordcamp.test/2027/' ), $this->attempted_site_urls( $event ) );
+	}
+
+	/**
+	 * An event with neither a region nor a group still gets no site, since there'd be no sponsors to import.
+	 *
+	 * @covers WordCamp_New_Site::maybe_create_new_sites
+	 */
+	public function test_maybe_create_new_sites_skips_an_event_with_no_region_or_group() {
+		$event = $this->create_event( array( 'URL' => 'https://nosponsors.wordcamp.test/2027/' ) );
+
+		$this->assertSame( array(), $this->attempted_site_urls( $event ) );
+	}
 }

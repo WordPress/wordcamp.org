@@ -88,7 +88,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	public function test_group_sponsorships_read_defaults_to_empty_array() {
 		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
 
-		$this->assertSame( array(), MES_Sponsor::get_group_sponsorships( $sponsor_id ) );
+		$this->assertSame( array(), MES_Sponsor::get_stored_group_sponsorships( $sponsor_id ) );
 	}
 
 	/**
@@ -99,7 +99,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( 11, 13, 0, '13' ) );
 
-		$groups = MES_Sponsor_Group::get_camp_groups( $wordcamp_id );
+		$groups = MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id );
 
 		$this->assertSame( array( 11, 13 ), $groups ); // Ints, deduped, zero dropped.
 	}
@@ -110,7 +110,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	public function test_camp_groups_read_defaults_to_empty_array() {
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 
-		$this->assertSame( array(), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -344,7 +344,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		unset( $_POST[ $post_key ] );
 
-		$this->assertSame( array(), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -361,7 +361,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$this->invoke( new MES_Sponsor(), 'save_post_meta', array( $sponsor_id, $submitted ) );
 
-		$this->assertSame( array( 11 => 501 ), MES_Sponsor::get_group_sponsorships( $sponsor_id ) );
+		$this->assertSame( array( 11 => 501 ), MES_Sponsor::get_stored_group_sponsorships( $sponsor_id ) );
 	}
 
 	/**

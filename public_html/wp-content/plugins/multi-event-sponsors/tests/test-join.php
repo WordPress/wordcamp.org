@@ -20,6 +20,9 @@ class Test_MES_Join extends WP_UnitTestCase {
 
 		// The join reads the region from $_POST before falling back to post meta.
 		unset( $_POST[ wcpt_key_to_str( 'Multi-Event Sponsor Region', 'wcpt_' ) ] );
+
+		// Groups only count while the flag is on. Tests of the flag-off state switch it back off.
+		add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
 	}
 
 	/**
@@ -146,6 +149,52 @@ class Test_MES_Join extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( $group_level_id, $by_level );
 		$this->assertArrayNotHasKey( $region_level_id, $by_level );
+	}
+
+	/**
+	 * While the flag is off, groups decide nothing and the region answers as it did before groups.
+	 *
+	 * This is what makes switching the flag off a real rollback once camps are in groups.
+	 */
+	public function test_groups_are_ignored_while_disabled() {
+		list( $sponsor_id, $wordcamp_id, $group_level_id ) = $this->make_group_pair();
+
+		$region_id       = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+		$region_level_id = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+
+		update_post_meta( $sponsor_id, 'mes_regional_sponsorships', array( $region_id => $region_level_id ) );
+		update_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', $region_id );
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$mes      = new Multi_Event_Sponsors();
+		$by_level = $mes->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
+
+		$this->assertArrayHasKey( $region_level_id, $by_level );
+		$this->assertArrayNotHasKey( $group_level_id, $by_level );
+	}
+
+	/**
+	 * A camp in a group still gets the sponsors that only target its region.
+	 *
+	 * The group decides the level only for sponsors that target that group. Everyone else falls back to
+	 * the region, so the camp keeps both kinds of sponsor.
+	 */
+	public function test_group_camp_keeps_region_only_sponsors() {
+		list( $group_sponsor_id, $wordcamp_id, $group_level_id ) = $this->make_group_pair();
+
+		$region_id         = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+		$region_level_id   = self::factory()->post->create( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG ) );
+		$region_sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
+
+		update_post_meta( $region_sponsor_id, 'mes_regional_sponsorships', array( $region_id => $region_level_id ) );
+		update_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', $region_id );
+
+		$mes      = new Multi_Event_Sponsors();
+		$by_level = $mes->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
+
+		$this->assertSame( array( $group_sponsor_id ), wp_list_pluck( $by_level[ $group_level_id ] ?? array(), 'ID' ) );
+		$this->assertSame( array( $region_sponsor_id ), wp_list_pluck( $by_level[ $region_level_id ] ?? array(), 'ID' ) );
 	}
 
 	/**

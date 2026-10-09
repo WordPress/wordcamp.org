@@ -457,6 +457,43 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Every request is pinned to the API version the code was written against, so Stripe never
+	 * falls back to the account default, which it rate-limits once it is over seven years old.
+	 *
+	 * @covers CampTix_Stripe_API_Client::send_request
+	 */
+	public function test_requests_pin_the_api_version() {
+		$captured = array();
+		$stub     = function ( $pre, $args, $url ) use ( &$captured ) {
+			if ( false === strpos( $url, 'api.stripe.com' ) ) {
+				return $pre;
+			}
+			$captured[] = $args['headers'];
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array( 'id' => 'cs_test_1' ) ),
+				'headers'  => array(),
+			);
+		};
+
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+		$client = new CampTix_Stripe_API_Client( 'tok_test', 'sk_test' );
+		$client->create_session( 'Event', array(), '', 'https://example.test/return', 'https://example.test/cancel', array() );
+		$client->get_session( 'cs_test_1' );
+		$client->request_refund( 'ch_test_1' );
+		remove_filter( 'pre_http_request', $stub, 10 );
+
+		$this->assertCount( 3, $captured );
+		foreach ( $captured as $headers ) {
+			$this->assertSame( CampTix_Stripe_API_Client::API_VERSION, $headers['Stripe-Version'] ?? null );
+		}
+	}
+
+	/**
 	 * Run the timeout backstop for a draft with the Stripe session fetch stubbed.
 	 */
 	protected function drive_pre_attendee_timeout( $stripe, $attendee_id, $session ) {

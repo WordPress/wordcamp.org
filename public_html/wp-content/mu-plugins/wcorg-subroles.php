@@ -157,9 +157,22 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 		case 'edit_wordcamps':
 		case 'edit_published_wordcamps':
 		case 'edit_wordcamp':
+			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
+				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			}
+			break;
+
 		case 'edit_others_wordcamps':
 			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
 				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			} elseif ( $current_user && user_mentors_wordcamp( $current_user, get_wordcamp_being_saved( $args ) ) ) {
+				/*
+				 * Saving a camp whose author isn't the current user makes core ask for this cap without
+				 * naming the post (`_wp_translate_postdata()`), so a mentor's Update was refused even though
+				 * `edit_post` let them open the screen. Grant it only for the camp the request is saving,
+				 * and only to its mentor; the cap stays unavailable everywhere else.
+				 */
+				$required_caps[] = 'edit_posts';
 			}
 			break;
 
@@ -189,14 +202,10 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 				}
 
 				// Mentors can edit their mentee WordCamp posts.
-				if ( $post && $current_user ) {
-					$mentor = wcorg_get_user_by_canonical_names( $post->{'Mentor WordPress.org User Name'} );
-
-					if ( $mentor && $current_user->ID === $mentor->ID ) {
-						// Note: `edit_posts` is only granted to users with at least Contributor-level access.
-						// This mapping is intentional and assumes mentors already have contributor+ access.
-						$required_caps[] = 'edit_posts';
-					}
+				if ( $current_user && user_mentors_wordcamp( $current_user, $post ) ) {
+					// Note: `edit_posts` is only granted to users with at least Contributor-level access.
+					// This mapping is intentional and assumes mentors already have contributor+ access.
+					$required_caps[] = 'edit_posts';
 				}
 			}
 
@@ -216,6 +225,61 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 }
 
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_subrole_caps', 10, 4 );
+
+/**
+ * Whether the user is the mentor named on a WordCamp post.
+ *
+ * @param WP_User      $user
+ * @param WP_Post|null $post
+ *
+ * @return bool
+ */
+function user_mentors_wordcamp( $user, $post ) {
+	if ( ! $post || ! defined( 'WCPT_POST_TYPE_ID' ) || WCPT_POST_TYPE_ID !== $post->post_type ) {
+		return false;
+	}
+
+	$mentor = wcorg_get_user_by_canonical_names( $post->{'Mentor WordPress.org User Name'} );
+
+	return $mentor && $user->ID === $mentor->ID;
+}
+
+/**
+ * The WordCamp post a save request is about, if the request keeps its author.
+ *
+ * Core's save path checks `edit_others_wordcamps` with no post argument, because the posted author
+ * isn't the current user. post.php always has the post being saved in `post_ID`, and the classic
+ * form posts the existing author back in `post_author`, so that's the case a mentor needs. A request
+ * that posts a different author is a change of author, which stays a wrangler's job. Nothing else is
+ * consulted: a GET or a REST request yields nothing.
+ *
+ * @param array $args Arguments passed to the capability check.
+ *
+ * @return WP_Post|null
+ */
+function get_wordcamp_being_saved( $args ) {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- post.php verifies the nonce before `edit_post()` runs this check; this only reads which post the request is about.
+	$post_id = ! empty( $args[0] ) ? absint( $args[0] ) : 0;
+
+	if ( ! $post_id && ! empty( $_POST['post_ID'] ) ) {
+		$post_id = absint( $_POST['post_ID'] );
+	}
+
+	$post = $post_id ? get_post( $post_id ) : null;
+
+	if ( ! $post || ! defined( 'WCPT_POST_TYPE_ID' ) || WCPT_POST_TYPE_ID !== $post->post_type ) {
+		return null;
+	}
+
+	$posted_author = absint( $_POST['post_author_override'] ?? $_POST['post_author'] ?? 0 );
+
+	if ( $posted_author && $posted_author !== (int) $post->post_author ) {
+		return null;
+	}
+	// phpcs:enable
+
+	return $post;
+}
 
 /**
  * Ignore capabilities that are "additional" i.e. stored in user meta.

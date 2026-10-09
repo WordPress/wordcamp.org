@@ -242,4 +242,191 @@ class Test_SubRoles extends Database_TestCase {
 			),
 		);
 	}
+
+	/**
+	 * Create a camp authored by someone else, mentored by a contributor who is the current user.
+	 *
+	 * @return array [ $mentor_id, $author_id, $post_id ]
+	 */
+	protected function become_mentor_of_someone_elses_camp() {
+		$author = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$mentor = self::factory()->user->create( array(
+			'role'       => 'contributor',
+			'user_login' => 'test_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_author' => $author,
+		) );
+
+		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'test_mentor' );
+		wp_set_current_user( $mentor );
+
+		return array( $mentor, $author, $post_id );
+	}
+
+	/**
+	 * Run the save through core's `_wp_translate_postdata()`, the way post.php does for an Update.
+	 *
+	 * The Author box posts the camp's author, who isn't the mentor, so core asks for
+	 * `edit_others_wordcamps` without naming the post. The post ID is in the request, as it is in post.php.
+	 *
+	 * @param int $post_id
+	 * @param int $author_id
+	 *
+	 * @return array|\WP_Error
+	 */
+	protected function translate_update( $post_id, $author_id ) {
+		require_once ABSPATH . 'wp-admin/includes/post.php';
+
+		// post.php hands `_wp_translate_postdata()` a copy of `$_POST`, so both carry the same fields.
+		$_POST['post_ID']              = (string) $post_id;
+		$_POST['post_author_override'] = (string) $author_id;
+
+		$result = _wp_translate_postdata(
+			true,
+			array(
+				'post_ID'              => (string) $post_id,
+				'post_type'            => WCPT_POST_TYPE_ID,
+				'post_author_override' => (string) $author_id,
+				'post_title'           => 'WordCamp Test',
+			)
+		);
+
+		unset( $_POST['post_ID'], $_POST['post_author_override'] );
+
+		return $result;
+	}
+
+	/**
+	 * A mentor can save their mentee's camp even though its author is someone else.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_mentor_can_save_their_mentees_camp() {
+		list( , $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$result = $this->translate_update( $post_id, $author );
+
+		$this->assertNotWPError( $result );
+		$this->assertSame( $author, $result['post_author'] );
+	}
+
+	/**
+	 * The same save on a camp the user doesn't mentor is still refused.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_save_a_camp_they_do_not_mentor() {
+		list( , $author ) = $this->become_mentor_of_someone_elses_camp();
+
+		$other = self::factory()->post->create( array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_author' => $author,
+		) );
+		update_post_meta( $other, 'Mentor WordPress.org User Name', 'different_mentor' );
+
+		$result = $this->translate_update( $other, $author );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'edit_others_posts', $result->get_error_code() );
+	}
+
+	/**
+	 * The cap is scoped to the request for the mentee's camp: it isn't granted outright.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_mentor_does_not_get_edit_others_wordcamps_outright() {
+		list( $mentor, , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
+
+		$_POST['post_ID'] = (string) $post_id;
+		$this->assertTrue( user_can( $mentor, 'edit_others_wordcamps' ) );
+		unset( $_POST['post_ID'] );
+
+		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
+	}
+
+	/**
+	 * Saving the mentee's camp doesn't open other camps: `edit_post` on another camp stays refused.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_mentee_save_request_does_not_open_other_camps() {
+		list( $mentor, $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$other = self::factory()->post->create( array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_author' => $author,
+		) );
+
+		$_POST['post_ID'] = (string) $post_id;
+		$this->assertFalse( user_can( $mentor, 'edit_post', $other ) );
+		unset( $_POST['post_ID'] );
+	}
+
+	/**
+	 * Saving with a different author is a change of author, which the mentor can't make.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_change_the_camps_author() {
+		list( , , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$someone_else = self::factory()->user->create( array( 'role' => 'contributor' ) );
+
+		$result = $this->translate_update( $post_id, $someone_else );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'edit_others_posts', $result->get_error_code() );
+	}
+
+	/**
+	 * A wrangler still edits anyone's camp and can change its author, through the type's own capability.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_wrangler_can_still_save_anyones_camp_with_a_new_author() {
+		global $wcorg_subroles;
+
+		list( , , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$wrangler        = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$wcorg_subroles  = array( $wrangler => array( 'wordcamp_wrangler' ) );
+		$someone_else    = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		wp_set_current_user( $wrangler );
+
+		$this->assertSame( 'edit_others_wordcamps', get_post_type_object( WCPT_POST_TYPE_ID )->cap->edit_others_posts );
+		$this->assertTrue( user_can( $wrangler, 'edit_others_wordcamps' ) );
+		$this->assertNotWPError( $this->translate_update( $post_id, $someone_else ) );
+	}
+
+	/**
+	 * A contributor who mentors nothing gets nothing from a post ID in the request.
+	 *
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 * @ticket 2159
+	 */
+	public function test_non_mentor_gets_nothing_from_a_post_id_in_the_request() {
+		list( , $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$someone = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		wp_set_current_user( $someone );
+
+		$_POST['post_ID'] = (string) $post_id;
+		$this->assertFalse( user_can( $someone, 'edit_others_wordcamps' ) );
+		unset( $_POST['post_ID'] );
+
+		$result = $this->translate_update( $post_id, $author );
+		$this->assertWPError( $result );
+	}
 }

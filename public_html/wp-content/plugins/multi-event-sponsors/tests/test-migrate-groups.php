@@ -159,4 +159,56 @@ class Test_MES_Migrate_Groups extends WP_UnitTestCase {
 		$this->assertArrayHasKey( $new_level_id, $by_level );
 		$this->assertArrayNotHasKey( $level_id, $by_level );
 	}
+
+	/**
+	 * A region whose name a hand-made group already has is skipped, and the summary says so.
+	 */
+	public function test_a_region_whose_name_is_taken_is_skipped_and_reported() {
+		list( $region_id, , $sponsor_id, $wordcamp_id ) = $this->make_legacy_setup();
+
+		$taken = self::factory()->term->create( array(
+			'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG, 'name' => 'EU',
+		) );
+
+		$summary = MES_Migrate_Groups::run();
+
+		$this->assertSame( 0, $summary['groups_created'] );
+		$this->assertSame( 0, $summary['camps_assigned'] );
+		$this->assertSame( 0, $summary['sponsors_migrated'] );
+		$this->assertSame( array( $region_id => 'EU' ), $summary['regions_skipped'] );
+
+		// The hand-made group is left alone, and nothing was migrated into it.
+		$this->assertSame( '', get_term_meta( $taken, MES_Migrate_Groups::ORIGIN_TERM_META, true ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array(), MES_Sponsor::get_stored_group_sponsorships( $sponsor_id ) );
+	}
+
+	/**
+	 * A dry run reports a taken name as skipped, not as a group it would create.
+	 */
+	public function test_dry_run_reports_a_taken_name_as_skipped_not_created() {
+		list( $region_id ) = $this->make_legacy_setup();
+
+		self::factory()->term->create( array(
+			'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG, 'name' => 'EU',
+		) );
+
+		$summary = MES_Migrate_Groups::run( true );
+
+		$this->assertSame( 0, $summary['groups_created'] );
+		$this->assertSame( 0, $summary['camps_assigned'] );
+		$this->assertSame( 0, $summary['sponsors_migrated'] );
+		$this->assertSame( array( $region_id => 'EU' ), $summary['regions_skipped'] );
+	}
+
+	/**
+	 * A clean run reports no skipped regions.
+	 */
+	public function test_a_clean_run_reports_no_skipped_regions() {
+		$this->make_legacy_setup();
+
+		$summary = MES_Migrate_Groups::run();
+
+		$this->assertSame( array(), $summary['regions_skipped'] );
+	}
 }

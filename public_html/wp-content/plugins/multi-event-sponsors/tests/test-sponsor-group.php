@@ -154,15 +154,41 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$first       = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$second      = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 
-		$_POST[ $post_key ] = array( '7', '7', '0', 9 );
+		$_POST[ $post_key ] = array( (string) $first, (string) $first, '0', $second );
 
 		$group = new MES_Sponsor_Group();
 		$group->save_group_picker( MES_Sponsor_Group::WCPT_FIELD, '', $wordcamp_id );
 
 		unset( $_POST[ $post_key ] );
 
-		$this->assertSame( array( 7, 9 ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array( $first, $second ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+	}
+
+	/**
+	 * `save_group_picker` keeps only IDs that are sponsor groups: a made-up ID or a term from another
+	 * taxonomy would otherwise be stored and count as a group.
+	 */
+	public function test_save_group_picker_drops_ids_that_are_not_groups() {
+		$this->enable_groups();
+
+		$this->set_current_user_as_wrangler();
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$real        = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$region      = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+
+		$_POST[ $post_key ] = array( (string) $real, '999999', (string) $region );
+
+		$group = new MES_Sponsor_Group();
+		$group->save_group_picker( MES_Sponsor_Group::WCPT_FIELD, '', $wordcamp_id );
+
+		unset( $_POST[ $post_key ] );
+
+		$this->assertSame( array( $real ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -285,11 +311,13 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$first       = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$second      = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 
 		$_POST = array(
 			'action'   => 'editpost',
 			'_wpnonce' => wp_create_nonce( 'update-post_' . $wordcamp_id ),
-			$post_key  => array( '7', '9' ),
+			$post_key  => array( (string) $first, (string) $second ),
 		);
 
 		// Only the per-field loop is under test. The after-save handlers geocode
@@ -300,7 +328,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$_POST = array();
 
-		$this->assertSame( array( 7, 9 ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array( $first, $second ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
 	}
 
 	/**

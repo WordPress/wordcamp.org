@@ -121,4 +121,28 @@ class Test_MES_Flagships extends WP_UnitTestCase {
 		$this->assertContains( $sponsor_id, wp_list_pluck( $mes->get_wordcamp_me_sponsors( $us ), 'ID' ) );
 		$this->assertEmpty( $mes->get_wordcamp_me_sponsors( $local ) );
 	}
+
+	/**
+	 * A hand-made group already called "Flagships" isn't the seeded one. The seed stops and says so,
+	 * so the CLI can fail instead of reporting a group it didn't make.
+	 */
+	public function test_seed_reports_a_hand_made_group_with_the_same_name() {
+		$us    = $this->make_camp( 'https://us.wordcamp.org/2026/' );
+		$taken = self::factory()->term->create( array(
+			'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG, 'name' => MES_Flagships::GROUP_NAME,
+		) );
+
+		$dry_run = MES_Flagships::seed( array(), true );
+
+		$this->assertFalse( $dry_run['group_created'] );
+		$this->assertTrue( $dry_run['group_name_taken'] );
+
+		$summary = MES_Flagships::seed();
+
+		$this->assertFalse( $summary['group_created'] );
+		$this->assertTrue( $summary['group_name_taken'] );
+		$this->assertSame( 0, $summary['camps_assigned'] );
+		$this->assertSame( '', get_term_meta( $taken, MES_Flagships::MARKER_TERM_META, true ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $us ) );
+	}
 }

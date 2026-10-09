@@ -34,19 +34,29 @@ class MES_Flagships {
 	 * @param string[] $domains Optional. Third-level domains; default us/europe/asia.
 	 * @param bool     $dry_run If true, count what would change but write nothing.
 	 *
-	 * @return array { group_created (bool), camps_assigned (int), camps_matched (int) }
+	 * @return array { group_created (bool), group_name_taken (bool), camps_assigned (int), camps_matched (int) }
+	 *               `group_name_taken` means a hand-made group already has the name, so nothing was done.
 	 */
 	public static function seed( array $domains = array(), $dry_run = false ) {
 		$domains = $domains ? array_map( 'sanitize_key', $domains ) : self::default_domains();
 		$summary = array(
-			'group_created'  => false,
-			'camps_assigned' => 0,
-			'camps_matched'  => 0,
+			'group_created'    => false,
+			'group_name_taken' => false,
+			'camps_assigned'   => 0,
+			'camps_matched'    => 0,
 		);
 
 		$group_id = self::find_flagships_group();
 
 		if ( ! $group_id ) {
+			// A hand-made group with this name isn't the seeded one, and wp_insert_term() would
+			// refuse the duplicate. Stop here, in a dry run too, and let the caller report it.
+			if ( term_exists( self::GROUP_NAME, MES_Sponsor_Group::TAXONOMY_SLUG ) ) {
+				$summary['group_name_taken'] = true;
+
+				return $summary;
+			}
+
 			$summary['group_created'] = true;
 
 			if ( $dry_run ) {
@@ -55,6 +65,9 @@ class MES_Flagships {
 				$created = wp_insert_term( self::GROUP_NAME, MES_Sponsor_Group::TAXONOMY_SLUG );
 
 				if ( is_wp_error( $created ) ) {
+					$summary['group_created']    = false;
+					$summary['group_name_taken'] = true;
+
 					return $summary;
 				}
 

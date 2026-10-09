@@ -52,6 +52,10 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			$dry_run = isset( $assoc_args['dry-run'] );
 			$summary = MES_Propagator::run( $mes_id, $dry_run );
 
+			foreach ( $summary['camps_skipped_no_author'] as $camp_id ) {
+				WP_CLI::warning( sprintf( 'Skipped camp %d: it has no lead organizer to author the stubs. Pass --user=<login> to author them yourself.', $camp_id ) );
+			}
+
 			WP_CLI::log( ( $dry_run ? '[dry-run] ' : '' ) . wp_json_encode( $summary ) );
 		}
 	);
@@ -62,6 +66,10 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			$domains = empty( $assoc_args['domains'] ) ? array() : explode( ',', $assoc_args['domains'] );
 			$dry_run = isset( $assoc_args['dry-run'] );
 			$summary = MES_Flagships::seed( $domains, $dry_run );
+
+			if ( $summary['group_name_taken'] ) {
+				WP_CLI::error( sprintf( 'A sponsor group named "%s" already exists but was not seeded by this command. Rename it, or add the flagship camps to it by hand.', MES_Flagships::GROUP_NAME ) );
+			}
 
 			WP_CLI::log( ( $dry_run ? '[dry-run] ' : '' ) . wp_json_encode( $summary ) );
 		}

@@ -53,6 +53,34 @@
 			    text-transform: capitalize;
 			}
 
+			/*
+			 * The event's type shares the location's cell, so the row keeps its three columns at every width.
+			 * Up to the large breakpoint the two run together, "Meetup · Paris, France", with the same dot the
+			 * date uses. From there the cell is only 130-150px wide, so the type takes its own line instead.
+			 */
+			& .wporg-marker-list-item__type {
+				@media (--large) {
+					display: block;
+				}
+
+				&::after {
+					content: "";
+					margin-top: -1px;
+					margin-left: var(--wp--preset--spacing--10);
+					margin-right: var(--wp--preset--spacing--10);
+					height: 3px;
+					width: 3px;
+					border-radius: 3px;
+					background: var(--wp--preset--color--charcoal-5);
+					display: inline-block;
+					vertical-align: middle;
+
+					@media (--large) {
+						display: none;
+					}
+				}
+			}
+
 			@media (--medium-small) {
 				margin-top: 2px;
 				margin-bottom: -2px;

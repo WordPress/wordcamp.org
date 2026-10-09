@@ -74,6 +74,7 @@ function render( $attributes, $content, $block ) {
 			return array(
 				'title'     => $event->title,
 				'url'       => $event->url,
+				'type'      => get_event_type_label( $event ),
 				'location'  => $event->location,
 				'timestamp' => $event->timestamp,
 			);
@@ -126,6 +127,31 @@ function render( $attributes, $content, $block ) {
 		$wrapper_attributes,
 		do_blocks( $content )
 	);
+}
+
+/**
+ * The label for an event's type, matching the Type filter's options.
+ *
+ * `wporg_events` only knows `meetup` and `wordcamp`; the importer files every official event, Campus
+ * Connect and do_action included, under `wordcamp`. The Type filter tells them apart by URL, the same
+ * way `get_where_clauses()` does in the Google Map block: only an event on a wordcamp.org site is a
+ * WordCamp, the rest are Other. The list uses the same rule so a row's label is what filtering by it
+ * would find.
+ *
+ * @param object $event An event from `Google_Map\get_events()`.
+ *
+ * @return string
+ */
+function get_event_type_label( $event ): string {
+	if ( 'meetup' === ( $event->type ?? '' ) ) {
+		return __( 'Meetup', 'wporg' );
+	}
+
+	if ( preg_match( '#^https?://([^/]*\.)?wordcamp\.org#i', (string) ( $event->url ?? '' ) ) ) {
+		return __( 'WordCamp', 'wporg' );
+	}
+
+	return __( 'Other', 'wporg' );
 }
 
 /**

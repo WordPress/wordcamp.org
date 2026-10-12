@@ -250,15 +250,25 @@ function user_mentors_wordcamp( $user, $post ) {
  * Core's save path checks `edit_others_wordcamps` with no post argument, because the posted author
  * isn't the current user. post.php always has the post being saved in `post_ID`, and the classic
  * form posts the existing author back in `post_author`, so that's the case a mentor needs. A request
- * that posts a different author is a change of author, which stays a wrangler's job. Nothing else is
- * consulted: a GET or a REST request yields nothing.
+ * that posts a different author is a change of author, which stays a wrangler's job.
+ *
+ * Only post.php's Update counts (`action=editpost`, which the block editor's meta box save sends
+ * too). PHP fills `$_POST` for any form-encoded request, so without that a REST update could name
+ * the camp in `post_ID` and get the cap for its own author check, which reads `author`, not
+ * `post_author`. A REST request is refused outright as well.
  *
  * @param array $args Arguments passed to the capability check.
  *
  * @return WP_Post|null
  */
 function get_wordcamp_being_saved( $args ) {
+	global $pagenow;
+
 	// phpcs:disable WordPress.Security.NonceVerification.Missing -- post.php verifies the nonce before `edit_post()` runs this check; this only reads which post the request is about.
+	if ( wp_is_serving_rest_request() || 'post.php' !== $pagenow || 'editpost' !== ( $_POST['action'] ?? '' ) ) {
+		return null;
+	}
+
 	$post_id = ! empty( $args[0] ) ? absint( $args[0] ) : 0;
 
 	if ( ! $post_id && ! empty( $_POST['post_ID'] ) ) {

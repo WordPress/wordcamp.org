@@ -17,6 +17,13 @@ defined( 'WPINC' ) || die();
  */
 class Test_SubRoles extends Database_TestCase {
 	/**
+	 * `$pagenow` before `start_classic_save()` replaced it.
+	 *
+	 * @var string|null
+	 */
+	protected $pagenow_before;
+
+	/**
 	 * Reset global state between tests, for isolation.
 	 */
 	public function set_up() {
@@ -281,7 +288,7 @@ class Test_SubRoles extends Database_TestCase {
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 
 		// post.php hands `_wp_translate_postdata()` a copy of `$_POST`, so both carry the same fields.
-		$_POST['post_ID']              = (string) $post_id;
+		$this->start_classic_save( $post_id );
 		$_POST['post_author_override'] = (string) $author_id;
 
 		$result = _wp_translate_postdata(
@@ -294,9 +301,33 @@ class Test_SubRoles extends Database_TestCase {
 			)
 		);
 
-		unset( $_POST['post_ID'], $_POST['post_author_override'] );
+		$this->end_classic_save();
+		unset( $_POST['post_author_override'] );
 
 		return $result;
+	}
+
+	/**
+	 * Make the request look like the classic Update on post.php: `action=editpost` and the post's ID.
+	 *
+	 * The block editor's meta box save posts the same form to post.php.
+	 *
+	 * @param int $post_id
+	 */
+	protected function start_classic_save( $post_id ) {
+		$this->pagenow_before = $GLOBALS['pagenow'] ?? null;
+
+		$GLOBALS['pagenow'] = 'post.php'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Stands in for the request's own script, restored by end_classic_save().
+		$_POST['action']    = 'editpost';
+		$_POST['post_ID']   = (string) $post_id;
+	}
+
+	/**
+	 * Undo `start_classic_save()`.
+	 */
+	protected function end_classic_save() {
+		$GLOBALS['pagenow'] = $this->pagenow_before; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the value start_classic_save() replaced.
+		unset( $_POST['action'], $_POST['post_ID'] );
 	}
 
 	/**
@@ -346,9 +377,9 @@ class Test_SubRoles extends Database_TestCase {
 
 		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
 
-		$_POST['post_ID'] = (string) $post_id;
+		$this->start_classic_save( $post_id );
 		$this->assertTrue( user_can( $mentor, 'edit_others_wordcamps' ) );
-		unset( $_POST['post_ID'] );
+		$this->end_classic_save();
 
 		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
 	}
@@ -367,9 +398,9 @@ class Test_SubRoles extends Database_TestCase {
 			'post_author' => $author,
 		) );
 
-		$_POST['post_ID'] = (string) $post_id;
+		$this->start_classic_save( $post_id );
 		$this->assertFalse( user_can( $mentor, 'edit_post', $other ) );
-		unset( $_POST['post_ID'] );
+		$this->end_classic_save();
 	}
 
 	/**
@@ -422,11 +453,64 @@ class Test_SubRoles extends Database_TestCase {
 		$someone = self::factory()->user->create( array( 'role' => 'contributor' ) );
 		wp_set_current_user( $someone );
 
-		$_POST['post_ID'] = (string) $post_id;
+		$this->start_classic_save( $post_id );
 		$this->assertFalse( user_can( $someone, 'edit_others_wordcamps' ) );
-		unset( $_POST['post_ID'] );
+		$this->end_classic_save();
 
 		$result = $this->translate_update( $post_id, $author );
 		$this->assertWPError( $result );
+	}
+
+	/**
+	 * A post ID in the form data only counts on post.php's Update. Anywhere else, or with another
+	 * action, the mentor gets nothing from it.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_gets_nothing_outside_the_classic_save() {
+		list( $mentor, , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		// The right fields, but not on post.php: what a form-encoded REST request looks like.
+		$_POST['action']  = 'editpost';
+		$_POST['post_ID'] = (string) $post_id;
+		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
+
+		// post.php, but not an Update.
+		$this->start_classic_save( $post_id );
+		$_POST['action'] = 'trash';
+		$this->assertFalse( user_can( $mentor, 'edit_others_wordcamps' ) );
+		$this->end_classic_save();
+	}
+
+	/**
+	 * Through the REST API, a mentor still can't give their mentee's camp to someone else, even when the
+	 * form-encoded body carries the camp's ID, which PHP puts in `$_POST`.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_change_the_author_over_rest() {
+		list( , $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$someone_else = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$route        = '/wp/v2/' . get_post_type_object( WCPT_POST_TYPE_ID )->rest_base . '/' . $post_id;
+
+		$this->assertArrayHasKey( '/wp/v2/' . get_post_type_object( WCPT_POST_TYPE_ID )->rest_base . '/(?P<id>[\d]+)', rest_get_server()->get_routes() );
+
+		$_POST = array(
+			'post_ID' => (string) $post_id,
+			'author'  => (string) $someone_else,
+		);
+
+		$request = new \WP_REST_Request( 'POST', $route );
+		$request->set_body_params( $_POST );
+
+		$response = rest_do_request( $request );
+		$_POST    = array();
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'rest_cannot_edit_others', $response->get_data()['code'] );
+		$this->assertSame( $author, (int) get_post( $post_id )->post_author );
 	}
 }

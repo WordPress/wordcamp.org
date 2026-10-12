@@ -155,12 +155,13 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	 * @param {Object} event
 	 * @param {string} event.title
 	 * @param {string} event.url
+	 * @param {string} event.type
 	 * @param {string} event.location
 	 * @param {number} event.timestamp
 	 *
 	 * @return {string}
 	 */
-	function renderEvent( { title, url, location, timestamp } ) {
+	function renderEvent( { title, url, type, location, timestamp } ) {
 		const markup = `
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
@@ -170,6 +171,7 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				</h3>
 
 				<div class="wporg-marker-list-item__location">
+					<span class="wporg-marker-list-item__type">${ escapeHTML( type ) }</span>
 					${ escapeHTML( location ) }
 				</div>
 

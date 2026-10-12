@@ -110,8 +110,8 @@ function register_tix_invoice() {
 	// (XML-RPC custom_fields, the REST meta endpoint, or the Custom Fields metabox).
 	// The plugin only ever writes these via direct update_post_meta()/delete_post_meta(),
 	// which bypass auth_callback, so legitimate invoice generation is unaffected. The
-	// sanitize_callback additionally contains invoice_document to a bare filename at the
-	// storage layer, neutralising any path component before it is ever persisted.
+	// sanitize_callback still runs on those direct writes, including the importer's, and
+	// only lets invoice_document keep a filename in the shape the plugin generates.
 	register_post_meta(
 		'tix_invoice',
 		'invoice_document',
@@ -137,18 +137,22 @@ function register_tix_invoice() {
 }
 
 /**
- * Contain the invoice_document meta to a bare filename at the storage layer.
+ * Contain the invoice_document meta to a filename the plugin could have generated.
  *
  * Registered as the sanitize_callback for the invoice_document post meta, so it runs on
- * every update_post_meta() for a tix_invoice. A crafted value can therefore never be
- * persisted with a directory component, even if a future writer forgets to sanitise.
- * basename() is a no-op for the flat filenames the plugin itself generates.
+ * every add_post_meta() and update_post_meta() for a tix_invoice, including the importer's.
+ * A crafted value can therefore never be persisted with a directory component or a
+ * non-PDF name, even if a future writer forgets to sanitise. Generated names are
+ * `<invoice number>-<12 random letters and digits>.pdf`, and invoice numbers are made of
+ * digits and dashes. Anything else is stored empty, and the next generation picks a new name.
  *
  * @param mixed $value The meta value being stored.
- * @return string The contained filename.
+ * @return string The contained filename, or an empty string.
  */
 function ctx_sanitize_invoice_document( $value ) {
-	return basename( (string) $value );
+	$filename = basename( (string) $value );
+
+	return preg_match( '/^[A-Za-z0-9-]*-[A-Za-z0-9]{12}\.pdf\z/', $filename ) ? $filename : '';
 }
 
 /**

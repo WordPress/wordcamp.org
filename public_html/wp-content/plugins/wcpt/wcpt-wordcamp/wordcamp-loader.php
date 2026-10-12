@@ -739,6 +739,8 @@ class WordCamp_Loader extends Event_Loader {
 	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
 	 *   WordCamp Closed      → Declined, Cancelled, On Hold
 	 *   Declined / Cancelled / On Hold → any CC status
+	 *   Any older, non-CC workflow status → On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, WordCamp Closed, Declined, Cancelled
 	 *
 	 * @param string $status Current status slug.
 	 * @return array Array of valid next-status slugs.
@@ -758,10 +760,23 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => $all_cc,
 		);
 
+		if ( isset( $transitions[ $status ] ) ) {
+			return $transitions[ $status ];
+		}
+
+		// Applications from before the CC workflow are still in the older statuses, like In
+		// Pre-Planning. With nothing to move to, their status couldn't be changed at all (#1714).
+		// They can go anywhere past intake: not back to Needs Vetting, which queues them for the
+		// vetting agent again, Needs Action, the agent's hand-off, or Needs Orientation, which sends
+		// the organizer email.
+		if ( array_key_exists( $status, self::get_post_statuses() ) ) {
+			return array( 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled' );
+		}
+
 		// For an unexpected/mid-transition status, allow no transitions rather than
 		// defaulting to a real status: the metabox keeps the current status selectable
 		// (as a disabled option) so it is never silently mutated.
-		return $transitions[ $status ] ?? array();
+		return array();
 	}
 
 	/**

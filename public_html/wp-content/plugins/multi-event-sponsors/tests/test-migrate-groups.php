@@ -211,4 +211,25 @@ class Test_MES_Migrate_Groups extends WP_UnitTestCase {
 
 		$this->assertSame( array(), $summary['regions_skipped'] );
 	}
+
+	/**
+	 * The region's camera kit wrangler moves to its group, so reminders keep reaching them after the flip.
+	 */
+	public function test_migration_copies_the_regions_camera_wrangler_to_its_group() {
+		list( $region_id, , , $wordcamp_id ) = $this->make_legacy_setup();
+
+		update_option( 'mes_region_camera_wranglers', array( $region_id => 'camera@example.com' ) );
+
+		MES_Migrate_Groups::run();
+
+		$group_id = MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id )[0];
+
+		$this->assertSame( 'camera@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		// A re-run doesn't overwrite an address someone has since changed on the group.
+		update_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'changed@example.com' );
+		MES_Migrate_Groups::run();
+
+		$this->assertSame( 'changed@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+	}
 }

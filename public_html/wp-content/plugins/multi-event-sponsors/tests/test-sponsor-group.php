@@ -410,4 +410,63 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'mes_group_sponsorships', $registered );
 		$this->assertArrayHasKey( 'mes_regional_sponsorships', $registered );
 	}
+
+	/**
+	 * The camera kit wranglers for a camp: one address per group that has one, no repeats, valid only.
+	 */
+	public function test_camera_wranglers_for_camp_are_distinct_valid_addresses() {
+		$this->enable_groups();
+
+		$group_a = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_b = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_c = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_d = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+
+		update_term_meta( $group_a, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'one@example.com' );
+		update_term_meta( $group_b, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'one@example.com' );
+		update_term_meta( $group_c, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'not an address' );
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( $group_a, $group_b, $group_c, $group_d ) );
+
+		$this->assertSame( array( 'one@example.com' ), MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$this->assertSame( array(), MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+	}
+
+	/**
+	 * The group screen's camera wrangler field saves a valid address, clears on empty, and ignores junk.
+	 */
+	public function test_save_camera_wrangler_writes_clears_and_rejects() {
+		$this->enable_groups();
+		$this->set_current_user_as_wrangler();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$group_id = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group    = new MES_Sponsor_Group();
+
+		$_POST['mes_group_camera_wrangler_nonce'] = wp_create_nonce( 'mes_group_camera_wrangler_' . $group_id );
+
+		$_POST['camera-wrangler-email'] = 'camera@example.com';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( 'camera@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		$_POST['camera-wrangler-email'] = 'not an address';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( 'camera@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		$_POST['camera-wrangler-email'] = '';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( '', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		// Without a valid nonce nothing is written.
+		$_POST['camera-wrangler-email']           = 'camera@example.com';
+		$_POST['mes_group_camera_wrangler_nonce'] = 'nope';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( '', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		unset( $_POST['camera-wrangler-email'], $_POST['mes_group_camera_wrangler_nonce'] );
+	}
 }

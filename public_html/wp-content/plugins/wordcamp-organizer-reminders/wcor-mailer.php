@@ -473,12 +473,10 @@ class WCOR_Mailer {
 		/** @var $multi_event_sponsors Multi_Event_Sponsors */
 		global $multi_event_sponsors;
 
-		// The 'sponsor_level' shape attaches each sponsor's resolved level, which
-		// covers both group-matched and legacy region-matched sponsors (a camp may
-		// have no region at all when it's targeted via groups).
-		$sponsors_by_level = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
-		$sponsors          = $sponsors_by_level ? array_merge( ...array_values( $sponsors_by_level ) ) : array();
-		$sponsor_info      = $multi_event_sponsors->get_sponsor_info( $sponsors );
+		// Newest sponsor first, as the email has always listed them. Each sponsor carries its
+		// resolved level for this camp, whether it came from a group or the legacy region.
+		$sponsors     = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id );
+		$sponsor_info = $multi_event_sponsors->get_sponsor_info( $sponsors );
 
 		if ( ! $sponsors || ! $sponsor_info ) {
 			return '';
@@ -642,8 +640,13 @@ class WCOR_Mailer {
 		}
 
 		if ( in_array( 'wcor_send_camera_wrangler', $send_where ) ) {
-			$region_id = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+			$region_id    = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
 			$recipients[] = MES_Region::get_camera_wranger_from_region( $region_id );
+
+			// A camp in sponsor groups may have no region, so its groups' wranglers count too.
+			if ( class_exists( 'MES_Sponsor_Group' ) ) {
+				$recipients = array_merge( $recipients, MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+			}
 		}
 
 		if ( in_array( 'wcor_send_mentor', $send_where ) ) {

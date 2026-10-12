@@ -1048,6 +1048,18 @@ camptix_register_addon( 'CampTix_Payment_Method_Stripe' );
  */
 class CampTix_Stripe_API_Client {
 	/**
+	 * The Stripe API version every request is pinned to.
+	 *
+	 * Without this, requests run on the account's default version, which Stripe rate-limits once it is
+	 * more than seven years old. Review the changelog for breaking changes before moving to a new major release.
+	 *
+	 * @see https://docs.stripe.com/upgrades
+	 *
+	 * @var string
+	 */
+	public const API_VERSION = '2026-09-30.endive';
+
+	/**
 	 * @var string
 	 */
 	protected $payment_token = '';
@@ -1144,6 +1156,7 @@ class CampTix_Stripe_API_Client {
 			'headers' => array(
 				'Authorization'   => 'Bearer ' . $this->api_secret_key,
 				'Idempotency-Key' => $this->payment_token,
+				'Stripe-Version'  => self::API_VERSION,
 			),
 		);
 

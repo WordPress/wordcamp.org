@@ -550,6 +550,7 @@ class WordCamp_Loader extends Event_Loader {
 	public static function map_statuses_to_milestones() {
 		$milestones = array(
 			'wcpt-needs-vetting'   => 'Application received',
+			'wcpt-needs-action'    => 'Application vetted',
 			'wcpt-needs-orientati' => 'Application vetted',
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',

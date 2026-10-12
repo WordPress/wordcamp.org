@@ -42,8 +42,9 @@ class MES_Propagator {
 	 * @param bool $dry_run If true, count what would be added but write nothing.
 	 *
 	 * @return array { camps_scanned, camps_updated, sponsors_added, camps_skipped_no_author }
-	 *               `camps_skipped_no_author` lists camps that needed a stub but have no lead organizer,
-	 *               while nobody is logged in to author it instead (WP-CLI without `--user`).
+	 *               `camps_skipped_no_author` lists camps that need a stub but have no lead organizer,
+	 *               while nobody is logged in to author it instead (WP-CLI without `--user`). A dry run
+	 *               reports them too.
 	 */
 	public static function run( $mes_id = 0, $dry_run = false ) {
 		/** @var $multi_event_sponsors Multi_Event_Sponsors */
@@ -56,6 +57,8 @@ class MES_Propagator {
 			'sponsors_added'          => 0,
 			'camps_skipped_no_author' => array(),
 		);
+
+		self::register_level_taxonomy();
 
 		$camps = get_posts( array(
 			'post_type'   => WCPT_POST_TYPE_ID,
@@ -94,8 +97,12 @@ class MES_Propagator {
 
 			$author_id = self::get_author_id( $camp_id );
 
-			if ( ! $author_id && ! $dry_run ) {
-				$summary['camps_skipped_no_author'][] = $camp_id;
+			// Without an author, only find out whether the camp needed a stub, so it's reported the same way in a dry run.
+			if ( ! $author_id ) {
+				if ( static::push_missing_to_site( $site_id, $desired_sponsors, 0, true ) > 0 ) {
+					$summary['camps_skipped_no_author'][] = $camp_id;
+				}
+
 				continue;
 			}
 
@@ -108,6 +115,19 @@ class MES_Propagator {
 		}
 
 		return $summary;
+	}
+
+	/**
+	 * Register the sponsor level taxonomy if it isn't already.
+	 *
+	 * `wc-post-types` registers it, but returns early on central, where this runs. Without it,
+	 * `wp_insert_term()` and `wp_set_object_terms()` fail with `invalid_taxonomy` on every camp site.
+	 * Taxonomies are registered per request, not per site, so this covers the switched sites too.
+	 */
+	protected static function register_level_taxonomy() {
+		if ( ! taxonomy_exists( 'wcb_sponsor_level' ) ) {
+			register_taxonomy( 'wcb_sponsor_level', 'wcb_sponsor', array( 'hierarchical' => true ) );
+		}
 	}
 
 	/**

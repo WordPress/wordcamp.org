@@ -13,11 +13,15 @@ class Test_MES_Flagships extends WP_UnitTestCase {
 	 * Create a camp with a URL meta value.
 	 *
 	 * @param string $url
+	 * @param string $status A wcpt post status. Defaults to an active one.
 	 *
 	 * @return int WordCamp post ID.
 	 */
-	protected function make_camp( $url ) {
-		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+	protected function make_camp( $url, $status = 'wcpt-scheduled' ) {
+		$wordcamp_id = self::factory()->post->create( array(
+			'post_type'   => 'wordcamp',
+			'post_status' => $status,
+		) );
 
 		update_post_meta( $wordcamp_id, 'URL', $url );
 
@@ -144,5 +148,20 @@ class Test_MES_Flagships extends WP_UnitTestCase {
 		$this->assertSame( 0, $summary['camps_assigned'] );
 		$this->assertSame( '', get_term_meta( $taken, MES_Flagships::MARKER_TERM_META, true ) );
 		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $us ) );
+	}
+
+	/**
+	 * Closed flagship camps are left out: only active camps join the group.
+	 */
+	public function test_seed_skips_closed_camps() {
+		$active = $this->make_camp( 'https://us.wordcamp.org/2026/' );
+		$closed = $this->make_camp( 'https://us.wordcamp.org/2019/', 'wcpt-closed' );
+
+		$summary = MES_Flagships::seed();
+
+		$this->assertSame( 1, $summary['camps_matched'] );
+		$this->assertSame( 1, $summary['camps_assigned'] );
+		$this->assertCount( 1, MES_Sponsor_Group::get_stored_camp_groups( $active ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $closed ) );
 	}
 }

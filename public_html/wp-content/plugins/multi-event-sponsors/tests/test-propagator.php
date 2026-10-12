@@ -230,6 +230,35 @@ class Test_MES_Propagator extends WP_UnitTestCase {
 	}
 
 	/**
+	 * On central, where `wc-post-types` doesn't load, the level taxonomy isn't registered. The run
+	 * registers it, so the stub still gets its level instead of `invalid_taxonomy` being ignored.
+	 */
+	public function test_run_assigns_the_level_when_the_taxonomy_is_not_registered() {
+		list( , $site_id, , $sponsor_b ) = $this->make_propagation_setup();
+
+		$taxonomy = get_taxonomy( 'wcb_sponsor_level' );
+		unregister_taxonomy( 'wcb_sponsor_level' );
+
+		try {
+			MES_Propagator::run();
+
+			$stub = $this->get_site_sponsors_by_mes_id( $site_id )[ $sponsor_b ];
+
+			switch_to_blog( $site_id );
+			$slugs = wp_get_object_terms( $stub->ID, 'wcb_sponsor_level', array( 'fields' => 'slugs' ) );
+			$level = get_term_by( 'slug', 'gold', 'wcb_sponsor_level' );
+			restore_current_blog();
+
+			$this->assertSame( array( 'gold' ), $slugs );
+			$this->assertSame( 'Gold', $level->name );
+		} finally {
+			// Put the real registration back for the rest of the suite.
+			unregister_taxonomy( 'wcb_sponsor_level' );
+			register_taxonomy( 'wcb_sponsor_level', $taxonomy->object_type, (array) $taxonomy );
+		}
+	}
+
+	/**
 	 * Run is idempotent.
 	 */
 	public function test_run_is_idempotent() {
@@ -489,5 +518,36 @@ class Test_MES_Propagator extends WP_UnitTestCase {
 		$this->assertSame( 0, $summary['sponsors_added'] );
 		$this->assertSame( array( $wordcamp_id ), $summary['camps_skipped_no_author'] );
 		$this->assertArrayNotHasKey( $sponsor_b, $this->get_site_sponsors_by_mes_id( $site_id ) );
+	}
+
+	/**
+	 * A dry run reports the camps the real run would skip for having no author, and doesn't count their sponsors.
+	 */
+	public function test_dry_run_reports_a_camp_whose_stubs_would_have_no_author() {
+		list( $wordcamp_id ) = $this->make_propagation_setup();
+
+		delete_post_meta( $wordcamp_id, 'WordPress.org Username' );
+		wp_set_current_user( 0 );
+
+		$summary = MES_Propagator::run( 0, true );
+
+		$this->assertSame( 0, $summary['sponsors_added'] );
+		$this->assertSame( 0, $summary['camps_updated'] );
+		$this->assertSame( array( $wordcamp_id ), $summary['camps_skipped_no_author'] );
+	}
+
+	/**
+	 * A camp with no author but nothing missing isn't reported as skipped: there was nothing to author.
+	 */
+	public function test_run_does_not_report_a_camp_with_nothing_missing_as_skipped() {
+		list( $wordcamp_id ) = $this->make_propagation_setup();
+
+		MES_Propagator::run();
+
+		delete_post_meta( $wordcamp_id, 'WordPress.org Username' );
+		wp_set_current_user( 0 );
+
+		$this->assertSame( array(), MES_Propagator::run()['camps_skipped_no_author'] );
+		$this->assertSame( array(), MES_Propagator::run( 0, true )['camps_skipped_no_author'] );
 	}
 }

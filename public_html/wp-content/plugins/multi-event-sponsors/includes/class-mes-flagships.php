@@ -25,7 +25,7 @@ class MES_Flagships {
 	}
 
 	/**
-	 * Create the Flagships group (once) and assign camps matching the flagship domains.
+	 * Create the Flagships group (once) and assign active camps matching the flagship domains.
 	 *
 	 * Idempotent: the group is matched by a term-meta marker, and camps already in
 	 * the group are skipped. Only assigns — never removes (the group stays curated
@@ -78,9 +78,10 @@ class MES_Flagships {
 
 		$pattern = '^https?://(' . implode( '|', array_map( 'preg_quote', $domains ) ) . ')\.';
 
+		// Only active camps: a closed one has no use for a sponsor group.
 		$camps = get_posts( array(
 			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'any',
+			'post_status' => WordCamp_Loader::get_active_wordcamp_statuses(),
 			'numberposts' => -1,
 			'fields'      => 'ids',
 			'meta_query'  => array(

@@ -172,13 +172,11 @@ function get_query_var_facets(): array {
 			// We need a delimiter to separate the values, but Google discourages using commas, colons, or
 			// anything else in URLs, so we're use a dash like they want. We also need a dash in some of the
 			// values themselves, like `in-person`. Luckily `in-person` is the only value that needs one at
-			// the moment, so the easiest thing is to just make an exception.
+			// the moment, so the easiest thing is to just make an exception. It's kept whole wherever it
+			// appears, since ticking both formats gives `in-person-online`.
 			// @link https://developers.google.com/search/blog/2014/02/faceted-navigation-best-and-5-of-worst#worst-practice-1:-non-standard-url-encoding-for-parameters,-like-commas-or-brackets,-instead-of-key=value-pairs.
-			if ( 'in-person' === $parts[1] ) {
-				$var_values = array( 'in-person' );
-			} else {
-				$var_values = explode( PRETTY_URL_VALUE_DELIMITER, $parts[1] );
-			}
+			preg_match_all( '#in-person|[^' . PRETTY_URL_VALUE_DELIMITER . ']+#', $parts[1], $values );
+			$var_values = $values[0];
 
 			$facets[ $var_key ] = $var_values;
 		}

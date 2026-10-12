@@ -2,16 +2,24 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	'use strict';
 
 	var self = {
-		sectionID    : 'camptix_html_badges',
-		cssSettingID : 'cbg_badge_css',
-		siteURL      : window.location.protocol + '//' + window.location.hostname,
-		cmEditor     : null
+		sectionID      : 'camptix_html_badges',
+		cssSettingID   : 'cbg_badge_css',
+		siteURL        : '',
+		badgesPageURL  : '',
+		editorSettings : null,
+		cmEditor       : null
 	};
-
-	self.badgesPageURL = self.siteURL + '?camptix-badges';
 
 	$.extend( self, cbgHtmlCustomizerData );
 	window.cbgHtmlCustomizerData = null;
+
+	if ( ! self.siteURL ) {
+		self.siteURL = window.location.protocol + '//' + window.location.host;
+	}
+
+	if ( ! self.badgesPageURL ) {
+		self.badgesPageURL = self.siteURL + '?camptix-badges';
+	}
 
 	/**
 	 * Initialize
@@ -58,20 +66,31 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 			return;
 		}
 
-		self.cmEditor = CodeMirror.fromTextArea(
-			$( '#customize-control-cbg_badge_css' ).find( 'textarea' ).get(0),
-			{
-				tabSize        : 2,
-				indentWithTabs : true,
-				lineWrapping   : true
-			}
-		);
+		var $textarea = $( '#customize-control-cbg_badge_css' ).find( 'textarea' );
+		if ( ! $textarea.length ) {
+			return;
+		}
 
-		self.cmEditor.setSize( null, 'auto' );
+		if ( wp.codeEditor && self.editorSettings ) {
+			var editor = wp.codeEditor.initialize( $textarea, self.editorSettings );
+			self.cmEditor = editor.codemirror;
+		} else if ( typeof CodeMirror !== 'undefined' ) {
+			self.cmEditor = CodeMirror.fromTextArea(
+				$textarea.get(0),
+				{
+					tabSize        : 2,
+					indentWithTabs : true,
+					lineWrapping   : true
+				}
+			);
+			self.cmEditor.setSize( null, 'auto' );
+		}
 
-		self.cmEditor.on( 'change', function() {
-			api( self.cssSettingID ).set( self.cmEditor.getValue() );
-		} );
+		if ( self.cmEditor ) {
+			self.cmEditor.on( 'change', function() {
+				api( self.cssSettingID ).set( self.cmEditor.getValue() );
+			} );
+		}
 	};
 
 	/**
@@ -92,7 +111,12 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	 * @param {object} event
 	 */
 	self.printBadges = function( event ) {
-		window.frames[0].print();
+		var previewFrame = api.previewer.container.find( 'iframe' )[0];
+		if ( previewFrame && previewFrame.contentWindow ) {
+			previewFrame.contentWindow.print();
+		} else if ( window.frames[0] ) {
+			window.frames[0].print();
+		}
 	};
 
 	/**
@@ -102,7 +126,11 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	 */
 	self.resetCSS = function( event ) {
 		api( self.cssSettingID ).set( self.defaultCSS );
-		self.cmEditor.setValue(       self.defaultCSS );
+		if ( self.cmEditor ) {
+			self.cmEditor.setValue( self.defaultCSS );
+		} else {
+			$( '#customize-control-cbg_badge_css' ).find( 'textarea' ).val( self.defaultCSS );
+		}
 	};
 
 	api.bind( 'ready', self.initialize );

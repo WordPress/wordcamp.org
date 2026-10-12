@@ -38,6 +38,15 @@ defined( 'WPINC' ) || die();
 	</figcaption>
 </figure>
 
+<?php if ( ! empty( $attendee->qr_code_svg ) ) : ?>
+	<figure class="attendee-qrcode">
+		<?php echo $attendee->qr_code_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<figcaption class="screen-reader-text">
+			<?php echo esc_html( sprintf( __( 'QR code linking to %s', 'wordcamporg' ), $attendee->qr_code_target_url ) ); ?>
+		</figcaption>
+	</figure>
+<?php endif; ?>
+
 <!-- These are arbitrary elements that you can use for any purpose -->
 <div class="badge-design-element-1"></div>
 <div class="badge-design-element-2"></div>

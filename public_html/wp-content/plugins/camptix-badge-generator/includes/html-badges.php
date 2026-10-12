@@ -69,6 +69,33 @@ function register_customizer_components( $wp_customize ) {
 	);
 
 	$wp_customize->add_setting(
+		'cbg_qr_code_type',
+		array(
+			'default'           => 'none',
+			'type'              => 'option',
+			'capability'        => Badge_Generator\REQUIRED_CAPABILITY,
+			'transport'         => 'refresh',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_qr_code_type',
+		)
+	);
+
+	$wp_customize->add_control(
+		'cbg_qr_code_type',
+		array(
+			'section'     => 'camptix_html_badges',
+			'type'        => 'select',
+			'priority'    => 2,
+			'label'       => __( 'QR Code Destination', 'wordcamporg' ),
+			'description' => __( 'Optionally include a QR code on each badge linking to the attendee profile.', 'wordcamporg' ),
+			'choices'     => array(
+				'none'     => __( 'None', 'wordcamporg' ),
+				'gravatar' => __( 'Gravatar Profile (gravatar.com/...)', 'wordcamporg' ),
+				'wporg'    => __( 'WordPress.org Profile (w.org/@username)', 'wordcamporg' ),
+			),
+		)
+	);
+
+	$wp_customize->add_setting(
 		'cbg_badge_css',
 		array(
 			'default'           => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
@@ -84,10 +111,23 @@ function register_customizer_components( $wp_customize ) {
 		array(
 			'section'  => 'camptix_html_badges',
 			'type'     => 'textarea',
-			'priority' => 2,
+			'priority' => 3,
 			'label'    => __( 'Customize Badge CSS', 'wordcamporg' ),
 		)
 	);
+}
+
+/**
+ * Sanitize QR code type setting
+ *
+ * @param string $value
+ *
+ * @return string
+ */
+function sanitize_qr_code_type( $value ) {
+	$valid_types = array( 'none', 'gravatar', 'wporg' );
+
+	return in_array( $value, $valid_types, true ) ? $value : 'none';
 }
 
 /**
@@ -126,22 +166,26 @@ function enqueue_customizer_scripts() {
 		return;
 	}
 
+	// Enqueue code editor for CSS syntax highlighting.
+	$editor_settings = wp_enqueue_code_editor( array( 'type' => 'text/css' ) );
+
 	// Enqueue our scripts.
 	wp_enqueue_script(
 		'camptix-html-badges-customizer',
 		plugins_url( 'javascript/html-badges-customizer.js', __DIR__ ),
-		array( 'jquery', 'jetpack-codemirror' ),
+		array( 'jquery', 'customize-controls' ),
 		1,
 		true
 	);
-
-	wp_enqueue_style( 'jetpack-codemirror' );
 
 	wp_localize_script(
 		'camptix-html-badges-customizer',
 		'cbgHtmlCustomizerData',
 		array(
-			'defaultCSS' => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'defaultCSS'     => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'siteURL'        => site_url(),
+			'badgesPageURL'  => add_query_arg( 'camptix-badges', '', site_url() ),
+			'editorSettings' => $editor_settings,
 		)
 	);
 }

@@ -4,11 +4,8 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	var self = {
 		sectionID    : 'camptix_html_badges',
 		cssSettingID : 'cbg_badge_css',
-		siteURL      : window.location.protocol + '//' + window.location.hostname,
 		cmEditor     : null
 	};
-
-	self.badgesPageURL = self.siteURL + '?camptix-badges';
 
 	$.extend( self, cbgHtmlCustomizerData );
 	window.cbgHtmlCustomizerData = null;
@@ -54,18 +51,15 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	 * @param {object} event
 	 */
 	self.setupCodeMirror = function( event ) {
-		if ( self.cmEditor !== null ) {
+		// The settings are false when the user has turned off syntax highlighting in their profile.
+		if ( self.cmEditor !== null || ! self.editorSettings ) {
 			return;
 		}
 
-		self.cmEditor = CodeMirror.fromTextArea(
-			$( '#customize-control-cbg_badge_css' ).find( 'textarea' ).get(0),
-			{
-				tabSize        : 2,
-				indentWithTabs : true,
-				lineWrapping   : true
-			}
-		);
+		self.cmEditor = wp.codeEditor.initialize(
+			$( '#customize-control-cbg_badge_css' ).find( 'textarea' ),
+			self.editorSettings
+		).codemirror;
 
 		self.cmEditor.setSize( null, 'auto' );
 
@@ -102,7 +96,10 @@ wp.customize.CampTixHtmlBadgesCustomizer = ( function( $, api ) {
 	 */
 	self.resetCSS = function( event ) {
 		api( self.cssSettingID ).set( self.defaultCSS );
-		self.cmEditor.setValue(       self.defaultCSS );
+
+		if ( self.cmEditor ) {
+			self.cmEditor.setValue( self.defaultCSS );
+		}
 	};
 
 	api.bind( 'ready', self.initialize );

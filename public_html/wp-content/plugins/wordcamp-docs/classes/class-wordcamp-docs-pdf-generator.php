@@ -84,6 +84,13 @@ class WordCamp_Docs_PDF_Generator {
 			return $this->get_tmp_folder( $filename );
 		}
 
+		// DomPDF comes from Composer, so a deploy that skipped it would otherwise be a fatal error at checkout.
+		if ( ! class_exists( Dompdf::class ) ) {
+			$this->last_error = 'DomPDF is not installed.';
+
+			return $this->get_tmp_folder( $filename );
+		}
+
 		$font_dir = self::get_font_cache_folder();
 
 		$dompdf = new Dompdf( [
@@ -210,7 +217,9 @@ class WordCamp_Docs_PDF_Generator {
 	/**
 	 * Returns the path to the shared font cache folder.
 	 *
-	 * It lives outside /tmp so it survives reboots and is shared by every site.
+	 * It lives outside /tmp so it survives reboots and is shared by every site. With ms-files that's
+	 * `blogs.dir`, which every web server shares, so one warm-up covers all of them. It sits beside the
+	 * sites' `<id>/files` folders, not inside one, so `/files/` URLs can't serve it.
 	 *
 	 * @return string Full path to the font cache folder, with a trailing slash.
 	 */
@@ -220,7 +229,9 @@ class WordCamp_Docs_PDF_Generator {
 		 *
 		 * @param string $font_dir Full path to the font cache folder.
 		 */
-		$font_dir = trailingslashit( apply_filters( 'wordcamp_docs_font_cache_folder', WP_CONTENT_DIR . '/uploads/wordcamp-docs-fonts' ) );
+		// Not `wp_upload_dir()`: that's per site, and the main site's is `uploads` on local disk.
+		$uploads  = WP_CONTENT_DIR . ( get_site_option( 'ms_files_rewriting' ) ? '/blogs.dir' : '/uploads' );
+		$font_dir = trailingslashit( apply_filters( 'wordcamp_docs_font_cache_folder', $uploads . '/wordcamp-docs-fonts' ) );
 
 		if ( ! is_dir( $font_dir ) ) {
 			wp_mkdir_p( $font_dir );

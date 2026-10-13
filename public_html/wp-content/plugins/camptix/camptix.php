@@ -1763,7 +1763,13 @@ class CampTix_Plugin {
 			}
 		}
 
-		$currency = $currencies[ $currency_key ];
+		if ( isset( $currencies[ $currency_key ] ) ) {
+			$currency = $currencies[ $currency_key ];
+		} else {
+			// Payment addons can add currencies through the `camptix_currencies` filter (e.g. MercadoPago adds VEF).
+			$filtered_currencies = $this->get_currencies();
+			$currency            = $filtered_currencies[ $currency_key ] ?? array();
+		}
 
 		if ( ! isset( $currency['decimal_point'] ) ) {
 			$currency['decimal_point'] = 2;

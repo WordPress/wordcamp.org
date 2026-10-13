@@ -1,6 +1,9 @@
 <?php
 use Dompdf\Dompdf;
 
+require_once __DIR__ . '/class-wordcamp-docs-template.php';
+require_once __DIR__ . '/class-wordcamp-docs-arabic-shaper.php';
+
 /**
  * Helper class to generate PDFs from HTML strings or files.
  *
@@ -25,6 +28,18 @@ class WordCamp_Docs_PDF_Generator {
 	public $working_folder_name;
 
 	/**
+	 * Why the last PDF couldn't be generated, if it couldn't.
+	 *
+	 * @var string
+	 */
+	public $last_error = '';
+
+	/**
+	 * The only hosts DomPDF may fetch from: Google Fonts' stylesheets and font files.
+	 */
+	const FONT_HOSTS = array( 'fonts.googleapis.com', 'fonts.gstatic.com' );
+
+	/**
 	 * Constructor. No parameters.
 	 */
 	function __construct() {
@@ -38,8 +53,6 @@ class WordCamp_Docs_PDF_Generator {
 	 * @param string $filename Filename of the PDF, including the extension.
 	 * @param array  $args     Optional. An associative array of additional parameters.
 	 *                         assets:  optional array of full paths to local assets (images for example).
-	 *                         dpi:     optional integer to be passed directly to wkhtmltopdf.
-	 *                         margins: optional array of 4 integers specifying PDF margins. Top, right, bottom, left.
 	 *
 	 * @return string The path to the generated PDF.
 	 */
@@ -65,7 +78,13 @@ class WordCamp_Docs_PDF_Generator {
 			}
 		}
 
-		$font_dir = $this->get_font_cache_folder();
+		if ( ! is_readable( $source_file ) ) {
+			$this->last_error = "Can't read $source_file.";
+
+			return $this->get_tmp_folder( $filename );
+		}
+
+		$font_dir = self::get_font_cache_folder();
 
 		$dompdf = new Dompdf( [
 			'dpi'                  => 120,
@@ -73,32 +92,74 @@ class WordCamp_Docs_PDF_Generator {
 			'isHtml5ParserEnabled' => true,
 			'isJavascriptEnabled'  => false,
 			'isPhpEnabled'         => false,
+
+			// Only the web fonts are fetched remotely. Images are copied into the working
+			// folder as assets, so markup that reaches a template can't make the server
+			// request any other URL.
 			'isRemoteEnabled'      => true,
+			'allowedRemoteHosts'   => self::FONT_HOSTS,
 
 			'httpContext'          => stream_context_create( [
 				'http' => [
 					'user_agent' => 'WordCamp Docs PDF Generator; ' . home_url( '/' ),
+					'timeout'    => 30,
 				],
 			] ),
 
 			'fontCache'            => $font_dir,
 			'fontDir'              => $font_dir,
+			// Local files can only be read from this instance's working folder and the font cache.
 			'chroot'               => [
-				// Just to be explicit, only paths under the docs generator base path are allowed.
-				$this->working_folder_name,
-				$font_dir,
 				$this->get_tmp_folder(),
+				$font_dir,
 			],
 			'tempDir'              => $this->get_tmp_folder(),
 		] );
 
-		$dompdf->loadHtmlFile( $source_file );
+		// A rendering error leaves no PDF behind, which callers already treat as a failure.
+		try {
+			// DomPDF can't join Arabic letters or lay them out right to left, so shape them first.
+			$html   = file_get_contents( $source_file );
+			$shaped = WordCamp_Docs_Arabic_Shaper::shape( $html );
+			if ( $shaped !== $html ) {
+				$source_file = $this->write_file( basename( $source_file ), $shaped );
+			}
 
-		$dompdf->render();
-
-		$this->write_file( $filename, $dompdf->output() );
+			$dompdf->loadHtmlFile( $source_file );
+			$dompdf->render();
+			$this->write_file( $filename, $dompdf->output() );
+		} catch ( Throwable $e ) {
+			$this->last_error = $e->getMessage();
+		}
 
 		return $this->get_tmp_folder( $filename );
+	}
+
+	/**
+	 * Download the web fonts into the font cache, unless they're already there.
+	 *
+	 * The first PDF rendered against an empty cache downloads about 80MB of fonts, which takes
+	 * several seconds. Invoices are rendered during checkout, so warm the cache ahead of time.
+	 *
+	 * @return bool Whether the cache was already warm.
+	 */
+	public static function warm_font_cache() {
+		$installed = json_decode( (string) @file_get_contents( self::get_font_cache_folder() . 'installed-fonts.json' ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing file just means the cache is cold.
+		$missing   = array_diff( WordCamp_Docs_Template::FONT_FAMILIES, array_keys( (array) $installed ) );
+
+		if ( ! $missing ) {
+			return true;
+		}
+
+		ob_start();
+		WordCamp_Docs_Template::font_header_html();
+		$html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' . ob_get_clean() . '</head><body><p>Aa <strong>Aa</strong> 中文 한국어 العربية</p></body></html>';
+
+		$generator = new self();
+		$generator->generate_pdf_from_string( $html, 'warm-font-cache.pdf' );
+		$generator->delete_tmp_folder();
+
+		return false;
 	}
 
 	/**
@@ -149,13 +210,20 @@ class WordCamp_Docs_PDF_Generator {
 	/**
 	 * Returns the path to the shared font cache folder.
 	 *
-	 * @return string Full path to the font cache folder.
+	 * It lives outside /tmp so it survives reboots and is shared by every site.
+	 *
+	 * @return string Full path to the font cache folder, with a trailing slash.
 	 */
-	public function get_font_cache_folder() {
-		$font_dir = trailingslashit( $this->tmp_folder_base ) . 'wc-docs-font-cache/';
+	public static function get_font_cache_folder() {
+		/**
+		 * Filters where DomPDF caches the fonts it downloads.
+		 *
+		 * @param string $font_dir Full path to the font cache folder.
+		 */
+		$font_dir = trailingslashit( apply_filters( 'wordcamp_docs_font_cache_folder', WP_CONTENT_DIR . '/uploads/wordcamp-docs-fonts' ) );
 
 		if ( ! is_dir( $font_dir ) ) {
-			mkdir( $font_dir, 0777, true );
+			wp_mkdir_p( $font_dir );
 		}
 
 		return $font_dir;

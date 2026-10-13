@@ -402,10 +402,17 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$invoice_metas  = get_post_meta( $invoice_id, 'invoice_metas', true );
 		$invoice_order  = get_post_meta( $invoice_id, 'original_order', true );
 
-		$logo = CTX_INV_ADMIN_URL . '/images/wp-community-support.png';
+		// The logo is read from disk, from inside the generator's working folder. DomPDF can't
+		// fetch it by URL, and a broken image would leave a placeholder on the invoice.
+		$pdf_generator = new WordCamp_Docs_PDF_Generator();
+		$logo_file     = CTX_INV_DIR . '/admin/images/wp-community-support.png';
 		if ( ! empty( $camptix_opts['invoice-logo'] ) ) {
-			$logo = wp_get_attachment_url( $camptix_opts['invoice-logo'] );
+			$custom_logo = get_attached_file( $camptix_opts['invoice-logo'] );
+			if ( $custom_logo && is_readable( $custom_logo ) ) {
+				$logo_file = $custom_logo;
+			}
 		}
+		$logo = $pdf_generator->get_tmp_folder( basename( $logo_file ) );
 
 		$template = locate_template( 'invoice-template.php' ) ? locate_template( 'invoice-template.php' ) : CTX_INV_DIR . '/includes/views/invoice-template.php';
 
@@ -420,16 +427,22 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			$filename = $invoice_number . '-' . wp_generate_password( 12, false, false ) . '.pdf';
 		}
 
-		$pdf_generator = new WordCamp_Docs_PDF_Generator();
-		$upload_dir    = wp_upload_dir();
-		$tmp_path      = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename );
+		$upload_dir = wp_upload_dir();
+		$tmp_path   = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename, array( 'assets' => array( $logo_file ) ) );
 
 		global $camptix;
 
-		// Only record the document once the PDF verifiably exists, so a wkhtmltopdf
+		// Only record the document once the PDF verifiably exists, so a generator
 		// failure can't leave the invoice pointing at a file that was never written.
 		if ( ! file_exists( $tmp_path ) || 0 === filesize( $tmp_path ) ) {
-			$camptix->log( __( 'Invoice PDF generation failed: wkhtmltopdf produced no output.', 'wordcamporg' ), $invoice_id, array( 'filename' => $filename ) );
+			$camptix->log(
+				__( 'Invoice PDF generation failed: no PDF was produced.', 'wordcamporg' ),
+				$invoice_id,
+				array(
+					'filename' => $filename,
+					'error'    => $pdf_generator->last_error,
+				)
+			);
 			return false;
 		}
 
@@ -450,7 +463,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			return false;
 		}
 
-		unlink( $tmp_path );
+		$pdf_generator->delete_tmp_folder();
 
 		update_post_meta( $invoice_id, 'invoice_document', $filename );
 	}

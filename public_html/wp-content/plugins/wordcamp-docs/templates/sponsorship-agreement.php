@@ -159,7 +159,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement extends WordCamp_Docs_Templat
 <html>
 <head>
 <meta charset="UTF-8">
-<?php $this->font_header_html(); ?>
+		<?php $this->font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;

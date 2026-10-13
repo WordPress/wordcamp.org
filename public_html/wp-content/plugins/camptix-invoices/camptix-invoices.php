@@ -27,6 +27,18 @@ function ctx_load_docs_pdf_generator() {
 }
 
 /**
+ * Download the invoice fonts ahead of time, so the first invoice after a deploy doesn't wait on them during checkout.
+ */
+function ctx_warm_pdf_font_cache() {
+	ctx_load_docs_pdf_generator();
+
+	if ( class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+		WordCamp_Docs_PDF_Generator::warm_font_cache();
+	}
+}
+add_action( 'tix_scheduled_daily', 'ctx_warm_pdf_font_cache' );
+
+/**
  * Load invoice addon.
  */
 function load_camptix_invoices() {

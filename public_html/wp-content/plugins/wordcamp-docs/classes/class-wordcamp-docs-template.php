@@ -45,17 +45,22 @@ abstract class WordCamp_Docs_Template {
 	abstract public function get_assets();
 
 	/**
+	 * The font families font_header_html() loads, as DomPDF names them in its font cache.
+	 */
+	const FONT_FAMILIES = array( 'noto sans', 'noto sans sc', 'noto sans kr', 'noto sans arabic' );
+
+	/**
 	 * Output default font header HTML to be included in the PDF templates.
 	 *
-	 * Fonts included (weights: 300-700):
+	 * Fonts included (weights: 300-600):
 	 *  - Noto Sans
 	 *  - Noto Sans SC
 	 *  - Noto Sans KR
 	 *  - Noto Sans Arabic
 	 */
 	public static function font_header_html() {
-		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.Security.EscapeOutput.OutputNotEscaped
 		?>
+		<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- DomPDF fetches the fonts itself, this isn't a page WordPress renders. ?>
 		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..600&family=Noto+Sans+KR:wght@300..600&family=Noto+Sans+SC:wght@300..600&family=Noto+Sans:wght@300..600" rel="stylesheet" type="text/css"/>
 		<style type="text/css">
 		@page {
@@ -65,12 +70,14 @@ abstract class WordCamp_Docs_Template {
 			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;
 		}
 
-		<?php /* Define default font weights to match the imported fonts */ ?>
 		body {
+			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;
 			font-weight: 300;
 			line-height: 1;
 		}
-		strong {
+
+		<?php /* Bold is 700, which isn't loaded, and DomPDF falls back to Helvetica instead of the nearest weight. */ ?>
+		b, strong, th, h1, h2, h3, h4, h5, h6 {
 			font-weight: 600;
 		}
 		</style>

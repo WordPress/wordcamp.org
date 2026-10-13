@@ -88,7 +88,7 @@ function get_active_events( $application_type ) {
 				'city'          => $post->post_title,
 				'cityUrl'       => filter_var( get_post_meta( $post->ID, 'URL', true ), FILTER_VALIDATE_URL ),
 				'applicant'     => esc_html( get_post_meta( $post->ID, 'Organizer Name', true ) ),
-				'milestone'     => $milestones[ $post->post_status ],
+				'milestone'     => $milestones[ $post->post_status ] ?? '',
 				'status'        => $statuses[ $post->post_status ],
 				'lastUpdate'    => $last_update_timestamp,
 				'humanizedTime' => human_time_diff( $last_update_timestamp ),

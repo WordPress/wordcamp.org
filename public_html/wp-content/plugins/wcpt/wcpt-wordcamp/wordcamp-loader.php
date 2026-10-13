@@ -551,6 +551,7 @@ class WordCamp_Loader extends Event_Loader {
 		$milestones = array(
 			'wcpt-needs-vetting'   => 'Application received',
 			'wcpt-needs-orientati' => 'Application vetted',
+			'wcpt-needs-action'    => 'Application vetted',
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
 			'wcpt-rejected'        => 'Sent response',

@@ -48,6 +48,11 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	protected $stripe_unreachable = false;
 
 	/**
+	 * Orders the pending sweep has already looked up this pass, by payment token.
+	 */
+	protected $pending_looked_up = array();
+
+	/**
 	 * Runs during camptix_init, loads our options and sets some actions.
 	 *
 	 * @see CampTix_Addon
@@ -58,6 +63,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_timeout_sweep_start', array( $this, 'reset_timeout_sweep_state' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
+		// After CampTix's own draft timeout sweep, so a pass that found Stripe down skips this too.
+		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'review_pending_payments' ), 20 );
 
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
@@ -657,6 +664,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			wp_die( 'empty token' );
 		}
 
+		// The buyer can reach the cancel URL after the session completed, e.g. by going back
+		// from Stripe in another tab. Settle the order from the session in that case, since
+		// without the webhook nothing would revive a cancelled order that was paid.
+		$session = $this->get_draft_order_session( $payment_token );
+		if ( $session && 'complete' === ( $session['status'] ?? '' ) ) {
+			$order = $this->get_order( $payment_token );
+
+			if ( $order ) {
+				$camptix->log( 'Stripe session already complete at cancel; processing it instead.', $order['attendee_id'], $session );
+
+				return $this->process_payment_return_session( $payment_token, $session, $order );
+			}
+		}
+
 		// Set the associated attendees to cancelled.
 		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
 	}
@@ -1036,6 +1057,190 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		$camptix->log( sprintf( 'At timeout, %s; keeping the draft for the next sweep.', $why ), $attendee_id, $data );
 		$camptix->set_order_session_expiry( $payment_token, time() );
+	}
+
+	/**
+	 * The Checkout Session of an order that is still in draft, fresh from Stripe.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return array|false The session, or false if the order has no draft with a session or Stripe can't be asked.
+	 */
+	protected function get_draft_order_session( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+			if ( ! $stripe_session_id ) {
+				continue;
+			}
+
+			$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+			$session = $stripe->get_session( $stripe_session_id );
+
+			if ( is_wp_error( $session ) ) {
+				$camptix->log( 'Could not fetch the Stripe session.', $attendee_id, $session );
+				return false;
+			}
+
+			return $session;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Settle `pending` Stripe orders whose webhook never arrived.
+	 *
+	 * A delayed payment (boleto, OXXO) leaves the order pending until Stripe reports the outcome
+	 * through the webhook. If that webhook is lost, ask Stripe directly: once an order has been
+	 * pending for an hour, and then at most once an hour. There's no age limit, since a voucher
+	 * can stay payable for weeks.
+	 */
+	public function review_pending_payments() {
+		if ( ! empty( $this->camptix_options['archived'] ) || $this->stripe_unreachable ) {
+			return;
+		}
+
+		$this->pending_looked_up = array();
+		$current_loop            = 1;
+		$max_loops               = 50;
+		$an_hour_ago             = time() - HOUR_IN_SECONDS;
+
+		// Each order reviewed is stamped as checked, so the set shrinks as it's worked through.
+		while ( $attendees = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'pending',
+			'posts_per_page' => 100,
+			'cache_results'  => false,
+			'date_query'     => array(
+				array(
+					'column' => 'post_modified_gmt',
+					'before' => gmdate( 'Y-m-d H:i:s', $an_hour_ago ),
+				),
+			),
+			'meta_query'     => array(
+				array(
+					'key'     => '_stripe_checkout_session_id',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'     => '_stripe_pending_checked_at',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => '_stripe_pending_checked_at',
+						'compare' => '<',
+						'value'   => $an_hour_ago,
+						'type'    => 'NUMERIC',
+					),
+				),
+			),
+		) ) ) {
+			foreach ( $attendees as $attendee_id ) {
+				$this->review_pending_order( $attendee_id );
+
+				if ( $this->stripe_unreachable ) {
+					return;
+				}
+			}
+
+			// Just in case we get stuck in here.
+			if ( $current_loop++ >= $max_loops ) {
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Ask Stripe about one pending order and settle it if the payment has succeeded or failed.
+	 *
+	 * Orders parked as pending because the amount paid didn't match the order total are left
+	 * for the organizer: Stripe already reported those paid, so asking again changes nothing.
+	 *
+	 * @param int $attendee_id Any pending attendee of the order.
+	 */
+	protected function review_pending_order( $attendee_id ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+		if ( ! $payment_token || ! $stripe_session_id || isset( $this->pending_looked_up[ $payment_token ] ) ) {
+			return;
+		}
+		$this->pending_looked_up[ $payment_token ] = true;
+
+		$order_attendee_ids = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'pending',
+			'posts_per_page' => -1,
+			'meta_query'     => array(
+				array(
+					'key'   => 'tix_payment_token',
+					'value' => $payment_token,
+				),
+			),
+		) );
+
+		$recorded = get_post_meta( $attendee_id, 'tix_transaction_details', true );
+		if ( in_array( $recorded['raw']['payment_status'] ?? '', array( 'paid', 'no_payment_required' ), true ) ) {
+			$this->stamp_pending_checked( $order_attendee_ids );
+			return;
+		}
+
+		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$session = $stripe->get_session( $stripe_session_id );
+
+		if ( is_wp_error( $session ) ) {
+			// Stripe answered with an error: try again in an hour. Stripe didn't answer at all:
+			// leave the order unstamped and stop asking for the rest of this pass.
+			if ( 0 === strpos( $session->get_error_code(), 'camptix_stripe_request_error_' ) ) {
+				$this->stamp_pending_checked( $order_attendee_ids );
+			} else {
+				$this->stripe_unreachable = true;
+			}
+
+			$camptix->log( 'Could not look up a pending Stripe order.', $attendee_id, $session );
+			return;
+		}
+
+		$this->stamp_pending_checked( $order_attendee_ids );
+
+		$payment_intent = $session['payment_intent'] ?? array();
+		$intent_status  = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
+		$paid           = in_array( $session['payment_status'] ?? '', array( 'paid', 'no_payment_required' ), true );
+		$failed         = in_array( $intent_status, array( 'canceled', 'requires_payment_method' ), true );
+
+		// Still in flight.
+		if ( ! $paid && ! $failed ) {
+			return;
+		}
+
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return;
+		}
+
+		$camptix->log( 'Pending Stripe order settled without a webhook; processing it.', $attendee_id, $session );
+
+		$this->process_payment_return_session( $payment_token, $session, $order, false /* non-interactive */ );
+	}
+
+	/**
+	 * Record that the pending sweep has just asked Stripe about these attendees.
+	 *
+	 * @param int[] $attendee_ids Attendee IDs.
+	 */
+	protected function stamp_pending_checked( $attendee_ids ) {
+		foreach ( $attendee_ids as $attendee_id ) {
+			update_post_meta( $attendee_id, '_stripe_pending_checked_at', time() );
+		}
 	}
 }
 

@@ -14,7 +14,10 @@ import UsernameControl from '../components/username-control';
 export default function VolunteerInfoPanel() {
 	const [ email, setEmail ] = usePostMeta( '_wcb_volunteer_email', '' );
 	const [ username, setUsername ] = usePostMeta( '_wcpt_user_name', '' );
-	const [ firstTime, setFirstTime ] = usePostMeta( '_wcb_volunteer_first_time', false );
+	const [ firstTime, setFirstTime ] = usePostMeta(
+		'_wcb_volunteer_first_time',
+		false
+	);
 
 	return (
 		<PluginDocumentSettingPanel
@@ -36,7 +39,10 @@ export default function VolunteerInfoPanel() {
 			/>
 
 			<RadioControl
-				label={ __( 'Is this the first time they have volunteered at a WordPress event?', 'wordcamporg' ) }
+				label={ __(
+					'Is this the first time they have volunteered at a WordPress event?',
+					'wordcamporg'
+				) }
 				selected={ firstTime }
 				onChange={ ( value ) => setFirstTime( value ) }
 				options={ [

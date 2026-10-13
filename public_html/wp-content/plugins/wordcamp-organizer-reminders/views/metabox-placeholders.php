@@ -58,6 +58,13 @@
 	<li>[safety_wrangler_email]</li>
 </ul>
 
+<h5>Mentor:</h5>
+
+<ul class="ul-disc">
+	<li>[mentor_name]</li>
+	<li>[mentor_email]</li>
+</ul>
+
 <h5>Venue</h5>
 
 <ul class="ul-disc">

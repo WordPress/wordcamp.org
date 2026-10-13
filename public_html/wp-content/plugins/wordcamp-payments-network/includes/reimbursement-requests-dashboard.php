@@ -56,7 +56,7 @@ function render_submenu_page() {
 			break;
 
 		case 'wcb-cancelled':
-			$section_explanation = 'These requests have been reviewed by a deputy and cancelled/rejected.';
+			$section_explanation = 'These requests have been reviewed by a deputy and canceled/rejected.';
 			break;
 
 		case 'wcb-approved':
@@ -151,6 +151,8 @@ function upgrade_database() {
 	$table_name = get_index_table_name();
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+	$charset_collate = $wpdb->get_charset_collate();
+
 	$schema = "
 		CREATE TABLE $table_name (
 			blog_id        int( 11 )        unsigned NOT NULL default '0',
@@ -168,8 +170,7 @@ function upgrade_database() {
 			PRIMARY KEY  (blog_id, request_id),
 			KEY status (status)
 		)
-		DEFAULT CHARACTER SET {$wpdb->charset}
-		COLLATE {$wpdb->collate};
+		$charset_collate
 	";
 
 	dbDelta( $schema );

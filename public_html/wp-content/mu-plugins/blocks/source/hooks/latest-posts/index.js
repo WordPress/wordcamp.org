@@ -13,14 +13,13 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 			return <BlockEdit { ...props } />;
 		}
 
-		const {
-			liveUpdateEnabled,
-			order,
-			orderBy,
-		} = props.attributes;
+		const { liveUpdateEnabled, order, orderBy } = props.attributes;
 
 		const orderDateDesc = 'desc' === order && 'date' === orderBy;
-		const orderWarning = __( 'Live update only works with "Order by: Newest to Oldest".', 'wordcamporg' );
+		const orderWarning = __(
+			'Live update only works with "Order by: Newest to Oldest".',
+			'wordcamporg'
+		);
 
 		return (
 			<Fragment>
@@ -30,12 +29,24 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 						title={ __( 'Live Updates', 'wordcamporg' ) }
 						initialOpen={ true }
 					>
-						<p>{ __( "This feature helps your attendees keep up-to-date with your WordCamp's latest news. When active, new posts will be loaded as they're published without your attendees needing to refresh the page.", 'wordcamporg' ) }</p>
+						<p>
+							{ __(
+								"This feature helps your attendees keep up-to-date with your WordCamp's latest news. When active, new posts will be loaded as they're published without your attendees needing to refresh the page.",
+								'wordcamporg'
+							) }
+						</p>
 						{ orderDateDesc ? (
 							<ToggleControl
-								label={ __( 'Live update posts', 'wordcamporg' ) }
+								label={ __(
+									'Live update posts',
+									'wordcamporg'
+								) }
 								checked={ liveUpdateEnabled }
-								onChange={ ( value ) => props.setAttributes( { liveUpdateEnabled: value } ) }
+								onChange={ ( value ) =>
+									props.setAttributes( {
+										liveUpdateEnabled: value,
+									} )
+								}
 							/>
 						) : (
 							<p>{ orderWarning }</p>
@@ -48,5 +59,9 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 }, 'withLiveReloadOption' );
 
 if ( !! window.WordCampBlocks[ 'latest-posts' ] ) {
-	wp.hooks.addFilter( 'editor.BlockEdit', 'wordcamp/add-live-option-latest-posts', withLiveReloadOption );
+	wp.hooks.addFilter(
+		'editor.BlockEdit',
+		'wordcamp/add-live-option-latest-posts',
+		withLiveReloadOption
+	);
 }

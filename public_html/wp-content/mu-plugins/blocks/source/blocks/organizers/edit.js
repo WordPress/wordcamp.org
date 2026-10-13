@@ -35,22 +35,37 @@ class Edit extends Component {
 		let output;
 
 		switch ( mode ) {
-			case 'all' :
+			case 'all':
 				output = (
-					<OrganizerList attributes={ attributes } entities={ entities } />
+					<OrganizerList
+						attributes={ attributes }
+						entities={ entities }
+					/>
 				);
 				break;
 
-			case 'wcb_organizer' :
-			case 'wcb_organizer_team' :
+			case 'wcb_organizer':
+			case 'wcb_organizer_team':
 				output = (
 					<EditAppender
-						content={ <OrganizerList attributes={ attributes } entities={ entities } /> }
+						content={
+							<OrganizerList
+								attributes={ attributes }
+								entities={ entities }
+							/>
+						}
 						appender={
 							isSelected && (
-								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+								<Placeholder
+									className="wordcamp__edit-placeholder"
+									icon={ ICON }
+									label={ LABEL }
+								>
 									<OrganizerSelect
-										label={ getOptionLabel( mode, options.mode ) }
+										label={ getOptionLabel(
+											mode,
+											options.mode
+										) }
 										attributes={ attributes }
 										entities={ entities }
 										icon={ ICON }
@@ -63,7 +78,7 @@ class Edit extends Component {
 				);
 				break;
 
-			default :
+			default:
 				output = (
 					<Placeholder
 						className="wordcamp__edit-placeholder has-no-mode"
@@ -83,7 +98,10 @@ class Edit extends Component {
 
 						<div className="wordcamp__edit-mode-option">
 							<OrganizerSelect
-								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
+								label={ __(
+									'Choose specific organizers or teams',
+									'wordcamporg'
+								) }
 								attributes={ attributes }
 								entities={ entities }
 								icon={ ICON }
@@ -112,7 +130,7 @@ class Edit extends Component {
 			<Fragment>
 				{ this.renderContent() }
 
-				{ '' !== mode &&
+				{ '' !== mode && (
 					<Fragment>
 						<InspectorControls
 							attributes={ attributes }
@@ -125,7 +143,7 @@ class Edit extends Component {
 							setAttributes={ setAttributes }
 						/>
 					</Fragment>
-				}
+				) }
 			</Fragment>
 		);
 	}
@@ -135,7 +153,9 @@ const organizerSelect = ( select ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	const entities = {
-		wcb_organizer: getEntities( 'postType', 'wcb_organizer', { _embed: true } ),
+		wcb_organizer: getEntities( 'postType', 'wcb_organizer', {
+			_embed: true,
+		} ),
 		wcb_organizer_team: getEntities( 'taxonomy', 'wcb_organizer_team' ),
 	};
 

@@ -3,12 +3,24 @@ namespace WordCamp\Reports\Views\HTML\Data_Table;
 defined( 'WPINC' ) || die();
 
 /** @var array $data */
+/** @var array? $safe_html */
 
 if ( ! empty( $data ) && is_array( $data ) ) {
+	$safe_html ??= false;
+
+	$escape = static function ( $value ) use ( $safe_html ) {
+		if ( $safe_html ) {
+			return wp_kses( $value, $safe_html );
+		}
+
+		return esc_html( $value );
+	};
+
 	echo '<table class=" widefat fixed striped" id="report-data-table">';
 	echo '<thead><tr>';
 	foreach ( array_keys( reset( $data ) ) as $header ) {
-		echo '<th>' . esc_html( $header ) . '</th>';
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<th>' . $escape( $header ) . '</th>';
 	}
 	echo '</tr></thead>';
 
@@ -17,7 +29,7 @@ if ( ! empty( $data ) && is_array( $data ) ) {
 		echo '<tr>';
 		foreach ( $row as $cell ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo '<td>' . make_clickable( esc_html( $cell ) ) . '</td>';
+			echo '<td>' . make_clickable( $escape( $cell ) ) . '</td>';
 		}
 		echo '</tr>';
 	}

@@ -11,7 +11,7 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\CampTix_Tweaks
  */
 class Code_Of_Conduct_Field extends Extra_Fields {
-	const SLUG = 'coc';
+	public const SLUG = 'coc';
 
 	public $question_order      = 100;
 	public $type                = 'checkbox';

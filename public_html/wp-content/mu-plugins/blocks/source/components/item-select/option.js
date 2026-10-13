@@ -27,11 +27,7 @@ export function Option( { avatar, context, count, details, icon, label } ) {
 	let image;
 
 	if ( 'value' === context ) {
-		return (
-			<div className="wordcamp-item-select__token">
-				{ label }
-			</div>
-		);
+		return <div className="wordcamp-item-select__token">{ label }</div>;
 	}
 
 	if ( avatar ) {

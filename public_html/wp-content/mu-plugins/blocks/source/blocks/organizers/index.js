@@ -21,7 +21,7 @@ export const SETTINGS = {
 	description: __( 'Add a list of organizers.', 'wordcamporg' ),
 	icon: ICON,
 	category: 'wordcamp',
-	supports: supports,
+	supports,
 	edit: Edit,
 	save: () => null,
 };

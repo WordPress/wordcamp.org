@@ -23,16 +23,14 @@ function ScheduleGridWithContext( props ) {
 	const { chosenSessions, allTracks, attributes, settings } = props;
 
 	const contextValues = {
-		allTracks: allTracks,
-		attributes: attributes,
-		settings: settings,
+		allTracks,
+		attributes,
+		settings,
 		renderEnvironment: 'front-end',
 	};
 
 	return (
-		<ScheduleGridContext.Provider
-			value={ contextValues }
-		>
+		<ScheduleGridContext.Provider value={ contextValues }>
 			<ScheduleGrid sessions={ chosenSessions } />
 		</ScheduleGridContext.Provider>
 	);
@@ -64,8 +62,8 @@ function getScheduleGridProps( element ) {
 	}
 
 	const props = {
-		allTracks: allTracks,
-		settings: settings,
+		allTracks,
+		settings,
 		attributes: parsedAttributes,
 		chosenSessions: derivedSessions.chosenSessions,
 	};
@@ -73,4 +71,8 @@ function getScheduleGridProps( element ) {
 	return props;
 }
 
-renderFrontend( '.wp-block-wordcamp-schedule', ScheduleGridWithContext, getScheduleGridProps );
+renderFrontend(
+	'.wp-block-wordcamp-schedule',
+	ScheduleGridWithContext,
+	getScheduleGridProps
+);

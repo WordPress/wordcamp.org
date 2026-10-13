@@ -26,6 +26,9 @@ $wp_cache_debug_username       = WP_CACHE_DEBUG_USERNAME;
 $cached_direct_pages           = array();
 $wp_cache_rest_prefix          = 'wp-json';
 $wp_cache_home_path            = '/';
+$wpsc_cookies                  = array (
+	'wp-jp-premium-content-session',
+);
 
 /*
  * Preloading should happen faster than expiration ($cache_max_time), so that fresh static pages are always

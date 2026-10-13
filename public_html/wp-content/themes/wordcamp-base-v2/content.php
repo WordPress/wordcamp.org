@@ -22,12 +22,24 @@
 	</div><!-- .entry-summary -->
 	<?php else : ?>
 	<div class="entry-content">
-		<?php the_content( sprintf(
-			// translators: The title of the post to continue reading
-			__( 'Continue reading %s <span class="meta-nav">&rarr;</span>', 'wordcamporg' ),
-			the_title( '<span class="assistive-text">', '</span> ', false )
-		) ); ?>
-		<?php wp_link_pages( array( 'before' => '<div class="page-links">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+		<?php
+		$more_title = get_the_title();
+
+		the_content(
+			sprintf(
+				/* translators: %s - the title of the post to continue reading */
+				esc_html__( 'Continue reading %s', 'wordcamporg' ),
+				$more_title ? '<span class="assistive-text">' . esc_html( $more_title ) . '</span> ' : ''
+			) . '<span class="meta-nav">&rarr;</span>'
+		);
+
+		wp_link_pages(
+			array(
+				'before' => '<div class="page-links">' . esc_html__( 'Pages:', 'wordcamporg' ),
+				'after'  => '</div>',
+			)
+		);
+		?>
 	</div><!-- .entry-content -->
 	<?php endif; ?>
 
@@ -57,9 +69,9 @@
 
 		<?php if ( ! post_password_required() && ( comments_open() || '0' != get_comments_number() ) ) : ?>
 		<span class="sep"> | </span>
-		<span class="comments-link"><?php comments_popup_link( __( 'Leave a comment', 'wordcamporg' ), __( '1 Comment', 'wordcamporg' ), __( '% Comments', 'wordcamporg' ) ); ?></span>
+		<span class="comments-link"><?php comments_popup_link( esc_html__( 'Leave a comment', 'wordcamporg' ), esc_html__( '1 Comment', 'wordcamporg' ), esc_html__( '% Comments', 'wordcamporg' ) ); ?></span>
 		<?php endif; ?>
 
-		<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span><span class="edit-link">', '</span>' ); ?>
+		<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="sep"> | </span><span class="edit-link">', '</span>' ); ?>
 	</footer><!-- #entry-meta -->
 </article><!-- #post-<?php the_ID(); ?> -->

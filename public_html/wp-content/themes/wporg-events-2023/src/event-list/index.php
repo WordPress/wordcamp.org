@@ -41,6 +41,8 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
+	$attributes['id'] ??= wp_unique_id('events');
+
 	$facets = Events_2023\get_query_var_facets();
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
@@ -72,6 +74,7 @@ function render( $attributes, $content, $block ) {
 			return array(
 				'title'     => $event->title,
 				'url'       => $event->url,
+				'type'      => get_event_type_label( $event ),
 				'location'  => $event->location,
 				'timestamp' => $event->timestamp,
 			);
@@ -88,7 +91,12 @@ function render( $attributes, $content, $block ) {
 		// `generate_block_asset_handle()` includes the index if `viewScript` is an array, so this is fragile.
 		// There isn't a way to get it programmatically, though, so it just has to manually be kept in sync.
 		'wporg-event-list-view-script-2',
-		'globalEventsPayload = ' . wp_json_encode( $payload ) . ';',
+		sprintf(
+			'var globalEventsPayload = globalEventsPayload || {};
+			globalEventsPayload[%s] = %s;',
+			wp_json_encode( (string) $attributes['id'] ),
+			wp_json_encode( $payload )
+		),
 		'before'
 	);
 
@@ -97,7 +105,7 @@ function render( $attributes, $content, $block ) {
 	?>
 
 	<p class="wporg-marker-list__loading">
-		Loading global events...
+		Loading events...
 		<img
 			src="<?php echo esc_url( includes_url( 'images/spinner-2x.gif' ) ); ?>"
 			width="20"
@@ -110,13 +118,40 @@ function render( $attributes, $content, $block ) {
 
 	$content = ob_get_clean();
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+	$wrapper_attributes = get_block_wrapper_attributes( array(
+		'id' => 'wp-block-wporg-event-list-' . $attributes['id'],
+	) );
 
 	return sprintf(
 		'<div %1$s>%2$s</div>',
 		$wrapper_attributes,
 		do_blocks( $content )
 	);
+}
+
+/**
+ * The label for an event's type, matching the Type filter's options.
+ *
+ * `wporg_events` only knows `meetup` and `wordcamp`; the importer files every official event, Campus
+ * Connect and do_action included, under `wordcamp`. The Type filter tells them apart by URL, the same
+ * way `get_where_clauses()` does in the Google Map block: only an event on a wordcamp.org site is a
+ * WordCamp, the rest are Other. The list uses the same rule so a row's label is what filtering by it
+ * would find.
+ *
+ * @param object $event An event from `Google_Map\get_events()`.
+ *
+ * @return string
+ */
+function get_event_type_label( $event ): string {
+	if ( 'meetup' === ( $event->type ?? '' ) ) {
+		return __( 'Meetup', 'wporg' );
+	}
+
+	if ( preg_match( '#^https?://([^/]*\.)?wordcamp\.org#i', (string) ( $event->url ?? '' ) ) ) {
+		return __( 'WordCamp', 'wporg' );
+	}
+
+	return __( 'Other', 'wporg' );
 }
 
 /**

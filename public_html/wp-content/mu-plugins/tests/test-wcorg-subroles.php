@@ -25,6 +25,21 @@ class Test_SubRoles extends Database_TestCase {
 		global $wcorg_subroles;
 
 		$wcorg_subroles = array();
+
+		if ( ! defined( 'WCPT_POST_TYPE_ID' ) ) {
+			define( 'WCPT_POST_TYPE_ID', 'wordcamp' );
+		}
+
+		if ( ! post_type_exists( WCPT_POST_TYPE_ID ) ) {
+			register_post_type(
+				WCPT_POST_TYPE_ID,
+				array(
+					'public'          => true,
+					'capability_type' => WCPT_POST_TYPE_ID,
+					'map_meta_cap'    => true,
+				)
+			);
+		}
 	}
 
 	/**
@@ -77,6 +92,127 @@ class Test_SubRoles extends Database_TestCase {
 	}
 
 	/**
+	 * `campus_connect_viewer` exists to be narrower than `report_viewer`, so it must not
+	 * grant the capability that opens every private report, nor anything off Central.
+	 *
+	 * @covers \WordCamp\SubRoles\add_subrole_caps()
+	 */
+	public function test_campus_connect_viewer_is_narrower_than_report_viewer() {
+		global $wcorg_subroles;
+
+		$user = self::factory()->user->create_and_get( array(
+			'role' => 'subscriber',
+		) );
+
+		$wcorg_subroles = array(
+			$user->ID => array( 'campus_connect_viewer' ),
+		);
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		$this->assertTrue( user_can( $user->ID, 'view_campus_connect_report' ) );
+		$this->assertFalse( user_can( $user->ID, 'view_wordcamp_reports' ) );
+
+		restore_current_blog();
+
+		switch_to_blog( self::factory()->blog->create() );
+
+		$this->assertFalse( user_can( $user->ID, 'view_campus_connect_report' ) );
+
+		restore_current_blog();
+	}
+
+	/**
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 */
+	public function test_mentor_can_edit_their_wordcamp_post() {
+		$mentor = self::factory()->user->create_and_get( array(
+			'role'       => 'contributor',
+			'user_login' => 'test_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type' => WCPT_POST_TYPE_ID,
+		) );
+
+		$this->assertFalse( user_can( $mentor->ID, 'edit_post', $post_id ) );
+
+		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'test_mentor' );
+
+		$this->assertTrue( user_can( $mentor->ID, 'edit_post', $post_id ) );
+	}
+
+	/**
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 */
+	public function test_non_mentor_cannot_edit_wordcamp_post() {
+		$user = self::factory()->user->create_and_get( array(
+			'role'       => 'contributor',
+			'user_login' => 'not_a_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type' => WCPT_POST_TYPE_ID,
+		) );
+		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'actual_mentor' );
+
+		$this->assertFalse( user_can( $user->ID, 'edit_post', $post_id ) );
+	}
+
+	/**
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 */
+	public function test_mentor_cannot_edit_wordcamp_post_they_dont_mentor() {
+		$mentor = self::factory()->user->create_and_get( array(
+			'role'       => 'contributor',
+			'user_login' => 'test_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type' => WCPT_POST_TYPE_ID,
+		) );
+		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'different_mentor' );
+
+		$this->assertFalse( user_can( $mentor->ID, 'edit_post', $post_id ) );
+	}
+
+	/**
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 */
+	public function test_mentor_cannot_edit_wordcamp_post_without_mentor_meta() {
+		$user = self::factory()->user->create_and_get( array(
+			'role'       => 'contributor',
+			'user_login' => 'test_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type' => WCPT_POST_TYPE_ID,
+		) );
+		// No mentor meta set.
+
+		$this->assertFalse( user_can( $user->ID, 'edit_post', $post_id ) );
+	}
+
+	/**
+	 * @covers \WordCamp\SubRoles\map_subrole_caps()
+	 */
+	public function test_mentor_without_contributor_role_cannot_edit() {
+		$mentor = self::factory()->user->create_and_get( array(
+			'role'       => 'subscriber',
+			'user_login' => 'test_mentor',
+		) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type' => WCPT_POST_TYPE_ID,
+		) );
+		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'test_mentor' );
+
+		// Subscribers don't have `edit_posts`, so even though the mentor mapping
+		// returns `edit_posts` as the required cap, a subscriber won't have it.
+		$this->assertFalse( user_can( $mentor->ID, 'edit_post', $post_id ) );
+	}
+
+	/**
 	 * Define test cases for test_user_with_subrole_can().
 	 */
 	public function data_user_with_subrole_can() : array {
@@ -97,6 +233,12 @@ class Test_SubRoles extends Database_TestCase {
 				'subrole'       => 'report_viewer',
 				'primitive_cap' => 'view_wordcamp_reports',
 				'meta_cap'      => 'view_wordcamp_reports',
+			),
+
+			'campus_connect_viewer' => array(
+				'subrole'       => 'campus_connect_viewer',
+				'primitive_cap' => 'view_campus_connect_report',
+				'meta_cap'      => 'view_campus_connect_report',
 			),
 		);
 	}

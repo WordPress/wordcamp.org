@@ -69,7 +69,7 @@ export class FeaturedImage extends Component {
 		const image = this.constructor.getWidestImage( media_details );
 
 		this.state = {
-			image: image,
+			image,
 			alt: alt_text,
 		};
 	}
@@ -84,7 +84,10 @@ export class FeaturedImage extends Component {
 		let image = {};
 		const { sizes = {} } = media_details;
 
-		if ( sizes.hasOwnProperty( 'full' ) && sizes.full.hasOwnProperty( 'source_url' ) ) {
+		if (
+			sizes.hasOwnProperty( 'full' ) &&
+			sizes.full.hasOwnProperty( 'source_url' )
+		) {
 			image = sizes.full;
 		} else if ( Object.getOwnPropertyDescriptors( sizes ).length > 0 ) {
 			const sortedSizes = sortBy( sizes, 'width' );
@@ -107,7 +110,9 @@ export class FeaturedImage extends Component {
 
 		if ( width && height ) {
 			const aspectRatio = Number( height ) / Number( width );
-			newHeight = Number.parseFloat( aspectRatio * newWidth ).toFixed( 1 );
+			newHeight = Number.parseFloat( aspectRatio * newWidth ).toFixed(
+				1
+			);
 		}
 
 		return newHeight;
@@ -131,7 +136,10 @@ export class FeaturedImage extends Component {
 
 		let output = (
 			<img
-				className={ classnames( 'wordcamp-image__featured-image', 'wp-post-image' ) }
+				className={ classnames(
+					'wordcamp-image__featured-image',
+					'wp-post-image'
+				) }
 				src={ src }
 				alt={ alt }
 				width={ width }
@@ -153,7 +161,12 @@ export class FeaturedImage extends Component {
 		}
 
 		output = (
-			<div className={ classnames( 'wordcamp-image__featured-image-container', className ) }>
+			<div
+				className={ classnames(
+					'wordcamp-image__featured-image-container',
+					className
+				) }
+			>
 				{ output }
 			</div>
 		);

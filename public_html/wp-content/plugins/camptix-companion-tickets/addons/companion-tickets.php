@@ -280,17 +280,33 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 	}
 
 	/**
+	 * Whether a ticket is free. Only free tickets can be activity tickets: the cascade
+	 * cancels a seat without refunding it, so a seat must never carry money.
+	 *
+	 * @param int $ticket_id Ticket post ID.
+	 * @return bool
+	 */
+	private function is_free_ticket( $ticket_id ) {
+		return (float) get_post_meta( $ticket_id, 'tix_price', true ) <= 0;
+	}
+
+	/**
 	 * Render checkboxes choosing which tickets are activity (free add-on) tickets.
 	 */
 	public function render_companion_select() {
 		$selected = $this->get_companion_ticket_ids();
-		$tickets  = $this->get_all_tickets();
+		$tickets  = array_filter(
+			$this->get_all_tickets(),
+			function ( $ticket ) {
+				return $this->is_free_ticket( $ticket->ID );
+			}
+		);
 
 		// Marker so an all-unchecked save is recognised as "clear".
 		echo '<input type="hidden" name="camptix_options[camptix-companion-tickets-rendered]" value="1" />';
 
 		if ( empty( $tickets ) ) {
-			echo '<p class="description">' . esc_html__( 'No ticket types found. Create a free activity ticket (e.g. Contributor Day) first.', 'wordcamporg' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'No free ticket types found. Create a free activity ticket (e.g. Contributor Day) first.', 'wordcamporg' ) . '</p>';
 			return;
 		}
 
@@ -351,7 +367,7 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 		// unchecked UI save (marker present, no array) as "clear".
 		if ( isset( $input['camptix-companion-ticket-ids'] ) || isset( $input['camptix-companion-tickets-rendered'] ) ) {
 			$raw                                    = isset( $input['camptix-companion-ticket-ids'] ) ? (array) $input['camptix-companion-ticket-ids'] : array();
-			$ids                                    = array_filter( array_map( 'absint', $raw ) );
+			$ids                                    = array_filter( array_filter( array_map( 'absint', $raw ) ), array( $this, 'is_free_ticket' ) );
 			$output['camptix-companion-ticket-ids'] = array_values( array_unique( $ids ) );
 		}
 
@@ -914,11 +930,21 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 	 * @param int $main_id Main attendee post ID.
 	 */
 	private function cancel_linked_companion_seats( $main_id ) {
+		global $camptix;
+
 		$companions = $this->get_linked_companion_ids( $main_id, array( 'publish' ) );
 		foreach ( $companions as $companion_id ) {
 			if ( ! $this->is_companion_ticket( get_post_meta( $companion_id, 'tix_ticket_id', true ) ) ) {
 				continue;
 			}
+
+			// A seat bought while its ticket had a price (raised after setup) carries money.
+			// Cancelling it here would drop it without a refund, so leave it to the organizer.
+			if ( (float) get_post_meta( $companion_id, 'tix_ticket_price', true ) > 0 ) {
+				$camptix->log( 'Activity seat was paid for, so it was not cancelled with its main ticket. Refund it from this screen if needed.', $companion_id );
+				continue;
+			}
+
 			wp_update_post( array(
 				'ID'          => $companion_id,
 				'post_status' => 'cancel',

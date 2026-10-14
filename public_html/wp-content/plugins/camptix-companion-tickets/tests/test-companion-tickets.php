@@ -228,12 +228,15 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 	 * Submitted companion ids are sanitised to ints.
 	 */
 	public function test_validate_options_sanitizes_companion_ids() {
+		$first  = $this->make_ticket( 'Contributor Day' );
+		$second = $this->make_ticket( 'Social Dinner' );
+
 		$addon = new CampTix_Companion_Tickets_Addon();
 		$out   = $addon->validate_options(
 			array(),
-			array( 'camptix-companion-ticket-ids' => array( '7', 0, 'x', '9' ) )
+			array( 'camptix-companion-ticket-ids' => array( (string) $first, 0, 'x', (string) $second ) )
 		);
-		$this->assertSame( array( 7, 9 ), $out['camptix-companion-ticket-ids'] );
+		$this->assertSame( array( $first, $second ), $out['camptix-companion-ticket-ids'] );
 	}
 
 	/**
@@ -250,6 +253,39 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 		);
 		$this->assertSame( array( 5, 6 ), $out['camptix-companion-ticket-ids'] );
 		$this->assertSame( array( 7, 9 ), $out['camptix-companion-qualifying-ticket-ids'] );
+	}
+
+	/**
+	 * Only free tickets can be activity tickets: the cascade cancels a seat without a
+	 * refund, so a seat must never carry money.
+	 */
+	public function test_validate_options_rejects_paid_tickets() {
+		$free = $this->make_ticket( 'Contributor Day', 0 );
+		$paid = $this->make_ticket( 'Workshop', 10 );
+
+		$addon = new CampTix_Companion_Tickets_Addon();
+		$out   = $addon->validate_options(
+			array(),
+			array( 'camptix-companion-ticket-ids' => array( $free, $paid ) )
+		);
+
+		$this->assertSame( array( $free ), $out['camptix-companion-ticket-ids'] );
+	}
+
+	/**
+	 * The setup list only offers free tickets.
+	 */
+	public function test_setup_list_offers_only_free_tickets() {
+		$free = $this->make_ticket( 'Contributor Day', 0 );
+		$paid = $this->make_ticket( 'Workshop', 10 );
+
+		$addon = new CampTix_Companion_Tickets_Addon();
+		ob_start();
+		$addon->render_companion_select();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'value="' . $free . '"', $html );
+		$this->assertStringNotContainsString( 'value="' . $paid . '"', $html );
 	}
 
 	/**
@@ -433,6 +469,40 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 		$this->assertSame( 'cancel', get_post_status( $dinner_id ) );
 
 		remove_action( 'transition_post_status', array( $addon, 'maybe_cascade_cancel' ), 10 );
+	}
+
+	/**
+	 * A seat that was paid for, e.g. after an activity ticket's price was raised, is never
+	 * cancelled by the cascade: that would drop the seat without refunding it.
+	 */
+	public function test_cascade_keeps_a_paid_seat() {
+		$main = $this->make_ticket( 'Main' );
+		$cd   = $this->make_ticket( 'Contributor Day' );
+		$this->set_companion_config( array( $cd ) );
+		$main_id = $this->make_attendee( $main, 'alice', 'publish' );
+		$seat_id = $this->make_attendee( $cd, 'alice', 'publish' );
+		update_post_meta( $seat_id, 'tix_companion_primary_attendee_id', $main_id );
+		update_post_meta( $seat_id, 'tix_ticket_price', 10 );
+
+		$logged = array();
+		$log    = function ( $message, $post_id ) use ( &$logged ) {
+			$logged[] = array( $message, $post_id );
+		};
+		add_action( 'camptix_log_raw', $log, 10, 2 );
+
+		$addon = new CampTix_Companion_Tickets_Addon();
+		add_action( 'transition_post_status', array( $addon, 'maybe_cascade_cancel' ), 10, 3 );
+
+		wp_update_post( array(
+			'ID'          => $main_id,
+			'post_status' => 'refund',
+		) );
+
+		remove_action( 'transition_post_status', array( $addon, 'maybe_cascade_cancel' ), 10 );
+		remove_action( 'camptix_log_raw', $log, 10 );
+
+		$this->assertSame( 'publish', get_post_status( $seat_id ) );
+		$this->assertContains( $seat_id, wp_list_pluck( $logged, 1 ), 'the kept seat is logged for the organizer' );
 	}
 
 	/**

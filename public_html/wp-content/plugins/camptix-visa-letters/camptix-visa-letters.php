@@ -156,6 +156,11 @@ add_action( 'camptix_load_addons', 'load_camptix_visa_letters' );
  * Register visa letter CPT and custom statuses.
  */
 function register_tix_visa_letter() {
+	global $camptix;
+
+	$manage_attendees = $camptix->caps['manage_attendees'] ?? 'manage_options';
+	$delete_attendees = $camptix->caps['delete_attendees'] ?? 'manage_options';
+
 	register_post_type(
 		'tix_visa_letter',
 		array(
@@ -176,10 +181,27 @@ function register_tix_visa_letter() {
 				'view_items'     => __( 'View Visa Letters', 'wordcamporg' ),
 				'search_items'   => __( 'Search Visa Letters', 'wordcamporg' ),
 			),
-			'supports'     => array( 'title' ),
-			'public'       => false,
-			'show_ui'      => true,
-			'show_in_menu' => 'edit.php?post_type=tix_ticket',
+			'supports'        => array( 'title' ),
+			'public'          => false,
+			'show_ui'         => true,
+			'show_in_menu'    => 'edit.php?post_type=tix_ticket',
+			// A letter holds a passport number, so it gets the attendee capabilities, as
+			// tix_attendee does. Without these the CPT maps to the post capabilities, which
+			// would let a camp Editor read any letter and an Author create one. Letters are
+			// still created at checkout, since wp_insert_post() checks no capabilities.
+			'capability_type' => 'tix_visa_letter',
+			'capabilities'    => array(
+				'create_posts'        => $manage_attendees,
+				'publish_posts'       => $manage_attendees,
+				'edit_posts'          => $manage_attendees,
+				'edit_others_posts'   => $manage_attendees,
+				'delete_posts'        => $delete_attendees,
+				'delete_others_posts' => $delete_attendees,
+				'read_private_posts'  => $manage_attendees,
+				'edit_post'           => $manage_attendees,
+				'delete_post'         => $delete_attendees,
+				'read_post'           => $manage_attendees,
+			),
 		)
 	);
 

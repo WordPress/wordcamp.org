@@ -260,4 +260,65 @@ class Test_CampTix_Visa_Letters_Security extends WP_UnitTestCase {
 		$this->assertFalse( CampTix_Addon_Visa_Letters::create_letter_document( $letter_id ) );
 		$this->assertSame( '', get_post_meta( $letter_id, 'visa_letter_document', true ) );
 	}
+	/**
+	 * A camp Editor can't open, change or delete a visa letter: it holds a passport number.
+	 * Letters follow CampTix's attendee capabilities, not the post ones.
+	 */
+	public function test_editor_cannot_read_edit_or_delete_a_letter() {
+		list( , $letter_id ) = $this->make_paid_letter( 'editor' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$this->assertFalse( current_user_can( 'read_post', $letter_id ) );
+		$this->assertFalse( current_user_can( 'edit_post', $letter_id ) );
+		$this->assertFalse( current_user_can( 'delete_post', $letter_id ) );
+		$this->assertFalse( current_user_can( get_post_type_object( 'tix_visa_letter' )->cap->edit_others_posts ) );
+	}
+
+	/**
+	 * An Author can't create or publish a letter, nor edit one they wrote.
+	 */
+	public function test_author_cannot_create_or_publish_letters() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $author_id );
+		$cap = get_post_type_object( 'tix_visa_letter' )->cap;
+
+		$this->assertFalse( current_user_can( $cap->create_posts ) );
+		$this->assertFalse( current_user_can( $cap->publish_posts ) );
+
+		$letter_id = self::factory()->post->create( array(
+			'post_type'   => 'tix_visa_letter',
+			'post_author' => $author_id,
+		) );
+		$this->assertFalse( current_user_can( 'edit_post', $letter_id ) );
+	}
+
+	/**
+	 * An Editor with a valid nonce still can't download a letter.
+	 */
+	public function test_download_endpoint_refuses_an_editor() {
+		list( , $letter_id ) = $this->make_paid_letter( 'editordl' );
+		$this->attach_stub_pdf( $letter_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$_GET['letter_id']     = $letter_id;
+		$_REQUEST['letter_id'] = $letter_id;
+		$_REQUEST['_wpnonce']  = wp_create_nonce( 'ctx_vl_download_' . $letter_id );
+
+		$this->expectException( 'WPDieException' );
+		ctx_vl_download_letter();
+	}
+
+	/**
+	 * Whoever manages CampTix attendees manages letters.
+	 */
+	public function test_attendee_manager_can_manage_letters() {
+		list( , $letter_id ) = $this->make_paid_letter( 'admin' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$cap = get_post_type_object( 'tix_visa_letter' )->cap;
+
+		$this->assertTrue( current_user_can( 'read_post', $letter_id ) );
+		$this->assertTrue( current_user_can( 'edit_post', $letter_id ) );
+		$this->assertTrue( current_user_can( 'delete_post', $letter_id ) );
+		$this->assertTrue( current_user_can( $cap->create_posts ) );
+	}
 }

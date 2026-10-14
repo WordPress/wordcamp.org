@@ -970,6 +970,58 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The return URL carries the order in progress, so the buyer comes back to the same selection.
+	 *
+	 * @covers CampTix_Require_Login::get_redirect_return_url
+	 */
+	public function test_redirect_return_url_carries_the_order_in_progress() {
+		$request  = $_REQUEST;
+		$_REQUEST = array(
+			'tix_action'           => 'attendee_info',
+			'tix_tickets_selected' => array( 123 => 2 ),
+			'tix_coupon'           => 'SAVE10',
+			'tix_errors'           => array( 'invalid_coupon' ),
+			'tix_attendee_id'      => 45,
+			'tix_edit_token'       => 'abc123',
+			'tix_access_token'     => 'def456',
+		);
+
+		$url = $this->get_addon( 'CampTix_Require_Login' )->get_redirect_return_url();
+
+		$_REQUEST = $request;
+
+		wp_parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+
+		$this->assertSame(
+			array(
+				'tix_action'           => 'attendee_info',
+				'tix_tickets_selected' => array( 123 => '2' ),
+				'tix_coupon'           => 'SAVE10',
+			),
+			$query
+		);
+	}
+
+	/**
+	 * A request with no order in progress gets the plain tickets URL back.
+	 *
+	 * @covers CampTix_Require_Login::get_redirect_return_url
+	 */
+	public function test_redirect_return_url_is_bare_without_an_order() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$request  = $_REQUEST;
+		$_REQUEST = array();
+
+		$url = $this->get_addon( 'CampTix_Require_Login' )->get_redirect_return_url();
+
+		$_REQUEST = $request;
+
+		$this->assertSame( $camptix->get_tickets_url(), $url );
+	}
+
+	/**
 	 * Record an outgoing CampTix e-mail instead of sending it.
 	 *
 	 * @param bool  $override

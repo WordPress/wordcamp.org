@@ -260,8 +260,6 @@ jobs:
         create_user eventorganiser4 author & pids+=( "$!" )
         create_user eventorganiser5 author & pids+=( "$!" )
         create_user eventorganiser6 author & pids+=( "$!" )
-        # admin-bar-new-event.spec.js follows the toolbar's + New → Event as
-        # an author, on an account of its own for the reason above.
         create_user eventorganiser7 author & pids+=( "$!" )
         create_user member1 subscriber & pids+=( "$!" )
         status=0

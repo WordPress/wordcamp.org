@@ -26,6 +26,12 @@ function wcorg_high_memory_context() : string {
 add_filter( 'wordcamp_high_memory_limit', 'wcorg_high_memory_context' );
 
 /*
+ * GD decodes the full bitmap into PHP memory (~4 bytes per pixel), so large PNG uploads can exhaust the default
+ * `WP_MAX_MEMORY_LIMIT` while generating sub-sizes. That kills the request before attachment metadata is saved.
+ */
+add_filter( 'image_memory_limit', 'wcorg_high_memory_context' );
+
+/*
  * Register an extra directory for private themes.
  *
  * These are all old and no longer used on new sites, but must remain active for old sites. They haven't been

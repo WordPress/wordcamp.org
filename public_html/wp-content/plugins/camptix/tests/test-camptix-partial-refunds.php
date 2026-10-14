@@ -169,7 +169,6 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		global $camptix;
 
 		$property = new ReflectionProperty( $camptix, 'shortcode_str' );
-		$property->setAccessible( true );
 		$property->setValue( $camptix, $shortcode );
 	}
 

@@ -17,7 +17,16 @@ namespace WordCamp\Groups\Frontend\Modal;
 
 defined( 'WPINC' ) || die();
 
+use GatherPress\Core\Event\Event;
+use WP_Admin_Bar;
+
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
+
+/**
+ * The URL fragment that opens the create-event modal on the group's home
+ * page. `event-modal-app.js` looks for the same value.
+ */
+const CREATE_EVENT_FRAGMENT = 'create-event';
 
 /**
  * Bootstrap supplementary modal assets.
@@ -26,6 +35,41 @@ function bootstrap(): void {
 	add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_supplementary_assets' );
 	add_filter( 'render_block_wporg/event-manage', __NAMESPACE__ . '\localize_block_script', 10, 2 );
 	add_filter( 'render_block_wporg/group-settings', __NAMESPACE__ . '\localize_block_script', 10, 2 );
+
+	// After core's `wp_admin_bar_new_content_menu()` (priority 70) adds the node.
+	add_action( 'admin_bar_menu', __NAMESPACE__ . '\link_new_event_to_modal', 80 );
+}
+
+/**
+ * Point the toolbar's + New → Event at the create-event modal.
+ *
+ * Organizers are site admins, so + New → Event is the way in they already
+ * know, and it's in reach at any width while the home page's Create event
+ * button can be screens down. It opens GatherPress's block editor, though,
+ * where the venue is a block that reads "Title" until one is chosen from its
+ * settings panel, and nothing on screen says so (#2027). The modal is the
+ * flow built for organizers, so the link opens that instead.
+ *
+ * Only for the people the modal serves. Anyone else who can create events,
+ * like a contributor, keeps the editor. Events → Add New in wp-admin is left
+ * alone, so the editor is still there for anyone who goes looking for it.
+ *
+ * @param WP_Admin_Bar $wp_admin_bar The toolbar.
+ */
+function link_new_event_to_modal( WP_Admin_Bar $wp_admin_bar ): void {
+	$node_id = 'new-' . Event::POST_TYPE;
+
+	if ( ! $wp_admin_bar->get_node( $node_id ) || ! current_user_can_manage_events() ) {
+		return;
+	}
+
+	// An existing node is updated in place, keeping its title and position.
+	$wp_admin_bar->add_node(
+		array(
+			'id'   => $node_id,
+			'href' => home_url( '/#' . CREATE_EVENT_FRAGMENT ),
+		)
+	);
 }
 
 /**

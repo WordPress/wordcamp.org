@@ -43,16 +43,15 @@ function bootstrap(): void {
 /**
  * Point the toolbar's + New → Event at the create-event modal.
  *
- * Organizers are site admins, so + New → Event is the way in they already
- * know, and it's in reach at any width while the home page's Create event
- * button can be screens down. It opens GatherPress's block editor, though,
- * where the venue is a block that reads "Title" until one is chosen from its
- * settings panel, and nothing on screen says so (#2027). The modal is the
- * flow built for organizers, so the link opens that instead.
+ * The modal is where organizers create events, with the venue and the
+ * online-only option as plain, labelled fields. In the block editor the venue
+ * picker sits in the venue block's settings, where it's easy to miss. + New →
+ * Event is at the top of every page, so it's the way in organizers reach for
+ * first, and it takes them to the modal on the group's home page (#2027).
  *
- * Only for the people the modal serves. Anyone else who can create events,
- * like a contributor, keeps the editor. Events → Add New in wp-admin is left
- * alone, so the editor is still there for anyone who goes looking for it.
+ * Only for users the modal serves. Anyone else who can create events, such as
+ * a contributor, keeps the link to the editor, and Events → Add New in
+ * wp-admin still opens it.
  *
  * @param WP_Admin_Bar $wp_admin_bar The toolbar.
  */

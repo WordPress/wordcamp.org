@@ -43,15 +43,9 @@ function bootstrap(): void {
 /**
  * Point the toolbar's + New → Event at the create-event modal.
  *
- * The modal is where organizers create events, with the venue and the
- * online-only option as plain, labelled fields. In the block editor the venue
- * picker sits in the venue block's settings, where it's easy to miss. + New →
- * Event is at the top of every page, so it's the way in organizers reach for
- * first, and it takes them to the modal on the group's home page (#2027).
- *
- * Only for users the modal serves. Anyone else who can create events, such as
- * a contributor, keeps the link to the editor, and Events → Add New in
- * wp-admin still opens it.
+ * Organizers should create events in the modal rather than the block editor:
+ * it has the venue and the online-only option as plain, labelled fields. So
+ * + New → Event opens the modal on the group's home page (#2027).
  *
  * @param WP_Admin_Bar $wp_admin_bar The toolbar.
  */

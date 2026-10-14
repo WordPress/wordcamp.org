@@ -110,6 +110,7 @@ require_once( WP_PLUGIN_DIR . '/wordcamp-remote-css/tests/bootstrap.php' );
 require_once WP_PLUGIN_DIR . '/wordcamp-speaker-feedback/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-payments-network/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-payments/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/wordcamp-qbo/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-reports/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-attendance/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-invoices/tests/bootstrap.php';

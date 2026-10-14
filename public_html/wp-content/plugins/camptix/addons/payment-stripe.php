@@ -960,8 +960,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * moments and neither the return nor the webhook reached us), a complete-but-unpaid one is
 	 * a delayed payment still in flight and goes pending, a failed one fails. A session Stripe
 	 * still reports open has its expiry re-recorded from Stripe and the sweep checks the release
-	 * time again, so it keeps its seat until then (Stripe expires sessions a little after the
-	 * timestamp, so an open session past it is timed out in the same pass). If Stripe can't be
+	 * time again, so it keeps its seat until then. Stripe expires sessions a little after the
+	 * timestamp, and a payment can still be confirming then (UPI, bank redirects), so an open
+	 * session already past it is kept for the next sweep, like one Stripe can't be asked about,
+	 * rather than timed out while it can still be paid. If Stripe can't be
 	 * asked, or answers with an error, the draft is kept for the next sweep to try again, for
 	 * up to 24 hours: not knowing is not evidence the session died, and a timed-out order can't
 	 * be revived. That includes a 404, which only says the session isn't on the account and
@@ -1022,10 +1024,16 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		if ( 'open' === $session['status'] ) {
-			$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
-			if ( ! empty( $session['expires_at'] ) ) {
-				$camptix->set_order_session_expiry( $payment_token, (int) $session['expires_at'] );
+			$expires_at = (int) ( $session['expires_at'] ?? 0 );
+
+			if ( $expires_at > time() ) {
+				$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
+				$camptix->set_order_session_expiry( $payment_token, $expires_at );
+				return;
 			}
+
+			// Past its expiry, but Stripe hasn't expired it yet: a payment may still be confirming.
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'the Stripe checkout session is still open past its expiry', $session );
 			return;
 		}
 

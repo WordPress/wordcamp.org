@@ -68,6 +68,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp QBO">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-qbo/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Payments">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-payments/tests/

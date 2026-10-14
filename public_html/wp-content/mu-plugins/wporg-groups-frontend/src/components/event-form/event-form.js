@@ -36,11 +36,13 @@ import buildEventPayload from './build-payload';
 import FeaturedImagePicker from './featured-image-picker';
 import DurationField from './duration-field';
 import VenueField from './venue-field';
+import TimezoneField from './timezone-field';
+import LanguageField from './language-field';
+import TopicsField from './topics-field';
+import HostsField from './hosts-field';
+import { NS } from './constants';
 
-export const NS =
-	( window.wporgGroupsEventModal &&
-		window.wporgGroupsEventModal.restNamespace ) ||
-	'wporg-groups/v1';
+export { NS };
 const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
 const EMPTY_FORM = {
@@ -51,6 +53,10 @@ const EMPTY_FORM = {
 	venue_select: '',
 	is_online: false,
 	online_event_link: '',
+	timezone: '',
+	language: '',
+	topics: [],
+	hosts: [],
 	rsvp_questions: [],
 };
 
@@ -69,7 +75,7 @@ const EMPTY_FORM = {
  * @param {*}        props.header            Rendered above the fields.
  * @param {*}        props.footerStart       Rendered at the start of the actions row.
  * @param {*}        props.children          Rendered after the RSVP questions.
- * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
+ * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `loadTemplate( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
  */
 function EventForm(
 	{
@@ -95,6 +101,9 @@ function EventForm(
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
 
+	// The browser-side minimum date only applies to a brand-new event; the server validates a loaded post's date.
+	const [ isExistingPost, setIsExistingPost ] = useState( false );
+
 	/**
 	 * Description is intentionally NOT in form state - the inline block editor
 	 * owns it. We grab the current value via `descriptionRef` only at
@@ -105,6 +114,9 @@ function EventForm(
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
 	const [ recurrence, setRecurrence ] = useState( null );
 	const [ venues, setVenues ] = useState( [] );
+	const [ timezones, setTimezones ] = useState( {} );
+	const [ languages, setLanguages ] = useState( [] );
+	const [ topicSuggestions, setTopicSuggestions ] = useState( [] );
 	const descriptionRef = useRef( () => '' );
 	const cancelLoadRef = useRef( () => {} );
 
@@ -129,7 +141,7 @@ function EventForm(
 		markChanged();
 	};
 
-	const loadFormData = ( id ) => {
+	const loadFormData = ( id, templateId = 0 ) => {
 		cancelLoadRef.current();
 		let cancelled = false;
 		cancelLoadRef.current = () => {
@@ -138,9 +150,12 @@ function EventForm(
 		setLoading( true );
 		setError( '' );
 
-		const path = id
-			? `/${ NS }/event-form-data?event_id=${ id }`
-			: `/${ NS }/event-form-data`;
+		let path = `/${ NS }/event-form-data`;
+		if ( id ) {
+			path += `?event_id=${ id }`;
+		} else if ( templateId ) {
+			path += `?template_id=${ templateId }`;
+		}
 
 		apiFetch( { path } )
 			.then( ( res ) => {
@@ -148,6 +163,10 @@ function EventForm(
 					return;
 				}
 				setVenues( res.venues || [] );
+				setTimezones( res.timezones || {} );
+				setLanguages( res.languages || [] );
+				setTopicSuggestions( res.topics || [] );
+				setIsExistingPost( !! res.is_editing );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
 					id: res.fields.featured_image_id || 0,
@@ -162,6 +181,10 @@ function EventForm(
 					venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
 					is_online: !! res.fields.is_online,
 					online_event_link: res.fields.online_event_link || '',
+					timezone: res.fields.timezone || '',
+					language: res.fields.language || '',
+					topics: res.fields.topics || [],
+					hosts: res.fields.hosts || [],
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -174,7 +197,7 @@ function EventForm(
 				if ( cancelled ) {
 					return;
 				}
-				setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wporg-groups-frontend' ) );
+				setError( err && err.message ? err.message : __( 'Failed to load event data.', 'wordcamporg' ) );
 				setLoading( false );
 			} );
 	};
@@ -199,6 +222,9 @@ function EventForm(
 		loadEvent: ( id ) => {
 			loadFormData( id );
 		},
+		loadTemplate: ( templateId ) => {
+			loadFormData( 0, templateId );
+		},
 		selectVenue: ( venue ) => {
 			updateField( 'venue_select', String( venue.id ) );
 			setVenues( ( prev ) => {
@@ -222,7 +248,7 @@ function EventForm(
 
 		onSubmitPayload( buildPayload() ).catch( ( err ) => {
 			setSaving( false );
-			setError( err && err.message ? err.message : __( 'Failed to save the event.', 'wporg-groups-frontend' ) );
+			setError( err && err.message ? err.message : __( 'Failed to save the event.', 'wordcamporg' ) );
 		} );
 	};
 
@@ -245,7 +271,7 @@ function EventForm(
 			) }
 
 			<TextControl
-				label={ __( 'Event title', 'wporg-groups-frontend' ) }
+				label={ __( 'Event title', 'wordcamporg' ) }
 				value={ form.title }
 				onChange={ ( v ) => updateField( 'title', v ) }
 				required
@@ -254,7 +280,7 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__field` }>
 				<label className="components-base-control__label">
-					{ __( 'Description', 'wporg-groups-frontend' ) }
+					{ __( 'Description', 'wordcamporg' ) }
 				</label>
 				<DescriptionEditor
 					key={ editorKey }
@@ -277,16 +303,16 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__row` }>
 				<TextControl
-					label={ __( 'Date', 'wporg-groups-frontend' ) }
+					label={ __( 'Date', 'wordcamporg' ) }
 					type="date"
 					value={ form.date }
-					min={ isEdit ? undefined : MINIMUM_EVENT_DATE }
+					min={ isExistingPost ? undefined : MINIMUM_EVENT_DATE }
 					onChange={ ( v ) => updateField( 'date', v ) }
 					required
 					__nextHasNoMarginBottom
 				/>
 				<TextControl
-					label={ __( 'Start time', 'wporg-groups-frontend' ) }
+					label={ __( 'Start time', 'wordcamporg' ) }
 					type="time"
 					value={ form.time_start }
 					onChange={ ( v ) => updateField( 'time_start', v ) }
@@ -300,6 +326,13 @@ function EventForm(
 					classPrefix={ classPrefix }
 				/>
 			</div>
+
+			<TimezoneField
+				timezones={ timezones }
+				value={ form.timezone }
+				onChange={ ( v ) => updateField( 'timezone', v ) }
+				classPrefix={ classPrefix }
+			/>
 
 			<RecurrenceControls
 				value={ recurrence }
@@ -320,23 +353,42 @@ function EventForm(
 
 			<div className={ `${ classPrefix }__online-event` }>
 				<ToggleControl
-					label={ __( 'This is an online event', 'wporg-groups-frontend' ) }
+					label={ __( 'This is an online event', 'wordcamporg' ) }
 					checked={ form.is_online }
 					onChange={ ( value ) => updateField( 'is_online', value ) }
 					__nextHasNoMarginBottom
 				/>
 				{ form.is_online && (
 					<TextControl
-						label={ __( 'Online event link', 'wporg-groups-frontend' ) }
+						label={ __( 'Online event link', 'wordcamporg' ) }
 						type="url"
 						value={ form.online_event_link }
 						onChange={ ( value ) => updateField( 'online_event_link', value ) }
 						placeholder="https://"
-						required
 						__nextHasNoMarginBottom
 					/>
 				) }
 			</div>
+
+			<LanguageField
+				languages={ languages }
+				value={ form.language }
+				onChange={ ( v ) => updateField( 'language', v ) }
+				classPrefix={ classPrefix }
+			/>
+
+			<TopicsField
+				suggestions={ topicSuggestions }
+				value={ form.topics }
+				onChange={ ( v ) => updateField( 'topics', v ) }
+				classPrefix={ classPrefix }
+			/>
+
+			<HostsField
+				value={ form.hosts }
+				onChange={ ( v ) => updateField( 'hosts', v ) }
+				classPrefix={ classPrefix }
+			/>
 
 			<RsvpQuestionsEditor
 				questions={ form.rsvp_questions }
@@ -348,12 +400,12 @@ function EventForm(
 			<div className={ `${ classPrefix }__actions` }>
 				{ footerStart }
 				<Button variant="tertiary" onClick={ onCancel } disabled={ saving }>
-					{ _x( 'Cancel', 'abort current action', 'wporg-groups-frontend' ) }
+					{ _x( 'Cancel', 'abort current action', 'wordcamporg' ) }
 				</Button>
 				<Button variant="primary" type="submit" isBusy={ saving } disabled={ saving }>
 					{ isEdit
-						? __( 'Save changes', 'wporg-groups-frontend' )
-						: __( 'Create event', 'wporg-groups-frontend' ) }
+						? __( 'Save changes', 'wordcamporg' )
+						: __( 'Create event', 'wordcamporg' ) }
 				</Button>
 			</div>
 		</form>

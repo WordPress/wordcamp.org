@@ -54,6 +54,13 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	const PHONE_CANARY = '555-0100-canary';
 
 	/**
+	 * The organiser's name, which is personal data and must not ship either.
+	 *
+	 * @var string
+	 */
+	const ORGANIZER_CANARY = 'Organizer Canary Name';
+
+	/**
 	 * A user with no report capability.
 	 *
 	 * @var int
@@ -103,6 +110,7 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 		// Canaries: private fields that are in the safelist but must not ship.
 		update_post_meta( self::$event_id, 'E-mail Address', self::EMAIL_CANARY );
 		update_post_meta( self::$event_id, 'Telephone', self::PHONE_CANARY );
+		update_post_meta( self::$event_id, 'Organizer Name', self::ORGANIZER_CANARY );
 	}
 
 	/**
@@ -130,6 +138,7 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		remove_filter( 'user_has_cap', array( $this, 'grant_caps' ), 10 );
+		remove_filter( 'user_has_cap', array( $this, 'grant_campus_connect_cap' ), 10 );
 		wp_set_current_user( 0 );
 
 		parent::tear_down();
@@ -150,6 +159,28 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 		}
 
 		return $allcaps;
+	}
+
+	/**
+	 * Grant only the Campus Connect capability, as the `campus_connect_viewer`
+	 * subrole does.
+	 *
+	 * @param bool[] $allcaps All capabilities for the user.
+	 *
+	 * @return bool[]
+	 */
+	public function grant_campus_connect_cap( $allcaps ) {
+		$allcaps['view_campus_connect_report'] = true;
+
+		return $allcaps;
+	}
+
+	/**
+	 * Sign in as a subscriber holding only the Campus Connect capability.
+	 */
+	protected function act_as_campus_connect_viewer() {
+		wp_set_current_user( self::$subscriber_id );
+		add_filter( 'user_has_cap', array( $this, 'grant_campus_connect_cap' ) );
 	}
 
 	/**
@@ -238,6 +269,29 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The narrower `campus_connect_viewer` capability opens this endpoint, with
+	 * the same field set a `report_viewer` gets and no contact details.
+	 */
+	public function test_allows_user_with_only_the_campus_connect_capability() {
+		$this->act_as_campus_connect_viewer();
+
+		$response = $this->dispatch();
+		$this->assertSame( 200, $response->get_status() );
+
+		$expected = array_values( array_diff( CampusConnect_Details::get_rest_fields(), array( 'Series Event' ) ) );
+
+		sort( $expected );
+		$actual = array_keys( $this->fixture_row( $response ) );
+		sort( $actual );
+
+		$this->assertSame( $expected, $actual );
+
+		$serialised = wp_json_encode( $response->get_data() );
+		$this->assertStringNotContainsString( self::EMAIL_CANARY, $serialised );
+		$this->assertStringNotContainsString( self::PHONE_CANARY, $serialised );
+	}
+
+	/**
 	 * The published field set is exactly what `get_rest_fields()` promises, less
 	 * the fields this caller's capability withholds. Asserting the whole key set
 	 * -- rather than probing for known-bad keys -- is what makes adding a private
@@ -277,9 +331,10 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Contact details sit in the private safelist, so nothing but the explicit
-	 * field list keeps them off the wire. Check the whole serialised response,
-	 * not just the row keys, so a value leaking through some other field fails.
+	 * Contact details and the organiser's name sit in the private safelist, so
+	 * nothing but the explicit field list keeps them off the wire. Check the
+	 * whole serialised response, not just the row keys, so a value leaking
+	 * through some other field fails.
 	 */
 	public function test_contact_details_never_reach_the_response() {
 		foreach ( array( 'report_viewer', 'administrator' ) as $persona ) {
@@ -297,10 +352,12 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 			$row = $this->fixture_row( $response );
 			$this->assertArrayNotHasKey( 'E-mail Address', $row, "$persona received an e-mail column." );
 			$this->assertArrayNotHasKey( 'Telephone', $row, "$persona received a telephone column." );
+			$this->assertArrayNotHasKey( 'Organizer Name', $row, "$persona received an organiser name column." );
 
 			$serialised = wp_json_encode( $response->get_data() );
 			$this->assertStringNotContainsString( self::EMAIL_CANARY, $serialised, "$persona: e-mail canary leaked." );
 			$this->assertStringNotContainsString( self::PHONE_CANARY, $serialised, "$persona: telephone canary leaked." );
+			$this->assertStringNotContainsString( self::ORGANIZER_CANARY, $serialised, "$persona: organiser name canary leaked." );
 		}
 	}
 
@@ -333,6 +390,14 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `Organizer Name` names a person, including the organiser behind an
+	 * application Central never lists publicly, so it is deliberately unpublished.
+	 */
+	public function test_organizer_name_is_not_published() {
+		$this->assertNotContains( 'Organizer Name', CampusConnect_Details::get_rest_fields() );
+	}
+
+	/**
 	 * The fallback used by any future report that declares `$rest_base` without
 	 * its own permission callback. No route uses it today, so nothing else
 	 * exercises the line that keeps those routes from being public.
@@ -346,5 +411,17 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 
 		$this->act_as_report_viewer();
 		$this->assertTrue( default_rest_permission_callback() );
+	}
+
+	/**
+	 * The Campus Connect capability opens that one route, not the fallback every
+	 * other report route would use.
+	 */
+	public function test_default_permission_callback_rejects_the_campus_connect_capability() {
+		$this->act_as_campus_connect_viewer();
+
+		$this->assertTrue( CampusConnect_Details::rest_permission_callback() );
+		$this->assertFalse( default_rest_permission_callback() );
+		$this->assertFalse( current_user_can( CAPABILITY ) );
 	}
 }

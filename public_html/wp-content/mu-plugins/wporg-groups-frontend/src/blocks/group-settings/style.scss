@@ -49,6 +49,14 @@
 			padding: 24px;
 		}
 	}
+
+	// Editing one event drops the tab bar (#2073), and with it the
+	// tab-content wrapper that padded and scrolled the panel.
+	&__single {
+		flex: 1;
+		overflow-y: auto;
+		padding: 24px;
+	}
 }
 
 // === Shared tab styles ===

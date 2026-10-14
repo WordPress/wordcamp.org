@@ -25,8 +25,8 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 			return;
 		}
 		const frame = window.wp.media( {
-			title: __( 'Select a featured image', 'wporg-groups-frontend' ),
-			button: { text: __( 'Use this image', 'wporg-groups-frontend' ) },
+			title: __( 'Select a featured image', 'wordcamporg' ),
+			button: { text: __( 'Use this image', 'wordcamporg' ) },
 			library: { type: 'image' },
 			multiple: false,
 		} );
@@ -50,7 +50,7 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 		h(
 			'label',
 			{ className: 'components-base-control__label' },
-			__( 'Featured image', 'wporg-groups-frontend' )
+			__( 'Featured image', 'wordcamporg' )
 		),
 		h(
 			'div',
@@ -66,19 +66,19 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 						h(
 							Button,
 							{ variant: 'secondary', isSmall: true, onClick: openMediaFrame },
-							__( 'Replace', 'wporg-groups-frontend' )
+							__( 'Replace', 'wordcamporg' )
 						),
 						h(
 							Button,
 							{ variant: 'tertiary', isSmall: true, isDestructive: true, onClick: handleRemove },
-							__( 'Remove', 'wporg-groups-frontend' )
+							__( 'Remove', 'wordcamporg' )
 						)
 					)
 				)
 				: h(
 					Button,
 					{ variant: 'secondary', onClick: openMediaFrame },
-					__( 'Choose featured image', 'wporg-groups-frontend' )
+					__( 'Choose featured image', 'wordcamporg' )
 				)
 		)
 	);

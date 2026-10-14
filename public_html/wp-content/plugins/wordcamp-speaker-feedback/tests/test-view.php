@@ -70,6 +70,28 @@ class Test_SpeakerFeedback_View extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Answers are plain text, so a stored answer with comparisons is shown as text, not parsed as HTML.
+	 *
+	 * @covers \WordCamp\SpeakerFeedback\View\render_feedback_comment()
+	 */
+	public function test_rendered_answers_are_shown_as_text() {
+		$comment_id = self::factory()->comment->create( array(
+			'comment_post_ID' => self::$session_post->ID,
+			'comment_type'    => COMMENT_TYPE,
+			'comment_meta'    => array(
+				'version' => 1,
+				'rating'  => 5,
+				'q1'      => 'if a < b and c > d then ok',
+			),
+		) );
+
+		$this->assertStringContainsString(
+			'<p class="speaker-feedback__answer">if a &lt; b and c &gt; d then ok</p>',
+			render_feedback_comment( $comment_id, false )
+		);
+	}
+
+	/**
 	 * @covers \WordCamp\SpeakerFeedback\View\render_feedback_comment()
 	 */
 	public function test_rendered_answers_survive_a_later_shortcode_pass() {

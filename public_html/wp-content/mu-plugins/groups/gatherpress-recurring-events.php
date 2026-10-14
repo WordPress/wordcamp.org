@@ -51,6 +51,8 @@ add_action(
 		add_action( 'wporg_groups_frontend_event_draft_saved', __NAMESPACE__ . '\\save_recurring_event_draft', 10, 2 );
 		add_action( 'wporg_groups_frontend_event_saved', __NAMESPACE__ . '\\save_recurring_event', 10, 3 );
 		add_filter( 'wporg_groups_frontend_before_rsvp', __NAMESPACE__ . '\\set_rsvp_occurrence_context', 10, 3 );
+		add_filter( 'wporg_groups_frontend_current_recurrence_id', array( Context::class, 'recurrence_id' ), 10, 0 );
+		add_filter( 'wporg_groups_frontend_is_recurring_event', __NAMESPACE__ . '\\is_recurring_event', 10, 2 );
 	},
 	30
 );
@@ -314,4 +316,16 @@ function set_rsvp_occurrence_context( $error, int $event_id, WP_REST_Request $re
 	Context::set( $occurrence );
 
 	return $error;
+}
+
+/**
+ * Tells the front end which events are series, so routes that act on one
+ * date can insist on being told which.
+ *
+ * @param bool $is_recurring Whether another filter already said so.
+ * @param int  $event_id     Event post ID.
+ * @return bool Whether the event recurs.
+ */
+function is_recurring_event( $is_recurring, int $event_id ): bool {
+	return (bool) $is_recurring || Rule::is_recurring( $event_id );
 }

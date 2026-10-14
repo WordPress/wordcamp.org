@@ -46,14 +46,14 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 		h(
 			'label',
 			{ className: 'components-base-control__label' },
-			__( 'Registration questions', 'wporg-groups-frontend' )
+			__( 'Registration questions', 'wordcamporg' )
 		),
 		h(
 			'p',
 			{ className: 'wporg-groups-rsvp-questions__help' },
 			__(
 				'Optional. Attendees answer these when they RSVP. Only organizers can see the answers.',
-				'wporg-groups-frontend'
+				'wordcamporg'
 			)
 		),
 		list.map( ( question, index ) =>
@@ -66,14 +66,14 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 				h( TextControl, {
 					label: sprintf(
 						/* translators: %d: question number. */
-						__( 'Question %d', 'wporg-groups-frontend' ),
+						__( 'Question %d', 'wordcamporg' ),
 						index + 1
 					),
 					value: question.label,
 					onChange: ( value ) => updateAt( index, { label: value } ),
 					placeholder: __(
 						'e.g. Dietary requirements',
-						'wporg-groups-frontend'
+						'wordcamporg'
 					),
 					__nextHasNoMarginBottom: true,
 				} ),
@@ -81,7 +81,7 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 					'div',
 					{ className: 'wporg-groups-rsvp-questions__row-actions' },
 					h( CheckboxControl, {
-						label: __( 'Required', 'wporg-groups-frontend' ),
+						label: __( 'Required', 'wordcamporg' ),
 						checked: !! question.required,
 						onChange: ( value ) =>
 							updateAt( index, { required: value } ),
@@ -94,7 +94,7 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 							isDestructive: true,
 							onClick: () => removeAt( index ),
 						},
-						__( 'Remove', 'wporg-groups-frontend' )
+						__( 'Remove', 'wordcamporg' )
 					)
 				)
 			)
@@ -107,7 +107,7 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 					onClick: addQuestion,
 					className: 'wporg-groups-rsvp-questions__add',
 				},
-				__( '+ Add a question', 'wporg-groups-frontend' )
+				__( '+ Add a question', 'wordcamporg' )
 			)
 			: h(
 				'p',
@@ -116,7 +116,7 @@ export default function RsvpQuestionsEditor( { questions, onChange } ) {
 					/* translators: %d: maximum number of questions. */
 					__(
 						'You can ask up to %d questions.',
-						'wporg-groups-frontend'
+						'wordcamporg'
 					),
 					MAX_QUESTIONS
 				)

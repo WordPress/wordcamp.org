@@ -25,6 +25,7 @@ import { __ } from '@wordpress/i18n';
  */
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
+import CheckInModal from './check-in-modal';
 import EventForm, { NS } from '../../components/event-form/event-form';
 
 	const AUTOSAVE_INTERVAL_MS = 5000;
@@ -41,6 +42,11 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		// of the draft we're currently autosaving to (0 = none yet).
 		const [ drafts, setDrafts ] = useState( [] );
 		const [ draftId, setDraftId ] = useState( 0 );
+
+		// Templates: the group's published events a new one can start from
+		// (create mode only), and the one the form was last filled from.
+		const [ templates, setTemplates ] = useState( [] );
+		const [ templateId, setTemplateId ] = useState( 0 );
 		const [ autosaveStatus, setAutosaveStatus ] = useState( '' );
 		const [ autosaveTime, setAutosaveTime ] = useState( null );
 		const [ venueEditorOpen, setVenueEditorOpen ] = useState( false );
@@ -70,6 +76,9 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			}
 			apiFetch( { path: `/${ NS }/drafts` } )
 				.then( ( res ) => setDrafts( Array.isArray( res ) ? res : [] ) )
+				.catch( () => {} );
+			apiFetch( { path: `/${ NS }/event-templates` } )
+				.then( ( res ) => setTemplates( Array.isArray( res ) ? res : [] ) )
 				.catch( () => {} );
 		}, [ isEdit ] );
 
@@ -113,14 +122,30 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				return;
 			}
 			setDraftId( parseInt( id, 10 ) );
+			setTemplateId( 0 );
 			formRef.current.loadEvent( parseInt( id, 10 ) );
 		};
 
 		const handleStartFresh = () => {
 			setDraftId( 0 );
+			setTemplateId( 0 );
 			setAutosaveStatus( '' );
 			setAutosaveTime( null );
 			formRef.current.loadEvent( 0 );
+		};
+
+		// Starting from a template makes a new event, never an edit of the
+		// draft that may be open: the next autosave creates a fresh draft.
+		const handleSelectTemplate = ( id ) => {
+			if ( ! id ) {
+				handleStartFresh();
+				return;
+			}
+			setDraftId( 0 );
+			setTemplateId( parseInt( id, 10 ) );
+			setAutosaveStatus( '' );
+			setAutosaveTime( null );
+			formRef.current.loadTemplate( parseInt( id, 10 ) );
 		};
 
 		const submitPayload = ( payload ) => {
@@ -164,8 +189,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			const shouldPrompt = dirty || draftId > 0;
 			if ( shouldPrompt ) {
 				const message = draftId
-					? __( 'This event has been auto-saved as a draft. Close the form?', 'wporg-groups-frontend' )
-					: __( 'You have unsaved changes. Close this form anyway?', 'wporg-groups-frontend' );
+					? __( 'This event has been auto-saved as a draft. Close the form?', 'wordcamporg' )
+					: __( 'You have unsaved changes. Close this form anyway?', 'wordcamporg' );
 				if ( ! window.confirm( message ) ) {
 					return;
 				}
@@ -186,22 +211,23 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		} );
 
 		const showDraftPicker = ! isEdit && drafts.length > 0;
+		const showTemplatePicker = ! isEdit && templates.length > 0;
 
 		const autosaveLabel = ( () => {
 			if ( isEdit ) {
 				return '';
 			}
 			if ( autosaveStatus === 'saving' ) {
-				return __( 'Saving draft…', 'wporg-groups-frontend' );
+				return __( 'Saving draft…', 'wordcamporg' );
 			}
 			if ( autosaveStatus === 'error' ) {
-				return __( 'Couldn\u2019t autosave', 'wporg-groups-frontend' );
+				return __( 'Couldn\u2019t autosave', 'wordcamporg' );
 			}
 			if ( autosaveStatus === 'saved' && autosaveTime ) {
 				const t = autosaveTime;
 				const hh = String( t.getHours() ).padStart( 2, '0' );
 				const mm = String( t.getMinutes() ).padStart( 2, '0' );
-				return __( 'Draft saved at', 'wporg-groups-frontend' ) + ` ${ hh }:${ mm }`;
+				return __( 'Draft saved at', 'wordcamporg' ) + ` ${ hh }:${ mm }`;
 			}
 			return '';
 		} )();
@@ -210,8 +236,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			Modal,
 			{
 				title: isEdit
-					? __( 'Edit event', 'wporg-groups-frontend' )
-					: __( 'Create event', 'wporg-groups-frontend' ),
+					? __( 'Edit event', 'wordcamporg' )
+					: __( 'Create event', 'wordcamporg' ),
 				onRequestClose: handleClose,
 				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
 				size: 'large',
@@ -235,20 +261,46 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 					setDirty( false );
 					restartAutosave();
 				},
-				header: showDraftPicker &&
+				header: ( showTemplatePicker || showDraftPicker ) && h(
+					'div',
+					{ className: 'wporg-groups-event-modal__pickers' },
+					showTemplatePicker && h(
+						'div',
+						{ className: 'wporg-groups-event-modal__template-picker' },
+						h(
+							SelectControl,
+							{
+								label: __( 'Start from a past event', 'wordcamporg' ),
+								help: __( 'Copies everything except the date and time.', 'wordcamporg' ),
+								value: templateId ? String( templateId ) : '',
+								options: [
+									{ label: __( '— Start from scratch —', 'wordcamporg' ), value: '' },
+								].concat(
+									templates.map( ( t ) => ( {
+										label: ( t.title || __( '(Untitled)', 'wordcamporg' ) )
+											+ ( t.event_date ? ` — ${ t.event_date.slice( 0, 10 ) }` : '' ),
+										value: String( t.id ),
+									} ) )
+								),
+								onChange: handleSelectTemplate,
+								__nextHasNoMarginBottom: true,
+							}
+						)
+					),
+					showDraftPicker &&
 					h(
 						'div',
 						{ className: 'wporg-groups-event-modal__draft-picker' },
 						h(
 							SelectControl,
 							{
-								label: __( 'Continue from a draft', 'wporg-groups-frontend' ),
+								label: __( 'Continue from a draft', 'wordcamporg' ),
 								value: draftId ? String( draftId ) : '',
 								options: [
-									{ label: __( '— Start fresh —', 'wporg-groups-frontend' ), value: '' },
+									{ label: __( '— Start fresh —', 'wordcamporg' ), value: '' },
 								].concat(
 									drafts.map( ( d ) => ( {
-										label: ( d.title || __( '(Untitled)', 'wporg-groups-frontend' ) )
+										label: ( d.title || __( '(Untitled)', 'wordcamporg' ) )
 											+ ( d.event_date ? ` — ${ d.event_date.slice( 0, 10 ) }` : '' ),
 										value: String( d.id ),
 									} ) )
@@ -263,7 +315,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 								__nextHasNoMarginBottom: true,
 							}
 						)
-					),
+					)
+				),
 				footerStart: h(
 					'span',
 					{
@@ -299,7 +352,8 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				ev.preventDefault();
 				const mode = trigger.getAttribute( 'data-wporg-groups-modal' );
 				const eventId = parseInt( trigger.getAttribute( 'data-wporg-groups-event-id' ) || '0', 10 );
-				setState( { open: true, mode: mode, eventId: eventId } );
+				const recurrenceId = trigger.getAttribute( 'data-wporg-groups-recurrence-id' ) || '';
+				setState( { open: true, mode: mode, eventId: eventId, recurrenceId: recurrenceId } );
 			};
 			document.addEventListener( 'click', onClick );
 			return () => {
@@ -309,6 +363,14 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 
 		if ( ! state.open ) {
 			return null;
+		}
+
+		if ( 'check-in' === state.mode ) {
+			return h( CheckInModal, {
+				eventId: state.eventId,
+				recurrenceId: state.recurrenceId,
+				onClose: () => setState( { open: false, mode: 'create', eventId: 0 } ),
+			} );
 		}
 
 		if ( [ 'message-all', 'message-attendees' ].includes( state.mode ) ) {

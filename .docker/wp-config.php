@@ -47,13 +47,42 @@ const CAMPUS_ROOT_BLOG_ID   = 47;
 const GROUPS_NETWORK_ID     = 4;
 const GROUPS_ROOT_BLOG_ID   = 52;
 
+/*
+ * Local dev can bind HTTPS to a non-standard host port (`WORDCAMP_HTTPS_PORT`
+ * in `.env` -- see `.docker/readme.md`), which puts a `:8443`-style suffix into
+ * `HTTP_HOST`.
+ *
+ * Strip it here, before anything reads it, and stash it in a constant. That way
+ * the network `switch` below, the regexes in `sunrise*.php`, and WordPress's own
+ * lookups against the portless `domain` columns in `wp_blogs`/`wp_site` all
+ * behave exactly as they do on 443 -- the port never reaches any code that
+ * matches on a hostname.
+ *
+ * The port is added back onto generated URLs by the `0-local-https-port`
+ * mu-plugin, so it stays a presentation concern and the database stays
+ * canonical.
+ */
+$wc_url_port = '';
+
+if ( isset( $_SERVER['HTTP_HOST'] ) && preg_match( '/^(.+):(\d+)$/', $_SERVER['HTTP_HOST'], $wc_host_parts ) ) {
+	$_SERVER['HTTP_HOST'] = $wc_host_parts[1];
+
+	// 443 is implied by `https://`, so it never belongs in a generated URL.
+	if ( '443' !== $wc_host_parts[2] ) {
+		$wc_url_port = ':' . $wc_host_parts[2];
+	}
+}
+
+define( 'WORDCAMP_LOCAL_URL_PORT', $wc_url_port );
+unset( $wc_url_port, $wc_host_parts );
+
 switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 	case 'campus.wordpress.test':
 		define( 'SITE_ID_CURRENT_SITE',  CAMPUS_NETWORK_ID );
 		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'campus.wordpress.test' );
 		define( 'SUBDOMAIN_INSTALL',     false );
-		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test/campusconnect/' );
+		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' . WORDCAMP_LOCAL_URL_PORT . '/campusconnect/' );
 		define( 'CLI_HOSTNAME_OVERRIDE', 'campus.wordpress.test' );
 		break;
 
@@ -89,7 +118,7 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'buddycamp.test' === $_SERVER['HTTP_HOST'] ? 'buddycamp.test' : 'wordcamp.test' );
 		define( 'SUBDOMAIN_INSTALL',     true );
-		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' );
+		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' . WORDCAMP_LOCAL_URL_PORT );
 		define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
 		break;
 }
@@ -147,7 +176,7 @@ define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'put your unique phrase here' );
  */
 define( 'WPLANG',          '' );
 define( 'WP_CONTENT_DIR', __DIR__ . '/wp-content' );
-define( 'WP_CONTENT_URL', 'https://' . preg_replace( '/[^-_.0-9a-z:]/i', '', $_SERVER['HTTP_HOST'] ) . '/wp-content' );
+define( 'WP_CONTENT_URL', 'https://' . preg_replace( '/[^-_.0-9a-z:]/i', '', $_SERVER['HTTP_HOST'] ) . WORDCAMP_LOCAL_URL_PORT . '/wp-content' );
 define( 'WP_TEMP_DIR',    '/tmp' );
 
 define( 'FORCE_SSL_ADMIN',          true );

@@ -8,6 +8,10 @@ const form = {
 	venue_select: '42',
 	is_online: false,
 	online_event_link: 'https://example.test/join',
+	timezone: 'Australia/Brisbane',
+	language: 'es',
+	topics: [ 'WordPress' ],
+	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
 	rsvp_questions: [],
 };
 
@@ -50,6 +54,29 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends the hosts as user ids, in order', () => {
+		expect( build().hosts ).toEqual( [ 3, 9 ] );
+		expect( build( { form: { ...form, hosts: [] } } ).hosts ).toEqual( [] );
+	} );
+
+	test( 'sends the timezone, and an empty string when it is unset', () => {
+		expect( build().timezone ).toBe( 'Australia/Brisbane' );
+		expect( build( { form: { ...form, timezone: '' } } ).timezone ).toBe( '' );
+		expect( build( { form: { ...form, timezone: undefined } } ).timezone ).toBe( '' );
+	} );
+
+	test( 'sends the topics, and an empty list when they are unset', () => {
+		expect( build().topics ).toEqual( [ 'WordPress' ] );
+		expect( build( { form: { ...form, topics: [] } } ).topics ).toEqual( [] );
+		expect( build( { form: { ...form, topics: undefined } } ).topics ).toEqual( [] );
+	} );
+
+	test( 'sends the language, and an empty string when it is unset', () => {
+		expect( build().language ).toBe( 'es' );
+		expect( build( { form: { ...form, language: '' } } ).language ).toBe( '' );
+		expect( build( { form: { ...form, language: undefined } } ).language ).toBe( '' );
 	} );
 
 	test( 'sends venue_id 0 when no venue is selected', () => {

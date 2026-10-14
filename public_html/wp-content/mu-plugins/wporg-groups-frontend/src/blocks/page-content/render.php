@@ -46,14 +46,14 @@ if ( ! $target_page || 'publish' !== $target_page->post_status ) {
 			$link_url  = $edit_url;
 			$link_text = sprintf(
 				/* translators: %s: page slug */
-				__( 'Finish the draft "%s" page', 'wporg-groups-frontend' ),
+				__( 'Finish the draft "%s" page', 'wordcamporg' ),
 				$slug
 			);
 		} else {
 			$link_url  = admin_url( 'post-new.php?post_type=page&post_title=' . urlencode( ucfirst( $slug ) ) );
 			$link_text = sprintf(
 				/* translators: %s: page slug */
-				__( 'Create "%s" page', 'wporg-groups-frontend' ),
+				__( 'Create "%s" page', 'wordcamporg' ),
 				$slug
 			);
 		}
@@ -97,9 +97,9 @@ if ( post_password_required( $target_page ) ) {
 		$edit_url ? sprintf(
 			'<a class="wporg-page-content__edit" href="%1$s">&#9998; %2$s</a>',
 			esc_url( $edit_url ),
-			esc_html__( 'Edit this content', 'wporg-groups-frontend' )
+			esc_html__( 'Edit this content', 'wordcamporg' )
 		) : '',
-		esc_html__( 'This content is password-protected.', 'wporg-groups-frontend' )
+		esc_html__( 'This content is password-protected.', 'wordcamporg' )
 	);
 
 	return;
@@ -211,7 +211,7 @@ $wrapper_attributes = get_block_wrapper_attributes();
 
 			<?php if ( $can_edit ) : ?>
 				<a class="wporg-page-content__edit" href="<?php echo esc_url( get_edit_post_link( $target_page->ID ) ); ?>">
-					&#9998; <?php esc_html_e( 'Edit this content', 'wporg-groups-frontend' ); ?>
+					&#9998; <?php esc_html_e( 'Edit this content', 'wordcamporg' ); ?>
 				</a>
 			<?php endif; ?>
 		</div>
@@ -222,7 +222,7 @@ $wrapper_attributes = get_block_wrapper_attributes();
 	<?php if ( $is_truncated ) : ?>
 		<p class="wporg-page-content__more has-small-font-size">
 			<a href="<?php echo esc_url( get_permalink( $target_page ) ); ?>">
-				<?php esc_html_e( 'Read more', 'wporg-groups-frontend' ); ?> &rarr;
+				<?php esc_html_e( 'Read more', 'wordcamporg' ); ?> &rarr;
 			</a>
 		</p>
 	<?php endif; ?>

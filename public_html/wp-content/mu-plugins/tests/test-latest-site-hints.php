@@ -44,7 +44,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
 	 *
-	 * Verify that comments and pings are closed on past WordCamp sites.
+	 * Verify that the banner hooks are registered and comments/pings are closed on past WordCamp sites.
 	 */
 	public function test_comments_closed_on_past_site() {
 		global $current_blog;
@@ -66,9 +66,16 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$this->assertNotFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should be registered on past sites.' );
 		$this->assertNotFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should be registered on past sites.' );
 
+		// The banner prints in the normal flow at `wp_body_open`, with a `wp_footer` fallback. Locking
+		// both hooks in guards against a future refactor silently dropping one of the two paths.
+		$this->assertNotFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should be hooked to wp_body_open on past sites.' );
+		$this->assertNotFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should be hooked to wp_footer on past sites.' );
+
 		// Clean up.
 		remove_filter( 'comments_open', '__return_false' );
 		remove_filter( 'pings_open', '__return_false' );
+		remove_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' );
+		remove_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' );
 		restore_current_blog();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
 		$current_blog = $original_blog;
@@ -98,6 +105,8 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 		$this->assertFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should not be registered on the latest site.' );
 		$this->assertFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should not be registered on the latest site.' );
+		$this->assertFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should not be hooked to wp_body_open on the latest site.' );
+		$this->assertFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should not be hooked to wp_footer on the latest site.' );
 
 		// Clean up.
 		restore_current_blog();

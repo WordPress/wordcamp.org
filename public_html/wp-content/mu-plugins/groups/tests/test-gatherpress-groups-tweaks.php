@@ -2,6 +2,10 @@
 
 namespace WordCamp\Groups\Tests;
 
+use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
+use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
+use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
+
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-testcase.php';
@@ -12,13 +16,14 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
-	 * Groups-network sites should never show a timezone suffix or offer
-	 * anonymous RSVP, regardless of GatherPress's own defaults.
+	 * Groups-network sites always show the event timezone and never offer
+	 * anonymous RSVP, regardless of GatherPress's own defaults or of what an
+	 * organizer saved on the settings screen.
 	 */
 	public function test_gatherpress_settings_overridden() {
 		$settings = get_option( 'gatherpress_settings' );
 
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
@@ -34,7 +39,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			array(
 				'max_guest_limit'  => 5,
 				'enable_open_rsvp' => 1,
-				'show_timezone'    => 1,
+				'show_timezone'    => 0,
 			)
 		);
 
@@ -44,7 +49,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 5, $settings['max_guest_limit'] );
 
 		// Forced keys win regardless of what was stored.
-		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
 
@@ -179,29 +184,796 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * "Upcoming" is the default view, so the toggle stays unannotated — but its
-	 * radio remains selected so the filter exposes the view currently on screen.
+	 * The default view names itself too. A bare "Time" told the reader which
+	 * axis the control filters on but nothing about what picking it would
+	 * offer, or that a view was already applied (#2059).
 	 */
-	public function test_event_time_filter_marks_upcoming_selected_on_the_default_view() {
+	public function test_event_time_filter_names_the_default_view_as_well() {
 		$filter = $this->get_event_time_filter( null );
 
-		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
 		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+	}
+
+	/**
+	 * Every view names itself, so the toggle reads the same way whichever one
+	 * is applied. "All" had no coverage at all before this.
+	 */
+	public function test_event_time_filter_names_every_view() {
+		$this->assertSame( 'Time: Upcoming', $this->get_event_time_filter( 'upcoming' )['label'] );
+		$this->assertSame( 'Time: Past', $this->get_event_time_filter( 'past' )['label'] );
+		$this->assertSame( 'Time: All', $this->get_event_time_filter( 'all' )['label'] );
 	}
 
 	/**
 	 * A hand-typed `event_time` that isn't one of the three views falls back
-	 * to the default rather than naming itself in the toggle.
+	 * to the default, and the toggle names that fallback rather than the
+	 * value the reader typed.
 	 */
 	public function test_event_time_filter_ignores_an_unknown_value() {
 		$filter = $this->get_event_time_filter( 'whenever' );
 
-		$this->assertSame( 'Time', $filter['label'] );
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
 		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 
 	/**
-	 * Venues are metadata on events, not their own front-end destination —
+	 * An event with an RSVP and nothing else.
+	 *
+	 * @return array{event_id: int, user_id: int}
+	 */
+	private function create_event_with_rsvp(): array {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		return array(
+			'event_id' => $event_id,
+			'user_id'  => $user_id,
+		);
+	}
+
+	/**
+	 * The #2020 symptom itself: a real comment query on a site whose only
+	 * comments are RSVPs must come back empty.
+	 *
+	 * This is the state the bug needed. GatherPress builds its exclusion by
+	 * listing the comment types that *do* exist and subtracting RSVPs -- on a
+	 * site with no ordinary comments that list is empty, and
+	 * `WP_Comment_Query` reads an empty type filter as "no type filter", so
+	 * every RSVP surfaced in the Discussion section. Asserting on the query
+	 * vars alone would not have caught it; the query has to actually run.
+	 */
+	public function test_rsvps_do_not_leak_into_a_general_comment_query() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$this->assertSame(
+			array(),
+			get_comments( array( 'post_id' => $fixture['event_id'] ) ),
+			'A general comment query on an RSVP-only site must return nothing.'
+		);
+
+		// The same query the Discussion section runs, unscoped by post. Not
+		// asserted empty -- the fixture install seeds an ordinary comment, and
+		// keeping that one is the point. Asserted free of RSVPs.
+		$this->assertNotContains(
+			'gatherpress_rsvp',
+			wp_list_pluck( get_comments( array( 'status' => 'approve' ) ), 'comment_type' )
+		);
+	}
+
+	/**
+	 * Asking for RSVPs explicitly still gets them: the exclusion is for
+	 * queries that did not ask, and GatherPress's own reads must keep working.
+	 */
+	public function test_an_explicit_rsvp_query_still_returns_rsvps() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$by_type = get_comments(
+			array(
+				'post_id' => $fixture['event_id'],
+				'type'    => 'gatherpress_rsvp',
+				'status'  => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type );
+
+		$by_type_in = get_comments(
+			array(
+				'post_id'  => $fixture['event_id'],
+				'type__in' => array( 'gatherpress_rsvp' ),
+				'status'   => 'approve',
+			)
+		);
+		$this->assertCount( 1, $by_type_in );
+
+		// And through GatherPress's own reader, which is what the attendee
+		// list and the RSVP counts render from.
+		$this->assertSame(
+			1,
+			(int) ( ( new \GatherPress\Core\Rsvp\Rsvp( $fixture['event_id'] ) )->responses()['attending']['count'] ?? 0 )
+		);
+	}
+
+	/**
+	 * An ordinary comment alongside the RSVPs still comes back.
+	 *
+	 * The exclusion has to subtract RSVPs, not everything: a group site with a
+	 * real discussion must keep it.
+	 */
+	public function test_ordinary_comments_survive_the_exclusion() {
+		$fixture = $this->create_event_with_rsvp();
+
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID'  => $fixture['event_id'],
+				'comment_approved' => '1',
+			)
+		);
+
+		$comments = get_comments( array( 'post_id' => $fixture['event_id'] ) );
+
+		$this->assertCount( 1, $comments );
+		$this->assertSame( $comment_id, (int) $comments[0]->comment_ID );
+	}
+
+	/**
+	 * The exclusion hook runs after the capture hook, and both stay attached.
+	 *
+	 * The ordering is the whole mechanism: `capture_explicit_rsvp_query()` has
+	 * to mark an explicit request before `exclude_rsvps_from_general_comment_queries()`
+	 * decides whether to subtract. Pinned here because nothing else would
+	 * notice a priority drifting, and the symptom would be silent.
+	 */
+	public function test_the_rsvp_exclusion_hooks_are_wired_in_order() {
+		$this->assertSame(
+			5,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query' )
+		);
+		$this->assertSame(
+			20,
+			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries' )
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'gatherpress_rsvp_comment_query_exclusion', 'WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries' )
+		);
+	}
+
+	/**
+	 * Read the archive's Format filter options as the query-filter block would.
+	 *
+	 * @param string|null $event_format The `event_format` query arg to simulate.
+	 */
+	private function get_event_format_filter( ?string $event_format ): array {
+		if ( null === $event_format ) {
+			unset( $_GET['event_format'] );
+		} else {
+			$_GET['event_format'] = $event_format;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_format', array() );
+
+		unset( $_GET['event_format'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The Format toggle names its applied choice, exactly as Time does — same
+	 * control, same reason (#2059).
+	 */
+	public function test_event_format_filter_names_every_view() {
+		$this->assertSame( 'Format: All', $this->get_event_format_filter( null )['label'] );
+		$this->assertSame( 'Format: All', $this->get_event_format_filter( 'all' )['label'] );
+		$this->assertSame( 'Format: In person', $this->get_event_format_filter( 'in-person' )['label'] );
+		$this->assertSame( 'Format: Online', $this->get_event_format_filter( 'online' )['label'] );
+	}
+
+	/**
+	 * A hand-typed value that isn't one of the three widens the view back to
+	 * "All" rather than emptying the archive.
+	 */
+	public function test_event_format_filter_ignores_an_unknown_value() {
+		$filter = $this->get_event_format_filter( 'hybrid' );
+
+		$this->assertSame( 'Format: All', $filter['label'] );
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * Build the tax query the archive's Query Loop would run.
+	 *
+	 * @param string|null $event_format   The `event_format` query arg to simulate.
+	 * @param string|null $event_language The `event_language` query arg to simulate.
+	 * @param string|null $event_topic    The `event_topic` query arg to simulate.
+	 */
+	private function get_archive_query_vars( ?string $event_format, ?string $event_language = null, ?string $event_topic = null ): array {
+		if ( null === $event_topic ) {
+			unset( $_GET['event_topic'] );
+		} else {
+			$_GET['event_topic'] = $event_topic;
+		}
+
+		if ( null === $event_format ) {
+			unset( $_GET['event_format'] );
+		} else {
+			$_GET['event_format'] = $event_format;
+		}
+
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
+		}
+
+		$block = new \WP_Block(
+			array(
+				'blockName'   => 'core/query',
+				'attrs'       => array(),
+				'innerBlocks' => array(),
+			)
+		);
+
+		$block->context = array(
+			'query' => array(
+				'postType'                => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+			),
+		);
+
+		$query_vars = apply_filters(
+			'query_loop_block_query_vars',
+			array( 'post_type' => 'gatherpress_event' ),
+			$block
+		);
+
+		unset( $_GET['event_format'], $_GET['event_language'], $_GET['event_topic'] );
+
+		return $query_vars;
+	}
+
+	/**
+	 * Create a published event, optionally marked online.
+	 *
+	 * @param string $title     Event title.
+	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_format_event( string $title, bool $is_online ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+
+		if ( $is_online ) {
+			$taxonomy = \GatherPress\Core\Venue\Setup::get_instance()->taxonomy_for_event_post_type(
+				\GatherPress\Core\Event\Event::POST_TYPE
+			);
+
+			wp_set_object_terms( $event_id, 'online-event', $taxonomy );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * "Online" narrows to the events carrying GatherPress's `online-event`
+	 * venue term.
+	 */
+	public function test_event_format_filter_narrows_to_online_events() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query_vars = $this->get_archive_query_vars( 'online' );
+
+		$this->assertSame( array( $online ), $query_vars['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
+	}
+
+	/**
+	 * "In person" is the absence of that term, so an event with no venue at
+	 * all counts as in person — it is certainly not online.
+	 */
+	public function test_event_format_filter_treats_a_venueless_event_as_in_person() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Event with no venue', false );
+
+		$query_vars = $this->get_archive_query_vars( 'in-person' );
+
+		$this->assertSame( array( $online ), $query_vars['post__not_in'] );
+		$this->assertArrayNotHasKey( 'post__in', $query_vars );
+	}
+
+	/**
+	 * A group that runs nothing online should show an empty "Online" view, not
+	 * its whole archive. WP_Query ignores an empty `post__in`, so the filter
+	 * has to say "no posts" explicitly.
+	 */
+	public function test_event_format_filter_shows_nothing_when_no_events_are_online() {
+		$this->make_format_event( 'Hall meetup', false );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online' )['post__in'] );
+	}
+
+	/**
+	 * The filter must never put a tax query on the archive's own query.
+	 *
+	 * A tax query joins `term_relationships`, which makes WP_Query select
+	 * `DISTINCT` — and that collapses the duplicate rows
+	 * `gatherpress-recurring-events` adds in `Query::clauses()` to turn a
+	 * series into one row per date. Filtering by format would then show a
+	 * weekly series once instead of on each of its dates, silently and only
+	 * while a filter is applied.
+	 */
+	public function test_event_format_filter_keeps_a_tax_query_off_the_archive_query() {
+		$this->make_format_event( 'Online office hours', true );
+
+		foreach ( array( 'online', 'in-person' ) as $format ) {
+			$this->assertArrayNotHasKey(
+				'tax_query',
+				$this->get_archive_query_vars( $format ),
+				"A tax query on the {$format} view would collapse recurring occurrences."
+			);
+		}
+	}
+
+	/**
+	 * "All" is the absence of a constraint, not a third thing to match.
+	 */
+	public function test_event_format_filter_constrains_nothing_when_showing_all() {
+		foreach ( array( null, 'all' ) as $format ) {
+			$query_vars = $this->get_archive_query_vars( $format );
+
+			$this->assertArrayNotHasKey( 'post__in', $query_vars );
+			$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
+			$this->assertArrayNotHasKey( 'tax_query', $query_vars );
+		}
+	}
+
+	/**
+	 * Each filter's form holds only its own control, so without this the two
+	 * filters would reset each other and the search term on every submit.
+	 */
+	public function test_filter_forms_carry_the_other_view_state() {
+		$_GET['event_time']   = 'past';
+		$_GET['event_format'] = 'online';
+		$_GET['s']            = 'meetup';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_format' );
+		$format_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		unset( $_GET['event_time'], $_GET['event_format'], $_GET['s'] );
+
+		// Each form carries the sibling filter and the search, never its own
+		// key -- the control itself already submits that.
+		$this->assertStringContainsString( 'name="event_time" value="past"', $format_form );
+		$this->assertStringContainsString( 'name="s" value="meetup"', $format_form );
+		$this->assertStringNotContainsString( 'name="event_format"', $format_form );
+
+		$this->assertStringContainsString( 'name="event_format" value="online"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_time"', $time_form );
+	}
+
+	/**
+	 * Nothing applied, nothing carried: a default view should not litter the
+	 * form with hidden inputs restating the default.
+	 */
+	public function test_filter_forms_carry_nothing_on_the_default_view() {
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+
+		$this->assertSame( '', ob_get_clean() );
+	}
+
+	/**
+	 * Create a published event in a language, optionally marked online.
+	 *
+	 * @param string $title     Event title.
+	 * @param string $language  Language subtag, or '' to leave it unset.
+	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_language_event( string $title, string $language, bool $is_online = false ): int {
+		$event_id = $this->make_format_event( $title, $is_online );
+
+		if ( '' !== $language ) {
+			set_event_language( $event_id, $language );
+		}
+
+		return $event_id;
+	}
+
+	/**
+	 * Read the language filter's registered options.
+	 *
+	 * @param string|null $event_language The `event_language` query arg to simulate.
+	 */
+	private function get_event_language_filter( ?string $event_language ): array {
+		if ( null === $event_language ) {
+			unset( $_GET['event_language'] );
+		} else {
+			$_GET['event_language'] = $event_language;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_language', array() );
+
+		unset( $_GET['event_language'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The control offers the languages this group actually runs events in,
+	 * not the 593 CLDR knows about.
+	 */
+	public function test_event_language_filter_offers_only_languages_in_use() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$options = $this->get_event_language_filter( null )['options'];
+
+		$this->assertSame( array( 'all', 'en', 'es' ), array_keys( $options ) );
+		$this->assertSame( 'English', $options['en'] );
+		$this->assertSame( 'Spanish', $options['es'] );
+	}
+
+	/**
+	 * A group that runs everything in one language gets no control at all:
+	 * "All" and that language would select the same events.
+	 */
+	public function test_event_language_filter_is_hidden_without_a_choice() {
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Otra charla', 'es' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array(), $this->get_event_language_filter( null ) );
+	}
+
+	/**
+	 * The toggle names the applied view, the way Time and Format do.
+	 */
+	public function test_event_language_filter_names_every_view() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$this->assertSame( 'Language: All', $this->get_event_language_filter( null )['label'] );
+		$this->assertSame( 'Language: Spanish', $this->get_event_language_filter( 'es' )['label'] );
+	}
+
+	/**
+	 * A language the group does not run events in widens the archive rather
+	 * than emptying it.
+	 */
+	public function test_event_language_filter_ignores_an_unknown_value() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$filter = $this->get_event_language_filter( 'ja' );
+
+		$this->assertSame( 'Language: All', $filter['label'] );
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * Picking a language narrows the archive to the events run in it.
+	 */
+	public function test_event_language_filter_narrows_to_one_language() {
+		$spanish = $this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+		$this->make_language_event( 'Untagged meetup', '' );
+
+		$this->assertSame( array( $spanish ), $this->get_archive_query_vars( null, 'es' )['post__in'] );
+	}
+
+	/**
+	 * Language and format have to narrow each other. WP_Query treats
+	 * `post__in` and `post__not_in` as an if/elseif, so the in-person filter's
+	 * `post__not_in` would be dropped without a word if both were left to set
+	 * their own query var.
+	 */
+	public function test_event_language_and_format_filters_narrow_together() {
+		$spanish_online    = $this->make_language_event( 'Charla en linea', 'es', true );
+		$spanish_in_person = $this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$online = $this->get_archive_query_vars( 'online', 'es' );
+		$this->assertSame( array( $spanish_online ), $online['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $online );
+
+		$in_person = $this->get_archive_query_vars( 'in-person', 'es' );
+		$this->assertSame( array( $spanish_in_person ), $in_person['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $in_person );
+	}
+
+	/**
+	 * An empty `post__in` is ignored by WP_Query, so a combination that
+	 * matches nothing has to say "no posts" explicitly rather than falling
+	 * back to the whole archive.
+	 */
+	public function test_event_language_filter_shows_nothing_when_the_combination_is_empty() {
+		$this->make_language_event( 'Charla en el bar', 'es', false );
+		$this->make_language_event( 'Online talk', 'en', true );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online', 'es' )['post__in'] );
+	}
+
+	/**
+	 * The language filter must stay off the archive's own query for the same
+	 * reason the format filter does: a join that makes WP_Query select
+	 * `DISTINCT` collapses a recurring series back into a single row.
+	 */
+	public function test_event_language_filter_keeps_a_meta_query_off_the_archive_query() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$query_vars = $this->get_archive_query_vars( null, 'es' );
+
+		$this->assertArrayNotHasKey( 'meta_query', $query_vars );
+		$this->assertArrayNotHasKey( 'meta_key', $query_vars );
+	}
+
+	/**
+	 * Each filter's form carries the applied language, so submitting one does
+	 * not reset it.
+	 */
+	public function test_filter_forms_carry_the_applied_language() {
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		$_GET['event_language'] = 'es';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_language' );
+		$language_form = ob_get_clean();
+
+		unset( $_GET['event_language'] );
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_language"', $language_form );
+	}
+
+	/**
+	 * Searching narrows the language already in view rather than resetting it.
+	 */
+	public function test_search_form_carries_the_applied_language() {
+		global $wp_query;
+
+		$this->make_language_event( 'Charla mensual', 'es' );
+		$this->make_language_event( 'Monthly talk', 'en' );
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$_GET['event_language'] = 'es';
+
+		$search_form = '<form role="search" method="get" action="https://example.org"><input type="search" name="s" /></form>';
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own block filter name.
+		$output = apply_filters( 'render_block_core/search', $search_form );
+
+		unset( $_GET['event_language'] );
+		$wp_query = $original_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertStringContainsString( 'name="event_language" value="es"', $output );
+	}
+
+	/**
+	 * Create a published event with topics, optionally in a language and
+	 * marked online.
+	 *
+	 * @param string   $title     Event title.
+	 * @param string[] $topics    Topic names.
+	 * @param string   $language  Language subtag, or '' to leave it unset.
+	 * @param bool     $is_online Whether to give it the `online-event` term.
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_topic_event( string $title, array $topics, string $language = '', bool $is_online = false ): int {
+		$event_id = $this->make_language_event( $title, $language, $is_online );
+
+		set_event_topics( $event_id, $topics );
+
+		return $event_id;
+	}
+
+	/**
+	 * Read the topic filter's registered options.
+	 *
+	 * @param string|null $event_topic The `event_topic` query arg to simulate.
+	 */
+	private function get_event_topic_filter( ?string $event_topic ): array {
+		if ( null === $event_topic ) {
+			unset( $_GET['event_topic'] );
+		} else {
+			$_GET['event_topic'] = $event_topic;
+		}
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_topic', array() );
+
+		unset( $_GET['event_topic'] );
+
+		return $filter;
+	}
+
+	/**
+	 * The control offers the topics on published events, keyed by slug, and
+	 * is hidden when no event has one. A topic that only lives on a draft
+	 * would be a filter that comes back empty.
+	 */
+	public function test_event_topic_filter_offers_only_topics_in_use() {
+		$this->assertSame( array(), $this->get_event_topic_filter( null ) );
+
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$draft = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		set_event_topics( $draft, array( 'Unpublished' ) );
+
+		$filter = $this->get_event_topic_filter( null );
+
+		$this->assertSame( array( 'all', 'block-themes' ), array_keys( $filter['options'] ) );
+		$this->assertSame( 'Block Themes', $filter['options']['block-themes'] );
+		$this->assertSame( 'Topic: All', $filter['label'] );
+		$this->assertSame( 'Topic: Block Themes', $this->get_event_topic_filter( 'block-themes' )['label'] );
+	}
+
+	/**
+	 * A topic the group has no events on widens the archive rather than
+	 * emptying it.
+	 */
+	public function test_event_topic_filter_ignores_an_unknown_value() {
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$filter = $this->get_event_topic_filter( 'nope' );
+
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+		$this->assertArrayNotHasKey( 'post__in', $this->get_archive_query_vars( null, null, 'nope' ) );
+	}
+
+	/**
+	 * `?event_topic[]=` sends an array. It falls back to "All" like any
+	 * other value the group has no events on, rather than fataling.
+	 */
+	public function test_event_topic_filter_ignores_an_array_value() {
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$_GET['event_topic'] = array( 'block-themes' );
+
+		$filter = apply_filters( 'wporg_query_filter_options_event_topic', array() );
+
+		unset( $_GET['event_topic'] );
+
+		$this->assertSame( array( 'all' ), $filter['selected'] );
+	}
+
+	/**
+	 * A topic with non-ASCII letters has a percent-encoded slug, and PHP
+	 * decodes the query arg. The filter has to match it either way.
+	 */
+	public function test_event_topic_filter_matches_a_non_ascii_topic() {
+		$event = $this->make_topic_event( 'Вечер', array( 'Блокови' ) );
+
+		$slug = get_term_by( 'name', 'Блокови', 'gatherpress_topic' )->slug;
+
+		$this->assertSame( array( $event ), $this->get_archive_query_vars( null, null, rawurldecode( $slug ) )['post__in'] );
+		$this->assertSame( array( $event ), $this->get_archive_query_vars( null, null, $slug )['post__in'] );
+	}
+
+	/**
+	 * Picking a topic narrows the archive to the events tagged with it,
+	 * without a tax query on the archive's own SQL.
+	 */
+	public function test_event_topic_filter_narrows_to_one_topic() {
+		$themes = $this->make_topic_event( 'Theme night', array( 'Block Themes', 'Design' ) );
+		$this->make_topic_event( 'Plugin night', array( 'Plugins' ) );
+		$this->make_topic_event( 'Untagged meetup', array() );
+
+		$query_vars = $this->get_archive_query_vars( null, null, 'block-themes' );
+
+		$this->assertSame( array( $themes ), $query_vars['post__in'] );
+		$this->assertArrayNotHasKey( 'tax_query', $query_vars );
+	}
+
+	/**
+	 * Topic, language and format all narrow each other rather than the last
+	 * one applied winning.
+	 */
+	public function test_event_topic_language_and_format_filters_narrow_together() {
+		$match = $this->make_topic_event( 'Charla de temas', array( 'Block Themes' ), 'es', false );
+		$this->make_topic_event( 'Charla en linea', array( 'Block Themes' ), 'es', true );
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ), 'en', false );
+		$this->make_topic_event( 'Charla de plugins', array( 'Plugins' ), 'es', false );
+
+		$in_person = $this->get_archive_query_vars( 'in-person', 'es', 'block-themes' );
+		$this->assertSame( array( $match ), $in_person['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $in_person );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'online', 'en', 'block-themes' )['post__in'] );
+	}
+
+	/**
+	 * Each filter's form and the search form carry the applied topic, so
+	 * submitting one does not reset it.
+	 */
+	public function test_filter_and_search_forms_carry_the_applied_topic() {
+		global $wp_query;
+
+		$this->make_topic_event( 'Theme night', array( 'Block Themes' ) );
+
+		$_GET['event_topic'] = 'block-themes';
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_topic' );
+		$topic_form = ob_get_clean();
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$search_form = '<form role="search" method="get" action="https://example.org"><input type="search" name="s" /></form>';
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's own block filter name.
+		$search = apply_filters( 'render_block_core/search', $search_form );
+
+		$wp_query = $original_query;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		unset( $_GET['event_topic'] );
+
+		$this->assertStringContainsString( 'name="event_topic" value="block-themes"', $time_form );
+		$this->assertStringNotContainsString( 'name="event_topic"', $topic_form );
+		$this->assertStringContainsString( 'name="event_topic" value="block-themes"', $search );
+	}
+
+	/**
+	 * Venues are metadata on events, not their own front-end destination -
 	 * confirm the post type stays non-public even though GatherPress itself
 	 * registers it.
 	 */
@@ -212,5 +984,857 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertFalse( $post_type_object->public );
 		$this->assertFalse( $post_type_object->publicly_queryable );
 		$this->assertFalse( $post_type_object->has_archive );
+	}
+
+	/**
+	 * The venue taxonomy has no public archive either, so it cannot list the
+	 * events at a venue - protected ones included - under the venue's name. Its
+	 * REST exposure stays on, since the REST surfaces are gated separately.
+	 */
+	public function test_gatherpress_venue_taxonomy_is_not_publicly_queryable() {
+		$taxonomy = get_taxonomy( '_gatherpress_venue' );
+
+		$this->assertNotFalse( $taxonomy, 'GatherPress must be active for this assertion to be meaningful.' );
+		$this->assertFalse( $taxonomy->publicly_queryable );
+		$this->assertFalse( $taxonomy->query_var );
+		$this->assertTrue( $taxonomy->show_in_rest );
+	}
+
+	/**
+	 * Create a published event with a published venue attached to it.
+	 *
+	 * GatherPress links the two with a shadow term in `_gatherpress_venue`
+	 * whose slug is the venue's `post_name` prefixed with an underscore.
+	 *
+	 * @param string $venue_name The venue's title.
+	 *
+	 * @return int The event's post ID.
+	 */
+	private function create_event_with_venue( string $venue_name = 'Salty Spaces' ): int {
+		$venue_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_venue',
+				'post_status' => 'publish',
+				'post_title'  => $venue_name,
+				'post_name'   => sanitize_title( $venue_name ),
+			)
+		);
+
+		update_post_meta( $venue_id, 'gatherpress_address', 'The Wharf Mooloolaba, Mooloolaba QLD 4557' );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Event With A Venue',
+			)
+		);
+
+		$slug = '_' . get_post_field( 'post_name', $venue_id );
+		$term = get_term_by( 'slug', $slug, '_gatherpress_venue' );
+
+		if ( ! $term ) {
+			$inserted = wp_insert_term( $venue_name, '_gatherpress_venue', array( 'slug' => $slug ) );
+			$this->assertNotWPError( $inserted, 'Could not create the venue shadow term.' );
+			$term = get_term( $inserted['term_id'], '_gatherpress_venue' );
+		}
+
+		wp_set_object_terms( $event_id, array( (int) $term->term_id ), '_gatherpress_venue', false );
+
+		return $event_id;
+	}
+
+	/**
+	 * Render the venue block in the context of an event.
+	 *
+	 * @param int $event_id Event to render the block for.
+	 *
+	 * @return string The rendered block.
+	 */
+	private function render_venue_block( int $event_id ): string {
+		global $post;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_post = $post;
+		$post          = get_post( $event_id );
+		setup_postdata( $post );
+
+		$output = do_blocks(
+			'<!-- wp:gatherpress/venue -->'
+			. '<!-- wp:post-title {"level":0,"isLink":false} /-->'
+			. '<!-- wp:gatherpress/venue-detail {"fieldType":"address"} /-->'
+			. '<!-- /wp:gatherpress/venue -->'
+		);
+
+		wp_reset_postdata();
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		return $output;
+	}
+
+	/**
+	 * The venue block must render for logged-out visitors.
+	 *
+	 * GatherPress 0.35.4 gates the block's source post on
+	 * `is_post_publicly_viewable() || current_user_can( 'read_post' )`, and
+	 * the first arm reads `publicly_queryable`, which the tweak above turns
+	 * off. Anonymous visitors therefore got an empty block: no Location
+	 * heading, no venue name, no address, on every public event page and
+	 * card. Logged-in users passed the second arm, which is why it went
+	 * unnoticed. See #2027.
+	 */
+	public function test_venue_block_renders_for_logged_out_visitors() {
+		$event_id = $this->create_event_with_venue();
+
+		wp_set_current_user( 0 );
+
+		$output = $this->render_venue_block( $event_id );
+
+		$this->assertStringContainsString( 'Salty Spaces', $output );
+		$this->assertStringContainsString( 'Mooloolaba', $output );
+	}
+
+	/**
+	 * The override is scoped to the venue block's own render.
+	 *
+	 * A standing `is_post_type_viewable` override would leak into every
+	 * other caller — `WP_Sitemaps_Posts` above all, which would then list
+	 * venue URLs that 404.
+	 */
+	public function test_venue_visibility_override_does_not_outlive_the_block() {
+		$event_id = $this->create_event_with_venue();
+
+		wp_set_current_user( 0 );
+
+		$this->assertFalse( is_post_type_viewable( get_post_type_object( 'gatherpress_venue' ) ) );
+
+		$this->render_venue_block( $event_id );
+
+		$this->assertFalse(
+			is_post_type_viewable( get_post_type_object( 'gatherpress_venue' ) ),
+			'The venue visibility override outlived the block render.'
+		);
+		$this->assertNotContains(
+			'gatherpress_venue',
+			array_keys( ( new \WP_Sitemaps_Posts() )->get_object_subtypes() ),
+			'Venues must stay out of the sitemap - they have no front-end URL.'
+		);
+	}
+
+	/**
+	 * The venue description is an append, not a standalone renderer.
+	 *
+	 * When GatherPress renders nothing, appending the description to that
+	 * empty string leaves a stray sentence in the event card with no
+	 * heading, name or address around it - which is what made the venue
+	 * zone unrecognizable in #2027.
+	 */
+	public function test_venue_description_is_not_appended_to_an_empty_block() {
+		$event_id = $this->create_event_with_venue();
+		$venue    = get_page_by_path( 'salty-spaces', OBJECT, 'gatherpress_venue' );
+
+		$this->assertNotNull( $venue, 'The venue fixture was not created.' );
+
+		wp_update_post(
+			array(
+				'ID'           => $venue->ID,
+				'post_content' => 'An entire pub floor just for us!',
+			)
+		);
+		update_post_meta( $venue->ID, 'gatherpress_access_requirements', 'Step-free entrance.' );
+
+		// The append only runs on a singular event, so put the query there.
+		// Rewrite rules aren't flushed in this suite, so `go_to()` can't
+		// resolve the permalink - set the query up directly instead.
+		global $wp_query, $post;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_query = $wp_query;
+		$original_post  = $post;
+
+		$wp_query = new \WP_Query(
+			array(
+				'p'         => $event_id,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+		$wp_query->the_post();
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Could not set up the singular event request.' );
+
+		// phpcs:disable WordPress.NamingConventions.ValidHookName.UseUnderscores -- GatherPress's block filter name.
+		$this->assertSame(
+			'',
+			apply_filters( 'render_block_gatherpress/venue', '', array(), null ),
+			'The description was appended to an empty venue block, stranding it in the event card.'
+		);
+
+		// It must still append when GatherPress actually rendered the venue.
+		$rendered = apply_filters( 'render_block_gatherpress/venue', '<div class="wp-block-gatherpress-venue"></div>', array(), null );
+		// phpcs:enable WordPress.NamingConventions.ValidHookName.UseUnderscores
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+		$wp_query = $original_query;
+		$post     = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$this->assertStringContainsString( 'An entire pub floor just for us!', $rendered );
+		$this->assertStringContainsString( 'Step-free entrance.', $rendered );
+	}
+
+	/**
+	 * A password-protected event's venue block is blanked until the password
+	 * is entered, so the venue does not show on the event's own page or card.
+	 */
+	public function test_venue_block_is_hidden_for_a_password_protected_event() {
+		$event_id = $this->create_event_with_venue();
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		wp_set_current_user( 0 );
+
+		$gated = $this->render_venue_block( $event_id );
+		$this->assertStringNotContainsString( 'Salty Spaces', $gated );
+		$this->assertStringNotContainsString( 'Mooloolaba', $gated );
+
+		// Entering the password reveals the venue again.
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$_COOKIE[ 'wp-postpass_' . COOKIEHASH ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret-pass' );
+
+		$revealed = $this->render_venue_block( $event_id );
+
+		unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+		$this->assertStringContainsString( 'Salty Spaces', $revealed );
+	}
+
+	/**
+	 * The REST filter strips a protected event's venue and speakers for a
+	 * caller who cannot edit it, and keeps both (and the venue term link) for
+	 * one who can.
+	 *
+	 * Exercised against the filter directly rather than the full REST pipeline,
+	 * whose taxonomy and meta fields depend on registration order and so are
+	 * flaky in isolation.
+	 */
+	public function test_rest_filter_hides_venue_and_speakers_for_protected_event() {
+		$event = self::factory()->post->create_and_get(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		$build_response = static function (): \WP_REST_Response {
+			$response = new \WP_REST_Response(
+				array(
+					'content'            => array( 'protected' => true ),
+					'meta'               => array( '_event_speakers' => array( 101, 102 ) ),
+					'_gatherpress_venue' => array( 8 ),
+					'class_list'         => array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' ),
+				)
+			);
+			$response->add_link( 'https://api.w.org/term', 'https://example.org/venue', array( 'taxonomy' => '_gatherpress_venue' ) );
+			$response->add_link( 'https://api.w.org/term', 'https://example.org/topic', array( 'taxonomy' => 'gatherpress_topic' ) );
+
+			return $response;
+		};
+
+		// A caller who cannot edit the event: venue and speakers are stripped,
+		// the venue term link too, while another taxonomy's link stays.
+		wp_set_current_user( 0 );
+		$response = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event );
+		$data     = $response->get_data();
+		$hrefs    = wp_list_pluck( $response->get_links()['https://api.w.org/term'] ?? array(), 'href' );
+
+		$this->assertArrayNotHasKey( '_event_speakers', $data['meta'] );
+		$this->assertArrayNotHasKey( '_gatherpress_venue', $data );
+		$this->assertNotContains( '_gatherpress_venue-_salty-spaces', $data['class_list'] );
+		$this->assertNotContains( 'https://example.org/venue', $hrefs );
+		$this->assertContains( 'https://example.org/topic', $hrefs );
+
+		// Someone who can edit it keeps everything.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$kept = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
+
+		$this->assertSame( array( 101, 102 ), $kept['meta']['_event_speakers'] );
+		$this->assertSame( array( 8 ), $kept['_gatherpress_venue'] );
+		$this->assertContains( '_gatherpress_venue-_salty-spaces', $kept['class_list'] );
+	}
+
+	/**
+	 * `post_class()` drops the venue term class for a password-protected event.
+	 */
+	public function test_post_class_drops_venue_class_for_protected_event() {
+		$public_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		$classes = array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' );
+
+		$this->assertContains(
+			'_gatherpress_venue-_salty-spaces',
+			\WordCamp\Groups\GatherPress_Tweaks\hide_venue_class_for_protected_event( $classes, array(), $public_id )
+		);
+		$this->assertNotContains(
+			'_gatherpress_venue-_salty-spaces',
+			\WordCamp\Groups\GatherPress_Tweaks\hide_venue_class_for_protected_event( $classes, array(), $protected_id )
+		);
+	}
+
+	/**
+	 * The venue filter on the events collection drops protected events for a
+	 * caller who cannot read private events, for both the include and exclude
+	 * params, and leaves an unfiltered query alone.
+	 */
+	public function test_venue_filter_excludes_protected_events_for_anonymous() {
+		wp_set_current_user( 0 );
+
+		foreach ( array( '_gatherpress_venue', '_gatherpress_venue_exclude' ) as $param ) {
+			$request = new \WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
+			$request->set_param( $param, array( 8 ) );
+
+			$args = \WordCamp\Groups\GatherPress_Tweaks\hide_protected_events_in_venue_filter( array(), $request );
+
+			$this->assertFalse( $args['has_password'], "The {$param} filter did not drop protected events." );
+		}
+
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
+		$args    = \WordCamp\Groups\GatherPress_Tweaks\hide_protected_events_in_venue_filter( array(), $request );
+
+		$this->assertArrayNotHasKey( 'has_password', $args );
+	}
+
+	/**
+	 * The venue terms route returns no venue for a protected event the caller
+	 * cannot edit, and is left alone for a public event.
+	 */
+	public function test_terms_route_hides_venue_for_protected_event() {
+		$public_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+
+		$protected_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_event',
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		wp_set_current_user( 0 );
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/_gatherpress_venue' );
+
+		$public = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_terms_for_protected_event(
+			array( 'post' => array( $public_id ) ),
+			$request
+		);
+		$this->assertSame( array( $public_id ), $public['post'] );
+
+		$protected = \WordCamp\Groups\GatherPress_Tweaks\hide_venue_terms_for_protected_event(
+			array( 'post' => array( $protected_id ) ),
+			$request
+		);
+		$this->assertSame( array( 0 ), $protected['post'] );
+	}
+
+	/**
+	 * Build an event's feed excerpt and content through GatherPress's filters,
+	 * the way the feed template does.
+	 *
+	 * @param int $event_id The event.
+	 *
+	 * @return string The excerpt followed by the content.
+	 */
+	private function get_event_feed_text( int $event_id ): string {
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		global $post;
+		$original_post = $post;
+		$post          = get_post( $event_id );
+		setup_postdata( $post );
+
+		$text = apply_filters( 'gatherpress_event_feed_excerpt', '' ) . apply_filters( 'gatherpress_event_feed_content', 'Body text.' );
+
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+
+		return $text;
+	}
+
+	/**
+	 * Data provider for test_feed_strips_venue_for_protected_event().
+	 *
+	 * @return array[]
+	 */
+	public function data_feed_venue_formats(): array {
+		return array(
+			'venue only'                => array( 'Salty Spaces', '%1$s: %2$s', false ),
+			'after the date'            => array( 'Salty Spaces', '%1$s: %2$s', true ),
+			'name with a pipe'          => array( 'Bar | Grill', '%1$s: %2$s', true ),
+			// GatherPress's French translation puts a space before the colon.
+			'french punctuation'        => array( 'Salty Spaces', '%1$s : %2$s', true ),
+			'french punctuation, alone' => array( 'Salty Spaces', '%1$s : %2$s', false ),
+			'regex metacharacters'      => array( 'Café (Rooftop) $1 / [B]', '%1$s: %2$s', true ),
+		);
+	}
+
+	/**
+	 * The event RSS feed excerpt/content drops the venue for a protected event
+	 * and leaves a public event's untouched, whatever the venue is called and
+	 * however the locale punctuates the label.
+	 *
+	 * @dataProvider data_feed_venue_formats
+	 *
+	 * @param string $venue_name The venue's title.
+	 * @param string $format     The translated `%1$s: %2$s` format.
+	 * @param bool   $has_date   Whether the event has a date, which precedes the venue on the metadata line.
+	 */
+	public function test_feed_strips_venue_for_protected_event( string $venue_name, string $format, bool $has_date ) {
+		$translate = static function ( $translation, $text, $domain ) use ( $format ) {
+			return ( 'gatherpress' === $domain && '%1$s: %2$s' === $text ) ? $format : $translation;
+		};
+		add_filter( 'gettext', $translate, 10, 3 );
+
+		$public_id    = $this->create_event_with_venue( $venue_name );
+		$protected_id = $this->create_event_with_venue( $venue_name );
+		wp_update_post(
+			array(
+				'ID'            => $protected_id,
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		if ( $has_date ) {
+			foreach ( array( $public_id, $protected_id ) as $event_id ) {
+				( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+					array(
+						'post_id'        => $event_id,
+						'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+						'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+						'timezone'       => 'UTC',
+					)
+				);
+			}
+		}
+
+		$public_out    = $this->get_event_feed_text( $public_id );
+		$protected_out = $this->get_event_feed_text( $protected_id );
+
+		remove_filter( 'gettext', $translate, 10 );
+
+		$this->assertStringContainsString( $venue_name, $public_out, 'The public event lost its venue.' );
+		$this->assertStringNotContainsString( $venue_name, $protected_out );
+		$this->assertStringNotContainsString( '|', $protected_out, 'A stray separator was left behind.' );
+		$this->assertStringContainsString( 'Body text.', $protected_out );
+
+		if ( $has_date ) {
+			$this->assertStringContainsString( '<strong>Date: ', $protected_out, 'The date was removed along with the venue.' );
+		}
+	}
+
+	/**
+	 * The meta-link block (session video and slides links) returns nothing for
+	 * a password-protected post, so the links do not show above the password
+	 * form.
+	 */
+	public function test_meta_link_block_is_hidden_for_a_password_protected_post() {
+		// The block lives in the blocks mu-plugin, which this suite does not
+		// load; pull in its controller so the gate can be exercised here.
+		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
+			$controller = dirname( __DIR__, 2 ) . '/blocks/source/blocks/meta-link/controller.php';
+
+			if ( is_readable( $controller ) ) {
+				require_once $controller;
+			}
+		}
+
+		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
+			$this->markTestSkipped( 'The wordcamp/meta-link block could not be loaded.' );
+		}
+
+		register_post_meta(
+			'gatherpress_event',
+			'_test_meta_link_url',
+			array(
+				'type'         => 'string',
+				'single'       => true,
+				'show_in_rest' => true,
+			)
+		);
+
+		$event_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+		update_post_meta( $event_id, '_test_meta_link_url', 'https://example.org/slides' );
+
+		$block = (object) array(
+			'context' => array(
+				'postId'   => $event_id,
+				'postType' => 'gatherpress_event',
+			),
+		);
+
+		$attributes = array(
+			'key'  => '_test_meta_link_url',
+			'text' => 'View slides',
+		);
+
+		wp_set_current_user( 0 );
+
+		// Public post: the link renders.
+		$this->assertStringContainsString(
+			'https://example.org/slides',
+			\WordCamp\Blocks\MetaLink\render( $attributes, '', $block )
+		);
+
+		// Password-protected: nothing.
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
+		$this->assertSame( '', \WordCamp\Blocks\MetaLink\render( $attributes, '', $block ) );
+	}
+
+	/**
+	 * The protection callbacks are hooked to the filters that actually fire.
+	 *
+	 * The behavioural tests above call each callback directly, so they would
+	 * stay green even if a registration named the wrong hook. Assert the wiring
+	 * so a typo in a hook name cannot pass unnoticed.
+	 */
+	public function test_protection_callbacks_are_hooked() {
+		$ns = 'WordCamp\Groups\GatherPress_Tweaks\\';
+
+		$this->assertSame(
+			5,
+			has_filter( 'render_block_gatherpress/venue', $ns . 'hide_venue_block_for_protected_event' ),
+			'The venue render gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest_prepare_gatherpress_event', $ns . 'hide_event_details_in_rest' ),
+			'The REST item gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'post_class', $ns . 'hide_venue_class_for_protected_event' ),
+			'The venue class gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest_gatherpress_event_query', $ns . 'hide_protected_events_in_venue_filter' ),
+			'The venue-filtered events query gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'rest__gatherpress_venue_query', $ns . 'hide_venue_terms_for_protected_event' ),
+			'The venue terms query gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			20,
+			has_filter( 'gatherpress_event_feed_excerpt', $ns . 'hide_venue_in_protected_event_feed' ),
+			'The feed excerpt venue gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			20,
+			has_filter( 'gatherpress_event_feed_content', $ns . 'hide_venue_in_protected_event_feed' ),
+			'The feed content venue gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'get_the_terms', $ns . 'hide_venue_in_protected_event_calendar' ),
+			'The calendar venue gate is not hooked where it fires.'
+		);
+		$this->assertSame(
+			10,
+			has_filter( 'get_terms', $ns . 'hide_venue_feed_link_for_protected_event' ),
+			'The venue feed link gate is not hooked where it fires.'
+		);
+	}
+
+	/**
+	 * Create a dated event with a venue, optionally password-protected.
+	 *
+	 * @param string $password The event's password, if any.
+	 *
+	 * @return int The event's post ID.
+	 */
+	private function create_dated_event_with_venue( string $password = '' ): int {
+		$event_id = $this->create_event_with_venue();
+
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => $password,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * The calendar endpoints (iCal, Google and Yahoo) leave a protected event's
+	 * venue out, keep a public event's, and keep it for an editor. Outside a
+	 * calendar request (the RSVP and organiser emails) the venue is untouched.
+	 */
+	public function test_calendar_withholds_protected_event_venue() {
+		$public_id    = $this->create_dated_event_with_venue();
+		$protected_id = $this->create_dated_event_with_venue( 'secret-pass' );
+
+		wp_set_current_user( 0 );
+		set_query_var( 'gatherpress_calendar', 'ical' );
+
+		$protected = new \GatherPress\Core\Calendar\Calendar( $protected_id );
+		$public    = new \GatherPress\Core\Calendar\Calendar( $public_id );
+
+		$this->assertStringNotContainsString( 'Salty Spaces', $protected->get_ical_event_string() );
+		$this->assertStringNotContainsString( 'Salty', $protected->get_google_destination_url() );
+		$this->assertStringNotContainsString( 'Salty', $protected->get_yahoo_destination_url() );
+		$this->assertStringContainsString( 'Salty Spaces', $public->get_ical_event_string() );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertStringContainsString( 'Salty Spaces', $protected->get_ical_event_string(), 'An editor lost the venue.' );
+
+		wp_set_current_user( 0 );
+		set_query_var( 'gatherpress_calendar', '' );
+
+		$this->assertSame(
+			'Salty Spaces',
+			( new \GatherPress\Core\Event\Event( $protected_id ) )->get_venue_information()['name'],
+			'The venue was withheld outside a calendar request.'
+		);
+	}
+
+	/**
+	 * While the head prints, a protected event's term lookup leaves out its
+	 * venue, so GatherPress doesn't link the venue's iCal feed (titled with the
+	 * venue's name). A public event keeps it, and outside the head nothing
+	 * changes.
+	 */
+	public function test_head_term_lookup_omits_protected_event_venue() {
+		$public_id    = $this->create_dated_event_with_venue();
+		$protected_id = $this->create_dated_event_with_venue( 'secret-pass' );
+
+		wp_set_current_user( 0 );
+
+		$found = array();
+
+		// GatherPress builds its links from this same lookup. The hook registry
+		// is restored after each test.
+		remove_all_actions( 'wp_head' );
+		add_action(
+			'wp_head',
+			static function () use ( $public_id, $protected_id, &$found ) {
+				foreach ( array( $public_id, $protected_id ) as $event_id ) {
+					$found[ $event_id ] = wp_list_pluck(
+						get_terms(
+							array(
+								'taxonomy'   => array( 'gatherpress_topic', '_gatherpress_venue' ),
+								'object_ids' => $event_id,
+							)
+						),
+						'taxonomy'
+					);
+				}
+			}
+		);
+		do_action( 'wp_head' );
+
+		$this->assertContains( '_gatherpress_venue', $found[ $public_id ] );
+		$this->assertNotContains( '_gatherpress_venue', $found[ $protected_id ] );
+
+		$this->assertContains(
+			'_gatherpress_venue',
+			wp_list_pluck(
+				get_terms(
+					array(
+						'taxonomy'   => '_gatherpress_venue',
+						'object_ids' => $protected_id,
+					)
+				),
+				'taxonomy'
+			),
+			'The venue was withheld outside the head.'
+		);
+	}
+
+	/**
+	 * Search block on the events archive rewrites form action, removes required,
+	 * adds the event_time hidden input, and marks the form for events search clear.
+	 */
+	public function test_search_block_removes_required_and_handles_clearing() {
+		global $wp_query;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited, WordPress.NamingConventions.ValidHookName.UseUnderscores
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = true;
+		$wp_query->set( 'post_type', 'gatherpress_event' );
+
+		$input_html = '<form role="search" method="get" action="https://example.org">'
+			. '<input type="search" name="s" required />'
+			. '</form>';
+
+		$output = apply_filters( 'render_block_core/search', $input_html );
+
+		$archive_url = get_post_type_archive_link( 'gatherpress_event' );
+		$this->assertStringContainsString( 'action="' . esc_url( $archive_url ) . '"', $output );
+		$this->assertStringContainsString( 'data-events-search-form="1"', $output );
+		$this->assertStringNotContainsString( 'required', $output );
+		$this->assertStringContainsString( '<input type="hidden" name="event_time" value="all" />', $output );
+		$this->assertStringNotContainsString( '<script', $output );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $processor->next_tag( 'form' ) );
+		$this->assertSame( '1', $processor->get_attribute( 'data-events-search-form' ) );
+		$this->assertTrue( $processor->next_tag( 'input' ) );
+		$this->assertNull( $processor->get_attribute( 'required' ) );
+
+		$wp_query = $original_query;
+		// phpcs:enable
+	}
+
+	/**
+	 * Search block on other pages remains untouched.
+	 */
+	public function test_search_block_untouched_outside_event_archive() {
+		global $wp_query;
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited, WordPress.NamingConventions.ValidHookName.UseUnderscores
+		$original_query                 = $wp_query;
+		$wp_query                       = new \WP_Query();
+		$wp_query->is_post_type_archive = false;
+
+		$input_html = '<form role="search" method="get" action="https://example.org">'
+			. '<input type="search" name="s" required />'
+			. '</form>';
+
+		$output = apply_filters( 'render_block_core/search', $input_html );
+
+		$this->assertSame( $input_html, $output );
+
+		$wp_query = $original_query;
+		// phpcs:enable
+	}
+
+	/**
+	 * Empty search query parameter reverts the default all-time view back to upcoming.
+	 */
+	public function test_event_time_filter_reverts_to_upcoming_on_empty_search() {
+		$_GET['s'] = '';
+		$filter    = $this->get_event_time_filter( 'all' );
+		unset( $_GET['s'] );
+
+		$this->assertSame( 'Time: Upcoming', $filter['label'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+	}
+
+	/**
+	 * Normalizing event time filter reverts 'all' to 'upcoming' on empty search query.
+	 */
+	public function test_normalize_event_time_filter() {
+		// When search query is empty string or whitespace and time is 'all'.
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '' ) );
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '   ' ) );
+
+		// When search query has text, 'all' is preserved.
+		$this->assertSame( 'all', normalize_event_time_filter( 'all', 'wordcamp' ) );
+
+		// When search is not set (null), 'all' is preserved.
+		unset( $_GET['s'] );
+		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
+
+		// When reading from $_GET['s'].
+		$_GET['s'] = '';
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all' ) );
+		$_GET['s'] = 'community';
+		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
+		unset( $_GET['s'] );
+
+		// When time is not 'all', it is preserved.
+		$this->assertSame( 'past', normalize_event_time_filter( 'past', '' ) );
+		$this->assertSame( 'upcoming', normalize_event_time_filter( 'upcoming', '' ) );
+	}
+
+	/**
+	 * RSVPs should never leak into general comment queries, even when
+	 * no standard comments exist yet on the site.
+	 */
+	public function test_rsvps_excluded_from_general_comment_query() {
+		$query                     = new \WP_Comment_Query();
+		$query->query_vars['type'] = array();
+
+		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
+
+		$this->assertContains( 'gatherpress_rsvp', (array) ( $query->query_vars['type__not_in'] ?? array() ) );
+	}
+
+	/**
+	 * Queries specifically requesting RSVPs should not have them excluded.
+	 */
+	public function test_rsvps_not_excluded_when_explicitly_requested() {
+		$query                     = new \WP_Comment_Query();
+		$query->query_vars['type'] = 'gatherpress_rsvp';
+
+		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
+
+		$this->assertEmpty( $query->query_vars['type__not_in'] ?? array() );
+	}
+
+	/**
+	 * Caller's explicit RSVP intent should be captured before GatherPress priority 10 filter runs.
+	 */
+	public function test_capture_explicit_rsvp_query_records_intent() {
+		$query_single                     = new \WP_Comment_Query();
+		$query_single->query_vars['type'] = 'gatherpress_rsvp';
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_single );
+		$this->assertTrue( $query_single->query_vars['_gatherpress_rsvp_explicit'] );
+
+		$query_in                         = new \WP_Comment_Query();
+		$query_in->query_vars['type__in'] = array( 'gatherpress_rsvp' );
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_in );
+		$this->assertTrue( $query_in->query_vars['_gatherpress_rsvp_explicit'] );
+
+		$query_general                     = new \WP_Comment_Query();
+		$query_general->query_vars['type'] = '';
+
+		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_general );
+		$this->assertArrayNotHasKey( '_gatherpress_rsvp_explicit', $query_general->query_vars );
+	}
+
+	/**
+	 * GatherPress RSVP exclusion filter should opt out when query explicitly asks for RSVPs.
+	 */
+	public function test_skip_rsvp_exclusion_for_explicit_queries() {
+		$query_explicit = new \WP_Comment_Query();
+		$query_explicit->query_vars['_gatherpress_rsvp_explicit'] = true;
+
+		$should_exclude = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_explicit );
+		$this->assertFalse( $should_exclude );
+
+		$query_general          = new \WP_Comment_Query();
+		$should_exclude_general = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_general );
+		$this->assertTrue( $should_exclude_general );
 	}
 }

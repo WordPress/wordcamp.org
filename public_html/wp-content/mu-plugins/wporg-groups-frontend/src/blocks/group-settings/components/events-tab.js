@@ -31,7 +31,7 @@ import EventForm, { NS } from '../../../components/event-form/event-form';
 
 // === Event Form (inline) ===
 
-function InlineEventForm( { eventId, onDone, onCancel } ) {
+function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 	const isEdit = !! eventId;
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
 	// null until loaded, so a save can't overwrite speakers with an empty list.
@@ -104,12 +104,12 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 				onCancel,
 				onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
 				header: h( 'div', { className: 'wporg-event-form__header' },
-					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wporg-groups-frontend' ) ),
+					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, backLabel ),
 				),
 			},
 				h( 'div', { className: 'wporg-event-form__field' },
 					h( FormTokenField, {
-						label: __( 'Speakers', 'wporg-groups-frontend' ),
+						label: __( 'Speakers', 'wordcamporg' ),
 						value: ( speakers || [] ).map( ( id ) => {
 							const member = memberOptions.find( ( m ) => m.id === id );
 							return member ? member.name : String( id );
@@ -133,7 +133,7 @@ function InlineEventForm( { eventId, onDone, onCancel } ) {
 
 // === Events Tab (list + form) ===
 
-export default function EventsTab( { eventId: initialEventId, onClose } ) {
+export default function EventsTab( { eventId: initialEventId, onClose, singleEvent = false } ) {
 	const [ events, setEvents ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ editingId, setEditingId ] = useState( initialEventId || null );
@@ -143,24 +143,55 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	useEffect( () => {
 		if ( editingId !== null ) return;
 		setLoading( true );
-		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
-			.then( ( data ) => {
-				setEvents( data.map( ( e ) => {
-					const dtStart = e.meta?.gatherpress_datetime_start || '';
-					return {
-						id: e.id,
-						title: e.title.rendered,
-						status: e.status,
-						dateStart: dtStart,
-						isPast: dtStart ? new Date( dtStart ) < new Date() : false,
-					};
-				} ) );
+		/*
+		 * One request per section rather than one list sliced client-side.
+		 * Two reasons. The collection defaults to published only, so the
+		 * Drafts section could never populate without asking for them. And
+		 * the collection inherits GatherPress's upcoming-only clause, which
+		 * left Past permanently empty and hid past-dated drafts (#1977);
+		 * `wporg_groups_event_list` is this plugin's own parameter, read in
+		 * inc/rest.php, and selects the slice.
+		 *
+		 * Splitting also keeps `per_page` honest. A single capped request
+		 * ordered by post date spends its 100 rows on whatever was created
+		 * most recently, so on a group with a long history the other two
+		 * sections come back empty no matter what the clause does.
+		 */
+		const fields = '_fields=id,title,meta,status&per_page=100';
+		Promise.all( [
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=draft&wporg_groups_event_list=all&orderby=date&order=desc` } ),
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=publish&wporg_groups_event_list=upcoming` } ),
+			apiFetch( { path: `/wp/v2/gatherpress_events?${ fields }&status=publish&wporg_groups_event_list=past` } ),
+		] )
+			.then( ( [ draftRows, upcomingRows, pastRows ] ) => {
+				const toEvent = ( e, section ) => ( {
+					id: e.id,
+					title: e.title.rendered,
+					status: e.status,
+					dateStart: e.meta?.gatherpress_datetime_start || '',
+					section,
+				} );
+				setEvents( [
+					...draftRows.map( ( e ) => toEvent( e, 'draft' ) ),
+					...upcomingRows.map( ( e ) => toEvent( e, 'upcoming' ) ),
+					...pastRows.map( ( e ) => toEvent( e, 'past' ) ),
+				] );
 				setLoading( false );
 			} )
 			.catch( () => setLoading( false ) );
 	}, [ refreshKey ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const backToList = () => {
+		/*
+		 * There is no list behind the form in single-event mode: the modal is
+		 * that event's own editing surface (#2073), so backing out returns to
+		 * the event page it was opened from rather than to group settings.
+		 */
+		if ( singleEvent ) {
+			onClose();
+			return;
+		}
+
 		setEditingId( null );
 		setRefreshKey( ( k ) => k + 1 );
 	};
@@ -168,6 +199,9 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	if ( editingId !== null ) {
 		return h( InlineEventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
+			backLabel: singleEvent
+				? __( 'Back to event', 'wordcamporg' )
+				: __( 'Back to events', 'wordcamporg' ),
 			onDone: backToList,
 			onCancel: backToList,
 		} );
@@ -184,7 +218,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 			const res = await apiFetch( { path: `/${ NS }/event-form-data${ params }` } );
 			// Create a draft with the source data but a new date.
 			const draftData = {
-				title: res.fields.title + ' ' + __( '(copy)', 'wporg-groups-frontend' ),
+				title: res.fields.title + ' ' + __( '(copy)', 'wordcamporg' ),
 				description: res.fields.description || '',
 				time_start: res.fields.time_start || '',
 				time_end: res.fields.time_end || '',
@@ -208,9 +242,9 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 		}
 	};
 
-	const drafts = events.filter( ( e ) => e.status === 'draft' );
-	const upcoming = events.filter( ( e ) => ! e.isPast && e.status !== 'draft' );
-	const past = events.filter( ( e ) => e.isPast && e.status !== 'draft' );
+	const drafts = events.filter( ( e ) => e.section === 'draft' );
+	const upcoming = events.filter( ( e ) => e.section === 'upcoming' );
+	const past = events.filter( ( e ) => e.section === 'past' );
 
 	const renderEventItem = ( event, showClone ) =>
 		h( 'div', {
@@ -225,7 +259,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 				h( 'strong', {}, event.title ),
 				h( 'span', {},
 					event.dateStart ? formatEventDate( event.dateStart ) : '',
-					event.status === 'draft' ? ( event.dateStart ? ' — ' : '' ) + __( 'Draft', 'wporg-groups-frontend' ) : ''
+					event.status === 'draft' ? ( event.dateStart ? ' — ' : '' ) + __( 'Draft', 'wordcamporg' ) : ''
 				)
 			),
 			showClone && h( 'div', { className: 'wporg-settings-tab__list-item-actions',
@@ -234,32 +268,32 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 					variant: 'tertiary', isSmall: true,
 					onClick: () => cloneEvent( event.id ),
 					disabled: cloning,
-				}, __( 'Clone', 'wporg-groups-frontend' ) )
+				}, __( 'Clone', 'wordcamporg' ) )
 			)
 		);
 
 	return h( 'div', { className: 'wporg-settings-tab' },
 		h( 'div', { className: 'wporg-settings-tab__header' },
-			h( 'p', {}, __( 'Manage your group events.', 'wporg-groups-frontend' ) ),
+			h( 'p', {}, __( 'Manage your group events.', 'wordcamporg' ) ),
 			h( Button, { variant: 'primary', onClick: () => setEditingId( 0 ) },
-				__( '+ Create event', 'wporg-groups-frontend' ) )
+				__( '+ Create event', 'wordcamporg' ) )
 		),
 
 		drafts.length > 0 && h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Drafts', 'wporg-groups-frontend' ) ),
+			__( 'Drafts', 'wordcamporg' ) ),
 		drafts.length > 0 && h( 'div', { className: 'wporg-settings-tab__list' },
 			drafts.map( ( e ) => renderEventItem( e, false ) ) ),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Upcoming', 'wporg-groups-frontend' ) ),
+			__( 'Upcoming', 'wordcamporg' ) ),
 		upcoming.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No upcoming events.', 'wporg-groups-frontend' ) )
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No upcoming events.', 'wordcamporg' ) )
 			: h( 'div', { className: 'wporg-settings-tab__list' }, upcoming.map( ( e ) => renderEventItem( e, true ) ) ),
 
 		h( 'h3', { className: 'wporg-settings-tab__section-title' },
-			__( 'Past', 'wporg-groups-frontend' ) ),
+			__( 'Past', 'wordcamporg' ) ),
 		past.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No past events.', 'wporg-groups-frontend' ) )
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No past events.', 'wordcamporg' ) )
 			: h( 'div', { className: 'wporg-settings-tab__list' }, past.map( ( e ) => renderEventItem( e, true ) ) )
 	);
 }

@@ -235,6 +235,9 @@ class Test_Groups_Export extends Groups_TestCase {
 				'attending'     => 2,
 				'waiting_list'  => 1,
 				'not_attending' => 1,
+				// Unknown rather than zero: nobody used check-in here.
+				'checked_in'    => null,
+				'walk_ins'      => 0,
 			),
 			$event['counts']
 		);

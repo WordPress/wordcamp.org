@@ -1,0 +1,360 @@
+<?php
+
+namespace WordCamp\Groups\Tests;
+
+use GatherPress\Core\Rsvp\Rsvp;
+
+use function WordCamp\Groups\Frontend\RSVP_Confirmation\get_calendar_links;
+
+defined( 'WPINC' ) || die();
+
+require_once __DIR__ . '/class-groups-testcase.php';
+
+/**
+ * @group groups
+ *
+ * Covers the RSVP confirmation email (#2062): a member who RSVPs as
+ * attending gets one plain-text confirmation, and nothing else does.
+ */
+class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
+
+	/**
+	 * Emails captured during the current test, via `pre_wp_mail`.
+	 *
+	 * @var array[]
+	 */
+	protected $sent_mail = array();
+
+	/**
+	 * Intercept outgoing mail, and re-add the real hook this class's own
+	 * `Groups_TestCase::setUp()` removes for every other test in the suite.
+	 */
+	protected function setUp(): void {
+		parent::setUp();
+
+		$this->sent_mail = array();
+
+		add_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10, 2 );
+		add_action( 'set_object_terms', 'WordCamp\Groups\Frontend\RSVP_Confirmation\send_confirmation', 10, 6 );
+	}
+
+	/**
+	 * Remove the mail interceptor and the hook re-added above.
+	 */
+	protected function tearDown(): void {
+		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
+		remove_action( 'set_object_terms', 'WordCamp\Groups\Frontend\RSVP_Confirmation\send_confirmation', 10 );
+
+		parent::tearDown();
+	}
+
+	/**
+	 * Record mail instead of sending it.
+	 *
+	 * @param null|bool $short_circuit Whether to short-circuit `wp_mail()`.
+	 * @param array     $atts          `wp_mail()` arguments.
+	 * @return bool
+	 */
+	public function capture_mail( $short_circuit, $atts ) {
+		$this->sent_mail[] = $atts;
+
+		return true;
+	}
+
+	/**
+	 * A published event with saved datetimes.
+	 *
+	 * @param string $status Post status.
+	 * @return int
+	 */
+	private function create_dated_event( string $status = 'publish' ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => $status,
+				'post_title'  => 'Confirmation Test Event',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2031-05-20 10:00:00',
+				'datetime_end'   => '2031-05-20 12:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * A group member who can RSVP, acting as themselves.
+	 *
+	 * The current user matters, not just the `$user_id` passed to
+	 * `Rsvp::save()`: the confirmation goes out only when the person acting is
+	 * the one whose RSVP it is, because it confirms an action they took
+	 * themselves. Every test below is that case; the one that is not sets its
+	 * own actor.
+	 *
+	 * @return int
+	 */
+	private function create_member(): int {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		wp_set_current_user( $user_id );
+
+		return $user_id;
+	}
+
+	/**
+	 * RSVPing as attending sends exactly one confirmation, addressed to the
+	 * member, naming the event.
+	 */
+	public function test_sends_confirmation_on_attending_rsvp() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		( new Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail, 'Expected exactly one confirmation email.' );
+
+		$mail = $this->sent_mail[0];
+		$user = get_userdata( $user_id );
+
+		$this->assertStringContainsString( $user->user_email, implode( ',', (array) $mail['to'] ) );
+		$this->assertStringContainsString( 'Confirmation Test Event', $mail['subject'] );
+		$this->assertStringContainsString( 'Confirmation Test Event', $mail['message'] );
+	}
+
+	/**
+	 * The confirmation is plain text, not GatherPress's HTML event email.
+	 */
+	public function test_confirmation_is_plain_text() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		( new Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$headers = implode( ' ', (array) $this->sent_mail[0]['headers'] );
+
+		$this->assertStringContainsString( 'text/plain', $headers );
+		$this->assertStringNotContainsString( '<html', $this->sent_mail[0]['message'] );
+	}
+
+	/**
+	 * The event's date and its permalink both make it into the body, so the
+	 * email is usable as the record of the event testers asked for.
+	 */
+	public function test_confirmation_carries_date_and_link() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		( new Rsvp( $event_id ) )->save( $user_id, 'attending' );
+
+		$message = $this->sent_mail[0]['message'];
+
+		$this->assertStringContainsString( '2031', $message, 'Expected the event date in the body.' );
+		$this->assertStringContainsString( get_permalink( $event_id ), $message );
+	}
+
+	/**
+	 * Declining sends nothing: the confirmation is for attendance only.
+	 */
+	public function test_sends_nothing_on_not_attending_rsvp() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		( new Rsvp( $event_id ) )->save( $user_id, 'not_attending' );
+
+		$this->assertCount( 0, $this->sent_mail );
+	}
+
+	/**
+	 * Re-saving an RSVP that already reads attending does not confirm again.
+	 * `Storage::save()` rewrites the status term on every save, so without
+	 * the unchanged-status guard this would mail on each one.
+	 */
+	public function test_does_not_resend_when_status_is_unchanged() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+		$rsvp     = new Rsvp( $event_id );
+
+		$rsvp->save( $user_id, 'attending' );
+		$rsvp->save( $user_id, 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail, 'A re-save at the same status should not confirm again.' );
+	}
+
+	/**
+	 * Cancelling and re-RSVPing is a real change of mind each way, so the
+	 * member is confirmed again when they come back.
+	 */
+	public function test_resends_after_cancelling_and_rsvping_again() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+		$rsvp     = new Rsvp( $event_id );
+
+		$rsvp->save( $user_id, 'attending' );
+		$rsvp->save( $user_id, 'not_attending' );
+		$rsvp->save( $user_id, 'attending' );
+
+		$this->assertCount( 2, $this->sent_mail );
+	}
+
+	/**
+	 * Nothing in the body or the subject arrives HTML-escaped. `the_title`
+	 * runs `wptexturize()`, and the group name is stored escaped, so both
+	 * would otherwise reach the member as `&#8217;` and `&quot;` in what is
+	 * a plain-text message.
+	 */
+	public function test_entities_are_decoded_for_plain_text() {
+		update_option( 'blogname', 'Jess\'s "Group"' );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Let\'s build Jess\'s "demo" site',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2031-05-20 10:00:00',
+				'datetime_end'   => '2031-05-20 12:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$mail = $this->sent_mail[0];
+
+		$this->assertStringNotContainsString( '&#', $mail['subject'], 'The subject should carry no HTML entities.' );
+		$this->assertStringNotContainsString( '&#', $mail['message'], 'The body should carry no HTML entities.' );
+		$this->assertStringNotContainsString( '&quot;', $mail['message'] );
+		$this->assertStringContainsString( 'Jess', $mail['message'] );
+	}
+
+	/**
+	 * The email is the message someone keeps, and the point at which they
+	 * want the event in their own calendar — so it offers the same four
+	 * calendars the event page does (#2110).
+	 */
+	public function test_confirmation_offers_the_calendar_links() {
+		$event_id = $this->create_dated_event();
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$message = $this->sent_mail[0]['message'];
+
+		$this->assertStringContainsString( 'Add to calendar:', $message );
+
+		foreach ( get_calendar_links( $event_id ) as $calendar_name => $calendar_url ) {
+			$this->assertStringContainsString(
+				$calendar_name . ': ' . $calendar_url,
+				$message,
+				"Expected the {$calendar_name} link in the body."
+			);
+		}
+	}
+
+	/**
+	 * The links are the event page's own endpoints, so they inherit whatever
+	 * the permalink resolved to rather than being rebuilt here — which is what
+	 * keeps a recurring occurrence's links pointing at that occurrence.
+	 */
+	public function test_calendar_links_hang_off_the_event_permalink() {
+		$event_id = $this->create_dated_event();
+
+		$links = get_calendar_links( $event_id );
+
+		$this->assertSame(
+			array( 'Google Calendar', 'iCal', 'Outlook', 'Yahoo Calendar' ),
+			array_keys( $links ),
+			'The email should offer the same calendars, in the same order, as the event page.'
+		);
+
+		foreach ( $links as $calendar_name => $calendar_url ) {
+			$this->assertStringStartsWith(
+				get_permalink( $event_id ),
+				$calendar_url,
+				"The {$calendar_name} link does not hang off the event permalink."
+			);
+		}
+	}
+
+	/**
+	 * An event with no date yet has nothing to put in a calendar — every link
+	 * would hand it GatherPress's placeholder instead of a time.
+	 */
+	public function test_an_undated_event_offers_no_calendar_links() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Undated Event',
+			)
+		);
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail, 'The confirmation itself should still go out.' );
+		$this->assertStringNotContainsString( 'Add to calendar:', $this->sent_mail[0]['message'] );
+	}
+
+	/**
+	 * An organizer moving someone else's RSVP does not mail that member.
+	 *
+	 * The regression test for the mail loop: GatherPress's own RSVP route
+	 * takes a `user_id`, which anyone holding `edit_post` on the event may
+	 * pass, and the unchanged-status guard does not help -- walking the RSVP
+	 * between attending and not attending is a real change each way. Without
+	 * the actor check an organizer could mail a member once per step, for as
+	 * long as they cared to keep going.
+	 */
+	public function test_does_not_confirm_when_someone_else_moves_the_rsvp() {
+		$event_id = $this->create_dated_event();
+		$user_id  = $this->create_member();
+
+		$organizer_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		add_user_to_blog( get_current_blog_id(), $organizer_id, 'editor' );
+		wp_set_current_user( $organizer_id );
+
+		$rsvp = new Rsvp( $event_id );
+		$rsvp->save( $user_id, 'attending' );
+		$rsvp->save( $user_id, 'not_attending' );
+		$rsvp->save( $user_id, 'attending' );
+
+		$this->assertCount( 0, $this->sent_mail, 'Only the member themselves earns a confirmation.' );
+	}
+
+	/**
+	 * The organizer's own RSVP still confirms: the check is "who acted",
+	 * not "is this person an organizer".
+	 */
+	public function test_confirms_an_organizers_own_rsvp() {
+		$event_id = $this->create_dated_event();
+
+		$organizer_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		add_user_to_blog( get_current_blog_id(), $organizer_id, 'editor' );
+		wp_set_current_user( $organizer_id );
+
+		( new Rsvp( $event_id ) )->save( $organizer_id, 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail );
+	}
+
+	/**
+	 * Terms set on some other taxonomy never reach the mailer.
+	 */
+	public function test_ignores_other_taxonomies() {
+		$post_id = self::factory()->post->create();
+
+		wp_set_object_terms( $post_id, 'uncategorized', 'category' );
+
+		$this->assertCount( 0, $this->sent_mail );
+	}
+}

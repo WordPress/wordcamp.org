@@ -12,6 +12,7 @@
 		"@wordpress/scripts": "^30.0.0"
 	},
 	"dependencies": {
-		"leaflet": "^1.9.4"
+		"leaflet": "^1.9.4",
+		"uqr": "^0.1.3"
 	}
 }

@@ -32,7 +32,13 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
-	$post_ID  = $block->context['postId'];
+	$post_ID = $block->context['postId'];
+
+	// A password-protected session withholds its speakers along with its content.
+	if ( post_password_required( $post_ID ) ) {
+		return '';
+	}
+
 	$speaker_ids = get_post_meta( $post_ID, '_wcpt_speaker_id' );
 
 	// Session has no published speakers.

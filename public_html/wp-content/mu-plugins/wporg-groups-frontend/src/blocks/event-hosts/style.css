@@ -1,0 +1,43 @@
+/*
+ * The event hero's "Hosted by" line. Matches the avatar and author-name pair
+ * it replaces: a 48px avatar, then muted "Hosted by" and the names in the
+ * body colour at weight 500. More hosts overlap their avatars, ringed in the
+ * hero's surface colour so each face stays distinct.
+ */
+
+.wporg-event-hosts {
+	align-items: center;
+	display: flex;
+	gap: var(--wp--preset--spacing--20);
+}
+
+.wporg-event-hosts__avatars {
+	display: flex;
+	flex-shrink: 0;
+}
+
+.wporg-event-hosts__avatar {
+	border-radius: 9999px;
+	display: block;
+	height: 48px;
+	width: 48px;
+}
+
+.wporg-event-hosts__avatar + .wporg-event-hosts__avatar {
+	box-shadow: 0 0 0 2px var(--wp--preset--color--light-grey-2);
+	margin-inline-start: -12px;
+}
+
+.wporg-event-hosts__text {
+	color: var(--wp--preset--color--charcoal-1);
+	margin: 0;
+}
+
+.wporg-event-hosts__label {
+	color: var(--wp--preset--color--charcoal-3);
+}
+
+.wporg-event-hosts__name {
+	color: inherit;
+	font-weight: 500;
+}

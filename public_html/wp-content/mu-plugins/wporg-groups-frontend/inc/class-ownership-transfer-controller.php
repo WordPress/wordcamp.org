@@ -137,7 +137,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -149,7 +149,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		if ( ! is_user_member_of_blog() ) {
 			return new WP_Error(
 				'not_a_member',
-				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are not a member of this group.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -157,7 +157,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		if ( ! current_user_can_manage_group_settings() ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'Sorry, you are not allowed to view this group\'s ownership transfers.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to view this group\'s ownership transfers.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -179,7 +179,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		if ( ! Transfer\current_user_can_initiate( get_current_blog_id() ) ) {
 			return new WP_Error(
 				'rest_cannot_initiate_transfer',
-				__( 'Sorry, you are not allowed to transfer ownership of this group.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to transfer ownership of this group.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -216,7 +216,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 			if ( $from_user_id && $from_user_id !== $current_user->ID ) {
 				return new WP_Error(
 					'from_user_mismatch',
-					__( 'You can only transfer ownership away from your own account.', 'wporg-groups-frontend' ),
+					__( 'You can only transfer ownership away from your own account.', 'wordcamporg' ),
 					array( 'status' => 400 )
 				);
 			}
@@ -224,7 +224,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		} elseif ( ! $from_user_id ) {
 			return new WP_Error(
 				'from_user_required',
-				__( 'Please specify which current owner is being replaced.', 'wporg-groups-frontend' ),
+				__( 'Please specify which current owner is being replaced.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -358,6 +358,6 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 	private function display_name( int $user_id ): string {
 		$user = get_userdata( $user_id );
 
-		return $user ? $user->display_name : __( '(deleted user)', 'wporg-groups-frontend' );
+		return $user ? $user->display_name : __( '(deleted user)', 'wordcamporg' );
 	}
 }

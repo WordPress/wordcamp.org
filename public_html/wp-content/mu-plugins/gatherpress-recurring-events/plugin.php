@@ -23,6 +23,7 @@ require_once DIR . '/includes/class-rule.php';
 require_once DIR . '/includes/class-occurrences.php';
 require_once DIR . '/includes/class-context.php';
 require_once DIR . '/includes/class-comments.php';
+require_once DIR . '/includes/class-rsvp-cache.php';
 require_once DIR . '/includes/class-rest-api.php';
 require_once DIR . '/includes/class-admin.php';
 require_once DIR . '/includes/class-query.php';

@@ -249,7 +249,7 @@ function _handle_post_data( &$data ) {
 			$stripe = new Stripe_Client( $data['keys']['secret'] );
 			try {
 				$session = $stripe->create_session( array(
-					'ui_mode'    => 'embedded',
+					'ui_mode'    => 'embedded_page',
 					'mode'       => 'payment',
 					'return_url' => add_query_arg(
 						array(

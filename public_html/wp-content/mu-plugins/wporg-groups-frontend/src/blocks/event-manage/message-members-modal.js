@@ -51,7 +51,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 		} )
 			.then( ( response ) => {
 				if ( ! response?.success ) {
-					throw new Error( __( 'The message could not be scheduled.', 'wporg-groups-frontend' ) );
+					throw new Error( __( 'The message could not be scheduled.', 'wordcamporg' ) );
 				}
 
 				setSent( true );
@@ -60,7 +60,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 			.catch( ( requestError ) => {
 				setSending( false );
 				setError(
-					requestError?.message || __( 'The message could not be scheduled.', 'wporg-groups-frontend' )
+					requestError?.message || __( 'The message could not be scheduled.', 'wordcamporg' )
 				);
 			} );
 	};
@@ -69,8 +69,8 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 		Modal,
 		{
 			title: isAllMembers
-				? __( 'Message all members', 'wporg-groups-frontend' )
-				: __( 'Message event attendees', 'wporg-groups-frontend' ),
+				? __( 'Message all members', 'wordcamporg' )
+				: __( 'Message event attendees', 'wordcamporg' ),
 			onRequestClose: onClose,
 			className: 'wporg-groups-modal-accent wporg-groups-message-modal',
 			shouldCloseOnClickOutside: false,
@@ -82,9 +82,9 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 					h(
 						Notice,
 						{ status: 'success', isDismissible: false },
-						__( 'Your message has been scheduled for delivery.', 'wporg-groups-frontend' )
+						__( 'Your message has been scheduled for delivery.', 'wordcamporg' )
 					),
-					h( Button, { variant: 'primary', onClick: onClose }, __( 'Close', 'wporg-groups-frontend' ) )
+					h( Button, { variant: 'primary', onClick: onClose }, __( 'Close', 'wordcamporg' ) )
 			  )
 			: h(
 					'form',
@@ -96,32 +96,32 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 						isAllMembers
 							? __(
 									'This message will be emailed to every opted-in member of this group.',
-									'wporg-groups-frontend'
+									'wordcamporg'
 							  )
 							: __(
 									'Choose which RSVP groups should receive this message.',
-									'wporg-groups-frontend'
+									'wordcamporg'
 							  )
 					),
 					! isAllMembers &&
 						h(
 							'fieldset',
 							{ className: 'wporg-groups-message-modal__recipients' },
-							h( 'legend', {}, __( 'Recipients', 'wporg-groups-frontend' ) ),
+							h( 'legend', {}, __( 'Recipients', 'wordcamporg' ) ),
 							h( CheckboxControl, {
-								label: __( 'Attending', 'wporg-groups-frontend' ),
+								label: __( 'Attending', 'wordcamporg' ),
 								checked: recipients.attending,
 								onChange: ( checked ) => updateRecipient( 'attending', checked ),
 								__nextHasNoMarginBottom: true,
 							} ),
 							h( CheckboxControl, {
-								label: __( 'Waiting list', 'wporg-groups-frontend' ),
+								label: __( 'Waiting list', 'wordcamporg' ),
 								checked: recipients.waiting_list,
 								onChange: ( checked ) => updateRecipient( 'waiting_list', checked ),
 								__nextHasNoMarginBottom: true,
 							} ),
 							h( CheckboxControl, {
-								label: __( 'Not attending', 'wporg-groups-frontend' ),
+								label: __( 'Not attending', 'wordcamporg' ),
 								checked: recipients.not_attending,
 								onChange: ( checked ) => updateRecipient( 'not_attending', checked ),
 								__nextHasNoMarginBottom: true,
@@ -131,10 +131,10 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 						h(
 							Notice,
 							{ status: 'warning', isDismissible: false },
-							__( 'Select at least one RSVP group.', 'wporg-groups-frontend' )
+							__( 'Select at least one RSVP group.', 'wordcamporg' )
 						),
 					h( TextareaControl, {
-						label: __( 'Message', 'wporg-groups-frontend' ),
+						label: __( 'Message', 'wordcamporg' ),
 						value: message,
 						onChange: setMessage,
 						required: true,
@@ -151,7 +151,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								onClick: onClose,
 								disabled: sending,
 							},
-							_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'abort current action', 'wordcamporg' )
 						),
 						h(
 							Button,
@@ -161,7 +161,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								isBusy: sending,
 								disabled: sending || ! message.trim() || ! hasRecipients,
 							},
-							__( 'Send message', 'wporg-groups-frontend' )
+							__( 'Send message', 'wordcamporg' )
 						)
 					)
 			  )

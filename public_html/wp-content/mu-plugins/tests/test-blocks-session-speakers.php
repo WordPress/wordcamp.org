@@ -187,6 +187,42 @@ class Test_Session_Speakers_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A password-protected session withholds its speakers along with its content,
+	 * so the byline and names don't print above the password form.
+	 */
+	public function test_password_protected_session_lists_no_speakers() {
+		wp_update_post( array(
+			'ID'            => $this->session_id,
+			'post_password' => 'secret-pass',
+		) );
+
+		wp_set_current_user( 0 );
+
+		$this->assertSame( '', $this->render_block() );
+	}
+
+	/**
+	 * Once the visitor enters the session's password, its speakers show again.
+	 */
+	public function test_password_protected_session_lists_speakers_once_unlocked() {
+		wp_update_post( array(
+			'ID'            => $this->session_id,
+			'post_password' => 'secret-pass',
+		) );
+
+		wp_set_current_user( 0 );
+
+		$cookie = 'wp-postpass_' . COOKIEHASH;
+		$hasher = new \PasswordHash( 8, true );
+
+		$_COOKIE[ $cookie ] = $hasher->HashPassword( 'secret-pass' );
+		$rendered           = $this->render_block();
+		unset( $_COOKIE[ $cookie ] );
+
+		$this->assertStringContainsString( 'Published speaker', $rendered );
+	}
+
+	/**
 	 * Test that a user who can read the speakers still sees all of them.
 	 */
 	public function test_editor_sees_every_speaker() {

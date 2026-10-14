@@ -245,10 +245,10 @@ function notify_candidate_cancelled( int $site_id, array $pending ): void {
 
 	send_notification(
 		$recipient,
-		sprintf( __( 'Ownership transfer cancelled for "%s"', 'wordcamporg' ), $group_name ),
+		sprintf( __( 'Ownership transfer canceled for "%s"', 'wordcamporg' ), $group_name ),
 		sprintf(
 			/* translators: %s: group name. */
-			__( 'Your nomination to take over "%s" has been cancelled.', 'wordcamporg' ),
+			__( 'Your nomination to take over "%s" has been canceled.', 'wordcamporg' ),
 			$group_name
 		)
 	);

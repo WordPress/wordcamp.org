@@ -61,24 +61,24 @@ function get_count_parts( int $count, bool $is_attending ): array {
 	if ( $is_attending && $others > 0 ) {
 		return array(
 			/* translators: %s: number of attendees other than the current user. */
-			_n( 'You and %s other', 'You and %s others', $others, 'wporg-groups-frontend' ),
+			_n( 'You and %s other', 'You and %s others', $others, 'wordcamporg' ),
 			$others,
 		);
 	}
 
 	if ( $is_attending ) {
-		return array( __( 'First one in', 'wporg-groups-frontend' ), null );
+		return array( __( 'First one in', 'wordcamporg' ), null );
 	}
 
 	if ( $count > 0 ) {
 		return array(
 			/* translators: %s: attendee count. */
-			_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
+			_n( '%s going', '%s going', $count, 'wordcamporg' ),
 			$count,
 		);
 	}
 
-	return array( __( 'Be the first to RSVP', 'wporg-groups-frontend' ), null );
+	return array( __( 'Be the first to RSVP', 'wordcamporg' ), null );
 }
 
 /**
@@ -151,7 +151,7 @@ const MODAL_TITLE_FORMAT_KEYS = array( 'modalTitleSingular', 'modalTitlePlural' 
 function get_modal_title_parts( int $count ): array {
 	return array(
 		/* translators: 1: attendee count, 2: event title */
-		_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wporg-groups-frontend' ),
+		_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wordcamporg' ),
 		$count,
 	);
 }

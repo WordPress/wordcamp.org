@@ -20,6 +20,7 @@ require_once( __DIR__ . '/classes/mes-privacy.php' );
 require_once __DIR__ . '/includes/class-mes-migrate-groups.php';
 require_once __DIR__ . '/includes/class-mes-propagator.php';
 require_once __DIR__ . '/includes/class-mes-flagships.php';
+require_once __DIR__ . '/includes/class-mes-dry-run-page.php';
 
 $GLOBALS['multi_event_sponsors']  = new Multi_Event_Sponsors();
 $GLOBALS['mes_sponsor']           = new MES_Region();
@@ -27,6 +28,7 @@ $GLOBALS['mes_sponsor']           = new MES_Sponsor();
 $GLOBALS['mes_sponsor_group']     = new MES_Sponsor_Group();
 $GLOBALS['mes_sponsorship_level'] = new MES_Sponsorship_Level();
 $GLOBALS['mes_privacy']           = new MES_Privacy();
+$GLOBALS['mes_dry_run_page']      = new MES_Dry_Run_Page();
 
 register_activation_hook( __FILE__, array( $GLOBALS['multi_event_sponsors'], 'activate' ) );
 

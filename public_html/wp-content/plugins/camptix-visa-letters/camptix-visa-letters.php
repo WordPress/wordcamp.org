@@ -917,10 +917,10 @@ function ctx_vl_data_eraser( $email_address, $page ) { // phpcs:ignore Generic.C
 		array(
 			'posts_per_page' => $number,
 			'post_type'      => 'tix_attendee',
-			'post_status'    => 'any',
+			'post_status'    => ctx_vl_every_post_status(),
 			'meta_key'       => 'visa_letter_metas',
 			'meta_compare'   => 'LIKE',
-			'meta_value'     => $email_address,
+			'meta_value'     => ctx_vl_serialized_email( $email_address ),
 		)
 	);
 
@@ -1005,7 +1005,7 @@ function ctx_vl_retention_purge() {
 	$letters = get_posts(
 		array(
 			'post_type'      => 'tix_visa_letter',
-			'post_status'    => 'any',
+			'post_status'    => ctx_vl_every_post_status(),
 			'posts_per_page' => $batch,
 			'fields'         => 'ids',
 			'meta_query'     => array( // @codingStandardsIgnoreLine
@@ -1024,7 +1024,7 @@ function ctx_vl_retention_purge() {
 	$attendees = get_posts(
 		array(
 			'post_type'      => 'tix_attendee',
-			'post_status'    => 'any',
+			'post_status'    => ctx_vl_every_post_status(),
 			'posts_per_page' => $batch,
 			'fields'         => 'ids',
 			'meta_query'     => array( // @codingStandardsIgnoreLine
@@ -1058,6 +1058,31 @@ function ctx_vl_retention_purge() {
 add_action( 'ctx_vl_retention_cron', 'ctx_vl_retention_purge' );
 
 /**
+ * Every registered post status, trash included.
+ *
+ * Privacy requests and the retention purge must reach a letter or a staged request whatever
+ * became of it. 'any' leaves out trash, and any status registered as excluded from search.
+ *
+ * @return string[]
+ */
+function ctx_vl_every_post_status() {
+	return array_values( get_post_stati() );
+}
+
+/**
+ * The part of serialized visa letter metas that holds one exact email address.
+ *
+ * Matching the bare address with LIKE also matches every longer address that contains it,
+ * so `organiser1@example.test` would find `eventorganiser1@example.test`'s letter.
+ *
+ * @param string $email_address
+ * @return string
+ */
+function ctx_vl_serialized_email( $email_address ) {
+	return sprintf( '"email";s:%d:"%s";', strlen( $email_address ), $email_address );
+}
+
+/**
  * Get the list of visa letter posts related to a particular email address.
  *
  * @param string $email_address
@@ -1073,12 +1098,12 @@ function ctx_vl_get_letter_posts( $email_address, $page ) {
 			'posts_per_page' => $number,
 			'paged'          => $page,
 			'post_type'      => 'tix_visa_letter',
-			'post_status'    => 'any',
+			'post_status'    => ctx_vl_every_post_status(),
 			'orderby'        => 'ID',
 			'order'          => 'ASC',
 			'meta_key'       => 'visa_letter_metas',
 			'meta_compare'   => 'LIKE',
-			'meta_value'     => $email_address,
+			'meta_value'     => ctx_vl_serialized_email( $email_address ),
 		)
 	);
 }

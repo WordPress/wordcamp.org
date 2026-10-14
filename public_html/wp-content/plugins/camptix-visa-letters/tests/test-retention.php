@@ -239,4 +239,36 @@ class Test_CampTix_Visa_Letters_Retention extends WP_UnitTestCase {
 		$this->assertGreaterThanOrEqual( 1, ctx_vl_retention_purge() );
 		$this->assertNotEmpty( get_post_meta( $letter_id, '_ctx_vl_erased', true ) );
 	}
+	/**
+	 * The purge reaches a staged request whatever became of the order, and a trashed letter.
+	 *
+	 * @testWith ["cancel"]
+	 *           ["failed"]
+	 *           ["timeout"]
+	 *           ["refund"]
+	 *           ["trash"]
+	 */
+	public function test_purge_reaches_every_order_status( $status ) {
+		$attendee_id         = $this->make_attendee( "ret-$status", $status, $this->letter_details() );
+		list( , $letter_id ) = $this->make_paid_letter( "ret-letter-$status" );
+		wp_update_post(
+			array(
+				'ID'          => $letter_id,
+				'post_status' => 'trash',
+			)
+		);
+
+		$this->set_visa_options(
+			array(
+				'visa-letter-retention'      => 1,
+				'visa-letter-retention-days' => 30,
+			)
+		);
+		$this->pin_event_end( time() - 31 * DAY_IN_SECONDS );
+
+		ctx_vl_retention_purge();
+
+		$this->assertSame( '', get_post_meta( $attendee_id, 'visa_letter_metas', true ) );
+		$this->assertNotEmpty( get_post_meta( $letter_id, '_ctx_vl_erased', true ) );
+	}
 }

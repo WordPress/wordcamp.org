@@ -224,4 +224,49 @@ class Test_CampTix_Visa_Letters_Privacy extends WP_UnitTestCase {
 		$this->assertFileExists( ctx_vl_get_letters_dir() . '/' . $bystander_pdf );
 		$this->assertNotEmpty( get_post_meta( $other_id, 'visa_letter_metas', true ) );
 	}
+	/**
+	 * Export and erasure match the exact address, not every address that contains it.
+	 */
+	public function test_export_and_erasure_match_the_exact_email() {
+		list( , $own )             = $this->make_paid_letter( 'exact', array( 'email' => 'organiser1@example.test' ) );
+		list( $other_id, $longer ) = $this->make_paid_letter( 'longer', array( 'email' => 'eventorganiser1@example.test' ) );
+
+		$export = ctx_vl_data_exporter( 'organiser1@example.test', 1 );
+		$this->assertCount( 1, $export['data'] );
+		$this->assertSame( "camptix-visa-letter-$own", $export['data'][0]['item_id'] );
+
+		ctx_vl_data_eraser( 'organiser1@example.test', 1 );
+
+		$this->assertSame(
+			'AB1234567',
+			ctx_vl_open_metas( get_post_meta( $longer, 'visa_letter_metas', true ) )['passport_number']
+		);
+		$this->assertNotEmpty( get_post_meta( $other_id, 'visa_letter_metas', true ) );
+	}
+
+	/**
+	 * Erasure reaches a staged request whatever became of the order, and a trashed letter.
+	 *
+	 * @testWith ["cancel"]
+	 *           ["failed"]
+	 *           ["timeout"]
+	 *           ["refund"]
+	 *           ["trash"]
+	 */
+	public function test_erasure_reaches_every_order_status( $status ) {
+		$this->set_visa_options();
+		$attendee_id         = $this->make_attendee( "erase-$status", $status, $this->letter_details() );
+		list( , $letter_id ) = $this->make_paid_letter( "erase-letter-$status" );
+		wp_update_post(
+			array(
+				'ID'          => $letter_id,
+				'post_status' => 'trash',
+			)
+		);
+
+		ctx_vl_data_eraser( 'eva@example.org', 1 );
+
+		$this->assertSame( '', get_post_meta( $attendee_id, 'visa_letter_metas', true ) );
+		$this->assertNotEmpty( get_post_meta( $letter_id, '_ctx_vl_erased', true ) );
+	}
 }

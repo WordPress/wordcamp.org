@@ -64,8 +64,11 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
-		$post             = self::factory()->post->get_object_by_id( self::factory()->post->create() );
+		$post               = self::factory()->post->get_object_by_id( self::factory()->post->create( array( 'post_content' => '[camptix]' ) ) );
 		$_GET['tix_action'] = 'refund_request';
+
+		// template_redirect sets this on a real tickets page, and the form writes it back to the page.
+		$this->set_shortcode_str( '[camptix]' );
 
 		$this->gateway = new class() {
 			public $supported_features = array(
@@ -151,8 +154,23 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 
 		delete_option( 'camptix_options' );
 		$camptix->load_options();
+		$this->set_shortcode_str( null );
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Set the shortcode CampTix found on the current page.
+	 *
+	 * @param string|null $shortcode
+	 */
+	protected function set_shortcode_str( $shortcode ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$property = new ReflectionProperty( $camptix, 'shortcode_str' );
+		$property->setAccessible( true );
+		$property->setValue( $camptix, $shortcode );
 	}
 
 	/**

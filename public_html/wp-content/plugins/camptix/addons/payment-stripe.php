@@ -925,7 +925,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$metadata = array(
-			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
+			// Null without a POST body, e.g. when the refund-all cron sends it.
+			'Refund reason' => (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
 		// Create a new Idempotency token for the refund request.

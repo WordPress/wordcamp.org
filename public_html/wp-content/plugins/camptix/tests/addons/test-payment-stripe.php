@@ -1249,4 +1249,98 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		parent::tear_down();
 		$camptix->load_options();
 	}
+
+	/**
+	 * A partial refund asks Stripe for the tickets' amount. The last one asks for no
+	 * amount, so Stripe refunds whatever is left of the charge.
+	 *
+	 * @dataProvider data_partial_refund_amount
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_refund_partial
+	 * @covers CampTix_Stripe_API_Client::request_refund
+	 *
+	 * @param float    $amount            The amount to refund.
+	 * @param bool     $refunds_remainder Whether this refunds the rest of the order.
+	 * @param int|null $expected          The amount sent to Stripe, in cents.
+	 */
+	public function test_partial_refund_amount( $amount, $refunds_remainder, $expected ) {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee ) = $this->make_stripe_order( 'tok_partial_refund_' . (int) $refunds_remainder, 30 );
+		update_post_meta( $attendee, 'tix_transaction_id', 'ch_test' );
+
+		$sent = null;
+		$stub = function ( $pre, $args ) use ( &$sent ) {
+			$sent = $args['body'];
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array(
+					'id'     => 're_test',
+					'charge' => 'ch_test',
+				) ),
+				'headers'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$result = $stripe->payment_refund_partial( $token, $amount, $refunds_remainder );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
+		$this->assertSame( 're_test', $result['refund_transaction_id'] );
+		$this->assertSame( 'ch_test', $sent['charge'] );
+		$this->assertSame( $expected, $sent['amount'] ?? null );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_partial_refund_amount() {
+		return array(
+			'some tickets'        => array( 10, false, 1000 ),
+			'the rest of the order' => array( 20, true, null ),
+		);
+	}
+
+	/**
+	 * A refused partial refund is reported as failed, not refunded.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_refund_partial
+	 */
+	public function test_partial_refund_reports_a_refused_refund() {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee ) = $this->make_stripe_order( 'tok_partial_refused', 30 );
+		update_post_meta( $attendee, 'tix_transaction_id', 'ch_test' );
+
+		$stub = function () {
+			return array(
+				'response' => array(
+					'code'    => 400,
+					'message' => 'Bad Request',
+				),
+				'body'     => wp_json_encode( array(
+					'error' => array(
+						'type'    => 'invalid_request_error',
+						'message' => 'Refund amount is greater than unrefunded amount on charge.',
+					),
+				) ),
+				'headers'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$result = $stripe->payment_refund_partial( $token, 40, false );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $result['status'] );
+	}
 }

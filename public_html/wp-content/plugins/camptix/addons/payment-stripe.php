@@ -30,8 +30,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	);
 
 	public $supported_features = array(
-		'refund-single' => true,
-		'refund-all'    => true,
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => true,
 	);
 
 	/**
@@ -840,17 +841,15 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	/**
 	 * Submits a single, user-initiated refund request to Stripe and returns the result.
 	 *
-	 * @param string    $payment_token
-	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
-	 *                                 If 0 or not provided, a full refund is issued.
+	 * @param string $payment_token
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	public function payment_refund( $payment_token, $refund_amount = 0 ) {
+	public function payment_refund( $payment_token ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		$result = $this->send_refund_request( $payment_token, $refund_amount );
+		$result = $this->send_refund_request( $payment_token );
 
 		if ( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED === $result['status'] ) {
 			$order = $this->get_order( $payment_token );
@@ -864,28 +863,48 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			);
 		}
 
-		// For partial refunds, store result data so the caller can use it
-		// without payment_result marking all attendees as refunded.
-		if ( $refund_amount > 0 ) {
-			$camptix->tmp( 'refund_transaction_id', $result['refund_transaction_id'] );
-			$camptix->tmp( 'refund_transaction_details', $result['refund_transaction_details'] );
+		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result );
+	}
 
-			return CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+	/**
+	 * Refund part of a charge, leaving the order's other tickets paid.
+	 *
+	 * The last refund on an order is sent without an amount, so Stripe refunds whatever
+	 * is left of the charge. Charges are made from truncated per-item amounts (see
+	 * get_expected_fractional_total()), so that is the only way the refunds add up to
+	 * exactly what was charged.
+	 *
+	 * @param string $payment_token
+	 * @param float  $amount            The amount to refund, in the currency's base unit.
+	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
+	 *
+	 * @return array
+	 */
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token, $refunds_remainder ? null : $amount );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+
+			$camptix->log( 'Stripe partial refund failed', $order['attendee_id'] ?? null, $result, 'stripe' );
 		}
 
-		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result );
+		return $result;
 	}
 
 	/**
 	 * Send a request to Stripe to refund a transaction.
 	 *
-	 * @param string    $payment_token
-	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
-	 *                                 If 0 or not provided, a full refund is issued.
+	 * @param string     $payment_token
+	 * @param float|null $amount Optional. The amount to refund, in the currency's base unit.
+	 *                           Null refunds whatever is left of the charge.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token, $refund_amount = 0 ) {
+	public function send_refund_request( $payment_token, $amount = null ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -909,16 +928,21 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
-		// Convert refund amount to fractional units (e.g. cents) for partial refunds.
-		$fractional_amount = 0;
-		if ( $refund_amount > 0 ) {
-			$fractional_amount = $this->get_fractional_unit_amount( $camptix->get_options()['currency'], $refund_amount );
-		}
-
 		// Create a new Idempotency token for the refund request.
 		// The same token can't be used for both a charge and a refund.
 		$idempotency_token = md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
 		$credentials       = $this->get_api_credentials();
+
+		$fractional_amount = null;
+		if ( null !== $amount ) {
+			try {
+				$fractional_amount = $this->get_fractional_unit_amount( $this->camptix_options['currency'], $amount );
+			} catch ( Exception $e ) {
+				$result['refund_transaction_details'] = $e->getMessage();
+
+				return $result;
+			}
+		}
 
 		$stripe = new CampTix_Stripe_API_Client( $idempotency_token, $credentials['api_secret_key'] );
 		$refund = $stripe->request_refund( $transaction_id, $metadata, $fractional_amount );
@@ -1546,18 +1570,18 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @param string $transaction_id
 	 * @param array  $metadata       Associative array of extra data to store with the transaction.
-	 * @param int    $amount         Optional. The amount to refund in fractional currency units (e.g. cents).
-	 *                               If 0 or not provided, a full refund is issued.
+	 * @param int    $amount         Optional. The amount to refund, in fractional units (e.g. cents).
+	 *                               Null refunds whatever is left of the charge.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function request_refund( $transaction_id, $metadata = array(), $amount = 0 ) {
+	public function request_refund( $transaction_id, $metadata = array(), $amount = null ) {
 		$args = array(
 			'charge' => $transaction_id,
 			'reason' => 'requested_by_customer',
 		);
 
-		if ( $amount > 0 ) {
+		if ( null !== $amount ) {
 			$args['amount'] = $amount;
 		}
 

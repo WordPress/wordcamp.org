@@ -64,6 +64,7 @@ function _get_network_plugin_state_list( $state ) {
 		'deactivated' => array(
 			'bbpress/bbpress.php',
 			'campt-indian-payment-gateway/campt-indian-payment-gateway.php',
+			'camptix-companion-tickets/camptix-companion-tickets.php',
 			'camptix-invoices/camptix-invoices.php',
 			'camptix-mailchimp/camptix-mailchimp.php',
 			'camptix-mercadopago/camptix-mercadopago.php',

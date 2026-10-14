@@ -1113,6 +1113,27 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A camp that doesn't use activity tickets shows no "Your tickets" notice: CampTix's
+	 * own assigned-tickets box already lists the same tickets.
+	 */
+	public function test_my_ticket_links_notice_hidden_without_activity_tickets() {
+		$main = $this->make_ticket( 'Main' );
+		$this->set_companion_config( array() );
+
+		$user_id = self::factory()->user->create( array( 'user_login' => 'bob' ) );
+		$this->make_attendee( $main, 'bob', 'publish' );
+
+		$addon = new CampTix_Companion_Tickets_Addon();
+		$this->reset_notices();
+		wp_set_current_user( $user_id );
+		$addon->maybe_show_my_ticket_links();
+
+		$this->assertSame( array(), $this->get_notices() );
+
+		wp_set_current_user( 0 );
+	}
+
+	/**
 	 * The "Your tickets" notice lists the visitor's seats; anonymous visitors get nothing.
 	 */
 	public function test_my_ticket_links_notice_lists_seats() {
@@ -1912,19 +1933,19 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 	/**
 	 * The add-on instance CampTix loaded.
 	 *
-	 * @param string $class Add-on class name.
+	 * @param string $class_name Add-on class name.
 	 * @return object
 	 */
-	private function get_loaded_addon( $class ) {
+	private function get_loaded_addon( $class_name ) {
 		global $camptix;
 
 		foreach ( $camptix->addons_loaded as $loaded ) {
-			if ( $loaded instanceof $class ) {
+			if ( $loaded instanceof $class_name ) {
 				return $loaded;
 			}
 		}
 
-		$this->fail( "{$class} is not loaded." );
+		$this->fail( "{$class_name} is not loaded." );
 	}
 
 	/**

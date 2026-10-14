@@ -318,7 +318,7 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 				esc_html( $ticket->post_title )
 			);
 		}
-		echo '<p class="description">' . esc_html__( 'Checked tickets are free, capacity-limited extras that only existing ticket-holders may register for (one each).', 'wordcamporg' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Checked tickets are free, capacity-limited extras that only existing ticket-holders may register for (one each). Only free tickets are listed.', 'wordcamporg' ) . '</p>';
 	}
 
 	/**
@@ -1655,7 +1655,8 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 			$camptix->notice( __( 'We emailed you your ticket links recently — please check your inbox (and spam folder) before requesting them again.', 'wordcamporg' ) );
 		}
 
-		if ( ! is_user_logged_in() ) {
+		// Without activity tickets the list repeats CampTix's own assigned-tickets box.
+		if ( ! is_user_logged_in() || ! $this->get_companion_ticket_ids() ) {
 			return;
 		}
 

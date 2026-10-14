@@ -1047,7 +1047,7 @@ class WCOR_Mailer {
 		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
 		if ( ! $emails ) {
-			log( 'Trigger fired, but no reminder posts are assigned to it.', compact( 'trigger', 'wordcamp' ) );
+			log( 'trigger_has_no_reminders', compact( 'trigger', 'wordcamp' ) );
 			return;
 		}
 
@@ -1072,7 +1072,7 @@ class WCOR_Mailer {
 		}
 
 		if ( ! $sent ) {
-			log( 'Trigger fired, but every assigned reminder was skipped or failed.', compact( 'trigger', 'wordcamp' ) );
+			log( 'trigger_sent_no_reminders', compact( 'trigger', 'wordcamp' ) );
 		}
 	}
 }

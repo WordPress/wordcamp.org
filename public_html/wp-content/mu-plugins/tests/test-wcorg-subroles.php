@@ -285,24 +285,38 @@ class Test_SubRoles extends Database_TestCase {
 	 * @return array|\WP_Error
 	 */
 	protected function translate_update( $post_id, $author_id ) {
+		return $this->translate_update_with_author_fields( $post_id, array( 'post_author_override' => (string) $author_id ) );
+	}
+
+	/**
+	 * Like `translate_update()`, but posting the given author fields as they are.
+	 *
+	 * @param int   $post_id
+	 * @param array $author_fields `post_author_override` and/or `post_author`.
+	 *
+	 * @return array|\WP_Error
+	 */
+	protected function translate_update_with_author_fields( $post_id, $author_fields ) {
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 
 		// post.php hands `_wp_translate_postdata()` a copy of `$_POST`, so both carry the same fields.
 		$this->start_classic_save( $post_id );
-		$_POST['post_author_override'] = (string) $author_id;
+		$_POST = array_merge( $_POST, $author_fields );
 
 		$result = _wp_translate_postdata(
 			true,
-			array(
-				'post_ID'              => (string) $post_id,
-				'post_type'            => WCPT_POST_TYPE_ID,
-				'post_author_override' => (string) $author_id,
-				'post_title'           => 'WordCamp Test',
+			array_merge(
+				array(
+					'post_ID'    => (string) $post_id,
+					'post_type'  => WCPT_POST_TYPE_ID,
+					'post_title' => 'WordCamp Test',
+				),
+				$author_fields
 			)
 		);
 
 		$this->end_classic_save();
-		unset( $_POST['post_author_override'] );
+		unset( $_POST['post_author_override'], $_POST['post_author'] );
 
 		return $result;
 	}
@@ -512,5 +526,86 @@ class Test_SubRoles extends Database_TestCase {
 		$this->assertSame( 403, $response->get_status() );
 		$this->assertSame( 'rest_cannot_edit_others', $response->get_data()['code'] );
 		$this->assertSame( $author, (int) get_post( $post_id )->post_author );
+	}
+
+	/**
+	 * An empty `post_author_override` is ignored by core, which saves `post_author` instead, so the
+	 * author check has to skip it too.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_change_the_author_behind_an_empty_override() {
+		list( , , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$someone_else = self::factory()->user->create( array( 'role' => 'contributor' ) );
+
+		$fields = array(
+			'post_author_override' => '',
+			'post_author'          => (string) $someone_else,
+		);
+
+		$result = $this->translate_update_with_author_fields( $post_id, $fields );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'edit_others_posts', $result->get_error_code() );
+	}
+
+	/**
+	 * Core ignores a `post_author_override` of `0` the same way.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_change_the_author_behind_a_zero_override() {
+		list( , , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$someone_else = self::factory()->user->create( array( 'role' => 'contributor' ) );
+
+		$fields = array(
+			'post_author_override' => '0',
+			'post_author'          => (string) $someone_else,
+		);
+
+		$result = $this->translate_update_with_author_fields( $post_id, $fields );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'edit_others_posts', $result->get_error_code() );
+	}
+
+	/**
+	 * Core casts the author with `(int)`, so `-1` is a change of author, even on a camp authored by user
+	 * 1, which `absint( -1 )` would match.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_cannot_save_a_negative_author() {
+		list( , , $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		wp_update_post( array(
+			'ID'          => $post_id,
+			'post_author' => 1,
+		) );
+
+		$result = $this->translate_update_with_author_fields( $post_id, array( 'post_author' => '-1' ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'edit_others_posts', $result->get_error_code() );
+	}
+
+	/**
+	 * The mentor's own form has no Author box, so it posts only `post_author`. That save still goes through.
+	 *
+	 * @covers \WordCamp\SubRoles\get_wordcamp_being_saved()
+	 * @ticket 2159
+	 */
+	public function test_mentor_can_save_with_only_post_author() {
+		list( , $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$result = $this->translate_update_with_author_fields( $post_id, array( 'post_author' => (string) $author ) );
+
+		$this->assertNotWPError( $result );
+		$this->assertSame( $author, $result['post_author'] );
 	}
 }

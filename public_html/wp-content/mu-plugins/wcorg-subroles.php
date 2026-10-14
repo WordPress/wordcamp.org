@@ -281,9 +281,16 @@ function get_wordcamp_being_saved( $args ) {
 		return null;
 	}
 
-	$posted_author = absint( $_POST['post_author_override'] ?? $_POST['post_author'] ?? 0 );
+	// Read the author the way `_wp_translate_postdata()` does, or the check passes on a value core ignores.
+	if ( ! empty( $_POST['post_author_override'] ) ) {
+		$posted_author = (int) $_POST['post_author_override'];
+	} elseif ( ! empty( $_POST['post_author'] ) ) {
+		$posted_author = (int) $_POST['post_author'];
+	} else {
+		$posted_author = null; // Core falls back to the current user, and doesn't ask for this cap.
+	}
 
-	if ( $posted_author && $posted_author !== (int) $post->post_author ) {
+	if ( null !== $posted_author && $posted_author !== (int) $post->post_author ) {
 		return null;
 	}
 	// phpcs:enable

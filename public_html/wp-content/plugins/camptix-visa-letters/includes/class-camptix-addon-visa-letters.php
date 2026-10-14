@@ -238,11 +238,14 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 			return;
 		}//end if
 
+		// Oldest first, so the buyer comes first, as in CampTix's email_tickets().
 		$attendees = get_posts(
 			array(
 				'posts_per_page' => -1,
 				'post_type'      => 'tix_attendee',
 				'post_status'    => 'any',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
 				'meta_query'     => array( // @codingStandardsIgnoreLine
 					array(
 						'key'     => 'tix_payment_token',
@@ -253,24 +256,25 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 				),
 			)
 		);
-		if ( ! $attendees ) {
-			return;
-		}//end if
 
-		// Payment gateways can report a completed result more than once
-		// (return + webhook, refresh); never issue a second letter.
-		$existing_letter = get_post_meta( $attendees[0]->ID, 'tix_visa_letter_id', true );
-		if ( $existing_letter && get_post( $existing_letter ) ) {
-			return;
-		}//end if
-
-		$metas = get_post_meta( $attendees[0]->ID, 'visa_letter_metas', true );
-		if ( $metas ) {
-			$letter_id = self::create_visa_letter( $attendees[0], $metas );
-			if ( ! is_wp_error( $letter_id ) && ! empty( $letter_id ) ) {
-				self::send_visa_letter( $letter_id );
+		// The checkout request is on the buyer, and any attendee of the order can add their
+		// own from their edit page before the payment completes. Issue each of them.
+		foreach ( $attendees as $attendee ) {
+			// Payment gateways can report a completed result more than once
+			// (return + webhook, refresh); never issue a second letter.
+			$existing_letter = get_post_meta( $attendee->ID, 'tix_visa_letter_id', true );
+			if ( $existing_letter && get_post( $existing_letter ) ) {
+				continue;
 			}//end if
-		}//end if
+
+			$metas = get_post_meta( $attendee->ID, 'visa_letter_metas', true );
+			if ( $metas ) {
+				$letter_id = self::create_visa_letter( $attendee, $metas );
+				if ( ! is_wp_error( $letter_id ) && ! empty( $letter_id ) ) {
+					self::send_visa_letter( $letter_id );
+				}//end if
+			}//end if
+		}//end foreach
 	}
 
 	/**
@@ -752,12 +756,50 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 	 */
 	public static function add_meta_visa_letter_on_attendee( $post_id, $attendee ) {
 
-		if ( ! empty( $attendee->visa_letter ) ) {
+		// The visa form is shared by the whole order, so every attendee of the checkout
+		// carries the same request. Keep it on the first one only, the buyer: a copy on the
+		// others would pre-fill their edit pages with the buyer's passport details.
+		if ( ! empty( $attendee->visa_letter ) && ! self::order_has_visa_request( $post_id ) ) {
 			$sealed = ctx_vl_seal_metas( $attendee->visa_letter );
 			update_post_meta( $post_id, 'visa_letter_metas', $sealed );
 			global $camptix;
 			$camptix->log( __( 'This attendee requested a visa letter.', 'wordcamporg' ), $post_id );
 		}//end if
+	}
+
+	/**
+	 * Whether another attendee of the same order already holds a visa letter request.
+	 *
+	 * @param int $attendee_id The attendee post ID.
+	 * @return bool
+	 */
+	public static function order_has_visa_request( $attendee_id ) {
+		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		if ( ! $payment_token ) {
+			return false;
+		}//end if
+
+		$others = get_posts(
+			array(
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'post_type'      => 'tix_attendee',
+				'post_status'    => 'any',
+				'post__not_in'   => array( $attendee_id ), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- at most a handful of attendees share a token.
+				'meta_query'     => array( // @codingStandardsIgnoreLine
+					array(
+						'key'   => 'tix_payment_token',
+						'value' => $payment_token,
+					),
+					array(
+						'key'     => 'visa_letter_metas',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return ! empty( $others );
 	}
 
 	/**

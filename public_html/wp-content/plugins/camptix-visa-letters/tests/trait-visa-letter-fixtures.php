@@ -183,6 +183,25 @@ trait Visa_Letter_Fixtures {
 	}
 
 	/**
+	 * Create the attendees of one order, in checkout order, sharing a payment token.
+	 *
+	 * @param string $slug  Unique-ish slug for the payment token.
+	 * @param int    $count How many attendees.
+	 * @return int[] Attendee post IDs, the buyer first.
+	 */
+	protected function make_order( $slug, $count ) {
+		$ids = array();
+
+		for ( $i = 1; $i <= $count; $i++ ) {
+			$attendee_id = $this->make_attendee( "$slug-$i" );
+			update_post_meta( $attendee_id, 'tix_payment_token', "token-$slug" );
+			$ids[] = $attendee_id;
+		}
+
+		return $ids;
+	}
+
+	/**
 	 * Letters linked to an attendee, oldest first.
 	 *
 	 * @param int $attendee_id Attendee post ID.

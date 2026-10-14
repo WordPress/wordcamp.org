@@ -158,4 +158,60 @@ class Test_CampTix_Visa_Letters_Creation extends WP_UnitTestCase {
 		$this->assertFileDoesNotExist( $path );
 		$this->assertSame( '', get_post_meta( $letter_id, 'visa_letter_document', true ) );
 	}
+	/**
+	 * The visa form is shared by the whole order, so checkout stores the request on the
+	 * first attendee only. Copying it to every attendee would show attendee 1's passport
+	 * details on attendee 2's edit page.
+	 */
+	public function test_checkout_stores_the_request_on_the_first_attendee_only() {
+		$this->set_visa_options();
+		list( $first, $second ) = $this->make_order( 'shared', 2 );
+
+		// What attendee_object() gives every attendee of the order.
+		foreach ( array( $first, $second ) as $attendee_id ) {
+			$attendee              = new stdClass();
+			$attendee->visa_letter = $this->letter_details();
+			CampTix_Addon_Visa_Letters::add_meta_visa_letter_on_attendee( $attendee_id, $attendee );
+		}
+
+		$this->assertNotEmpty( get_post_meta( $first, 'visa_letter_metas', true ) );
+		$this->assertSame( '', get_post_meta( $second, 'visa_letter_metas', true ) );
+	}
+
+	/**
+	 * A completed payment issues the letter for the attendee who requested it, whatever
+	 * order the attendees are read in.
+	 */
+	public function test_completed_payment_issues_the_letter_for_the_requesting_attendee() {
+		$this->set_visa_options();
+		list( $first, $second ) = $this->make_order( 'buyer', 2 );
+		update_post_meta( $first, 'visa_letter_metas', ctx_vl_seal_metas( $this->letter_details() ) );
+
+		// A checkout that crosses a second: the buyer is no longer the newest post.
+		global $wpdb;
+		$wpdb->update( $wpdb->posts, array( 'post_date' => gmdate( 'Y-m-d H:i:s', time() + 1 ) ), array( 'ID' => $second ) );
+		clean_post_cache( $second );
+
+		do_action( 'camptix_payment_result', 'token-buyer', 2, array() );
+
+		$this->assertCount( 1, $this->letters_for( $first ) );
+		$this->assertCount( 0, $this->letters_for( $second ) );
+	}
+
+	/**
+	 * Another attendee of the order can ask for their own letter before payment, from their
+	 * edit page. A completed payment issues both letters.
+	 */
+	public function test_completed_payment_issues_each_attendees_own_request() {
+		$this->set_visa_options();
+		list( $first, $second ) = $this->make_order( 'both', 2 );
+		update_post_meta( $first, 'visa_letter_metas', ctx_vl_seal_metas( $this->letter_details() ) );
+		update_post_meta( $second, 'visa_letter_metas', ctx_vl_seal_metas( $this->letter_details( array( 'passport_number' => 'ZZ9876543' ) ) ) );
+
+		do_action( 'camptix_payment_result', 'token-both', 2, array() );
+		do_action( 'camptix_payment_result', 'token-both', 2, array() );
+
+		$this->assertCount( 1, $this->letters_for( $first ) );
+		$this->assertCount( 1, $this->letters_for( $second ) );
+	}
 }

@@ -269,4 +269,20 @@ class Test_CampTix_Visa_Letters_Post_Purchase extends WP_UnitTestCase {
 		$this->assertSame( '2026-11-10', $stored['exit_date'] );
 		$this->assertSame( 'Hotel Vancouver', $stored['accommodation'] );
 	}
+	/**
+	 * Another attendee of the same order gets an empty form, not the buyer's details.
+	 */
+	public function test_other_attendee_of_the_order_gets_an_empty_form() {
+		list( $first, $second ) = $this->make_order( 'editshared', 2 );
+		foreach ( array( $first, $second ) as $attendee_id ) {
+			$attendee              = new stdClass();
+			$attendee->visa_letter = $this->letter_details();
+			CampTix_Addon_Visa_Letters::add_meta_visa_letter_on_attendee( $attendee_id, $attendee );
+		}
+
+		$html = $this->render_form_for( $second );
+
+		$this->assertStringNotContainsString( 'AB1234567', $html );
+		$this->assertDoesNotMatchRegularExpression( '/camptix-need-visa-letter[^>]*checked/', $html );
+	}
 }

@@ -462,7 +462,12 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 		 * request down with it. The letter simply keeps no document, and can be
 		 * regenerated once the dependency is available again.
 		 */
-		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+		/**
+		 * Filters whether the WordCamp Docs PDF generator may be used for visa letters.
+		 *
+		 * @param bool $available Whether to generate PDFs. Ignored when the generator isn't loaded.
+		 */
+		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) || ! apply_filters( 'ctx_vl_pdf_generator_available', true ) ) {
 			$camptix->log( __( 'Visa letter PDF generation failed: the WordCamp Docs PDF generator is missing.', 'wordcamporg' ), $letter_id );
 
 			return false;

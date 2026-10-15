@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-hosts",
+	"version": "1.0.0",
+	"title": "Event Hosts",
+	"category": "widgets",
+	"icon": "groups",
+	"description": "Lists the people hosting an event, with their avatars.",
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false,
+		"spacing": { "margin": true }
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}

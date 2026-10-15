@@ -26,6 +26,12 @@ function wcorg_high_memory_context() : string {
 add_filter( 'wordcamp_high_memory_limit', 'wcorg_high_memory_context' );
 
 /*
+ * GD decodes the full bitmap into PHP memory (~4 bytes per pixel), so large PNG uploads can exhaust the default
+ * `WP_MAX_MEMORY_LIMIT` while generating sub-sizes. That kills the request before attachment metadata is saved.
+ */
+add_filter( 'image_memory_limit', 'wcorg_high_memory_context' );
+
+/*
  * Register an extra directory for private themes.
  *
  * These are all old and no longer used on new sites, but must remain active for old sites. They haven't been
@@ -295,7 +301,12 @@ add_filter( 'change_locale', function() {
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
-	// Secrets.
+	// Secrets. Matches the `wordcamp_qbo_client_options` filter below; the plugin withholds its REST routes
+	// when the key is absent, so bailing is safer than fataling on an undefined constant.
+	if ( ! defined( 'WORDCAMP_QBO_HMAC_KEY' ) ) {
+		return $options;
+	}
+
 	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
 
 	// WordCamp Payments to QBO categories mapping.
@@ -495,6 +506,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 	$target_plugin    = $args[0] ?? null;
 	$optional_plugins = array(
 		'campt-indian-payment-gateway/campt-indian-payment-gateway.php',
+		'camptix-companion-tickets/camptix-companion-tickets.php',
 		'camptix-invoices/camptix-invoices.php',
 		'camptix-mailchimp/camptix-mailchimp.php',
 		'camptix-mercadopago/camptix-mercadopago.php',
@@ -502,6 +514,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-payfast-gateway/camptix-payfast.php',
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
+		'camptix-visa-letters/camptix-visa-letters.php',
 		'edit-flow/edit_flow.php',
 		'knit-pay/knit-pay.php',
 		'lang-attribute-blocks/lang-attribute-blocks.php',

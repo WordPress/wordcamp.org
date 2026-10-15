@@ -48,6 +48,7 @@ function default_jetpack_modules( $modules ) {
 		'image-cdn',
 		'sharedaddy',
 		'shortcodes',
+		'shortlinks',
 		'subscriptions'
 	);
 

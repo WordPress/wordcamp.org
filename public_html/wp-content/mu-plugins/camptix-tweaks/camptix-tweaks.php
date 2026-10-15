@@ -606,6 +606,7 @@ function load_custom_addons() {
 	// Miscellaneous.
 	require_once __DIR__ . '/addons/spam-prevention.php';
 	require_once __DIR__ . '/addons/ticket-types/ticket-types.php';
+	require_once __DIR__ . '/addons/wporg-profile-url.php';
 
 	// Payment options.
 	if (

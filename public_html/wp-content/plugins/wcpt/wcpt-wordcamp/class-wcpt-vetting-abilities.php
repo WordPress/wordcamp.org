@@ -191,7 +191,8 @@ class WCPT_Vetting_Abilities {
 	/**
 	 * Shared permission callback for both abilities.
 	 *
-	 * Mirrors the check used by WordCamp_Admin::enforce_post_status().
+	 * These abilities advance an application's status, which is also what
+	 * WordCamp_Status_Guard::enforce_post_status() reserves to this capability.
 	 *
 	 * @return bool
 	 */

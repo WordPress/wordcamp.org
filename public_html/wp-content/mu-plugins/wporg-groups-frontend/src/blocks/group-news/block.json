@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/group-news",
+	"version": "1.0.0",
+	"title": "Group News",
+	"category": "widgets",
+	"icon": "admin-post",
+	"description": "Displays recent group posts and hides itself when there are none.",
+	"attributes": {
+		"limit": {
+			"type": "number",
+			"default": 3
+		}
+	},
+	"supports": {
+		"html": false,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}

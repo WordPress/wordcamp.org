@@ -413,7 +413,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
 		}
 
-		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
+		// basename() contains the value to the camptix-invoices directory so a crafted meta
+		// value cannot make the PDF generator write, or rename() move, outside of it.
+		$filename = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 		if ( empty( $filename ) ) {
 			$filename = $invoice_number . '-' . wp_generate_password( 12, false, false ) . '.pdf';
 		}
@@ -422,6 +424,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir    = wp_upload_dir();
 		$tmp_path      = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename );
 
+		global $camptix;
+
+		// Only record the document once the PDF verifiably exists, so a wkhtmltopdf
+		// failure can't leave the invoice pointing at a file that was never written.
+		if ( ! file_exists( $tmp_path ) || 0 === filesize( $tmp_path ) ) {
+			$camptix->log( __( 'Invoice PDF generation failed: wkhtmltopdf produced no output.', 'wordcamporg' ), $invoice_id, array( 'filename' => $filename ) );
+			return false;
+		}
+
 		if ( ! empty( $upload_dir['basedir'] ) ) {
 			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
 			if ( ! file_exists( $invoices_dirname ) ) {
@@ -429,7 +440,17 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			}
 		}
 
-		rename( $tmp_path, $invoices_dirname . '/' . $filename );
+		// `rename()` always fails with "Operation not permitted" here because the PDF is
+		// generated into a `/tmp` mount that is a different filesystem from the uploads
+		// volume, so cross-device renames are never possible in this environment. Copy
+		// across and remove the source instead of attempting (and logging a warning for)
+		// a rename that cannot succeed.
+		if ( ! copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			$camptix->log( __( 'Invoice PDF generation failed: could not move the PDF into the uploads directory.', 'wordcamporg' ), $invoice_id, array( 'filename' => $filename ) );
+			return false;
+		}
+
+		unlink( $tmp_path );
 
 		update_post_meta( $invoice_id, 'invoice_document', $filename );
 	}
@@ -483,7 +504,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir = wp_upload_dir();
 		if ( ! empty( $upload_dir['basedir'] ) ) {
 			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
-			$filename         = $invoices_dirname . '/' . $filename;
+			// basename() contains the value to the camptix-invoices directory: the meta is
+			// not guaranteed to be plugin-written and must never be able to traverse out.
+			$filename         = $invoices_dirname . '/' . basename( $filename );
 			if ( file_exists( $filename ) ) {
 				wp_delete_file( $filename );
 			}
@@ -506,8 +529,11 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) === true ) {
 			try {
+				// Use formatCurrency() with the explicit ISO code so the symbol always matches
+				// the configured currency, rather than format(), which would fall back to the
+				// locale's default currency (e.g. rendering EUR as "$" on an en_US site).
 				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-				$formatted_amount = $formatter->format( $amount );
+				$formatted_amount = $formatter->formatCurrency( $amount, $currency_key );
 			} catch ( \Throwable $e ) {
 				$formatted_amount = false;
 			}

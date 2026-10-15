@@ -56,7 +56,7 @@ function render_submenu_page() {
 			break;
 
 		case 'wcb-cancelled':
-			$section_explanation = 'These requests have been reviewed by a deputy and cancelled/rejected.';
+			$section_explanation = 'These requests have been reviewed by a deputy and canceled/rejected.';
 			break;
 
 		case 'wcb-approved':

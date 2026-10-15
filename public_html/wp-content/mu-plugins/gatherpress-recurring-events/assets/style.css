@@ -1,0 +1,122 @@
+.gpre-occurrence-selector {
+	position: relative;
+	margin-block: 0 2rem;
+
+	/* The scroll strip's negative margin (below) intentionally bleeds past
+	   this container so its content lines up flush with the container's own
+	   edges once the matching padding is subtracted back out. Without
+	   clipping that bleed here, nothing else in the page does either — every
+	   ancestor up to <body> is `overflow: visible` — so it was propagating
+	   into page-level horizontal scroll on any viewport narrower than the
+	   bleed amount. The prev/next controls stay visible: they're positioned
+	   relative to this element, not the bled-out list, and sit well inside
+	   its box on every side. */
+	overflow: hidden;
+}
+
+/* The fade zone and scroll padding match the prev/next control's full
+   footprint (0.25rem offset + 2.5rem width = 2.75rem from each edge), not
+   just its offset — otherwise the control's near edge lands past where the
+   content has faded out, so it visually overlaps a still-fully-opaque chip
+   instead of one that's already faded to transparent underneath it. This
+   showed up worst on narrow viewports, where fewer chips fit and the
+   overlapped one is more likely to be a chip the user hasn't scrolled past
+   yet, but the underlying mismatch exists at any width. */
+
+nav.gpre-occurrence-selector > ul {
+	display: flex;
+	gap: 0.75rem;
+	margin: 0 -2.75rem;
+	overflow-x: auto;
+	padding: 0 2.75rem;
+	list-style: none;
+	-webkit-mask-image: linear-gradient(
+		to right,
+		transparent,
+		#000 2.75rem,
+		#000 calc(100% - 2.75rem),
+		transparent
+	);
+	mask-image: linear-gradient(to right, transparent, #000 2.75rem, #000 calc(100% - 2.75rem), transparent);
+	scroll-padding-inline: 2.75rem;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+}
+
+nav.gpre-occurrence-selector > ul::-webkit-scrollbar {
+	display: none;
+}
+
+.gpre-occurrence-selector__control {
+	position: absolute;
+	top: 50%;
+	z-index: 1;
+	display: grid !important;
+	width: 2.5rem;
+	height: 2.5rem;
+	min-width: 2.5rem !important;
+	padding: 0 !important;
+	transform: translateY(-50%);
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
+	border-radius: 50% !important;
+	background: #fff !important;
+	box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e) !important;
+	cursor: pointer;
+	font-size: 2rem !important;
+	line-height: 1 !important;
+	place-items: center;
+}
+
+.gpre-occurrence-selector__control.is-previous {
+	left: 0.25rem;
+}
+
+.gpre-occurrence-selector__control.is-next {
+	right: 0.25rem;
+}
+
+.gpre-occurrence-selector__control:disabled,
+.gpre-occurrence-selector:not(.is-scrollable) .gpre-occurrence-selector__control {
+	visibility: hidden;
+	pointer-events: none;
+}
+
+nav.gpre-occurrence-selector > ul > li {
+	flex: 0 0 auto;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	scroll-snap-align: center;
+}
+
+.gpre-occurrence-link {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e) !important;
+	display: block;
+	padding: 0.65rem 1rem;
+	font-weight: 700;
+	text-decoration: none !important;
+	white-space: nowrap;
+}
+
+.gpre-occurrence-link:hover {
+	text-decoration: underline !important;
+}
+
+.gpre-occurrence-link[aria-current="date"] {
+	background: var(--wp--preset--color--charcoal-1, #1e1e1e);
+	color: #fff !important;
+}
+
+.gpre-occurrence-link.is-cancelled {
+	text-decoration: line-through;
+}
+
+.gpre-cancelled-notice,
+.gpre-rsvp-closed,
+.gpre-series-ended {
+	padding: 1rem;
+	border-left: 4px solid #d63638;
+	background: #fcf0f1;
+}

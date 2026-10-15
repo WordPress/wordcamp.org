@@ -7,6 +7,7 @@
 		"@wordpress/block-editor": "15.21.0",
 		"@wordpress/blocks": "15.21.0",
 		"@wordpress/components": "35.0.0",
+		"@wordpress/escape-html": "3.48.0",
 		"@wordpress/scripts": "^32.4.0",
 		"@wordpress/server-side-render": "6.24.0",
 		"@wordpress/env": "11.8.0",

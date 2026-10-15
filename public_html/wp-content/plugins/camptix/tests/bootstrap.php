@@ -25,4 +25,16 @@ function manually_load_plugin() {
 }
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );
 
+/**
+ * Enable the Require Login addon, like `camptix-tweaks` does on every WordCamp site.
+ *
+ * Addons must be registered before `camptix_init`, so this can't be done from inside a test.
+ */
+function load_addons( $addons ) {
+	$addons['require-login'] = dirname( __DIR__ ) . '/addons/require-login.php';
+
+	return $addons;
+}
+tests_add_filter( 'camptix_default_addons', __NAMESPACE__ . '\load_addons' );
+
 require $core_tests_directory . '/includes/bootstrap.php';

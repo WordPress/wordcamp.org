@@ -251,6 +251,31 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	}
 
 	/**
+	 * On Central the groups are switched on with a network option, from WP-CLI, so the
+	 * migration and the switch can happen in one sitting and switching off needs no deploy.
+	 */
+	public function test_network_option_switches_groups_on_and_off() {
+		update_site_option( MES_Sponsor_Group::ENABLED_OPTION, 1 );
+		$this->assertTrue( MES_Sponsor_Group::is_enabled() );
+
+		delete_site_option( MES_Sponsor_Group::ENABLED_OPTION );
+		$this->assertFalse( MES_Sponsor_Group::is_enabled() );
+	}
+
+	/**
+	 * The filter still has the last word, over the option.
+	 */
+	public function test_filter_overrides_the_network_option() {
+		update_site_option( MES_Sponsor_Group::ENABLED_OPTION, 1 );
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false' );
+
+		$this->assertFalse( MES_Sponsor_Group::is_enabled() );
+
+		remove_filter( 'mes_sponsor_groups_enabled', '__return_false' );
+		delete_site_option( MES_Sponsor_Group::ENABLED_OPTION );
+	}
+
+	/**
 	 * The taxonomy is registered but stays out of the admin menu while disabled.
 	 */
 	public function test_taxonomy_has_no_admin_menu_while_disabled() {

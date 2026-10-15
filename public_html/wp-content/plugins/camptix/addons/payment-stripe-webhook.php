@@ -33,14 +33,14 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 	public function rest_stripe_webhook_permissions_check( $request ) {
 		$payload          = $request->get_body();
 		$signature_header = $request->get_header( 'stripe-signature' );
-		$webhook_secret   = defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ? trim( WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET ) : '';
+		$webhook_secrets  = $this->get_webhook_secrets();
 		$error            = new WP_Error(
 			'camptix_stripe_webhook_invalid_signature',
 			'Invalid Stripe webhook signature.',
 			array( 'status' => 403 )
 		);
 
-		if ( ! $webhook_secret || ! $signature_header ) {
+		if ( ! $webhook_secrets || ! $signature_header ) {
 			return $error;
 		}
 
@@ -59,15 +59,43 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 		}
 
 		$signed_payload = $timestamp . '.' . $payload;
-		$expected_signature = hash_hmac( 'sha256', $signed_payload, $webhook_secret );
 
-		foreach ( $signatures as $signature ) {
-			if ( hash_equals( $expected_signature, $signature ) ) {
-				return true;
+		foreach ( $webhook_secrets as $webhook_secret ) {
+			$expected_signature = hash_hmac( 'sha256', $signed_payload, $webhook_secret );
+
+			foreach ( $signatures as $signature ) {
+				if ( hash_equals( $expected_signature, $signature ) ) {
+					return true;
+				}
 			}
 		}
 
 		return $error;
+	}
+
+	/**
+	 * The signing secrets a webhook may be signed with.
+	 *
+	 * Each Stripe account signs its endpoint's events with its own secret, so a predefined
+	 * account can carry a `webhook_secret`. `WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET` is
+	 * still accepted for the account that was set up before accounts could carry one.
+	 *
+	 * @return string[]
+	 */
+	protected function get_webhook_secrets() {
+		$secrets = array();
+
+		if ( defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ) {
+			$secrets[] = WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET;
+		}
+
+		foreach ( $this->get_predefined_accounts() as $account ) {
+			$secrets[] = $account['webhook_secret'] ?? '';
+		}
+
+		$secrets = array_map( 'trim', array_filter( $secrets, 'is_string' ) );
+
+		return array_values( array_unique( array_filter( $secrets ) ) );
 	}
 
 	/**

@@ -59,6 +59,9 @@ use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_format;
 use function WordCamp\Groups\Frontend\Event_Date_Format\get_time_formats;
 use function WordCamp\Groups\Frontend\Event_Date_Format\set_date_format;
 use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
+use function WordCamp\Groups\Frontend\Event_Hosts\get_default_form_value as get_default_hosts;
+use function WordCamp\Groups\Frontend\Event_Hosts\get_form_value as get_event_hosts_form_value;
+use function WordCamp\Groups\Frontend\Event_Hosts\set_event_hosts;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
@@ -809,6 +812,13 @@ function event_args_schema(): array {
 			'required' => false,
 			'items'    => array( 'type' => 'string' ),
 		),
+		// Host user IDs. No `default`, like the topics: an absent parameter
+		// leaves the hosts alone. `set_event_hosts()` keeps group members only.
+		'hosts'             => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array( 'type' => 'integer' ),
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -859,6 +869,20 @@ function maybe_save_topics( int $event_id, WP_REST_Request $request ): void {
 
 	if ( is_array( $topics ) ) {
 		set_event_topics( $event_id, $topics );
+	}
+}
+
+/**
+ * Write the event's hosts, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_hosts( int $event_id, WP_REST_Request $request ): void {
+	$hosts = $request->get_param( 'hosts' );
+
+	if ( is_array( $hosts ) ) {
+		set_event_hosts( $event_id, $hosts );
 	}
 }
 
@@ -923,6 +947,8 @@ function get_existing_event_fields( int $event_id ): array {
 	// a group's recurring talk night is usually about the same things.
 	$fields['topics'] = get_event_topics( $event_id );
 
+	$fields['hosts'] = get_event_hosts_form_value( $event_id );
+
 	$thumb_id = (int) get_post_thumbnail_id( $event_id );
 	if ( $thumb_id ) {
 		$fields['featured_image_id']  = $thumb_id;
@@ -951,7 +977,9 @@ function get_template_event_fields( int $template_id, array $defaults ): array {
 
 	$duration = get_event_duration_minutes( $template_id );
 
-	unset( $fields['date'], $fields['time_start'], $fields['time_end'] );
+	// Hosts don't carry over: a new event is hosted by whoever creates it
+	// until they say otherwise, the same as one started from scratch.
+	unset( $fields['date'], $fields['time_start'], $fields['time_end'], $fields['hosts'] );
 
 	if ( null !== $duration && preg_match( '/^(\d{2}):(\d{2})$/', (string) $defaults['time_start'], $m ) ) {
 		$end_minutes        = ( (int) $m[1] * 60 + (int) $m[2] + $duration ) % ( 24 * 60 );
@@ -1051,6 +1079,7 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
 	$fields['rsvp_questions']     = $fields['rsvp_questions'] ?? array();
 	$fields['topics']             = $fields['topics'] ?? array();
+	$fields['hosts']              = $fields['hosts'] ?? get_default_hosts();
 
 	/**
 	 * Filters the fields returned to the frontend event form.
@@ -1229,6 +1258,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 
 	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
 	maybe_save_topics( $saved_id, $request );
+	maybe_save_hosts( $saved_id, $request );
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -1438,6 +1468,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 
 	set_event_language( $saved_id, $fields['language'] );
 	maybe_save_topics( $saved_id, $request );
+	maybe_save_hosts( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

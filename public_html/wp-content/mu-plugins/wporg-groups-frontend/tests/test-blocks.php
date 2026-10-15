@@ -15,6 +15,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/event-attendees',
 		'wporg/event-flyer-link',
 		'wporg/event-flyer-qr',
+		'wporg/event-hosts',
 		'wporg/event-language',
 		'wporg/event-manage',
 		'wporg/event-rsvp',
@@ -31,7 +32,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 16 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 17 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -54,6 +55,31 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		sort( $expected );
 
 		$this->assertSame( $expected, $wporg_blocks );
+	}
+
+	/**
+	 * Block stylesheets are versioned by file, not by `block.json`, so a
+	 * deploy that changes the CSS also changes its URL (#2153).
+	 */
+	public function test_block_styles_are_versioned_by_file() {
+		$build_dir = dirname( __DIR__ ) . '/build/blocks';
+		$checked   = 0;
+
+		foreach ( self::EXPECTED_BLOCKS as $name ) {
+			$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( $name );
+			$handles    = array_merge( (array) $block_type->style_handles, (array) $block_type->view_style_handles );
+
+			foreach ( $handles as $handle ) {
+				$style = wp_styles()->query( $handle, 'registered' );
+				$file  = $build_dir . '/' . substr( $name, strlen( 'wporg/' ) ) . '/' . wp_basename( wp_parse_url( $style->src, PHP_URL_PATH ) );
+
+				$this->assertFileExists( $file );
+				$this->assertSame( (string) filemtime( $file ), $style->ver, "$handle is not versioned by its file." );
+				++$checked;
+			}
+		}
+
+		$this->assertGreaterThan( 0, $checked );
 	}
 
 	/**

@@ -88,7 +88,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	public function test_group_sponsorships_read_defaults_to_empty_array() {
 		$sponsor_id = self::factory()->post->create( array( 'post_type' => MES_Sponsor::POST_TYPE_SLUG ) );
 
-		$this->assertSame( array(), MES_Sponsor::get_group_sponsorships( $sponsor_id ) );
+		$this->assertSame( array(), MES_Sponsor::get_stored_group_sponsorships( $sponsor_id ) );
 	}
 
 	/**
@@ -99,7 +99,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( 11, 13, 0, '13' ) );
 
-		$groups = MES_Sponsor_Group::get_camp_groups( $wordcamp_id );
+		$groups = MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id );
 
 		$this->assertSame( array( 11, 13 ), $groups ); // Ints, deduped, zero dropped.
 	}
@@ -110,7 +110,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	public function test_camp_groups_read_defaults_to_empty_array() {
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 
-		$this->assertSame( array(), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -154,15 +154,41 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$first       = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$second      = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 
-		$_POST[ $post_key ] = array( '7', '7', '0', 9 );
+		$_POST[ $post_key ] = array( (string) $first, (string) $first, '0', $second );
 
 		$group = new MES_Sponsor_Group();
 		$group->save_group_picker( MES_Sponsor_Group::WCPT_FIELD, '', $wordcamp_id );
 
 		unset( $_POST[ $post_key ] );
 
-		$this->assertSame( array( 7, 9 ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array( $first, $second ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+	}
+
+	/**
+	 * `save_group_picker` keeps only IDs that are sponsor groups: a made-up ID or a term from another
+	 * taxonomy would otherwise be stored and count as a group.
+	 */
+	public function test_save_group_picker_drops_ids_that_are_not_groups() {
+		$this->enable_groups();
+
+		$this->set_current_user_as_wrangler();
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$real        = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$region      = self::factory()->term->create( array( 'taxonomy' => MES_Region::TAXONOMY_SLUG ) );
+
+		$_POST[ $post_key ] = array( (string) $real, '999999', (string) $region );
+
+		$group = new MES_Sponsor_Group();
+		$group->save_group_picker( MES_Sponsor_Group::WCPT_FIELD, '', $wordcamp_id );
+
+		unset( $_POST[ $post_key ] );
+
+		$this->assertSame( array( $real ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -285,11 +311,13 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
 		$post_key    = wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' );
+		$first       = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$second      = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
 
 		$_POST = array(
 			'action'   => 'editpost',
 			'_wpnonce' => wp_create_nonce( 'update-post_' . $wordcamp_id ),
-			$post_key  => array( '7', '9' ),
+			$post_key  => array( (string) $first, (string) $second ),
 		);
 
 		// Only the per-field loop is under test. The after-save handlers geocode
@@ -300,7 +328,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$_POST = array();
 
-		$this->assertSame( array( 7, 9 ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array( $first, $second ), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -344,7 +372,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		unset( $_POST[ $post_key ] );
 
-		$this->assertSame( array(), MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) );
+		$this->assertSame( array(), MES_Sponsor_Group::get_stored_camp_groups( $wordcamp_id ) );
 	}
 
 	/**
@@ -361,7 +389,7 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$this->invoke( new MES_Sponsor(), 'save_post_meta', array( $sponsor_id, $submitted ) );
 
-		$this->assertSame( array( 11 => 501 ), MES_Sponsor::get_group_sponsorships( $sponsor_id ) );
+		$this->assertSame( array( 11 => 501 ), MES_Sponsor::get_stored_group_sponsorships( $sponsor_id ) );
 	}
 
 	/**
@@ -381,5 +409,64 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 
 		$this->assertArrayNotHasKey( 'mes_group_sponsorships', $registered );
 		$this->assertArrayHasKey( 'mes_regional_sponsorships', $registered );
+	}
+
+	/**
+	 * The camera kit wranglers for a camp: one address per group that has one, no repeats, valid only.
+	 */
+	public function test_camera_wranglers_for_camp_are_distinct_valid_addresses() {
+		$this->enable_groups();
+
+		$group_a = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_b = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_c = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group_d = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+
+		update_term_meta( $group_a, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'one@example.com' );
+		update_term_meta( $group_b, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'one@example.com' );
+		update_term_meta( $group_c, MES_Sponsor_Group::CAMERA_WRANGLER_META, 'not an address' );
+
+		$wordcamp_id = self::factory()->post->create( array( 'post_type' => 'wordcamp' ) );
+		update_post_meta( $wordcamp_id, 'mes_sponsor_groups', array( $group_a, $group_b, $group_c, $group_d ) );
+
+		$this->assertSame( array( 'one@example.com' ), MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+
+		add_filter( 'mes_sponsor_groups_enabled', '__return_false', 20 );
+
+		$this->assertSame( array(), MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+	}
+
+	/**
+	 * The group screen's camera wrangler field saves a valid address, clears on empty, and ignores junk.
+	 */
+	public function test_save_camera_wrangler_writes_clears_and_rejects() {
+		$this->enable_groups();
+		$this->set_current_user_as_wrangler();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$group_id = self::factory()->term->create( array( 'taxonomy' => MES_Sponsor_Group::TAXONOMY_SLUG ) );
+		$group    = new MES_Sponsor_Group();
+
+		$_POST['mes_group_camera_wrangler_nonce'] = wp_create_nonce( 'mes_group_camera_wrangler_' . $group_id );
+
+		$_POST['camera-wrangler-email'] = 'camera@example.com';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( 'camera@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		$_POST['camera-wrangler-email'] = 'not an address';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( 'camera@example.com', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		$_POST['camera-wrangler-email'] = '';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( '', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		// Without a valid nonce nothing is written.
+		$_POST['camera-wrangler-email']           = 'camera@example.com';
+		$_POST['mes_group_camera_wrangler_nonce'] = 'nope';
+		$group->save_camera_wrangler( $group_id );
+		$this->assertSame( '', get_term_meta( $group_id, MES_Sponsor_Group::CAMERA_WRANGLER_META, true ) );
+
+		unset( $_POST['camera-wrangler-email'], $_POST['mes_group_camera_wrangler_nonce'] );
 	}
 }

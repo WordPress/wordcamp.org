@@ -52,6 +52,17 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	protected static $has_occurrence_tables = false;
 
 	/**
+	 * The start stored for each plain event this test created, keyed by post ID.
+	 *
+	 * Expected entries read the start from here rather than resolving the offset again: two
+	 * `strtotime( '-2 days' )` calls a moment apart can land on different seconds, which made
+	 * `test_past_attended_event_is_listed` fail by one second in CI.
+	 *
+	 * @var array<int, string>
+	 */
+	protected $event_starts = array();
+
+	/**
 	 * Create the GatherPress datetime table the block reads from.
 	 *
 	 * The plugin owns this table, so the tests create it rather than assuming
@@ -139,8 +150,11 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 			)
 		);
 
-		$start = gmdate( 'Y-m-d H:i:s', strtotime( $offset ) );
-		$end   = gmdate( 'Y-m-d H:i:s', strtotime( $offset ) + HOUR_IN_SECONDS );
+		$timestamp = strtotime( $offset );
+		$start     = gmdate( 'Y-m-d H:i:s', $timestamp );
+		$end       = gmdate( 'Y-m-d H:i:s', $timestamp + HOUR_IN_SECONDS );
+
+		$this->event_starts[ $event_id ] = $start;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert(
@@ -211,8 +225,9 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	protected function add_occurrence( int $event_id, string $offset, string $status = 'scheduled' ): array {
 		global $wpdb;
 
-		$start         = gmdate( 'Y-m-d H:i:s', strtotime( $offset ) );
-		$end           = gmdate( 'Y-m-d H:i:s', strtotime( $offset ) + HOUR_IN_SECONDS );
+		$timestamp     = strtotime( $offset );
+		$start         = gmdate( 'Y-m-d H:i:s', $timestamp );
+		$end           = gmdate( 'Y-m-d H:i:s', $timestamp + HOUR_IN_SECONDS );
 		$recurrence_id = Rule::recurrence_id( new DateTimeImmutable( $start, new DateTimeZone( 'UTC' ) ) );
 		$now           = current_time( 'mysql', true );
 
@@ -277,16 +292,15 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	/**
 	 * Build the expected entry for a plain, non-recurring event.
 	 *
-	 * @param int    $event_id Event post ID.
-	 * @param string $offset   The offset the event was created with.
+	 * @param int $event_id Event post ID, as returned by `make_event()`.
 	 *
 	 * @return array{event_id: int, recurrence_id: string, start: string, timezone: string}
 	 */
-	protected function plain_entry( int $event_id, string $offset ): array {
+	protected function plain_entry( int $event_id ): array {
 		return array(
 			'event_id'      => $event_id,
 			'recurrence_id' => '',
-			'start'         => gmdate( 'Y-m-d H:i:s', strtotime( $offset ) ),
+			'start'         => $this->event_starts[ $event_id ],
 			'timezone'      => 'UTC',
 		);
 	}
@@ -421,7 +435,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$event_id  = $this->make_event( $organiser, '+3 days' );
 
 		$this->assertSame(
-			array( $this->plain_entry( $event_id, '+3 days' ) ),
+			array( $this->plain_entry( $event_id ) ),
 			get_upcoming_events( $organiser )
 		);
 	}
@@ -622,7 +636,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$this->rsvp( $member, $event_id );
 
 		$this->assertSame(
-			array( $this->plain_entry( $event_id, '-2 days' ) ),
+			array( $this->plain_entry( $event_id ) ),
 			get_past_events( $member ),
 			"An event the member RSVP'd to and that has finished should be listed."
 		);

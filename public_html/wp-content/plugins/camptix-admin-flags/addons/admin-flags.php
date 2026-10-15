@@ -244,7 +244,12 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			return;
 		}
 
-		if ( empty( $_POST['camptix-admin-flags-nonce'] ) || ! wp_verify_nonce( $_POST['camptix-admin-flags-nonce'], 'camptix-admin-flags-update' ) ) {
+		/*
+		 * The nonce is tied to the attendee the form was rendered for, so the form is
+		 * not applied to other attendees saved during the same request (e.g. companion
+		 * seats cancelled when their main ticket is refunded).
+		 */
+		if ( empty( $_POST['camptix-admin-flags-nonce'] ) || ! wp_verify_nonce( $_POST['camptix-admin-flags-nonce'], 'camptix-admin-flags-update-' . $post_id ) ) {
 			return;
 		}
 
@@ -265,7 +270,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		$attendee_flags = (array) get_post_meta( $post->ID, 'camptix-admin-flag' );
 		?>
 
-		<?php wp_nonce_field( 'camptix-admin-flags-update', 'camptix-admin-flags-nonce' ); ?>
+		<?php wp_nonce_field( 'camptix-admin-flags-update-' . $post->ID, 'camptix-admin-flags-nonce' ); ?>
 		<div class="camptix-admin-flags">
 			<?php foreach ( $this->flags as $key => $label ) : ?>
 

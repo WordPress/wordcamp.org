@@ -298,8 +298,33 @@ document.addEventListener( 'DOMContentLoaded', function () {
 				url: event.url,
 				location: event.location?.location ?? '',
 				timestamp: event.start_unix_timestamp,
-				type: event.type,
+				type: getEventTypeLabel( event ),
 			} ) );
+	}
+
+	/**
+	 * The label for an event's type, matching the Type filter's options.
+	 *
+	 * Keep in sync with `get_event_type_label()` in `index.php`, which labels the global list and REST results.
+	 *
+	 * @param {Object} event
+	 * @param {string} event.type
+	 * @param {string} event.url
+	 *
+	 * @return {string} Meetup, WordCamp or Other.
+	 */
+	function getEventTypeLabel( { type, url } ) {
+		if ( 'meetup' === type ) {
+			return 'Meetup';
+		}
+
+		if (
+			/^https?:\/\/([^/]*\.)?wordcamp\.org/i.test( String( url ?? '' ) )
+		) {
+			return 'WordCamp';
+		}
+
+		return 'Other';
 	}
 
 	/**
@@ -416,29 +441,23 @@ document.addEventListener( 'DOMContentLoaded', function () {
 	 * @param {Object} event
 	 * @param {string} event.title
 	 * @param {string} event.url
+	 * @param {string} event.type
 	 * @param {string} event.location
 	 * @param {number} event.timestamp
-	 * @param {string} event.type      Optional. Only nearby events have one.
 	 *
 	 * @return {string}
 	 */
-	function renderEvent( { title, url, location, timestamp, type } ) {
+	function renderEvent( { title, url, type, location, timestamp } ) {
 		const markup = `
 			<li class="wporg-marker-list-item">
 				<h3 class="wporg-marker-list-item__title">
 					<a class="external-link" href="${ escapeUrl( url ) }">
 						${ escapeHTML( title ) }
 					</a>
-					${
-						type
-							? `<span class="wporg-marker-list-item__type">${ escapeHTML(
-									type
-							  ) }</span>`
-							: ''
-					}
 				</h3>
 
 				<div class="wporg-marker-list-item__location">
+					<span class="wporg-marker-list-item__type">${ escapeHTML( type ) }</span>
 					${ escapeHTML( location ) }
 				</div>
 

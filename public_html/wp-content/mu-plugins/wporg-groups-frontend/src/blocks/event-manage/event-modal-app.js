@@ -361,6 +361,30 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			};
 		}, [] );
 
+		// Open the create form when the page is reached through the toolbar
+		// link, whose fragment comes from the config. The fragment is dropped
+		// once read: a reload doesn't reopen the form, and following the link
+		// again from this page is a fresh hash change that does.
+		useEffect( () => {
+			const openFromHash = () => {
+				const fragment = window.wporgGroupsEventModal?.createEventFragment;
+				if ( ! fragment || window.location.hash !== '#' + fragment ) {
+					return;
+				}
+				window.history.replaceState(
+					window.history.state,
+					'',
+					window.location.pathname + window.location.search
+				);
+				setState( { open: true, mode: 'create', eventId: 0 } );
+			};
+			openFromHash();
+			window.addEventListener( 'hashchange', openFromHash );
+			return () => {
+				window.removeEventListener( 'hashchange', openFromHash );
+			};
+		}, [] );
+
 		if ( ! state.open ) {
 			return null;
 		}

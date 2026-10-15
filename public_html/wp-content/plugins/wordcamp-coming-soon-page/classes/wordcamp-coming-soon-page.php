@@ -14,6 +14,7 @@ class WordCamp_Coming_Soon_Page {
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
+		add_action( 'template_redirect',          array( $this, 'disable_feeds' ) );
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
 		// Again after the callbacks, since `before_callbacks` only sets a response and a
 		// later filter on the same request can replace it. `PHP_INT_MAX` so nothing runs after it.
@@ -186,6 +187,33 @@ class WordCamp_Coming_Soon_Page {
 		if ( $this->override_theme_template ) {
 			add_filter( 'jetpack_enable_open_graph', '__return_false' );
 		}
+	}
+
+	/**
+	 * Prevent feeds from leaking content while the Coming Soon page is active.
+	 *
+	 * Core dispatches feed requests in `wp-includes/template-loader.php` and returns before the
+	 * `template_include` filter runs, so `override_theme_template()` never fires for them and posts
+	 * stay readable at `/feed/`, `/comments/feed/`, etc. `template_redirect` does fire for feeds, so
+	 * refuse them here, and strip the feed discovery links from the Coming Soon page so the blocked
+	 * feeds aren't advertised. Gated like the page and REST locks, so logged-in editors keep access.
+	 *
+	 * @see https://github.com/WordPress/wordcamp.org/issues/600
+	 */
+	public function disable_feeds() {
+		if ( ! $this->override_theme_template ) {
+			return;
+		}
+
+		if ( is_feed() ) {
+			wp_die(
+				esc_html__( 'Feeds are not available while the site is in Coming Soon mode.', 'wordcamporg' ),
+				'',
+				array( 'response' => 403 )
+			);
+		}
+
+		remove_action( 'wp_head', 'feed_links', 2 );
 	}
 
 	/**
@@ -407,7 +435,7 @@ class WordCamp_Coming_Soon_Page {
 	 */
 	public function get_dates() {
 		if ( 'wcpt-cancelled' === $this->get_status() ) {
-			return esc_html__( 'Cancelled', 'wordcamporg' );
+			return esc_html__( 'Canceled', 'wordcamporg' );
 		}
 
 		$dates         = false;
@@ -433,11 +461,9 @@ class WordCamp_Coming_Soon_Page {
 	/**
 	 * Loop through all pages and renders first contact-us form or contact-us block.
 	 *
-	 * We can't just create an arbitrary shortcode because of https://github.com/Automattic/jetpack/issues/102. Instead we have to use a form that's tied to a page.
-	 * This is somewhat fragile, though. It should work in most cases because the first $page that contains [contact-form] will be the one we automatically create
-	 * when the site is created, but if the organizers delete that and then add multiple forms, the wrong form could be displayed. The alternative approaches also
-	 * have problems, though, and #102 should be fixed relatively soon, so hopefully this will be good enough until it can be refactored.
-	 * todo Refactor this once #102-jetpack is fixed.
+	 * Jetpack contact forms are tied to a post/page context, so the Coming Soon page renders a form that lives on an existing page.
+	 * That constraint came from https://github.com/Automattic/jetpack/issues/102, which was closed in 2025 without changing it for shortcode forms.
+	 * Organizers can select which page's form is shown, and the oldest page with a form remains the fallback when there is no usable selection.
 	 *
 	 * @return string|false
 	 */
@@ -451,6 +477,23 @@ class WordCamp_Coming_Soon_Page {
 			'orderby'        => 'date',
 			'order'          => 'ASC',
 		) );
+
+		/*
+		 * The organizer can pick which page's form is shown. A valid published selection
+		 * is only moved to the front of the scan below, so the oldest-page fallback still
+		 * applies when the selection is missing, unpublished, or has no form.
+		 */
+		$settings  = $GLOBALS['WCCSP_Settings']->get_settings();
+		$chosen_id = absint( $settings['contact_form_page_id'] );
+
+		if ( $chosen_id ) {
+			// Not get_post( 0 ), which would return the global post instead.
+			$chosen_page = get_post( $chosen_id );
+
+			if ( $chosen_page instanceof WP_Post && 'page' === $chosen_page->post_type && 'publish' === $chosen_page->post_status ) {
+				array_unshift( $all_pages, $chosen_page );
+			}
+		}
 
 		foreach ( $all_pages as $page ) {
 

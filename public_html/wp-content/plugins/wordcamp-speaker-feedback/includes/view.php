@@ -208,8 +208,8 @@ function render_feedback_view() {
 /**
  * Prepare an attendee-submitted answer for display.
  *
- * Answers are free-form text, so the syntax that later filters would act on is encoded along
- * with the tags that `wp_kses_data()` handles.
+ * Answers are stored as plain text, so they're escaped rather than filtered as HTML, and the
+ * shortcode syntax that later filters would act on is encoded too.
  *
  * @param string $answer
  *
@@ -219,7 +219,7 @@ function sanitize_answer_for_display( $answer ) {
 	return str_replace(
 		array( '[', ']' ),
 		array( '&#91;', '&#93;' ),
-		wp_kses_data( $answer )
+		esc_html( $answer )
 	);
 }
 

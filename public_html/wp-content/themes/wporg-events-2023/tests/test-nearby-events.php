@@ -159,8 +159,31 @@ class Test_Nearby_Events extends WP_UnitTestCase {
 		$this->assertSame( array( 'title', 'url', 'location', 'timestamp', 'type' ), array_keys( $events[0] ) );
 		$this->assertSame( 'WordCamp Testing', $events[0]['title'] );
 		$this->assertSame( 'Skopje, North Macedonia', $events[0]['location'] );
-		$this->assertSame( 'wordcamp', $events[0]['type'] );
+		$this->assertSame( 'WordCamp', $events[0]['type'] );
 		$this->assertIsInt( $events[0]['timestamp'] );
+	}
+
+	/**
+	 * Types are labelled the same way as in the global list, so Campus Connect and other official events that the
+	 * API files under `wordcamp` aren't called WordCamps.
+	 */
+	public function test_labels_event_types_like_the_global_list() {
+		$meetup         = $this->make_event( 'Meetup' );
+		$meetup['type'] = 'meetup';
+		$meetup['url']  = 'https://www.meetup.com/example/events/1/';
+
+		$other        = $this->make_event( 'Campus Connect', 2 * DAY_IN_SECONDS );
+		$other['url'] = 'https://events.wordpress.org/campusconnect/2026/example/';
+
+		$this->api_response = $this->make_api_response( array(
+			$meetup,
+			$other,
+			$this->make_event( 'WordCamp Testing', 3 * DAY_IN_SECONDS ),
+		) );
+
+		$labels = wp_list_pluck( $this->get_nearby()->get_data()['events'], 'type' );
+
+		$this->assertSame( array( 'Meetup', 'Other', 'WordCamp' ), $labels );
 	}
 
 	/**

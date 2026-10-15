@@ -56,7 +56,7 @@ interaction, cross-plugin capability leaks, exploratory checks):
   Cancel on a group news post's comment form. Needs
   `organiser1`/`organiser2`/`organiser3`/`organiser4`/`eventorganiser1`/
   `eventorganiser2`/`eventorganiser3`/`eventorganiser4`/`eventorganiser5`/
-  `eventorganiser6`/`member1` (all `password`) — **every
+  `eventorganiser6`/`eventorganiser7`/`member1` (all `password`) — **every
   individual test that logs in as an author has its own dedicated
   `eventorganiser*` account, not just every spec *file*.** `organiser2`/
   `3`/`4` (editor tier) are `event-form.spec.js`'s own, one per test, for
@@ -266,7 +266,7 @@ and a REST application password (the browser pass needs the former, the
 REST pass needs the latter):
 
 ```bash
-for pair in "organiser1:editor" eventorganiser{1..6}:author "member1:subscriber"; do
+for pair in "organiser1:editor" eventorganiser{1..7}:author "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \

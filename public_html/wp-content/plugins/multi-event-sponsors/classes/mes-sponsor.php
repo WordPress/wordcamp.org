@@ -15,13 +15,31 @@ class MES_Sponsor {
 	public const POST_TYPE_SLUG = 'mes';
 
 	/**
-	 * Get a sponsor's group → sponsorship-level map.
+	 * Get a sponsor's group → sponsorship-level map, for deciding where it sponsors.
+	 *
+	 * Empty while the sponsor-groups flag is off; see MES_Sponsor_Group::get_camp_groups(). Use
+	 * get_stored_group_sponsorships() for the saved value itself.
 	 *
 	 * @param int $sponsor_id
 	 *
 	 * @return array { group_term_id (int) => sponsorship_level_post_id (int) }
 	 */
 	public static function get_group_sponsorships( $sponsor_id ) {
+		if ( ! MES_Sponsor_Group::is_enabled() ) {
+			return array();
+		}
+
+		return self::get_stored_group_sponsorships( $sponsor_id );
+	}
+
+	/**
+	 * Get a sponsor's saved group → sponsorship-level map, whether or not the flag is on.
+	 *
+	 * @param int $sponsor_id
+	 *
+	 * @return array { group_term_id (int) => sponsorship_level_post_id (int) }
+	 */
+	public static function get_stored_group_sponsorships( $sponsor_id ) {
 		$map = get_post_meta( $sponsor_id, 'mes_group_sponsorships', true );
 
 		return is_array( $map ) ? $map : array();

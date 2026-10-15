@@ -239,6 +239,11 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$_REQUEST['tix_stripe_session'] = $stripe_session_id;
 
 		$http_stub = function () use ( $session ) {
+			// A WP_Error stands in for Stripe not answering at all.
+			if ( is_wp_error( $session ) ) {
+				return $session;
+			}
+
 			return array(
 				'response' => array(
 					'code'    => 200,
@@ -398,6 +403,24 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * When Stripe can't be reached on return, the buyer is told not to pay again and the
+	 * order is left for the webhook or the timeout sweep, instead of a fatal error.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_return
+	 */
+	public function test_payment_return_leaves_order_when_stripe_cannot_be_reached() {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_return_down', 500 );
+
+		$down = new WP_Error( 'http_request_failed', 'Connection timed out' );
+		$died = $this->drive_payment_return( $stripe, $token, 'cs_return_down', $down );
+
+		$this->assertNotNull( $died );
+		$this->assertStringContainsString( 'Please do not pay again', $died );
+		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
+	}
+
+	/**
 	 * A Checkout Session is created with an expiry, so an abandoned draft's seat is only
 	 * ever held for as long as the session can be paid.
 	 */
@@ -431,6 +454,43 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		remove_filter( 'pre_http_request', $stub, 10 );
 
 		$this->assertSame( $expires_at, $captured['expires_at'] ?? null );
+	}
+
+	/**
+	 * Every request is pinned to the API version the code was written against, so Stripe never
+	 * falls back to the account default, which it rate-limits once it is over seven years old.
+	 *
+	 * @covers CampTix_Stripe_API_Client::send_request
+	 */
+	public function test_requests_pin_the_api_version() {
+		$captured = array();
+		$stub     = function ( $pre, $args, $url ) use ( &$captured ) {
+			if ( false === strpos( $url, 'api.stripe.com' ) ) {
+				return $pre;
+			}
+			$captured[] = $args['headers'];
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array( 'id' => 'cs_test_1' ) ),
+				'headers'  => array(),
+			);
+		};
+
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+		$client = new CampTix_Stripe_API_Client( 'tok_test', 'sk_test' );
+		$client->create_session( 'Event', array(), '', 'https://example.test/return', 'https://example.test/cancel', array() );
+		$client->get_session( 'cs_test_1' );
+		$client->request_refund( 'ch_test_1' );
+		remove_filter( 'pre_http_request', $stub, 10 );
+
+		$this->assertCount( 3, $captured );
+		foreach ( $captured as $headers ) {
+			$this->assertSame( CampTix_Stripe_API_Client::API_VERSION, $headers['Stripe-Version'] ?? null );
+		}
 	}
 
 	/**
@@ -833,6 +893,351 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$stripe->camptix_init();
 
 		return $stripe;
+	}
+
+	/**
+	 * A webhook signed with any predefined account's secret is accepted, as is one signed with
+	 * the original constant. Anything else is still rejected.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::rest_stripe_webhook_permissions_check
+	 */
+	public function test_webhook_accepts_each_predefined_accounts_secret() {
+		$client = new class() extends CampTix_Payment_Method_Stripe {
+			/**
+			 * One account without a webhook secret, one with.
+			 */
+			public function get_predefined_accounts() {
+				return array(
+					'first'  => array( 'label' => 'No webhook secret' ),
+					'second' => array( 'webhook_secret' => ' whsec_second ' ),
+				);
+			}
+		};
+
+		$this->assertTrue( $client->rest_stripe_webhook_permissions_check( $this->signed_webhook_request( 'whsec_second' ) ) );
+		$this->assertTrue( $client->rest_stripe_webhook_permissions_check( $this->signed_webhook_request( WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET ) ) );
+		$this->assertWPError( $client->rest_stripe_webhook_permissions_check( $this->signed_webhook_request( 'whsec_other' ) ) );
+	}
+
+	/**
+	 * A webhook request signed with the given secret.
+	 */
+	protected function signed_webhook_request( $secret ) {
+		$payload   = wp_json_encode( array( 'id' => 'evt_test' ) );
+		$timestamp = time();
+		$request   = new WP_REST_Request( 'POST', '/camptix/v1/stripe-webhook' );
+
+		$request->set_body( $payload );
+		$request->set_header( 'stripe-signature', 't=' . $timestamp . ',v1=' . hash_hmac( 'sha256', $timestamp . '.' . $payload, $secret ) );
+
+		return $request;
+	}
+
+	/**
+	 * A pending order waiting on a delayed payment, as left by a completed-but-unpaid checkout.
+	 *
+	 * @param string $token          Payment token.
+	 * @param int    $pending_since  When the order went pending.
+	 * @param string $payment_status The payment status recorded when it went pending.
+	 *
+	 * @return int[] The order's attendee IDs.
+	 */
+	protected function make_pending_order( $token, $pending_since, $payment_status = 'unpaid' ) {
+		global $wpdb;
+
+		$attendee_ids = array();
+		foreach ( array( 1, 2 ) as $i ) {
+			list( , $attendee_id ) = $this->make_stripe_order( $token, 500 );
+			$attendee_ids[]        = $attendee_id;
+		}
+
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_' . $token, time() );
+
+		foreach ( $attendee_ids as $attendee_id ) {
+			wp_update_post(
+				array(
+					'ID'          => $attendee_id,
+					'post_status' => 'pending',
+				)
+			);
+			update_post_meta(
+				$attendee_id,
+				'tix_transaction_details',
+				array(
+					'raw' => array(
+						'id'             => 'cs_' . $token,
+						'status'         => 'complete',
+						'payment_status' => $payment_status,
+					),
+				)
+			);
+
+			$modified = gmdate( 'Y-m-d H:i:s', $pending_since );
+			$wpdb->update(
+				$wpdb->posts,
+				array(
+					'post_modified_gmt' => $modified,
+					'post_modified'     => get_date_from_gmt( $modified ),
+				),
+				array( 'ID' => $attendee_id )
+			);
+			clean_post_cache( $attendee_id );
+		}
+
+		return $attendee_ids;
+	}
+
+	/**
+	 * A Checkout Session for a delayed payment, in the given state.
+	 */
+	protected function delayed_session( $token, $payment_status, $intent_status ) {
+		$session                   = $this->complete_session( get_current_blog_id() . ':' . $token, 50000 );
+		$session['id']             = 'cs_' . $token;
+		$session['payment_status'] = $payment_status;
+		$session['payment_intent'] = array(
+			'status'        => $intent_status,
+			'latest_charge' => 'ch_' . $token,
+		);
+
+		return $session;
+	}
+
+	/**
+	 * Run the pending sweep with the Stripe session fetch stubbed, counting the lookups.
+	 *
+	 * @param array|WP_Error $session The session Stripe answers with, or a transport error.
+	 *
+	 * @return int How many times Stripe was asked.
+	 */
+	protected function pending_sweep_with( $session ) {
+		$calls = 0;
+		$stub  = function () use ( $session, &$calls ) {
+			$calls++;
+
+			if ( is_wp_error( $session ) ) {
+				return $session;
+			}
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( $session ),
+				'headers'  => array(),
+			);
+		};
+
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+		try {
+			$this->make_configured_stripe()->review_pending_payments();
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		return $calls;
+	}
+
+	/**
+	 * A delayed payment that succeeded, with the webhook lost, is completed by the sweep. One
+	 * lookup covers the whole order.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_completes_a_paid_order() {
+		$attendee_ids = $this->make_pending_order( 'tok_boleto_paid', time() - 2 * HOUR_IN_SECONDS );
+
+		$calls = $this->pending_sweep_with( $this->delayed_session( 'tok_boleto_paid', 'paid', 'succeeded' ) );
+
+		$this->assertSame( 1, $calls );
+		foreach ( $attendee_ids as $attendee_id ) {
+			$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+		}
+	}
+
+	/**
+	 * A delayed payment that failed, with the webhook lost, fails the order and frees its seats.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_fails_a_failed_order() {
+		$attendee_ids = $this->make_pending_order( 'tok_boleto_failed', time() - 2 * HOUR_IN_SECONDS );
+
+		$this->pending_sweep_with( $this->delayed_session( 'tok_boleto_failed', 'unpaid', 'requires_payment_method' ) );
+
+		foreach ( $attendee_ids as $attendee_id ) {
+			$this->assertSame( 'failed', get_post_status( $attendee_id ) );
+		}
+	}
+
+	/**
+	 * A payment still in flight stays pending, and isn't asked about again for an hour.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_asks_about_an_order_in_flight_once_an_hour() {
+		$attendee_ids = $this->make_pending_order( 'tok_boleto_waiting', time() - 2 * HOUR_IN_SECONDS );
+		$session      = $this->delayed_session( 'tok_boleto_waiting', 'unpaid', 'processing' );
+
+		$this->assertSame( 1, $this->pending_sweep_with( $session ) );
+		$this->assertSame( 'pending', get_post_status( $attendee_ids[0] ) );
+		$this->assertSame( 'pending', get_post_status( $attendee_ids[1] ) );
+
+		$this->assertSame( 0, $this->pending_sweep_with( $session ), 'checked less than an hour ago' );
+
+		update_post_meta( $attendee_ids[0], '_stripe_pending_checked_at', time() - HOUR_IN_SECONDS - 1 );
+		update_post_meta( $attendee_ids[1], '_stripe_pending_checked_at', time() - HOUR_IN_SECONDS - 1 );
+		$this->assertSame( 1, $this->pending_sweep_with( $session ), 'checked over an hour ago' );
+	}
+
+	/**
+	 * An order that went pending less than an hour ago is left for its webhook.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_leaves_a_recent_order_to_the_webhook() {
+		$attendee_ids = $this->make_pending_order( 'tok_boleto_new', time() - 10 * MINUTE_IN_SECONDS );
+
+		$this->assertSame( 0, $this->pending_sweep_with( $this->delayed_session( 'tok_boleto_new', 'paid', 'succeeded' ) ) );
+		$this->assertSame( 'pending', get_post_status( $attendee_ids[0] ) );
+	}
+
+	/**
+	 * An order parked as pending because the amount paid didn't match is the organizer's to
+	 * reconcile. Stripe already said it was paid, so the sweep doesn't ask again.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_skips_an_order_held_for_organizer_review() {
+		$attendee_ids = $this->make_pending_order( 'tok_mismatch', time() - 2 * HOUR_IN_SECONDS, 'paid' );
+
+		$this->assertSame( 0, $this->pending_sweep_with( $this->delayed_session( 'tok_mismatch', 'paid', 'succeeded' ) ) );
+		$this->assertSame( 'pending', get_post_status( $attendee_ids[0] ) );
+	}
+
+	/**
+	 * When Stripe doesn't answer, the order stays pending and unstamped, so the next pass asks
+	 * again, and the rest of this pass doesn't wait on a lookup each.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::review_pending_payments
+	 */
+	public function test_pending_sweep_stops_asking_once_stripe_is_down() {
+		$first  = $this->make_pending_order( 'tok_down_1', time() - 2 * HOUR_IN_SECONDS );
+		$second = $this->make_pending_order( 'tok_down_2', time() - 2 * HOUR_IN_SECONDS );
+
+		$calls = $this->pending_sweep_with( new WP_Error( 'http_request_failed', 'Connection timed out' ) );
+
+		$this->assertSame( 1, $calls );
+		foreach ( array_merge( $first, $second ) as $attendee_id ) {
+			$this->assertSame( 'pending', get_post_status( $attendee_id ) );
+			$this->assertSame( '', get_post_meta( $attendee_id, '_stripe_pending_checked_at', true ) );
+		}
+	}
+
+	/**
+	 * Hit the cancel URL for an order with the Stripe session fetch stubbed.
+	 *
+	 * @param string         $payment_token Payment token.
+	 * @param array|WP_Error $session       The session Stripe answers with, or a transport error.
+	 *
+	 * @return string Where the buyer was redirected to.
+	 */
+	protected function drive_payment_cancel( $payment_token, $session ) {
+		$stub = function () use ( $session ) {
+			if ( is_wp_error( $session ) ) {
+				return $session;
+			}
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( $session ),
+				'headers'  => array(),
+			);
+		};
+
+		$location     = '';
+		$stop_redirect = function ( $url ) use ( &$location ) {
+			$location = $url;
+			throw new WPDieException( 'redirect' );
+		};
+
+		$_REQUEST['tix_payment_token'] = $payment_token;
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+		add_filter( 'wp_redirect', $stop_redirect );
+
+		try {
+			$this->make_configured_stripe()->payment_cancel();
+			$this->fail( 'payment_cancel() did not redirect.' );
+		} catch ( WPDieException $e ) {
+			$this->assertSame( 'redirect', $e->getMessage() );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+			remove_filter( 'wp_redirect', $stop_redirect );
+			unset( $_REQUEST['tix_payment_token'] );
+		}
+
+		return $location;
+	}
+
+	/**
+	 * A buyer who reaches the cancel URL after paying keeps the tickets they paid for.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_cancel
+	 */
+	public function test_cancel_completes_an_order_whose_session_is_already_paid() {
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_cancel_paid', 500 );
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_cancel_paid', time() + HOUR_IN_SECONDS );
+
+		$location = $this->drive_payment_cancel( $token, $this->complete_session( get_current_blog_id() . ':' . $token, 50000 ) );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+		$this->assertStringContainsString( 'tix_action=access_tickets', $location );
+	}
+
+	/**
+	 * A delayed payment completed at Stripe goes pending rather than being cancelled.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_cancel
+	 */
+	public function test_cancel_keeps_a_delayed_payment_pending() {
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_cancel_delayed', 500 );
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_cancel_delayed', time() + HOUR_IN_SECONDS );
+
+		$session                   = $this->complete_session( get_current_blog_id() . ':' . $token, 50000 );
+		$session['payment_status'] = 'unpaid';
+		$session['payment_intent'] = array( 'status' => 'processing' );
+
+		$this->drive_payment_cancel( $token, $session );
+
+		$this->assertSame( 'pending', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * A session that isn't complete, or one Stripe can't be asked about, is cancelled as before.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_cancel
+	 */
+	public function test_cancel_cancels_an_open_or_unknown_session() {
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_cancel_open', 500 );
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_cancel_open', time() + HOUR_IN_SECONDS );
+
+		$session           = $this->complete_session( get_current_blog_id() . ':' . $token, 50000 );
+		$session['status'] = 'open';
+
+		$location = $this->drive_payment_cancel( $token, $session );
+
+		$this->assertSame( 'cancel', get_post_status( $attendee_id ) );
+		$this->assertStringContainsString( 'payment_cancelled', $location );
+
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_cancel_down', 500 );
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_cancel_down', time() + HOUR_IN_SECONDS );
+
+		$this->drive_payment_cancel( $token, new WP_Error( 'http_request_failed', 'Connection timed out' ) );
+
+		$this->assertSame( 'cancel', get_post_status( $attendee_id ) );
 	}
 
 	/**

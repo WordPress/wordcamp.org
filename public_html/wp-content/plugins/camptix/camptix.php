@@ -1271,8 +1271,8 @@ class CampTix_Plugin {
 
 	function register_post_statuses() {
 		register_post_status( 'cancel', array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,
@@ -1317,7 +1317,7 @@ class CampTix_Plugin {
 			$states['failed'] = __( 'Failed', 'wordcamporg' );
 
 		if ( $post->post_status == 'cancel' && get_query_var( 'post_status' ) != 'cancel' )
-			$states['cancelled'] = __( 'Cancelled', 'wordcamporg' );
+			$states['cancelled'] = __( 'Canceled', 'wordcamporg' );
 
 		if ( $post->post_status == 'refund' && get_query_var( 'post_status' ) != 'refund' )
 			$states['cancelled'] = __( 'Refunded', 'wordcamporg' );
@@ -1763,7 +1763,13 @@ class CampTix_Plugin {
 			}
 		}
 
-		$currency = $currencies[ $currency_key ];
+		if ( isset( $currencies[ $currency_key ] ) ) {
+			$currency = $currencies[ $currency_key ];
+		} else {
+			// Payment addons can add currencies through the `camptix_currencies` filter (e.g. MercadoPago adds VEF).
+			$filtered_currencies = $this->get_currencies();
+			$currency            = $filtered_currencies[ $currency_key ] ?? array();
+		}
 
 		if ( ! isset( $currency['decimal_point'] ) ) {
 			$currency['decimal_point'] = 2;
@@ -2557,8 +2563,9 @@ class CampTix_Plugin {
 		$post_query_conditions = array();
 
 		$relation = strtolower( $relation );
-		if ( ! in_array( $relation, array( 'and', 'or' ) ) )
+		if ( ! in_array( $relation, array( 'and', 'or' ) ) ) {
 			return $segment;
+		}
 
 		$query = array(
 			'post_type' => 'tix_attendee',
@@ -2645,6 +2652,15 @@ class CampTix_Plugin {
 				$post_query_conditions[] = $condition;
 				continue;
 			}
+		}
+
+		// Allow others to filter the query as needed.
+		$query = apply_filters( 'camptix_notify_segment_query', $query, $conditions, $relation );
+
+		// A filter that added a meta or date condition makes this a non-empty query, so an "or"
+		// relation still gets the second pass for the post-query conditions below.
+		if ( count( $query['meta_query'] ) > 1 || ! empty( $query['date_query'] ) ) {
+			$empty_query = false;
 		}
 
 		$post_query_segment = get_posts( $query );
@@ -2957,7 +2973,7 @@ class CampTix_Plugin {
 								<?php endif; ?>
 								<option <?php selected( $post->post_status, 'publish' ); ?> value="publish"><?php _e( 'Published', 'wordcamporg' ); ?></option>
 								<option <?php selected( $post->post_status, 'refund' ); ?> value="refund"><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
-								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Canceled', 'wordcamporg' ); ?></option>
 							</select>
 							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
 							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
@@ -3046,7 +3062,7 @@ class CampTix_Plugin {
 		$statuses = array(
 			'publish' => _x( 'Published', 'post', 'wordcamporg' ),
 			'refund'  => _x( 'Refunded', 'post', 'wordcamporg' ),
-			'cancel'  => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'cancel'  => _x( 'Canceled', 'post', 'wordcamporg' ),
 		);
 
 		?>
@@ -4021,7 +4037,7 @@ class CampTix_Plugin {
 					update_post_meta( $post_id, 'tix_quantity', $ticket_quantity );
 
 					delete_post_meta( $post_id, 'tix_reservation', $reservations[$cancel_token] );
-					$this->log( 'Cancelled a reservation.', $post_id, $reservations[$cancel_token] );
+					$this->log( 'Canceled a reservation.', $post_id, $reservations[$cancel_token] );
 				}
 			}
 		}
@@ -4565,7 +4581,7 @@ class CampTix_Plugin {
 		}
 
 		if ( isset( $redirected_error_flags['payment_cancelled'] ) ) {
-			$this->error( __( 'Your payment has been cancelled. Feel free to try again!', 'wordcamporg' ) );
+			$this->error( __( 'Your payment has been canceled. Feel free to try again!', 'wordcamporg' ) );
 		}
 
 		if ( isset( $redirected_error_flags['invalid_edit_token'] ) ) {
@@ -4577,7 +4593,7 @@ class CampTix_Plugin {
 		}
 
 		if ( isset( $redirected_error_flags['invalid_reservation'] ) ) {
-			$this->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
+			$this->error( __( 'Sorry, but the reservation you are trying to use has been canceled or has expired.', 'wordcamporg' ) );
 		}
 
 		do_action( 'camptix_form_start_errors', $redirected_error_flags );
@@ -5703,7 +5719,7 @@ class CampTix_Plugin {
 
 					</tbody>
 				</table>
-				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be cancelled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
+				<p class="tix-description"><?php _e( 'Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be canceled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund.', 'wordcamporg' ); ?></p>
 				<p class="tix-submit">
 					<label><input type="checkbox" name="tix_refund_request_confirmed" value="1"> <?php _e( 'I agree to the above terms', 'wordcamporg' ); ?></label>
 					<input type="submit" value="<?php esc_attr_e( 'Send Request', 'wordcamporg' ); ?>" />
@@ -6375,6 +6391,14 @@ class CampTix_Plugin {
 		if ( isset( $_POST['tix_receipt_email_js'] ) && is_email( $_POST['tix_receipt_email_js'] ) )
 			$receipt_email = wp_unslash( $_POST['tix_receipt_email_js'] );
 
+		/**
+		 * Filter: Modify the address the receipt is sent to.
+		 *
+		 * @param string|false $receipt_email The email of the attendee the buyer picked, or false if none was picked.
+		 * @param array        $attendees     The attendees being checked out.
+		 */
+		$receipt_email = apply_filters( 'camptix_checkout_receipt_email', $receipt_email, $attendees );
+
 		if ( ! is_email( $receipt_email ) )
 			$this->error_flags['no_receipt_email'] = true;
 
@@ -6519,7 +6543,9 @@ class CampTix_Plugin {
 	 * Attendee ids of the buyer's own abandoned draft orders: drafts on the payment token of a
 	 * buyer row, whose release time has passed. The buyer row is the one require-login stamps
 	 * with the buyer's tix_username: the first attendee of the order, the rest carrying its
-	 * unconfirmed placeholder until each confirms. Without require-login nothing is stamped
+	 * unconfirmed placeholder until each confirms. When the buyer doesn't know who will use
+	 * the first ticket either, it carries the placeholder too, and the buyer's username is in
+	 * tix_buyer_username instead. Without require-login nothing is stamped
 	 * and this is always empty, as it is when logged out. Their sessions are dead, so they can
 	 * be left out of the buyer's own counts without any risk of two seats; the sweep times
 	 * them out.
@@ -6549,8 +6575,13 @@ class CampTix_Plugin {
 			'posts_per_page' => -1,
 			'cache_results'  => ! $this->checkout_lock_open,
 			'meta_query'     => array(
+				'relation' => 'OR',
 				array(
 					'key'   => 'tix_username',
+					'value' => $login,
+				),
+				array(
+					'key'   => 'tix_buyer_username',
 					'value' => $login,
 				),
 			),
@@ -7402,6 +7433,16 @@ class CampTix_Plugin {
 
 				do_action( 'camptix_ticket_emailed', $receipt_attendee->ID );
 
+				/**
+				 * Filter: Also send the attendee their own ticket e-mail, as multiple purchases do.
+				 *
+				 * @param bool    $send     Whether to send it. Default false.
+				 * @param WP_Post $attendee The only attendee in the order.
+				 */
+				if ( apply_filters( 'camptix_email_single_purchase_attendee_ticket', false, $attendees[0] ) ) {
+					$this->email_attendee_ticket_multiple_template( $attendees[0] );
+				}
+
 			} elseif ( count( $attendees ) > 1 ) {
 
 				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase_receipt', $attendees[0] );
@@ -7590,7 +7631,12 @@ class CampTix_Plugin {
 
 		$printed = array();
 		$allowed_html = array_merge(
-			array( 'p' => array( 'id' => true ) ),
+			array(
+				'p' => array( 'id' => true ),
+				'ul' => true,
+				'ol' => true,
+				'li' => true,
+			),
 			wp_kses_allowed_html( 'data' )
 		);
 
@@ -7696,6 +7742,19 @@ class CampTix_Plugin {
 	 * easy, check out the addons directory.
 	 */
 	function log( $message, $post_id = 0, $data = null, $module = 'general' ) {
+		/**
+		 * Filters the data attached to a log entry, before any logger receives it.
+		 *
+		 * Lets an add-on keep sensitive form fields out of the log, which stores some
+		 * entries' data as the raw `$_POST`.
+		 *
+		 * @param mixed  $data    Data attached to the entry.
+		 * @param string $message Log message.
+		 * @param int    $post_id Related post ID.
+		 * @param string $module  Log module.
+		 */
+		$data = apply_filters( 'camptix_log_data', $data, $message, $post_id, $module );
+
 		do_action( 'camptix_log_raw', $message, $post_id, $data, $module );
 	}
 

@@ -984,7 +984,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				array(
 					'timestamp' => time(),
 					'user_id'   => get_current_user_id(),
-					'message'   => __( 'Application moved to Needs Orientation. Organizer notification email triggered.', 'wordcamporg' ),
+					'message'   => __( 'Application moved to Needs Orientation. Organizer notification email trigger fired.', 'wordcamporg' ),
 				)
 			);
 
@@ -1129,6 +1129,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
 					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
+					// A sponsor group stands in for the region while groups are on, as it does for creating the site.
+					if ( 'Multi-Event Sponsor Region' === $field && $this->has_sponsor_groups( $post_data_raw['ID'] ) ) {
+						continue;
+					}
+
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
@@ -1142,6 +1147,33 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $post_data;
+		}
+
+		/**
+		 * Whether the camp is in at least one sponsor group, while sponsor groups are on.
+		 *
+		 * Reads what the WordCamp screen posted, or what's saved when the current user can't change the
+		 * groups: the picker is disabled for them, so it posts nothing, and they can't change the saved
+		 * groups either.
+		 *
+		 * @param int $post_id
+		 *
+		 * @return bool
+		 */
+		protected function has_sponsor_groups( $post_id ) {
+			if ( ! class_exists( 'MES_Sponsor_Group' ) || ! MES_Sponsor_Group::is_enabled() ) {
+				return false;
+			}
+
+			if ( self::is_protected_field( MES_Sponsor_Group::WCPT_FIELD ) ) {
+				return (bool) MES_Sponsor_Group::get_stored_camp_groups( $post_id );
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+			$groups = (array) ( $_POST[ wcpt_key_to_str( MES_Sponsor_Group::WCPT_FIELD, 'wcpt_' ) ] ?? array() );
+
+			// Only a group that exists counts, the same way the picker's save keeps only those.
+			return (bool) MES_Sponsor_Group::sanitize_group_ids( $groups );
 		}
 
 		/**
@@ -1324,7 +1356,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				5 => array(
 					'type'   => 'updated',
-					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation. The organizer notification email has been triggered and a note has been added to the log.', 'wordcamporg' ),
+					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation and a note has been added to the log. The organizer notification email is sent by the Automated Reminder assigned to the "Campus Connect application needs orientation" trigger — if no reminder is assigned, no email goes out.', 'wordcamporg' ),
 				),
 			);
 

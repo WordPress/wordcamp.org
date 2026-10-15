@@ -390,6 +390,22 @@ class WordCamp_QBO {
 			$customer_email = is_email( $sponsor['email-address'] );
 		}
 
+		/*
+		 * Copy the event's own address on the invoice, so the organizers see exactly what the sponsor received,
+		 * and can resend it from QBO. It's optional, so a missing or invalid address doesn't stop the invoice.
+		 * Sandboxes get a fake address here too, for the same reason as above.
+		 */
+		$wordcamp    = get_wordcamp_post();
+		$event_email = $wordcamp ? is_email( $wordcamp->meta['E-mail Address'][0] ?? '' ) : false;
+
+		if ( $event_email && 0 === strcasecmp( $event_email, (string) $sponsor['email-address'] ) ) {
+			$event_email = false;
+		}
+
+		if ( $event_email && self::$sandbox_mode ) {
+			$event_email = 'john.doe@example.org';
+		}
+
 		foreach ( array( 'amount', 'customer_id', 'customer_email' ) as $field ) {
 			if ( empty( $$field ) ) {
 				return new WP_Error( 'required_field_empty', "$field cannot be empty." );
@@ -519,6 +535,12 @@ class WordCamp_QBO {
 				'Address' => $customer_email,
 			),
 		);
+
+		if ( $event_email ) {
+			$payload['BillEmailCc'] = array(
+				'Address' => $event_email,
+			);
+		}
 
 		/*
 		 * QuickBooks doesn't have a CustomerCurrency row for the home currency, so a CurrencyRef is only used

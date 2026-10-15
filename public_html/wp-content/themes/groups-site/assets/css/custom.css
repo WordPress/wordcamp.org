@@ -775,14 +775,6 @@ body.error404 .site-content-container h1 {
 	text-wrap: balance;
 }
 
-/* The host's name is a person, not an action — it keeps the text colour
-   and lets the underline mark it as a link, the way speaker and member
-   names render, rather than turning blue like a UI control. */
-
-.groups-site-event-hero-host .wp-block-post-author-name a {
-	color: inherit;
-}
-
 /* "Part of {group} · {count}". The separator binds to the count it
    introduces, mirroring the location + count pair on the front page. */
 

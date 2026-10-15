@@ -225,10 +225,15 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * ones, and exposes private post meta such as `Actual Attendees`. It must
 	 * therefore never be readable anonymously.
 	 *
+	 * `view_campus_connect_report` (the `campus_connect_viewer` subrole) opens
+	 * this endpoint and nothing else. It is deliberately not accepted by the
+	 * admin screen, which builds the report in private context from any
+	 * requested fields, organiser contact details included.
+	 *
 	 * @return bool
 	 */
 	public static function rest_permission_callback() {
-		return current_user_can( CAPABILITY );
+		return current_user_can( CAPABILITY ) || current_user_can( 'view_campus_connect_report' );
 	}
 
 	/**
@@ -255,6 +260,12 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * which returns null for callers who cannot edit the post -- precisely the
 	 * `report_viewer` audience this endpoint serves.
 	 *
+	 * `Organizer Name` is deliberately absent too. It names a person, and this
+	 * endpoint returns events in every status, so it would name the organiser
+	 * behind applications that are declined, cancelled or still being vetted,
+	 * which Central never lists publicly. The endpoint exists for automated
+	 * reporting on events, which needs no one's name.
+	 *
 	 * @return array
 	 */
 	public static function get_rest_fields() {
@@ -263,7 +274,6 @@ class CampusConnect_Details extends WordCamp_Details {
 			'End Date (YYYY-mm-dd)',
 			'Status',
 			'Name',
-			'Organizer Name',
 			'Venue Name',
 			'_venue_city',
 			'_venue_country_name',

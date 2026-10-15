@@ -131,7 +131,15 @@ class WordCamp_Loader extends Event_Loader {
 				'delete_others_posts'    => 'wordcamp_wrangle_wordcamps',
 				'delete_private_posts'   => 'wordcamp_wrangle_wordcamps',
 				'delete_published_posts' => 'wordcamp_wrangle_wordcamps',
-				'edit_others_posts'      => 'wordcamp_wrangle_wordcamps',
+
+				/*
+				 * Its own capability, not the wrangler one, so it can be granted more narrowly: wranglers get
+				 * it through `wcorg-subroles.php`, and a mentor gets it only while saving their mentee's camp.
+				 * Mapping it straight to `wordcamp_wrangle_wordcamps` made core's save path demand wrangler
+				 * rights from a mentor, and widening that cap for the save would also have let them change the
+				 * status and the protected fields, which check `wordcamp_wrangle_wordcamps` directly.
+				 */
+				'edit_others_posts'      => 'edit_others_wordcamps',
 				'edit_private_posts'     => 'wordcamp_wrangle_wordcamps',
 				'edit_published_posts'   => 'wordcamp_wrangle_wordcamps',
 				'publish_posts'          => 'wordcamp_wrangle_wordcamps',
@@ -209,7 +217,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => _x( 'On Hold',                                     'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                                    'wordcamp status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                                   'wordcamp status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                                    'wordcamp status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved for Pre-Planning Pending Agreement', 'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
@@ -551,6 +559,7 @@ class WordCamp_Loader extends Event_Loader {
 		$milestones = array(
 			'wcpt-needs-vetting'   => 'Application received',
 			'wcpt-needs-orientati' => 'Application vetted',
+			'wcpt-needs-action'    => 'Application vetted',
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
 			'wcpt-rejected'        => 'Sent response',
@@ -721,7 +730,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                 'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                  'campus connect status', 'wordcamporg' ),
 		);
 	}
 
@@ -739,6 +748,8 @@ class WordCamp_Loader extends Event_Loader {
 	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
 	 *   WordCamp Closed      → Declined, Cancelled, On Hold
 	 *   Declined / Cancelled / On Hold → any CC status
+	 *   Any older, non-CC workflow status → On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, WordCamp Closed, Declined, Cancelled
 	 *
 	 * @param string $status Current status slug.
 	 * @return array Array of valid next-status slugs.
@@ -758,10 +769,23 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => $all_cc,
 		);
 
+		if ( isset( $transitions[ $status ] ) ) {
+			return $transitions[ $status ];
+		}
+
+		// Applications from before the CC workflow are still in the older statuses, like In
+		// Pre-Planning. With nothing to move to, their status couldn't be changed at all (#1714).
+		// They can go anywhere past intake: not back to Needs Vetting, which queues them for the
+		// vetting agent again, Needs Action, the agent's hand-off, or Needs Orientation, which sends
+		// the organizer email.
+		if ( array_key_exists( $status, self::get_post_statuses() ) ) {
+			return array( 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled' );
+		}
+
 		// For an unexpected/mid-transition status, allow no transitions rather than
 		// defaulting to a real status: the metabox keeps the current status selectable
 		// (as a disabled option) so it is never silently mutated.
-		return $transitions[ $status ] ?? array();
+		return array();
 	}
 
 	/**

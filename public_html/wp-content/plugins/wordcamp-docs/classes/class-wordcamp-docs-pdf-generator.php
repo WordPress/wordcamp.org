@@ -187,6 +187,8 @@ class WordCamp_Docs_PDF_Generator {
 		if ( ! file_exists( $file ) ) {
 			status_header( 404 );
 			echo 'File not found.';
+
+			return;
 		}
 
 		header( 'Content-Type: application/pdf' );
@@ -221,6 +223,9 @@ class WordCamp_Docs_PDF_Generator {
 	 * `blogs.dir`, which every web server shares, so one warm-up covers all of them. It sits beside the
 	 * sites' `<id>/files` folders, not inside one, so `/files/` URLs can't serve it.
 	 *
+	 * If that folder can't be written to, the cache falls back to the temp folder, which is per server
+	 * and doesn't survive a reboot. DomPDF can't render anything without a writable font cache.
+	 *
 	 * @return string Full path to the font cache folder, with a trailing slash.
 	 */
 	public static function get_font_cache_folder() {
@@ -235,6 +240,15 @@ class WordCamp_Docs_PDF_Generator {
 
 		if ( ! is_dir( $font_dir ) ) {
 			wp_mkdir_p( $font_dir );
+		}
+
+		// E.g. an NFS export that doesn't let this server write to the shared folder.
+		if ( ! wp_is_writable( $font_dir ) ) {
+			$font_dir = get_temp_dir() . 'wordcamp-docs-fonts/';
+
+			if ( ! is_dir( $font_dir ) ) {
+				wp_mkdir_p( $font_dir );
+			}
 		}
 
 		return $font_dir;

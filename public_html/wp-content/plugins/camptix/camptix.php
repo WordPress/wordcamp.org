@@ -4652,10 +4652,6 @@ class CampTix_Plugin {
 			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
 		}
 
-		if ( isset( $this->error_flags['attendee_info_mismatch'] ) ) {
-			$this->error( __( 'The attendee information submitted does not match the selected tickets. Please review your order and try again.', 'wordcamporg' ) );
-		}
-
 		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
 			$no_tickets_msg = ( $this->block_attributes['noTicketsMessage'] ?? '' )
 				?: __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' );
@@ -4938,6 +4934,9 @@ class CampTix_Plugin {
 				$this->notice( __( 'You have exceeded the coupon limits, so we have stripped down the extra tickets.', 'wordcamporg' ) );
 			elseif ( 'checkout' == $_GET['tix_action'] )
 				$this->error( __( 'It looks like somebody used the same coupon before you could finish your purchase. Please review your order and try again.', 'wordcamporg' ) );
+
+		if ( isset( $this->error_flags['attendee_info_mismatch'] ) )
+			$this->error( __( 'The attendee information submitted does not match the selected tickets. Please review your order and try again.', 'wordcamporg' ) );
 
 		if ( isset( $this->error_flags['required_fields'] ) )
 			$this->error( __( 'Please fill in all required fields.', 'wordcamporg' ) );

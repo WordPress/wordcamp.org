@@ -15,8 +15,8 @@ defined( 'WPINC' ) || die();
 
 final class Query {
 
-	/** @var WeakMap<WP_Post, object>|null Occurrence context keyed by the exact cloned post object. */
-	private static ?WeakMap $contexts = null;
+	/** @var array<int, array<string, object>> Occurrence rows keyed by series post ID, then recurrence ID. */
+	private static array $occurrences = array();
 
 	/** @var WeakMap<WP_Query, array{0: ?object}>|null Context that was active when each occurrence loop started. */
 	private static ?WeakMap $outer_contexts = null;
@@ -105,16 +105,21 @@ final class Query {
 			return $posts;
 		}
 
-		self::$contexts ??= new WeakMap();
-
 		foreach ( $posts as $index => $post ) {
-			if ( empty( $rows[ $index ]->recurrence_id ) ) {
+			$recurrence_id = (string) ( $rows[ $index ]->recurrence_id ?? '' );
+			if ( '' === $recurrence_id ) {
 				continue;
 			}
 
-			$posts[ $index ]                    = clone $post;
-			$posts[ $index ]->gpre_occurrence   = $rows[ $index ];
-			self::$contexts[ $posts[ $index ] ] = $rows[ $index ];
+			/*
+			 * The post carries only the recurrence ID, not the row. Core casts posts
+			 * to arrays of strings, e.g. `is_attachment( $post )` in `get_post_class()`,
+			 * and an object property there is a fatal error.
+			 */
+			$posts[ $index ]                  = clone $post;
+			$posts[ $index ]->gpre_occurrence = $recurrence_id;
+
+			self::$occurrences[ $post->ID ][ $recurrence_id ] = $rows[ $index ];
 		}
 
 		return $posts;
@@ -131,13 +136,8 @@ final class Query {
 			return;
 		}
 
-		if ( isset( $post->gpre_occurrence ) ) {
-			Context::set( $post->gpre_occurrence );
-			return;
-		}
-
-		if ( null !== self::$contexts && isset( self::$contexts[ $post ] ) ) {
-			Context::set( self::$contexts[ $post ] );
+		if ( isset( $post->gpre_occurrence, self::$occurrences[ $post->ID ][ $post->gpre_occurrence ] ) ) {
+			Context::set( self::$occurrences[ $post->ID ][ $post->gpre_occurrence ] );
 			return;
 		}
 

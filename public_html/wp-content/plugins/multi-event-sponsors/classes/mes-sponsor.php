@@ -117,17 +117,76 @@ class MES_Sponsor {
 					'permission_callback' => function() {
 						return current_user_can( 'manage_network' );
 					},
+					'args'                => array(
+						'sponsorId' => array(
+							'type'     => 'integer',
+							'required' => true,
+						),
+						'dryRun'    => array(
+							'type'    => 'boolean',
+							'default' => false,
+						),
+					),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Copy the contents of MES posts to their forked posts on active camp sites.
+	 * Push a Multi-Event Sponsor to the active camp sites.
+	 *
+	 * Copies its title, content and meta to the camp copies organizers haven't edited. A draft is a
+	 * brand the working group is staging (#1208), so it's also added, as a draft copy, to the active
+	 * camps in its regions or groups that don't have it yet, the way `wp mes propagate` adds a new
+	 * sponsor. A published sponsor is only updated, as before.
+	 *
+	 * With `dryRun`, nothing is written: the response says what a push would do, so the editor can
+	 * show it and ask for confirmation first.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return array { success, dry_run, added, updated, skipped_posts }, or { success, error }.
 	 */
 	public function push_to_active_camps( WP_REST_Request $request ) : array {
+		$source_post = get_post( absint( $request->get_param( 'sponsorId' ) ) );
+		$dry_run     = (bool) $request->get_param( 'dryRun' );
+
+		if ( ! $source_post || self::POST_TYPE_SLUG !== $source_post->post_type ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'That is not a Multi-Event Sponsor.', 'wordcamporg' ),
+			);
+		}
+
+		// Update first, so copies added below aren't counted as updated too.
+		$forks = $this->update_forks( $source_post, $dry_run );
+		$added = array();
+
+		if ( 'draft' === $source_post->post_status ) {
+			$summary = MES_Propagator::run( $source_post->ID, $dry_run, true );
+			$added   = array_values( array_map( 'html_entity_decode', $summary['camps_added'] ) );
+		}
+
+		return array(
+			'success'       => true,
+			'dry_run'       => $dry_run,
+			'added'         => $added,
+			'updated'       => $forks['updated'],
+			'skipped_posts' => $forks['skipped'],
+		);
+	}
+
+	/**
+	 * Copy the contents of a MES post to its forked posts on active camp sites.
+	 *
+	 * @param WP_Post $source_post
+	 * @param bool    $dry_run If true, only find out which copies would be updated.
+	 *
+	 * @return array { updated: site names, skipped: { edit_url, site_name } for copies organizers edited }
+	 */
+	protected function update_forks( WP_Post $source_post, $dry_run ): array {
+		$updated       = array();
 		$skipped_posts = array();
-		$source_post   = get_post( $request->get_param( 'sponsorId' ) );
 		$wordcamps     = get_wordcamps( array(
 			'post_status' => array_merge(
 				// Any status where the camp might have a site created, and the event isn't over.
@@ -170,6 +229,13 @@ class MES_Sponsor {
 				continue;
 			}
 
+			$updated[] = get_wordcamp_name();
+
+			if ( $dry_run ) {
+				restore_current_blog();
+				continue;
+			}
+
 			wp_update_post( array(
 				'ID'           => $fork_post->ID,
 				'post_title'   => $source_post->post_title,
@@ -191,8 +257,8 @@ class MES_Sponsor {
 		}
 
 		return array(
-			'success'       => true,
-			'skipped_posts' => $skipped_posts,
+			'updated' => $updated,
+			'skipped' => $skipped_posts,
 		);
 	}
 

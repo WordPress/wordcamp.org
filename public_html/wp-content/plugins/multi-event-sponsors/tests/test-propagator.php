@@ -299,6 +299,89 @@ class Test_MES_Propagator extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A draft sponsor is a staged brand the working group hasn't published, so a run leaves it
+	 * out, even when it's named, unless drafts are asked for explicitly (#1208).
+	 */
+	public function test_run_skips_a_draft_sponsor_by_default() {
+		list( , $site_id, , $sponsor_b ) = $this->make_propagation_setup();
+		wp_update_post(
+			array(
+				'ID'          => $sponsor_b,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertSame( 0, MES_Propagator::run()['sponsors_added'] );
+		$this->assertSame( 0, MES_Propagator::run( $sponsor_b )['sponsors_added'] );
+		$this->assertArrayNotHasKey( $sponsor_b, $this->get_site_sponsors_by_mes_id( $site_id ) );
+	}
+
+	/**
+	 * With drafts asked for, a named draft sponsor reaches the camps a published one would, as a
+	 * draft copy, and the summary names those camps.
+	 */
+	public function test_run_adds_a_named_draft_sponsor_when_asked() {
+		list( $wordcamp_id, $site_id, , $sponsor_b ) = $this->make_propagation_setup();
+		wp_update_post(
+			array(
+				'ID'          => $sponsor_b,
+				'post_status' => 'draft',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'         => $wordcamp_id,
+				'post_title' => 'WordCamp Draftville',
+			)
+		);
+
+		$summary = MES_Propagator::run( $sponsor_b, false, true );
+
+		$this->assertSame( 1, $summary['sponsors_added'] );
+		$this->assertSame( array( $wordcamp_id => get_wordcamp_name( $site_id ) ), $summary['camps_added'] );
+		$this->assertStringStartsWith( 'WordCamp Draftville', $summary['camps_added'][ $wordcamp_id ] );
+
+		$site_sponsors = $this->get_site_sponsors_by_mes_id( $site_id );
+		$this->assertArrayHasKey( $sponsor_b, $site_sponsors );
+		$this->assertSame( 'draft', $site_sponsors[ $sponsor_b ]->post_status );
+	}
+
+	/**
+	 * Drafts are only ever pushed for one named sponsor, never in a full run.
+	 */
+	public function test_run_ignores_drafts_without_a_named_sponsor() {
+		list( , $site_id, , $sponsor_b ) = $this->make_propagation_setup();
+		wp_update_post(
+			array(
+				'ID'          => $sponsor_b,
+				'post_status' => 'draft',
+			)
+		);
+
+		MES_Propagator::run( 0, false, true );
+
+		$this->assertArrayNotHasKey( $sponsor_b, $this->get_site_sponsors_by_mes_id( $site_id ) );
+	}
+
+	/**
+	 * A dry run names the camps it would add to, and writes nothing.
+	 */
+	public function test_dry_run_names_the_camps() {
+		list( $wordcamp_id, $site_id, , $sponsor_b ) = $this->make_propagation_setup();
+		wp_update_post(
+			array(
+				'ID'          => $sponsor_b,
+				'post_status' => 'draft',
+			)
+		);
+
+		$summary = MES_Propagator::run( $sponsor_b, true, true );
+
+		$this->assertArrayHasKey( $wordcamp_id, $summary['camps_added'] );
+		$this->assertArrayNotHasKey( $sponsor_b, $this->get_site_sponsors_by_mes_id( $site_id ) );
+	}
+
+	/**
 	 * Dry run counts without writing.
 	 */
 	public function test_dry_run_counts_without_writing() {

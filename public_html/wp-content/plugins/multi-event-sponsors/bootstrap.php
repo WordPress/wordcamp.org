@@ -50,9 +50,20 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	WP_CLI::add_command(
 		'mes propagate',
 		function ( $args, $assoc_args ) {
-			$mes_id  = absint( $assoc_args['sponsor'] ?? 0 );
-			$dry_run = isset( $assoc_args['dry-run'] );
-			$summary = MES_Propagator::run( $mes_id, $dry_run );
+			$mes_id        = absint( $assoc_args['sponsor'] ?? 0 );
+			$dry_run       = isset( $assoc_args['dry-run'] );
+			$include_draft = isset( $assoc_args['include-draft'] );
+
+			// A draft is a staged brand (#1208): only ever pushed by name, never in a full run.
+			if ( $include_draft && ! $mes_id ) {
+				WP_CLI::error( '--include-draft needs --sponsor=<id>: drafts are only pushed one at a time.' );
+			}
+
+			if ( $mes_id && ! $include_draft && 'draft' === get_post_status( $mes_id ) ) {
+				WP_CLI::warning( sprintf( 'Sponsor %d is a draft, so it will be skipped. Pass --include-draft to push it.', $mes_id ) );
+			}
+
+			$summary = MES_Propagator::run( $mes_id, $dry_run, $include_draft );
 
 			foreach ( $summary['camps_skipped_no_author'] as $camp_id ) {
 				WP_CLI::warning( sprintf( 'Skipped camp %d: it has no lead organizer to author the stubs. Pass --user=<login> to author them yourself.', $camp_id ) );

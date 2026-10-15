@@ -24,7 +24,7 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_event
 
 /**
  * The URL fragment that opens the create-event modal on the group's home
- * page. `event-modal-app.js` looks for the same value.
+ * page. Passed to the modal app in its config.
  */
 const CREATE_EVENT_FRAGMENT = 'create-event';
 
@@ -105,6 +105,7 @@ function localize_block_script( string $content, array $block ): string {
 		'restNamespace'   => 'wporg-groups/v1',
 		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
 		'minimumEventDate' => wp_date( 'Y-m-d' ),
+		'createEventFragment' => CREATE_EVENT_FRAGMENT,
 	);
 
 	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {

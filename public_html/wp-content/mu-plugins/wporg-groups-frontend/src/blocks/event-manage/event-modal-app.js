@@ -30,10 +30,6 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 
 	const AUTOSAVE_INTERVAL_MS = 5000;
 
-	// The toolbar's + New → Event links to the home page with this fragment.
-	// Matches `CREATE_EVENT_FRAGMENT` in inc/modal.php.
-	const CREATE_EVENT_HASH = '#create-event';
-
 	/**
 	 * Modal containing the create/edit form. Mode is `'create'` or `'edit'`,
 	 * `eventId` is the integer post id when editing.
@@ -366,12 +362,13 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		}, [] );
 
 		// Open the create form when the page is reached through the toolbar
-		// link. The fragment is dropped once read: a reload doesn't reopen
-		// the form, and following the link again from this page is a fresh
-		// hash change that does.
+		// link, whose fragment comes from the config. The fragment is dropped
+		// once read: a reload doesn't reopen the form, and following the link
+		// again from this page is a fresh hash change that does.
 		useEffect( () => {
 			const openFromHash = () => {
-				if ( window.location.hash !== CREATE_EVENT_HASH ) {
+				const fragment = window.wporgGroupsEventModal?.createEventFragment;
+				if ( ! fragment || window.location.hash !== '#' + fragment ) {
 					return;
 				}
 				window.history.replaceState(

@@ -19,10 +19,9 @@ const { login } = require( './utils/login' );
  */
 test.describe( 'toolbar + New → Event', () => {
 	test( 'opens the Create event form on the home page', async ( { page } ) => {
+		// Logging in leaves the page in wp-admin, so following the link from
+		// there loads the home page.
 		await login( page, 'eventorganiser7', 'password' );
-
-		// Start away from the home page, so following the link loads it.
-		await page.goto( 'event/' );
 
 		const link = page.locator( '#wp-admin-bar-new-gatherpress_event > a' );
 		const href = await link.getAttribute( 'href' );

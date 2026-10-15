@@ -46,10 +46,8 @@ function render( $attributes, $content, $block ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	if (
-		! is_admin() ||
-		( function_exists( 'wp_should_load_block_editor_scripts_and_styles' ) && ! wp_should_load_block_editor_scripts_and_styles() )
-	) {
+	// This runs on `init`, before the admin screen is set, so it can't check for the block editor.
+	if ( ! is_admin() ) {
 		return $data;
 	}
 

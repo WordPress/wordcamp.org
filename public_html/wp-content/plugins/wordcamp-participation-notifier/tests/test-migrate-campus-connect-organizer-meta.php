@@ -6,6 +6,9 @@ use WordCamp_Participation_Notifier;
 use WP_UnitTestCase;
 
 use function WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\migrate_organizer_meta_for_site;
+use function WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\reconcile_profiles_badges_for_user;
+use function WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\user_deserves_campus_connect_organizer;
+use function WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\user_deserves_wordcamp_organizer;
 
 defined( 'WPINC' ) || die();
 
@@ -81,6 +84,7 @@ class Test_Migrate_Campus_Connect_Organizer_Meta extends WP_UnitTestCase {
 		$result = migrate_organizer_meta_for_site( $site_id );
 
 		$this->assertSame( 1, $result['renamed'] );
+		$this->assertSame( array( $user_id ), $result['user_ids'] );
 		$this->assertSame( '', get_user_meta( $user_id, $old_key, true ) );
 		$this->assertSame( '1', (string) get_user_meta( $user_id, $new_key, true ) );
 	}
@@ -144,5 +148,100 @@ class Test_Migrate_Campus_Connect_Organizer_Meta extends WP_UnitTestCase {
 		$this->assertSame( 1, $result['renamed'] );
 		$this->assertSame( '1', (string) get_user_meta( $user_id, $old_key, true ) );
 		$this->assertSame( '', get_user_meta( $user_id, $new_key, true ) );
+	}
+
+	/**
+	 * @covers \WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\user_deserves_campus_connect_organizer
+	 * @covers \WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\user_deserves_wordcamp_organizer
+	 */
+	public function test_dry_run_entitlement_treats_legacy_cc_keys_as_campus_connect_only() {
+		$user_id        = self::factory()->user->create();
+		$campus_site_id = 3001;
+		$cc_site_ids    = array( $campus_site_id );
+
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . $campus_site_id . '_1',
+			true
+		);
+
+		$this->assertTrue( user_deserves_campus_connect_organizer( $user_id, $cc_site_ids, true ) );
+		$this->assertFalse( user_deserves_wordcamp_organizer( $user_id, $cc_site_ids, true ) );
+	}
+
+	/**
+	 * @covers \WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\user_deserves_wordcamp_organizer
+	 */
+	public function test_mixed_organizer_keeps_wordcamp_entitlement_after_excluding_legacy_cc_keys() {
+		$user_id          = self::factory()->user->create();
+		$campus_site_id   = 3002;
+		$wordcamp_site_id = 3003;
+		$cc_site_ids      = array( $campus_site_id );
+
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . $campus_site_id . '_1',
+			true
+		);
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . $wordcamp_site_id . '_2',
+			true
+		);
+
+		$this->assertTrue( user_deserves_wordcamp_organizer( $user_id, $cc_site_ids, true ) );
+	}
+
+	/**
+	 * @covers \WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\reconcile_profiles_badges_for_user
+	 */
+	public function test_dry_run_reconcile_reports_add_and_remove_for_cc_only_organizer() {
+		$user_id     = self::factory()->user->create( array( 'user_login' => 'cc_only_org' ) );
+		$cc_site_ids = array( 4001 );
+
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . '4001_9',
+			true
+		);
+
+		$result = reconcile_profiles_badges_for_user( $user_id, $cc_site_ids, true );
+
+		$this->assertTrue( $result['add_campus_connect'] );
+		$this->assertTrue( $result['remove_wordcamp'] );
+		$this->assertSame( 'cc_only_org', $result['login'] );
+		// Dry-run must not rename meta.
+		$this->assertSame(
+			'1',
+			(string) get_user_meta(
+				$user_id,
+				WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . '4001_9',
+				true
+			)
+		);
+	}
+
+	/**
+	 * @covers \WordCamp\Participation_Notifier\Migrate_Campus_Connect_Organizer_Meta\reconcile_profiles_badges_for_user
+	 */
+	public function test_dry_run_reconcile_keeps_wordcamp_badge_for_mixed_organizer() {
+		$user_id     = self::factory()->user->create();
+		$cc_site_ids = array( 4002 );
+
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . '4002_1',
+			true
+		);
+		update_user_meta(
+			$user_id,
+			WordCamp_Participation_Notifier::WORDCAMP_ORGANIZER_META_PREFIX . '5000_1',
+			true
+		);
+
+		$result = reconcile_profiles_badges_for_user( $user_id, $cc_site_ids, true );
+
+		$this->assertTrue( $result['add_campus_connect'] );
+		$this->assertFalse( $result['remove_wordcamp'] );
 	}
 }

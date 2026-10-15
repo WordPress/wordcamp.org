@@ -53,8 +53,10 @@ class MES_Sponsor_Group {
 	 *
 	 *     wp site option update mes_sponsor_groups_enabled 1
 	 *
-	 * and off again with `wp site option delete mes_sponsor_groups_enabled`. The
-	 * `mes_sponsor_groups_enabled` filter gets the option's value and has the last word.
+	 * and off again with `wp site option delete mes_sponsor_groups_enabled`. WP-CLI stores
+	 * whatever it is given as a string, so the value goes through wp_validate_boolean(): `0`
+	 * and `false` both mean off. The `mes_sponsor_groups_enabled` filter gets the result and
+	 * has the last word.
 	 *
 	 * It also decides whether groups count at all: while it's off, get_camp_groups() and
 	 * MES_Sponsor::get_group_sponsorships() return nothing, so sponsors come from the regions
@@ -68,7 +70,7 @@ class MES_Sponsor_Group {
 	 * @return bool
 	 */
 	public static function is_enabled() {
-		return (bool) apply_filters( 'mes_sponsor_groups_enabled', (bool) get_site_option( self::ENABLED_OPTION, false ) );
+		return (bool) apply_filters( 'mes_sponsor_groups_enabled', wp_validate_boolean( get_site_option( self::ENABLED_OPTION, false ) ) );
 	}
 
 	/**

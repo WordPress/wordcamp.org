@@ -263,6 +263,39 @@ class Test_MES_Sponsor_Group extends WP_UnitTestCase {
 	}
 
 	/**
+	 * WP-CLI stores the value as a string, so `wp site option update ... false` must switch
+	 * the groups off, not on as a plain `(bool)` cast of "false" would.
+	 *
+	 * @dataProvider data_option_values_from_wp_cli
+	 *
+	 * @param string $value
+	 * @param bool   $expected
+	 */
+	public function test_option_value_as_wp_cli_stores_it( $value, $expected ) {
+		update_site_option( MES_Sponsor_Group::ENABLED_OPTION, $value );
+
+		$this->assertSame( $expected, MES_Sponsor_Group::is_enabled() );
+
+		delete_site_option( MES_Sponsor_Group::ENABLED_OPTION );
+	}
+
+	/**
+	 * Values as `wp site option update mes_sponsor_groups_enabled <value>` stores them.
+	 *
+	 * @return array
+	 */
+	public function data_option_values_from_wp_cli() {
+		return array(
+			'1'     => array( '1', true ),
+			'true'  => array( 'true', true ),
+			'0'     => array( '0', false ),
+			'false' => array( 'false', false ),
+			'FALSE' => array( 'FALSE', false ),
+			'empty' => array( '', false ),
+		);
+	}
+
+	/**
 	 * The filter still has the last word, over the option.
 	 */
 	public function test_filter_overrides_the_network_option() {

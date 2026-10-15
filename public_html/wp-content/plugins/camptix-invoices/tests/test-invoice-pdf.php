@@ -212,6 +212,37 @@ class Test_CampTix_Invoice_PDF extends WP_UnitTestCase {
 	}
 
 	/**
+	 * When the font cache folder can't be written to, the cache moves to the temp folder rather
+	 * than leaving DomPDF unable to render anything.
+	 *
+	 * @covers WordCamp_Docs_PDF_Generator::get_font_cache_folder
+	 */
+	public function test_font_cache_falls_back_to_temp_folder_when_not_writable() {
+		// A folder inside a file can't be created, not even by root.
+		$this->font_dir = __FILE__ . '/fonts/';
+
+		$font_dir = WordCamp_Docs_PDF_Generator::get_font_cache_folder();
+
+		$this->assertSame( get_temp_dir() . 'wordcamp-docs-fonts/', $font_dir );
+		$this->assertTrue( wp_is_writable( $font_dir ) );
+	}
+
+	/**
+	 * A missing PDF is a plain 404, without PHP warnings from trying to read it anyway.
+	 *
+	 * @covers WordCamp_Docs_PDF_Generator::serve_pdf_to_browser
+	 */
+	public function test_serving_a_missing_pdf_only_says_not_found() {
+		$generator = new WordCamp_Docs_PDF_Generator();
+
+		ob_start();
+		$generator->serve_pdf_to_browser( 'missing.pdf' );
+		$this->assertSame( 'File not found.', ob_get_clean() );
+
+		$generator->delete_tmp_folder();
+	}
+
+	/**
 	 * The From and To addresses are laid out in a table, which DomPDF sizes to fit. As floats
 	 * inside an overflow: hidden box, DomPDF collapsed them and hid both addresses.
 	 */

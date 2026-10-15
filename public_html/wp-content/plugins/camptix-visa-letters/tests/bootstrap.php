@@ -8,7 +8,9 @@
  * saves depend on.
  *
  * `wordcamp-docs` is deliberately NOT loaded here: the add-on has to behave when
- * its PDF generator is absent, and that is asserted by the suite.
+ * its PDF generator is absent, and that is asserted by the suite. Other suites load
+ * the generator into the same process (PHPUnit includes every test file up front),
+ * so it's also switched off with a filter rather than relying on the class missing.
  */
 
 if ( 'cli' !== php_sapi_name() ) {
@@ -24,3 +26,4 @@ function camptix_visa_letters_manually_load_plugin() {
 	require_once WP_PLUGIN_DIR . '/camptix-visa-letters/camptix-visa-letters.php';
 }
 tests_add_filter( 'muplugins_loaded', 'camptix_visa_letters_manually_load_plugin' );
+tests_add_filter( 'ctx_vl_pdf_generator_available', '__return_false' );

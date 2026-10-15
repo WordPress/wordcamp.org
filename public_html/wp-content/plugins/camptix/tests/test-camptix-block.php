@@ -2,6 +2,8 @@
 
 defined( 'WPINC' ) || die();
 
+require_once __DIR__ . '/trait-wordcamp-root-blog.php';
+
 /**
  * Tests for the CampTix Gutenberg block integration.
  *
@@ -10,6 +12,7 @@ defined( 'WPINC' ) || die();
  * @covers CampTix_Plugin::get_tickets_post_id
  */
 class Test_CampTix_Block extends WP_UnitTestCase {
+	use CampTix_Root_Blog_Fixture;
 
 	/**
 	 * @var CampTix_Plugin
@@ -30,12 +33,32 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 */
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
 		self::$camptix = $GLOBALS['camptix'];
+		self::create_wordcamp_root_blog( $factory );
+	}
+
+	/**
+	 * Tears down the shared fixtures created in wpSetUpBeforeClass().
+	 */
+	public static function wpTearDownAfterClass() {
+		self::delete_wordcamp_root_blog();
+	}
+
+	/**
+	 * Turn CampTix redirects into exceptions, so a redirect that would die() fails the
+	 * test instead of silently ending the whole PHPUnit run.
+	 */
+	public function set_up() {
+		parent::set_up();
+		add_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );
 	}
 
 	/**
 	 * Clean up after each test.
 	 */
 	public function tear_down() {
+		remove_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );
+		self::$camptix->release_checkout_rows();
+
 		foreach ( $this->post_ids as $post_id ) {
 			wp_delete_post( $post_id, true );
 		}
@@ -422,7 +445,12 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 			'total' => 50.00,
 		);
 
+		// Without a tix_action, verify_order() redirects back to the form on any error flag.
+		$_GET['tix_action'] = 'attendee_info';
+
 		self::$camptix->verify_order( $order );
+
+		$_GET = array();
 
 		$this->assertArrayHasKey( 'tickets_excess', self::$camptix->error_flags );
 		$this->assertSame( 2, $order['items'][0]['quantity'] );
@@ -478,6 +506,9 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 			'tix_receipt_email' => 1,
 		);
 		self::set_protected_property( 'form_data', $_POST );
+
+		// form_checkout() rewrites the content of the tickets page being viewed.
+		$GLOBALS['post'] = get_post( $this->create_block_page() );
 
 		$output = self::$camptix->form_checkout();
 
@@ -551,5 +582,14 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 
 		$this->assertEquals( '[camptix]', self::call_protected_method( 'get_camptix_shortcode_string', array( $content ) ) );
 		$this->assertFalse( self::call_protected_method( 'get_camptix_shortcode_string', array( '[camptix_attendees]' ) ) );
+	}
+
+	/**
+	 * End the request where CampTix redirects, before it calls die().
+	 *
+	 * @throws WPDieException Always.
+	 */
+	public function stop_redirect() {
+		throw new WPDieException( 'redirect' );
 	}
 }

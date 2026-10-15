@@ -1387,16 +1387,27 @@ class CampTix_Companion_Tickets_Addon extends CampTix_Addon {
 	 * fully completed (cancelling mid-save would be overwritten by it).
 	 */
 	public function process_deferred_releases() {
+		global $camptix;
+
 		$ids                     = array_keys( $this->deferred_releases );
 		$this->deferred_releases = array();
 
 		foreach ( $ids as $attendee_id ) {
-			if ( 'publish' === get_post_status( $attendee_id ) ) {
-				wp_update_post( array(
-					'ID'          => $attendee_id,
-					'post_status' => 'cancel',
-				) );
+			if ( 'publish' !== get_post_status( $attendee_id ) ) {
+				continue;
 			}
+
+			// A seat bought while its ticket had a price (raised after setup) carries money.
+			// Releasing it here would drop it without a refund, so leave it to the organizer.
+			if ( (float) get_post_meta( $attendee_id, 'tix_ticket_price', true ) > 0 ) {
+				$camptix->log( 'Activity seat was paid for, so it was not released when the ticket changed hands. Refund it from this screen if needed.', $attendee_id );
+				continue;
+			}
+
+			wp_update_post( array(
+				'ID'          => $attendee_id,
+				'post_status' => 'cancel',
+			) );
 		}
 	}
 

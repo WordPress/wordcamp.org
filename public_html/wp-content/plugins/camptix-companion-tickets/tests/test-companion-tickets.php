@@ -928,6 +928,43 @@ class Test_Companion_Tickets extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A paid seat is never released by a transfer, of the main or of the seat itself:
+	 * that would drop it without refunding it.
+	 */
+	public function test_transfer_keeps_a_paid_seat() {
+		$main = $this->make_ticket( 'Main' );
+		$cd   = $this->make_ticket( 'Contributor Day' );
+		$sd   = $this->make_ticket( 'Social Dinner' );
+		$this->set_companion_config( array( $cd, $sd ) );
+		$main_id = $this->make_attendee( $main, 'alice', 'publish' );
+		$cd_id   = $this->make_attendee( $cd, 'alice', 'publish' );
+		$sd_id   = $this->make_attendee( $sd, 'carol', 'publish' );
+		update_post_meta( $cd_id, 'tix_companion_primary_attendee_id', $main_id );
+		update_post_meta( $cd_id, 'tix_ticket_price', 10 );
+		update_post_meta( $sd_id, 'tix_ticket_price', 10 );
+
+		$logged = array();
+		$log    = function ( $message, $post_id ) use ( &$logged ) {
+			$logged[] = array( $message, $post_id );
+		};
+		add_action( 'camptix_log_raw', $log, 10, 2 );
+
+		$addon = new CampTix_Companion_Tickets_Addon();
+		add_action( 'update_post_meta', array( $addon, 'detect_ownership_change' ), 10, 4 );
+		update_post_meta( $main_id, 'tix_username', 'bob' );
+		update_post_meta( $sd_id, 'tix_username', 'dave' );
+		remove_action( 'update_post_meta', array( $addon, 'detect_ownership_change' ), 10 );
+
+		$addon->process_deferred_releases();
+		remove_action( 'camptix_log_raw', $log, 10 );
+
+		$this->assertSame( 'publish', get_post_status( $cd_id ), 'a paid seat is kept when its main changes hands' );
+		$this->assertSame( 'publish', get_post_status( $sd_id ), 'a paid seat is kept when it changes hands itself' );
+		$this->assertContains( $cd_id, wp_list_pluck( $logged, 1 ), 'the kept seat is logged for the organizer' );
+		$this->assertContains( $sd_id, wp_list_pluck( $logged, 1 ), 'the kept seat is logged for the organizer' );
+	}
+
+	/**
 	 * Claiming an "[[ unconfirmed ]]" group-purchase seat is first ownership,
 	 * not a transfer — nothing is released.
 	 */

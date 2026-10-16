@@ -60,6 +60,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch' );
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch_members' );
+		remove_all_filters( 'wcorg_meetup_import_pre_sideload_photo' );
 		Meetup_Import\release_lock();
 
 		wp_delete_site( $this->site_id );
@@ -976,6 +977,395 @@ class Test_Meetup_Import extends Groups_TestCase {
 		}
 
 		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * A featured photo as the Meetup API returns it.
+	 *
+	 * @param string $id  Meetup photo ID.
+	 * @param string $url High-resolution URL.
+	 */
+	protected function raw_photo( string $id = '536071599', string $url = 'https://secure.meetupstatic.com/photos/event/7/b/6/f/highres_536071599.jpeg' ): array {
+		return array(
+			'id'         => $id,
+			'highResUrl' => $url,
+		);
+	}
+
+	/**
+	 * Stand in for downloading photos, counting each download.
+	 *
+	 * @param int $downloads Incremented on every download.
+	 */
+	protected function fake_photo_downloads( int &$downloads ): void {
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function ( $attachment_id, $url, $post_id ) use ( &$downloads ) {
+				++$downloads;
+
+				return self::factory()->attachment->create_object(
+					basename( $url ),
+					$post_id,
+					array(
+						'post_mime_type' => 'image/jpeg',
+						'post_type'      => 'attachment',
+					)
+				);
+			},
+			10,
+			3
+		);
+	}
+
+	/**
+	 * Only photos on Meetup's own image host, over HTTPS, are kept.
+	 *
+	 * @dataProvider data_normalize_photo
+	 *
+	 * @param mixed $photo    `featuredEventPhoto` from the API.
+	 * @param bool  $is_kept  Whether it should survive normalization.
+	 */
+	public function test_normalize_photo( $photo, bool $is_kept ) {
+		$normalized = Meetup_Import\normalize_photo( $photo );
+
+		if ( $is_kept ) {
+			$this->assertSame( $photo['highResUrl'], $normalized['url'] );
+			$this->assertSame( $photo['id'], $normalized['meetup_id'] );
+		} else {
+			$this->assertNull( $normalized );
+		}
+	}
+
+	/**
+	 * Inputs for `test_normalize_photo()`.
+	 */
+	public function data_normalize_photo(): array {
+		return array(
+			'meetup photo' => array(
+				array(
+					'id'         => '1',
+					'highResUrl' => 'https://secure.meetupstatic.com/photos/event/highres_1.jpeg',
+				),
+				true,
+			),
+			'plain http' => array(
+				array(
+					'id'         => '1',
+					'highResUrl' => 'http://secure.meetupstatic.com/photos/event/highres_1.jpeg',
+				),
+				false,
+			),
+			'other host' => array(
+				array(
+					'id'         => '1',
+					'highResUrl' => 'https://example.org/highres_1.jpeg',
+				),
+				false,
+			),
+			'lookalike host' => array(
+				array(
+					'id'         => '1',
+					'highResUrl' => 'https://meetupstatic.com.example.org/highres_1.jpeg',
+				),
+				false,
+			),
+			'missing url' => array(
+				array( 'id' => '1' ),
+				false,
+			),
+			'no photo' => array(
+				null,
+				false,
+			),
+		);
+	}
+
+	/**
+	 * An event's Meetup photo becomes its featured image.
+	 */
+	public function test_import_sets_featured_image() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+
+		Meetup_Import\import_events(
+			$this->site_id,
+			array( Meetup_Import\normalize_event( $this->raw_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ) )
+		);
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 1, $downloads );
+		$this->on_site(
+			function () use ( $post ) {
+				$thumbnail_id = get_post_thumbnail_id( $post->ID );
+
+				$this->assertGreaterThan( 0, $thumbnail_id );
+				$this->assertSame( '536071599', get_post_meta( $thumbnail_id, Meetup_Import\PHOTO_ID_META, true ) );
+			}
+		);
+	}
+
+	/**
+	 * A cover photo shared by several events is downloaded once.
+	 */
+	public function test_shared_photo_is_downloaded_once() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+
+		Meetup_Import\import_events(
+			$this->site_id,
+			array(
+				Meetup_Import\normalize_event( $this->raw_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ),
+				Meetup_Import\normalize_event(
+					$this->raw_event(
+						array(
+							'id'                 => '315889306',
+							'featuredEventPhoto' => $this->raw_photo(),
+						)
+					)
+				),
+			)
+		);
+
+		$first  = $this->find_event( '315889305' );
+		$second = $this->find_event( '315889306' );
+
+		$this->assertSame( 1, $downloads );
+		$this->assertSame(
+			$this->on_site(
+				static function () use ( $first ) {
+					return get_post_thumbnail_id( $first->ID );
+				}
+			),
+			$this->on_site(
+				static function () use ( $second ) {
+					return get_post_thumbnail_id( $second->ID );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Refreshing a draft keeps the image the organizer picked.
+	 */
+	public function test_refresh_keeps_organizer_image() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+
+		$post      = $this->find_event( '315889305' );
+		$organizer = $this->on_site(
+			static function () use ( $post ) {
+				$attachment_id = self::factory()->attachment->create_object(
+					'organizer.jpg',
+					$post->ID,
+					array(
+						'post_mime_type' => 'image/jpeg',
+						'post_type'      => 'attachment',
+					)
+				);
+				set_post_thumbnail( $post->ID, $attachment_id );
+
+				return $attachment_id;
+			}
+		);
+
+		Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame(
+			$organizer,
+			$this->on_site(
+				static function () use ( $post ) {
+					return get_post_thumbnail_id( $post->ID );
+				}
+			)
+		);
+	}
+
+	/**
+	 * A photo that fails to download leaves the event imported, without an image.
+	 */
+	public function test_failed_photo_download_still_imports_event() {
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function () {
+				return new \WP_Error( 'http_request_failed', 'Nope' );
+			}
+		);
+
+		$results = Meetup_Import\import_events(
+			$this->site_id,
+			array( Meetup_Import\normalize_event( $this->raw_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ) )
+		);
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'created', $results[0]['status'] );
+		$this->assertSame(
+			0,
+			$this->on_site(
+				static function () use ( $post ) {
+					return (int) get_post_thumbnail_id( $post->ID );
+				}
+			)
+		);
+	}
+
+	/**
+	 * The Meetup ID is on an event and a venue from the moment they exist.
+	 *
+	 * Checked from `save_post`, the first point other code can see a new post:
+	 * if the ID only arrived after, a run that died in between would leave
+	 * something a rerun can't find, and it would be created twice.
+	 */
+	public function test_meetup_ids_are_saved_with_the_post() {
+		$seen = array();
+
+		$check = static function ( $post_id, $post ) use ( &$seen ) {
+			$key                        = Venue::POST_TYPE === $post->post_type ? Meetup_Import\VENUE_ID_META : Meetup_Import\EVENT_ID_META;
+			$seen[ $post->post_type ][] = get_post_meta( $post_id, $key, true );
+		};
+
+		add_action( 'save_post_' . Event::POST_TYPE, $check, 10, 2 );
+		add_action( 'save_post_' . Venue::POST_TYPE, $check, 10, 2 );
+
+		try {
+			Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+		} finally {
+			remove_action( 'save_post_' . Event::POST_TYPE, $check, 10 );
+			remove_action( 'save_post_' . Venue::POST_TYPE, $check, 10 );
+		}
+
+		$this->assertSame( '315889305', $seen[ Event::POST_TYPE ][0] );
+		$this->assertSame( '27654321', $seen[ Venue::POST_TYPE ][0] );
+	}
+
+	/**
+	 * A past event an interrupted run left as a marked draft is finished by the next run.
+	 */
+	public function test_rerun_finishes_interrupted_past_event() {
+		// What a run that died after creating the event, but before publishing it, leaves behind.
+		$post_id = $this->on_site(
+			static function () {
+				return wp_insert_post(
+					array(
+						'post_type'   => Event::POST_TYPE,
+						'post_status' => 'draft',
+						'post_title'  => 'March meetup',
+						'meta_input'  => array(
+							Meetup_Import\EVENT_ID_META        => '300000001',
+							Meetup_Import\PENDING_PUBLISH_META => 1,
+							\WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META => 1,
+						),
+					)
+				);
+			}
+		);
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+
+		$this->assertSame( 'create', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
+
+		$this->watch_publish_notifications();
+
+		try {
+			Meetup_Import\import_events( $this->site_id, $events );
+		} finally {
+			$queued = $this->stop_watching_publish_notifications();
+		}
+
+		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertSame( array(), $queued );
+
+		$this->on_site(
+			function () use ( $post_id ) {
+				$this->assertSame( 'publish', get_post_status( $post_id ) );
+				$this->assertSame( '', get_post_meta( $post_id, Meetup_Import\PENDING_PUBLISH_META, true ) );
+				$this->assertSame( '2025-03-12 18:00:00', get_post_meta( $post_id, 'gatherpress_datetime_start', true ) );
+			}
+		);
+	}
+
+	/**
+	 * An imported upcoming draft that has since happened stays a draft.
+	 */
+	public function test_draft_that_became_past_stays_draft() {
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$happened = $this->raw_event(
+			array(
+				'status'   => 'PAST',
+				'dateTime' => '2025-11-11T18:00:00-05:00',
+				'endTime'  => '2025-11-11T20:00:00-05:00',
+			)
+		);
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $happened ) ) );
+
+		$this->assertSame( 'draft', $this->find_event( '315889305' )->post_status );
+	}
+
+	/**
+	 * A matched member is opted out before they become a member.
+	 *
+	 * If the run died between the two, the next run would see an existing
+	 * member and leave them alone -- so the opt-out must already be there.
+	 */
+	public function test_member_is_opted_out_before_joining() {
+		list( $raw, $users ) = $this->setup_members();
+		$opt_in_at_join      = null;
+		$key                 = \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id );
+
+		$check = static function ( $user_id ) use ( $users, $key, &$opt_in_at_join ) {
+			if ( $users['match'] === (int) $user_id ) {
+				$opt_in_at_join = get_user_meta( $user_id, $key, true );
+			}
+		};
+
+		add_action( 'add_user_to_blog', $check );
+
+		try {
+			Meetup_Import\import_members( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_member', $raw ) );
+		} finally {
+			remove_action( 'add_user_to_blog', $check );
+		}
+
+		$this->assertSame( '0', $opt_in_at_join );
+	}
+
+	/**
+	 * Releasing leaves alone a lock that another import has since taken over.
+	 */
+	public function test_release_keeps_someone_elses_lock() {
+		global $wpdb;
+
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+
+		// Another import took the lock over after ours expired.
+		$wpdb->update(
+			Meetup_Import\lock_table(),
+			array( 'option_value' => ( time() + 600 ) . ':someone-else' ),
+			array( 'option_name' => Meetup_Import\LOCK_OPTION )
+		);
+
+		Meetup_Import\release_lock();
+
+		$this->assertFalse( Meetup_Import\acquire_lock() );
+
+		$wpdb->delete( Meetup_Import\lock_table(), array( 'option_name' => Meetup_Import\LOCK_OPTION ) );
+	}
+
+	/**
+	 * Releasing twice -- once after the import, once at shutdown -- is harmless.
+	 */
+	public function test_release_is_safe_to_repeat() {
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+
+		Meetup_Import\release_lock();
+		Meetup_Import\release_lock();
+
 		$this->assertTrue( Meetup_Import\acquire_lock() );
 	}
 }

@@ -41,6 +41,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
 	require_once dirname( __DIR__ ) . '/network-export.php';
 	require_once dirname( __DIR__ ) . '/meetup-import.php';
+	require_once dirname( __DIR__ ) . '/meetup-shared-connection.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

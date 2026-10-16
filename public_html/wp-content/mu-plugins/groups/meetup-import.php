@@ -58,6 +58,15 @@ const EVENT_URL_META = '_wporg_meetup_event_url';
 const VENUE_ID_META  = '_wporg_meetup_venue_id';
 const RSVP_YES_META  = '_wporg_meetup_rsvp_yes_count';
 const ATTENDED_META  = '_wporg_meetup_attended_count';
+const PHOTO_ID_META  = '_wporg_meetup_photo_id';
+
+/**
+ * Marks an imported past event that still has to be published.
+ *
+ * Set when the event is created and cleared once it's published, so a run
+ * that dies in between leaves something the next run knows to finish.
+ */
+const PENDING_PUBLISH_META = '_wporg_meetup_pending_publish';
 
 /**
  * Site option listing the Meetup member IDs an import has already considered.
@@ -194,6 +203,12 @@ function handle_form_submission() {
 		request_state( $state );
 		return;
 	}
+
+	// `finally` doesn't run when PHP hits its time limit, but shutdown
+	// functions do, so a timed-out import frees the lock for the retry right
+	// away instead of holding it until `LOCK_TIMEOUT`. The retry then picks up
+	// where this run stopped: see `import_event()` on reruns.
+	register_shutdown_function( __NAMESPACE__ . '\release_lock' );
 
 	try {
 		run_import( $site_id, $events, $members, $import_members, $state );
@@ -508,6 +523,7 @@ function fetch_group_events( string $urlname, bool $include_past = false ) {
 				'fields' => array(
 					'howToFindUs',
 					'venues { address postalCode }',
+					'featuredEventPhoto { id highResUrl }',
 				),
 			)
 		);
@@ -680,6 +696,37 @@ function normalize_event( array $raw ): array {
 		'is_past'     => 'PAST' === strtoupper( (string) ( $raw['status'] ?? '' ) ),
 		'rsvp_yes'    => (int) ( $raw['rsvps']['yesCount'] ?? 0 ),
 		'attended'    => (int) ( $raw['rsvps']['attendedCount'] ?? 0 ),
+		'photo'       => normalize_photo( $raw['featuredEventPhoto'] ?? null ),
+	);
+}
+
+/**
+ * Keep an event's featured photo only if it's an image Meetup hosts.
+ *
+ * The URL is something this server will download, so it has to point at
+ * Meetup's own image host over HTTPS, not anywhere a response could name.
+ *
+ * @param mixed $photo `featuredEventPhoto` from the Meetup API.
+ * @return array|null `{ meetup_id, url }`, or null for no usable photo.
+ */
+function normalize_photo( $photo ): ?array {
+	if ( ! is_array( $photo ) || empty( $photo['id'] ) || empty( $photo['highResUrl'] ) ) {
+		return null;
+	}
+
+	$url  = (string) $photo['highResUrl'];
+	$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+
+	if (
+		'https' !== wp_parse_url( $url, PHP_URL_SCHEME ) ||
+		( 'meetupstatic.com' !== $host && ! str_ends_with( $host, '.meetupstatic.com' ) )
+	) {
+		return null;
+	}
+
+	return array(
+		'meetup_id' => (string) $photo['id'],
+		'url'       => esc_url_raw( $url ),
 	);
 }
 
@@ -722,7 +769,9 @@ function plan_events( int $site_id, array $events ): array {
 			foreach ( $events as $event ) {
 				$existing = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $event['meetup_id'] );
 
-				if ( ! $existing ) {
+				// A past event an interrupted run left half-done is, as far as
+				// anyone is concerned, still to be created.
+				if ( ! $existing || get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) ) {
 					$status = 'create';
 				} elseif ( 'draft' === $existing->post_status ) {
 					$status = 'update';
@@ -810,6 +859,15 @@ function import_event( array $event ): array {
 		);
 	}
 
+	// A past event is history, not something to review, so it ends up
+	// published. It's created as a draft marked to publish, and only published
+	// once every other piece is in place, so an import that dies partway
+	// leaves a marked draft that the next run finishes -- not a published
+	// event missing its date or venue. An event that was imported as an
+	// upcoming draft and has happened since carries no mark, and stays the
+	// organizer's to publish.
+	$publish = $existing ? (bool) get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) : $event['is_past'];
+
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
 		'post_status'  => 'draft',
@@ -822,6 +880,21 @@ function import_event( array $event ): array {
 		$post_args['ID'] = $existing->ID;
 		$post_id         = wp_update_post( wp_slash( $post_args ), true );
 	} else {
+		// The Meetup ID goes in with the post itself, so there's no moment
+		// where the event exists but a rerun couldn't find it and would
+		// create it again.
+		$post_args['meta_input'] = array(
+			EVENT_ID_META  => $event['meetup_id'],
+			EVENT_URL_META => esc_url_raw( $event['meetup_url'] ),
+		);
+
+		if ( $publish ) {
+			// First publish emails every member of the group. This marks that
+			// notification as already handled, so there's nothing to send.
+			$post_args['meta_input'][ PENDING_PUBLISH_META ]                = 1;
+			$post_args['meta_input'][ PUBLISH_NOTIFICATION_SCHEDULED_META ] = 1;
+		}
+
 		$post_id = wp_insert_post( wp_slash( $post_args ), true );
 	}
 
@@ -836,7 +909,6 @@ function import_event( array $event ): array {
 
 	$post_id = (int) $post_id;
 
-	update_post_meta( $post_id, EVENT_ID_META, $event['meetup_id'] );
 	update_post_meta( $post_id, EVENT_URL_META, esc_url_raw( $event['meetup_url'] ) );
 
 	( new Event( $post_id ) )->save_datetimes(
@@ -853,19 +925,22 @@ function import_event( array $event ): array {
 	// Meetup doesn't hand out the meeting link, so the organizer adds it while reviewing.
 	sync_online_event_link( $post_id, $event['is_online'], '' );
 
+	// Only fill an empty slot: a refreshed draft keeps whatever image the
+	// organizer has picked since.
+	if ( $event['photo'] && ! has_post_thumbnail( $post_id ) ) {
+		$attachment_id = find_or_sideload_photo( $event['photo'], $post_id );
+
+		if ( $attachment_id ) {
+			set_post_thumbnail( $post_id, $attachment_id );
+		}
+	}
+
 	// Meetup's own counts, kept for history and reporting. There are no
 	// individual RSVP records behind them.
 	update_post_meta( $post_id, RSVP_YES_META, $event['rsvp_yes'] );
 	update_post_meta( $post_id, ATTENDED_META, $event['attended'] );
 
-	// A past event is history, not something to review, so it's published --
-	// but only the first time. One that was imported as an upcoming draft and
-	// has happened since stays the organizer's to publish.
-	if ( ! $existing && $event['is_past'] ) {
-		// First publish emails every member of the group. This marks that
-		// notification as already handled, so there's nothing to send.
-		update_post_meta( $post_id, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
-
+	if ( $publish ) {
 		$published = wp_update_post(
 			array(
 				'ID'          => $post_id,
@@ -882,6 +957,8 @@ function import_event( array $event ): array {
 				'message' => $published->get_error_message(),
 			);
 		}
+
+		delete_post_meta( $post_id, PENDING_PUBLISH_META );
 	}
 
 	return array(
@@ -968,14 +1045,17 @@ function import_members( int $site_id, array $members ) {
 
 	foreach ( $classified as $index => $entry ) {
 		if ( 'join' === $entry['outcome'] ) {
+			// Opt out first. If the run dies right after adding them, the next
+			// run sees an existing member and leaves them be -- so the opt-out
+			// has to be in place before they're a member, not after.
+			update_user_meta( $entry['user_id'], get_scoped_opt_in_meta_key( $site_id ), '0' );
+
 			$added = add_user_to_blog( $site_id, $entry['user_id'], 'subscriber' );
 
 			if ( is_wp_error( $added ) ) {
 				$classified[ $index ]['outcome'] = 'failed';
 				continue;
 			}
-
-			update_user_meta( $entry['user_id'], get_scoped_opt_in_meta_key( $site_id ), '0' );
 		}
 
 		if ( in_array( $entry['outcome'], array( 'join', 'already_member' ), true ) ) {
@@ -1006,6 +1086,59 @@ function count_member_outcomes( array $classified ): array {
 }
 
 /**
+ * Find the attachment a Meetup photo was imported as, downloading it the first time.
+ *
+ * A recurring meetup usually reuses one cover photo across its events, so
+ * keying on Meetup's photo ID downloads it once per group site rather than
+ * once per event. A failed download leaves the event without an image; it
+ * doesn't fail the event.
+ *
+ * @param array $photo   Normalized photo, from `normalize_photo()`.
+ * @param int   $post_id Event the photo is first attached to.
+ * @return int Attachment ID, or 0.
+ */
+function find_or_sideload_photo( array $photo, int $post_id ): int {
+	$existing = find_imported_post( 'attachment', PHOTO_ID_META, $photo['meetup_id'] );
+
+	if ( $existing ) {
+		return $existing->ID;
+	}
+
+	/**
+	 * Short-circuit downloading a Meetup photo, e.g. in tests.
+	 *
+	 * @param int|WP_Error|null $attachment_id Attachment ID, or null to download it.
+	 * @param string            $url           Photo URL on Meetup's image host.
+	 * @param int               $post_id       Event the photo is attached to.
+	 */
+	$attachment_id = apply_filters( 'wcorg_meetup_import_pre_sideload_photo', null, $photo['url'], $post_id );
+
+	if ( null === $attachment_id ) {
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$attachment_id = media_sideload_image( $photo['url'], $post_id, null, 'id' );
+	}
+
+	if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+		Logger\log(
+			'photo_failed',
+			array(
+				'url'   => $photo['url'],
+				'error' => is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : '',
+			)
+		);
+
+		return 0;
+	}
+
+	update_post_meta( (int) $attachment_id, PHOTO_ID_META, $photo['meetup_id'] );
+
+	return (int) $attachment_id;
+}
+
+/**
  * Find the venue a Meetup venue was imported as, creating it the first time.
  *
  * An existing venue is never updated: once it's on the site, the organizer
@@ -1032,6 +1165,8 @@ function find_or_create_venue( ?array $venue ): int {
 			'post_type'   => Venue::POST_TYPE,
 			'post_status' => 'publish',
 			'post_title'  => wcorg_sanitize_plain_text( $venue['name'] ),
+			// With the post, so a rerun can always find it (see `import_event()`).
+			'meta_input'  => array( VENUE_ID_META => $venue['meetup_id'] ),
 		),
 		true
 	);
@@ -1039,8 +1174,6 @@ function find_or_create_venue( ?array $venue ): int {
 	if ( is_wp_error( $venue_id ) || ! $venue_id ) {
 		return 0;
 	}
-
-	update_post_meta( $venue_id, VENUE_ID_META, $venue['meetup_id'] );
 
 	if ( '' !== $venue['address'] ) {
 		update_post_meta( $venue_id, 'gatherpress_address', $venue['address'] );
@@ -1094,13 +1227,16 @@ function lock_table(): string {
  * compare-and-swap on its old value, so two requests can't both take over the
  * same stale lock.
  *
+ * The stored value is the expiry plus a random token, so each holder's value
+ * is its own and `release_lock()` can tell whether the lock is still theirs.
+ *
  * @return bool Whether this request now holds the lock.
  */
 function acquire_lock(): bool {
 	global $wpdb;
 
 	$table   = lock_table();
-	$expires = (string) ( time() + LOCK_TIMEOUT );
+	$expires = ( time() + LOCK_TIMEOUT ) . ':' . wp_generate_password( 12, false );
 
 	// phpcs:disable WordPress.DB.DirectDatabaseQuery -- the lock has to bypass the options cache to be atomic.
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- `$table` is built from the blog prefix, not input.
@@ -1113,6 +1249,7 @@ function acquire_lock(): bool {
 	);
 
 	if ( $inserted ) {
+		held_lock( $expires );
 		return true;
 	}
 
@@ -1132,16 +1269,53 @@ function acquire_lock(): bool {
 	);
 	// phpcs:enable
 
-	return 1 === $taken_over;
+	if ( 1 !== $taken_over ) {
+		return false;
+	}
+
+	held_lock( $expires );
+	return true;
 }
 
 /**
- * Give the import lock back.
+ * The lock value this request holds, if any.
+ *
+ * @param string|null $value New value to remember; '' to forget it; null to read.
+ */
+function held_lock( ?string $value = null ): string {
+	static $held = '';
+
+	if ( null !== $value ) {
+		$held = $value;
+	}
+
+	return $held;
+}
+
+/**
+ * Give the import lock back, if this request still holds it.
+ *
+ * Only the row with this request's own value is deleted: if the lock expired
+ * and another import took it over, that one keeps it. Safe to call more than
+ * once, which matters because it runs both when the import finishes and at
+ * shutdown (see `handle_form_submission()`).
  */
 function release_lock(): void {
 	global $wpdb;
 
-	$wpdb->delete( lock_table(), array( 'option_name' => LOCK_OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	if ( '' === held_lock() ) {
+		return;
+	}
+
+	$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		lock_table(),
+		array(
+			'option_name'  => LOCK_OPTION,
+			'option_value' => held_lock(),
+		)
+	);
+
+	held_lock( '' );
 }
 
 /**

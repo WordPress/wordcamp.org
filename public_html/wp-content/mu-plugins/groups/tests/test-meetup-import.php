@@ -225,14 +225,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 */
 	public function data_parse_group_urlname(): array {
 		return array(
-			'bare urlname'    => array( 'wma-wordpress-meetup', 'wma-wordpress-meetup' ),
-			'group url'       => array( 'https://www.meetup.com/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
-			'event url'       => array( 'https://www.meetup.com/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
-			'no scheme'       => array( 'meetup.com/wma-wordpress-meetup', 'wma-wordpress-meetup' ),
-			'query string'    => array( 'https://www.meetup.com/wma-wordpress-meetup?utm=x', 'wma-wordpress-meetup' ),
-			'other domain'    => array( 'https://example.com/wma-wordpress-meetup/', '' ),
-			'invalid chars'   => array( 'foo bar', '' ),
-			'empty'           => array( '', '' ),
+			'bare urlname'     => array( 'wma-wordpress-meetup', 'wma-wordpress-meetup' ),
+			'group url'        => array( 'https://www.meetup.com/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'event url'        => array( 'https://www.meetup.com/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
+			'no scheme'        => array( 'meetup.com/wma-wordpress-meetup', 'wma-wordpress-meetup' ),
+			'query string'     => array( 'https://www.meetup.com/wma-wordpress-meetup?utm=x', 'wma-wordpress-meetup' ),
+			'other domain'     => array( 'https://example.com/wma-wordpress-meetup/', '' ),
+			'invalid chars'    => array( 'foo bar', '' ),
+			'empty'            => array( '', '' ),
+			'localized url pl' => array( 'https://www.meetup.com/pl-PL/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'localized url de' => array( 'https://www.meetup.com/de-DE/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
+			'localized url es' => array( 'https://www.meetup.com/es/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'localized url pt' => array( 'https://meetup.com/pt-BR/rio-wordpress', 'rio-wordpress' ),
 		);
 	}
 
@@ -2266,6 +2270,33 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( 'Bring a project.', $loaded );
 		$this->assertStringContainsString( 'How to find us: Room E103', $loaded );
 		$this->assertStringContainsString( '<!-- wp:paragraph -->', $loaded );
+	}
+
+	/**
+	 * An imported description with headings, lists, and quotes opens in the editor without losing markup.
+	 */
+	public function test_rich_description_blocks_load_in_editor() {
+		$raw = $this->raw_event(
+			array(
+				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1</li><li>Talk 2</li></ul>\n<blockquote>Note this</blockquote>",
+			)
+		);
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $raw ) ) );
+
+		$post   = $this->find_event( '315889305' );
+		$loaded = $this->on_site(
+			static function () use ( $post ) {
+				return \WordCamp\Groups\Frontend\Defaults\extract_description_blocks( $post->ID );
+			}
+		);
+
+		$this->assertStringContainsString( '<!-- wp:heading {"level":2} -->', $loaded );
+		$this->assertStringContainsString( '<h2>Agenda</h2>', $loaded );
+		$this->assertStringContainsString( '<!-- wp:list -->', $loaded );
+		$this->assertStringContainsString( '<ul><li>Talk 1</li><li>Talk 2</li></ul>', $loaded );
+		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
+		$this->assertStringContainsString( '<blockquote>Note this</blockquote>', $loaded );
 	}
 
 	/**

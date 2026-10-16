@@ -51,6 +51,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 		);
 
 		add_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10, 2 );
+
+		// Defaults for the requests every form submission makes. Tests that
+		// care about one return their own from a later-priority callback.
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_group',
+			function () {
+				return $this->raw_group();
+			},
+			5
+		);
+		add_filter( 'wcorg_meetup_import_pre_fetch_leaders', '__return_empty_array', 5 );
+		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array', 5 );
 	}
 
 	/**
@@ -61,6 +73,9 @@ class Test_Meetup_Import extends Groups_TestCase {
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch' );
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch_members' );
 		remove_all_filters( 'wcorg_meetup_import_pre_sideload_photo' );
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_group' );
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_leaders' );
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_rsvps' );
 		Meetup_Import\release_lock();
 
 		wp_delete_site( $this->site_id );
@@ -98,6 +113,30 @@ class Test_Meetup_Import extends Groups_TestCase {
 		} finally {
 			restore_current_blog();
 		}
+	}
+
+	/**
+	 * A Meetup group node, as `fetch_group()` returns it.
+	 *
+	 * @param array $overrides Fields to replace.
+	 */
+	protected function raw_group( array $overrides = array() ): array {
+		return array_merge(
+			array(
+				'id'            => '26903462',
+				'name'          => 'Western Mass WordPress Meetups',
+				'urlname'       => 'wma-wordpress-meetup',
+				'description'   => "We're a group of local WordPress users.\n\nJoin us!",
+				'city'          => 'Greenfield',
+				'country'       => 'us',
+				'foundedDate'   => '2017-06-01T10:00:00-04:00',
+				'keyGroupPhoto' => array(
+					'id'         => '480000001',
+					'highResUrl' => 'https://secure.meetupstatic.com/photos/event/1/2/3/4/highres_480000001.jpeg',
+				),
+			),
+			$overrides
+		);
 	}
 
 	/**
@@ -867,10 +906,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 			$this->assertSame( 0, $fetched_members );
 			$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
 
-			$_POST['import_members'] = '1';
+			$_POST['match_people'] = '1';
 			Meetup_Import\handle_form_submission();
 		} finally {
-			unset( $GLOBALS['super_admins'], $_POST['import_members'] );
+			unset( $GLOBALS['super_admins'], $_POST['match_people'] );
 		}
 
 		$this->assertSame( 1, $fetched_members );
@@ -1367,5 +1406,554 @@ class Test_Meetup_Import extends Groups_TestCase {
 		Meetup_Import\release_lock();
 
 		$this->assertTrue( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * The About draft seeded by Add Group Site, untouched since.
+	 */
+	protected function seed_about_page(): int {
+		return $this->on_site(
+			static function () {
+				return wp_insert_post(
+					array(
+						'post_type'    => 'page',
+						'post_name'    => 'about',
+						'post_title'   => 'About',
+						'post_status'  => 'draft',
+						'post_content' => '<!-- wp:paragraph --><p>Example text.</p><!-- /wp:paragraph -->',
+					)
+				);
+			}
+		);
+	}
+
+	/**
+	 * Group details fill every gap on a fresh site.
+	 */
+	public function test_import_group_fills_gaps() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+		$about_id = $this->seed_about_page();
+
+		$results = Meetup_Import\import_group( $this->site_id, Meetup_Import\normalize_group( $this->raw_group() ) );
+
+		$this->assertSame(
+			array(
+				'location' => 'set',
+				'about'    => 'set',
+				'icon'     => 'set',
+			),
+			$results
+		);
+
+		$this->on_site(
+			function () use ( $about_id ) {
+				$this->assertSame(
+					array(
+						'type'        => 'physical',
+						'city'        => 'Greenfield',
+						'countryCode' => 'US',
+					),
+					\WordCamp\Groups\Frontend\Group_Location\get_location()
+				);
+
+				$about = get_post( $about_id );
+				$this->assertSame( 'draft', $about->post_status );
+				$this->assertStringContainsString( '<!-- wp:paragraph --><p>Join us!</p><!-- /wp:paragraph -->', $about->post_content );
+				$this->assertStringNotContainsString( 'Example text', $about->post_content );
+
+				$this->assertGreaterThan( 0, (int) get_option( 'site_icon' ) );
+				$this->assertSame( 'wma-wordpress-meetup', get_option( Meetup_Import\GROUP_URLNAME_OPTION ) );
+				$this->assertSame( '2017-06-01', get_option( Meetup_Import\FOUNDED_OPTION ) );
+			}
+		);
+		$this->assertSame( 1, $downloads );
+	}
+
+	/**
+	 * Anything the organizer has already set stays theirs.
+	 */
+	public function test_import_group_keeps_what_is_set() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+		$about_id = $this->seed_about_page();
+
+		$this->on_site(
+			static function () use ( $about_id ) {
+				\WordCamp\Groups\Frontend\Group_Location\save_location( array( 'type' => 'online' ) );
+				update_option( 'site_icon', 12345 );
+
+				// The organizer edited the About page a while after it was seeded.
+				global $wpdb;
+				$wpdb->update(
+					$wpdb->posts,
+					array(
+						'post_content'  => 'Our own story.',
+						'post_modified' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
+					),
+					array( 'ID' => $about_id )
+				);
+				clean_post_cache( $about_id );
+			}
+		);
+
+		$results = Meetup_Import\import_group( $this->site_id, Meetup_Import\normalize_group( $this->raw_group() ) );
+
+		$this->assertSame(
+			array(
+				'location' => 'kept',
+				'about'    => 'kept',
+				'icon'     => 'kept',
+			),
+			$results
+		);
+
+		$this->on_site(
+			function () use ( $about_id ) {
+				$this->assertSame( array( 'type' => 'online' ), \WordCamp\Groups\Frontend\Group_Location\get_location() );
+				$this->assertSame( 'Our own story.', get_post( $about_id )->post_content );
+				$this->assertSame( 12345, (int) get_option( 'site_icon' ) );
+			}
+		);
+		$this->assertSame( 0, $downloads );
+	}
+
+	/**
+	 * The group preview writes nothing.
+	 */
+	public function test_plan_group_writes_nothing() {
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+		$about_id = $this->seed_about_page();
+
+		$results = Meetup_Import\plan_group( $this->site_id, Meetup_Import\normalize_group( $this->raw_group() ) );
+
+		$this->assertSame( 'set', $results['location'] );
+		$this->on_site(
+			function () use ( $about_id ) {
+				$this->assertNull( \WordCamp\Groups\Frontend\Group_Location\get_location() );
+				$this->assertStringContainsString( 'Example text', get_post( $about_id )->post_content );
+				$this->assertSame( 0, (int) get_option( 'site_icon' ) );
+			}
+		);
+		$this->assertSame( 0, $downloads );
+	}
+
+	/**
+	 * A group Meetup knows no city for leaves the location unset.
+	 */
+	public function test_import_group_without_location() {
+		$results = Meetup_Import\import_group(
+			$this->site_id,
+			Meetup_Import\normalize_group(
+				$this->raw_group(
+					array(
+						'city'          => '',
+						'description'   => '',
+						'keyGroupPhoto' => null,
+					)
+				)
+			)
+		);
+
+		$this->assertSame( 'missing', $results['location'] );
+		$this->assertSame( 'missing', $results['about'] );
+		$this->assertSame( 'missing', $results['icon'] );
+	}
+
+	/**
+	 * Meetup organizers in each of the ways leader matching can go.
+	 *
+	 * @return array{0: array, 1: int[]} Raw leader edges, and the users.
+	 */
+	protected function setup_leaders(): array {
+		$users = array(
+			'organizer' => self::factory()->user->create( array( 'user_email' => 'organizer@example.org' ) ),
+			'coorg'     => self::factory()->user->create( array( 'user_email' => 'coorg@example.org' ) ),
+			'admin'     => self::factory()->user->create( array( 'user_email' => 'siteadmin@example.org' ) ),
+			'asst'      => self::factory()->user->create( array( 'user_email' => 'asst@example.org' ) ),
+		);
+
+		add_user_to_blog( $this->site_id, $users['coorg'], 'subscriber' );
+		add_user_to_blog( $this->site_id, $users['admin'], 'administrator' );
+
+		$edge = static function ( string $id, string $email, string $role ): array {
+			return array(
+				'metadata' => array( 'role' => $role ),
+				'node'     => array(
+					'id'    => $id,
+					'email' => $email,
+				),
+			);
+		};
+
+		$raw = array(
+			$edge( 'l1', 'organizer@example.org', 'ORGANIZER' ),
+			$edge( 'l2', 'coorg@example.org', 'COORGANIZER' ),
+			$edge( 'l3', 'siteadmin@example.org', 'COORGANIZER' ),
+			$edge( 'l4', 'asst@example.org', 'ASST_ORGANIZER' ),
+			$edge( 'l5', 'nobody@example.org', 'COORGANIZER' ),
+			$edge( 'l6', '', 'EVENT_ORGANIZER' ),
+			$edge( 'l7', 'member@example.org', 'MEMBER' ),
+		);
+
+		return array( $raw, $users );
+	}
+
+	/**
+	 * Organizers get the matching role; nobody is demoted or made an administrator.
+	 */
+	public function test_import_leaders() {
+		list( $raw, $users ) = $this->setup_leaders();
+
+		$counts = Meetup_Import\import_leaders( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_leader', $raw ) );
+
+		$this->assertSame( 2, $counts['added'] );
+		$this->assertSame( 1, $counts['promoted'] );
+		$this->assertSame( 1, $counts['kept'] );
+		$this->assertSame( 1, $counts['unmatched'] );
+		$this->assertSame( 1, $counts['no_email'] );
+
+		$roles = function ( int $user_id ): array {
+			return ( new \WP_User( $user_id, '', $this->site_id ) )->roles;
+		};
+
+		$this->assertSame( array( 'editor' ), $roles( $users['organizer'] ) );
+		$this->assertSame( array( 'editor' ), $roles( $users['coorg'] ) );
+		$this->assertSame( array( 'administrator' ), $roles( $users['admin'] ) );
+		$this->assertSame( array( 'author' ), $roles( $users['asst'] ) );
+
+		// Added organizers are opted out of event emails like any imported member.
+		$this->assertSame( '0', get_user_meta( $users['organizer'], \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * The organizer preview changes no roles.
+	 */
+	public function test_plan_leaders_writes_nothing() {
+		list( $raw, $users ) = $this->setup_leaders();
+
+		$counts = Meetup_Import\plan_leaders( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_leader', $raw ) );
+
+		$this->assertSame( 2, $counts['added'] );
+		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
+		$this->assertSame( array( 'subscriber' ), ( new \WP_User( $users['coorg'], '', $this->site_id ) )->roles );
+	}
+
+	/**
+	 * Matched hosts join the group if needed and are credited on the event.
+	 */
+	public function test_import_credits_hosts() {
+		$host  = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		$event = $this->raw_event(
+			array(
+				'eventHosts' => array(
+					array( 'member' => array( 'email' => 'Host@Example.org' ) ),
+					array( 'member' => array( 'email' => 'stranger@example.org' ) ),
+				),
+			)
+		);
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $event ) ), true );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertTrue( is_user_member_of_blog( $host, $this->site_id ) );
+		$this->assertSame( '0', get_user_meta( $host, \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
+		$this->assertSame(
+			array( $host ),
+			$this->on_site(
+				static function () use ( $post ) {
+					return array_map( 'intval', (array) get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Hosts aren't touched without the matching box, and an organizer's choice survives a refresh.
+	 */
+	public function test_hosts_need_matching_and_respect_organizer() {
+		$host  = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		$other = self::factory()->user->create();
+		add_user_to_blog( $this->site_id, $other, 'subscriber' );
+
+		$events = array(
+			Meetup_Import\normalize_event( $this->raw_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'host@example.org' ) ) ) ) ) ),
+		);
+
+		Meetup_Import\import_events( $this->site_id, $events );
+		$this->assertFalse( is_user_member_of_blog( $host, $this->site_id ) );
+
+		$post = $this->find_event( '315889305' );
+		$this->on_site(
+			static function () use ( $post, $other ) {
+				\WordCamp\Groups\Frontend\Event_Hosts\set_event_hosts( $post->ID, array( $other ) );
+			}
+		);
+
+		Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame(
+			array( $other ),
+			$this->on_site(
+				static function () use ( $post ) {
+					return array_map( 'intval', (array) get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Meetup RSVPs in every status, from matched and unmatched people.
+	 *
+	 * @return array{0: array, 1: int[]} Raw RSVP nodes, and the users.
+	 */
+	protected function setup_rsvps(): array {
+		$users = array(
+			'yes'      => self::factory()->user->create( array( 'user_email' => 'yes@example.org' ) ),
+			'no'       => self::factory()->user->create( array( 'user_email' => 'no@example.org' ) ),
+			'waitlist' => self::factory()->user->create( array( 'user_email' => 'waitlist@example.org' ) ),
+			'attended' => self::factory()->user->create( array( 'user_email' => 'attended@example.org' ) ),
+			'maybe'    => self::factory()->user->create( array( 'user_email' => 'maybe@example.org' ) ),
+		);
+
+		$rsvp = static function ( string $email, string $status ): array {
+			return array(
+				'status'      => $status,
+				'guestsCount' => 0,
+				'member'      => array( 'email' => $email ),
+			);
+		};
+
+		$raw = array(
+			$rsvp( 'Yes@Example.org', 'YES' ),
+			$rsvp( 'no@example.org', 'NO' ),
+			$rsvp( 'waitlist@example.org', 'WAITLIST' ),
+			$rsvp( 'attended@example.org', 'ATTENDED' ),
+			$rsvp( 'maybe@example.org', 'MAYBE' ),
+			$rsvp( 'nobody@example.org', 'YES' ),
+			$rsvp( '', 'YES' ),
+		);
+
+		return array( $raw, $users );
+	}
+
+	/**
+	 * RSVPs from matched people become real RSVPs, with attendance checked in, and email nobody.
+	 */
+	public function test_import_rsvps() {
+		list( $raw, $users ) = $this->setup_rsvps();
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( $raw ) {
+				return $raw;
+			}
+		);
+
+		// The confirmation email this guards against has to be live for the
+		// "emails nobody" check below to mean anything.
+		$this->assertNotFalse( has_action( 'set_object_terms', 'WordCamp\\Groups\\Frontend\\RSVP_Confirmation\\send_confirmation' ) );
+
+		// A past event, so it ends up published -- the case a confirmation email could go out for.
+		$results = Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_past_event() ) ), true );
+
+		$this->assertSame(
+			array(
+				'saved'      => 4,
+				'checked_in' => 1,
+				'unmatched'  => 2,
+				'skipped'    => 1,
+				'failed'     => 0,
+			),
+			$results[0]['rsvps']
+		);
+
+		$post = $this->find_event( '300000001' );
+		$this->assertSame( 'publish', $post->post_status );
+
+		$this->on_site(
+			function () use ( $post, $users ) {
+				$rsvp   = ( new Event( $post->ID ) )->rsvp;
+				$status = static function ( int $user_id ) use ( $rsvp ) {
+					return $rsvp->get( $user_id )['status'] ?? null;
+				};
+
+				$this->assertSame( 'attending', $status( $users['yes'] ) );
+				$this->assertSame( 'not_attending', $status( $users['no'] ) );
+				// Meetup's waiting list comes over as attending; this event has room.
+				$this->assertSame( 'attending', $status( $users['waitlist'] ) );
+				$this->assertSame( 'attending', $status( $users['attended'] ) );
+				$this->assertNull( $status( $users['maybe'] ) );
+
+				$this->assertTrue( \WordCamp\Groups\Frontend\Check_In\is_checked_in( (int) $rsvp->get( $users['attended'] )['comment_id'] ) );
+				$this->assertFalse( \WordCamp\Groups\Frontend\Check_In\is_checked_in( (int) $rsvp->get( $users['yes'] )['comment_id'] ) );
+				$this->assertTrue( \WordCamp\Groups\Frontend\Check_In\event_has_check_ins( $post->ID ) );
+			}
+		);
+
+		// RSVPing doesn't join anyone to the group.
+		$this->assertFalse( is_user_member_of_blog( $users['yes'], $this->site_id ) );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * Re-importing RSVPs updates them rather than adding more.
+	 */
+	public function test_rsvps_are_idempotent() {
+		list( $raw, $users ) = $this->setup_rsvps();
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( $raw ) {
+				return $raw;
+			}
+		);
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame(
+			4,
+			$this->on_site(
+				static function () use ( $post ) {
+					return count(
+						get_comments(
+							array(
+								'post_id' => $post->ID,
+								'type'    => 'gatherpress_rsvp',
+								'fields'  => 'ids',
+							)
+						)
+					);
+				}
+			)
+		);
+	}
+
+	/**
+	 * Without the matching box, no RSVPs are fetched at all.
+	 */
+	public function test_rsvps_need_matching() {
+		$fetched = 0;
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( &$fetched ) {
+				++$fetched;
+				return array();
+			}
+		);
+
+		$results = Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$this->assertSame( 0, $fetched );
+		$this->assertNull( $results[0]['rsvps'] );
+	}
+
+	/**
+	 * An RSVP request that fails leaves the event imported and counts the failure.
+	 */
+	public function test_failed_rsvp_fetch_still_imports_event() {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () {
+				return new \WP_Error( 'http_request_failed', 'Nope' );
+			},
+			20
+		);
+
+		$results = Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ), true );
+
+		$this->assertSame( 'created', $results[0]['status'] );
+		$this->assertSame( 1, $results[0]['rsvps']['failed'] );
+	}
+
+	/**
+	 * Meetup statuses map to GatherPress ones; the rest are left out.
+	 *
+	 * @dataProvider data_normalize_rsvp
+	 *
+	 * @param string      $meetup     Meetup status.
+	 * @param string|null $status     Expected GatherPress status.
+	 * @param bool        $checked_in Whether it means they came.
+	 */
+	public function test_normalize_rsvp( string $meetup, ?string $status, bool $checked_in ) {
+		$rsvp = Meetup_Import\normalize_rsvp(
+			array(
+				'status' => $meetup,
+				'member' => array( 'email' => 'x@example.org' ),
+			)
+		);
+
+		$this->assertSame( $status, $rsvp['status'] );
+		$this->assertSame( $checked_in, $rsvp['checked_in'] );
+	}
+
+	/**
+	 * Inputs for `test_normalize_rsvp()`.
+	 */
+	public function data_normalize_rsvp(): array {
+		return array(
+			'yes'              => array( 'YES', 'attending', false ),
+			'yes, pending pay' => array( 'YES_PENDING_PAYMENT', 'attending', false ),
+			'attended'         => array( 'ATTENDED', 'attending', true ),
+			'no'               => array( 'NO', 'not_attending', false ),
+			'waitlist'         => array( 'WAITLIST', 'attending', false ),
+			'maybe'            => array( 'MAYBE', null, false ),
+			'no show'          => array( 'NO_SHOW', null, false ),
+			'excused'          => array( 'EXCUSED_ABSENCE', null, false ),
+			'unanswered'       => array( 'HAVENT', null, false ),
+		);
+	}
+
+	/**
+	 * The form preview reports group details and organizers, and writes nothing.
+	 */
+	public function test_form_preview_with_matching() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		list( $raw_leaders, $users ) = $this->setup_leaders();
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			function () {
+				return array( $this->raw_event() );
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_leaders',
+			static function () use ( $raw_leaders ) {
+				return $raw_leaders;
+			}
+		);
+		add_filter( 'wcorg_meetup_import_pre_fetch_members', '__return_empty_array' );
+
+		$_POST['wcorg_meetup_import_step']    = 'preview';
+		$_POST['meetup_group']                = 'wma-wordpress-meetup';
+		$_POST['site_id']                     = (string) $this->site_id;
+		$_POST['match_people']                = '1';
+		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
+		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
+
+		try {
+			Meetup_Import\handle_form_submission();
+		} finally {
+			unset( $GLOBALS['super_admins'], $_POST['match_people'] );
+		}
+
+		$state = Meetup_Import\request_state();
+
+		$this->assertSame( 'set', $state['group_results']['location'] );
+		$this->assertSame( 2, $state['leader_counts']['added'] );
+		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
+		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
 	}
 }

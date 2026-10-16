@@ -38,9 +38,13 @@ use DateTimeZone;
 use Exception;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Venue;
+use WordCamp\Groups\Frontend\Check_In;
+use WordCamp\Groups\Frontend\Event_Hosts;
+use WordCamp\Groups\Frontend\Group_Location;
 use WordCamp\Logger;
 use WordPressdotorg\MU_Plugins\Utilities\Meetup_Client;
 use WP_Error;
+use WP_User;
 
 use function WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key;
 use function WordCamp\Groups\Frontend\REST\storable_timezone;
@@ -59,6 +63,61 @@ const VENUE_ID_META  = '_wporg_meetup_venue_id';
 const RSVP_YES_META  = '_wporg_meetup_rsvp_yes_count';
 const ATTENDED_META  = '_wporg_meetup_attended_count';
 const PHOTO_ID_META  = '_wporg_meetup_photo_id';
+
+/**
+ * Site options recording which Meetup group a site was imported from, and
+ * when that group was founded, for the group's history.
+ */
+const GROUP_URLNAME_OPTION = 'wporg_meetup_group_urlname';
+const FOUNDED_OPTION       = 'wporg_meetup_founded_date';
+
+/**
+ * The site role each Meetup leadership role maps to.
+ *
+ * Meetup's organizers and co-organizers run the group, the full "Organizer"
+ * tier here (`editor`); assistant and event organizers run events, the "Event
+ * Organizer" tier (`author`). See `Frontend\Capabilities\ORGANIZER_ROLES`.
+ * Nobody is ever made an `administrator` by an import -- that stays with the
+ * lead organizer the site was created for.
+ */
+const LEADER_ROLES = array(
+	'ORGANIZER'       => 'editor',
+	'COORGANIZER'     => 'editor',
+	'ASST_ORGANIZER'  => 'author',
+	'EVENT_ORGANIZER' => 'author',
+);
+
+/**
+ * How the site roles rank, so an import only ever promotes.
+ */
+const ROLE_RANK = array(
+	'subscriber'    => 0,
+	'contributor'   => 0,
+	'author'        => 1,
+	'editor'        => 2,
+	'administrator' => 3,
+);
+
+/**
+ * GatherPress RSVP status for each Meetup one, and whether it means they came.
+ *
+ * Meetup's waiting list comes over as "attending" and GatherPress places it:
+ * on an event with room it promotes waitlisted RSVPs straight away anyway,
+ * and on a full one it puts an attending RSVP on the waiting list itself
+ * (`Rsvp::constrain_rsvp_intent()`). Saving `waiting_list` directly on an
+ * event with room also trips a bug in GatherPress 0.35's waiting-list
+ * promotion (`Rsvp::check_waiting_list()` walks past the end of the list).
+ *
+ * Meetup statuses with no equivalent (maybe, no-show, excused, haven't
+ * answered) are left out rather than guessed at.
+ */
+const RSVP_STATUSES = array(
+	'YES'                 => array( 'attending', false ),
+	'YES_PENDING_PAYMENT' => array( 'attending', false ),
+	'ATTENDED'            => array( 'attending', true ),
+	'NO'                  => array( 'not_attending', false ),
+	'WAITLIST'            => array( 'attending', false ),
+);
 
 /**
  * Marks an imported past event that still has to be published.
@@ -149,13 +208,13 @@ function handle_form_submission() {
 
 	check_admin_referer( NONCE_ACTION, NONCE_NAME );
 
-	$step           = 'import' === $_POST['wcorg_meetup_import_step'] ? 'import' : 'preview';
-	$urlname        = parse_group_urlname( isset( $_POST['meetup_group'] ) ? sanitize_text_field( wp_unslash( $_POST['meetup_group'] ) ) : '' );
-	$site_id        = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
-	$include_past   = ! empty( $_POST['include_past'] );
-	$import_members = ! empty( $_POST['import_members'] );
-	$state          = compact( 'step', 'urlname', 'site_id', 'include_past', 'import_members' );
-	$is_valid       = validate_target_site( $site_id );
+	$step         = 'import' === $_POST['wcorg_meetup_import_step'] ? 'import' : 'preview';
+	$urlname      = parse_group_urlname( isset( $_POST['meetup_group'] ) ? sanitize_text_field( wp_unslash( $_POST['meetup_group'] ) ) : '' );
+	$site_id      = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
+	$include_past = ! empty( $_POST['include_past'] );
+	$match_people = ! empty( $_POST['match_people'] );
+	$state        = compact( 'step', 'urlname', 'site_id', 'include_past', 'match_people' );
+	$is_valid     = validate_target_site( $site_id );
 
 	if ( '' === $urlname ) {
 		add_settings_error( 'wcorg-meetup-import', 'invalid_group', __( 'Please enter a Meetup group URL or name.', 'wordcamporg' ) );
@@ -169,10 +228,12 @@ function handle_form_submission() {
 		return;
 	}
 
+	$raw_group   = fetch_group( $urlname );
 	$raw_events  = fetch_group_events( $urlname, $include_past );
-	$raw_members = $import_members ? fetch_group_members( $urlname ) : array();
+	$raw_members = $match_people ? fetch_group_members( $urlname ) : array();
+	$raw_leaders = $match_people ? fetch_group_leaders( $urlname ) : array();
 
-	foreach ( array( $raw_events, $raw_members ) as $fetched ) {
+	foreach ( array( $raw_group, $raw_events, $raw_members, $raw_leaders ) as $fetched ) {
 		if ( is_wp_error( $fetched ) ) {
 			add_settings_error( 'wcorg-meetup-import', $fetched->get_error_code(), $fetched->get_error_message() );
 			request_state( $state );
@@ -180,14 +241,20 @@ function handle_form_submission() {
 		}
 	}
 
-	$events  = array_map( __NAMESPACE__ . '\normalize_event', $raw_events );
-	$members = array_map( __NAMESPACE__ . '\normalize_member', $raw_members );
+	$data = array(
+		'group'   => normalize_group( $raw_group ),
+		'events'  => array_map( __NAMESPACE__ . '\normalize_event', $raw_events ),
+		'members' => array_map( __NAMESPACE__ . '\normalize_member', $raw_members ),
+		'leaders' => array_map( __NAMESPACE__ . '\normalize_leader', $raw_leaders ),
+	);
 
 	if ( 'preview' === $step ) {
-		$state['plan'] = plan_events( $site_id, $events );
+		$state['group_results'] = plan_group( $site_id, $data['group'] );
+		$state['plan']          = plan_events( $site_id, $data['events'] );
 
-		if ( $import_members ) {
-			$state['member_counts'] = plan_members( $site_id, $members );
+		if ( $match_people ) {
+			$state['leader_counts'] = plan_leaders( $site_id, $data['leaders'] );
+			$state['member_counts'] = plan_members( $site_id, $data['members'] );
 		}
 
 		request_state( $state );
@@ -211,7 +278,7 @@ function handle_form_submission() {
 	register_shutdown_function( __NAMESPACE__ . '\release_lock' );
 
 	try {
-		run_import( $site_id, $events, $members, $import_members, $state );
+		run_import( $site_id, $data, $match_people, $state );
 	} finally {
 		release_lock();
 	}
@@ -220,14 +287,32 @@ function handle_form_submission() {
 /**
  * Write the import and report on it. Runs while holding the import lock.
  *
- * @param int   $site_id        Target group site.
- * @param array $events         Normalized events.
- * @param array $members        Normalized members.
- * @param bool  $import_members Whether members were asked for.
- * @param array $state          Request state so far.
+ * Group details go first, then the group's leaders and members, so that
+ * everyone is in the group, in the right role, before events credit them as
+ * hosts.
+ *
+ * @param int   $site_id      Target group site.
+ * @param array $data         Normalized `group`, `events`, `members`, and `leaders`.
+ * @param bool  $match_people Whether to match people to WordPress.org accounts by email.
+ * @param array $state        Request state so far.
  */
-function run_import( int $site_id, array $events, array $members, bool $import_members, array $state ): void {
-	$results = import_events( $site_id, $events );
+function run_import( int $site_id, array $data, bool $match_people, array $state ): void {
+	$group_results = import_group( $site_id, $data['group'] );
+
+	if ( is_wp_error( $group_results ) ) {
+		add_settings_error( 'wcorg-meetup-import', $group_results->get_error_code(), $group_results->get_error_message() );
+		request_state( $state );
+		return;
+	}
+
+	$state['group_results'] = $group_results;
+
+	if ( $match_people ) {
+		$state['leader_counts'] = import_leaders( $site_id, $data['leaders'] );
+		$state['member_counts'] = import_members( $site_id, $data['members'] );
+	}
+
+	$results = import_events( $site_id, $data['events'], $match_people );
 
 	if ( is_wp_error( $results ) ) {
 		add_settings_error( 'wcorg-meetup-import', $results->get_error_code(), $results->get_error_message() );
@@ -254,14 +339,8 @@ function run_import( int $site_id, array $events, array $members, bool $import_m
 
 	$state['results'] = $results;
 
-	if ( $import_members ) {
-		$member_counts = import_members( $site_id, $members );
-
-		if ( is_wp_error( $member_counts ) ) {
-			add_settings_error( 'wcorg-meetup-import', $member_counts->get_error_code(), $member_counts->get_error_message() );
-		} else {
-			$state['member_counts'] = $member_counts;
-		}
+	if ( $match_people ) {
+		$state['rsvp_counts'] = sum_rsvp_counts( $results );
 	}
 
 	request_state( $state );
@@ -275,12 +354,13 @@ function render_admin_page() {
 		wp_die( esc_html__( 'Sorry, you are not allowed to import events on this network.', 'wordcamporg' ) );
 	}
 
-	$state          = request_state();
-	$urlname        = $state['urlname'] ?? '';
-	$site_id        = $state['site_id'] ?? 0;
-	$include_past   = ! empty( $state['include_past'] );
-	$import_members = ! empty( $state['import_members'] );
-	$rows           = $state['plan'] ?? $state['results'] ?? array();
+	$state        = request_state();
+	$urlname      = $state['urlname'] ?? '';
+	$site_id      = $state['site_id'] ?? 0;
+	$include_past = ! empty( $state['include_past'] );
+	$match_people = ! empty( $state['match_people'] );
+	$rows         = $state['plan'] ?? $state['results'] ?? array();
+	$is_preview   = isset( $state['plan'] );
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import from Meetup', 'wordcamporg' ); ?></h1>
@@ -300,7 +380,7 @@ function render_admin_page() {
 		<?php settings_errors( 'wcorg-meetup-import' ); ?>
 
 		<p>
-			<?php esc_html_e( 'Copies a Meetup group\'s upcoming events and venues into a group site as drafts, and optionally its past events and members. No emails are sent. Running it again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. Running it again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
 		</p>
 
 		<form method="post" action="">
@@ -336,8 +416,8 @@ function render_admin_page() {
 							</label>
 							<br />
 							<label>
-								<input name="import_members" type="checkbox" value="1" <?php checked( $import_members ); ?> />
-								<?php esc_html_e( 'Members who already have a WordPress.org account with the same email. They join as Members with event emails off. Nobody else gets an account.', 'wordcamporg' ); ?>
+								<input name="match_people" type="checkbox" value="1" <?php checked( $match_people ); ?> />
+								<?php esc_html_e( 'Match people to WordPress.org accounts by email: members join the group (event emails off), Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' ); ?>
 							</label>
 						</fieldset>
 					</td>
@@ -346,7 +426,7 @@ function render_admin_page() {
 
 			<p class="submit">
 				<button type="submit" name="wcorg_meetup_import_step" value="preview" class="button button-secondary"><?php esc_html_e( 'Preview', 'wordcamporg' ); ?></button>
-				<?php if ( isset( $state['plan'] ) && ( $rows || ! empty( $state['member_counts']['join'] ) ) ) : ?>
+				<?php if ( $is_preview ) : ?>
 					<button type="submit" name="wcorg_meetup_import_step" value="import" class="button button-primary"><?php esc_html_e( 'Import', 'wordcamporg' ); ?></button>
 				<?php endif; ?>
 			</p>
@@ -355,11 +435,33 @@ function render_admin_page() {
 		<?php if ( isset( $state['plan'] ) || isset( $state['results'] ) ) : ?>
 			<h2><?php echo esc_html( isset( $state['plan'] ) ? __( 'Preview', 'wordcamporg' ) : __( 'Results', 'wordcamporg' ) ); ?></h2>
 
-			<?php if ( isset( $state['member_counts'] ) ) : ?>
-				<h3><?php esc_html_e( 'Members', 'wordcamporg' ); ?></h3>
-				<p><?php echo esc_html( describe_member_counts( $state['member_counts'], isset( $state['plan'] ) ) ); ?></p>
-				<h3><?php esc_html_e( 'Events', 'wordcamporg' ); ?></h3>
+			<?php if ( isset( $state['group_results'] ) ) : ?>
+				<h3><?php esc_html_e( 'Group', 'wordcamporg' ); ?></h3>
+				<ul class="ul-disc">
+					<?php foreach ( describe_group_results( $state['group_results'], $is_preview ) as $line ) : ?>
+						<li><?php echo esc_html( $line ); ?></li>
+					<?php endforeach; ?>
+				</ul>
 			<?php endif; ?>
+
+			<?php if ( isset( $state['member_counts'] ) ) : ?>
+				<h3><?php esc_html_e( 'People', 'wordcamporg' ); ?></h3>
+				<ul class="ul-disc">
+					<li><?php echo esc_html( describe_leader_counts( $state['leader_counts'] ?? array(), $is_preview ) ); ?></li>
+					<li><?php echo esc_html( describe_member_counts( $state['member_counts'], $is_preview ) ); ?></li>
+					<li>
+						<?php
+						echo esc_html(
+							isset( $state['rsvp_counts'] )
+								? describe_rsvp_counts( $state['rsvp_counts'] )
+								: __( 'RSVPs are fetched per event, so they are matched during the import rather than previewed.', 'wordcamporg' )
+						);
+						?>
+					</li>
+				</ul>
+			<?php endif; ?>
+
+			<h3><?php esc_html_e( 'Events', 'wordcamporg' ); ?></h3>
 
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
@@ -435,6 +537,84 @@ function describe_member_counts( array $counts, bool $is_preview ): string {
 		$counts['previously_imported'],
 		$counts['unmatched'],
 		$counts['no_email']
+	);
+}
+
+/**
+ * One line per group detail, saying what happened (or would happen) to it.
+ *
+ * @param array $results    From `plan_group()` or `import_group()`: detail => outcome.
+ * @param bool  $is_preview Whether this is a preview.
+ * @return string[]
+ */
+function describe_group_results( array $results, bool $is_preview ): array {
+	$labels = array(
+		'location' => array(
+			'set'     => $is_preview ? __( 'Location: will be set from Meetup.', 'wordcamporg' ) : __( 'Location: set from Meetup.', 'wordcamporg' ),
+			'kept'    => __( 'Location: already set on the site, left as is.', 'wordcamporg' ),
+			'missing' => __( 'Location: Meetup has no usable city and country.', 'wordcamporg' ),
+		),
+		'about'    => array(
+			'set'     => $is_preview ? __( 'About page: the example text will be replaced with Meetup\'s group description.', 'wordcamporg' ) : __( 'About page: example text replaced with Meetup\'s group description.', 'wordcamporg' ),
+			'kept'    => __( 'About page: already edited, or missing, left as is.', 'wordcamporg' ),
+			'missing' => __( 'About page: Meetup has no group description.', 'wordcamporg' ),
+		),
+		'icon'     => array(
+			'set'     => $is_preview ? __( 'Site icon: will be set from Meetup\'s group photo.', 'wordcamporg' ) : __( 'Site icon: set from Meetup\'s group photo.', 'wordcamporg' ),
+			'kept'    => __( 'Site icon: already set, left as is.', 'wordcamporg' ),
+			'missing' => __( 'Site icon: Meetup has no group photo.', 'wordcamporg' ),
+			'failed'  => __( 'Site icon: the group photo could not be downloaded.', 'wordcamporg' ),
+		),
+	);
+
+	$lines = array();
+
+	foreach ( $labels as $detail => $outcomes ) {
+		if ( isset( $results[ $detail ], $outcomes[ $results[ $detail ] ] ) ) {
+			$lines[] = $outcomes[ $results[ $detail ] ];
+		}
+	}
+
+	return $lines;
+}
+
+/**
+ * One-line summary of what happened, or would happen, to the group's Meetup organizers.
+ *
+ * @param array $counts     From `plan_leaders()` or `import_leaders()`.
+ * @param bool  $is_preview Whether this is a preview.
+ */
+function describe_leader_counts( array $counts, bool $is_preview ): string {
+	$counts = array_merge( array_fill_keys( array( 'added', 'promoted', 'kept', 'unmatched', 'no_email' ), 0 ), $counts );
+
+	return sprintf(
+		/* translators: 1: Total organizers, 2: Added to the group, 3: Given a higher role, 4: Already in that role or higher, 5: No matching account, 6: No email shared. */
+		$is_preview
+			? __( '%1$d Meetup organizers: %2$d will join with their organizer role, %3$d will be promoted, %4$d already have that role or higher, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' )
+			: __( '%1$d Meetup organizers: %2$d joined with their organizer role, %3$d were promoted, %4$d already had that role or higher, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' ),
+		array_sum( $counts ),
+		$counts['added'],
+		$counts['promoted'],
+		$counts['kept'],
+		$counts['unmatched'],
+		$counts['no_email']
+	);
+}
+
+/**
+ * One-line summary of the RSVPs an import carried over.
+ *
+ * @param array $counts From `sum_rsvp_counts()`.
+ */
+function describe_rsvp_counts( array $counts ): string {
+	return sprintf(
+		/* translators: 1: RSVPs saved, 2: Of which checked in, 3: No matching account, 4: Status with no equivalent, e.g. "maybe", 5: Could not be fetched or saved. */
+		__( 'RSVPs: %1$d kept (%2$d checked in as attended), %3$d had no matching WordPress.org account, %4$d had a status with no equivalent here, %5$d failed.', 'wordcamporg' ),
+		$counts['saved'],
+		$counts['checked_in'],
+		$counts['unmatched'],
+		$counts['skipped'],
+		$counts['failed']
 	);
 }
 
@@ -524,6 +704,7 @@ function fetch_group_events( string $urlname, bool $include_past = false ) {
 					'howToFindUs',
 					'venues { address postalCode }',
 					'featuredEventPhoto { id highResUrl }',
+					'eventHosts { member { id email } }',
 				),
 			)
 		);
@@ -620,6 +801,219 @@ function normalize_member( array $raw ): array {
 }
 
 /**
+ * Fetch a group's own details from the Meetup API.
+ *
+ * @param string $urlname Meetup group urlname.
+ * @return array|WP_Error The `groupByUrlname` node.
+ */
+function fetch_group( string $urlname ) {
+	/**
+	 * Short-circuit the Meetup group request, e.g. with fixture data.
+	 *
+	 * @param array|WP_Error|null $group   The `groupByUrlname` node, or null to fetch from Meetup.
+	 * @param string              $urlname Meetup group urlname.
+	 */
+	$group = apply_filters( 'wcorg_meetup_import_pre_fetch_group', null, $urlname );
+
+	if ( null === $group ) {
+		$client = get_meetup_client();
+
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$result = $client->send_paginated_request(
+			'query ( $urlname: String! ) {
+				groupByUrlname( urlname: $urlname ) {
+					id name urlname description city country foundedDate
+					keyGroupPhoto { id highResUrl }
+				}
+			}',
+			array( 'urlname' => $urlname )
+		);
+
+		$group = is_wp_error( $result ) ? $result : ( $result['groupByUrlname'] ?? null );
+	}
+
+	if ( is_wp_error( $group ) ) {
+		return $group;
+	}
+
+	if ( ! is_array( $group ) || empty( $group['id'] ) ) {
+		return new WP_Error( 'meetup_group_not_found', __( 'Meetup did not return that group. Check the group URL.', 'wordcamporg' ) );
+	}
+
+	return $group;
+}
+
+/**
+ * Fetch a group's organizers from the Meetup API, with their roles.
+ *
+ * The Meetup account the connection belongs to is left out. On a Pro network
+ * that account is listed as an organizer of every group, and matching it by
+ * email would hand whoever owns that address an Organizer role on every
+ * imported site.
+ *
+ * @param string $urlname Meetup group urlname.
+ * @return array|WP_Error Raw edges: `{ metadata: { role }, node: { id, email } }`.
+ */
+function fetch_group_leaders( string $urlname ) {
+	/**
+	 * Short-circuit the Meetup leaders request, e.g. with fixture data.
+	 *
+	 * @param array|WP_Error|null $leaders Raw edges, or null to fetch from Meetup.
+	 * @param string              $urlname Meetup group urlname.
+	 */
+	$leaders = apply_filters( 'wcorg_meetup_import_pre_fetch_leaders', null, $urlname );
+
+	if ( null === $leaders ) {
+		$client = get_meetup_client();
+
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$result = $client->send_paginated_request(
+			'query ( $urlname: String!, $cursor: String ) {
+				self { id }
+				groupByUrlname( urlname: $urlname ) {
+					memberships ( first: 100, after: $cursor, filter: { status: LEADER } ) {
+						' . $client->pagination . '
+						edges { metadata { role } node { id email } }
+					}
+				}
+			}',
+			array(
+				'urlname' => $urlname,
+				'cursor'  => null,
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$self_id = (string) ( $result['self']['id'] ?? '' );
+		$leaders = array_values(
+			array_filter(
+				$result['groupByUrlname']['memberships']['edges'] ?? array(),
+				static function ( $edge ) use ( $self_id ) {
+					return '' === $self_id || (string) ( $edge['node']['id'] ?? '' ) !== $self_id;
+				}
+			)
+		);
+	}
+
+	return is_array( $leaders ) || is_wp_error( $leaders ) ? $leaders : array();
+}
+
+/**
+ * Fetch one event's RSVPs from the Meetup API.
+ *
+ * @param string $meetup_event_id Meetup event ID.
+ * @return array|WP_Error Raw RSVP nodes: `{ status, guestsCount, member: { id, email } }`.
+ */
+function fetch_event_rsvps( string $meetup_event_id ) {
+	/**
+	 * Short-circuit a Meetup RSVPs request, e.g. with fixture data.
+	 *
+	 * @param array|WP_Error|null $rsvps           Raw RSVP nodes, or null to fetch from Meetup.
+	 * @param string              $meetup_event_id Meetup event ID.
+	 */
+	$rsvps = apply_filters( 'wcorg_meetup_import_pre_fetch_rsvps', null, $meetup_event_id );
+
+	if ( null === $rsvps ) {
+		$client = get_meetup_client();
+
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$result = $client->send_paginated_request(
+			'query ( $eventId: ID!, $cursor: String ) {
+				event( id: $eventId ) {
+					rsvps ( first: 100, after: $cursor ) {
+						' . $client->pagination . '
+						edges { node { status guestsCount member { id email } } }
+					}
+				}
+			}',
+			array(
+				'eventId' => $meetup_event_id,
+				'cursor'  => null,
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$rsvps = array_column( $result['event']['rsvps']['edges'] ?? array(), 'node' );
+	}
+
+	return is_array( $rsvps ) || is_wp_error( $rsvps ) ? $rsvps : array();
+}
+
+/**
+ * Map a Meetup group node to the details the importer writes.
+ *
+ * @param array $raw The `groupByUrlname` node.
+ * @return array
+ */
+function normalize_group( array $raw ): array {
+	$founded = '';
+
+	if ( ! empty( $raw['foundedDate'] ) ) {
+		try {
+			$founded = ( new DateTimeImmutable( (string) $raw['foundedDate'] ) )->format( 'Y-m-d' );
+		} catch ( Exception $e ) {
+			$founded = '';
+		}
+	}
+
+	return array(
+		'meetup_id'    => (string) ( $raw['id'] ?? '' ),
+		'urlname'      => (string) ( $raw['urlname'] ?? '' ),
+		'description'  => '' !== trim( (string) ( $raw['description'] ?? '' ) ) ? wp_kses_post( wpautop( (string) $raw['description'] ) ) : '',
+		'city'         => trim( (string) ( $raw['city'] ?? '' ) ),
+		'country_code' => strtoupper( trim( (string) ( $raw['country'] ?? '' ) ) ),
+		'founded'      => $founded,
+		'photo'        => normalize_photo( $raw['keyGroupPhoto'] ?? null ),
+	);
+}
+
+/**
+ * Keep what leader matching needs: the Meetup ID, the email, and the site role.
+ *
+ * @param array $raw Edge from `fetch_group_leaders()`.
+ * @return array `role` is null for a Meetup role with no organizer equivalent.
+ */
+function normalize_leader( array $raw ): array {
+	return array(
+		'meetup_id' => (string) ( $raw['node']['id'] ?? '' ),
+		'email'     => strtolower( (string) sanitize_email( (string) ( $raw['node']['email'] ?? '' ) ) ),
+		'role'      => LEADER_ROLES[ strtoupper( (string) ( $raw['metadata']['role'] ?? '' ) ) ] ?? null,
+	);
+}
+
+/**
+ * Map a Meetup RSVP to the GatherPress RSVP it becomes.
+ *
+ * @param array $raw RSVP node from `fetch_event_rsvps()`.
+ * @return array `status` is null for a Meetup status with no equivalent.
+ */
+function normalize_rsvp( array $raw ): array {
+	$mapped = RSVP_STATUSES[ strtoupper( (string) ( $raw['status'] ?? '' ) ) ] ?? array( null, false );
+
+	return array(
+		'email'      => strtolower( (string) sanitize_email( (string) ( $raw['member']['email'] ?? '' ) ) ),
+		'status'     => $mapped[0],
+		'checked_in' => $mapped[1],
+		'guests'     => max( 0, (int) ( $raw['guestsCount'] ?? 0 ) ),
+	);
+}
+
+/**
  * Map a Meetup event node to the fields the importer writes.
  *
  * Times are converted to the group's own timezone, which is what GatherPress
@@ -697,6 +1091,18 @@ function normalize_event( array $raw ): array {
 		'rsvp_yes'    => (int) ( $raw['rsvps']['yesCount'] ?? 0 ),
 		'attended'    => (int) ( $raw['rsvps']['attendedCount'] ?? 0 ),
 		'photo'       => normalize_photo( $raw['featuredEventPhoto'] ?? null ),
+		'hosts'       => array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static function ( $host ) {
+							return strtolower( (string) sanitize_email( (string) ( $host['member']['email'] ?? '' ) ) );
+						},
+						(array) ( $raw['eventHosts'] ?? array() )
+					)
+				)
+			)
+		),
 	);
 }
 
@@ -793,12 +1199,13 @@ function plan_events( int $site_id, array $events ): array {
  * Callers MUST verify the `manage_sites` capability before calling this -- it
  * performs no capability check of its own, matching `create_group_site()`.
  *
- * @param int   $site_id Target group site.
- * @param array $events  Normalized events, from `normalize_event()`.
- * @return array[]|WP_Error One `{ event, status, post_id, message }` per event,
+ * @param int   $site_id      Target group site.
+ * @param array $events       Normalized events, from `normalize_event()`.
+ * @param bool  $match_people Whether to credit hosts and carry RSVPs over, matching people by email.
+ * @return array[]|WP_Error One `{ event, status, post_id, message, rsvps }` per event,
  *                          status `created`, `updated`, `skipped`, or `failed`.
  */
-function import_events( int $site_id, array $events ) {
+function import_events( int $site_id, array $events, bool $match_people = false ) {
 	$is_valid = validate_target_site( $site_id );
 
 	if ( is_wp_error( $is_valid ) ) {
@@ -811,7 +1218,7 @@ function import_events( int $site_id, array $events ) {
 
 	$results = with_site(
 		$site_id,
-		function () use ( $events ) {
+		function () use ( $events, $match_people ) {
 			/*
 			 * The recurring-events tables are per-site and created lazily, from
 			 * hooks that don't fire for a `switch_to_blog()`. See the same call
@@ -821,7 +1228,12 @@ function import_events( int $site_id, array $events ) {
 				\WordPressdotorg\GatherPress_Recurring_Events\Database::maybe_install();
 			}
 
-			return array_map( __NAMESPACE__ . '\import_event', $events );
+			return array_map(
+				static function ( $event ) use ( $match_people ) {
+					return import_event( $event, $match_people );
+				},
+				$events
+			);
 		}
 	);
 
@@ -845,10 +1257,11 @@ function import_events( int $site_id, array $events ) {
  * action fires, upcoming events stay drafts, and past events are published
  * with their notification already marked handled, so no emails go out.
  *
- * @param array $event Normalized event.
+ * @param array $event        Normalized event.
+ * @param bool  $match_people Whether to credit hosts and carry RSVPs over.
  * @return array
  */
-function import_event( array $event ): array {
+function import_event( array $event, bool $match_people = false ): array {
 	$existing = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $event['meetup_id'] );
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
@@ -940,6 +1353,15 @@ function import_event( array $event ): array {
 	update_post_meta( $post_id, RSVP_YES_META, $event['rsvp_yes'] );
 	update_post_meta( $post_id, ATTENDED_META, $event['attended'] );
 
+	// People last, while the event is still a draft: RSVP confirmations only
+	// go out for published events (see `import_rsvps()`).
+	$rsvps = null;
+
+	if ( $match_people ) {
+		import_hosts( $post_id, $event['hosts'] );
+		$rsvps = import_rsvps( $post_id, $event['meetup_id'] );
+	}
+
 	if ( $publish ) {
 		$published = wp_update_post(
 			array(
@@ -965,7 +1387,400 @@ function import_event( array $event ): array {
 		'event'   => $event,
 		'status'  => $existing ? 'updated' : 'created',
 		'post_id' => $post_id,
+		'rsvps'   => $rsvps,
 	);
+}
+
+/**
+ * Work out what an import would do with the group's own details.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $group   Normalized group, from `normalize_group()`.
+ * @return string[] Detail => outcome (`set`, `kept`, `missing`).
+ */
+function plan_group( int $site_id, array $group ): array {
+	return with_site(
+		$site_id,
+		static function () use ( $group ) {
+			return apply_group_details( $group, false );
+		}
+	);
+}
+
+/**
+ * Bring the group's own details over, wherever the site doesn't have them yet.
+ *
+ * Callers MUST verify the `manage_sites` capability before calling this, as
+ * with `import_events()`.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $group   Normalized group, from `normalize_group()`.
+ * @return string[]|WP_Error Detail => outcome (`set`, `kept`, `missing`, `failed`).
+ */
+function import_group( int $site_id, array $group ) {
+	$is_valid = validate_target_site( $site_id );
+
+	if ( is_wp_error( $is_valid ) ) {
+		return $is_valid;
+	}
+
+	$results = with_site(
+		$site_id,
+		static function () use ( $group ) {
+			return apply_group_details( $group, true );
+		}
+	);
+
+	Logger\log( 'group_imported', compact( 'site_id', 'results' ) );
+
+	return $results;
+}
+
+/**
+ * Decide, and optionally write, each group detail on the current site.
+ *
+ * One function for both the preview and the import, so they can't disagree.
+ * Every detail only fills a gap: anything the organizer has already set is
+ * theirs and stays.
+ *
+ * - Location: the same site meta the group settings tab writes, validated the
+ *   same way.
+ * - About page: only the draft seeded by Add Group Site, and only while it's
+ *   untouched (never modified since it was created).
+ * - Site icon: Meetup's key group photo, downloaded like an event photo.
+ *
+ * @param array $group Normalized group.
+ * @param bool  $write Whether to write, or only report.
+ * @return string[]
+ */
+function apply_group_details( array $group, bool $write ): array {
+	$results = array();
+
+	// Location.
+	if ( null !== Group_Location\get_location() ) {
+		$results['location'] = 'kept';
+	} else {
+		$location = Group_Location\normalize_location(
+			array(
+				'type'        => Group_Location\TYPE_PHYSICAL,
+				'city'        => $group['city'],
+				'countryCode' => $group['country_code'],
+			)
+		);
+
+		if ( is_wp_error( $location ) ) {
+			$results['location'] = 'missing';
+		} else {
+			if ( $write ) {
+				Group_Location\save_location( $location );
+			}
+
+			$results['location'] = 'set';
+		}
+	}
+
+	// About page.
+	$about = get_page_by_path( 'about', OBJECT, 'page' );
+
+	if ( '' === $group['description'] ) {
+		$results['about'] = 'missing';
+	} elseif ( ! $about || 'draft' !== $about->post_status || $about->post_modified !== $about->post_date ) {
+		$results['about'] = 'kept';
+	} else {
+		if ( $write ) {
+			wp_update_post(
+				wp_slash(
+					array(
+						'ID'           => $about->ID,
+						'post_content' => str_replace(
+							array( '<p>', '</p>' ),
+							array( '<!-- wp:paragraph --><p>', '</p><!-- /wp:paragraph -->' ),
+							$group['description']
+						),
+					)
+				)
+			);
+		}
+
+		$results['about'] = 'set';
+	}
+
+	// Site icon.
+	if ( get_option( 'site_icon' ) ) {
+		$results['icon'] = 'kept';
+	} elseif ( ! $group['photo'] ) {
+		$results['icon'] = 'missing';
+	} elseif ( ! $write ) {
+		$results['icon'] = 'set';
+	} else {
+		$attachment_id = find_or_sideload_photo( $group['photo'], 0 );
+
+		if ( $attachment_id ) {
+			update_option( 'site_icon', $attachment_id );
+		}
+
+		$results['icon'] = $attachment_id ? 'set' : 'failed';
+	}
+
+	// Where the site came from, for the group's history.
+	if ( $write ) {
+		if ( '' !== $group['urlname'] ) {
+			update_option( GROUP_URLNAME_OPTION, $group['urlname'] );
+		}
+
+		if ( '' !== $group['founded'] ) {
+			update_option( FOUNDED_OPTION, $group['founded'] );
+		}
+	}
+
+	return $results;
+}
+
+/**
+ * Add a user to a group site, opted out of its event emails.
+ *
+ * The one way an import puts someone in a group, whether as a member, an
+ * organizer, or a host. The opt-out goes first: GatherPress opts users in by
+ * default, nobody should start getting mail because their address turned up
+ * in a Meetup export, and if the run died right after adding them, the next
+ * run would see an existing member and leave them be.
+ *
+ * Someone who is already in the group is left exactly as they are.
+ *
+ * @param int    $site_id Group site.
+ * @param int    $user_id User to add.
+ * @param string $role    Site role to add them with.
+ * @return bool Whether they're in the group now.
+ */
+function ensure_member( int $site_id, int $user_id, string $role = 'subscriber' ): bool {
+	if ( is_user_member_of_blog( $user_id, $site_id ) ) {
+		return true;
+	}
+
+	update_user_meta( $user_id, get_scoped_opt_in_meta_key( $site_id ), '0' );
+
+	return ! is_wp_error( add_user_to_blog( $site_id, $user_id, $role ) );
+}
+
+/**
+ * The highest-ranking role a user has on a site.
+ *
+ * @param int $user_id User.
+ * @param int $site_id Site.
+ * @return int Rank from `ROLE_RANK`, or -1 for none.
+ */
+function role_rank( int $user_id, int $site_id ): int {
+	$roles = ( new WP_User( $user_id, '', $site_id ) )->roles;
+	$ranks = array_map(
+		static function ( $role ) {
+			return ROLE_RANK[ $role ] ?? 0;
+		},
+		$roles
+	);
+
+	return $ranks ? max( $ranks ) : -1;
+}
+
+/**
+ * Sort a group's Meetup organizers by what an import does with each one.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $leaders Normalized leaders, from `normalize_leader()`.
+ * @return array[] One `{ leader, outcome, user_id }` per leader with an organizer role.
+ */
+function classify_leaders( int $site_id, array $leaders ): array {
+	$classified = array();
+
+	foreach ( $leaders as $leader ) {
+		if ( ! $leader['role'] ) {
+			continue;
+		}
+
+		$user    = '' !== $leader['email'] ? get_user_by( 'email', $leader['email'] ) : false;
+		$user_id = $user ? (int) $user->ID : 0;
+
+		if ( '' === $leader['email'] ) {
+			$outcome = 'no_email';
+		} elseif ( ! $user_id ) {
+			$outcome = 'unmatched';
+		} elseif ( ! is_user_member_of_blog( $user_id, $site_id ) ) {
+			$outcome = 'added';
+		} elseif ( role_rank( $user_id, $site_id ) < ROLE_RANK[ $leader['role'] ] ) {
+			$outcome = 'promoted';
+		} else {
+			$outcome = 'kept';
+		}
+
+		$classified[] = compact( 'leader', 'outcome', 'user_id' );
+	}
+
+	return $classified;
+}
+
+/**
+ * Count what an import would do with a group's organizers, without writing anything.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $leaders Normalized leaders.
+ * @return int[] Counts keyed by outcome.
+ */
+function plan_leaders( int $site_id, array $leaders ): array {
+	return array_count_values( wp_list_pluck( classify_leaders( $site_id, $leaders ), 'outcome' ) );
+}
+
+/**
+ * Give a group's Meetup organizers the matching Organizer role on its site.
+ *
+ * Matched by email to existing WordPress.org accounts only. Only ever
+ * promotes: someone already in that role or higher keeps theirs, and nobody
+ * is made an administrator (see `LEADER_ROLES`).
+ *
+ * Callers MUST verify the `manage_sites` capability before calling this, as
+ * with `import_events()`.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $leaders Normalized leaders.
+ * @return int[] Counts keyed by outcome.
+ */
+function import_leaders( int $site_id, array $leaders ): array {
+	$classified = classify_leaders( $site_id, $leaders );
+
+	foreach ( $classified as $index => $entry ) {
+		if ( 'added' === $entry['outcome'] ) {
+			if ( ! ensure_member( $site_id, $entry['user_id'], $entry['leader']['role'] ) ) {
+				$classified[ $index ]['outcome'] = 'failed';
+			}
+		} elseif ( 'promoted' === $entry['outcome'] ) {
+			( new WP_User( $entry['user_id'], '', $site_id ) )->set_role( $entry['leader']['role'] );
+		}
+	}
+
+	$counts = array_count_values( wp_list_pluck( $classified, 'outcome' ) );
+
+	Logger\log( 'leaders_imported', compact( 'site_id', 'counts' ) );
+
+	return $counts;
+}
+
+/**
+ * Credit an event's Meetup hosts as its hosts here.
+ *
+ * Hosts are matched to existing WordPress.org accounts by email and added to
+ * the group if they aren't in it, since a host has to be a member. Only fills
+ * an event with no hosts yet, so a refreshed draft keeps the organizer's
+ * choice. Runs on the event's own site.
+ *
+ * @param int   $post_id Event post ID.
+ * @param array $emails  Normalized host emails.
+ */
+function import_hosts( int $post_id, array $emails ): void {
+	if ( ! $emails || get_post_meta( $post_id, Event_Hosts\META_KEY, true ) ) {
+		return;
+	}
+
+	$user_ids = array();
+
+	foreach ( $emails as $email ) {
+		$user = get_user_by( 'email', $email );
+
+		if ( $user && ensure_member( get_current_blog_id(), (int) $user->ID ) ) {
+			$user_ids[] = (int) $user->ID;
+		}
+	}
+
+	Event_Hosts\set_event_hosts( $post_id, $user_ids );
+}
+
+/**
+ * Carry an event's Meetup RSVPs over as real RSVPs, for matched people only.
+ *
+ * Saved through GatherPress's own RSVP API, so its rules apply as for any
+ * RSVP (attendance limits, the waiting list). RSVPing doesn't add anyone to
+ * the group. An "attended" RSVP is also checked in, the same record the
+ * check-in screen keeps, so reporting counts it as attendance.
+ *
+ * No confirmation email goes out: those are only sent when the event is
+ * published and the person whose RSVP it is made the change
+ * (`Frontend\RSVP_Confirmation\send_confirmation()`), and this runs as the
+ * admin, on an event that's still a draft. Runs on the event's own site.
+ *
+ * @param int    $post_id         Event post ID.
+ * @param string $meetup_event_id Meetup event ID.
+ * @return int[] Counts: `saved`, `checked_in`, `unmatched`, `skipped`, `failed`.
+ */
+function import_rsvps( int $post_id, string $meetup_event_id ): array {
+	$counts = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
+	$raw    = fetch_event_rsvps( $meetup_event_id );
+	$rsvp   = ( new Event( $post_id ) )->rsvp;
+
+	if ( is_wp_error( $raw ) || ! $rsvp ) {
+		++$counts['failed'];
+		return $counts;
+	}
+
+	foreach ( array_map( __NAMESPACE__ . '\normalize_rsvp', $raw ) as $entry ) {
+		if ( ! $entry['status'] ) {
+			++$counts['skipped'];
+			continue;
+		}
+
+		$user = '' !== $entry['email'] ? get_user_by( 'email', $entry['email'] ) : false;
+
+		if ( ! $user ) {
+			++$counts['unmatched'];
+			continue;
+		}
+
+		try {
+			$saved = $rsvp->save( (int) $user->ID, $entry['status'], 0, $entry['guests'] );
+		} catch ( \Throwable $e ) {
+			// One RSVP GatherPress chokes on shouldn't take the rest of the import down with it.
+			Logger\log(
+				'rsvp_failed',
+				array(
+					'post_id' => $post_id,
+					'error'   => $e->getMessage(),
+				)
+			);
+			$saved = array();
+		}
+
+		if ( empty( $saved['comment_id'] ) ) {
+			++$counts['failed'];
+			continue;
+		}
+
+		++$counts['saved'];
+
+		if ( $entry['checked_in'] ) {
+			$comment = get_comment( (int) $saved['comment_id'] );
+
+			if ( $comment ) {
+				Check_In\set_checked_in( $comment, true );
+				++$counts['checked_in'];
+			}
+		}
+	}
+
+	return $counts;
+}
+
+/**
+ * Add up the RSVP counts across an import's events.
+ *
+ * @param array[] $results From `import_events()`.
+ * @return int[]
+ */
+function sum_rsvp_counts( array $results ): array {
+	$totals = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
+
+	foreach ( $results as $result ) {
+		foreach ( $result['rsvps'] ?? array() as $key => $count ) {
+			$totals[ $key ] += $count;
+		}
+	}
+
+	return $totals;
 }
 
 /**
@@ -1044,18 +1859,9 @@ function import_members( int $site_id, array $members ) {
 	$seen       = (array) get_blog_option( $site_id, MEMBERS_OPTION, array() );
 
 	foreach ( $classified as $index => $entry ) {
-		if ( 'join' === $entry['outcome'] ) {
-			// Opt out first. If the run dies right after adding them, the next
-			// run sees an existing member and leaves them be -- so the opt-out
-			// has to be in place before they're a member, not after.
-			update_user_meta( $entry['user_id'], get_scoped_opt_in_meta_key( $site_id ), '0' );
-
-			$added = add_user_to_blog( $site_id, $entry['user_id'], 'subscriber' );
-
-			if ( is_wp_error( $added ) ) {
-				$classified[ $index ]['outcome'] = 'failed';
-				continue;
-			}
+		if ( 'join' === $entry['outcome'] && ! ensure_member( $site_id, $entry['user_id'] ) ) {
+			$classified[ $index ]['outcome'] = 'failed';
+			continue;
 		}
 
 		if ( in_array( $entry['outcome'], array( 'join', 'already_member' ), true ) ) {

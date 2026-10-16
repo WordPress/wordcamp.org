@@ -80,7 +80,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		wp_delete_site( $this->site_id );
 
-		unset( $_POST['wcorg_meetup_import_step'], $_POST['meetup_group'], $_POST['site_id'], $_POST[ Meetup_Import\NONCE_NAME ], $_REQUEST[ Meetup_Import\NONCE_NAME ] );
+		Meetup_Import\cancel_job();
+		_set_cron_array( array() );
 
 		$this->sent_mail = array();
 
@@ -513,20 +514,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Users without `manage_sites` can't run the import.
-	 */
-	public function test_form_handler_requires_manage_sites() {
-		$user_id = self::factory()->user->create();
-		add_user_to_blog( $this->site_id, $user_id, 'administrator' );
-		wp_set_current_user( $user_id );
-
-		$_POST['wcorg_meetup_import_step'] = 'import';
-
-		$this->expectException( WPDieException::class );
-		Meetup_Import\handle_form_submission();
-	}
-
-	/**
 	 * The render is guarded too, not just the menu registration.
 	 */
 	public function test_render_requires_manage_sites() {
@@ -534,39 +521,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->expectException( WPDieException::class );
 		Meetup_Import\render_admin_page();
-	}
-
-	/**
-	 * A network admin can import through the form, from fetched (filtered) data.
-	 */
-	public function test_form_handler_imports_for_network_admin() {
-		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
-
-		add_filter(
-			'wcorg_meetup_import_pre_fetch',
-			function ( $events, $urlname ) {
-				$this->assertSame( 'wma-wordpress-meetup', $urlname );
-				return array( $this->raw_event() );
-			},
-			10,
-			2
-		);
-
-		$_POST['wcorg_meetup_import_step']    = 'import';
-		$_POST['meetup_group']                = 'https://www.meetup.com/wma-wordpress-meetup/';
-		$_POST['site_id']                     = (string) $this->site_id;
-		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
-		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
-
-		try {
-			Meetup_Import\handle_form_submission();
-		} finally {
-			unset( $GLOBALS['super_admins'] );
-		}
-
-		$this->assertSame( 'draft', $this->find_event( '315889305' )->post_status );
-		$this->assertSame( 'created', Meetup_Import\request_state()['results'][0]['status'] );
 	}
 
 	/**
@@ -872,52 +826,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Members are only fetched and imported when the box is ticked.
-	 */
-	public function test_form_handler_imports_members_only_when_asked() {
-		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
-
-		list( $raw, $users ) = $this->setup_members();
-		$fetched_members     = 0;
-
-		add_filter(
-			'wcorg_meetup_import_pre_fetch',
-			function () {
-				return array( $this->raw_event() );
-			}
-		);
-		add_filter(
-			'wcorg_meetup_import_pre_fetch_members',
-			function () use ( $raw, &$fetched_members ) {
-				++$fetched_members;
-				return $raw;
-			}
-		);
-
-		$_POST['wcorg_meetup_import_step']    = 'import';
-		$_POST['meetup_group']                = 'wma-wordpress-meetup';
-		$_POST['site_id']                     = (string) $this->site_id;
-		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
-		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
-
-		try {
-			Meetup_Import\handle_form_submission();
-			$this->assertSame( 0, $fetched_members );
-			$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
-
-			$_POST['match_people'] = '1';
-			Meetup_Import\handle_form_submission();
-		} finally {
-			unset( $GLOBALS['super_admins'], $_POST['match_people'] );
-		}
-
-		$this->assertSame( 1, $fetched_members );
-		$this->assertTrue( is_user_member_of_blog( $users['match'], $this->site_id ) );
-		$this->assertSame( 1, Meetup_Import\request_state()['member_counts']['join'] );
-	}
-
-	/**
 	 * Only one request can hold the import lock at a time.
 	 */
 	public function test_lock_is_exclusive() {
@@ -952,71 +860,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertTrue( Meetup_Import\acquire_lock() );
 		$this->assertFalse( Meetup_Import\acquire_lock() );
-	}
-
-	/**
-	 * While another import holds the lock, the form imports nothing and says why.
-	 */
-	public function test_form_handler_refuses_while_locked() {
-		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
-
-		add_filter(
-			'wcorg_meetup_import_pre_fetch',
-			function () {
-				return array( $this->raw_event() );
-			}
-		);
-
-		$_POST['wcorg_meetup_import_step']    = 'import';
-		$_POST['meetup_group']                = 'wma-wordpress-meetup';
-		$_POST['site_id']                     = (string) $this->site_id;
-		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
-		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
-
-		Meetup_Import\acquire_lock();
-
-		try {
-			Meetup_Import\handle_form_submission();
-		} finally {
-			unset( $GLOBALS['super_admins'] );
-		}
-
-		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
-		$this->assertContains( 'import_running', wp_list_pluck( get_settings_errors( 'wcorg-meetup-import' ), 'code' ) );
-
-		// The lock is still the other import's, untouched by the refused one.
-		$this->assertFalse( Meetup_Import\acquire_lock() );
-	}
-
-	/**
-	 * A finished import gives the lock back.
-	 */
-	public function test_form_handler_releases_lock() {
-		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
-
-		add_filter(
-			'wcorg_meetup_import_pre_fetch',
-			function () {
-				return array( $this->raw_event() );
-			}
-		);
-
-		$_POST['wcorg_meetup_import_step']    = 'import';
-		$_POST['meetup_group']                = 'wma-wordpress-meetup';
-		$_POST['site_id']                     = (string) $this->site_id;
-		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
-		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
-
-		try {
-			Meetup_Import\handle_form_submission();
-		} finally {
-			unset( $GLOBALS['super_admins'] );
-		}
-
-		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
-		$this->assertTrue( Meetup_Import\acquire_lock() );
 	}
 
 	/**
@@ -1914,46 +1757,463 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * The form preview reports group details and organizers, and writes nothing.
+	 * Return these raw events from the (faked) Meetup events request.
+	 *
+	 * @param array $events Raw event nodes.
 	 */
-	public function test_form_preview_with_matching() {
-		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
-
-		list( $raw_leaders, $users ) = $this->setup_leaders();
-
+	protected function fake_events( array $events ): void {
 		add_filter(
 			'wcorg_meetup_import_pre_fetch',
-			function () {
-				return array( $this->raw_event() );
+			static function () use ( $events ) {
+				return $events;
 			}
 		);
+	}
+
+	/**
+	 * `$count` upcoming events with distinct Meetup IDs.
+	 *
+	 * @param int $count How many.
+	 */
+	protected function many_events( int $count ): array {
+		$events = array();
+
+		for ( $i = 1; $i <= $count; $i++ ) {
+			$events[] = $this->raw_event( array( 'id' => (string) ( 700000000 + $i ) ) );
+		}
+
+		return $events;
+	}
+
+	/**
+	 * Run queued cron batches until none is queued.
+	 *
+	 * @param int $max Safety cap on the number of runs.
+	 * @return int How many runs it took.
+	 */
+	protected function run_batches( int $max = 50 ): int {
+		$runs = 0;
+
+		// Only run when a run is queued, and remove the event before running it,
+		// as WP-Cron does -- so the job only finishes if each run queues the next.
+		while ( $runs < $max && wp_next_scheduled( Meetup_Import\CRON_HOOK ) ) {
+			wp_clear_scheduled_hook( Meetup_Import\CRON_HOOK );
+			Meetup_Import\process_batch();
+			++$runs;
+		}
+
+		return $runs;
+	}
+
+	/**
+	 * Run a handler whose success path ends in a redirect, and return where it was sent.
+	 *
+	 * @param callable $callback Handler to run.
+	 * @throws \RuntimeException Anything the handler throws other than the redirect sentinel.
+	 */
+	protected function catch_redirect( callable $callback ): string {
+		$location = '';
+		$catcher  = static function ( $target ) use ( &$location ) {
+			$location = $target;
+			throw new \RuntimeException( 'redirected' );
+		};
+
+		add_filter( 'wp_redirect', $catcher );
+
+		try {
+			$callback();
+		} catch ( \RuntimeException $e ) {
+			if ( 'redirected' !== $e->getMessage() ) {
+				throw $e;
+			}
+		} finally {
+			remove_filter( 'wp_redirect', $catcher );
+		}
+
+		return $location;
+	}
+
+	/**
+	 * A job is checked before it's queued.
+	 */
+	public function test_start_job_validates() {
+		$this->assertSame( 'invalid_group', Meetup_Import\start_job( '', $this->site_id, false, false )->get_error_code() );
+		$this->assertSame( 'invalid_group_site', Meetup_Import\start_job( 'wma-wordpress-meetup', GROUPS_ROOT_BLOG_ID, false, false )->get_error_code() );
+		$this->assertSame( array(), Meetup_Import\get_job() );
+	}
+
+	/**
+	 * Preview queues a fetch; the fetch writes nothing; Import writes it all, in batches.
+	 */
+	public function test_job_end_to_end() {
+		$this->fake_events( array( $this->raw_event(), $this->raw_past_event() ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, true, false );
+
+		$this->assertSame( 'fetching', $job['status'] );
+		$this->assertNotFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+
+		// The fetch: a preview, and nothing written.
+		Meetup_Import\process_batch();
+
+		$job = Meetup_Import\get_job();
+		$this->assertSame( 'ready', $job['status'] );
+		$this->assertSame( array( 'create', 'create' ), wp_list_pluck( $job['plan']['events'], 'status' ) );
+		$this->assertSame( 'set', $job['plan']['group_results']['location'] );
+		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
+
+		// Waiting on a person: more cron runs change nothing.
+		Meetup_Import\process_batch();
+		$this->assertSame( 'ready', Meetup_Import\get_job()['status'] );
+
+		$this->assertNotWPError( Meetup_Import\confirm_job( $job['id'] ) );
+		$this->run_batches();
+
+		$job = Meetup_Import\get_job();
+		$this->assertSame( 'done', $job['status'] );
+		$this->assertSame( array( 'created', 'created' ), wp_list_pluck( $job['results']['events'], 'status' ) );
+		$this->assertSame( 'set', $job['results']['group_results']['location'] );
+		$this->assertArrayNotHasKey( 'data', $job );
+		$this->assertSame( 2, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * Events are written `EVENTS_PER_BATCH` per cron run.
+	 */
+	public function test_events_are_batched() {
+		$this->fake_events( $this->many_events( Meetup_Import\EVENTS_PER_BATCH * 2 + 5 ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+		Meetup_Import\confirm_job( $job['id'] );
+
+		// Group details, then the first batch of events.
+		Meetup_Import\process_batch();
+		Meetup_Import\process_batch();
+
+		$job = Meetup_Import\get_job();
+		$this->assertSame( 'importing', $job['status'] );
+		$this->assertSame( Meetup_Import\EVENTS_PER_BATCH, $job['cursor']['offset'] );
+		$this->assertSame( Meetup_Import\EVENTS_PER_BATCH, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertStringContainsString( '10 of 25', Meetup_Import\describe_job_status( $job ) );
+
+		$this->assertSame( 2, $this->run_batches() );
+		$this->assertSame( 'done', Meetup_Import\get_job()['status'] );
+		$this->assertSame( 25, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * A batch that dies partway is redone by the next run without duplicating anything.
+	 */
+	public function test_redone_batch_does_not_duplicate() {
+		$this->fake_events( $this->many_events( 5 ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+		Meetup_Import\confirm_job( $job['id'] );
+		Meetup_Import\process_batch();
+
+		// What a run that died after writing the events, but before saving its cursor, leaves behind.
+		$before = Meetup_Import\get_job();
+		Meetup_Import\import_events( $this->site_id, $before['data']['events'] );
+
+		$this->run_batches();
+
+		$this->assertSame( 'done', Meetup_Import\get_job()['status'] );
+		$this->assertSame( 5, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * Members are written `MEMBERS_PER_BATCH` per run, with their counts added up.
+	 */
+	public function test_members_are_batched() {
+		$user_id = self::factory()->user->create( array( 'user_email' => 'match@example.org' ) );
+		$members = array(
+			array(
+				'id'    => 'm0',
+				'email' => 'match@example.org',
+			),
+		);
+
+		for ( $i = 1; $i < Meetup_Import\MEMBERS_PER_BATCH + 50; $i++ ) {
+			$members[] = array( 'id' => "m$i" );
+		}
+
+		$this->fake_events( array() );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( $members ) {
+				return $members;
+			}
+		);
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch();
+		Meetup_Import\confirm_job( $job['id'] );
+
+		// Group details, organizers, then the first batch of members.
+		Meetup_Import\process_batch();
+		Meetup_Import\process_batch();
+		Meetup_Import\process_batch();
+
+		$this->assertSame( 'members', Meetup_Import\get_job()['cursor']['step'] );
+
+		$this->run_batches();
+
+		$counts = Meetup_Import\get_job()['results']['member_counts'];
+		$this->assertSame( 'done', Meetup_Import\get_job()['status'] );
+		$this->assertSame( 1, $counts['join'] );
+		$this->assertSame( Meetup_Import\MEMBERS_PER_BATCH + 49, $counts['no_email'] );
+		$this->assertTrue( is_user_member_of_blog( $user_id, $this->site_id ) );
+	}
+
+	/**
+	 * People are only fetched, previewed, and imported when matching is ticked.
+	 */
+	public function test_job_matches_people_only_when_asked() {
+		list( $raw_leaders, $users ) = $this->setup_leaders();
+		$fetched_members             = 0;
+
+		$this->fake_events( array( $this->raw_event() ) );
 		add_filter(
 			'wcorg_meetup_import_pre_fetch_leaders',
 			static function () use ( $raw_leaders ) {
 				return $raw_leaders;
 			}
 		);
-		add_filter( 'wcorg_meetup_import_pre_fetch_members', '__return_empty_array' );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( &$fetched_members ) {
+				++$fetched_members;
+				return array();
+			}
+		);
 
-		$_POST['wcorg_meetup_import_step']    = 'preview';
-		$_POST['meetup_group']                = 'wma-wordpress-meetup';
-		$_POST['site_id']                     = (string) $this->site_id;
-		$_POST['match_people']                = '1';
-		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
-		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+		$this->assertNull( Meetup_Import\get_job()['plan']['leader_counts'] );
+		Meetup_Import\confirm_job( $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( 0, $fetched_members );
+		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch();
+		$this->assertSame( 2, Meetup_Import\get_job()['plan']['leader_counts']['added'] );
+		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
+		Meetup_Import\confirm_job( $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( 1, $fetched_members );
+		$this->assertSame( array( 'editor' ), ( new \WP_User( $users['organizer'], '', $this->site_id ) )->roles );
+	}
+
+	/**
+	 * Only one import can be in progress.
+	 */
+	public function test_start_refuses_while_active() {
+		$this->fake_events( array() );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+
+		$this->assertSame( 'import_running', Meetup_Import\start_job( 'other-group', $this->site_id, false, false )->get_error_code() );
+
+		// Once it's finished, a new one can start.
+		Meetup_Import\process_batch();
+		Meetup_Import\confirm_job( Meetup_Import\get_job()['id'] );
+		$this->run_batches();
+
+		$this->assertNotWPError( Meetup_Import\start_job( 'other-group', $this->site_id, false, false ) );
+	}
+
+	/**
+	 * Only the preview someone is looking at can be confirmed, and only once it's ready.
+	 */
+	public function test_confirm_needs_the_current_ready_job() {
+		$this->fake_events( array() );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+
+		$this->assertSame( 'job_not_ready', Meetup_Import\confirm_job( $job['id'] )->get_error_code() );
+
+		Meetup_Import\process_batch();
+
+		$this->assertSame( 'job_not_ready', Meetup_Import\confirm_job( 'some-other-job' )->get_error_code() );
+		$this->assertNotWPError( Meetup_Import\confirm_job( $job['id'] ) );
+	}
+
+	/**
+	 * A run that can't take the lock leaves the job alone and makes sure another run is queued.
+	 */
+	public function test_batch_waits_for_lock() {
+		$this->fake_events( array( $this->raw_event() ) );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		_set_cron_array( array() );
+
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+		$held = Meetup_Import\held_lock();
+		Meetup_Import\held_lock( '' ); // Pretend another process holds it.
+
+		Meetup_Import\process_batch();
+
+		$this->assertSame( 'fetching', Meetup_Import\get_job()['status'] );
+		$this->assertNotFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+
+		Meetup_Import\held_lock( $held );
+		Meetup_Import\release_lock();
+	}
+
+	/**
+	 * Each run gives the lock back when it's done.
+	 */
+	public function test_batch_releases_lock() {
+		$this->fake_events( array() );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+
+		Meetup_Import\process_batch();
+
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * A run that crashes keeps the job, frees the lock, and queues a retry.
+	 */
+	public function test_crashed_batch_is_retried() {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			static function () {
+				throw new \Exception( 'Boom' );
+			}
+		);
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		_set_cron_array( array() );
+
+		Meetup_Import\process_batch();
+
+		$this->assertSame( 'fetching', Meetup_Import\get_job()['status'] );
+		$this->assertNotFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * A fetch that fails ends the job with the reason, and stops scheduling runs.
+	 */
+	public function test_failed_fetch_fails_job() {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			static function () {
+				return new \WP_Error( 'meetup_group_not_found', 'Meetup did not return that group.' );
+			}
+		);
+
+		Meetup_Import\start_job( 'not-a-group', $this->site_id, false, false );
+		_set_cron_array( array() );
+
+		Meetup_Import\process_batch();
+
+		$job = Meetup_Import\get_job();
+		$this->assertSame( 'failed', $job['status'] );
+		$this->assertSame( 'Meetup did not return that group.', $job['error'] );
+		$this->assertFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+	}
+
+	/**
+	 * A batch that was running when someone cancelled doesn't bring the job back.
+	 */
+	public function test_cancelled_job_stays_cancelled() {
+		$this->fake_events( $this->many_events( 15 ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+		Meetup_Import\confirm_job( $job['id'] );
+
+		$in_flight = Meetup_Import\get_job();
+		Meetup_Import\cancel_job();
+
+		$this->assertFalse( Meetup_Import\save_job( $in_flight ) );
+		$this->assertSame( array(), Meetup_Import\get_job() );
+		$this->assertFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+
+		Meetup_Import\process_batch();
+		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * The screen queues a run again for a job whose cron event went missing.
+	 */
+	public function test_render_reschedules_stalled_job() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		$this->fake_events( array() );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		_set_cron_array( array() );
 
 		try {
-			Meetup_Import\handle_form_submission();
+			ob_start();
+			Meetup_Import\render_admin_page();
+			$html = ob_get_clean();
 		} finally {
-			unset( $GLOBALS['super_admins'], $_POST['match_people'] );
+			unset( $GLOBALS['super_admins'] );
 		}
 
-		$state = Meetup_Import\request_state();
+		$this->assertNotFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+		$this->assertStringContainsString( 'Fetching the group from Meetup', $html );
+	}
 
-		$this->assertSame( 'set', $state['group_results']['location'] );
-		$this->assertSame( 2, $state['leader_counts']['added'] );
-		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
-		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
+	/**
+	 * Every admin-post handler checks the capability before anything else.
+	 *
+	 * @dataProvider data_handlers
+	 *
+	 * @param string $handler Handler function name.
+	 */
+	public function test_handlers_require_manage_sites( string $handler ) {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( $this->site_id, $user_id, 'administrator' );
+		wp_set_current_user( $user_id );
+
+		$this->expectException( WPDieException::class );
+		call_user_func( 'WordCamp\Groups\Meetup_Import\\' . $handler );
+	}
+
+	/**
+	 * Inputs for `test_handlers_require_manage_sites()`.
+	 */
+	public function data_handlers(): array {
+		return array(
+			'start'   => array( 'handle_start' ),
+			'confirm' => array( 'handle_confirm' ),
+			'cancel'  => array( 'handle_cancel' ),
+		);
+	}
+
+	/**
+	 * The Preview button queues a job and sends the browser back to the screen.
+	 */
+	public function test_handle_start_queues_job() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		$_POST['meetup_group'] = 'https://www.meetup.com/wma-wordpress-meetup/events/1/';
+		$_POST['site_id']      = (string) $this->site_id;
+		$_POST['match_people'] = '1';
+		$_REQUEST['_wpnonce']  = wp_create_nonce( Meetup_Import\START_ACTION );
+
+		try {
+			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\handle_start' );
+		} finally {
+			unset( $GLOBALS['super_admins'], $_POST['meetup_group'], $_POST['site_id'], $_POST['match_people'], $_REQUEST['_wpnonce'] );
+		}
+
+		$job = Meetup_Import\get_job();
+
+		$this->assertStringContainsString( 'notice=queued', $location );
+		$this->assertSame( 'fetching', $job['status'] );
+		$this->assertSame( 'wma-wordpress-meetup', $job['urlname'] );
+		$this->assertTrue( $job['match_people'] );
+		$this->assertFalse( $job['include_past'] );
 	}
 }

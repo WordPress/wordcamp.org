@@ -11,8 +11,9 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	public $description          = false;
 	public $supported_currencies = array();
 	public $supported_features   = array(
-		'refund-single' => false,
-		'refund-all' => false,
+		'refund-single'  => false,
+		'refund-all'     => false,
+		'refund-partial' => false,
 	);
 	public $camptix_options;
 
@@ -231,6 +232,36 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );
 
 		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $refund_data );
+	}
+
+	/**
+	 * Refund part of a payment, leaving the order's other tickets paid.
+	 *
+	 * Gateways that implement this must also set the `refund-partial` feature. Unlike
+	 * payment_refund(), this does not call payment_result(): CampTix records the result
+	 * only on the attendees whose tickets were refunded.
+	 *
+	 * @param string $payment_token
+	 * @param float  $amount            The amount to refund, in the currency's base unit (e.g. dollars).
+	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
+	 *
+	 * @return array {
+	 *     @type int    $status                     PAYMENT_STATUS_REFUNDED on success.
+	 *     @type string $refund_transaction_id      The gateway's ID for the refund.
+	 *     @type mixed  $refund_transaction_details The gateway's response.
+	 * }
+	 */
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
+		/** @var $camptix Camptix_Plugin  */
+		global $camptix;
+
+		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );
+
+		return array(
+			'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
+			'refund_transaction_id'      => null,
+			'refund_transaction_details' => array(),
+		);
 	}
 
 	/**

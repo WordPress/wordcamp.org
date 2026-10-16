@@ -667,6 +667,49 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A session Stripe still reports open after its expiry (a UPI or bank confirmation in
+	 * flight) keeps its draft for the next sweep, instead of being timed out in the same pass.
+	 * As when Stripe can't be asked, that stops after 24 hours.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 */
+	public function test_timeout_sweep_keeps_a_draft_whose_session_is_still_open() {
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_open_late', 500 );
+		$expired_at                  = time() - 10 * MINUTE_IN_SECONDS;
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_open_late', $expired_at );
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - 40 * MINUTE_IN_SECONDS );
+
+		$calls = 0;
+		$open  = function () use ( &$calls, $token, $expired_at ) {
+			$calls++;
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array(
+					'id'                  => 'cs_open_late',
+					'status'              => 'open',
+					'expires_at'          => $expired_at,
+					'client_reference_id' => get_current_blog_id() . ':' . $token,
+				) ),
+				'headers'  => array(),
+			);
+		};
+
+		$this->sweep_with( $open );
+		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
+		$this->assertGreaterThan( time(), $GLOBALS['camptix']->get_draft_release_at( $attendee_id ), 'retried by a later sweep' );
+		$this->assertSame( 1, $calls, 'asked once: the kept draft is no longer due in this pass' );
+
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - 6 * MINUTE_IN_SECONDS );
+		update_post_meta( $attendee_id, 'tix_session_expires_at', $expired_at );
+		$this->sweep_with( $open );
+		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'not past 24 hours' );
+	}
+
+	/**
 	 * Give a draft a post date. wp_update_post() resets a draft's date to now, so straight to the row.
 	 */
 	protected function date_draft( $attendee_id, $timestamp ) {

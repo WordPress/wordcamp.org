@@ -674,7 +674,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		 * Hack
 		 */
 		$rp = new ReflectionProperty( 'CampTix_Plugin', 'error_flags' );
-		$rp->setAccessible( true );
 		$error_flags = $rp->getValue( $camptix );
 		if ( ! empty( $error_flags['nope'] ) ) {
 			$camptix->error( __( 'As you have requested an invoice, please fill in the required fields.', 'wordcamporg' ) );

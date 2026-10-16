@@ -68,6 +68,15 @@ const ATTENDED_META  = '_wporg_meetup_attended_count';
 const PHOTO_ID_META  = '_wporg_meetup_photo_id';
 
 /**
+ * When an import last finished writing an event, as its `post_modified_gmt`.
+ *
+ * A draft modified since then has been edited on the site, and from then on
+ * belongs to the organizer: reruns leave it alone rather than overwrite their
+ * changes with Meetup's.
+ */
+const IMPORTED_MODIFIED_META = '_wporg_meetup_imported_modified';
+
+/**
  * Site options recording which Meetup group a site was imported from, and
  * when that group was founded, for the group's history.
  */
@@ -137,6 +146,16 @@ const PENDING_PUBLISH_META = '_wporg_meetup_pending_publish';
  * seen before (and who may since have left the group) from a new one.
  */
 const MEMBERS_OPTION = 'wporg_meetup_imported_member_ids';
+
+/**
+ * Site option listing the users an import has added to the group, or found
+ * already in it, whichever way it got to them: as a member, an organizer, or
+ * an event host.
+ *
+ * Someone on this list who isn't in the group any more has left it, and no
+ * import adds them back (see `ensure_member()`).
+ */
+const IMPORTED_USERS_OPTION = 'wporg_meetup_imported_user_ids';
 
 /**
  * Option row that marks an import batch as running, and how long it may hold it.
@@ -233,13 +252,31 @@ function is_job_active( array $job ): bool {
  * @return bool Whether it was saved.
  */
 function save_job( array $job ): bool {
-	if ( ( get_job()['id'] ?? '' ) !== $job['id'] ) {
-		return false;
-	}
+	global $wpdb;
 
 	$job['updated'] = time();
 
-	return update_site_option( JOB_OPTION, $job );
+	/*
+	 * One conditional UPDATE, rather than reading the stored job and then
+	 * writing it: a cancel or a new preview landing between a read and a
+	 * write would otherwise be overwritten. The row only matches while it
+	 * still holds this job's ID -- serialized as `s:2:"id";s:36:"<uuid>"` --
+	 * so a cancelled job (row deleted) or a replaced one (different ID) is
+	 * left alone.
+	 */
+	$updated = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- must bypass the option cache to be atomic.
+		$wpdb->prepare(
+			"UPDATE $wpdb->sitemeta SET meta_value = %s WHERE site_id = %d AND meta_key = %s AND meta_value LIKE %s",
+			maybe_serialize( $job ),
+			get_current_network_id(),
+			JOB_OPTION,
+			'%' . $wpdb->esc_like( serialize( 'id' ) . serialize( (string) $job['id'] ) ) . '%' // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- matching the stored serialized form.
+		)
+	);
+
+	wp_cache_delete( get_current_network_id() . ':' . JOB_OPTION, 'site-options' );
+
+	return 1 === $updated;
 }
 
 /**
@@ -950,7 +987,7 @@ function describe_job_status( array $job ): string {
 				__( 'Import finished: %1$d events created, %2$d updated, %3$d skipped, %4$d failed.', 'wordcamporg' ),
 				$counts['created'] ?? 0,
 				$counts['updated'] ?? 0,
-				$counts['skipped'] ?? 0,
+				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ),
 				$counts['failed'] ?? 0
 			);
 
@@ -977,6 +1014,8 @@ function describe_status( string $status, bool $is_past = false, string $message
 		'create'  => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
 		'update'  => __( 'Draft will be refreshed', 'wordcamporg' ),
 		'skip'    => __( 'Skipped: already published or trashed', 'wordcamporg' ),
+		'keep'    => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
+		'kept'    => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'created' => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
 		'updated' => __( 'Draft refreshed', 'wordcamporg' ),
 		'skipped' => __( 'Skipped: already published or trashed', 'wordcamporg' ),
@@ -1054,17 +1093,18 @@ function describe_group_results( array $results, bool $is_preview ): array {
  * @param bool  $is_preview Whether this is a preview.
  */
 function describe_leader_counts( array $counts, bool $is_preview ): string {
-	$counts = array_merge( array_fill_keys( array( 'added', 'promoted', 'kept', 'unmatched', 'no_email' ), 0 ), $counts );
+	$counts = array_merge( array_fill_keys( array( 'added', 'promoted', 'kept', 'left', 'unmatched', 'no_email' ), 0 ), $counts );
 
 	return sprintf(
-		/* translators: 1: Total organizers, 2: Added to the group, 3: Given a higher role, 4: Already in that role or higher, 5: No matching account, 6: No email shared. */
+		/* translators: 1: Total organizers, 2: Added to the group, 3: Given a higher role, 4: Already in that role or higher, 5: Left the group since an earlier import, 6: No matching account, 7: No email shared. */
 		$is_preview
-			? __( '%1$d Meetup organizers: %2$d will join with their organizer role, %3$d will be promoted, %4$d already have that role or higher, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' )
-			: __( '%1$d Meetup organizers: %2$d joined with their organizer role, %3$d were promoted, %4$d already had that role or higher, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' ),
+			? __( '%1$d Meetup organizers: %2$d will join with their organizer role, %3$d will be promoted, %4$d already have that role or higher, %5$d left the group since an earlier import, %6$d have no matching WordPress.org account, %7$d have not shared an email.', 'wordcamporg' )
+			: __( '%1$d Meetup organizers: %2$d joined with their organizer role, %3$d were promoted, %4$d already had that role or higher, %5$d left the group since an earlier import, %6$d have no matching WordPress.org account, %7$d have not shared an email.', 'wordcamporg' ),
 		array_sum( $counts ),
 		$counts['added'],
 		$counts['promoted'],
 		$counts['kept'],
+		$counts['left'],
 		$counts['unmatched'],
 		$counts['no_email']
 	);
@@ -1169,7 +1209,12 @@ function fetch_group_events( string $urlname, bool $include_past = false ) {
 			$urlname,
 			array(
 				'status' => $include_past ? 'upcoming,past' : 'upcoming',
+				// `status` itself comes back rewritten by the client's back-compat
+				// layer, which reports past events as "upcoming" too
+				// (`Meetup_Client::apply_backcompat_fields()`), so ask for the
+				// raw value under another name as well.
 				'fields' => array(
+					'meetupStatus: status',
 					'howToFindUs',
 					'venues { address postalCode }',
 					'featuredEventPhoto { id highResUrl }',
@@ -1192,7 +1237,7 @@ function fetch_group_events( string $urlname, bool $include_past = false ) {
 			array_filter(
 				$events,
 				static function ( $event ) {
-					return 'PAST' !== strtoupper( (string) ( $event['status'] ?? '' ) );
+					return ! is_past_status( $event );
 				}
 			)
 		);
@@ -1550,13 +1595,13 @@ function normalize_event( array $raw ): array {
 		'meetup_id'   => (string) $raw['id'],
 		'meetup_url'  => (string) ( $raw['eventUrl'] ?? '' ),
 		'title'       => (string) ( $raw['title'] ?? '' ),
-		'description' => wp_kses_post( $description ),
+		'description' => to_paragraph_blocks( wp_kses_post( $description ) ),
 		'timezone'    => $zone->getName(),
 		'start'       => $start->setTimezone( $zone )->format( 'Y-m-d H:i:s' ),
 		'end'         => $end->setTimezone( $zone )->format( 'Y-m-d H:i:s' ),
 		'is_online'   => $is_online,
 		'venue'       => $venue,
-		'is_past'     => 'PAST' === strtoupper( (string) ( $raw['status'] ?? '' ) ),
+		'is_past'     => is_past_status( $raw ),
 		'rsvp_yes'    => (int) ( $raw['rsvps']['yesCount'] ?? 0 ),
 		'attended'    => (int) ( $raw['rsvps']['attendedCount'] ?? 0 ),
 		'photo'       => normalize_photo( $raw['featuredEventPhoto'] ?? null ),
@@ -1572,6 +1617,35 @@ function normalize_event( array $raw ): array {
 				)
 			)
 		),
+	);
+}
+
+/**
+ * Whether a Meetup event node is one that has already happened.
+ *
+ * Reads Meetup's own status from `meetupStatus` when it's there -- see
+ * `fetch_group_events()` for why `status` can't be trusted on its own.
+ *
+ * @param array $raw Event node from the Meetup API.
+ */
+function is_past_status( array $raw ): bool {
+	return 'PAST' === strtoupper( (string) ( $raw['meetupStatus'] ?? $raw['status'] ?? '' ) );
+}
+
+/**
+ * Turn HTML paragraphs into serialized paragraph blocks.
+ *
+ * The event editor only loads content made of blocks
+ * (`Frontend\Defaults\extract_description_blocks()` drops anything else), so
+ * plain HTML would open as an empty description, and saving would erase it.
+ *
+ * @param string $html Paragraph HTML, as `wpautop()` produces.
+ */
+function to_paragraph_blocks( string $html ): string {
+	return str_replace(
+		array( '<p>', '</p>' ),
+		array( '<!-- wp:paragraph -->' . "\n" . '<p>', '</p>' . "\n" . '<!-- /wp:paragraph -->' ),
+		trim( $html )
 	);
 }
 
@@ -1648,6 +1722,8 @@ function plan_events( int $site_id, array $events ): array {
 				// anyone is concerned, still to be created.
 				if ( ! $existing || get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) ) {
 					$status = 'create';
+				} elseif ( 'draft' === $existing->post_status && is_edited_since_import( $existing ) ) {
+					$status = 'keep';
 				} elseif ( 'draft' === $existing->post_status ) {
 					$status = 'update';
 				} else {
@@ -1741,6 +1817,14 @@ function import_event( array $event, bool $match_people = false ): array {
 		);
 	}
 
+	if ( $existing && ! get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) && is_edited_since_import( $existing ) ) {
+		return array(
+			'event'   => $event,
+			'status'  => 'kept',
+			'post_id' => $existing->ID,
+		);
+	}
+
 	// A past event is history, not something to review, so it ends up
 	// published. It's created as a draft marked to publish, and only published
 	// once every other piece is in place, so an import that dies partway
@@ -1804,8 +1888,13 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	sync_event_venue_terms( $post_id, find_or_create_venue( $event['venue'] ), $event['is_online'] );
 
-	// Meetup doesn't hand out the meeting link, so the organizer adds it while reviewing.
-	sync_online_event_link( $post_id, $event['is_online'], '' );
+	// Meetup doesn't hand out the meeting link, so the organizer adds it while
+	// reviewing -- and a refresh keeps one they've added.
+	sync_online_event_link(
+		$post_id,
+		$event['is_online'],
+		$existing ? (string) get_post_meta( $post_id, 'gatherpress_online_event_link', true ) : ''
+	);
 
 	// Only fill an empty slot: a refreshed draft keeps whatever image the
 	// organizer has picked since.
@@ -1852,12 +1941,28 @@ function import_event( array $event, bool $match_people = false ): array {
 		delete_post_meta( $post_id, PENDING_PUBLISH_META );
 	}
 
+	clean_post_cache( $post_id );
+	update_post_meta( $post_id, IMPORTED_MODIFIED_META, get_post_field( 'post_modified_gmt', $post_id ) );
+
 	return array(
 		'event'   => $event,
 		'status'  => $existing ? 'updated' : 'created',
 		'post_id' => $post_id,
 		'rsvps'   => $rsvps,
 	);
+}
+
+/**
+ * Whether an imported event has been edited on the site since it was imported.
+ *
+ * Events imported before this was recorded count as untouched.
+ *
+ * @param \WP_Post $post Imported event.
+ */
+function is_edited_since_import( \WP_Post $post ): bool {
+	$imported = (string) get_post_meta( $post->ID, IMPORTED_MODIFIED_META, true );
+
+	return '' !== $imported && $imported !== $post->post_modified_gmt;
 }
 
 /**
@@ -1961,11 +2066,7 @@ function apply_group_details( array $group, bool $write ): array {
 				wp_slash(
 					array(
 						'ID'           => $about->ID,
-						'post_content' => str_replace(
-							array( '<p>', '</p>' ),
-							array( '<!-- wp:paragraph --><p>', '</p><!-- /wp:paragraph -->' ),
-							$group['description']
-						),
+						'post_content' => to_paragraph_blocks( $group['description'] ),
 					)
 				)
 			);
@@ -2023,12 +2124,49 @@ function apply_group_details( array $group, bool $write ): array {
  */
 function ensure_member( int $site_id, int $user_id, string $role = 'subscriber' ): bool {
 	if ( is_user_member_of_blog( $user_id, $site_id ) ) {
+		remember_imported_user( $site_id, $user_id );
 		return true;
+	}
+
+	if ( has_left_group( $site_id, $user_id ) ) {
+		return false;
 	}
 
 	update_user_meta( $user_id, get_scoped_opt_in_meta_key( $site_id ), '0' );
 
-	return ! is_wp_error( add_user_to_blog( $site_id, $user_id, $role ) );
+	if ( is_wp_error( add_user_to_blog( $site_id, $user_id, $role ) ) ) {
+		return false;
+	}
+
+	remember_imported_user( $site_id, $user_id );
+
+	return true;
+}
+
+/**
+ * Note that an import has added a user to the group, or found them in it.
+ *
+ * @param int $site_id Group site.
+ * @param int $user_id User.
+ */
+function remember_imported_user( int $site_id, int $user_id ): void {
+	$user_ids = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_USERS_OPTION, array() ) );
+
+	if ( ! in_array( $user_id, $user_ids, true ) ) {
+		$user_ids[] = $user_id;
+		update_blog_option( $site_id, IMPORTED_USERS_OPTION, $user_ids );
+	}
+}
+
+/**
+ * Whether a user an import once put in the group has since left it.
+ *
+ * @param int $site_id Group site.
+ * @param int $user_id User.
+ */
+function has_left_group( int $site_id, int $user_id ): bool {
+	return in_array( $user_id, array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_USERS_OPTION, array() ) ), true )
+		&& ! is_user_member_of_blog( $user_id, $site_id );
 }
 
 /**
@@ -2072,6 +2210,8 @@ function classify_leaders( int $site_id, array $leaders ): array {
 			$outcome = 'no_email';
 		} elseif ( ! $user_id ) {
 			$outcome = 'unmatched';
+		} elseif ( has_left_group( $site_id, $user_id ) ) {
+			$outcome = 'left';
 		} elseif ( ! is_user_member_of_blog( $user_id, $site_id ) ) {
 			$outcome = 'added';
 		} elseif ( role_rank( $user_id, $site_id ) < ROLE_RANK[ $leader['role'] ] ) {
@@ -2272,7 +2412,7 @@ function classify_members( int $site_id, array $members ): array {
 		$user    = '' !== $member['email'] ? get_user_by( 'email', $member['email'] ) : false;
 		$user_id = $user ? (int) $user->ID : 0;
 
-		if ( isset( $seen[ $member['meetup_id'] ] ) ) {
+		if ( isset( $seen[ $member['meetup_id'] ] ) || ( $user_id && has_left_group( $site_id, $user_id ) ) ) {
 			$outcome = 'previously_imported';
 		} elseif ( '' === $member['email'] ) {
 			$outcome = 'no_email';
@@ -2331,6 +2471,10 @@ function import_members( int $site_id, array $members ) {
 		if ( 'join' === $entry['outcome'] && ! ensure_member( $site_id, $entry['user_id'] ) ) {
 			$classified[ $index ]['outcome'] = 'failed';
 			continue;
+		}
+
+		if ( 'already_member' === $entry['outcome'] ) {
+			remember_imported_user( $site_id, $entry['user_id'] );
 		}
 
 		if ( in_array( $entry['outcome'], array( 'join', 'already_member' ), true ) ) {

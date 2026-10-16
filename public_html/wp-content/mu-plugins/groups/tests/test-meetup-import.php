@@ -1302,7 +1302,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 				$about = get_post( $about_id );
 				$this->assertSame( 'draft', $about->post_status );
-				$this->assertStringContainsString( '<!-- wp:paragraph --><p>Join us!</p><!-- /wp:paragraph -->', $about->post_content );
+				$this->assertStringContainsString( "<!-- wp:paragraph -->\n<p>Join us!</p>\n<!-- /wp:paragraph -->", $about->post_content );
 				$this->assertStringNotContainsString( 'Example text', $about->post_content );
 
 				$this->assertGreaterThan( 0, (int) get_option( 'site_icon' ) );
@@ -2215,5 +2215,197 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( 'wma-wordpress-meetup', $job['urlname'] );
 		$this->assertTrue( $job['match_people'] );
 		$this->assertFalse( $job['include_past'] );
+	}
+
+	/**
+	 * Past events are recognized from the raw status, not the client's rewritten one.
+	 *
+	 * `Meetup_Client::get_group_events()` reports past events as "upcoming";
+	 * the importer asks for Meetup's own value as `meetupStatus`.
+	 */
+	public function test_past_status_survives_client_rewrite() {
+		$client_shaped = $this->raw_past_event(
+			array(
+				'status'       => 'upcoming',
+				'meetupStatus' => 'PAST',
+			)
+		);
+
+		$this->assertTrue( Meetup_Import\normalize_event( $client_shaped )['is_past'] );
+		$upcoming = $this->raw_event(
+			array(
+				'status'       => 'upcoming',
+				'meetupStatus' => 'ACTIVE',
+			)
+		);
+
+		$this->assertFalse( Meetup_Import\normalize_event( $upcoming )['is_past'] );
+
+		$this->fake_events( array( $upcoming, $client_shaped ) );
+
+		$this->assertCount( 1, Meetup_Import\fetch_group_events( 'wma-wordpress-meetup' ) );
+		$this->assertCount( 2, Meetup_Import\fetch_group_events( 'wma-wordpress-meetup', true ) );
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $client_shaped ) ) );
+		$this->assertSame( 'publish', $this->find_event( '300000001' )->post_status );
+	}
+
+	/**
+	 * An imported description opens in the event editor, rather than as an empty one.
+	 */
+	public function test_description_loads_in_editor() {
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$post   = $this->find_event( '315889305' );
+		$loaded = $this->on_site(
+			static function () use ( $post ) {
+				return \WordCamp\Groups\Frontend\Defaults\extract_description_blocks( $post->ID );
+			}
+		);
+
+		$this->assertStringContainsString( 'Bring a project.', $loaded );
+		$this->assertStringContainsString( 'How to find us: Room E103', $loaded );
+		$this->assertStringContainsString( '<!-- wp:paragraph -->', $loaded );
+	}
+
+	/**
+	 * A draft the organizer has edited since the import is left alone by reruns.
+	 */
+	public function test_edited_draft_is_kept() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+
+		$post = $this->find_event( '315889305' );
+
+		// The organizer edits the draft a while later.
+		$this->on_site(
+			static function () use ( $post ) {
+				wp_update_post(
+					array(
+						'ID'                => $post->ID,
+						'post_title'        => 'Organizer title',
+						'post_modified'     => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
+						'post_modified_gmt' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
+					)
+				);
+				global $wpdb;
+				$wpdb->update(
+					$wpdb->posts,
+					array( 'post_modified_gmt' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ) ),
+					array( 'ID' => $post->ID )
+				);
+				clean_post_cache( $post->ID );
+			}
+		);
+
+		$this->assertSame( 'keep', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
+
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame( 'kept', $results[0]['status'] );
+		$this->assertSame( 'Organizer title', $this->find_event( '315889305' )->post_title );
+	}
+
+	/**
+	 * Refreshing a draft keeps the meeting link the organizer added.
+	 */
+	public function test_refresh_keeps_meeting_link() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_event( array( 'eventType' => 'ONLINE' ) ) ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+
+		$post = $this->find_event( '315889305' );
+		$this->on_site(
+			static function () use ( $post ) {
+				update_post_meta( $post->ID, 'gatherpress_online_event_link', 'https://meet.example.org/wp' );
+			}
+		);
+
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame( 'updated', $results[0]['status'] );
+		$this->assertSame(
+			'https://meet.example.org/wp',
+			$this->on_site(
+				static function () use ( $post ) {
+					return get_post_meta( $post->ID, 'gatherpress_online_event_link', true );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Someone who left after an import isn't added back as an organizer or a host.
+	 */
+	public function test_departed_member_not_re_added_by_other_steps() {
+		list( $raw, $users ) = $this->setup_members();
+
+		Meetup_Import\import_members( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_member', $raw ) );
+		remove_user_from_blog( $users['match'], $this->site_id );
+
+		$counts = Meetup_Import\import_leaders(
+			$this->site_id,
+			array(
+				Meetup_Import\normalize_leader(
+					array(
+						'metadata' => array( 'role' => 'COORGANIZER' ),
+						'node'     => array(
+							'id'    => 'l1',
+							'email' => 'match@example.org',
+						),
+					)
+				),
+			)
+		);
+
+		$this->assertSame( 1, $counts['left'] );
+		$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
+
+		$event = $this->raw_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'match@example.org' ) ) ) ) );
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $event ) ), true );
+
+		$post = $this->find_event( '315889305' );
+		$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
+		$this->assertSame(
+			'',
+			$this->on_site(
+				static function () use ( $post ) {
+					return get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true );
+				}
+			)
+		);
+	}
+
+	/**
+	 * A batch holding a stale copy can't overwrite a job started after a cancel.
+	 */
+	public function test_stale_save_cannot_overwrite_replacement() {
+		$this->fake_events( array() );
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		$stale = Meetup_Import\get_job();
+
+		Meetup_Import\cancel_job();
+		$replacement = Meetup_Import\start_job( 'other-group', $this->site_id, false, false );
+
+		$stale['status'] = 'importing';
+
+		$this->assertFalse( Meetup_Import\save_job( $stale ) );
+		$this->assertSame( $replacement['id'], Meetup_Import\get_job()['id'] );
+		$this->assertSame( 'other-group', Meetup_Import\get_job()['urlname'] );
+		$this->assertSame( 'fetching', Meetup_Import\get_job()['status'] );
+	}
+
+	/**
+	 * Saving the current job does write it.
+	 */
+	public function test_save_job_writes_current_job() {
+		$this->fake_events( array() );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+
+		$job['status'] = 'failed';
+		$job['error']  = 'Test';
+
+		$this->assertTrue( Meetup_Import\save_job( $job ) );
+		$this->assertSame( 'failed', Meetup_Import\get_job()['status'] );
 	}
 }

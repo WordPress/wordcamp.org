@@ -24,6 +24,11 @@ class MES_Sponsor_Group {
 	public const CAMERA_WRANGLER_META = 'mes_camera_wrangler_email';
 
 	/**
+	 * Network option that switches the groups on. See is_enabled().
+	 */
+	public const ENABLED_OPTION = 'mes_sponsor_groups_enabled';
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -43,13 +48,20 @@ class MES_Sponsor_Group {
 	 *
 	 * Off by default, so merging the group model changes nothing an organizer or
 	 * deputy can see: the field is not offered on the WordCamp screen, saves are
-	 * ignored, and the taxonomy has no admin menu. Flip it with
+	 * ignored, and the taxonomy has no admin menu. Once the migration has run, switch
+	 * it on from WP-CLI on Central, with no deploy and no UI toggle:
 	 *
-	 *     add_filter( 'mes_sponsor_groups_enabled', '__return_true' );
+	 *     wp site option update mes_sponsor_groups_enabled 1
 	 *
-	 * once the migration has run. It also decides whether groups count at all: while it's off,
-	 * get_camp_groups() and MES_Sponsor::get_group_sponsorships() return nothing, so sponsors
-	 * come from the regions alone, and switching it off again is a rollback.
+	 * and off again with `wp site option delete mes_sponsor_groups_enabled`. WP-CLI stores
+	 * whatever it is given as a string, so the value goes through wp_validate_boolean(): `0`
+	 * and `false` both mean off. The `mes_sponsor_groups_enabled` filter gets the result and
+	 * has the last word.
+	 *
+	 * It also decides whether groups count at all: while it's off, get_camp_groups() and
+	 * MES_Sponsor::get_group_sponsorships() return nothing, so sponsors come from the regions
+	 * alone. Switching it off restores that read path only: sponsors already propagated
+	 * through groups, and group values organizers saved, stay where they are.
 	 *
 	 * Deliberately checked inside each callback rather than around the
 	 * `add_action()` calls, so the answer doesn't depend on whether a filter was
@@ -58,7 +70,7 @@ class MES_Sponsor_Group {
 	 * @return bool
 	 */
 	public static function is_enabled() {
-		return (bool) apply_filters( 'mes_sponsor_groups_enabled', false );
+		return (bool) apply_filters( 'mes_sponsor_groups_enabled', wp_validate_boolean( get_site_option( self::ENABLED_OPTION, false ) ) );
 	}
 
 	/**

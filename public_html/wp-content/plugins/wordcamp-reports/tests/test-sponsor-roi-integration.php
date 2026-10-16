@@ -187,6 +187,59 @@ class Test_Sponsor_ROI_Integration extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The tier is read even where `wcb_sponsor_level` isn't registered. The report runs on
+	 * Central, and `wc-post-types` only registers the taxonomy on camp sites, so the term API
+	 * answered `invalid_taxonomy` and every tier came out blank (#2193).
+	 */
+	public function test_get_data_reads_the_tier_without_the_taxonomy_registered() {
+		$report  = $this->stubbed_report();
+		$site_id = $report->test_camp[1];
+
+		switch_to_blog( $site_id );
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+			'post_title'  => 'PayPal',
+		) );
+		wp_set_object_terms( $sponsor_id, 'Gold', 'wcb_sponsor_level' );
+		restore_current_blog();
+
+		unregister_taxonomy( 'wcb_sponsor_level' );
+
+		$rows = $report->get_data();
+
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'Gold', $rows[0]['tier'] );
+	}
+
+	/**
+	 * Camp, sponsor and tier names are stored HTML-encoded (`&amp;`), which showed up as-is in
+	 * the CSV and was escaped a second time in the HTML view (#2193).
+	 */
+	public function test_get_data_decodes_names() {
+		$report               = $this->stubbed_report();
+		$report->test_camp[2] = 'WordCamp Test &amp; Friends';
+		$site_id              = $report->test_camp[1];
+
+		switch_to_blog( $site_id );
+		$sponsor_id = self::factory()->post->create( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'publish',
+			'post_title'  => 'Smith & Co',
+		) );
+		wp_set_object_terms( $sponsor_id, 'Bronze & Up', 'wcb_sponsor_level' );
+		$stored_title = get_post_field( 'post_title', $sponsor_id, 'raw' );
+		restore_current_blog();
+
+		$rows = $report->get_data();
+
+		$this->assertSame( 'WordCamp Test & Friends', $rows[0]['wordcamp_name'] );
+		$this->assertSame( 'Smith & Co', $rows[0]['sponsor_name'] );
+		$this->assertSame( 'Bronze & Up', $rows[0]['tier'] );
+		$this->assertStringContainsString( '&amp;', $stored_title, 'fixture: WordPress stores the title encoded' );
+	}
+
+	/**
 	 * A failed exchange-rate lookup must not be cached as $0 spend.
 	 *
 	 * The failed run reports the error; the next run must recompute spend

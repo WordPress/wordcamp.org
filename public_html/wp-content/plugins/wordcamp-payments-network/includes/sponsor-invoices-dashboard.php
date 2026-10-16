@@ -391,6 +391,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 
 	$wordcamp           = get_wordcamp_post();
 	$invoice            = get_post( $invoice_id );
+	$sponsor_id         = get_post_meta( $invoice_id, '_wcbsi_sponsor_id', true );
 	$to                 = WordCamp_Budgets::get_requester_formatted_email( $invoice->post_author );
 	$subject            = "Invoice for {$invoice->post_title} $new_status";
 	$sponsor_name       = get_sponsor_name( $invoice_id );
@@ -405,10 +406,9 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 	}
 
 	if ( 'approved' === $new_status ) {
-		$sponsor_id       = get_post_meta( $invoice_id, '_wcbsi_sponsor_id',           true );
 		$sponsor_email    = get_post_meta( $sponsor_id, '_wcpt_sponsor_email_address', true );
 		$qbo_invoice_id   = get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id',       true );
-		$status_message   = "has been sent to $sponsor_name via $sponsor_email. You will receive another notification when they have paid the invoice.";
+		$status_message   = "has been sent to [$sponsor_id] $sponsor_name via $sponsor_email. You will receive another notification when they have paid the invoice.";
 		$invoice_filename = WordCamp_QBO::download_invoice_pdf( $qbo_invoice_id );
 
 		Logger\log( 'get_invoice_filename', compact( 'qbo_invoice_id', 'invoice_filename' ) );
@@ -418,7 +418,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 			$attachment_message = "\nA copy of the invoice has been attached to this message, in case you need to follow up with the sponsor.";
 		}
 	} elseif ( 'paid' === $new_status ) {
-		$status_message = "has been paid by $sponsor_name. Go ahead and publish them to your website!";
+		$status_message = "has been paid by [$sponsor_id] $sponsor_name. Go ahead and publish them to your website!";
 	} else {
 		return;
 	}

@@ -131,7 +131,15 @@ class WordCamp_Loader extends Event_Loader {
 				'delete_others_posts'    => 'wordcamp_wrangle_wordcamps',
 				'delete_private_posts'   => 'wordcamp_wrangle_wordcamps',
 				'delete_published_posts' => 'wordcamp_wrangle_wordcamps',
-				'edit_others_posts'      => 'wordcamp_wrangle_wordcamps',
+
+				/*
+				 * Its own capability, not the wrangler one, so it can be granted more narrowly: wranglers get
+				 * it through `wcorg-subroles.php`, and a mentor gets it only while saving their mentee's camp.
+				 * Mapping it straight to `wordcamp_wrangle_wordcamps` made core's save path demand wrangler
+				 * rights from a mentor, and widening that cap for the save would also have let them change the
+				 * status and the protected fields, which check `wordcamp_wrangle_wordcamps` directly.
+				 */
+				'edit_others_posts'      => 'edit_others_wordcamps',
 				'edit_private_posts'     => 'wordcamp_wrangle_wordcamps',
 				'edit_published_posts'   => 'wordcamp_wrangle_wordcamps',
 				'publish_posts'          => 'wordcamp_wrangle_wordcamps',

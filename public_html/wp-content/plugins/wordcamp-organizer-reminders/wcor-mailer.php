@@ -1046,6 +1046,13 @@ class WCOR_Mailer {
 		$emails         = $this->get_triggered_posts( $trigger );
 		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
+		if ( ! $emails ) {
+			log( 'trigger_has_no_reminders', compact( 'trigger', 'wordcamp' ) );
+			return;
+		}
+
+		$sent = 0;
+
 		foreach( $emails as $email ) {
 			if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
 				continue;
@@ -1059,8 +1066,13 @@ class WCOR_Mailer {
 
 			if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
 				$sent_email_ids[] = $email->ID;
+				$sent++;
 				update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
 			}
+		}
+
+		if ( ! $sent ) {
+			log( 'trigger_sent_no_reminders', compact( 'trigger', 'wordcamp' ) );
 		}
 	}
 }

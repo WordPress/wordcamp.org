@@ -33,6 +33,12 @@ class Sponsor_ROI extends Base {
 	const COUNTED_STATUSES_PAID = array( 'wcbsi_paid' );
 
 	/**
+	 * Bump when the shape or meaning of the cached rows changes, so rows cached by an older
+	 * version aren't served after a deploy. 2: tiers read on Central, names decoded (#2193).
+	 */
+	const CACHE_VERSION = 2;
+
+	/**
 	 * Invoice statuses that count toward spend when including sent invoices.
 	 *
 	 * @var array
@@ -191,6 +197,7 @@ class Sponsor_ROI extends Base {
 	protected function get_cache_key() {
 		$cache_key_segments = array(
 			parent::get_cache_key(),
+			'v' . self::CACHE_VERSION,
 			$this->range->generate_cache_key_segment(),
 		);
 
@@ -372,7 +379,7 @@ class Sponsor_ROI extends Base {
 				$spend_usd += $this->to_base_currency( $amount, $currency, $event_date );
 			}
 
-			$levels       = wp_get_post_terms( $sponsor->ID, 'wcb_sponsor_level', array( 'fields' => 'names' ) );
+			$levels       = $this->get_sponsor_level_names( $sponsor->ID );
 			$company_name = (string) get_post_meta( $sponsor->ID, '_wcpt_sponsor_company_name', true );
 
 			$rows[] = array(
@@ -380,11 +387,11 @@ class Sponsor_ROI extends Base {
 				'mes_id'              => $mes_id,
 				'wordcamp_id'         => (int) $wordcamp_id,
 				'site_id'             => (int) $site_id,
-				'wordcamp_name'       => (string) $wordcamp_name,
+				'wordcamp_name'       => self::decode( $wordcamp_name ),
 				'event_date'          => (string) $event_date,
 				'sponsor_id'          => (int) $sponsor->ID,
-				'sponsor_name'        => '' !== $company_name ? $company_name : $sponsor->post_title,
-				'tier'                => ! empty( $levels ) && ! is_wp_error( $levels ) ? (string) $levels[0] : '',
+				'sponsor_name'        => self::decode( '' !== $company_name ? $company_name : $sponsor->post_title ),
+				'tier'                => $levels ? self::decode( $levels[0] ) : '',
 				'website'             => (string) get_post_meta( $sponsor->ID, '_wcpt_sponsor_website', true ),
 				'country'             => (string) get_post_meta( $sponsor->ID, self::COUNTRY_META, true ),
 				'first_time'          => (string) get_post_meta( $sponsor->ID, '_wcb_sponsor_first_time', true ),
@@ -399,6 +406,51 @@ class Sponsor_ROI extends Base {
 		restore_current_blog();
 
 		return $rows;
+	}
+
+	/**
+	 * A sponsor's level names, read straight from the term tables.
+	 *
+	 * The report runs on Central and switches into each camp, but `wcb_sponsor_level` is only
+	 * registered on camp sites (`wc-post-types` returns early on Central), so the term API
+	 * answers `invalid_taxonomy` here. Sorted by name, as `wp_get_post_terms()` did.
+	 *
+	 * Must be called within switch_to_blog() of the sponsor's subsite.
+	 *
+	 * @param int $sponsor_id The `wcb_sponsor` post ID.
+	 *
+	 * @return string[]
+	 */
+	protected function get_sponsor_level_names( $sponsor_id ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The term API can't be used for a taxonomy that isn't registered on this site; the report caches its own results.
+		return $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT t.name
+				FROM {$wpdb->terms} AS t
+				INNER JOIN {$wpdb->term_taxonomy} AS tt ON tt.term_id = t.term_id
+				INNER JOIN {$wpdb->term_relationships} AS tr ON tr.term_taxonomy_id = tt.term_taxonomy_id
+				WHERE tt.taxonomy = %s AND tr.object_id = %d
+				ORDER BY t.name ASC",
+				'wcb_sponsor_level',
+				$sponsor_id
+			)
+		);
+	}
+
+	/**
+	 * Turn a stored name back into plain text.
+	 *
+	 * Post titles and term names are stored HTML-encoded (`&amp;`). The CSV wants plain text,
+	 * and the HTML view escapes on output, so encoded names showed up as `&amp;` in both.
+	 *
+	 * @param string $text
+	 *
+	 * @return string
+	 */
+	protected static function decode( $text ) {
+		return html_entity_decode( (string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	}
 
 	/**

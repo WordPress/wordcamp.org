@@ -1,6 +1,11 @@
 <?php
+use Dompdf\Dompdf;
+
+require_once __DIR__ . '/class-wordcamp-docs-template.php';
+require_once __DIR__ . '/class-wordcamp-docs-arabic-shaper.php';
+
 /**
- * Helper class to generate PDFs from HTML strings or files using wkhtmltopdf.
+ * Helper class to generate PDFs from HTML strings or files.
  *
  * Thanks to Viper007Bond ( http://www.viper007bond.com )
  */
@@ -23,6 +28,18 @@ class WordCamp_Docs_PDF_Generator {
 	public $working_folder_name;
 
 	/**
+	 * Why the last PDF couldn't be generated, if it couldn't.
+	 *
+	 * @var string
+	 */
+	public $last_error = '';
+
+	/**
+	 * The only hosts DomPDF may fetch from: Google Fonts' stylesheets and font files.
+	 */
+	const FONT_HOSTS = array( 'fonts.googleapis.com', 'fonts.gstatic.com' );
+
+	/**
 	 * Constructor. No parameters.
 	 */
 	function __construct() {
@@ -36,8 +53,6 @@ class WordCamp_Docs_PDF_Generator {
 	 * @param string $filename Filename of the PDF, including the extension.
 	 * @param array  $args     Optional. An associative array of additional parameters.
 	 *                         assets:  optional array of full paths to local assets (images for example).
-	 *                         dpi:     optional integer to be passed directly to wkhtmltopdf.
-	 *                         margins: optional array of 4 integers specifying PDF margins. Top, right, bottom, left.
 	 *
 	 * @return string The path to the generated PDF.
 	 */
@@ -53,8 +68,6 @@ class WordCamp_Docs_PDF_Generator {
 	 * @param  string $filename    Filename of the PDF, including the extension.
 	 * @param array   $args        Optional. An associative array of additional parameters.
 	 *                             assets:  optional array of full paths to local assets (images for example).
-	 *                             dpi:     optional integer to be passed directly to wkhtmltopdf.
-	 *                             margins: optional array of 4 integers specifying PDF margins. Top, right, bottom, left.
 	 *
 	 * @return string The path to the generated PDF.
 	 */
@@ -65,35 +78,101 @@ class WordCamp_Docs_PDF_Generator {
 			}
 		}
 
-		$dpi = ( ! empty( $args['dpi'] ) ) ? absint( $args['dpi'] ) : 300;
+		if ( ! is_readable( $source_file ) ) {
+			$this->last_error = "Can't read $source_file.";
 
-		$margins = ( ! empty( $args['margins'] ) && is_array( $args['margins'] ) && 4 == count( $args['margins'] ) ) ? $args['margins'] : array( 0, 0, 0, 0 );
+			return $this->get_tmp_folder( $filename );
+		}
 
-		chmod( $this->get_tmp_folder(), 0775 );
+		// DomPDF comes from Composer, so a deploy that skipped it would otherwise be a fatal error at checkout.
+		if ( ! class_exists( Dompdf::class ) ) {
+			$this->last_error = 'DomPDF is not installed.';
 
-		$file = $this->get_tmp_folder( $filename );
+			return $this->get_tmp_folder( $filename );
+		}
 
-		$command = sprintf(
-			// Allowing local file access is safe because the inputs to `$source_file` should have been escaped.
-			'sudo -u wkhtmltopdf -g nogroup -H wkhtmltopdf --enable-external-links --enable-local-file-access -d %d -T %s -R %s -B %s -L %s %s %s',
-			$dpi,
-			escapeshellarg( $margins[0] ),
-			escapeshellarg( $margins[1] ),
-			escapeshellarg( $margins[2] ),
-			escapeshellarg( $margins[3] ),
-			escapeshellarg( $source_file ),
-			escapeshellarg( $file )
-		);
+		$font_dir = self::get_font_cache_folder();
 
-		exec( $command );
+		$dompdf = new Dompdf( [
+			'dpi'                  => 120,
 
-		return $file;
+			'isHtml5ParserEnabled' => true,
+			'isJavascriptEnabled'  => false,
+			'isPhpEnabled'         => false,
+
+			// Only the web fonts are fetched remotely. Images are copied into the working
+			// folder as assets, so markup that reaches a template can't make the server
+			// request any other URL.
+			'isRemoteEnabled'      => true,
+			'allowedRemoteHosts'   => self::FONT_HOSTS,
+
+			'httpContext'          => stream_context_create( [
+				'http' => [
+					'user_agent' => 'WordCamp Docs PDF Generator; ' . home_url( '/' ),
+					'timeout'    => 30,
+				],
+			] ),
+
+			'fontCache'            => $font_dir,
+			'fontDir'              => $font_dir,
+			// Local files can only be read from this instance's working folder and the font cache.
+			'chroot'               => [
+				$this->get_tmp_folder(),
+				$font_dir,
+			],
+			'tempDir'              => $this->get_tmp_folder(),
+		] );
+
+		// A rendering error leaves no PDF behind, which callers already treat as a failure.
+		try {
+			// DomPDF can't join Arabic letters or lay them out right to left, so shape them first.
+			$html   = file_get_contents( $source_file );
+			$shaped = WordCamp_Docs_Arabic_Shaper::shape( $html );
+			if ( $shaped !== $html ) {
+				$source_file = $this->write_file( basename( $source_file ), $shaped );
+			}
+
+			$dompdf->loadHtmlFile( $source_file );
+			$dompdf->render();
+			$this->write_file( $filename, $dompdf->output() );
+		} catch ( Throwable $e ) {
+			$this->last_error = $e->getMessage();
+		}
+
+		return $this->get_tmp_folder( $filename );
+	}
+
+	/**
+	 * Download the web fonts into the font cache, unless they're already there.
+	 *
+	 * The first PDF rendered against an empty cache downloads about 80MB of fonts, which takes
+	 * several seconds. Invoices are rendered during checkout, so warm the cache ahead of time.
+	 *
+	 * @return bool Whether the cache was already warm.
+	 */
+	public static function warm_font_cache() {
+		$installed = json_decode( (string) @file_get_contents( self::get_font_cache_folder() . 'installed-fonts.json' ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing file just means the cache is cold.
+		$missing   = array_diff( WordCamp_Docs_Template::FONT_FAMILIES, array_keys( (array) $installed ) );
+
+		if ( ! $missing ) {
+			return true;
+		}
+
+		ob_start();
+		WordCamp_Docs_Template::font_header_html();
+		$html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' . ob_get_clean() . '</head><body><p>Aa <strong>Aa</strong> 中文 한국어 العربية</p></body></html>';
+
+		$generator = new self();
+		$generator->generate_pdf_from_string( $html, 'warm-font-cache.pdf' );
+		$generator->delete_tmp_folder();
+
+		return false;
 	}
 
 	/**
 	 * Serves a file from the tmp folder up to the browser.
 	 * Does NOT exit when finished so that you can still call
-	 * A8C_PDF_Generator::delete_tmp_folder() when you're all done.
+	 * WordCamp_PDF_Generator::delete_tmp_folder() when you're all done.
 	 *
 	 * @param string $filename The filename within this instance's temporary folder to serve up.
 	 * @param bool $download Whether to prompt downloading or serve it natively within the browser.
@@ -108,6 +187,8 @@ class WordCamp_Docs_PDF_Generator {
 		if ( ! file_exists( $file ) ) {
 			status_header( 404 );
 			echo 'File not found.';
+
+			return;
 		}
 
 		header( 'Content-Type: application/pdf' );
@@ -128,15 +209,49 @@ class WordCamp_Docs_PDF_Generator {
 	 * @return string The full path to the newly created file.
 	 */
 	public function write_file( $filename, $data ) {
-		if ( ! is_dir( $this->get_tmp_folder() ) ) {
-			mkdir( $this->get_tmp_folder() );
-		}
-
 		$path = $this->get_tmp_folder( $filename );
 
 		file_put_contents( $path, $data );
 
 		return $path;
+	}
+
+	/**
+	 * Returns the path to the shared font cache folder.
+	 *
+	 * It lives outside /tmp so it survives reboots and is shared by every site. With ms-files that's
+	 * `blogs.dir`, which every web server shares, so one warm-up covers all of them. It sits beside the
+	 * sites' `<id>/files` folders, not inside one, so `/files/` URLs can't serve it.
+	 *
+	 * If that folder can't be written to, the cache falls back to the temp folder, which is per server
+	 * and doesn't survive a reboot. DomPDF can't render anything without a writable font cache.
+	 *
+	 * @return string Full path to the font cache folder, with a trailing slash.
+	 */
+	public static function get_font_cache_folder() {
+		/**
+		 * Filters where DomPDF caches the fonts it downloads.
+		 *
+		 * @param string $font_dir Full path to the font cache folder.
+		 */
+		// Not `wp_upload_dir()`: that's per site, and the main site's is `uploads` on local disk.
+		$uploads  = WP_CONTENT_DIR . ( get_site_option( 'ms_files_rewriting' ) ? '/blogs.dir' : '/uploads' );
+		$font_dir = trailingslashit( apply_filters( 'wordcamp_docs_font_cache_folder', $uploads . '/wordcamp-docs-fonts' ) );
+
+		if ( ! is_dir( $font_dir ) ) {
+			wp_mkdir_p( $font_dir );
+		}
+
+		// E.g. an NFS export that doesn't let this server write to the shared folder.
+		if ( ! wp_is_writable( $font_dir ) ) {
+			$font_dir = get_temp_dir() . 'wordcamp-docs-fonts/';
+
+			if ( ! is_dir( $font_dir ) ) {
+				wp_mkdir_p( $font_dir );
+			}
+		}
+
+		return $font_dir;
 	}
 
 	/**
@@ -148,7 +263,13 @@ class WordCamp_Docs_PDF_Generator {
 	 * @return string Full path to the temporary folder or file.
 	 */
 	public function get_tmp_folder( $filename = '' ) {
-		return trailingslashit( $this->tmp_folder_base ) . $this->working_folder_name . '/' . $filename;
+		$path = trailingslashit( $this->tmp_folder_base ) . $this->working_folder_name . '/';
+
+		if ( ! is_dir( $path ) ) {
+			mkdir( $path, 0777, true );
+		}
+
+		return $path . $filename;
 	}
 
 	/**

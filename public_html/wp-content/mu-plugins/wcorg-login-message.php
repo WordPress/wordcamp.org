@@ -70,7 +70,8 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		$redirect_to = false;
 	}
 
-	$wporg_login_url = add_query_arg( 'redirect_to', $redirect_to, $login_url );
+	// `add_query_arg()` doesn't encode values, and a return URL with its own query string would end at its first `&`.
+	$wporg_login_url = add_query_arg( 'redirect_to', $redirect_to ? rawurlencode( $redirect_to ) : false, $login_url );
 
 	if ( empty( $message ) ) {
 		$message = __( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' );

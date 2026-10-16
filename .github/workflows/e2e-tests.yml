@@ -260,6 +260,7 @@ jobs:
         create_user eventorganiser4 author & pids+=( "$!" )
         create_user eventorganiser5 author & pids+=( "$!" )
         create_user eventorganiser6 author & pids+=( "$!" )
+        create_user eventorganiser7 author & pids+=( "$!" )
         create_user member1 subscriber & pids+=( "$!" )
         status=0
         for pid in "${pids[@]}"; do

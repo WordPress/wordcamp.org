@@ -1609,6 +1609,51 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Occurrence posts can be cast to strings by core.
+	 *
+	 * `get_post_class()` passes the whole post to `is_attachment()`, which casts
+	 * it to an array of strings, and `?attachment=` on any front-end URL makes
+	 * `is_attachment` true. An object property on the post was a fatal error.
+	 */
+	public function test_occurrence_posts_survive_post_class_on_attachment_requests(): void {
+		global $wp_query;
+
+		set_current_screen( 'front' );
+		$this->create_projected_weekly_series( 'Weekly Series' );
+
+		$loop = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'orderby'                 => 'datetime',
+				'order'                   => 'ASC',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+				'posts_per_page'          => 3,
+			)
+		);
+
+		$this->assertNotEmpty( $loop->posts );
+		$occurrence = $loop->posts[0];
+		$this->assertIsString( $occurrence->gpre_occurrence );
+
+		add_theme_support( 'post-thumbnails' );
+		add_filter( 'has_post_thumbnail', '__return_true' );
+		$wp_query->is_attachment = true;
+
+		try {
+			$this->assertContains( 'has-post-thumbnail', get_post_class( '', $occurrence ) );
+
+			$loop->the_post();
+			$this->assertSame( $occurrence->gpre_occurrence, Context::get()->recurrence_id );
+		} finally {
+			$wp_query->is_attachment = false;
+			remove_theme_support( 'post-thumbnails' );
+			wp_reset_postdata();
+			Context::set( null );
+		}
+	}
+
+	/**
 	 * Creates a published weekly series that started a week ago, with its
 	 * occurrences projected.
 	 *

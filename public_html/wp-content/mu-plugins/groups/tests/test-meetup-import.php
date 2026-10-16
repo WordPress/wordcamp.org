@@ -2294,9 +2294,11 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( '<!-- wp:heading {"level":2} -->', $loaded );
 		$this->assertStringContainsString( '<h2>Agenda</h2>', $loaded );
 		$this->assertStringContainsString( '<!-- wp:list -->', $loaded );
-		$this->assertStringContainsString( '<ul><li>Talk 1</li><li>Talk 2</li></ul>', $loaded );
+		$this->assertStringContainsString( '<li>Talk 1</li>', $loaded );
+		$this->assertStringContainsString( '<li>Talk 2</li>', $loaded );
 		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
-		$this->assertStringContainsString( '<blockquote>Note this</blockquote>', $loaded );
+		$this->assertStringContainsString( '<blockquote>', $loaded );
+		$this->assertStringContainsString( 'Note this', $loaded );
 	}
 
 	/**

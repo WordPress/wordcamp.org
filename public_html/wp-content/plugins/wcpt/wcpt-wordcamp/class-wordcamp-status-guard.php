@@ -2,7 +2,7 @@
 defined( 'WPINC' ) || die();
 
 /**
- * Enforces which post status a WordCamp application may be written to.
+ * Enforces which post status a WordCamp application may be written to, and who may change its author.
  *
  * Not in `WordCamp_Admin`: `WCPT_Loader::core_admin()` only constructs that class for
  * admin and cron requests, and applications are also written over REST and by WP-CLI.
@@ -17,6 +17,49 @@ class WordCamp_Status_Guard {
 	 */
 	public static function init() {
 		add_filter( 'wp_insert_post_data', array( __CLASS__, 'enforce_post_status' ), 9, 2 );
+		add_filter( 'wp_insert_post_data', array( __CLASS__, 'enforce_post_author' ), 9, 2 );
+	}
+
+	/**
+	 * Whether the current request may change the workflow fields: the status and the author.
+	 *
+	 * Cron and WP-CLI without a user are the workflow's own writers:
+	 * `close_wordcamps_after_event()` sets `wcpt-closed` from cron, and operators move
+	 * applications from the command line. A user set with `wp --user` is held to the
+	 * capability like any other.
+	 *
+	 * @return bool
+	 */
+	protected static function may_change_workflow() {
+		$system_context = wp_doing_cron()
+			|| ( defined( 'WP_CLI' ) && WP_CLI && ! is_user_logged_in() );
+
+		// Not `WordCamp_Admin::get_edit_capability()`: that class is admin and cron only.
+		return $system_context || current_user_can( 'wordcamp_wrangle_wordcamps' );
+	}
+
+	/**
+	 * Keep a WordCamp's author unless a wrangler changes it.
+	 *
+	 * Who leads a camp is a wrangler's call. A save that names no author makes core fall back
+	 * to the current user, and since that's "the same user" it never asks for `edit_others_posts`,
+	 * so a mentor saving their mentee's camp became its author (#2189). Updates only, like the status.
+	 *
+	 * @param array $post_data
+	 * @param array $post_data_raw
+	 * @return array
+	 */
+	public static function enforce_post_author( $post_data, $post_data_raw ) {
+		if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) || self::may_change_workflow() ) {
+			return $post_data;
+		}
+
+		$post = get_post( $post_data_raw['ID'] );
+		if ( $post ) {
+			$post_data['post_author'] = $post->post_author;
+		}
+
+		return $post_data;
 	}
 
 	/**
@@ -31,17 +74,7 @@ class WordCamp_Status_Guard {
 			return $post_data;
 		}
 
-		/*
-		 * Cron and WP-CLI without a user are the workflow's own writers:
-		 * `close_wordcamps_after_event()` sets `wcpt-closed` from cron, and operators move
-		 * applications from the command line. A user set with `wp --user` is held to the
-		 * capability like any other.
-		 */
-		$system_context = wp_doing_cron()
-			|| ( defined( 'WP_CLI' ) && WP_CLI && ! is_user_logged_in() );
-
-		// Not `WordCamp_Admin::get_edit_capability()`: that class is admin and cron only.
-		$may_set_status = $system_context || current_user_can( 'wordcamp_wrangle_wordcamps' );
+		$may_set_status = self::may_change_workflow();
 
 		/*
 		 * Updates only. An insert reaching `wp_insert_post()` has already been decided by the

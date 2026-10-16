@@ -59,6 +59,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	protected function tearDown(): void {
 		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch' );
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_members' );
+		Meetup_Import\release_lock();
 
 		wp_delete_site( $this->site_id );
 
@@ -525,5 +527,455 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertSame( 'draft', $this->find_event( '315889305' )->post_status );
 		$this->assertSame( 'created', Meetup_Import\request_state()['results'][0]['status'] );
+	}
+
+	/**
+	 * A past Meetup event, with Meetup's RSVP counts.
+	 *
+	 * @param array $overrides Fields to replace.
+	 */
+	protected function raw_past_event( array $overrides = array() ): array {
+		return $this->raw_event(
+			array_merge(
+				array(
+					'id'       => '300000001',
+					'status'   => 'PAST',
+					'dateTime' => '2025-03-12T18:00:00-04:00',
+					'endTime'  => '2025-03-12T20:00:00-04:00',
+					'rsvps'    => array(
+						'yesCount'      => 14,
+						'attendedCount' => 11,
+					),
+				),
+				$overrides
+			)
+		);
+	}
+
+	/**
+	 * Past events carry their status and Meetup's counts through normalization.
+	 */
+	public function test_normalize_past_event() {
+		$event = Meetup_Import\normalize_event( $this->raw_past_event() );
+
+		$this->assertTrue( $event['is_past'] );
+		$this->assertSame( 14, $event['rsvp_yes'] );
+		$this->assertSame( 11, $event['attended'] );
+		$this->assertFalse( Meetup_Import\normalize_event( $this->raw_event() )['is_past'] );
+	}
+
+	/**
+	 * Past events only come through when asked for.
+	 */
+	public function test_fetch_drops_past_events_unless_asked() {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			function () {
+				return array( $this->raw_event(), $this->raw_past_event() );
+			}
+		);
+
+		$this->assertSame( array( '315889305' ), wp_list_pluck( Meetup_Import\fetch_group_events( 'wma-wordpress-meetup' ), 'id' ) );
+		$this->assertCount( 2, Meetup_Import\fetch_group_events( 'wma-wordpress-meetup', true ) );
+	}
+
+	/**
+	 * Re-attach the new-event notification hook, which `Groups_TestCase`
+	 * detaches for every test, and start from an empty queue.
+	 */
+	protected function watch_publish_notifications(): void {
+		\WordCamp\Groups\Frontend\Notifications\pending_notification_queue( null, true );
+
+		add_action( 'transition_post_status', 'WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification', 10, 3 );
+	}
+
+	/**
+	 * Detach the hook again and drain the queue, so nothing renders at shutdown.
+	 *
+	 * @return int[] Event IDs that were queued for a notification.
+	 */
+	protected function stop_watching_publish_notifications(): array {
+		remove_action( 'transition_post_status', 'WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification', 10 );
+
+		return \WordCamp\Groups\Frontend\Notifications\pending_notification_queue( null, true );
+	}
+
+	/**
+	 * A past event is published as history, with its counts, and emails nobody.
+	 */
+	public function test_import_publishes_past_event_silently() {
+		$this->watch_publish_notifications();
+
+		try {
+			$results = Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_past_event() ) ) );
+		} finally {
+			$queued = $this->stop_watching_publish_notifications();
+		}
+
+		$this->assertSame( 'created', $results[0]['status'] );
+
+		$post = $this->find_event( '300000001' );
+		$this->assertSame( 'publish', $post->post_status );
+
+		$this->on_site(
+			function () use ( $post ) {
+				$this->assertSame( '14', get_post_meta( $post->ID, Meetup_Import\RSVP_YES_META, true ) );
+				$this->assertSame( '11', get_post_meta( $post->ID, Meetup_Import\ATTENDED_META, true ) );
+				$this->assertSame( '2025-03-12 18:00:00', get_post_meta( $post->ID, 'gatherpress_datetime_start', true ) );
+			}
+		);
+
+		$this->assertSame( array(), $queued );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * Organizers publishing an imported upcoming draft still notifies members as usual.
+	 */
+	public function test_publishing_imported_draft_still_notifies() {
+		$this->watch_publish_notifications();
+
+		try {
+			Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+			$post = $this->find_event( '315889305' );
+
+			// Importing the draft queues nothing...
+			$this->assertSame( array(), \WordCamp\Groups\Frontend\Notifications\pending_notification_queue() );
+
+			$this->on_site(
+				static function () use ( $post ) {
+					wp_update_post(
+						array(
+							'ID'          => $post->ID,
+							'post_status' => 'publish',
+						)
+					);
+				}
+			);
+		} finally {
+			$queued = $this->stop_watching_publish_notifications();
+		}
+
+		// ...but the organizer publishing it notifies members as usual.
+		$this->assertSame( array( $post->ID ), $queued );
+	}
+
+	/**
+	 * A past event that's already on the site is never touched again.
+	 */
+	public function test_rerun_skips_imported_past_event() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+
+		Meetup_Import\import_events( $this->site_id, $events );
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame( 'skipped', $results[0]['status'] );
+		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * Once published, an imported event takes RSVPs through the same route as any other.
+	 */
+	public function test_published_imported_event_accepts_rsvp() {
+		$start = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days' ) );
+		$end   = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days 2 hours' ) );
+
+		Meetup_Import\import_events(
+			$this->site_id,
+			array(
+				Meetup_Import\normalize_event(
+					$this->raw_event(
+						array(
+							'dateTime' => $start,
+							'endTime'  => $end,
+						)
+					)
+				),
+			)
+		);
+
+		$post    = $this->find_event( '315889305' );
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( $this->site_id, $user_id, 'subscriber' );
+
+		$response = $this->on_site(
+			static function () use ( $post, $user_id ) {
+				wp_update_post(
+					array(
+						'ID'          => $post->ID,
+						'post_status' => 'publish',
+					)
+				);
+
+				wp_set_current_user( $user_id );
+
+				$request = new \WP_REST_Request( 'POST', "/wporg-groups/v1/event/{$post->ID}/rsvp" );
+				$request->set_param( 'status', 'attending' );
+
+				return rest_get_server()->dispatch( $request );
+			}
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+
+		$this->on_site(
+			function () use ( $post, $user_id ) {
+				$rsvp = ( new Event( $post->ID ) )->rsvp->get( $user_id );
+				$this->assertSame( 'attending', $rsvp['status'] );
+			}
+		);
+	}
+
+	/**
+	 * Count every user in the install, across all sites.
+	 */
+	protected function count_all_users(): int {
+		return count(
+			get_users(
+				array(
+					'blog_id' => 0,
+					'fields'  => 'ids',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Meetup members in each of the ways member matching can go.
+	 *
+	 * @return array{0: array, 1: int[]} Raw members, and the IDs of the users that exist.
+	 */
+	protected function setup_members(): array {
+		$users = array(
+			'match'   => self::factory()->user->create( array( 'user_email' => 'match@example.org' ) ),
+			'already' => self::factory()->user->create( array( 'user_email' => 'already@example.org' ) ),
+		);
+
+		add_user_to_blog( $this->site_id, $users['already'], 'subscriber' );
+
+		$raw = array(
+			array(
+				'id'    => 'm1',
+				'email' => 'Match@Example.org',
+			),
+			array(
+				'id'    => 'm2',
+				'email' => 'already@example.org',
+			),
+			array(
+				'id'    => 'm3',
+				'email' => 'nobody@example.org',
+			),
+			array(
+				'id'    => 'm4',
+				'email' => '',
+			),
+			array( 'id' => 'm5' ),
+		);
+
+		return array( $raw, $users );
+	}
+
+	/**
+	 * Matches join as Members with event emails off; nobody else gets an account.
+	 */
+	public function test_import_members() {
+		list( $raw, $users ) = $this->setup_members();
+		$user_count          = $this->count_all_users();
+
+		$counts = Meetup_Import\import_members( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_member', $raw ) );
+
+		$this->assertSame( 1, $counts['join'] );
+		$this->assertSame( 1, $counts['already_member'] );
+		$this->assertSame( 1, $counts['unmatched'] );
+		$this->assertSame( 2, $counts['no_email'] );
+
+		$this->assertTrue( is_user_member_of_blog( $users['match'], $this->site_id ) );
+		$this->assertSame( array( 'subscriber' ), ( new \WP_User( $users['match'], '', $this->site_id ) )->roles );
+		$this->assertSame( '0', get_user_meta( $users['match'], \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
+
+		// The member who was already there keeps whatever they had chosen.
+		$this->assertSame( '', get_user_meta( $users['already'], \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
+
+		$this->assertSame( $user_count, $this->count_all_users() );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * Someone who leaves after being imported isn't added back by a rerun.
+	 */
+	public function test_member_who_left_is_not_re_added() {
+		list( $raw, $users ) = $this->setup_members();
+		$members             = array_map( 'WordCamp\Groups\Meetup_Import\normalize_member', $raw );
+
+		Meetup_Import\import_members( $this->site_id, $members );
+		remove_user_from_blog( $users['match'], $this->site_id );
+
+		$counts = Meetup_Import\import_members( $this->site_id, $members );
+
+		$this->assertSame( 0, $counts['join'] );
+		$this->assertSame( 2, $counts['previously_imported'] );
+		$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
+	}
+
+	/**
+	 * The member preview counts without adding anyone.
+	 */
+	public function test_plan_members_writes_nothing() {
+		list( $raw, $users ) = $this->setup_members();
+
+		$counts = Meetup_Import\plan_members( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_member', $raw ) );
+
+		$this->assertSame( 1, $counts['join'] );
+		$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
+		$this->assertSame( array(), (array) get_blog_option( $this->site_id, Meetup_Import\MEMBERS_OPTION, array() ) );
+	}
+
+	/**
+	 * Members are only fetched and imported when the box is ticked.
+	 */
+	public function test_form_handler_imports_members_only_when_asked() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		list( $raw, $users ) = $this->setup_members();
+		$fetched_members     = 0;
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			function () {
+				return array( $this->raw_event() );
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			function () use ( $raw, &$fetched_members ) {
+				++$fetched_members;
+				return $raw;
+			}
+		);
+
+		$_POST['wcorg_meetup_import_step']    = 'import';
+		$_POST['meetup_group']                = 'wma-wordpress-meetup';
+		$_POST['site_id']                     = (string) $this->site_id;
+		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
+		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
+
+		try {
+			Meetup_Import\handle_form_submission();
+			$this->assertSame( 0, $fetched_members );
+			$this->assertFalse( is_user_member_of_blog( $users['match'], $this->site_id ) );
+
+			$_POST['import_members'] = '1';
+			Meetup_Import\handle_form_submission();
+		} finally {
+			unset( $GLOBALS['super_admins'], $_POST['import_members'] );
+		}
+
+		$this->assertSame( 1, $fetched_members );
+		$this->assertTrue( is_user_member_of_blog( $users['match'], $this->site_id ) );
+		$this->assertSame( 1, Meetup_Import\request_state()['member_counts']['join'] );
+	}
+
+	/**
+	 * Only one request can hold the import lock at a time.
+	 */
+	public function test_lock_is_exclusive() {
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+		$this->assertFalse( Meetup_Import\acquire_lock() );
+
+		Meetup_Import\release_lock();
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * The lock is one row for the whole network, whichever site the request is on.
+	 */
+	public function test_lock_is_network_wide() {
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+		$this->assertFalse( $this->on_site( 'WordCamp\Groups\Meetup_Import\acquire_lock' ) );
+	}
+
+	/**
+	 * A lock left behind by an import that died is taken over once it expires.
+	 */
+	public function test_stale_lock_is_taken_over() {
+		global $wpdb;
+
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+
+		$wpdb->update(
+			Meetup_Import\lock_table(),
+			array( 'option_value' => (string) ( time() - 1 ) ),
+			array( 'option_name' => Meetup_Import\LOCK_OPTION )
+		);
+
+		$this->assertTrue( Meetup_Import\acquire_lock() );
+		$this->assertFalse( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * While another import holds the lock, the form imports nothing and says why.
+	 */
+	public function test_form_handler_refuses_while_locked() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			function () {
+				return array( $this->raw_event() );
+			}
+		);
+
+		$_POST['wcorg_meetup_import_step']    = 'import';
+		$_POST['meetup_group']                = 'wma-wordpress-meetup';
+		$_POST['site_id']                     = (string) $this->site_id;
+		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
+		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
+
+		Meetup_Import\acquire_lock();
+
+		try {
+			Meetup_Import\handle_form_submission();
+		} finally {
+			unset( $GLOBALS['super_admins'] );
+		}
+
+		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertContains( 'import_running', wp_list_pluck( get_settings_errors( 'wcorg-meetup-import' ), 'code' ) );
+
+		// The lock is still the other import's, untouched by the refused one.
+		$this->assertFalse( Meetup_Import\acquire_lock() );
+	}
+
+	/**
+	 * A finished import gives the lock back.
+	 */
+	public function test_form_handler_releases_lock() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			function () {
+				return array( $this->raw_event() );
+			}
+		);
+
+		$_POST['wcorg_meetup_import_step']    = 'import';
+		$_POST['meetup_group']                = 'wma-wordpress-meetup';
+		$_POST['site_id']                     = (string) $this->site_id;
+		$_POST[ Meetup_Import\NONCE_NAME ]    = wp_create_nonce( Meetup_Import\NONCE_ACTION );
+		$_REQUEST[ Meetup_Import\NONCE_NAME ] = $_POST[ Meetup_Import\NONCE_NAME ];
+
+		try {
+			Meetup_Import\handle_form_submission();
+		} finally {
+			unset( $GLOBALS['super_admins'] );
+		}
+
+		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertTrue( Meetup_Import\acquire_lock() );
 	}
 }

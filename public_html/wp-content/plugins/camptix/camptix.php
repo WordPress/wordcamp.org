@@ -3746,7 +3746,12 @@ class CampTix_Plugin {
 		$coupon_id = get_post_meta( $post->ID, 'tix_coupon_id', true );
 		if ( $coupon_id ) {
 			$coupon = get_post( $coupon_id );
-			$rows[] = array( __( 'Coupon', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', get_edit_post_link( $coupon->ID ), $coupon->post_title ) );
+			if ( $coupon ) {
+				$rows[] = array( __( 'Coupon', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', get_edit_post_link( $coupon->ID ), esc_html( $coupon->post_title ) ) );
+			} else {
+				// The coupon was deleted; fall back to the code stored on the attendee.
+				$rows[] = array( __( 'Coupon', 'wordcamporg' ), esc_html( get_post_meta( $post->ID, 'tix_coupon', true ) ) );
+			}
 		}
 
 		$rows[] = array( __( 'Order Total', 'wordcamporg' ), $this->append_currency( get_post_meta( $post->ID, 'tix_order_total', true ) ) );

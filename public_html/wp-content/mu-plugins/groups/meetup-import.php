@@ -1191,15 +1191,25 @@ function is_meetup_connected(): bool {
  * Turn what an admin pasted into a Meetup group urlname.
  *
  * Accepts a bare urlname or any meetup.com URL under the group, e.g. an event
- * page.
+ * page, including localized URLs (such as /pl-PL/group-name/ or /de-DE/group-name/).
  *
  * @param string $input Group URL or urlname.
  */
 function parse_group_urlname( string $input ): string {
 	$input = trim( $input );
 
-	if ( preg_match( '#^(?:https?://)?(?:www\.)?meetup\.com/([^/?\#]+)#i', $input, $matches ) ) {
-		$input = $matches[1];
+	if ( preg_match( '#^(?:https?://)?(?:www\.)?meetup\.com(?:/.*)?$#i', $input ) ) {
+		$path     = preg_replace( '#^(?:https?://)?(?:www\.)?meetup\.com/?#i', '', $input );
+		$path     = preg_replace( '#[?\#].*$#', '', $path );
+		$segments = array_values( array_filter( explode( '/', trim( $path, '/' ) ) ) );
+
+		if ( ! empty( $segments ) && preg_match( '/^[a-z]{2}(?:-[a-z]{2,4})?$/i', $segments[0] ) && isset( $segments[1] ) ) {
+			$input = $segments[1];
+		} elseif ( ! empty( $segments ) ) {
+			$input = $segments[0];
+		} else {
+			return '';
+		}
 	}
 
 	$input = trim( $input, '/' );
@@ -1681,20 +1691,57 @@ function is_past_status( array $raw ): bool {
 }
 
 /**
- * Turn HTML paragraphs into serialized paragraph blocks.
+ * Turn HTML content into serialized Gutenberg blocks.
  *
- * The event editor only loads content made of blocks
+ * The event editor only loads content made of supported blocks
  * (`Frontend\Defaults\extract_description_blocks()` drops anything else), so
- * plain HTML would open as an empty description, and saving would erase it.
+ * plain HTML outside block comments would open as an empty description, and
+ * saving would erase it. Converts paragraphs, headings, lists, quotes, and
+ * code into their respective block markup, encapsulating any freeform text
+ * into paragraph blocks.
  *
- * @param string $html Paragraph HTML, as `wpautop()` produces.
+ * @param string $html HTML content, as `wpautop()` produces.
  */
 function to_paragraph_blocks( string $html ): string {
-	return str_replace(
-		array( '<p>', '</p>' ),
-		array( '<!-- wp:paragraph -->' . "\n" . '<p>', '</p>' . "\n" . '<!-- /wp:paragraph -->' ),
-		trim( $html )
+	$html = trim( $html );
+
+	if ( '' === $html ) {
+		return '';
+	}
+
+	$html = preg_replace( '#<p(?:\s+[^>]*)?>(.*?)</p>#is', "<!-- wp:paragraph -->\n<p>$1</p>\n<!-- /wp:paragraph -->", $html );
+	$html = preg_replace_callback(
+		'#<h([1-6])(?:\s+[^>]*)?>(.*?)</h[1-6]>#is',
+		static function ( $matches ) {
+			$level = (int) $matches[1];
+			return "<!-- wp:heading {\"level\":{$level}} -->\n<h{$level}>{$matches[2]}</h{$level}>\n<!-- /wp:heading -->";
+		},
+		$html
 	);
+	$html = preg_replace( '#<ul(?:\s+[^>]*)?>(.*?)</ul>#is', "<!-- wp:list -->\n<ul>$1</ul>\n<!-- /wp:list -->", $html );
+	$html = preg_replace( '#<ol(?:\s+[^>]*)?>(.*?)</ol>#is', "<!-- wp:list {\"ordered\":true} -->\n<ol>$1</ol>\n<!-- /wp:list -->", $html );
+	$html = preg_replace( '#<blockquote(?:\s+[^>]*)?>(.*?)</blockquote>#is', "<!-- wp:quote -->\n<blockquote>$1</blockquote>\n<!-- /wp:quote -->", $html );
+	$html = preg_replace( '#<pre(?:\s+[^>]*)?>(.*?)</pre>#is', "<!-- wp:code -->\n<pre class=\"wp-block-code\">$1</pre>\n<!-- /wp:code -->", $html );
+
+	$blocks     = parse_blocks( $html );
+	$normalized = array();
+
+	foreach ( $blocks as $block ) {
+		if ( null !== $block['blockName'] ) {
+			$normalized[] = $block;
+		} elseif ( '' !== trim( (string) ( $block['innerHTML'] ?? '' ) ) ) {
+			$content      = trim( (string) $block['innerHTML'] );
+			$normalized[] = array(
+				'blockName'    => 'core/paragraph',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '<p>' . $content . '</p>',
+				'innerContent' => array( '<p>' . $content . '</p>' ),
+			);
+		}
+	}
+
+	return trim( serialize_blocks( $normalized ) );
 }
 
 /**

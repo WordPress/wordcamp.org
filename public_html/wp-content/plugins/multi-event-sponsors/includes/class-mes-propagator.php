@@ -16,7 +16,9 @@
  * sponsor has no business on the site of a camp that already happened.
  *
  * Must run in the context of central (where the WordCamp posts and mes posts live):
- *   wp --url=central.wordcamp.org mes propagate [--sponsor=<mes_post_id>] [--dry-run]
+ *   wp --url=central.wordcamp.org mes propagate [--sponsor=<mes_post_id> [--include-draft]] [--dry-run]
+ *
+ * A draft sponsor is only pushed when it's named and `--include-draft` is passed, as a staged brand (#1208).
  */
 
 class MES_Propagator {
@@ -38,23 +40,28 @@ class MES_Propagator {
 	/**
 	 * Push missing Multi-Event Sponsors to every camp site.
 	 *
-	 * @param int  $mes_id  Optional. Limit to one Multi-Event Sponsor post ID.
-	 * @param bool $dry_run If true, count what would be added but write nothing.
+	 * @param int  $mes_id        Optional. Limit to one Multi-Event Sponsor post ID.
+	 * @param bool $dry_run       If true, count what would be added but write nothing.
+	 * @param bool $include_draft If true and `$mes_id` names a draft, push that draft too, as a
+	 *                            staged brand (#1208). Never applies to a full run.
 	 *
-	 * @return array { camps_scanned, camps_updated, sponsors_added, camps_skipped_no_author }
+	 * @return array { camps_scanned, camps_updated, sponsors_added, camps_added, camps_skipped_no_author }
+	 *               `camps_added` names the camps that got (or would get) a sponsor, camp ID => name.
 	 *               `camps_skipped_no_author` lists camps that need a stub but have no lead organizer,
 	 *               while nobody is logged in to author it instead (WP-CLI without `--user`). A dry run
 	 *               reports them too.
 	 */
-	public static function run( $mes_id = 0, $dry_run = false ) {
+	public static function run( $mes_id = 0, $dry_run = false, $include_draft = false ) {
 		/** @var $multi_event_sponsors Multi_Event_Sponsors */
 		global $multi_event_sponsors;
 
-		$mes_id  = absint( $mes_id );
+		$mes_id   = absint( $mes_id );
+		$draft_id = $include_draft ? $mes_id : 0;
 		$summary = array(
 			'camps_scanned'           => 0,
 			'camps_updated'           => 0,
 			'sponsors_added'          => 0,
+			'camps_added'             => array(),
 			'camps_skipped_no_author' => array(),
 		);
 
@@ -81,7 +88,7 @@ class MES_Propagator {
 			// and at which level, the same call site creation makes.
 			$desired_sponsors = array();
 
-			foreach ( $multi_event_sponsors->get_wordcamp_me_sponsors( $camp_id, 'sponsor_level' ) as $sponsors ) {
+			foreach ( $multi_event_sponsors->get_wordcamp_me_sponsors( $camp_id, 'sponsor_level', $draft_id ) as $sponsors ) {
 				foreach ( $sponsors as $sponsor ) {
 					if ( $mes_id && $mes_id !== (int) $sponsor->ID ) {
 						continue;
@@ -110,7 +117,8 @@ class MES_Propagator {
 
 			if ( $added > 0 ) {
 				++$summary['camps_updated'];
-				$summary['sponsors_added'] += $added;
+				$summary['sponsors_added']           += $added;
+				$summary['camps_added'][ $camp_id ] = get_wordcamp_name( $site_id );
 			}
 		}
 

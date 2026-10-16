@@ -6,6 +6,16 @@ use function WordCamp\Sunrise\get_top_level_domain;
 class WordCamp_Budget_Tool {
 
 	/**
+	 * Option holding the deputies' notes on this camp's budget (#1023).
+	 *
+	 * Kept out of `wcb_budget` on purpose. The budget page prints the whole of `wcb_budget` into a
+	 * hidden field for everyone who can open it, organizers included, and validate() rebuilds the line
+	 * lists on every save. In their own option the notes stay private, and no save, approval, Reset or
+	 * backup rotation touches them.
+	 */
+	public const NOTES_OPTION = 'wcb_budget_notes';
+
+	/**
 	 * Attach hooks & filters on load.
 	 */
 	public static function load() {
@@ -13,6 +23,7 @@ class WordCamp_Budget_Tool {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 		add_filter( 'heartbeat_received', array( __CLASS__, 'heartbeat_received' ), 10, 2 );
 		add_filter( 'map_meta_cap', array( __CLASS__, 'map_meta_cap' ), 10, 4 );
+		add_action( 'admin_post_wcb_budget_add_note', array( __CLASS__, 'handle_add_note' ) );
 	}
 
 	/**
@@ -174,6 +185,83 @@ class WordCamp_Budget_Tool {
 		self::rotate_backups();
 		update_option( 'wcb_budget', $budget, 'no' );
 		return;
+	}
+
+	/**
+	 * Whether the current user can read and add budget notes.
+	 *
+	 * Notes are internal to deputies and program managers, so this is the same check as the
+	 * Approve and Reject buttons. Organizers don't see them.
+	 *
+	 * @return bool
+	 */
+	public static function can_manage_notes() {
+		return current_user_can( 'wcb_approve_budget' );
+	}
+
+	/**
+	 * Get the notes on this camp's budget, oldest first.
+	 *
+	 * @return array[] Each note has `timestamp`, `author_id`, `message` and `status`, the budget's
+	 *                 status when the note was written.
+	 */
+	public static function get_notes() {
+		$notes = get_option( self::NOTES_OPTION, array() );
+
+		return is_array( $notes ) ? $notes : array();
+	}
+
+	/**
+	 * Add a note to this camp's budget. It doesn't change the budget itself.
+	 *
+	 * @param string $message   The note, unslashed.
+	 * @param int    $author_id
+	 *
+	 * @return bool False when the note is empty.
+	 */
+	public static function add_note( $message, $author_id ) {
+		$message = sanitize_textarea_field( $message );
+
+		if ( '' === $message ) {
+			return false;
+		}
+
+		$notes   = self::get_notes();
+		$notes[] = array(
+			'timestamp' => time(),
+			'author_id' => (int) $author_id,
+			'message'   => $message,
+			'status'    => self::_get_budget()['status'],
+		);
+
+		return update_option( self::NOTES_OPTION, $notes, false );
+	}
+
+	/**
+	 * Save a note from the budget page's notes form, then go back to the tab it was added on.
+	 */
+	public static function handle_add_note() {
+		check_admin_referer( 'wcb_budget_add_note', 'wcb_budget_note_nonce' );
+
+		if ( ! self::can_manage_notes() ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to add budget notes.', 'wordcamporg' ), 403 );
+		}
+
+		$message = isset( $_POST['wcb_budget_note'] ) ? wp_unslash( $_POST['wcb_budget_note'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in add_note().
+		$added   = self::add_note( $message, get_current_user_id() );
+
+		$view = isset( $_POST['wcb-view'] ) ? sanitize_key( $_POST['wcb-view'] ) : '';
+		$args = array(
+			'page'           => 'wordcamp-budget',
+			'wcb-note-added' => $added ? 1 : 0,
+		);
+
+		if ( in_array( $view, array( 'prelim', 'working', 'approved' ), true ) ) {
+			$args['wcb-view'] = $view;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
 	}
 
 	/**

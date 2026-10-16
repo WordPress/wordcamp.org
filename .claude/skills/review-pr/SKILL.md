@@ -26,6 +26,7 @@ A review is an independent attempt to make the change fail.
 - An old PR may already be superseded. Before reading the diff of a branch far behind, run `git log origin/production` on the files it touches and read what landed since. Rebasing a superseded branch can quietly revert the newer fix.
 - "Covered by tests" means go and find the test.
 - A green CI run says the suite passed, not that the suite covers this.
+- A green run can be a run that stopped. CampTix redirects end in `die()`, which exits PHPUnit with 0 and skips every later test. Compare the test count with the suite's, and make tests turn `wp_redirect` into `WPDieException` (see `test-require-login.php`).
 
 ## Reproducing
 
@@ -48,6 +49,7 @@ A review is an independent attempt to make the change fail.
 - Malformed input goes in the request, not the form. A field the page will not let you type into is not a field an attacker cannot send.
 - Check who answers the URL first. Another local stack can hold 443; `curl -ksi` and read the headers. The WordCamp container is also on `:8443`.
 - Block assets ship with a fixed `?ver=1.0.0`. After a rebuild, hard-reload (`cmd+shift+r`) before judging any styling, or you are looking at the old CSS.
+- A new `wordcamp/*` block only registers in the editor if its controller adds a key to `WordCampBlocks`. That data is built on `init`, before the admin screen exists, so a screen check there drops the key. Insert the block from the inserter before reviewing anything else about it.
 - A 403 or 400 from a raw REST call is not yet the permission check. No nonce gives `rest_cookie_invalid_nonce`; get one from `admin-ajax.php?action=rest-nonce`. Arg validation runs before `permission_callback`, so send a full valid payload and look for `rest_forbidden`.
 - The same holds for a nonce-gated `admin-post.php` action: a nonce minted in WP-CLI has no session token, so it fails before the capability check. Mint it with the user's cookie in place: `$_COOKIE[LOGGED_IN_COOKIE] = '<minted cookie>'; wp_set_current_user( <id> ); echo wp_create_nonce( '<action>' );`, then curl with that cookie. A 403 from the capability check carries the handler's own message, not "The link you followed has expired".
 - `resize_window` can silently not apply. For widths, load the page in a same-origin iframe of that width and measure it there.
@@ -86,6 +88,8 @@ A review is an independent attempt to make the change fail.
 - Seed the data the edge case needs. Absent data passes every assertion.
 - No local camp has sessions. For Speaker Feedback, seed a published `wcb_session` with `_wcpt_session_type=session` and a past `_wcpt_session_time`; the form is at `…/session/<slug>/feedback/` and saved answers wait in moderation until approved.
 - Logo and featured-image sideloads from Central fail locally with cURL error 60 (self-signed cert), so a missing thumbnail on a camp site proves nothing. Re-run the WP-CLI command with `--require` a file that calls `WP_CLI::add_wp_hook( 'https_ssl_verify', '__return_false' )` (plain `add_filter` isn't loaded yet at `--require` time).
+- Seattle and Shiny New 2023 point at a missing `twentytwenty` theme, so the page body renders empty. Set `template`/`stylesheet` to `campsite-2017` and put it back after.
+- The attendee Status dropdown on Edit Attendee renders only for `manage_sites`. A camp organizer refunds through the front-end Refund Request link, so test both paths when a change hooks attendee status.
 - Seed through the real API, then read it back. GatherPress drops what the event or site forbids: group sites force anonymous RSVPs off, so a saved "anonymous" RSVP is an ordinary one.
 - Publishing a seeded event emails every group member "New event". Harmless locally, but seed as a draft first if the mail log matters to the review.
 - A local CampTix checkout needs four things the camps don't have. A published ticket and a `[camptix]` page. The central WordCamp post must not be `wcpt-closed` (Seattle 2023's is). Reopening it doesn't stick for long: the `wcpt_close_wordcamps_after_event` cron closes past camps again on the next WP load that runs cron, so check `wp cron event list` for when it next runs. At least one payment method must be enabled, even for a free ticket. And it has to get past Spam_Prevention: "could not be processed" means the hidden `…-tos-required` honeypot was ticked, or the form was sent less than 2s after it rendered. Failed tries also add to a per-IP score in `form-spam-prevention-*` transients, so clear those before retrying.

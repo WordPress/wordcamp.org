@@ -142,8 +142,8 @@ class Test_CampTix_Visa_Letters_Document extends WP_UnitTestCase {
 	 */
 	public function test_publishing_a_letter_survives_a_missing_pdf_generator() {
 		$this->assertFalse(
-			class_exists( 'WordCamp_Docs_PDF_Generator' ),
-			'This test is only meaningful while the generator is absent from the suite.'
+			apply_filters( 'ctx_vl_pdf_generator_available', true ),
+			'This test is only meaningful while tests/bootstrap.php switches the generator off.'
 		);
 
 		$letter_id = $this->create_published_letter();

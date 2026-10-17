@@ -220,8 +220,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$address_key = self::get_address_key( $post_id );
-			$new_address = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
+			$address_key     = self::get_address_key( $post_id );
+			$new_address     = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ] ?? '';
 			$address_changed = empty( $original_meta_values[ $address_key ][0] ) || $new_address !== $original_meta_values[ $address_key ][0];
 
 			// No need to geocode if it hasn't changed.

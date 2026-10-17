@@ -140,6 +140,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	add_post_meta( $post_id, '_application_data', $application_data );
 	add_post_meta( $post_id, '_application_submitter_ip_address', $_SERVER['REMOTE_ADDR'] );
 	add_post_meta( $post_id, 'event_subtype', 'campusconnect' );
+	add_post_meta( $post_id, 'Running money through WPCS PBC', true );
 	add_post_meta( $post_id, 'Organizer Name', $name );
 	add_post_meta( $post_id, 'Email Address', $email ); // Lead organizer.
 	add_post_meta( $post_id, 'Location', trim( "$city, $country", ', ' ) );

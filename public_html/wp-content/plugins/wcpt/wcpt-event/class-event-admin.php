@@ -504,6 +504,8 @@ abstract class Event_Admin {
 			}
 		}
 
+		$orig_meta_values = get_post_meta( $post_id );
+
 		// Save the Event Subtype. Only a key of the known list, so the read side has
 		// something it can filter and label.
 		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
@@ -515,7 +517,6 @@ abstract class Event_Admin {
 		}
 
 		$meta_keys        = $this->meta_keys();
-		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
 
 		foreach ( $meta_keys as $key => $value ) {
@@ -582,6 +583,13 @@ abstract class Event_Admin {
 
 				case 'checkbox':
 					if ( ! empty( $values[ $key ] ) && 'on' == $values[ $key ] ) {
+						update_post_meta( $post_id, $key, true );
+					} elseif (
+						'Running money through WPCS PBC' === $key
+						&& 'campusconnect' === ( $event_subtype ?? get_post_meta( $post_id, 'event_subtype', true ) )
+						&& empty( $orig_meta_values['event_subtype'] )
+						&& ! isset( $orig_meta_values['Running money through WPCS PBC'] )
+					) {
 						update_post_meta( $post_id, $key, true );
 					} else {
 						update_post_meta( $post_id, $key, false );

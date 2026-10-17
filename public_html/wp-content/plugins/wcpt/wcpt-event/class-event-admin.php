@@ -583,6 +583,13 @@ abstract class Event_Admin {
 				case 'checkbox':
 					if ( ! empty( $values[ $key ] ) && 'on' == $values[ $key ] ) {
 						update_post_meta( $post_id, $key, true );
+					} elseif (
+						'Running money through WPCS PBC' === $key
+						&& 'campusconnect' === ( $event_subtype ?? get_post_meta( $post_id, 'event_subtype', true ) )
+						&& empty( $orig_meta_values['event_subtype'] )
+						&& ! isset( $orig_meta_values['Running money through WPCS PBC'] )
+					) {
+						update_post_meta( $post_id, $key, true );
 					} else {
 						update_post_meta( $post_id, $key, false );
 					}

@@ -224,7 +224,7 @@ class Test_Campus_Connect_WPCS_PBC_Default extends WP_UnitTestCase {
 		add_post_meta( $event_id, 'event_subtype', 'campusconnect' );
 
 		// Verifies the reminder check in wcor-mailer.php line 826:
-		// if ( $transparency_report && $through_wpcs_pbc ) { return $ready; }
+		// When both $transparency_report and $through_wpcs_pbc are truthy, the reminder is suppressed.
 		$transparency_report = true;
 		$through_wpcs_pbc    = get_post_meta( $event_id, 'Running money through WPCS PBC', true );
 

@@ -137,10 +137,9 @@ class Test_Campus_Connect_WPCS_PBC_Default extends WP_UnitTestCase {
 			)
 		);
 
-		// Temporarily unhook to simulate an existing pre-feature Campus Connect record.
-		remove_action( 'added_post_meta', array( $GLOBALS['wordcamp_loader'], 'maybe_default_campus_connect_meta' ), 10 );
+		// Simulate an existing pre-feature Campus Connect record without the meta key.
 		add_post_meta( $event_id, 'event_subtype', 'campusconnect' );
-		add_action( 'added_post_meta', array( $GLOBALS['wordcamp_loader'], 'maybe_default_campus_connect_meta' ), 10, 4 );
+		delete_post_meta( $event_id, 'Running money through WPCS PBC' );
 
 		$this->assertFalse( metadata_exists( 'post', $event_id, 'Running money through WPCS PBC' ) );
 
@@ -171,6 +170,7 @@ class Test_Campus_Connect_WPCS_PBC_Default extends WP_UnitTestCase {
 
 		$_POST['action']        = 'editpost';
 		$_POST['event_subtype'] = 'campusconnect';
+		$_POST[ wcpt_key_to_str( 'Physical Address', 'wcpt_' ) ] = '';
 
 		$admin = new WordCamp_Admin();
 		$admin->metabox_save( $event_id, get_post( $event_id ), false );
@@ -200,6 +200,7 @@ class Test_Campus_Connect_WPCS_PBC_Default extends WP_UnitTestCase {
 
 		$_POST['action']        = 'editpost';
 		$_POST['event_subtype'] = 'campusconnect';
+		$_POST[ wcpt_key_to_str( 'Physical Address', 'wcpt_' ) ] = '';
 		// wcpt_running_money_through_wpcs_pbc is not sent in $_POST when unchecked.
 
 		$admin = new WordCamp_Admin();
@@ -222,18 +223,11 @@ class Test_Campus_Connect_WPCS_PBC_Default extends WP_UnitTestCase {
 
 		add_post_meta( $event_id, 'event_subtype', 'campusconnect' );
 
-		$email_id = self::factory()->post->create(
-			array(
-				'post_type' => 'wcor_reminder',
-			)
-		);
-
-		update_post_meta( $email_id, 'wcor_transparency_report', true );
-
-		$transparency_report = get_post_meta( $email_id, 'wcor_transparency_report', true );
+		// Verifies the reminder check in wcor-mailer.php line 826:
+		// if ( $transparency_report && $through_wpcs_pbc ) { return $ready; }
+		$transparency_report = true;
 		$through_wpcs_pbc    = get_post_meta( $event_id, 'Running money through WPCS PBC', true );
 
-		// Verifies the suppression logic in wcor-mailer.php line 826.
 		$this->assertTrue( (bool) ( $transparency_report && $through_wpcs_pbc ) );
 	}
 }

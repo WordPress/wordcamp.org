@@ -504,6 +504,8 @@ abstract class Event_Admin {
 			}
 		}
 
+		$orig_meta_values = get_post_meta( $post_id );
+
 		// Save the Event Subtype. Only a key of the known list, so the read side has
 		// something it can filter and label.
 		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
@@ -515,7 +517,6 @@ abstract class Event_Admin {
 		}
 
 		$meta_keys        = $this->meta_keys();
-		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
 
 		foreach ( $meta_keys as $key => $value ) {

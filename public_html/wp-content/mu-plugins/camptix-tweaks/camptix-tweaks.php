@@ -44,6 +44,8 @@ add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\s
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
+add_action( 'init',                                          __NAMESPACE__ . '\register_attendee_manager_role', 0   );
+add_filter( 'option_page_capability_camptix_options',        __NAMESPACE__ . '\camptix_settings_capability'         );
 
 // Dashboard.
 add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_attendees_filter' );
@@ -628,15 +630,96 @@ function modify_default_fields_list( $default_fields ) {
 	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, severe allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
 }
 
+
 /**
- * Modify CampTix's default capabilities
+ * Modify CampTix's default capabilities.
+ *
+ * Allow Attendee Managers to operate CampTix without general
+ * WordPress administrator permissions.
+ *
+ * Network-level operations remain restricted.
+ *
+ * @param array $capabilities CampTix capability mapping.
+ * @return array
  */
 function modify_capabilities( $capabilities ) {
-	$capabilities['delete_attendees'] = 'manage_network';
-	$capabilities['refund_all']       = 'manage_network';
+    $capabilities['manage_tickets']   = 'manage_camptix_tickets';
+    $capabilities['manage_attendees'] = 'manage_camptix_attendees';
+    $capabilities['manage_coupons']   = 'manage_camptix_coupons';
+    $capabilities['manage_tools']     = 'manage_camptix_tools';
+    $capabilities['manage_options']   = 'manage_camptix_options';
 
-	return $capabilities;
+    // Reserved for network administrators.
+    $capabilities['delete_attendees'] = 'manage_network';
+    $capabilities['refund_all']       = 'manage_network';
+
+    return $capabilities;
 }
+
+/**
+ * Register the Attendee Manager role and maintain its capabilities.
+ *
+ * The version option avoids writing role definitions to the database
+ * on every request. Since roles are site-specific, each WordCamp
+ * site receives its own role configuration.
+ *
+ * For future changes, increase the version.
+ */
+function register_attendee_manager_role() {
+    $version = 1;
+
+    if ( (int) get_option( 'wcorg_camptix_role_version', 0 ) === $version ) {
+        return;
+    }
+
+    $capabilities = array(
+        'read'                     => true,
+        'manage_camptix_tickets'   => true,
+        'manage_camptix_attendees' => true,
+        'manage_camptix_coupons'   => true,
+        'manage_camptix_tools'     => true,
+        'manage_camptix_options'   => true,
+    );
+
+    $role = get_role( 'attendee_manager' );
+
+    if ( ! $role ) {
+        add_role(
+            'attendee_manager',
+            __( 'Attendee Manager', 'wordcamporg' ),
+            $capabilities
+        );
+    } else {
+        foreach ( $capabilities as $capability => $allowed ) {
+            $role->add_cap( $capability, $allowed );
+        }
+    }
+
+    // Preserve CampTix access for existing site administrators.
+    $administrator = get_role( 'administrator' );
+
+    if ( $administrator ) {
+        foreach ( $capabilities as $capability => $allowed ) {
+            $administrator->add_cap( $capability, $allowed );
+        }
+    }
+
+    update_option( 'wcorg_camptix_role_version', $version );
+}
+
+/**
+ * Allow authorised CampTix managers to save CampTix settings.
+ *
+ * This only changes the permissions for the camptix_options
+ * Settings API group, not other WordPress settings.
+ *
+ * @param string $capability Default Settings API capability.
+ * @return string
+ */
+function camptix_settings_capability( $capability ) {
+    return 'manage_camptix_options';
+}
+
 
 /**
  * Modify CampTix's default options

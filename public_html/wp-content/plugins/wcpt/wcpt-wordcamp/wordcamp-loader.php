@@ -697,8 +697,8 @@ class WordCamp_Loader extends Event_Loader {
 					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin. This is a true Unix timestamp in UTC, not local time.', 'wordcamporg' ),
 				),
 				'get_callback' => function( $object, $field_name ) {
-					// Short out if the event is not scheduled.
-					if ( 'wcpt-scheduled' !== $object['status'] ) {
+					// Short out if the event is not scheduled. `status` isn't in `$object` when `_fields` omits it.
+					if ( 'wcpt-scheduled' !== get_post_status( $object['id'] ) ) {
 						return 0;
 					}
 

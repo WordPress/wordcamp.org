@@ -222,7 +222,7 @@ docker compose ps   # expect wordcamp.test + wordcamp.db running
 docker compose exec wordcamp.test wp plugin list --url=events.wordpress.test/group/sunshine-coast-qld/ | grep gatherpress
 # If missing/inactive:
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress/releases/download/0.35.0/gatherpress.0.35.0.zip \
+  https://github.com/GatherPress/gatherpress/releases/download/0.36.0/gatherpress.0.36.0.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
@@ -256,7 +256,7 @@ data:
 
 ```bash
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.35.0/gatherpress-alpha.0.35.0.zip \
+  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.36.0/gatherpress-alpha.0.36.0.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 docker compose exec wordcamp.test wp gatherpress alpha fix --url=events.wordpress.test/group/sunshine-coast-qld/
 ```

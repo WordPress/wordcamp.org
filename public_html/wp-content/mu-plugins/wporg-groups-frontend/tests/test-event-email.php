@@ -19,24 +19,51 @@ require_once __DIR__ . '/class-groups-testcase.php';
 class Test_Groups_Event_Email extends Groups_TestCase {
 
 	/**
-	 * GatherPress's own rendered markup, copied from the template's output
-	 * rather than hand-written, so these tests fail if it drifts.
+	 * GatherPress 0.36.0's rendered markup, copied from the template's
+	 * output rather than hand-written. A copy cannot notice the template
+	 * drifting -- `Test_Groups_Notifications` renders the real one, and is
+	 * what caught 0.36.0 renaming the button's marker comment.
 	 *
 	 * @return string
 	 */
 	private function gatherpress_body(): string {
 		return '<!DOCTYPE html><html><body style="font-family: Arial, sans-serif;">
 		<!-- Featured Image -->
-			<img width="1200" height="630" src="https://example.org/probe.jpg" class="attachment-full size-full" alt="Event Image" style="max-width: 100%;" decoding="async" loading="lazy" />
+			<img
+				src="https://example.org/probe.jpg"
+				width="600"
+				height="315"
+				alt="Event Image"
+				style="max-width: 100%; height: auto;"
+			/>
 		<!-- Event Title -->
 		<h1 style="text-align: center;">Markup Probe</h1>
 
+		<!-- RSVP Button: only when registration is still open. -->
+			<div style="text-align: center; margin-top: 20px;">
+				<a href="https://example.org/event/markup-probe/" style="background-color: #0a58ca; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px; display: inline-block;">
+					RSVP Now				</a>
+			</div>
+		
+		<!-- Excerpt -->
+		<p style="text-align: left;">An excerpt.</p>
+		</body></html>';
+	}
+
+	/**
+	 * The button's marker as GatherPress 0.35 wrote it, before 0.36.0
+	 * appended a note to the comment. Both shapes have to match, because the
+	 * code and the plugin version are not deployed in the same instant.
+	 *
+	 * @return string
+	 */
+	private function legacy_button_body(): string {
+		return '<h1 style="text-align: center;">Markup Probe</h1>
 		<!-- RSVP Button -->
 		<div style="text-align: center; margin-top: 20px;">
 			<a href="https://example.org/event/markup-probe/" style="background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
 				RSVP Now			</a>
-		</div>
-		</body></html>';
+		</div>';
 	}
 
 	/**
@@ -47,7 +74,7 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 		$fixed = make_button_bulletproof( $this->gatherpress_body() );
 
 		$this->assertStringContainsString( '<table role="presentation"', $fixed );
-		$this->assertStringContainsString( 'bgcolor="#007bff"', $fixed );
+		$this->assertStringContainsString( 'bgcolor="#0a58ca"', $fixed );
 		$this->assertStringContainsString( 'line-height: 20px', $fixed );
 		$this->assertStringNotContainsString(
 			'<a href="https://example.org/event/markup-probe/" style="background-color',
@@ -82,11 +109,41 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 	}
 
 	/**
+	 * The pre-0.36.0 marker comment is still recognised, both for the
+	 * rebuild and for removing the button from the organizer's copy.
+	 */
+	public function test_legacy_marker_is_still_recognised() {
+		$fixed = make_button_bulletproof( $this->legacy_button_body() );
+
+		$this->assertStringContainsString( '<table role="presentation"', $fixed );
+		$this->assertStringNotContainsString(
+			'RSVP Now',
+			\WordCamp\Groups\Frontend\Notifications\strip_rsvp_button( $fixed )
+		);
+	}
+
+	/**
+	 * A closed event's email has the marker but no button: 0.36.0 leaves the
+	 * comment in and skips the `<div>`. Nothing after it may be mistaken for
+	 * the button and removed.
+	 */
+	public function test_marker_without_a_button_is_left_alone() {
+		$body = '<!-- RSVP Button: only when registration is still open. -->
+		<!-- Excerpt -->
+		<div><p>An excerpt.</p></div>';
+
+		$this->assertSame( $body, make_button_bulletproof( $body ) );
+		$this->assertSame( $body, \WordCamp\Groups\Frontend\Notifications\strip_rsvp_button( $body ) );
+	}
+
+	/**
 	 * `wp_get_attachment_image()` writes real width and height attributes,
 	 * so capping the width alone squashes the picture on a phone.
 	 */
 	public function test_featured_image_gets_height_auto() {
-		$fixed = fix_featured_image( $this->gatherpress_body() );
+		$body  = '<!-- Featured Image -->
+			<img width="1200" height="630" src="https://example.org/probe.jpg" class="attachment-full size-full" alt="Event Image" style="max-width: 100%;" decoding="async" loading="lazy" />';
+		$fixed = fix_featured_image( $body );
 
 		$this->assertStringContainsString( 'style="max-width: 100%; height: auto;"', $fixed );
 	}

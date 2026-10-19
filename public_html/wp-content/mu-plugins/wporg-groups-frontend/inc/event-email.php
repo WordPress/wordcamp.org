@@ -15,9 +15,15 @@ defined( 'WPINC' ) || die();
  * Matching on these is what keeps this filter off every other email the
  * site sends, and what makes it fail safely: if the template changes
  * shape, nothing matches and the email goes out exactly as it does today.
+ *
+ * The button's marker is a prefix, because GatherPress 0.36.0 appended a
+ * note to it (`<!-- RSVP Button: only when registration is still open. -->`)
+ * and an exact match silently stopped finding the button.
+ * `BUTTON_MARKER_PATTERN` is the whole comment, in either shape.
  */
-const IMAGE_MARKER  = '<!-- Featured Image -->';
-const BUTTON_MARKER = '<!-- RSVP Button -->';
+const IMAGE_MARKER          = '<!-- Featured Image -->';
+const BUTTON_MARKER         = '<!-- RSVP Button';
+const BUTTON_MARKER_PATTERN = '<!-- RSVP Button\b[^>]*-->';
 
 /**
  * A button email clients actually render.
@@ -25,11 +31,12 @@ const BUTTON_MARKER = '<!-- RSVP Button -->';
  * The background and radius move onto the cell, so a client that ignores
  * padding on an inline element still draws a filled box, and the explicit
  * `line-height` gives the padded anchor a box of its own instead of
- * letting it grow over the line above.
+ * letting it grow over the line above. The colour follows the template's
+ * own, which GatherPress 0.36.0 darkened to pass WCAG AA against white.
  *
  * %1$s is the event URL, %2$s the label.
  */
-const BUTTON_MARKUP = '<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;"><tr><td align="center" bgcolor="#007bff" style="background-color: #007bff; border-radius: 4px;"><a href="%1$s" style="display: inline-block; padding: 12px 20px; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; font-weight: bold; color: #ffffff; text-decoration: none; border-radius: 4px;">%2$s</a></td></tr></table>';
+const BUTTON_MARKUP = '<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;"><tr><td align="center" bgcolor="#0a58ca" style="background-color: #0a58ca; border-radius: 4px;"><a href="%1$s" style="display: inline-block; padding: 12px 20px; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; font-weight: bold; color: #ffffff; text-decoration: none; border-radius: 4px;">%2$s</a></td></tr></table>';
 
 /**
  * Register the filter.
@@ -123,7 +130,7 @@ function fix_featured_image( string $message ): string {
  */
 function make_button_bulletproof( string $message ): string {
 	$fixed = preg_replace_callback(
-		'#(' . preg_quote( BUTTON_MARKER, '#' ) . '\s*<div\b[^>]*>)\s*<a\s[^>]*href="([^"]*)"[^>]*>(.*?)</a>\s*(</div>)#s',
+		'#(' . BUTTON_MARKER_PATTERN . '\s*<div\b[^>]*>)\s*<a\s[^>]*href="([^"]*)"[^>]*>(.*?)</a>\s*(</div>)#s',
 		static function ( array $matches ): string {
 			// The label is already escaped -- it comes from the template's
 			// own `esc_html_e()` -- so re-escaping here would double-encode

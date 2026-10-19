@@ -7,6 +7,8 @@
 
 namespace WordCamp\Groups\Frontend\Notifications;
 
+use const WordCamp\Groups\Frontend\Event_Email\BUTTON_MARKER_PATTERN;
+
 defined( 'WPINC' ) || die();
 
 const PUBLISH_NOTIFICATION_SCHEDULED_META = '_wporg_groups_event_publish_notification_scheduled';
@@ -362,7 +364,7 @@ function recipient_is_event_author( $to, int $event_id ): bool {
  * @return string
  */
 function strip_rsvp_button( string $message ): string {
-	$stripped = preg_replace( '#<!-- RSVP Button -->\s*<div\b[^>]*>(?:(?!</?div\b).)*?</div>#s', '', $message, 1 );
+	$stripped = preg_replace( '#' . BUTTON_MARKER_PATTERN . '\s*<div\b[^>]*>(?:(?!</?div\b).)*?</div>#s', '', $message, 1 );
 
 	return null === $stripped ? $message : $stripped;
 }

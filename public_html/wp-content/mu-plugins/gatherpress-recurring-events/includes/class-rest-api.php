@@ -150,13 +150,14 @@ final class Rest_API {
 		}
 
 		$event = new Event( $post_id );
-		if ( $event->has_event_past() || ! $event->rsvp ) {
+		$rsvp  = new Rsvp( $post_id );
+		if ( $event->has_event_past() || ! $rsvp->is_enabled() ) {
 			return new WP_REST_Response( array( 'success' => false ), 400 );
 		}
 
-		$user_record = $event->rsvp->save( get_current_user_id(), $status );
+		$user_record = $rsvp->save( get_current_user_id(), $status );
 		Cache::delete( $post_id );
-		$responses = $event->rsvp->responses();
+		$responses = $rsvp->responses();
 
 		return new WP_REST_Response(
 			array(

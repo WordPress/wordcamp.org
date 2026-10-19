@@ -37,6 +37,7 @@ namespace WordCamp\Groups\Frontend\REST;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
 use WP_Error;
@@ -569,12 +570,11 @@ function save_rsvp( WP_REST_Request $request ) {
 	}
 
 	$event = new Event( $event_id );
+	$rsvp  = new Rsvp( $event_id );
 
-	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
-	// which the post-type check above already guarantees. The meaningful gate
-	// is whether RSVP is switched on for this event — without it
+	// The gate is whether RSVP is switched on for this event — without it
 	// `Rsvp::save()` is a no-op that would otherwise look like success.
-	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+	if ( ! $rsvp->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -614,7 +614,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
 	}
 
-	$record     = $event->rsvp->save( $user_id, $status );
+	$record     = $rsvp->save( $user_id, $status );
 	$comment_id = (int) ( $record['comment_id'] ?? 0 );
 
 	if ( ! $comment_id ) {
@@ -636,7 +636,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		array(
 			'success'           => true,
 			'status'            => $record['status'] ?? 'no_status',
-			'responses'         => $event->rsvp->responses(),
+			'responses'         => $rsvp->responses(),
 			// Empty for everyone the link isn't for, on exactly the terms the
 			// online-event block renders it with. Sent so an RSVP made without
 			// a reload can reveal or withdraw the meeting link in place (#2094).

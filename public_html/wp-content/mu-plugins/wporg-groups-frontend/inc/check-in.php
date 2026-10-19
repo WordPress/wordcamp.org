@@ -375,7 +375,7 @@ function set_walk_in_count( int $event_id, string $recurrence_id, int $count ): 
  * @param Event $event The event, after `resolve_event()`.
  */
 function current_scope( Event $event ): string {
-	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', (int) $event->event->ID );
+	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', (int) $event->post->ID );
 }
 
 /**
@@ -418,7 +418,7 @@ function resolve_event( WP_REST_Request $request ) {
 
 	$event = new Event( $event_id );
 
-	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+	if ( ! ( new Rsvp( $event_id ) )->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -453,7 +453,7 @@ function assert_open( Event $event ) {
  * @return array{attendees: array, checkedInCount: int, walkInsWithoutAccount: int, isOpen: bool}
  */
 function build_list( Event $event ): array {
-	$responses = $event->rsvp->responses();
+	$responses = ( new Rsvp( (int) $event->post->ID ) )->responses();
 	$records   = array_merge(
 		$responses['attending']['records'] ?? array(),
 		$responses['waiting_list']['records'] ?? array()
@@ -503,7 +503,7 @@ function build_list( Event $event ): array {
 	return array(
 		'attendees'             => $attendees,
 		'checkedInCount'        => $checked,
-		'walkInsWithoutAccount' => get_walk_in_count( (int) $event->event->ID, current_scope( $event ) ),
+		'walkInsWithoutAccount' => get_walk_in_count( (int) $event->post->ID, current_scope( $event ) ),
 		'isOpen'                => is_open( $event ),
 	);
 }
@@ -615,7 +615,8 @@ function add_walk_in( WP_REST_Request $request ) {
 		);
 	}
 
-	$existing = $event->rsvp->get( $user->ID );
+	$rsvp     = new Rsvp( (int) $event->post->ID );
+	$existing = $rsvp->get( $user->ID );
 	$status   = (string) ( $existing['status'] ?? '' );
 
 	// Someone already attending or on the waiting list keeps their RSVP as it
@@ -623,7 +624,7 @@ function add_walk_in( WP_REST_Request $request ) {
 	// on the waiting list, which doesn't matter here: they are checked in,
 	// and check-in is what records that they came.
 	if ( ! in_array( $status, array( 'attending', 'waiting_list' ), true ) ) {
-		$existing = $event->rsvp->save( $user->ID, 'attending' );
+		$existing = $rsvp->save( $user->ID, 'attending' );
 	}
 
 	$comment = get_comment( (int) ( $existing['comment_id'] ?? 0 ) );
@@ -666,7 +667,7 @@ function update_walk_in_count( WP_REST_Request $request ) {
 		return $open;
 	}
 
-	set_walk_in_count( (int) $event->event->ID, current_scope( $event ), (int) $request->get_param( 'count' ) );
+	set_walk_in_count( (int) $event->post->ID, current_scope( $event ), (int) $request->get_param( 'count' ) );
 
 	return new WP_REST_Response( build_list( $event ) );
 }

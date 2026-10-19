@@ -9,6 +9,7 @@
  */
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
@@ -59,8 +60,7 @@ $check_in_recurrence = '';
 
 if ( $show_edit && $is_single_event && $event_post_id ) {
 	$check_in_event = new Event( $event_post_id );
-	$show_check_in  = $check_in_event->rsvp
-		&& $check_in_event->rsvp->is_enabled()
+	$show_check_in  = ( new Rsvp( $event_post_id ) )->is_enabled()
 		&& check_in_is_open( $check_in_event );
 
 	$check_in_recurrence = (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_post_id );

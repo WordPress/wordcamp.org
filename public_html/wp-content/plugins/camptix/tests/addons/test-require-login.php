@@ -1022,6 +1022,123 @@ class Test_Camptix_Require_Login_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * Logged-out visitors are sent to log in for the step CampTix runs, which comes from the URL.
+	 *
+	 * @covers CampTix_Require_Login::block_unauthenticated_actions
+	 *
+	 * @dataProvider data_logged_out_requests
+	 *
+	 * @param array $get        Query string parameters.
+	 * @param array $post       Form fields.
+	 * @param bool  $redirected Whether the visitor should be sent to log in.
+	 */
+	public function test_logged_out_visitor_login_redirect( $get, $post, $redirected ) {
+		$this->assertSame( $redirected, $this->block_unauthenticated_actions_redirects( $get, $post ) );
+	}
+
+	/**
+	 * Data provider for test_logged_out_visitor_login_redirect().
+	 *
+	 * @return array[]
+	 */
+	public function data_logged_out_requests() {
+		return array(
+			'checkout'                                   => array(
+				array( 'tix_action' => 'checkout' ),
+				array(),
+				true,
+			),
+			'checkout, payment_notify in the form'       => array(
+				array( 'tix_action' => 'checkout' ),
+				array(
+					'tix_action'        => 'payment_notify',
+					'tix_payment_token' => 'abc',
+				),
+				true,
+			),
+			'checkout, coupon fields in the form'        => array(
+				array( 'tix_action' => 'checkout' ),
+				array(
+					'tix_action'        => 'attendee_info',
+					'tix_coupon'        => '',
+					'tix_coupon_submit' => '1',
+				),
+				true,
+			),
+			'checkout, edit_attendee in the form'        => array(
+				array( 'tix_action' => 'checkout' ),
+				array( 'tix_action' => 'edit_attendee' ),
+				true,
+			),
+			'attendee info, payment_notify in the form'  => array(
+				array( 'tix_action' => 'attendee_info' ),
+				array(
+					'tix_action'        => 'payment_notify',
+					'tix_payment_token' => 'abc',
+				),
+				true,
+			),
+			'payment notification'                       => array(
+				array(
+					'tix_action'         => 'payment_notify',
+					'tix_payment_token'  => 'abc',
+					'tix_payment_method' => 'paypal',
+				),
+				array( 'txn_id' => '123' ),
+				false,
+			),
+			'coupon'                                     => array(
+				array( 'tix_action' => 'attendee_info' ),
+				array(
+					'tix_coupon'        => 'SAVE10',
+					'tix_coupon_submit' => '1',
+				),
+				false,
+			),
+			'editing a ticket'                           => array(
+				array( 'tix_action' => 'edit_attendee' ),
+				array(),
+				false,
+			),
+			'not a tickets request'                      => array(
+				array(),
+				array(),
+				false,
+			),
+		);
+	}
+
+	/**
+	 * Run block_unauthenticated_actions() as a logged-out visitor.
+	 *
+	 * @param array $get  Query string parameters.
+	 * @param array $post Form fields.
+	 *
+	 * @return bool Whether it redirected.
+	 */
+	protected function block_unauthenticated_actions_redirects( $get, $post ) {
+		$globals = array( $_GET, $_POST, $_REQUEST );
+
+		// PHP fills $_REQUEST with the form fields over the query string.
+		$_GET     = $get;
+		$_POST    = $post;
+		$_REQUEST = array_merge( $get, $post );
+
+		add_filter( 'wp_redirect', array( $this, 'stop_redirect' ) );
+
+		try {
+			$this->get_addon( 'CampTix_Require_Login' )->block_unauthenticated_actions();
+			$redirected = false;
+		} catch ( WPDieException $e ) {
+			$redirected = true;
+		} finally {
+			list( $_GET, $_POST, $_REQUEST ) = $globals;
+		}
+
+		return $redirected;
+	}
+
+	/**
 	 * Record an outgoing CampTix e-mail instead of sending it.
 	 *
 	 * @param bool  $override

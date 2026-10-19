@@ -979,7 +979,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 1, $projections, 'The five meta writes of one schedule save should project once.' );
 
 		// An unrelated meta write is not a schedule change.
-		update_post_meta( $post_id, 'gatherpress_max_attendance_limit', 20 );
+		update_post_meta( $post_id, 'gatherpress_capacity', 20 );
 
 		$this->assertSame( 1, $projections, 'A meta key that is not part of the schedule should not project.' );
 

@@ -465,7 +465,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	 */
 	public function test_walk_in_at_capacity_is_still_checked_in() {
 		$event_id = $this->create_event();
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 		$this->rsvp( $event_id );
 
 		$user_id  = self::factory()->user->create();
@@ -508,7 +508,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		$event_id = $this->create_event();
 
 		// Without a limit GatherPress promotes the waiting list straight away.
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 2 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 2 );
 
 		list( $came_id, $came_comment )           = $this->rsvp( $event_id );
 		list( $no_show_id, )                      = $this->rsvp( $event_id );
@@ -530,7 +530,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	 */
 	public function test_attended_falls_back_to_rsvps() {
 		$event_id = $this->create_event();
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 
 		list( $attendee_id, )   = $this->rsvp( $event_id );
 		list( $waitlisted_id, ) = $this->rsvp( $event_id, 'waiting_list' );

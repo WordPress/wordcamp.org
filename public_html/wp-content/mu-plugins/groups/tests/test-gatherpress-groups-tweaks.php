@@ -37,7 +37,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		update_option(
 			'gatherpress_settings',
 			array(
-				'max_guest_limit'  => 5,
+				'guest_limit'      => 5,
 				'enable_open_rsvp' => 1,
 				'show_timezone'    => 0,
 			)
@@ -46,7 +46,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$settings = get_option( 'gatherpress_settings' );
 
 		// Unrelated stored setting is preserved.
-		$this->assertSame( 5, $settings['max_guest_limit'] );
+		$this->assertSame( 5, $settings['guest_limit'] );
 
 		// Forced keys win regardless of what was stored.
 		$this->assertSame( 1, $settings['show_timezone'] );

@@ -13,6 +13,14 @@ const FILTERED_URL_PATTERN       = '([\w-]+)/filtered/(.+)';
 const FILTERED_URL_PATTERN_FEED  = FILTERED_URL_PATTERN . '/feed/?';
 const PRETTY_URL_VALUE_DELIMITER = '-';
 
+// The facets a pretty URL can carry, and the query var each one sets. Anything else in the URL is ignored.
+const FACET_QUERY_VARS = array(
+	'type'    => 'event_type',
+	'format'  => 'format_type',
+	'month'   => 'month',
+	'country' => 'country',
+);
+
 // Misc.
 add_action( 'init', __NAMESPACE__ . '\register_post_types' );
 add_filter( 'posts_pre_query', __NAMESPACE__ . '\inject_events_into_query', 10, 2 );
@@ -166,8 +174,12 @@ function get_query_var_facets(): array {
 		preg_match_all( '#([\w\-]+/[\w\-,]+)#', $pretty_facets, $matches );
 
 		foreach ( (array) $matches[0] as $match ) {
-			$parts      = explode( '/', $match );
-			$var_key    = $parts[0];
+			$parts   = explode( '/', $match );
+			$var_key = $parts[0];
+
+			if ( ! isset( FACET_QUERY_VARS[ $var_key ] ) ) {
+				continue;
+			}
 
 			// We need a delimiter to separate the values, but Google discourages using commas, colons, or
 			// anything else in URLs, so we're use a dash like they want. We also need a dash in some of the
@@ -238,16 +250,12 @@ function set_query_vars_from_pretty_url( WP $wp ): void {
 	$facets = get_query_var_facets();
 
 	foreach ( $facets as $key => $value ) {
-		if ( 'format' === $key ) {
-			$key = 'format_type';
-		}
-
-		if ( 'type' === $key ) {
-			$key = 'event_type';
+		if ( ! isset( FACET_QUERY_VARS[ $key ] ) ) {
+			continue;
 		}
 
 		// Set it on `WP` because this is the main request. `WP_Query` will populate itself from this.
-		$wp->set_query_var( $key, $value );
+		$wp->set_query_var( FACET_QUERY_VARS[ $key ], $value );
 	}
 }
 

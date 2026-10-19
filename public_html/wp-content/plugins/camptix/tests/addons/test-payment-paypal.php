@@ -730,4 +730,109 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 
 		$this->assertSame( get_current_blog_id() . ':tok_payload', $payload['PAYMENTREQUEST_0_CUSTOM'] );
 	}
+
+	/**
+	 * Every partial refund goes to PayPal as one, with an amount, including the last
+	 * tickets of an order: PayPal refuses a full refund after a partial one.
+	 *
+	 * @dataProvider data_partial_refund_payload
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::payment_refund_partial
+	 * @covers CampTix_Payment_Method_PayPal::send_refund_request
+	 *
+	 * @param string $currency          The camp's currency.
+	 * @param float  $amount            The amount to refund.
+	 * @param bool   $refunds_remainder Whether this refunds the rest of the order.
+	 * @param string $expected_amount   The AMT sent to PayPal.
+	 */
+	public function test_partial_refund_payload( $currency, $amount, $refunds_remainder, $expected_amount ) {
+		$paypal = $this->make_configured_paypal();
+		$paypal->camptix_options['currency'] = $currency;
+		$token = 'tok_partial_' . md5( $currency . $amount );
+		$this->make_order( array(
+			'token'    => $token,
+			'status'   => 'publish',
+			'recorded' => 'TXN_PAID',
+		) );
+
+		$sent = null;
+		$stub = function ( $pre, $args ) use ( &$sent ) {
+			$sent = $args['body'];
+
+			return $this->response( http_build_query( array(
+				'ACK'                 => 'Success',
+				'REFUNDTRANSACTIONID' => 'TXN_REFUND',
+				'REFUNDSTATUS'        => 'Instant',
+			) ) );
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$result = $paypal->payment_refund_partial( $token, $amount, $refunds_remainder );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
+		$this->assertSame( 'TXN_REFUND', $result['refund_transaction_id'] );
+		$this->assertSame( 'TXN_PAID', $sent['TRANSACTIONID'] );
+		$this->assertSame( 'Partial', $sent['REFUNDTYPE'] );
+		$this->assertSame( $expected_amount, $sent['AMT'] );
+		$this->assertSame( $currency, $sent['CURRENCYCODE'] );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_partial_refund_payload() {
+		return array(
+			'some tickets'                  => array( 'USD', 10, false, '10.00' ),
+			'the rest of the order'         => array( 'USD', 20.5, true, '20.50' ),
+			'a currency without decimals'   => array( 'JPY', 1500, false, '1500' ),
+		);
+	}
+
+	/**
+	 * A full refund still goes to PayPal as one.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::send_refund_request
+	 */
+	public function test_full_refund_payload() {
+		$paypal = $this->make_configured_paypal();
+		$this->make_order( array(
+			'token'    => 'tok_full',
+			'status'   => 'publish',
+			'recorded' => 'TXN_PAID',
+		) );
+
+		$sent = null;
+		$stub = function ( $pre, $args ) use ( &$sent ) {
+			$sent = $args['body'];
+
+			return $this->response( http_build_query( array( 'ACK' => 'Failure' ) ) );
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$paypal->send_refund_request( 'tok_full' );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( 'Full', $sent['REFUNDTYPE'] );
+		$this->assertArrayNotHasKey( 'AMT', $sent );
+	}
+
+	/**
+	 * After a partial refund PayPal reports the transaction as partially refunded. The
+	 * tickets still on the order are paid, so a later notification must not demote them
+	 * to pending.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::get_status_from_string
+	 */
+	public function test_partially_refunded_transaction_is_still_paid() {
+		$paypal = $this->make_configured_paypal();
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $paypal->get_status_from_string( 'Partially-Refunded' ) );
+	}
 }

@@ -54,6 +54,7 @@ class CampTix_Plugin {
 	protected $checkout_lock_open  = false;
 	protected $checkout_lock_names = array();
 	protected $refund_lock_name    = '';
+	protected $refund_lock_timeout = 10;
 	protected $abandoned_draft_attendee_ids;
 	protected $did_checkout;
 	protected $shortcode_contents;
@@ -5738,12 +5739,9 @@ class CampTix_Plugin {
 			}
 		}
 
-		// Tickets refunded earlier from this order, by a partial refund.
-		$refunded_attendee_ids = $this->get_refunded_attendee_ids( $tix_payment_token );
-		$refundable_amount     = $this->get_refundable_amount( $transaction ? (float) $transaction['payment_amount'] : 0, $refunded_attendee_ids );
-
-		// Offer to refund tickets one by one only where the gateway can refund part of a payment.
-		$supports_partial = count( $attendees ) > 1 && $this->can_refund_partially( $transaction );
+		// What has already been refunded, what is left, and whether the gateway can refund tickets
+		// one by one. Recomputed under the lock below from the re-read attendees before any refund.
+		list( $refunded_attendee_ids, $refundable_amount, $supports_partial ) = $this->get_order_refund_state( $tix_payment_token, $transaction, $attendees );
 
 		// Has a refund request been submitted?
 		$reason = '';
@@ -5773,10 +5771,8 @@ class CampTix_Plugin {
 				// just committed is visible here, so its tickets drop out of the selection below and
 				// the refundable amount shrinks to match. Without this re-read the lock would only
 				// serialize requests that all still saw the pre-lock state.
-				$attendees             = $this->get_order_active_attendees( $access_token );
-				$refunded_attendee_ids = $this->get_refunded_attendee_ids( $tix_payment_token );
-				$refundable_amount     = $this->get_refundable_amount( $transaction ? (float) $transaction['payment_amount'] : 0, $refunded_attendee_ids );
-				$supports_partial      = count( $attendees ) > 1 && $this->can_refund_partially( $transaction );
+				$attendees = $this->get_order_active_attendees( $access_token );
+				list( $refunded_attendee_ids, $refundable_amount, $supports_partial ) = $this->get_order_refund_state( $tix_payment_token, $transaction, $attendees );
 
 				$attendees_to_refund = $attendees;
 				if ( $supports_partial ) {
@@ -5794,12 +5790,12 @@ class CampTix_Plugin {
 				} else {
 					if ( $is_partial_refund ) {
 						$refunds_remainder = count( $attendees_to_refund ) === count( $attendees );
-						$refund_amount     = $refunds_remainder ? $refundable_amount : $this->get_tickets_price( $attendees_to_refund );
 
 						// Never ask the gateway for more than is left to refund on the order, even if
-						// the selected tickets' prices add up to more. A second guard that does not
-						// depend on the lock.
-						$refund_amount = min( $refund_amount, $refundable_amount );
+						// the selected tickets' prices add up to more. A guard that does not need the lock.
+						$refund_amount = $refunds_remainder
+							? $refundable_amount
+							: min( $this->get_tickets_price( $attendees_to_refund ), $refundable_amount );
 
 						$result = $this->refund_attendees_partially( $tix_payment_token, $attendees_to_refund, $transaction, $refund_amount, $refunds_remainder );
 
@@ -5818,9 +5814,9 @@ class CampTix_Plugin {
 					} else {
 						$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
 
-						// Bail if a payment method does not exist, or doesn't support refunds.
+						// Bail if a payment method does not exist, or doesn't support refunds. The lock is
+						// released by the registered shutdown function when die() ends the request.
 						if ( ! $payment_method_obj || empty( $payment_method_obj->supported_features['refund-single'] ) ) {
-							$this->release_order_refund_lock();
 							$this->error_flags['cannot_refund'] = true;
 							$this->redirect_with_error_flags();
 							die();
@@ -6045,6 +6041,27 @@ class CampTix_Plugin {
 	}
 
 	/**
+	 * The refund state the form and the refund itself both read: which tickets are already
+	 * refunded, how much is left to refund, and whether the gateway can refund tickets one by
+	 * one. Computed once for the form, then again from the re-read attendees under the lock.
+	 *
+	 * @param string      $payment_token
+	 * @param array|false $transaction The order's payment, or false if nothing was paid.
+	 * @param WP_Post[]   $attendees   The order's active attendees.
+	 *
+	 * @return array{0: int[], 1: float, 2: bool} refunded attendee IDs, refundable amount, partial support.
+	 */
+	protected function get_order_refund_state( $payment_token, $transaction, $attendees ) {
+		$refunded_attendee_ids = $this->get_refunded_attendee_ids( $payment_token );
+		$refundable_amount     = $this->get_refundable_amount( $transaction ? (float) $transaction['payment_amount'] : 0, $refunded_attendee_ids );
+
+		// Offer to refund tickets one by one only where the gateway can refund part of a payment.
+		$supports_partial = count( $attendees ) > 1 && $this->can_refund_partially( $transaction );
+
+		return array( $refunded_attendee_ids, $refundable_amount, $supports_partial );
+	}
+
+	/**
 	 * Whether the tickets of an order can be refunded one by one.
 	 *
 	 * @param array|false $transaction The order's payment, or false if nothing was paid.
@@ -6108,14 +6125,14 @@ class CampTix_Plugin {
 
 		$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
 
-		// A key the gateway can use to collapse a duplicate of this exact refund. Built from the
-		// order, the tickets being refunded and the amount, so two identical requests send the same
-		// key (the gateway returns the first refund instead of making a second), while a later
-		// refund of different tickets sends a different key and goes through. Belt and braces behind
-		// the order lock in form_refund_request().
+		// A key identifying this exact refund, so the gateway can collapse a duplicate: two identical
+		// requests send the same key (the gateway returns the first refund instead of making a
+		// second), while a later refund of different tickets sends a different key and goes through.
+		// Belt and braces behind the order lock in form_refund_request(). It's the refund's identity,
+		// not its wire format: each gateway normalizes it to its own idempotency header.
 		$attendee_ids = wp_list_pluck( $attendees_to_refund, 'ID' );
 		sort( $attendee_ids );
-		$idempotency_key = md5( 'tix-partial-refund|' . $payment_token . '|' . implode( ',', $attendee_ids ) . '|' . $amount );
+		$idempotency_key = 'tix-partial-refund|' . $payment_token . '|' . implode( ',', $attendee_ids ) . '|' . $amount;
 
 		$data = $payment_method_obj->payment_refund_partial( $transaction['payment_token'], $amount, $refunds_remainder, $idempotency_key );
 
@@ -7297,15 +7314,9 @@ class CampTix_Plugin {
 		// after a normal release.
 		register_shutdown_function( array( $this, 'release_order_refund_lock' ) );
 
-		/**
-		 * Filter how long, in seconds, to wait for another request's refund of the same order to
-		 * finish before giving up and asking the buyer to try again.
-		 *
-		 * @param int $timeout
-		 */
-		$timeout = (int) apply_filters( 'camptix_refund_lock_timeout', 10 );
-
-		$got = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, %d )', $name, $timeout ) );
+		// Seconds to wait for another request's refund of the same order to finish before giving up
+		// and asking the buyer to try again.
+		$got = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, %d )', $name, $this->refund_lock_timeout ) );
 		if ( '1' !== (string) $got ) {
 			$this->log( 'Could not take a refund lock.', null, array( 'lock' => $name, 'result' => $got, 'error' => $wpdb->last_error ) );
 			return false;

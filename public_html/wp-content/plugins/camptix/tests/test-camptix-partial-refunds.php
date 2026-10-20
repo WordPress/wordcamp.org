@@ -552,14 +552,18 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 	 * reading the tickets as still paid and refunding them again.
 	 */
 	public function test_a_refund_is_refused_while_the_order_is_locked() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
 		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
 
 		// Don't wait on the lock in the test; a parallel request would.
-		add_filter( 'camptix_refund_lock_timeout', '__return_zero' );
+		$timeout = new ReflectionProperty( $camptix, 'refund_lock_timeout' );
+		$timeout->setValue( $camptix, 0 );
 
 		// Hold the order's lock on another connection, the way a parallel request would. A second
 		// connection is the point of the test, so $wpdb (one connection) can't stand in here.
-		$held = new mysqli( DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- see above.
+		$held = new mysqli( DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- a second connection is the point of the test; $wpdb owns one.
 		$name = sprintf( 'camptix_refund_%d_%s', get_current_blog_id(), 'tokpartial' );
 		$held->query( "SELECT GET_LOCK('" . $held->real_escape_string( $name ) . "', 0)" );
 
@@ -567,7 +571,7 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 
 		$held->query( "SELECT RELEASE_LOCK('" . $held->real_escape_string( $name ) . "')" );
 		$held->close();
-		remove_filter( 'camptix_refund_lock_timeout', '__return_zero' );
+		$timeout->setValue( $camptix, 10 );
 
 		$this->assertStringContainsString( 'Can not refund the transaction at this time.', $output );
 		$this->assertSame( array(), $this->gateway->partial_refunds );
@@ -585,12 +589,13 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 
 		$this->refund_form( 'tokpartial', array( $second ) );
 
-		$expected = md5( 'tix-partial-refund|tokpartial|' . $second . '|15' );
+		// The gateway gets the refund's identity, not a wire format; each gateway hashes it itself.
+		$expected = 'tix-partial-refund|tokpartial|' . $second . '|15';
 		$this->assertSame( array( $expected ), $this->gateway->partial_refund_keys );
 
 		// A refund of a different ticket sends a different key.
 		$this->refund_form( 'tokpartial', array( $third ) );
 		$this->assertNotSame( $expected, $this->gateway->partial_refund_keys[1] );
-		$this->assertSame( md5( 'tix-partial-refund|tokpartial|' . $third . '|20' ), $this->gateway->partial_refund_keys[1] );
+		$this->assertSame( 'tix-partial-refund|tokpartial|' . $third . '|20', $this->gateway->partial_refund_keys[1] );
 	}
 }

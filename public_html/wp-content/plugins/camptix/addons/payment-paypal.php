@@ -1113,9 +1113,9 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		}
 
 		// PayPal treats two refunds with the same MSGSUBID as one, returning the first instead of
-		// refunding again. Max 38 characters, so pass a hex digest rather than the raw key.
+		// refunding again. MSGSUBID allows up to 38 characters, so hash the key to a 32-char digest.
 		if ( $idempotency_key ) {
-			$payload['MSGSUBID'] = substr( md5( $idempotency_key ), 0, 38 );
+			$payload['MSGSUBID'] = md5( $idempotency_key );
 		}
 		$response = $this->request( $payload );
 

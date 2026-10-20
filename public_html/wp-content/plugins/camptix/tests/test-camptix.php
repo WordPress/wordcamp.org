@@ -344,6 +344,43 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A late payment for an order with several attendees sends each of them their own ticket, and
+	 * the buyer the receipt, as a draft order does.
+	 *
+	 * @covers CampTix_Plugin::email_tickets
+	 * @testWith ["cancel"]
+	 *           ["timeout"]
+	 *           ["failed"]
+	 */
+	public function test_late_payment_emails_every_attendee_their_ticket( $status ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_late_group_' . $status;
+		$buyer_id      = $this->create_attendee( $payment_token, $status );
+		$guest_id      = $this->create_attendee( $payment_token, $status );
+		update_post_meta( $buyer_id, 'tix_email', 'receipt@example.test' );
+		update_post_meta( $guest_id, 'tix_email', 'guest@example.test' );
+
+		reset_phpmailer_instance();
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$recipients = array_map(
+			function ( $email ) {
+				return $email['to'][0][0];
+			},
+			tests_retrieve_phpmailer_instance()->mock_sent
+		);
+		sort( $recipients );
+
+		$this->assertSame(
+			array( 'guest@example.test', 'receipt@example.test', 'receipt@example.test' ),
+			$recipients,
+			'a ticket to each attendee, and the receipt to the buyer'
+		);
+	}
+
+	/**
 	 * A late delayed payment (Stripe reports it complete but not yet paid) sends the receipt
 	 * with the pending note, as it does for a draft.
 	 *

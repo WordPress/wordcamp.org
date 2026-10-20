@@ -750,6 +750,15 @@ clean (#2021).
   by calling `project()` yourself — an explicit call passes whether or not the
   hook works.
 
+- **Anything GatherPress caches per post is shared by every occurrence.** An
+  occurrence is the series post plus the `gpre_occurrence` query var, so a
+  cache keyed on the queried post serves one date's output for all of them.
+  0.36.0's iCal cache did exactly this: every occurrence's `.ics` carried
+  the first date downloaded. `Plugin::calendar_max_age()` turns the cache
+  off for occurrence requests. After each bump, download two occurrences'
+  `.ics` files and compare their `DTSTART`; also look for new caches in the
+  changelog.
+
 An occurrence page reads its date through `Context::metadata()`, which serves
 the occurrence row's own columns, so checking the series post's meta is not a
 check that the page will render what you expect. Look at the

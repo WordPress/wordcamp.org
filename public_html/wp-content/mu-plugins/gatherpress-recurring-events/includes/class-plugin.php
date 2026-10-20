@@ -175,6 +175,7 @@ final class Plugin {
 
 		add_filter( 'render_block_gatherpress/rsvp', array( Context::class, 'render_rsvp_block' ), 50 );
 		add_filter( 'gatherpress_calendar_url', array( $this, 'calendar_url' ), 10, 2 );
+		add_filter( 'gatherpress_calendar_max_age', array( $this, 'calendar_max_age' ) );
 		add_filter( 'posts_clauses', array( Query::class, 'clauses' ), 30, 2 );
 		add_filter( 'the_posts', array( Query::class, 'posts' ), 20, 2 );
 		add_action( 'the_post', array( Query::class, 'activate' ), 10, 2 );
@@ -334,6 +335,22 @@ final class Plugin {
 		}
 
 		return $url;
+	}
+
+	/**
+	 * Keeps an occurrence's calendar download out of GatherPress's iCal cache.
+	 *
+	 * GatherPress 0.36.0 keys that cache on the queried post, and every
+	 * occurrence of a series is the same post, so the first date anyone
+	 * downloaded was served for every other date too. The key cannot be
+	 * extended, so an occurrence's download is rendered fresh and sent
+	 * uncached, as before 0.36.0. Series downloads and feeds still cache.
+	 *
+	 * @param int $max_age Seconds a calendar response stays fresh.
+	 * @return int Zero for an occurrence, otherwise unchanged.
+	 */
+	public function calendar_max_age( $max_age ) {
+		return get_query_var( 'gpre_occurrence' ) ? 0 : $max_age;
 	}
 
 	/**

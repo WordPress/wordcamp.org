@@ -183,9 +183,9 @@ class Test_CampTix_Visa_Letters_Document extends WP_UnitTestCase {
 	 * A PDF that was never written must not be recorded as the letter's document.
 	 *
 	 * `WordCamp_Docs_PDF_Generator::generate_pdf_from_file()` returns its intended output
-	 * path unconditionally, right after `exec()`, without checking that wkhtmltopdf wrote
-	 * anything. Recording the filename anyway leaves the letter advertising a download
-	 * that 404s -- the defect reported in #1760 and fixed for invoices in #1761.
+	 * path unconditionally, even when rendering failed and nothing was written.
+	 * Recording the filename anyway leaves the letter advertising a download that
+	 * 404s -- the defect reported in #1760 and fixed for invoices in #1761.
 	 */
 	public function test_document_is_not_recorded_when_the_pdf_was_never_written() {
 		$letter_id = $this->create_published_letter();

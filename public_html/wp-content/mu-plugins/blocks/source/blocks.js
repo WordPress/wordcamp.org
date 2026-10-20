@@ -18,10 +18,11 @@ import './variations';
  * See also `blocks.php`.
  */
 const enabledBlocks = BLOCKS.filter( ( block ) =>
-	window.WordCampBlocks.hasOwnProperty( block.NAME.replace( 'wordcamp/', '' ) )
+	window.WordCampBlocks.hasOwnProperty(
+		block.NAME.replace( 'wordcamp/', '' )
+	)
 );
 
 enabledBlocks.forEach( ( { NAME, SETTINGS } ) => {
 	registerBlockType( NAME, SETTINGS );
 } );
-

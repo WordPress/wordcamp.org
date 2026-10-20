@@ -86,7 +86,7 @@ class Date_Range {
 			return $duration;
 		}
 
-		$now->setTime( 0, 0, 0 ); // Beginning of the current day.
+		$now = $now->setTime( 0, 0, 0 ); // Beginning of the current day.
 
 		if ( $this->is_within( $now ) ) {
 			// Expire the cache sooner if the data includes the current day.

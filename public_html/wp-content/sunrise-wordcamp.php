@@ -56,7 +56,35 @@ function main() {
 	}
 	*/
 
+	if ( handle_robots_txt_request( $domain, $path ) ) {
+		return;
+	}
+
 	redirect_to_site( $domain, $path );
+}
+
+/**
+ * Check if the current request is for a robots.txt file, and handle it if so.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return bool Whether the request will be handled as a robots.txt request.
+ */
+function handle_robots_txt_request( $domain, $path ) {
+	if ( '/' !== $path || '/robots.txt' !== $_SERVER['REQUEST_URI'] ) {
+		return false;
+	}
+
+	$latest_site = get_latest_site( $domain );
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	set_network_and_site( $latest_site );
+
+	// Abort redirects.
+	return true;
 }
 
 /**
@@ -172,6 +200,11 @@ function redirect_to_site( string $domain, string $path ): void {
 		if ( $redirect ) {
 			$status_code = 302;
 		}
+	}
+
+	// Check if this URL was previously used by a site that has since been renamed.
+	if ( ! $redirect ) {
+		$redirect = get_renamed_site_url( $domain, $path );
 	}
 
 	if ( ! $redirect ) {
@@ -449,7 +482,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		return false;
 	}
 
-	return sprintf( 'https://%s.wordcamp.%s/%s%s', $city, $tld, $year, $request_uri );
+	return sprintf( 'https://%s.wordcamp.%s%s/%s%s', $city, $tld, get_url_port(), $year, $request_uri );
 }
 
 /**
@@ -534,15 +567,16 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 	 */
 	$referer_site_path = $referer_matches[4];
 
-	if ( (int) filter_var( $referer_site_path, FILTER_SANITIZE_NUMBER_INT ) >= 2021 ) {
+	if ( (int) trim( $referer_site_path, '/' ) >= 2021 ) {
 		return false;
 	}
 
 	$is_file = false !== stripos( $request_uri, '/files/' ) && false !== stripos( basename( $request_uri ), '.' );
 
 	$corrected_url = sprintf(
-		'https://%s%s%s',
+		'https://%s%s%s%s',
 		untrailingslashit( $referer_parts['host'] ),
+		get_url_port(),
 		untrailingslashit( $referer_site_path ),
 		$is_file ? $request_uri : trailingslashit( $request_uri )
 	);
@@ -565,7 +599,6 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 function get_canonical_year_url( $domain, $path ) {
 	global $wpdb;
 
-	$tld       = get_top_level_domain();
 	$cache_key = 'current_blog_' . $domain;
 
 	/**
@@ -600,30 +633,15 @@ function get_canonical_year_url( $domain, $path ) {
 	}
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
-	switch ( $domain ) {
-		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-06-20' ) ) {
-				return "https://europe.wordcamp.$tld/2024/";
-			}
-			break;
+	$flagship_url = get_flagship_canonical_url( $domain );
 
-		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-09-25' ) ) {
-				return "https://us.wordcamp.$tld/2024/";
-			}
-			break;
-
-		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-03-15' ) ) {
-				return "https://asia.wordcamp.$tld/2024/";
-			}
-			break;
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	$latest = get_latest_site( $domain );
 
-	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+	return $latest ? 'https://' . $latest->domain . get_url_port() . $latest->path : false;
 }
 
 /**
@@ -712,8 +730,9 @@ function get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structur
 	}
 
 	return sprintf(
-		'https://%s%s%s',
+		'https://%s%s%s%s',
 		$domain,
+		get_url_port(),
 		$path,
 		$matches[3]
 	);

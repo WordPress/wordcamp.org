@@ -70,12 +70,12 @@ function handle_form_post() {
 		return;
 	}
 
-	$cmd = filter_input( INPUT_POST, 'cmd' );
+	$cmd = wp_unslash( $_POST['cmd'] ?? '' );
 	if ( ! $cmd ) {
-		$cmd = filter_input( INPUT_GET, 'cmd' );
+		$cmd = wp_unslash( $_GET['cmd'] ?? '' );
 	}
 
-	$nonce = filter_input( INPUT_POST, PLUGIN_PREFIX . '_oauth_' . $cmd );
+	$nonce = wp_unslash( $_POST[ PLUGIN_PREFIX . '_oauth_' . $cmd ] ?? '' );
 
 	switch ( $cmd ) {
 		case 'authorize':
@@ -165,7 +165,7 @@ function maybe_show_disconnection_warning() {
 	// though.
 	if (
 		'local' === wp_get_environment_type()
-		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page, $pagenow )
+		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page ?? '', $pagenow )
 	) {
 		return;
 	}

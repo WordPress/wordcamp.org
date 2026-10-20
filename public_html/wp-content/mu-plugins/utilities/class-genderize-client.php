@@ -16,7 +16,7 @@ class Genderize_Client extends API_Client {
 	/**
 	 * @var string The option key where the cache is saved in the database.
 	 */
-	const CACHE_KEY = 'genderize_cached_data';
+	public const CACHE_KEY = 'genderize_cached_data';
 
 	/**
 	 * @var string The base URL for the API endpoints.

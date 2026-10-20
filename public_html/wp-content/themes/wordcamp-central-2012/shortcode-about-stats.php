@@ -1,11 +1,11 @@
 <ul class="about-stats clearfix">
 	<li>
-		<span class="about-stat-number"><?php echo esc_html( $map_stats['wordcamps'] ); ?></span>
-		<span class="about-stat-descriptor">WordCamps</span>
+		<span class="about-stat-number"><?php echo esc_html( number_format( $map_stats['wordcamps'] ) ); ?></span>
+		<span class="about-stat-descriptor">WordPress Events</span>
 	</li>
 
 	<li>
-		<span class="about-stat-number"><?php echo esc_html( $map_stats['cities'] ); ?></span>
+		<span class="about-stat-number"><?php echo esc_html( number_format( $map_stats['cities'] ) ); ?></span>
 		<span class="about-stat-descriptor">Cities</span>
 	</li>
 

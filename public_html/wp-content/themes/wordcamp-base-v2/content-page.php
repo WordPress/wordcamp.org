@@ -14,7 +14,14 @@
 
 	<div class="entry-content">
 		<?php the_content(); ?>
-		<?php wp_link_pages( array( 'before' => '<div class="page-links">' . __( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
-		<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
+		<?php
+		wp_link_pages(
+			array(
+				'before' => '<div class="page-links">' . esc_html__( 'Pages:', 'wordcamporg' ),
+				'after'  => '</div>',
+			)
+		);
+		?>
+		<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
 	</div><!-- .entry-content -->
 </article><!-- #post-<?php the_ID(); ?> -->

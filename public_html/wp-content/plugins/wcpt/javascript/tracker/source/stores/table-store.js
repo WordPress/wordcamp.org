@@ -17,7 +17,10 @@ module.exports = {
 
 		filters = Object.assign( filters, options );
 
-		const filteredRows = this._searchRows( wpcApplicationTracker.applications, filters.searchQuery );
+		const filteredRows = this._searchRows(
+			wpcApplicationTracker.applications,
+			filters.searchQuery
+		);
 
 		filteredRows.sort( this._sortRows );
 
@@ -39,7 +42,7 @@ module.exports = {
 		}
 
 		rows.forEach(
-			function( row ) {
+			function ( row ) {
 				for ( const field in row ) {
 					if ( ! row.hasOwnProperty( field ) ) {
 						continue;

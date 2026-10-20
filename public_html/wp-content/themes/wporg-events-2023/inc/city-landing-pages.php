@@ -48,6 +48,11 @@ function is_city_landing_page(): bool {
 		return false;
 	}
 
+	// If the landing page slug actually exists as a page, display the page instead.
+	if ( ! empty( $wp->query_vars['pagename'] ) && get_page_by_path( $wp->query_vars['pagename'] ) ) {
+		return false;
+	}
+
 	$city = explode( '/', $wp->request );
 	$city = $city[0] ?? false;
 

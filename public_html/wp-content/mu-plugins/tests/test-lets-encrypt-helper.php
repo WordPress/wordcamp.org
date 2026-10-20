@@ -31,6 +31,7 @@ class Test_Lets_Encrypt extends Database_TestCase {
 		$database_sites = array(
 			'example.org', // The default site in WP's test suite.
 			'central.wordcamp.test',
+			'wordcamp.test',
 
 			// It should contain a city root site entry for the year.city domains that exist in the db.
 			'seattle.wordcamp.test',

@@ -6,6 +6,7 @@ defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/inc/events-query.php';
 require_once __DIR__ . '/inc/city-landing-pages.php';
+require_once __DIR__ . '/inc/feeds.php';
 
 // Block files.
 require_once __DIR__ . '/src/event-list/index.php';
@@ -82,8 +83,12 @@ function add_site_navigation_menus( $menus ) {
 				'url' => '/upcoming-events/',
 			),
 			array(
-				'label' => __( 'Organize an event', 'wordcamporg' ),
+				'label' => __( 'Organize an Event', 'wordcamporg' ),
 				'url' => '/organize-an-event/',
+			),
+			array(
+				'label' => __( 'Sponsor Events', 'wordcamporg' ),
+				'url' => '/sponsor/',
 			),
 		),
 	);

@@ -280,13 +280,16 @@ function get_assets_url() {
 function get_site_ids_without_skip_flag() {
 	global $wpdb;
 
-	$blog_ids = $wpdb->get_col( "
-		SELECT b.blog_id
-		FROM $wpdb->blogs AS b
-		LEFT OUTER JOIN $wpdb->blogmeta AS m
-		ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = 'speaker_feedback'
-		WHERE m.meta_value IS NULL
-	" );
+	$blog_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT b.blog_id
+			FROM $wpdb->blogs AS b
+			LEFT OUTER JOIN $wpdb->blogmeta AS m
+			ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = 'speaker_feedback'
+			WHERE b.site_id = %d AND m.meta_value IS NULL",
+			get_current_network_id()
+		)
+	);
 
 	return array_map( 'absint', $blog_ids );
 }

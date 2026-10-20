@@ -19,6 +19,11 @@ function manually_load_plugin() {
 	define( 'WP_ADMIN',          true );
 	define( 'JETPACK_DEV_DEBUG', true );
 
+	// Normally defined in `wp-config.php`, and used in the plugin's error messages.
+	if ( ! defined( 'EMAIL_CENTRAL_SUPPORT' ) ) {
+		define( 'EMAIL_CENTRAL_SUPPORT', 'support@wordcamp.test' );
+	}
+
 	// Initialize Jetpack.
 	require_once dirname( dirname( __DIR__ ) ) . '/jetpack/jetpack.php';
 

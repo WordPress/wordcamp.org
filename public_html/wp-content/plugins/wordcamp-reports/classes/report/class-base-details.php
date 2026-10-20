@@ -149,7 +149,7 @@ abstract class Base_Details extends Base {
 			$data[] = $this->fill_data_row( $post );
 		}
 
-		$this->filter_data_fields( $data );
+		$data = $this->filter_data_fields( $data );
 
 		// Reorder of the fields in each row.
 		$field_order = array_fill_keys( $this->get_field_order(), '' );
@@ -171,10 +171,11 @@ abstract class Base_Details extends Base {
 		$meta_keys   = $this->get_meta_keys();
 
 		$row = [
-			'ID'      => $event->ID,
-			'Name'    => $event->post_title,
-			'Created' => get_the_date( 'Y-m-d', $event->ID ),
-			'Status'  => $event->post_status,
+			'ID'          => $event->ID,
+			'Name'        => $event->post_title,
+			'Created'     => get_the_date( 'Y-m-d', $event->ID ),
+			'Status'      => $event->post_status,
+			'Tracker URL' => get_edit_post_link( $event, 'raw' ),
 		];
 
 		foreach ( $meta_keys as $key ) {

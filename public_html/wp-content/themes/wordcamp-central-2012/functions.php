@@ -799,6 +799,7 @@ class WordCamp_Central_Theme {
 
 		if ( ! $map_stats ) {
 			$cities    = array();
+			$countries = array();
 			$wordcamps = new WP_Query( array(
 				'post_type'      => 'wordcamp',
 				'post_status'    => WordCamp_Loader::get_public_post_statuses(),
@@ -815,16 +816,20 @@ class WordCamp_Central_Theme {
 					$city               = explode( '.', $hostname );
 					$cities[ $city[0] ] = true;
 				}
-			}
 
-			// @todo generate countries automatically from _venue_country_code field, but need to populate older camps first.
+				// Count the number of countries.
+				$country = get_post_meta( $wordcamp->ID, '_venue_country_code', true );
+				if ( $country ) {
+					$countries[ $country ] = true;
+				}
+			}
 
 			// Compile the results.
 			$map_stats = array(
 				'wordcamps'  => $wordcamps->found_posts,
 				'cities'     => count( $cities ),
-				'countries'  => 65,
-				'continents' => 6,
+				'countries'  => count( $countries ),
+				'continents' => 6, // We're still waiting for WordCamp Antarctica.
 			);
 
 			set_transient( $transient_key, $map_stats, 2 * WEEK_IN_SECONDS );

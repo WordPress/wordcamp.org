@@ -22,7 +22,7 @@ use WP_Error, WP_Post;
 class Events_Application extends WordCamp_Application {
 	public $post;
 
-	const SHORTCODE_SLUG = 'events-organizer-application';
+	public const SHORTCODE_SLUG = 'events-organizer-application';
 
 	/**
 	 * Return publicly displayed name of the event
@@ -145,18 +145,21 @@ class Events_Application extends WordCamp_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|WP_Error
+	 * @return int|WP_Error
 	 */
 	public function create_post( $data ) {
-		// Create the post.
-		$user     = wcorg_get_user_by_canonical_names( $data['q_wporg_username'] );
-		$statuses = \WordCamp_Loader::get_post_statuses();
+		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
+
+		// `submit_application()` only reaches this method for a logged-in submitter, so the
+		// application is owned by that account. The username field is stored as meta below.
+		$author_id = get_current_user_id();
+		$statuses  = \WordCamp_Loader::get_post_statuses();
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
 			'post_title'  => esc_html( $data['q_event_location'] ),
 			'post_status' => self::get_default_status(),
-			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : 7694169, // Set `wordcamp` as author if supplied username is not valid.
+			'post_author' => $author_id ?: $wordcamp_user_id,
 		);
 
 		$post_id = wp_insert_post( $post, true );
@@ -201,7 +204,7 @@ ADDRESS;
 
 		$this->post = get_post( $post_id );
 
-		return true;
+		return $post_id;
 	}
 
 	/**

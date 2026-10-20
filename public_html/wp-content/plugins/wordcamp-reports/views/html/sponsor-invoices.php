@@ -99,13 +99,15 @@ $asterisk2 = false;
 		</tr>
 		</thead>
 		<tbody>
-		<?php foreach ( array_keys( $payments['amount_by_currency'] ) as $currency ) : ?>
+		<?php foreach ( array_keys( $payments['amount_by_currency'] ) as $currency ) :
+			$has_invoices = ( $invoices['amount_by_currency'][ $currency ] ?? 0 ) > 0;
+			?>
 			<tr>
 				<td><?php echo esc_html( $currency ); ?></td>
 				<td class="number"><?php echo number_format_i18n( $payments['amount_by_currency'][ $currency ] ); ?></td>
 				<td class="number">
 					<?php echo number_format_i18n( $payments['converted_amounts'][ $currency ] ); ?>
-					<?php if ( $invoices['amount_by_currency'][ $currency ] > 0 && $invoices['converted_amounts'][ $currency ] === 0 ) : $asterisk2 = true; ?>
+					<?php if ( $has_invoices && $invoices['converted_amounts'][ $currency ] === 0 ) : $asterisk2 = true; ?>
 						**
 					<?php endif; ?>
 				</td>

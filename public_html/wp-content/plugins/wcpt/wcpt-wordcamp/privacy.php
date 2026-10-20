@@ -288,6 +288,10 @@ function _get_wordcamp_posts( $query_type, $email_address, $page ) {
 		'perm'           => 'readable',
 		'posts_per_page' => $number,
 		'paged'          => $page,
+
+		// The subject's own record belongs in their export even when the person running it
+		// cannot otherwise see it. See `WordCamp_Loader::hide_unscheduled_cancellations()`.
+		'wcpt_include_unscheduled_cancellations' => true,
 	);
 
 	switch ( $query_type ) {

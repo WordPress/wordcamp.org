@@ -2,14 +2,14 @@
 /**
  * Sponsorship Agreement Template
  */
-class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
+class WordCamp_Docs_Template_Sponsorship_Agreement extends WordCamp_Docs_Template {
 	/**
 	 * Step 10. Select the sponsor post from which the form will be pre-filled.
 	 */
 	public function form_prefill_select( $data ) {
 		$sponsors = get_posts( array(
 			'post_type'      => 'wcb_sponsor',
-			'post_status'    => 'publish',
+			'post_status'    => 'any',
 			'posts_per_page' => 500,
 		) );
 
@@ -66,18 +66,31 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? gmdate( $date_format, $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
 		$end_date   = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? gmdate( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
 
-		$number_formatter   = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
-		$sponsorship_amount = $number_formatter->format( $sponsor_amount ) . " {$sponsor_currency}";
+		// PHP 8.4+ throws ValueError for unknown locales; format()/formatCurrency() can also return false.
+		$formatted = false;
+		try {
+			$number_formatter = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
+			$formatted        = $number_formatter->format( (float) $sponsor_amount );
+		} catch ( \Throwable $e ) {
+			$formatted = false;
+		}
+		$sponsorship_amount = ( false !== $formatted ? $formatted : (float) $sponsor_amount ) . " {$sponsor_currency}";
 
-		$number_formatter       = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
-		$sponsorship_amount_num = $number_formatter->formatCurrency( $sponsor_amount, $sponsor_currency );
+		$formatted = false;
+		try {
+			$number_formatter = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
+			$formatted        = $number_formatter->formatCurrency( (float) $sponsor_amount, $sponsor_currency );
+		} catch ( \Throwable $e ) {
+			$formatted = false;
+		}
+		$sponsorship_amount_num = false !== $formatted ? $formatted : ( (float) $sponsor_amount ) . " {$sponsor_currency}";
 
 		$data = wp_parse_args( $data, array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'sponsor_name'            => get_the_title( $sponsor_id ),
 			'sponsor_rep_name'        => get_post_meta( $sponsor_id, '_wcpt_sponsor_first_name', true ) . ' ' . get_post_meta( $sponsor_id, '_wcpt_sponsor_last_name', true ),
 			'sponsor_rep_title'       => '',
 			'agreement_date'          => wp_date( $date_format ),
-			'wordcamp_location'       => $wordcamp->meta['Location'][0],
+			'wordcamp_location'       => $wordcamp->meta['Location'][0] ?? '',
 			'wordcamp_date'           => ( $start_date !== $end_date ) ? "{$start_date} - {$end_date}" : $start_date,
 			'sponsorship_amount'      => $sponsorship_amount,
 			'sponsorship_amount_num'  => $sponsorship_amount_num,
@@ -146,28 +159,17 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css" />
+		<?php $this->font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;
 	padding: 0;
-	font-family: 'Open Sans', sans-serif;
 	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 
 p {
 	margin: 0 0 1.5em;
-}
-
-h1, h2, h3, h4, div, p, span, table {
-	font-family: 'Open Sans', sans-serif;
-}
-
-strong {
-	font-weight: 600;
 }
 
 table {
@@ -178,10 +180,8 @@ table {
 	border: none;
 	border-collapse: collapse;
 
-	font-family: 'Open Sans', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 

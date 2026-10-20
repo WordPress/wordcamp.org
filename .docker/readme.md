@@ -2,7 +2,7 @@
 
 Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/). _Assume all command blocks start in the root directory (wordcamp.test) of the project._
 
-1. Make sure you have a Docker runtime installed and running. On macOS, use [Colima](https://github.com/abiosoft/colima): it's free and open source, needs no account, and runs this environment as is.
+1. Make sure you have a Docker runtime installed and running. On macOS, use [Colima](https://github.com/abiosoft/colima). It's free and open source and needs no account.
     ```bash
     brew install colima docker docker-compose
     colima start --cpu 4 --memory 4
@@ -16,7 +16,9 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     }
     ```
 
-    Colima remembers the CPU and memory settings, so later starts are just `colima start`. [Docker Desktop](https://www.docker.com/products/docker-desktop/) works too, and is the option on Windows.
+    Colima remembers the CPU and memory settings, so later starts are just `colima start`. To start it at login instead, run `brew services start colima`.
+
+    [Docker Desktop](https://www.docker.com/products/docker-desktop/) works too, and is the option on Windows along with [Rancher Desktop](https://rancherdesktop.io/). On Linux, use [Docker Engine](https://docs.docker.com/engine/install/).
 
 1. Clone the repo:
     ```bash

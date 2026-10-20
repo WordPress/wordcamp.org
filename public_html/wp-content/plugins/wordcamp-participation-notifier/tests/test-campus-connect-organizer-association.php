@@ -130,7 +130,6 @@ class Test_Campus_Connect_Organizer_Association extends WP_UnitTestCase {
 	 */
 	protected function invoke( $method, array $args = array() ) {
 		$reflection = new ReflectionMethod( WordCamp_Participation_Notifier::class, $method );
-		$reflection->setAccessible( true );
 
 		return $reflection->invokeArgs( $this->notifier, $args );
 	}

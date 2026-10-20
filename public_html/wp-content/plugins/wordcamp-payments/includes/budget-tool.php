@@ -250,11 +250,12 @@ class WordCamp_Budget_Tool {
 		$message = isset( $_POST['wcb_budget_note'] ) ? wp_unslash( $_POST['wcb_budget_note'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in add_note().
 		$added   = self::add_note( $message, get_current_user_id() );
 
+		// Not a query arg: the page's tab links and the budget form's referer would carry it on, and
+		// the notice would show again after the next save or approval.
+		set_transient( self::note_notice_key(), $added ? 'added' : 'empty', MINUTE_IN_SECONDS );
+
 		$view = isset( $_POST['wcb-view'] ) ? sanitize_key( $_POST['wcb-view'] ) : '';
-		$args = array(
-			'page'           => 'wordcamp-budget',
-			'wcb-note-added' => $added ? 1 : 0,
-		);
+		$args = array( 'page' => 'wordcamp-budget' );
 
 		if ( in_array( $view, array( 'prelim', 'working', 'approved' ), true ) ) {
 			$args['wcb-view'] = $view;
@@ -262,6 +263,27 @@ class WordCamp_Budget_Tool {
 
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
+	}
+
+	/**
+	 * Get the result of the current user's last note, and clear it so it's only shown once.
+	 *
+	 * @return string `added`, `empty`, or an empty string when there's nothing to show.
+	 */
+	public static function pop_note_notice() {
+		$notice = get_transient( self::note_notice_key() );
+		delete_transient( self::note_notice_key() );
+
+		return in_array( $notice, array( 'added', 'empty' ), true ) ? $notice : '';
+	}
+
+	/**
+	 * The transient holding the current user's note result, for the notice after the redirect.
+	 *
+	 * @return string
+	 */
+	private static function note_notice_key() {
+		return 'wcb_budget_note_notice_' . get_current_user_id();
 	}
 
 	/**

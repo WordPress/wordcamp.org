@@ -62,7 +62,7 @@ class Test_Budget_Notes extends WP_UnitTestCase {
 	 * Clear the request, the globals and the stored budget.
 	 */
 	public function tear_down() {
-		unset( $GLOBALS['trusted_deputies'], $GLOBALS['super_admins'], $_GET['wcb-note-added'] );
+		unset( $GLOBALS['trusted_deputies'], $GLOBALS['super_admins'] );
 		$_POST    = array();
 		$_REQUEST = array();
 		delete_option( 'wcb_budget' );
@@ -274,7 +274,35 @@ class Test_Budget_Notes extends WP_UnitTestCase {
 		$this->assertSame( array( "It's fine." ), wp_list_pluck( WordCamp_Budget_Tool::get_notes(), 'message' ), 'the note is unslashed' );
 		$this->assertStringContainsString( 'page=wordcamp-budget', $location );
 		$this->assertStringContainsString( 'wcb-view=working', $location );
-		$this->assertStringContainsString( 'wcb-note-added=1', $location );
+		$this->assertStringNotContainsString( 'wcb-note', $location, 'the result is not in the URL, where tab links and the budget form would carry it on' );
+	}
+
+	/**
+	 * "Note added." shows on the page the deputy lands on, and not again after they save or approve.
+	 */
+	public function test_note_added_notice_shows_once() {
+		$this->store_budget( 'approved' );
+		wp_set_current_user( self::$deputy );
+		$this->fill_note_request( 'Looks good', 'approved' );
+		$this->capture_redirect( array( WordCamp_Budget_Tool::class, 'handle_add_note' ) );
+
+		$this->assertStringContainsString( 'Note added.', $this->render_page() );
+		$this->assertStringNotContainsString( 'Note added.', $this->render_page(), 'the next page load' );
+	}
+
+	/**
+	 * An empty note gets the warning instead.
+	 */
+	public function test_empty_note_notice() {
+		$this->store_budget( 'approved' );
+		wp_set_current_user( self::$deputy );
+		$this->fill_note_request( '   ' );
+		$this->capture_redirect( array( WordCamp_Budget_Tool::class, 'handle_add_note' ) );
+
+		$html = $this->render_page();
+
+		$this->assertStringContainsString( 'The note was empty', $html );
+		$this->assertStringNotContainsString( 'Note added.', $html );
 	}
 
 	/**

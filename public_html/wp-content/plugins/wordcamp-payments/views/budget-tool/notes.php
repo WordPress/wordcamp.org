@@ -10,6 +10,7 @@
 defined( 'WPINC' ) || die();
 
 $notes         = WordCamp_Budget_Tool::get_notes();
+$notice        = WordCamp_Budget_Tool::pop_note_notice();
 $status_labels = array(
 	'draft'    => __( 'Draft', 'wordcamporg' ),
 	'pending'  => __( 'Submitted', 'wordcamporg' ),
@@ -22,12 +23,10 @@ $status_labels = array(
 	<h2><?php esc_html_e( 'Notes', 'wordcamporg' ); ?></h2>
 	<p class="description"><?php esc_html_e( 'Visible to deputies and program managers only. Adding a note does not change the budget.', 'wordcamporg' ); ?></p>
 
-	<?php if ( isset( $_GET['wcb-note-added'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display only. ?>
-		<?php if ( '1' === $_GET['wcb-note-added'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-			<div class="notice notice-success inline"><p><?php esc_html_e( 'Note added.', 'wordcamporg' ); ?></p></div>
-		<?php else : ?>
-			<div class="notice notice-warning inline"><p><?php esc_html_e( 'The note was empty, so nothing was added.', 'wordcamporg' ); ?></p></div>
-		<?php endif; ?>
+	<?php if ( 'added' === $notice ) : ?>
+		<div class="notice notice-success inline"><p><?php esc_html_e( 'Note added.', 'wordcamporg' ); ?></p></div>
+	<?php elseif ( 'empty' === $notice ) : ?>
+		<div class="notice notice-warning inline"><p><?php esc_html_e( 'The note was empty, so nothing was added.', 'wordcamporg' ); ?></p></div>
 	<?php endif; ?>
 
 	<?php if ( empty( $notes ) ) : ?>

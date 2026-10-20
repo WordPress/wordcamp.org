@@ -258,6 +258,8 @@ class MES_Propagator {
 				update_post_meta( $new_post_id, $key, $value );
 			}
 
+			MES_Sponsor::record_pushed_copy( $new_post_id );
+
 			if ( isset( $logo_urls[ $missing_mes_id ] ) ) {
 				$attachment_id = static::sideload_logo( $logo_urls[ $missing_mes_id ], $new_post_id );
 

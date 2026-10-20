@@ -250,4 +250,83 @@ class Test_MES_Push_To_Active_Camps extends WP_UnitTestCase {
 		$this->assertSame( array(), $again['added'] );
 		$this->assertCount( 1, $this->site_copies( $site_id, $sponsor_b ) );
 	}
+
+	/**
+	 * Push a draft so it gets a copy, change its text on central, and run a change on the copy.
+	 *
+	 * @param callable $edit_copy Called on the camp site with the copy's ID.
+	 *
+	 * @return array [ $site_id, $copy_id, push response data ]
+	 */
+	protected function push_again_after( callable $edit_copy ) {
+		list( , $site_id, , $sponsor_b ) = $this->make_fixture();
+		$this->push( $sponsor_b, false );
+		$copy_id = $this->site_copies( $site_id, $sponsor_b )[0]->ID;
+
+		switch_to_blog( $site_id );
+		$edit_copy( $copy_id );
+		restore_current_blog();
+
+		wp_update_post( array(
+			'ID'           => $sponsor_b,
+			'post_content' => 'Corrected brand text.',
+		) );
+
+		return array( $site_id, $copy_id, $this->push( $sponsor_b, false )->get_data() );
+	}
+
+	/**
+	 * An organizer's edit to a draft copy is kept. WP resets a draft's dates on save, so the dates alone
+	 * made it look untouched, and the next push overwrote it.
+	 */
+	public function test_push_skips_an_edited_draft_copy() {
+		list( $site_id, $copy_id, $data ) = $this->push_again_after( function ( $copy_id ) {
+			wp_update_post( array(
+				'ID'           => $copy_id,
+				'post_content' => 'Our camp-specific text.',
+			) );
+		} );
+
+		$this->assertSame( array(), $data['updated'] );
+		$this->assertCount( 1, $data['skipped_posts'] );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( 'Our camp-specific text.', get_post( $copy_id )->post_content );
+		$this->assertSame( 'draft', get_post_status( $copy_id ) );
+		restore_current_blog();
+	}
+
+	/**
+	 * Publishing a copy without changing it doesn't count as an edit, so it still gets updates.
+	 */
+	public function test_push_updates_a_copy_published_unchanged() {
+		list( $site_id, $copy_id, $data ) = $this->push_again_after( function ( $copy_id ) {
+			wp_update_post( array(
+				'ID'          => $copy_id,
+				'post_status' => 'publish',
+			) );
+		} );
+
+		$this->assertCount( 1, $data['updated'] );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( 'Corrected brand text.', get_post( $copy_id )->post_content );
+		$this->assertSame( 'publish', get_post_status( $copy_id ) );
+		restore_current_blog();
+	}
+
+	/**
+	 * An edit to only the sponsor's details, not the text, is kept too.
+	 */
+	public function test_push_skips_a_copy_with_edited_sponsor_details() {
+		list( $site_id, $copy_id, $data ) = $this->push_again_after( function ( $copy_id ) {
+			update_post_meta( $copy_id, '_wcpt_sponsor_website', 'https://camp-specific.example' );
+		} );
+
+		$this->assertSame( array(), $data['updated'] );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( 'https://camp-specific.example', get_post_meta( $copy_id, '_wcpt_sponsor_website', true ) );
+		restore_current_blog();
+	}
 }

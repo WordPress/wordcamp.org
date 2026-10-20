@@ -15,6 +15,11 @@ class MES_Sponsor {
 	public const POST_TYPE_SLUG = 'mes';
 
 	/**
+	 * Meta on a camp's `wcb_sponsor` copy: the fingerprint of what was last pushed to it.
+	 */
+	public const PUSHED_FINGERPRINT_META = '_mes_pushed_fingerprint';
+
+	/**
 	 * Get a sponsor's group → sponsorship-level map, for deciding where it sponsors.
 	 *
 	 * Empty while the sponsor-groups flag is off; see MES_Sponsor_Group::get_camp_groups(). Use
@@ -245,7 +250,9 @@ class MES_Sponsor {
 				'meta_input'   => WordCamp_New_Site::get_stub_me_sponsors_meta( $source_post ),
 			) );
 
-			// Reset date so that post_has_been_edited() will continue detecting that it hasn't been edited (by a user).
+			self::record_pushed_copy( $fork_post->ID );
+
+			// Reset date so that post_has_been_edited() still works for copies pushed before the fingerprint was recorded.
 			self::reset_post_modified_date( $fork_post );
 
 			// Default to Gutenberg since all the source posts now use it.
@@ -263,12 +270,56 @@ class MES_Sponsor {
 	}
 
 	/**
-	 * Check if the post has been edited since it was created.
+	 * Check if organizers have edited a camp's copy since it was last pushed.
 	 *
-	 * WP will update modified date when saving posts, even if only post meta is changed and the title/content are untouched.
+	 * Compares the copy with the fingerprint recorded when it was pushed. Dates can't tell: WP resets a
+	 * draft's post date on every save, so an edited draft copy (or one edited in the save that publishes
+	 * it) has matching post and modified dates, and looks untouched.
+	 *
+	 * Copies pushed before the fingerprint was recorded fall back to the dates. WP updates the modified
+	 * date when saving posts, even if only post meta is changed and the title/content are untouched.
 	 */
 	public static function post_has_been_edited( int $post_id ) : bool {
+		$pushed = get_post_meta( $post_id, self::PUSHED_FINGERPRINT_META, true );
+
+		if ( $pushed ) {
+			return ! hash_equals( $pushed, self::get_copy_fingerprint( $post_id ) );
+		}
+
 		return get_the_modified_time( 'U', $post_id ) !== get_the_time( 'U', $post_id );
+	}
+
+	/**
+	 * Record what was pushed to a camp's copy, so post_has_been_edited() can tell later edits apart.
+	 *
+	 * Call it on the camp site, after the copy's title, content and meta are written.
+	 *
+	 * @param int $post_id The `wcb_sponsor` copy.
+	 */
+	public static function record_pushed_copy( int $post_id ): void {
+		update_post_meta( $post_id, self::PUSHED_FINGERPRINT_META, self::get_copy_fingerprint( $post_id ) );
+	}
+
+	/**
+	 * A fingerprint of the parts of a camp's copy that a push writes: title, content and sponsor meta.
+	 *
+	 * @param int $post_id The `wcb_sponsor` copy.
+	 *
+	 * @return string
+	 */
+	protected static function get_copy_fingerprint( int $post_id ): string {
+		$post = get_post( $post_id );
+		$meta = array();
+
+		foreach ( get_post_meta( $post_id ) as $key => $values ) {
+			if ( 0 === strpos( $key, '_wcpt_sponsor_' ) ) {
+				$meta[ $key ] = $values;
+			}
+		}
+
+		ksort( $meta );
+
+		return md5( wp_json_encode( array( $post->post_title ?? '', $post->post_content ?? '', $meta ) ) );
 	}
 
 	/**

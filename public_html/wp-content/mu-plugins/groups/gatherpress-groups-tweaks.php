@@ -1293,7 +1293,12 @@ function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post
 	return $response;
 }
 
-add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 10, 2 );
+/*
+ * Priority 20, after GatherPress's own callbacks at 10: `Geo_Sync` recomputes
+ * stale `geo_*` meta there and writes it back into the response, which put the
+ * address back on the first read after the upgrade or a venue change.
+ */
+add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 20, 2 );
 
 /**
  * Strip the venue term class from a password-protected event's markup.

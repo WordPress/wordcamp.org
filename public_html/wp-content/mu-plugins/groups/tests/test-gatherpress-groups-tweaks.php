@@ -1216,10 +1216,9 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * The REST filter strips a protected event's venue (including the address
-	 * and coordinates GatherPress 0.36.0 copies into `geo_*` meta) and speakers
-	 * for a caller who cannot edit it, and keeps them (and the venue term link)
-	 * for one who can.
+	 * The REST filter strips a protected event's venue and speakers for a
+	 * caller who cannot edit it, and keeps both (and the venue term link) for
+	 * one who can.
 	 *
 	 * Exercised against the filter directly rather than the full REST pipeline,
 	 * whose taxonomy and meta fields depend on registration order and so are
@@ -1237,13 +1236,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$response = new \WP_REST_Response(
 				array(
 					'content'            => array( 'protected' => true ),
-					'meta'               => array(
-						'_event_speakers' => array( 101, 102 ),
-						'geo_address'     => '1 Venue Street, Mooloolaba',
-						'geo_latitude'    => '-26.68',
-						'geo_longitude'   => '153.12',
-						'geo_public'      => 1,
-					),
+					'meta'               => array( '_event_speakers' => array( 101, 102 ) ),
 					'_gatherpress_venue' => array( 8 ),
 					'class_list'         => array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' ),
 				)
@@ -1262,7 +1255,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$hrefs    = wp_list_pluck( $response->get_links()['https://api.w.org/term'] ?? array(), 'href' );
 
 		$this->assertArrayNotHasKey( '_event_speakers', $data['meta'] );
-		$this->assertSame( array(), $data['meta'], 'A geo_* field still carries the venue\'s address or coordinates.' );
 		$this->assertArrayNotHasKey( '_gatherpress_venue', $data );
 		$this->assertNotContains( '_gatherpress_venue-_salty-spaces', $data['class_list'] );
 		$this->assertNotContains( 'https://example.org/venue', $hrefs );
@@ -1273,9 +1265,44 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$kept = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
 
 		$this->assertSame( array( 101, 102 ), $kept['meta']['_event_speakers'] );
-		$this->assertSame( '1 Venue Street, Mooloolaba', $kept['meta']['geo_address'] );
 		$this->assertSame( array( 8 ), $kept['_gatherpress_venue'] );
 		$this->assertContains( '_gatherpress_venue-_salty-spaces', $kept['class_list'] );
+	}
+
+	/**
+	 * A protected event's `geo_*` meta stays out of REST even on the read
+	 * that GatherPress refreshes it.
+	 *
+	 * GatherPress 0.36.0 copies the venue's address and coordinates onto the
+	 * event as `geo_*` meta, and `Geo_Sync` writes freshly computed values
+	 * back into the response when the stored ones are stale: the first read
+	 * after the upgrade, or after a venue change. Run through the real hook,
+	 * so the gate has to run after that refresh to keep them out.
+	 */
+	public function test_rest_hides_protected_event_geo_meta_after_a_refresh() {
+		$event_id = $this->create_dated_event_with_venue( 'secret-pass' );
+		$event    = get_post( $event_id );
+		$geo_keys = array( 'geo_address', 'geo_latitude', 'geo_longitude', 'geo_public' );
+
+		$prepare = static function () use ( $event, $geo_keys ): array {
+			// Stale, as on the first read after the upgrade.
+			foreach ( $geo_keys as $key ) {
+				delete_post_meta( $event->ID, $key );
+			}
+
+			$response = new \WP_REST_Response( array( 'meta' => array() ) );
+
+			return apply_filters( 'rest_prepare_gatherpress_event', $response, $event )->get_data()['meta'];
+		};
+
+		wp_set_current_user( 0 );
+		$visitor = $prepare();
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$editor = $prepare();
+
+		$this->assertNotEmpty( $editor['geo_address'] ?? '', 'GatherPress did not refresh the geo meta, so nothing was tested.' );
+		$this->assertSame( array(), array_intersect_key( $visitor, array_flip( $geo_keys ) ), 'A geo_* field reached a logged-out visitor.' );
 	}
 
 	/**
@@ -1530,7 +1557,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			'The venue render gate is not hooked where it fires.'
 		);
 		$this->assertSame(
-			10,
+			20,
 			has_filter( 'rest_prepare_gatherpress_event', $ns . 'hide_event_details_in_rest' ),
 			'The REST item gate is not hooked where it fires.'
 		);

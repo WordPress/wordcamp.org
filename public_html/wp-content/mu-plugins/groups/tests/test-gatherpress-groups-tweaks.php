@@ -1216,9 +1216,10 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * The REST filter strips a protected event's venue and speakers for a
-	 * caller who cannot edit it, and keeps both (and the venue term link) for
-	 * one who can.
+	 * The REST filter strips a protected event's venue (including the address
+	 * and coordinates GatherPress 0.36.0 copies into `geo_*` meta) and speakers
+	 * for a caller who cannot edit it, and keeps them (and the venue term link)
+	 * for one who can.
 	 *
 	 * Exercised against the filter directly rather than the full REST pipeline,
 	 * whose taxonomy and meta fields depend on registration order and so are
@@ -1236,7 +1237,13 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$response = new \WP_REST_Response(
 				array(
 					'content'            => array( 'protected' => true ),
-					'meta'               => array( '_event_speakers' => array( 101, 102 ) ),
+					'meta'               => array(
+						'_event_speakers' => array( 101, 102 ),
+						'geo_address'     => '1 Venue Street, Mooloolaba',
+						'geo_latitude'    => '-26.68',
+						'geo_longitude'   => '153.12',
+						'geo_public'      => 1,
+					),
 					'_gatherpress_venue' => array( 8 ),
 					'class_list'         => array( 'type-gatherpress_event', '_gatherpress_venue-_salty-spaces', 'hentry' ),
 				)
@@ -1255,6 +1262,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$hrefs    = wp_list_pluck( $response->get_links()['https://api.w.org/term'] ?? array(), 'href' );
 
 		$this->assertArrayNotHasKey( '_event_speakers', $data['meta'] );
+		$this->assertSame( array(), $data['meta'], 'A geo_* field still carries the venue\'s address or coordinates.' );
 		$this->assertArrayNotHasKey( '_gatherpress_venue', $data );
 		$this->assertNotContains( '_gatherpress_venue-_salty-spaces', $data['class_list'] );
 		$this->assertNotContains( 'https://example.org/venue', $hrefs );
@@ -1265,6 +1273,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$kept = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
 
 		$this->assertSame( array( 101, 102 ), $kept['meta']['_event_speakers'] );
+		$this->assertSame( '1 Venue Street, Mooloolaba', $kept['meta']['geo_address'] );
 		$this->assertSame( array( 8 ), $kept['_gatherpress_venue'] );
 		$this->assertContains( '_gatherpress_venue-_salty-spaces', $kept['class_list'] );
 	}

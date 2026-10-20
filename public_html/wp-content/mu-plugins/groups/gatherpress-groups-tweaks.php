@@ -1243,8 +1243,9 @@ add_filter(
  *
  * The event page hides these behind the password, but the REST response still
  * named them: the `_gatherpress_venue` term, the venue's entry in `class_list`
- * (which spells out the venue slug), the venue term link, and the
- * `_event_speakers` roster meta. Strip them while the event requires its
+ * (which spells out the venue slug), the venue term link, the venue's address
+ * and coordinates in the `geo_*` meta, and the `_event_speakers` roster meta.
+ * Strip them while the event requires its
  * password for a caller who cannot edit it, the same way core blanks the
  * protected content; an editor (the event form) still gets them, and a public
  * event is untouched.
@@ -1262,6 +1263,12 @@ function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post
 	$data = $response->get_data();
 
 	unset( $data['_gatherpress_venue'], $data['meta']['_event_speakers'] );
+
+	// GatherPress 0.36.0 copies the venue's address and coordinates onto the
+	// event as `geo_*` meta, for geodata plugins.
+	foreach ( array( 'geo_address', 'geo_latitude', 'geo_longitude', 'geo_public' ) as $key ) {
+		unset( $data['meta'][ $key ] );
+	}
 
 	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
 		$data['class_list'] = array_values(

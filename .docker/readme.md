@@ -16,7 +16,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
     Colima remembers the CPU and memory settings, so later starts are just `colima start`. To start it at login instead, run `brew services start colima`.
 
-    On Windows, consider using [Rancher Desktop](https://rancherdesktop.io/) with its dockerd (moby) engine, or [Docker Desktop](https://www.docker.com/products/docker-desktop/), which works on macOS too. On Linux, use [Docker Engine](https://docs.docker.com/engine/install/).
+    On Windows, consider using [Rancher Desktop](https://rancherdesktop.io/) with its dockerd (moby) engine, or [Docker Desktop](https://www.docker.com/products/docker-desktop/). On Linux, use [Docker Engine](https://docs.docker.com/engine/install/).
 
 1. Clone the repo:
     ```bash

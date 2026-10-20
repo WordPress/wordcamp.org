@@ -7,7 +7,7 @@
 	"category": "design",
 	"icon": "chart-bar",
 	"description": "One of the homepage stats: events, local groups or meetup members, kept current from cron.",
-	"textdomain": "wporg",
+	"textdomain": "wordcamporg",
 	"attributes": {
 		"stat": {
 			"type": "string",

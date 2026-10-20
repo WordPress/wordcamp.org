@@ -102,15 +102,18 @@ function count_wordcamps(): int {
 		return (int) $count;
 	}
 
-	if ( ! defined( 'WORDCAMP_ROOT_BLOG_ID' ) || ! function_exists( 'get_wordcamps' ) ) {
+	if ( ! defined( 'WORDCAMP_ROOT_BLOG_ID' ) ) {
 		return 0;
 	}
 
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
-	$wordcamps = get_wordcamps( array(
+	// Not `get_wordcamps()`: it loads every camp's meta, and only the number is needed here.
+	$wordcamps = get_posts( array(
+		'post_type'   => 'wordcamp',
 		'post_status' => array( 'wcpt-scheduled', 'wcpt-closed' ),
 		'fields'      => 'ids',
+		'numberposts' => -1,
 	) );
 
 	restore_current_blog();
@@ -185,14 +188,14 @@ function format_stat( string $stat, array $stats ): string {
 		case 'events':
 			return sprintf(
 				/* translators: %s: number of events, e.g. "56,000+". */
-				__( '%s WordPress events since 2006', 'wporg' ),
+				__( '%s WordPress events since 2006', 'wordcamporg' ),
 				round_down_with_plus( (int) $stats['events'], 1000 )
 			);
 
 		case 'groups':
 			return sprintf(
 				/* translators: 1: number of local groups, 2: number of countries. */
-				__( '%1$s local groups in %2$s countries', 'wporg' ),
+				__( '%1$s local groups in %2$s countries', 'wordcamporg' ),
 				number_format_i18n( (int) $stats['groups'] ),
 				number_format_i18n( (int) $stats['countries'] )
 			);
@@ -200,7 +203,7 @@ function format_stat( string $stat, array $stats ): string {
 		case 'members':
 			return sprintf(
 				/* translators: %s: number of meetup members, e.g. "500,000+". */
-				__( '%s meetup members', 'wporg' ),
+				__( '%s meetup members', 'wordcamporg' ),
 				round_down_with_plus( (int) $stats['members'], 10000 )
 			);
 	}

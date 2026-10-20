@@ -137,6 +137,38 @@ class Test_Stats extends Database_TestCase {
 	}
 
 	/**
+	 * The cron run counts the real WordCamps on central: only scheduled and closed camps, and only `wordcamp` posts.
+	 *
+	 * Only the groups are injected here, so the count runs as it does in production.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\count_wordcamps
+	 * @covers \WordPressdotorg\Events_2023\refresh_stats
+	 */
+	public function test_refresh_counts_the_wordcamps_on_central() {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		foreach ( array( 'wcpt-scheduled', 'wcpt-scheduled', 'wcpt-closed', 'wcpt-needs-vetting', 'wcpt-cancelled' ) as $status ) {
+			self::factory()->post->create( array(
+				'post_type'   => 'wordcamp',
+				'post_status' => $status,
+			) );
+		}
+
+		self::factory()->post->create( array(
+			'post_type'   => 'post',
+			'post_status' => 'wcpt-scheduled',
+		) );
+
+		restore_current_blog();
+
+		add_filter( 'wporg_events_stats_groups', fn() => $this->groups() );
+
+		do_action( STATS_CRON_HOOK );
+
+		$this->assertSame( 15 + 3, get_stats()['events'] );
+	}
+
+	/**
 	 * When Meetup can't be reached, the last good figures stay.
 	 *
 	 * @covers \WordPressdotorg\Events_2023\refresh_stats

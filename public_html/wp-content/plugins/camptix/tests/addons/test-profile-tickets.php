@@ -228,6 +228,34 @@ class Test_Camptix_Profile_Tickets extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * The buyer giving away their own ticket mustn't hand them the rest of the order too: the unclaimed tickets
+	 * and the link that manages the order stay with the buyer.
+	 */
+	public function test_buyer_transferring_their_own_ticket_keeps_the_rest_of_the_order() {
+		$buyer_id     = self::factory()->user->create( array( 'user_login' => 'buyer' ) );
+		$recipient_id = self::factory()->user->create( array( 'user_login' => 'recipient' ) );
+
+		list( $payment_token, $attendee_ids ) = $this->create_order( 'buyer', 2 );
+		$this->complete( $payment_token );
+
+		update_post_meta( $attendee_ids[0], 'tix_username', 'recipient' );
+
+		// Something else about the unclaimed ticket changes later, like its status.
+		wp_update_post( array(
+			'ID'          => $attendee_ids[1],
+			'post_status' => 'refund',
+		) );
+
+		$buyer_rows     = $this->get_rows( $buyer_id );
+		$recipient_rows = $this->get_rows( $recipient_id );
+
+		$this->assertSame( array( $attendee_ids[1] ), array_keys( $buyer_rows ) );
+		$this->assertArrayHasKey( 'access_link', $buyer_rows[ $attendee_ids[1] ] );
+		$this->assertSame( array( $attendee_ids[0] ), array_keys( $recipient_rows ) );
+		$this->assertArrayNotHasKey( 'access_link', $recipient_rows[ $attendee_ids[0] ] );
+	}
+
+	/**
 	 * An organizer refunding an order should update the buyer's rows, not look for rows of their own.
 	 */
 	public function test_refund_by_another_user_updates_the_holders_rows() {
@@ -274,10 +302,16 @@ class Test_Camptix_Profile_Tickets extends \WP_UnitTestCase {
 
 		$buyer_id = self::factory()->user->create( array( 'user_login' => 'buyer' ) );
 
-		list( $payment_token ) = $this->create_order( 'buyer' );
+		list( $payment_token, $attendee_ids ) = $this->create_order( 'buyer', 2 );
 		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, array(), false );
 
 		$this->assertSame( array(), get_user_meta( $buyer_id, USER_META_KEY, false ) );
+
+		// Nor should it leave anything behind on the attendees.
+		foreach ( $attendee_ids as $attendee_id ) {
+			$this->assertSame( '', get_post_meta( $attendee_id, 'tix_profile_buyer', true ) );
+			$this->assertSame( '', get_post_meta( $attendee_id, 'tix_profile_user_id', true ) );
+		}
 	}
 
 	/**

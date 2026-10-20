@@ -23,6 +23,12 @@ const USER_META_KEY = 'wordcamp_ticket';
  */
 const HOLDER_META_KEY = 'tix_profile_user_id';
 
+/*
+ * Attendee meta recording who bought the ticket, taken the first time it's synced. The order only says who the
+ * buyer is through its first attendee, which stops being true once the buyer gives that ticket to someone else.
+ */
+const BUYER_META_KEY = 'tix_profile_buyer';
+
 add_action( 'transition_post_status', __NAMESPACE__ . '\sync_on_status_change', 10, 3 );
 add_action( 'added_post_meta',        __NAMESPACE__ . '\sync_on_username_change', 10, 3 );
 add_action( 'updated_post_meta',      __NAMESPACE__ . '\sync_on_username_change', 10, 3 );
@@ -92,15 +98,23 @@ function remove_on_delete( $post_id, $post ) {
  * @param WP_Post $attendee
  */
 function sync_ticket( WP_Post $attendee ) {
+	// Without Require Login, tickets aren't tied to accounts. Sites can opt out with `camptix_skip_require_login`.
+	if ( ! class_exists( 'CampTix_Require_Login' ) ) {
+		return;
+	}
+
 	$holder_id = (int) get_post_meta( $attendee->ID, HOLDER_META_KEY, true );
 
-	// A trashed ticket leaves the profile. Core restores it as a draft, so it comes back once it's published again.
-	$new_user_id = 'trash' === $attendee->post_status ? 0 : get_ticket_holder_id( $attendee );
-
-	// Only tickets that were bought, or are awaiting payment, belong on a profile; not abandoned checkouts.
+	/*
+	 * Only tickets that were bought, or are awaiting payment, belong on a profile; not abandoned checkouts. This
+	 * has to come first, because checkout saves the order's attendees one at a time, so the buyer isn't known yet.
+	 */
 	if ( ! $holder_id && ! in_array( $attendee->post_status, array( 'publish', 'pending' ), true ) ) {
 		return;
 	}
+
+	// A trashed ticket leaves the profile. Core restores it as a draft, so it comes back once it's published again.
+	$new_user_id = 'trash' === $attendee->post_status ? 0 : get_ticket_holder_id( $attendee );
 
 	if ( $holder_id && $holder_id !== $new_user_id ) {
 		remove_row( $holder_id, $attendee->ID );
@@ -148,7 +162,8 @@ function get_ticket_holder_id( WP_Post $attendee ) {
  * Get the username of the person who bought a ticket.
  *
  * `CampTix_Require_Login` stamps the buyer on the first attendee of the order: in `tix_buyer_username` when
- * the buyer didn't know who would use that ticket, and in `tix_username` otherwise.
+ * the buyer didn't know who would use that ticket, and in `tix_username` otherwise. That's read once and kept
+ * on the attendee, because the first attendee's `tix_username` changes if the buyer transfers that ticket.
  *
  * @param WP_Post $attendee
  *
@@ -157,6 +172,12 @@ function get_ticket_holder_id( WP_Post $attendee ) {
 function get_buyer_username( WP_Post $attendee ) {
 	/** @var \CampTix_Plugin $camptix */
 	global $camptix;
+
+	$username = get_post_meta( $attendee->ID, BUYER_META_KEY, true );
+
+	if ( $username ) {
+		return $username;
+	}
 
 	$payment_token = get_post_meta( $attendee->ID, 'tix_payment_token', true );
 	$order_ids     = $payment_token ? wp_list_pluck( $camptix->get_attendees_from_payment_token( $payment_token ), 'ID' ) : array();
@@ -167,7 +188,13 @@ function get_buyer_username( WP_Post $attendee ) {
 		$username = get_post_meta( $first_id, 'tix_username', true );
 	}
 
-	return CampTix_Require_Login::UNCONFIRMED_USERNAME === $username ? '' : (string) $username;
+	if ( ! $username || CampTix_Require_Login::UNCONFIRMED_USERNAME === $username ) {
+		return '';
+	}
+
+	update_post_meta( $attendee->ID, BUYER_META_KEY, $username );
+
+	return $username;
 }
 
 /**

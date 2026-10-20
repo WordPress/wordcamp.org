@@ -1,5 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
+const { siteOrigin } = require( './utils/env' );
 
 /**
  * The full RSVP state machine, and the gate in front of it.
@@ -142,7 +143,7 @@ test.describe( 'RSVP lifecycle', () => {
 		// this confirms it holds over real HTTP, unauthenticated, against a
 		// running site rather than a dispatched request.
 		const response = await request.post(
-			`https://events.wordpress.test/group/sunshine-coast-qld/wp-json/wporg-groups/v1/event/${ eventId }/rsvp`,
+			`${ siteOrigin() }/group/sunshine-coast-qld/wp-json/wporg-groups/v1/event/${ eventId }/rsvp`,
 			{ data: { status: 'attending' } }
 		);
 

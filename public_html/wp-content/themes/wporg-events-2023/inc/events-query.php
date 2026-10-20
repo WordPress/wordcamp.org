@@ -196,13 +196,11 @@ function get_query_var_facets(): array {
 		$facets['search'] = get_query_var( 's', '' );
 
 	} else {
-		$facets = array(
-			'search'  => (string) get_query_var( 's', '' ),
-			'type'    => (array) get_query_var( 'event_type', array() ),
-			'format'  => (array) get_query_var( 'format_type', array() ),
-			'month'   => (array) get_query_var( 'month', array() ),
-			'country' => (array) get_query_var( 'country', array() ),
-		);
+		$facets = array( 'search' => (string) get_query_var( 's', '' ) );
+
+		foreach ( FACET_QUERY_VARS as $facet => $query_var ) {
+			$facets[ $facet ] = (array) get_query_var( $query_var, array() );
+		}
 	}
 
 	$facets = array_filter( $facets ); // Remove empty values.
@@ -232,12 +230,7 @@ function add_query_vars( array $query_vars ): array {
 
 	// These are the individual query vars that will be populated from `event_facets`.
 	// @see `set_query_vars_from_pretty_url()`.
-	$query_vars[] = 'format_type';
-	$query_vars[] = 'event_type';
-	$query_vars[] = 'month';
-	$query_vars[] = 'country';
-
-	return $query_vars;
+	return array_merge( $query_vars, array_values( FACET_QUERY_VARS ) );
 }
 
 /**
@@ -249,13 +242,12 @@ function add_query_vars( array $query_vars ): array {
 function set_query_vars_from_pretty_url( WP $wp ): void {
 	$facets = get_query_var_facets();
 
-	foreach ( $facets as $key => $value ) {
-		if ( ! isset( FACET_QUERY_VARS[ $key ] ) ) {
-			continue;
+	// Only the mapped facets are set, so `search` and anything else in `$facets` never reach the main query.
+	foreach ( FACET_QUERY_VARS as $facet => $query_var ) {
+		if ( isset( $facets[ $facet ] ) ) {
+			// Set it on `WP` because this is the main request. `WP_Query` will populate itself from this.
+			$wp->set_query_var( $query_var, $facets[ $facet ] );
 		}
-
-		// Set it on `WP` because this is the main request. `WP_Query` will populate itself from this.
-		$wp->set_query_var( FACET_QUERY_VARS[ $key ], $value );
 	}
 }
 
@@ -473,9 +465,7 @@ function print_feed_link(): void {
 function inject_other_filters( string $key ): void {
 	global $wp_query;
 
-	$query_vars = array( 'event_type', 'format_type', 'month', 'country' );
-
-	foreach ( $query_vars as $query_var ) {
+	foreach ( FACET_QUERY_VARS as $query_var ) {
 		if ( $key === $query_var ) {
 			continue;
 		}

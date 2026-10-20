@@ -192,7 +192,8 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 	 * @param int    $post_id
 	 */
 	public function record_log( $message, $post_id ) {
-		$this->logs[ $post_id ][] = $message;
+		// Some log lines (e.g. a failed lock) carry no attendee; key those under 0.
+		$this->logs[ (int) $post_id ][] = $message;
 	}
 
 	/**
@@ -626,7 +627,6 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		$lock->setValue( $camptix, 'test-lock' );
 
 		$get_refundable = new ReflectionMethod( $camptix, 'get_refundable_amount' );
-		$get_refundable->setAccessible( true );
 		$refundable = $get_refundable->invoke( $camptix, 25, array( $first ) );
 
 		$lock->setValue( $camptix, '' );
@@ -647,7 +647,6 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
 
 		$method = new ReflectionMethod( $camptix, 'get_order_active_attendees' );
-		$method->setAccessible( true );
 
 		// Prime the query cache with both tickets active (lock not held → cached).
 		$method->invoke( $camptix, 'tokpartial' );

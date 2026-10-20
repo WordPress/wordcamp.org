@@ -106,6 +106,36 @@ final class Test_Rest_Api extends WP_UnitTestCase {
 		$this->assertSame( 'attending', $data['status'] );
 	}
 
+	/** Refuses an RSVP, and saves nothing, while RSVP is switched off. */
+	public function test_update_rsvp_rejects_an_event_with_rsvp_disabled(): void {
+		$post_id    = $this->create_future_weekly_series();
+		$occurrence = Occurrences::all( $post_id, 'upcoming' )[0];
+		$user_id    = self::factory()->user->create();
+		wp_set_current_user( $user_id );
+
+		$disable_rsvp = static function ( $value ) {
+			$value              = is_array( $value ) ? $value : array();
+			$value['rsvp_mode'] = 'disabled';
+
+			return $value;
+		};
+		add_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+
+		$request = new WP_REST_Request( 'POST', "/gpre/v1/event/{$occurrence->recurrence_id}/rsvp" );
+		$request->set_param( 'post_id', $post_id );
+		$request->set_param( 'status', 'attending' );
+
+		try {
+			$response = rest_do_request( $request );
+		} finally {
+			remove_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+		}
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertFalse( $response->get_data()['success'] );
+		$this->assertSame( 'no_status', ( new \GatherPress\Core\Rsvp\Rsvp( $post_id ) )->get( $user_id )['status'] ?? 'no_status' );
+	}
+
 	/** Rejects an RSVP write once the event is no longer published. */
 	public function test_update_rsvp_rejects_an_unpublished_event(): void {
 		$post_id    = $this->create_future_weekly_series();

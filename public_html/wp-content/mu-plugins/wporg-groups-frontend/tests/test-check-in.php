@@ -381,6 +381,41 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	}
 
 	/**
+	 * With RSVP switched off, check-in refuses the event outright: no list,
+	 * and no walk-in RSVP saved behind the setting's back.
+	 */
+	public function test_rsvp_disabled_event_is_refused() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+		$walk_in_id           = self::factory()->user->create();
+
+		// `pre_option_*`, like the RSVP route's test: the groups tweaks
+		// short-circuit the stored settings, so the mode is injected there.
+		$disable_rsvp = static function ( $value ) {
+			$value              = is_array( $value ) ? $value : array();
+			$value['rsvp_mode'] = 'disabled';
+
+			return $value;
+		};
+		add_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+
+		try {
+			$list    = rest_do_request( new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" ) );
+			$toggle  = $this->toggle( $event_id, $comment_id, true );
+			$walk_in = $this->walk_in( $event_id, get_userdata( $walk_in_id )->user_login );
+		} finally {
+			remove_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+		}
+
+		foreach ( array( $list, $toggle, $walk_in ) as $response ) {
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertSame( 'wporg_groups_rsvp_unavailable', $response->get_data()['code'] );
+		}
+		$this->assertFalse( is_checked_in( $comment_id ) );
+		$this->assertSame( 'no_status', ( new Rsvp( $event_id ) )->get( $walk_in_id )['status'] ?? 'no_status' );
+	}
+
+	/**
 	 * A walk-in found by username gets an RSVP and is checked in, without
 	 * being made a member of the group.
 	 */

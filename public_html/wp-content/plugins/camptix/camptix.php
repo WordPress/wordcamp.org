@@ -6034,6 +6034,14 @@ class CampTix_Plugin {
 		$refunded = 0;
 
 		foreach ( $refunded_attendee_ids as $attendee_id ) {
+			// Under the refund lock, read each refund fresh. form_refund_request() has already read
+			// every attendee's meta in its pre-lock loop, which primed the whole meta array for the
+			// post, so a plain get_post_meta() here would return the pre-refund tix_refund_amount
+			// (empty) for a ticket another request just refunded, and the amount left would be wrong.
+			if ( $this->refund_lock_name ) {
+				wp_cache_delete( $attendee_id, 'post_meta' );
+			}
+
 			$refunded += (float) get_post_meta( $attendee_id, 'tix_refund_amount', true );
 		}
 

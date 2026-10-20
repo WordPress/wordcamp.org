@@ -1040,14 +1040,16 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * @param string $payment_token
 	 * @param float  $amount            The amount to refund, in the currency's base unit.
 	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
+	 * @param string $idempotency_key   Optional. A stable key for this refund, sent to PayPal as
+	 *                                  MSGSUBID so a repeated request is not refunded twice.
 	 *
 	 * @return array
 	 */
-	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder, $idempotency_key = '' ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$result = $this->send_refund_request( $payment_token, $amount );
+		$result = $this->send_refund_request( $payment_token, $amount, $idempotency_key );
 
 		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED != $result['status'] ) {
 			$error_code    = $result['refund_transaction_details']['L_ERRORCODE0'] ?? 0;
@@ -1078,10 +1080,12 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * @param string     $payment_token
 	 * @param float|null $amount Optional. The amount to refund, in the currency's base unit.
 	 *                           Null refunds the whole transaction.
+	 * @param string     $idempotency_key Optional. Sent to PayPal as MSGSUBID so a repeated request
+	 *                                    for the same refund is not processed twice.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token, $amount = null ) {
+	public function send_refund_request( $payment_token, $amount = null, $idempotency_key = '' ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -1106,6 +1110,12 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$payload['REFUNDTYPE']   = 'Partial';
 			$payload['AMT']          = number_format( $amount, $decimals, '.', '' );
 			$payload['CURRENCYCODE'] = $currency;
+		}
+
+		// PayPal treats two refunds with the same MSGSUBID as one, returning the first instead of
+		// refunding again. Max 38 characters, so pass a hex digest rather than the raw key.
+		if ( $idempotency_key ) {
+			$payload['MSGSUBID'] = substr( md5( $idempotency_key ), 0, 38 );
 		}
 		$response = $this->request( $payload );
 

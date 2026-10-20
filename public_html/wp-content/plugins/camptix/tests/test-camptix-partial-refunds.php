@@ -77,6 +77,7 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 			);
 			public $status             = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
 			public $partial_refunds    = array();
+			public $partial_refund_keys = array();
 			public $full_refunds       = array();
 
 			/**
@@ -94,11 +95,13 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 			 * @param string $payment_token
 			 * @param float  $amount
 			 * @param bool   $refunds_remainder
+			 * @param string $idempotency_key
 			 *
 			 * @return array
 			 */
-			public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
-				$this->partial_refunds[] = array( $amount, $refunds_remainder );
+			public function payment_refund_partial( $payment_token, $amount, $refunds_remainder, $idempotency_key = '' ) {
+				$this->partial_refunds[]     = array( $amount, $refunds_remainder );
+				$this->partial_refund_keys[] = $idempotency_key;
 
 				return array(
 					'status'                     => $this->status,
@@ -518,5 +521,76 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		$this->assertSame( 're_1', get_post_meta( $first, 'tix_refund_transaction_id', true ) );
 		$this->assertSame( 're_later', get_post_meta( $second, 'tix_refund_transaction_id', true ) );
 		$this->assertSame( 'refund', get_post_status( $second ) );
+	}
+
+	/**
+	 * A request whose selected ticket was already refunded by an earlier request refunds
+	 * nothing and makes no gateway call. This is the window two parallel requests for the same
+	 * ticket used to race through: both read it as paid, both refunded it, and the order was
+	 * refunded more than once while its other tickets stayed valid. The refund now re-reads the
+	 * order's status before acting, so the second request sees the first's refund.
+	 */
+	public function test_a_stale_selection_of_an_already_refunded_ticket_refunds_nothing() {
+		list( $first, $second, $third ) = $this->make_order( array( 10, 15, 20 ) );
+
+		$this->refund_form( 'tokpartial', array( $first ) );
+		$this->assertCount( 1, $this->gateway->partial_refunds );
+
+		// A second request still naming the ticket the first one just refunded.
+		$output = $this->refund_form( 'tokpartial', array( $first ) );
+
+		$this->assertStringContainsString( 'Please select at least one ticket to refund.', $output );
+		$this->assertCount( 1, $this->gateway->partial_refunds, 'The already-refunded ticket must not be refunded again.' );
+		$this->assertSame( 'refund', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+		$this->assertSame( 'publish', get_post_status( $third ) );
+		$this->assertEquals( 10, get_post_meta( $first, 'tix_refund_amount', true ) );
+	}
+
+	/**
+	 * While another request holds the order's refund lock, a refund is refused rather than
+	 * reading the tickets as still paid and refunding them again.
+	 */
+	public function test_a_refund_is_refused_while_the_order_is_locked() {
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+
+		// Don't wait on the lock in the test; a parallel request would.
+		add_filter( 'camptix_refund_lock_timeout', '__return_zero' );
+
+		// Hold the order's lock on another connection, the way a parallel request would. A second
+		// connection is the point of the test, so $wpdb (one connection) can't stand in here.
+		$held = new mysqli( DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- see above.
+		$name = sprintf( 'camptix_refund_%d_%s', get_current_blog_id(), 'tokpartial' );
+		$held->query( "SELECT GET_LOCK('" . $held->real_escape_string( $name ) . "', 0)" );
+
+		$output = $this->refund_form( 'tokpartial', array( $first ) );
+
+		$held->query( "SELECT RELEASE_LOCK('" . $held->real_escape_string( $name ) . "')" );
+		$held->close();
+		remove_filter( 'camptix_refund_lock_timeout', '__return_zero' );
+
+		$this->assertStringContainsString( 'Can not refund the transaction at this time.', $output );
+		$this->assertSame( array(), $this->gateway->partial_refunds );
+		$this->assertSame( 'publish', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+	}
+
+	/**
+	 * The gateway gets a key identifying the exact refund, so it can collapse a duplicate instead
+	 * of refunding twice. The same tickets and amount always produce the same key; a different set
+	 * of tickets produces a different one.
+	 */
+	public function test_partial_refund_sends_a_deterministic_idempotency_key() {
+		list( $first, $second, $third ) = $this->make_order( array( 10, 15, 20 ) );
+
+		$this->refund_form( 'tokpartial', array( $second ) );
+
+		$expected = md5( 'tix-partial-refund|tokpartial|' . $second . '|15' );
+		$this->assertSame( array( $expected ), $this->gateway->partial_refund_keys );
+
+		// A refund of a different ticket sends a different key.
+		$this->refund_form( 'tokpartial', array( $third ) );
+		$this->assertNotSame( $expected, $this->gateway->partial_refund_keys[1] );
+		$this->assertSame( md5( 'tix-partial-refund|tokpartial|' . $third . '|20' ), $this->gateway->partial_refund_keys[1] );
 	}
 }

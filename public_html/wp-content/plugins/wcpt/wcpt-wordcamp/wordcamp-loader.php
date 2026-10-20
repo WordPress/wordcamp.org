@@ -24,6 +24,7 @@ class WordCamp_Loader extends Event_Loader {
 		parent::__construct();
 		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date' ), 20 );
 		add_filter( 'posts_where',                     array( $this, 'hide_unscheduled_cancellations' ), 10, 2 );
+		add_filter( 'posts_where',                     array( $this, 'limit_campus_connect_planned' ), 10, 2 );
 		add_filter( 'wordcamp_rewrite_rules',          array( $this, 'wordcamp_rewrite_rules'            ) );
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
@@ -501,6 +502,70 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-fill-list',
 			'wcpt-needs-schedule',
 		);
+	}
+
+	/**
+	 * Statuses in which a Campus Connect event is planned, beyond the regular pre-planning ones.
+	 *
+	 * A Campus Connect application goes from Approved For Pre-Planning straight to WordCamp
+	 * Scheduled, and never enters `get_pre_planning_post_statuses()` (#1714). For a regular camp
+	 * the same status is "Approved for Pre-Planning Pending Agreement", which isn't planned yet,
+	 * so these count only for Campus Connect posts. See `limit_campus_connect_planned()`.
+	 *
+	 * @return array Post status names.
+	 */
+	public static function get_campus_connect_planned_post_statuses() {
+		return array(
+			'wcpt-approved-pre-pl',
+		);
+	}
+
+	/**
+	 * Statuses for Central's Planned list, Campus Connect events included.
+	 *
+	 * Query these with `wcpt_campus_connect_planned` set, or regular camps that are still
+	 * waiting on their agreement are listed too.
+	 *
+	 * @return array Post status names.
+	 */
+	public static function get_planned_post_statuses() {
+		return array_merge(
+			self::get_pre_planning_post_statuses(),
+			self::get_campus_connect_planned_post_statuses()
+		);
+	}
+
+	/**
+	 * Keep the Campus Connect planned statuses to Campus Connect posts.
+	 *
+	 * `post_status` is per status and this is per post, so the query decides, as in
+	 * `hide_unscheduled_cancellations()`. It only applies to a query that sets
+	 * `wcpt_campus_connect_planned`, so the wp-admin list and every other query naming the
+	 * status still see regular camps in it.
+	 *
+	 * @param string   $where
+	 * @param WP_Query $query
+	 *
+	 * @return string
+	 */
+	public function limit_campus_connect_planned( $where, $query ) {
+		global $wpdb;
+
+		if ( ! $query->get( 'wcpt_campus_connect_planned' ) ) {
+			return $where;
+		}
+
+		$statuses     = self::get_campus_connect_planned_post_statuses();
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- `$placeholders` is one `%s` per status, filled by this prepare().
+		return $where . $wpdb->prepare(
+			" AND ( {$wpdb->posts}.post_status NOT IN ( $placeholders ) OR {$wpdb->posts}.ID IN (
+				SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s
+			) )",
+			array_merge( $statuses, array( 'event_subtype', 'campusconnect' ) )
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**

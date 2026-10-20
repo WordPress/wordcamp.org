@@ -1485,6 +1485,18 @@ function hide_venue_in_protected_event_calendar( $terms, $post_id, $taxonomy ) {
 
 add_filter( 'get_the_terms', __NAMESPACE__ . '\hide_venue_in_protected_event_calendar', 10, 3 );
 
+/*
+ * Don't cache calendar responses on group sites.
+ *
+ * GatherPress 0.36.0 keeps one rendered copy of each calendar download and
+ * feed for everyone, and sends it as `Cache-Control: public`. The filter above
+ * makes that output depend on the viewer, so whoever asked first decided
+ * what everyone got: an organiser's copy handed a protected event's venue to
+ * logged-out visitors, and a visitor's copy left it out for the organiser.
+ * Zero renders every response fresh and sends it `no-cache`, as before 0.36.0.
+ */
+add_filter( 'gatherpress_calendar_max_age', '__return_zero' );
+
 /**
  * Don't advertise a password-protected event's venue feed in its page head.
  *

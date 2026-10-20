@@ -1625,6 +1625,44 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * A protected event's calendar download isn't shared between viewers.
+	 *
+	 * GatherPress 0.36.0 caches one copy per event for everyone, but the venue
+	 * gate above makes the download differ per viewer. An editor downloading
+	 * first must not hand the venue to a logged-out visitor after them.
+	 */
+	public function test_calendar_download_is_not_cached_across_viewers() {
+		global $wp_query;
+
+		$event_id = $this->create_dated_event_with_venue( 'secret-pass' );
+		$setup    = \GatherPress\Core\Calendar\Setup::get_instance();
+
+		$wp_query->queried_object    = get_post( $event_id );
+		$wp_query->queried_object_id = $event_id;
+		set_query_var( 'gatherpress_calendar', 'ical' );
+
+		try {
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			$editor_copy = $setup->get_ics_body();
+
+			wp_set_current_user( 0 );
+			$visitor_copy = $setup->get_ics_body();
+		} finally {
+			set_query_var( 'gatherpress_calendar', '' );
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+
+		$this->assertStringContainsString( 'Salty Spaces', $editor_copy );
+		$this->assertStringNotContainsString(
+			'Salty Spaces',
+			$visitor_copy,
+			'A logged-out visitor was served the editor\'s cached download, venue included.'
+		);
+		$this->assertSame( 0, \GatherPress\Core\Calendar\Cache::get_instance()->get_max_age() );
+	}
+
+	/**
 	 * While the head prints, a protected event's term lookup leaves out its
 	 * venue, so GatherPress doesn't link the venue's iCal feed (titled with the
 	 * venue's name). A public event keeps it, and outside the head nothing

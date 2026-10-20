@@ -1326,17 +1326,14 @@ class Test_Meetup_Import extends Groups_TestCase {
 				\WordCamp\Groups\Frontend\Group_Location\save_location( array( 'type' => 'online' ) );
 				update_option( 'site_icon', 12345 );
 
-				// The organizer edited the About page a while after it was seeded.
-				global $wpdb;
-				$wpdb->update(
-					$wpdb->posts,
+				// The organizer edited the About page. Saving an unpublished
+				// draft resets its post_date too, so only the revision tells.
+				wp_update_post(
 					array(
-						'post_content'  => 'Our own story.',
-						'post_modified' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
-					),
-					array( 'ID' => $about_id )
+						'ID'           => $about_id,
+						'post_content' => 'Our own story.',
+					)
 				);
-				clean_post_cache( $about_id );
 			}
 		);
 
@@ -2164,29 +2161,66 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Every admin-post handler checks the capability before anything else.
+	 * Every admin-post handler checks the capability.
 	 *
 	 * @dataProvider data_handlers
 	 *
 	 * @param string $handler Handler function name.
+	 * @param string $action  Its nonce action.
 	 */
-	public function test_handlers_require_manage_sites( string $handler ) {
+	public function test_handlers_require_manage_sites( string $handler, string $action ) {
 		$user_id = self::factory()->user->create();
 		add_user_to_blog( $this->site_id, $user_id, 'administrator' );
 		wp_set_current_user( $user_id );
 
-		$this->expectException( WPDieException::class );
-		call_user_func( 'WordCamp\Groups\Meetup_Import\\' . $handler );
+		// A valid nonce, so the capability check is the only thing that can
+		// stop the request; a redirect means it got past it.
+		$_REQUEST['_wpnonce'] = wp_create_nonce( $action );
+
+		try {
+			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\\' . $handler );
+			$this->fail( "The handler redirected to $location instead of refusing." );
+		} catch ( WPDieException $e ) {
+			$this->assertStringContainsString( 'not allowed', $e->getMessage() );
+		} finally {
+			unset( $_REQUEST['_wpnonce'] );
+		}
 	}
 
 	/**
-	 * Inputs for `test_handlers_require_manage_sites()`.
+	 * Every admin-post handler refuses a request without a valid nonce, even from a network admin.
+	 *
+	 * @dataProvider data_handlers
+	 *
+	 * @param string $handler Handler function name.
+	 * @param string $action  Its nonce action.
+	 */
+	public function test_handlers_require_nonce( string $handler, string $action ) {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		$_REQUEST['_wpnonce'] = wp_create_nonce( 'some-other-action' );
+
+		try {
+			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\\' . $handler );
+			$this->fail( "The handler redirected to $location without a valid nonce." );
+		} catch ( WPDieException $e ) {
+			$this->assertStringNotContainsString( 'not allowed', $e->getMessage() );
+		} finally {
+			unset( $GLOBALS['super_admins'], $_REQUEST['_wpnonce'] );
+		}
+
+		$this->assertSame( array(), Meetup_Import\get_job() );
+	}
+
+	/**
+	 * Inputs for the handler tests: function, and its nonce action.
 	 */
 	public function data_handlers(): array {
 		return array(
-			'start'   => array( 'handle_start' ),
-			'confirm' => array( 'handle_confirm' ),
-			'cancel'  => array( 'handle_cancel' ),
+			'start'   => array( 'handle_start', Meetup_Import\START_ACTION ),
+			'confirm' => array( 'handle_confirm', Meetup_Import\CONFIRM_ACTION ),
+			'cancel'  => array( 'handle_cancel', Meetup_Import\CANCEL_ACTION ),
 		);
 	}
 
@@ -2407,5 +2441,176 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertTrue( Meetup_Import\save_job( $job ) );
 		$this->assertSame( 'failed', Meetup_Import\get_job()['status'] );
+	}
+
+	/**
+	 * The About page the import filled is left alone by the next import.
+	 */
+	public function test_rerun_keeps_imported_about_page() {
+		$about_id = $this->seed_about_page();
+		$group    = Meetup_Import\normalize_group( $this->raw_group() );
+
+		$this->assertSame( 'set', Meetup_Import\import_group( $this->site_id, $group )['about'] );
+
+		$changed = Meetup_Import\normalize_group( $this->raw_group( array( 'description' => 'A different description.' ) ) );
+		$this->assertSame( 'kept', Meetup_Import\import_group( $this->site_id, $changed )['about'] );
+
+		$this->assertStringNotContainsString(
+			'A different description.',
+			$this->on_site(
+				static function () use ( $about_id ) {
+					return get_post( $about_id )->post_content;
+				}
+			)
+		);
+	}
+
+	/**
+	 * An organizer the group demoted after an import isn't promoted back by the next one.
+	 */
+	public function test_demoted_organizer_stays_demoted() {
+		$user_id = self::factory()->user->create( array( 'user_email' => 'coorg@example.org' ) );
+		$leaders = array(
+			Meetup_Import\normalize_leader(
+				array(
+					'metadata' => array( 'role' => 'COORGANIZER' ),
+					'node'     => array(
+						'id'    => 'l1',
+						'email' => 'coorg@example.org',
+					),
+				)
+			),
+		);
+
+		$this->assertSame( 1, Meetup_Import\import_leaders( $this->site_id, $leaders )['added'] );
+
+		( new \WP_User( $user_id, '', $this->site_id ) )->set_role( 'subscriber' );
+
+		$counts = Meetup_Import\import_leaders( $this->site_id, $leaders );
+
+		$this->assertSame( 1, $counts['kept'] );
+		$this->assertSame( array( 'subscriber' ), ( new \WP_User( $user_id, '', $this->site_id ) )->roles );
+	}
+
+	/**
+	 * An imported event belongs to its matched host, who can then edit it.
+	 */
+	public function test_event_author_is_matched_host() {
+		$host = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		add_user_to_blog( $this->site_id, $host, 'author' );
+
+		$event = $this->raw_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'host@example.org' ) ) ) ) );
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $event ) ), true );
+
+		$post = $this->find_event( '315889305' );
+		$this->assertSame( $host, (int) $post->post_author );
+
+		$this->on_site(
+			function () use ( $post, $host ) {
+				wp_set_current_user( $host );
+				$this->assertTrue( current_user_can( 'edit_post', $post->ID ) );
+				wp_set_current_user( 0 );
+			}
+		);
+	}
+
+	/**
+	 * Without a matched host, an imported event belongs to the site's lead organizer, not to nobody.
+	 */
+	public function test_event_author_falls_back_to_lead_organizer() {
+		$lead = self::factory()->user->create();
+		add_user_to_blog( $this->site_id, $lead, 'administrator' );
+
+		wp_set_current_user( 0 );
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$author = (int) $this->find_event( '315889305' )->post_author;
+
+		$this->assertNotSame( 0, $author );
+		$this->assertContains( 'administrator', ( new \WP_User( $author, '', $this->site_id ) )->roles );
+	}
+
+	/**
+	 * A host who's already an administrator keeps their role.
+	 */
+	public function test_admin_host_keeps_role() {
+		$admin = self::factory()->user->create( array( 'user_email' => 'admin-host@example.org' ) );
+		add_user_to_blog( $this->site_id, $admin, 'administrator' );
+
+		$event = $this->raw_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'admin-host@example.org' ) ) ) ) );
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $event ) ), true );
+
+		$this->assertSame( array( 'administrator' ), ( new \WP_User( $admin, '', $this->site_id ) )->roles );
+		$this->assertSame( '', get_user_meta( $admin, \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
+	}
+
+	/**
+	 * A past event is dated when it happened, not when it was imported.
+	 */
+	public function test_past_event_is_dated_when_it_happened() {
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_past_event() ) ) );
+
+		$post = $this->find_event( '300000001' );
+
+		// 2025-03-12 18:00 in New York (EDT, UTC-4).
+		$this->assertSame( '2025-03-12 22:00:00', $post->post_date_gmt );
+		$this->assertSame( 'publish', $post->post_status );
+	}
+
+	/**
+	 * A batch that keeps crashing is given up on, rather than retried forever.
+	 */
+	public function test_job_gives_up_after_repeated_failures() {
+		$fetches = 0;
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch',
+			static function () use ( &$fetches ) {
+				++$fetches;
+				throw new \Exception( 'Boom' );
+			}
+		);
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		$this->run_batches();
+
+		$job = Meetup_Import\get_job();
+
+		$this->assertSame( 'failed', $job['status'] );
+		$this->assertStringContainsString( 'Gave up after 3 failed attempts', $job['error'] );
+		$this->assertSame( Meetup_Import\MAX_ATTEMPTS, $fetches );
+		$this->assertFalse( wp_next_scheduled( Meetup_Import\CRON_HOOK ) );
+	}
+
+	/**
+	 * Progress resets the count: only failures at the same point add up.
+	 */
+	public function test_attempts_reset_after_progress() {
+		$this->fake_events( $this->many_events( 5 ) );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+
+		$this->assertSame( 0, Meetup_Import\get_job()['attempts'] );
+
+		Meetup_Import\confirm_job( $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( 'done', Meetup_Import\get_job()['status'] );
+	}
+
+	/**
+	 * Cron runs while a preview waits for a person don't count against it.
+	 */
+	public function test_waiting_preview_is_not_failed() {
+		$this->fake_events( array() );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch();
+
+		for ( $i = 0; $i < Meetup_Import\MAX_ATTEMPTS + 2; $i++ ) {
+			Meetup_Import\process_batch();
+		}
+
+		$this->assertSame( 'ready', Meetup_Import\get_job()['status'] );
 	}
 }

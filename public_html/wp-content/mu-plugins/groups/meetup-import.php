@@ -158,6 +158,22 @@ const MEMBERS_OPTION = 'wporg_meetup_imported_member_ids';
 const IMPORTED_USERS_OPTION = 'wporg_meetup_imported_user_ids';
 
 /**
+ * Site option listing the users an import has already handled as organizers.
+ *
+ * Their role is the group's to change from then on: if the group demotes
+ * one, a later import mustn't promote them back.
+ */
+const IMPORTED_LEADERS_OPTION = 'wporg_meetup_imported_leader_ids';
+
+/**
+ * How many times a job may fail at the same point before it's given up on.
+ *
+ * Each retry re-runs the batch, and a fetch retry calls Meetup again on the
+ * shared connection, so a batch that keeps crashing mustn't loop forever.
+ */
+const MAX_ATTEMPTS = 3;
+
+/**
  * Option row that marks an import batch as running, and how long it may hold it.
  *
  * One batch at a time, across the whole network: events are looked up and
@@ -403,7 +419,9 @@ function cancel_job(): void {
  * run -- everything a batch writes is safe to write twice.
  */
 function process_batch(): void {
-	if ( ! is_job_active( get_job() ) ) {
+	// `ready` is waiting on a person, not on cron: nothing to do, and nothing
+	// to count against it.
+	if ( ! in_array( get_job()['status'] ?? '', array( 'fetching', 'importing' ), true ) ) {
 		return;
 	}
 
@@ -416,6 +434,33 @@ function process_batch(): void {
 
 	try {
 		$job = get_job();
+
+		// Counted, and saved, before the batch runs, so a batch that kills the
+		// process is still charged for it. Reset whenever a batch makes progress.
+		$job['attempts'] = ( $job['attempts'] ?? 0 ) + 1;
+
+		if ( $job['attempts'] > MAX_ATTEMPTS ) {
+			fail_job(
+				$job,
+				new WP_Error(
+					'job_stuck',
+					sprintf(
+						/* translators: 1: Number of attempts, 2: What the import was doing. */
+						__( 'Gave up after %1$d failed attempts while %2$s. Anything already written stays; preview again to retry.', 'wordcamporg' ),
+						MAX_ATTEMPTS,
+						'fetching' === $job['status'] ? __( 'fetching from Meetup', 'wordcamporg' ) : sprintf(
+							/* translators: %s: Import step, e.g. "events". */
+							__( 'importing %s', 'wordcamporg' ),
+							$job['cursor']['step'] ?? ''
+						)
+					)
+				)
+			);
+
+			return;
+		}
+
+		save_job( $job );
 
 		if ( 'fetching' === ( $job['status'] ?? '' ) ) {
 			run_fetch( $job );
@@ -489,7 +534,8 @@ function run_fetch( array $job ): void {
 		'member_counts' => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'] ) : null,
 	);
 
-	$job['status'] = 'ready';
+	$job['status']   = 'ready';
+	$job['attempts'] = 0;
 
 	save_job( $job );
 }
@@ -579,6 +625,8 @@ function run_import_batch( array $job ): void {
 			);
 		}
 	}
+
+	$job['attempts'] = 0;
 
 	save_job( $job );
 }
@@ -1842,6 +1890,13 @@ function import_event( array $event, bool $match_people = false ): array {
 		'post_content' => $event['description'],
 	);
 
+	// Cron runs as nobody, so the author has to be set, or no Event Organizer
+	// could edit the event. Existing events keep theirs, unless an earlier
+	// import left it unset.
+	if ( ! $existing || ! (int) $existing->post_author ) {
+		$post_args['post_author'] = event_author( $event, $match_people );
+	}
+
 	if ( $existing ) {
 		$post_args['ID'] = $existing->ID;
 		$post_id         = wp_update_post( wp_slash( $post_args ), true );
@@ -1921,10 +1976,19 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $publish ) {
+		// Dated when it happened, not when it was imported, so feeds and
+		// archives don't present years of history as new.
+		$happened_gmt = ( new DateTimeImmutable( $event['start'], new DateTimeZone( $event['timezone'] ) ) )
+			->setTimezone( new DateTimeZone( 'UTC' ) )
+			->format( 'Y-m-d H:i:s' );
+
 		$published = wp_update_post(
 			array(
-				'ID'          => $post_id,
-				'post_status' => 'publish',
+				'ID'            => $post_id,
+				'post_status'   => 'publish',
+				'post_date'     => get_date_from_gmt( $happened_gmt ),
+				'post_date_gmt' => $happened_gmt,
+				'edit_date'     => true,
 			),
 			true
 		);
@@ -1950,6 +2014,41 @@ function import_event( array $event, bool $match_people = false ): array {
 		'post_id' => $post_id,
 		'rsvps'   => $rsvps,
 	);
+}
+
+/**
+ * Who an imported event should belong to, on the current site.
+ *
+ * Its first host with a matching account, when people are being matched --
+ * added to the group if need be, as `import_hosts()` would -- so an Event
+ * Organizer hosting it can edit it. Otherwise the site's lead organizer.
+ *
+ * @param array $event        Normalized event.
+ * @param bool  $match_people Whether people are being matched by email.
+ * @return int User ID, or 0 if there's nobody suitable.
+ */
+function event_author( array $event, bool $match_people ): int {
+	if ( $match_people ) {
+		foreach ( $event['hosts'] as $email ) {
+			$user = get_user_by( 'email', $email );
+
+			if ( $user && ensure_member( get_current_blog_id(), (int) $user->ID ) ) {
+				return (int) $user->ID;
+			}
+		}
+	}
+
+	$admins = get_users(
+		array(
+			'blog_id' => get_current_blog_id(),
+			'role'    => 'administrator',
+			'orderby' => 'ID',
+			'number'  => 1,
+			'fields'  => 'ID',
+		)
+	);
+
+	return $admins ? (int) $admins[0] : 0;
 }
 
 /**
@@ -2020,7 +2119,9 @@ function import_group( int $site_id, array $group ) {
  * - Location: the same site meta the group settings tab writes, validated the
  *   same way.
  * - About page: only the draft seeded by Add Group Site, and only while it's
- *   untouched (never modified since it was created).
+ *   untouched: any revision means someone (an organizer, or an earlier
+ *   import) has saved it since. Its dates can't tell: saving an unpublished
+ *   draft resets its `post_date` too.
  * - Site icon: Meetup's key group photo, downloaded like an event photo.
  *
  * @param array $group Normalized group.
@@ -2058,7 +2159,7 @@ function apply_group_details( array $group, bool $write ): array {
 
 	if ( '' === $group['description'] ) {
 		$results['about'] = 'missing';
-	} elseif ( ! $about || 'draft' !== $about->post_status || $about->post_modified !== $about->post_date ) {
+	} elseif ( ! $about || 'draft' !== $about->post_status || wp_get_post_revisions( $about->ID ) ) {
 		$results['about'] = 'kept';
 	} else {
 		if ( $write ) {
@@ -2197,6 +2298,7 @@ function role_rank( int $user_id, int $site_id ): int {
  */
 function classify_leaders( int $site_id, array $leaders ): array {
 	$classified = array();
+	$handled    = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array() ) );
 
 	foreach ( $leaders as $leader ) {
 		if ( ! $leader['role'] ) {
@@ -2212,6 +2314,9 @@ function classify_leaders( int $site_id, array $leaders ): array {
 			$outcome = 'unmatched';
 		} elseif ( has_left_group( $site_id, $user_id ) ) {
 			$outcome = 'left';
+		} elseif ( in_array( $user_id, $handled, true ) ) {
+			// Handled by an earlier import; their role is the group's now.
+			$outcome = 'kept';
 		} elseif ( ! is_user_member_of_blog( $user_id, $site_id ) ) {
 			$outcome = 'added';
 		} elseif ( role_rank( $user_id, $site_id ) < ROLE_RANK[ $leader['role'] ] ) {
@@ -2242,7 +2347,9 @@ function plan_leaders( int $site_id, array $leaders ): array {
  *
  * Matched by email to existing WordPress.org accounts only. Only ever
  * promotes: someone already in that role or higher keeps theirs, and nobody
- * is made an administrator (see `LEADER_ROLES`).
+ * is made an administrator (see `LEADER_ROLES`). And only once: an organizer
+ * an earlier import handled is left alone, so a group that demotes one
+ * doesn't see them promoted back.
  *
  * Callers MUST verify the `manage_sites` capability before calling this, as
  * with `import_events()`.
@@ -2263,6 +2370,16 @@ function import_leaders( int $site_id, array $leaders ): array {
 			( new WP_User( $entry['user_id'], '', $site_id ) )->set_role( $entry['leader']['role'] );
 		}
 	}
+
+	$handled = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array() ) );
+
+	foreach ( $classified as $entry ) {
+		if ( in_array( $entry['outcome'], array( 'added', 'promoted', 'kept' ), true ) ) {
+			$handled[] = $entry['user_id'];
+		}
+	}
+
+	update_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array_values( array_unique( $handled ) ) );
 
 	$counts = array_count_values( wp_list_pluck( $classified, 'outcome' ) );
 

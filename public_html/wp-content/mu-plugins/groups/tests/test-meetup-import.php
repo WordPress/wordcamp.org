@@ -235,8 +235,14 @@ class Test_Meetup_Import extends Groups_TestCase {
 			'empty'            => array( '', '' ),
 			'localized url pl' => array( 'https://www.meetup.com/pl-PL/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
 			'localized url de' => array( 'https://www.meetup.com/de-DE/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
-			'localized url es' => array( 'https://www.meetup.com/es/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
-			'localized url pt' => array( 'https://meetup.com/pt-BR/rio-wordpress', 'rio-wordpress' ),
+			'localized url es'              => array( 'https://www.meetup.com/es/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'localized url pt'              => array( 'https://meetup.com/pt-BR/rio-wordpress', 'rio-wordpress' ),
+			'two-letter group with subpage' => array( 'https://www.meetup.com/wp/events/123/', 'wp' ),
+			'two-letter group bare'         => array( 'https://www.meetup.com/wp/', 'wp' ),
+			'two-letter group in localized' => array( 'https://www.meetup.com/pl-PL/wp/events/123/', 'wp' ),
+			'meetup page url events'        => array( 'https://www.meetup.com/events/123/', '' ),
+			'meetup page url members'       => array( 'https://www.meetup.com/members/123/', '' ),
+			'bare meetup page name'         => array( 'events', '' ),
 		);
 	}
 
@@ -2312,7 +2318,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 	public function test_rich_description_blocks_load_in_editor() {
 		$raw = $this->raw_event(
 			array(
-				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1</li><li>Talk 2</li></ul>\n<blockquote>Note this</blockquote>",
+				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1</li><li>Talk 2</li></ul>\n<blockquote>Note this</blockquote>\n<pre>console.log(\"hello\");</pre>",
 			)
 		);
 
@@ -2325,14 +2331,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$this->assertStringContainsString( '<!-- wp:heading {"level":2} -->', $loaded );
-		$this->assertStringContainsString( '<h2>Agenda</h2>', $loaded );
+		$this->assertStringContainsString( '<!-- wp:heading -->', $loaded );
+		$this->assertStringContainsString( '<h2 class="wp-block-heading">Agenda</h2>', $loaded );
 		$this->assertStringContainsString( '<!-- wp:list -->', $loaded );
+		$this->assertStringContainsString( '<ul class="wp-block-list">', $loaded );
+		$this->assertStringContainsString( '<!-- wp:list-item -->', $loaded );
 		$this->assertStringContainsString( '<li>Talk 1</li>', $loaded );
 		$this->assertStringContainsString( '<li>Talk 2</li>', $loaded );
 		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
-		$this->assertStringContainsString( '<blockquote>', $loaded );
+		$this->assertStringContainsString( '<blockquote class="wp-block-quote">', $loaded );
 		$this->assertStringContainsString( 'Note this', $loaded );
+		$this->assertStringContainsString( '<!-- wp:code -->', $loaded );
+		$this->assertStringContainsString( '<pre class="wp-block-code"><code>console.log("hello");</code></pre>', $loaded );
 	}
 
 	/**

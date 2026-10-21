@@ -1198,21 +1198,37 @@ function is_meetup_connected(): bool {
 function parse_group_urlname( string $input ): string {
 	$input = trim( $input );
 
+	$page_names = array( 'events', 'members', 'photos', 'discussions', 'about' );
+
 	if ( preg_match( '#^(?:https?://)?(?:www\.)?meetup\.com(?:/.*)?$#i', $input ) ) {
 		$path     = preg_replace( '#^(?:https?://)?(?:www\.)?meetup\.com/?#i', '', $input );
 		$path     = preg_replace( '#[?\#].*$#', '', $path );
 		$segments = array_values( array_filter( explode( '/', trim( $path, '/' ) ) ) );
 
-		if ( ! empty( $segments ) && preg_match( '/^[a-z]{2}(?:-[a-z]{2,4})?$/i', $segments[0] ) && isset( $segments[1] ) ) {
-			$input = $segments[1];
-		} elseif ( ! empty( $segments ) ) {
-			$input = $segments[0];
-		} else {
+		if ( ! empty( $segments ) ) {
+			if ( preg_match( '/^[a-z]{2,3}-[a-z]{2,4}$/i', $segments[0] ) ) {
+				array_shift( $segments );
+			} elseif (
+				preg_match( '/^[a-z]{2}$/i', $segments[0] ) &&
+				isset( $segments[1] ) &&
+				! in_array( strtolower( $segments[1] ), $page_names, true )
+			) {
+				array_shift( $segments );
+			}
+		}
+
+		if ( empty( $segments ) || in_array( strtolower( $segments[0] ), $page_names, true ) ) {
 			return '';
 		}
+
+		$input = $segments[0];
 	}
 
 	$input = trim( $input, '/' );
+
+	if ( in_array( strtolower( $input ), $page_names, true ) ) {
+		return '';
+	}
 
 	return preg_match( '/^[A-Za-z0-9_-]+$/', $input ) ? $input : '';
 }
@@ -1710,18 +1726,68 @@ function to_paragraph_blocks( string $html ): string {
 	}
 
 	$html = preg_replace( '#<p(?:\s+[^>]*)?>(.*?)</p>#is', "<!-- wp:paragraph -->\n<p>$1</p>\n<!-- /wp:paragraph -->", $html );
+
 	$html = preg_replace_callback(
 		'#<h([1-6])(?:\s+[^>]*)?>(.*?)</h[1-6]>#is',
 		static function ( $matches ) {
-			$level = (int) $matches[1];
-			return "<!-- wp:heading {\"level\":{$level}} -->\n<h{$level}>{$matches[2]}</h{$level}>\n<!-- /wp:heading -->";
+			$level   = (int) $matches[1];
+			$attrs   = 2 === $level ? '' : ' {"level":' . $level . '}';
+			$content = trim( $matches[2] );
+			return "<!-- wp:heading{$attrs} -->\n<h{$level} class=\"wp-block-heading\">{$content}</h{$level}>\n<!-- /wp:heading -->";
 		},
 		$html
 	);
-	$html = preg_replace( '#<ul(?:\s+[^>]*)?>(.*?)</ul>#is', "<!-- wp:list -->\n<ul>$1</ul>\n<!-- /wp:list -->", $html );
-	$html = preg_replace( '#<ol(?:\s+[^>]*)?>(.*?)</ol>#is', "<!-- wp:list {\"ordered\":true} -->\n<ol>$1</ol>\n<!-- /wp:list -->", $html );
-	$html = preg_replace( '#<blockquote(?:\s+[^>]*)?>(.*?)</blockquote>#is', "<!-- wp:quote -->\n<blockquote>$1</blockquote>\n<!-- /wp:quote -->", $html );
-	$html = preg_replace( '#<pre(?:\s+[^>]*)?>(.*?)</pre>#is', "<!-- wp:code -->\n<pre class=\"wp-block-code\">$1</pre>\n<!-- /wp:code -->", $html );
+
+	$convert_list = static function ( $matches, bool $ordered = false ): string {
+		$tag   = $ordered ? 'ol' : 'ul';
+		$attrs = $ordered ? ' {"ordered":true}' : '';
+		$inner = $matches[1];
+
+		$items = preg_replace_callback(
+			'#<li(?:\s+[^>]*)?>(.*?)</li>#is',
+			static function ( $li_matches ) {
+				$li_content = trim( $li_matches[1] );
+				return "<!-- wp:list-item -->\n<li>{$li_content}</li>\n<!-- /wp:list-item -->";
+			},
+			$inner
+		);
+
+		$items = trim( $items );
+
+		return "<!-- wp:list{$attrs} -->\n<{$tag} class=\"wp-block-list\">{$items}</{$tag}>\n<!-- /wp:list -->";
+	};
+
+	$html = preg_replace_callback(
+		'#<ul(?:\s+[^>]*)?>(.*?)</ul>#is',
+		static function ( $matches ) use ( $convert_list ) {
+			return $convert_list( $matches, false );
+		},
+		$html
+	);
+
+	$html = preg_replace_callback(
+		'#<ol(?:\s+[^>]*)?>(.*?)</ol>#is',
+		static function ( $matches ) use ( $convert_list ) {
+			return $convert_list( $matches, true );
+		},
+		$html
+	);
+
+	$html = preg_replace( '#<blockquote(?:\s+[^>]*)?>(.*?)</blockquote>#is', "<!-- wp:quote -->\n<blockquote class=\"wp-block-quote\">$1</blockquote>\n<!-- /wp:quote -->", $html );
+
+	$html = preg_replace_callback(
+		'#<pre(?:\s+[^>]*)?>(.*?)</pre>#is',
+		static function ( $matches ) {
+			$content = trim( $matches[1] );
+			if ( ! preg_match( '#^<code(?:\s+[^>]*)?>(.*)</code>$#is', $content, $code_match ) ) {
+				$content = '<code>' . $content . '</code>';
+			} else {
+				$content = '<code>' . trim( $code_match[1] ) . '</code>';
+			}
+			return "<!-- wp:code -->\n<pre class=\"wp-block-code\">{$content}</pre>\n<!-- /wp:code -->";
+		},
+		$html
+	);
 
 	$blocks     = parse_blocks( $html );
 	$normalized = array();

@@ -4,7 +4,7 @@
 		<?php _e( 'You must save this sponsor before you can send them an invoice.', 'wordcamporg' ); ?>
 	</p>
 
-<?php else : ?>
+<?php elseif ( current_user_can( get_post_type_object( \WordCamp\Budgets\Sponsor_Invoices\POST_TYPE )->cap->create_posts ) ) : ?>
 
 	<?php if ( $existing_invoices ) : ?>
 
@@ -17,7 +17,10 @@
 
 				<li>
 					<a href="<?php echo esc_url( get_edit_post_link( $invoice->ID ) ); ?>">
-						<?php echo _draft_or_post_title( $invoice->post_title ); ?>
+						<?php
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- _draft_or_post_title() returns esc_html().
+						echo _draft_or_post_title( $invoice );
+						?>
 					</a>
 				</li>
 
@@ -30,7 +33,7 @@
 	the same window, then users would probably assume the button submits the form and starts an invoice, and they
 	could lose any data they entered into the form -->
 	<a href="<?php echo esc_url( $new_invoice_url ); ?>" target="_blank" class="button secondary">
-		<?php _e( 'Add New Invoice', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'Add New Invoice', 'wordcamporg' ); ?>
 	</a>
 
 <?php endif;

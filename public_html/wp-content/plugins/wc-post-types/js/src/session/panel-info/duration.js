@@ -15,24 +15,32 @@ function SessionDuration( { instanceId, onChange, value } ) {
 
 	return (
 		<fieldset className="components-base-control wordcamp-panel-session-info__duration">
-			<legend className="components-base-control__label">{ __( 'Session Length', 'wordcamporg' ) }</legend>
+			<legend className="components-base-control__label">
+				{ __( 'Session Length', 'wordcamporg' ) }
+			</legend>
 
 			<div className="wordcamp-panel-session-info__duration-wrapper">
 				<input
 					type="number"
 					id={ `session-duration-hrs-${ instanceId }` }
 					value={ hours }
-					onChange={ ( event ) => updateDuration( event.target.value, minutes ) }
+					onChange={ ( event ) =>
+						updateDuration( event.target.value, minutes )
+					}
 					max="23"
 					min="0"
 				/>
-				<label htmlFor={ `session-duration-hrs-${ instanceId }` }>{ __( 'hours', 'wordcamporg' ) }</label>
+				<label htmlFor={ `session-duration-hrs-${ instanceId }` }>
+					{ __( 'hours', 'wordcamporg' ) }
+				</label>
 
 				<input
 					type="number"
 					id={ `session-duration-mins-${ instanceId }` }
 					value={ minutes }
-					onChange={ ( event ) => updateDuration( hours, event.target.value ) }
+					onChange={ ( event ) =>
+						updateDuration( hours, event.target.value )
+					}
 					max="59"
 					min="0"
 					step="5"

@@ -1,0 +1,55 @@
+/*
+ * The code sits in a fixed square so the layout doesn't jump when the script
+ * draws it, and so the space is still reserved (with the URL under it) if it
+ * never does. 40mm prints comfortably above the size phone cameras read
+ * reliably from arm's length.
+ */
+
+.wporg-event-flyer-qr {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--10);
+	margin: 0;
+	text-align: center;
+}
+
+.wporg-event-flyer-qr__code {
+	aspect-ratio: 1;
+	width: min(160px, 100%);
+}
+
+.wporg-event-flyer-qr__code svg {
+	display: block;
+	height: 100%;
+	width: 100%;
+}
+
+.wporg-event-flyer-qr__caption {
+	display: flex;
+	flex-direction: column;
+	font-family: var(--wp--preset--font-family--inter);
+	gap: 2px;
+}
+
+.wporg-event-flyer-qr__label {
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.wporg-event-flyer-qr__url {
+	color: var(--wp--preset--color--charcoal-1);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+@media print {
+
+	.wporg-event-flyer-qr__code {
+		width: 40mm;
+	}
+}

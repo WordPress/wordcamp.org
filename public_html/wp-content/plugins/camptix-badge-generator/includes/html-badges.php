@@ -11,12 +11,12 @@ use WP_Customize_Manager;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'customize_register',    __NAMESPACE__ . '\register_customizer_components'   );
-add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_customizer_scripts'       );
-add_action( 'admin_print_styles',    __NAMESPACE__ . '\print_customizer_styles'          );
-add_action( 'wp_enqueue_scripts',    __NAMESPACE__ . '\remove_all_previewer_styles', 998 );
-add_action( 'wp_enqueue_scripts',    __NAMESPACE__ . '\enqueue_previewer_scripts',   999 );  // after remove_all_previewer_styles().
-add_filter( 'template_include',      __NAMESPACE__ . '\use_badges_template'              );
+add_action( 'customize_register',                 __NAMESPACE__ . '\register_customizer_components'   );
+add_action( 'customize_controls_enqueue_scripts', __NAMESPACE__ . '\enqueue_customizer_scripts'       );
+add_action( 'customize_controls_print_styles',    __NAMESPACE__ . '\print_customizer_styles'          );
+add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\remove_all_previewer_styles', 998 );
+add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\enqueue_previewer_scripts',   999 );  // after remove_all_previewer_styles().
+add_filter( 'template_include',                   __NAMESPACE__ . '\use_badges_template'              );
 
 /**
  * Register our Customizer settings, panels, sections, and controls
@@ -99,12 +99,23 @@ function get_customizer_section_url() {
 	$url = add_query_arg(
 		array(
 			'autofocus[section]' => 'camptix_html_badges',
-			'url'                => rawurlencode( add_query_arg( 'camptix-badges', '', site_url() ) ),
+			'url'                => rawurlencode( get_badges_page_url() ),
 		),
 		admin_url( 'customize.php' )
 	);
 
 	return $url;
+}
+
+/**
+ * Get the URL of the Badges page that the Previewer loads
+ *
+ * This matches the form the Previewer stores the URL in, so the Customizer script can compare them.
+ *
+ * @return string
+ */
+function get_badges_page_url() {
+	return site_url( '/?camptix-badges=' );
 }
 
 /**
@@ -130,18 +141,19 @@ function enqueue_customizer_scripts() {
 	wp_enqueue_script(
 		'camptix-html-badges-customizer',
 		plugins_url( 'javascript/html-badges-customizer.js', __DIR__ ),
-		array( 'jquery', 'jetpack-codemirror' ),
-		1,
+		array( 'jquery', 'customize-controls', 'code-editor' ),
+		2,
 		true
 	);
-
-	wp_enqueue_style( 'jetpack-codemirror' );
 
 	wp_localize_script(
 		'camptix-html-badges-customizer',
 		'cbgHtmlCustomizerData',
 		array(
-			'defaultCSS' => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'defaultCSS'     => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
+			'siteURL'        => site_url( '/' ),
+			'badgesPageURL'  => get_badges_page_url(),
+			'editorSettings' => wp_enqueue_code_editor( array( 'type' => 'text/css' ) ),
 		)
 	);
 }

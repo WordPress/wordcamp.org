@@ -28,6 +28,16 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	}
 
 	/**
+	 * Define the sortable table columns.
+	 */
+	protected function get_sortable_columns() {
+		return array(
+			'amount'   => array( 'amount', false ),
+			'modified' => array( 'last_modified', true, '', '', true ),
+		);
+	}
+
+	/**
 	 * Parses query arguments and queries the index table in the database.
 	 */
 	public function prepare_items() {
@@ -45,23 +55,31 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		$this->_column_headers = array(
 			$this->get_columns(),
 			array(),
-			array(),
+			$this->get_sortable_columns(),
 			$this->get_primary_column_name(),
 		);
 
-		$table_name = get_index_table_name();
-		$status     = 'wcbsi_' . get_current_section();
-		$paged      = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
-		$limit      = 30;
-		$offset     = $limit * ( $paged - 1 );
+		$table_name    = get_index_table_name();
+		$status        = 'wcbsi_' . get_current_section();
+		$paged         = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
+		$limit         = 30;
+		$offset        = $limit * ( $paged - 1 );
+		$valid_orderby = array( 'amount', 'last_modified' );
 
+		$orderby = isset( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orderby, true )
+			? $_REQUEST['orderby']
+			: 'last_modified';
+		$order = isset( $_REQUEST['order'] ) && 'asc' === strtolower( $_REQUEST['order'] ) ? 'ASC' : 'DESC';
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $orderby and $order are whitelisted above.
 		$this->items = $wpdb->get_results( $wpdb->prepare(
-			'SELECT * FROM %i WHERE status = %s ORDER BY last_modified DESC LIMIT %d OFFSET %d',
+			"SELECT * FROM %i WHERE status = %s ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
 			$table_name,
 			$status,
 			$limit,
 			$offset
 		) );
+		// phpcs:enable
 
 		// A second query is faster than using SQL_CALC_FOUND_ROWS during the first query
 		$total_items = $wpdb->get_var( $wpdb->prepare(

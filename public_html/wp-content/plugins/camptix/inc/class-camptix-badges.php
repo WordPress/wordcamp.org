@@ -15,9 +15,9 @@ function process_badges() {
 		return __( 'Invalid request', 'wordcamporg' );
 	}
 
-	$usernames = sanitize_text_field( $_POST['usernames'] );
-	$operation = sanitize_text_field( $_POST['operation'] );
-	$badge = sanitize_text_field( $_POST['badge_name'] );
+	$usernames = sanitize_textarea_field( wp_unslash( $_POST['usernames'] ) );
+	$operation = sanitize_text_field( wp_unslash( $_POST['operation'] ) );
+	$badge     = sanitize_text_field( wp_unslash( $_POST['badge_name'] ) );
 
 	$valid_operations = [ 'add', 'remove' ];
 	$valid_badges = [ 'wordcamp-volunteer' ];

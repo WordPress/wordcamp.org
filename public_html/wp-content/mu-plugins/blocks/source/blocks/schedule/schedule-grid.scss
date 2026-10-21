@@ -1,4 +1,4 @@
-$color__grid-border: #e0e5e9;
+@use "schedule-layout" as layout;
 
 /*
  * todo
@@ -16,45 +16,6 @@ $color__grid-border: #e0e5e9;
  * in TwentyTwenty, some .wordcamp-schedule__time-slot-header cells are about 10px more narrow than they should
  * be, exposing a gap between them and their neighboring cell.
  */
-
-/*
- * This tries to only enhance to the grid layout when there's enough space, but there's no practical way to
- * determine that reliably across all themes, number of tracks, etc. The `Single Column Layout` block style
- * gives organizers a different option when the breakpoints here don't work for them.
- */
-@mixin breakpoint-grid-layout() {
-	.wordcamp-schedule:not(.is-style-single-column-layout) & {
-
-		@supports ( display: grid ) {
-
-			/* Front end. */
-			body:not(.block-editor-page) & {
-
-				@media screen and (min-width: 550px) {
-					@content;
-				}
-			}
-
-			/*
-			 * Back end.
-			 *
-			 * The editor area is very narrow because of `#adminmenu` and `.edit-post-sidebar`, so this needs to be
-			 * unusually high.
-			 *
-			 * todo maybe need a way to let the editor know that they're seeing the mobile view, but if they
-			 * preview front end they can see grid view like a notice-warning that is `display:none` on the grid
-			 * view.
-			 */
-
-			body.block-editor-page & {
-
-				@media screen and (min-width: 1025px) {
-					@content;
-				}
-			}
-		}
-	}
-}
 
 .wp-block[data-type="wordcamp/schedule"] .editor-block-list__block-edit {
 	padding-left: 1em;
@@ -77,7 +38,7 @@ $color__grid-border: #e0e5e9;
 .wordcamp-schedule__day {
 	background-color: #fbfbfc;
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		display: grid;
 		grid-gap: 1px;
 	}
@@ -112,7 +73,7 @@ $color__grid-border: #e0e5e9;
 	 * maybe need to switch back to ::after and then use z-index?
 	 * see https://make.wordpress.org/community/2018/10/26/wordcamp-block-schedule/#comment-26821
 	 */
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		display: block;
 		position: sticky;
 		top: 0; /* Remove the gap above in Firefox and maybe other browsers. */
@@ -125,6 +86,6 @@ $color__grid-border: #e0e5e9;
 		 */
 		margin: 0 -1px 0 -1px;
 		padding: 10px 5px 5px;
-		background-color: rgba(251, 251, 252, 0.92); /* Same as $color__grid-border, but with opacity */
+		background-color: rgba(251, 251, 252, 0.92); /* Same as the grid border color, but with opacity */
 	}
 }

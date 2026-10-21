@@ -14,6 +14,8 @@
 			<?php if ( $readonly ) {
 				echo 'readonly="readonly"'; } ?>
 			<?php __checked_selected_helper( $required, true, true, 'required' ); ?>
+			<?php if ( ! empty( $placeholder ) ) {
+				echo 'placeholder="' . esc_attr( $placeholder ) . '"'; } ?>
 			class="regular-text"
 			/>
 

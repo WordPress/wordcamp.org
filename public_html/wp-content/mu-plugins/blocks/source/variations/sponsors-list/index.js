@@ -46,6 +46,14 @@ registerBlockVariation( 'core/query', {
 		],
 		[ 'core/query-pagination' ],
 	],
-	allowedControls: [ 'inherit', 'order', 'taxQuery', 'search', 'postCount', 'offset', 'pages' ],
+	allowedControls: [
+		'inherit',
+		'order',
+		'taxQuery',
+		'search',
+		'postCount',
+		'offset',
+		'pages',
+	],
 	scope: [ 'inserter' ],
 } );

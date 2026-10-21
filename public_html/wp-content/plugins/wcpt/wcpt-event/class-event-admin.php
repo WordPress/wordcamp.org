@@ -78,6 +78,10 @@ abstract class Event_Admin {
 		add_filter( 'posts_search', array( $this, 'extend_search_to_postmeta' ), 10, 2 );
 		add_filter( 'posts_join', array( $this, 'search_postmeta_join' ), 10, 2 );
 		add_filter( 'posts_groupby', array( $this, 'search_postmeta_groupby' ), 10, 2 );
+
+		// Language filter on the admin list table.
+		add_action( 'restrict_manage_posts', array( $this, 'add_language_filter_dropdown' ) );
+		add_action( 'parse_query', array( $this, 'filter_by_language' ) );
 	}
 
 	/**
@@ -280,11 +284,29 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Log when the post status changes
+	 * Return the human-readable label for a post status slug.
 	 *
-	 * @param string  $new_status New status.
-	 * @param string  $old_status Old status.
-	 * @param WP_Post $post       Current Post.
+	 * Subclasses may override this to return subtype-specific labels
+	 * (e.g. WordCamp_Admin returns CC-specific labels for Campus Connect posts).
+	 *
+	 * @param string  $status Post status slug.
+	 * @param WP_Post $post   The post being transitioned.
+	 * @return string Human-readable label.
+	 */
+	protected function get_status_label( $status, $post ) {
+		return get_post_status_object( $status )->label ?? $status;
+	}
+
+	/**
+	 * Log a status transition for a post.
+	 *
+	 * Fires on the `transition_post_status` hook. Records a `_status_change`
+	 * meta entry with a human-readable "old → new" label pair and a secondary
+	 * indexed key so callers can filter the log by post type.
+	 *
+	 * @param string  $new_status The new post status slug.
+	 * @param string  $old_status The previous post status slug.
+	 * @param WP_Post $post       The post whose status changed.
 	 */
 	public function log_status_changes( $new_status, $old_status, $post ) {
 		if ( $new_status === $old_status || 'auto-draft' === $new_status ) {
@@ -295,11 +317,9 @@ abstract class Event_Admin {
 			return;
 		}
 
-		// Ensure status labels are in English.
+		// Ensure status labels are in English. Event_Loader re-registers post
+		// statuses on `change_locale`, so status objects get English labels here.
 		$locale_switched = switch_to_locale( 'en_US' );
-
-		$old_status_obj = get_post_status_object( $old_status );
-		$new_status_obj = get_post_status_object( $new_status );
 
 		$log_id = add_post_meta(
 			$post->ID,
@@ -307,7 +327,7 @@ abstract class Event_Admin {
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
+				'message'   => sprintf( '%s &rarr; %s', $this->get_status_label( $old_status, $post ), $this->get_status_label( $new_status, $post ) ),
 			)
 		);
 
@@ -484,10 +504,14 @@ abstract class Event_Admin {
 			}
 		}
 
-		// Save the Event Subtype.
+		// Save the Event Subtype. Only a key of the known list, so the read side has
+		// something it can filter and label.
 		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
 			$event_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) );
-			update_post_meta( $post_id, 'event_subtype', $event_subtype );
+
+			if ( array_key_exists( $event_subtype, $this->get_event_subtypes() ) ) {
+				update_post_meta( $post_id, 'event_subtype', $event_subtype );
+			}
 		}
 
 		$meta_keys        = $this->meta_keys();
@@ -582,6 +606,21 @@ abstract class Event_Admin {
 				case 'select-timezone':
 					$allowed_zones = timezone_identifiers_list();
 					$new_value     = in_array( $values[ $key ], $allowed_zones, true ) ? $values[ $key ] : '';
+
+					update_post_meta( $post_id, $key, $new_value );
+					break;
+
+				case 'select-locale':
+					$allowed_locales = array_keys( self::get_locale_options() );
+					$new_value       = array();
+
+					if ( is_array( $values[ $key ] ) ) {
+						foreach ( $values[ $key ] as $locale ) {
+							if ( in_array( $locale, $allowed_locales, true ) ) {
+								$new_value[] = $locale;
+							}
+						}
+					}
 
 					update_post_meta( $post_id, $key, $new_value );
 					break;
@@ -953,6 +992,33 @@ abstract class Event_Admin {
 									)
 								);
 								break;
+							case 'select-locale':
+								$selected_locales = get_post_meta( $post_id, $key, true );
+								$locales          = self::get_locale_options();
+
+								if ( ! is_array( $selected_locales ) ) {
+									$selected_locales = array();
+								}
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>[]"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									multiple
+									style="height: auto; min-height: 120px;"
+								>
+									<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+										<option
+											value="<?php echo esc_attr( $locale_code ); ?>"
+											<?php selected( in_array( $locale_code, $selected_locales, true ) ); ?>
+										>
+											<?php echo esc_html( $locale_name ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<?php
+								break;
 							case 'select-streaming':
 								$selected = get_post_meta( $post_id, $key, true );
 								$options  = self::get_streaming_services();
@@ -1147,5 +1213,100 @@ abstract class Event_Admin {
 		}
 
 		return $groupby;
+	}
+
+	/**
+	 * Get available locale options for the Language field.
+	 *
+	 * Uses GlotPress locales if available, otherwise falls back to
+	 * wp_get_available_translations().
+	 *
+	 * @return array Associative array of locale code => display name.
+	 */
+	public static function get_locale_options() {
+		if ( defined( 'GLOTPRESS_LOCALES_PATH' ) && file_exists( GLOTPRESS_LOCALES_PATH ) ) {
+			require_once GLOTPRESS_LOCALES_PATH;
+
+			$locales = GP_Locales::locales();
+			$options = array();
+
+			foreach ( $locales as $locale ) {
+				if ( ! empty( $locale->wp_locale ) ) {
+					$options[ $locale->wp_locale ] = $locale->english_name;
+				}
+			}
+
+			asort( $options );
+
+			return $options;
+		}
+
+		// Fallback: use WordPress available translations.
+		if ( ! function_exists( 'wp_get_available_translations' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+		}
+
+		$translations = wp_get_available_translations();
+		$options      = array( 'en_US' => 'English (United States)' );
+
+		foreach ( $translations as $locale => $data ) {
+			$options[ $locale ] = $data['english_name'];
+		}
+
+		asort( $options );
+
+		return $options;
+	}
+
+	/**
+	 * Add a Language filter dropdown to the admin list table.
+	 *
+	 * @param string $post_type The current post type.
+	 */
+	public function add_language_filter_dropdown( $post_type ) {
+		if ( $this->get_event_type() !== $post_type ) {
+			return;
+		}
+
+		$locales  = self::get_locale_options();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table.
+		$selected = isset( $_GET['language'] ) ? sanitize_text_field( wp_unslash( $_GET['language'] ) ) : '';
+
+		?>
+		<select name="language" id="filter-by-language">
+			<option value=""><?php esc_html_e( 'All Languages', 'wordcamporg' ); ?></option>
+			<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+				<option value="<?php echo esc_attr( $locale_code ); ?>" <?php selected( $selected, $locale_code ); ?>>
+					<?php echo esc_html( $locale_name ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Filter the admin list by Language.
+	 *
+	 * @param WP_Query $query The current query.
+	 */
+	public function filter_by_language( $query ) {
+		if (
+			! $query->is_main_query() ||
+			$this->get_event_type() !== $query->get( 'post_type' ) ||
+			empty( $_REQUEST['language'] )
+		) {
+			return;
+		}
+
+		$language = sanitize_text_field( wp_unslash( $_REQUEST['language'] ) );
+
+		$meta_query   = $query->get( 'meta_query' ) ?: array();
+		$meta_query[] = array(
+			'key'     => 'Language',
+			'value'   => $language,
+			'compare' => 'LIKE',
+		);
+
+		$query->set( 'meta_query', $meta_query );
 	}
 }

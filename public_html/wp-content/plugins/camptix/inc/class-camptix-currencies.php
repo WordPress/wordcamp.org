@@ -169,7 +169,7 @@ class CampTix_Currency {
 			),
 			'CZK' => array(
 				'label'         => __( 'Czech Koruna', 'wordcamporg' ),
-				'locale'        => 'hcs_CZ',
+				'locale'        => 'cs_CZ',
 				'decimal_point' => 2,
 			),
 			'DJF' => array(
@@ -204,6 +204,11 @@ class CampTix_Currency {
 			),
 			'EUR' => array(
 				'label'         => __( 'Euro', 'wordcamporg' ),
+				// The euro spans many locales whose conventions differ (symbol placement and
+				// decimal separator), so render it via NumberFormatter using the site/event
+				// locale. 'format' is retained only as a fallback for environments without
+				// the intl extension.
+				'locale'        => get_locale(),
 				'format'        => '€ %s',
 				'decimal_point' => 2,
 			),

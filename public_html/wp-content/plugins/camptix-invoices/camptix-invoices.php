@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'CTX_INV_VER', '1.0.1' );
 define( 'CTX_INV_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
-define( 'CTX_INV_DIR', untrailingslashit( dirname( __FILE__ ) ) );
+define( 'CTX_INV_DIR', untrailingslashit( __DIR__ ) );
 define( 'CTX_INV_ADMIN_URL', CTX_INV_URL . '/admin' );
 
 /**
@@ -25,7 +25,18 @@ function ctx_load_docs_pdf_generator() {
 	}//end if
 	require_once WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php';
 }
-add_action( 'init', 'ctx_load_docs_pdf_generator' );
+
+/**
+ * Download the invoice fonts ahead of time, so the first invoice after a deploy doesn't wait on them during checkout.
+ */
+function ctx_warm_pdf_font_cache() {
+	ctx_load_docs_pdf_generator();
+
+	if ( class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+		WordCamp_Docs_PDF_Generator::warm_font_cache();
+	}
+}
+add_action( 'tix_scheduled_daily', 'ctx_warm_pdf_font_cache' );
 
 /**
  * Load invoice addon.
@@ -61,10 +72,28 @@ function register_tix_invoice() {
 				'view_items'     => __( 'View Invoices', 'wordcamporg' ),
 				'search_items'   => __( 'Search Invoices', 'wordcamporg' ),
 			),
-			'supports'     => array( 'title' ),
-			'public'       => false,
-			'show_ui'      => true,
-			'show_in_menu' => 'edit.php?post_type=tix_ticket',
+			'supports'        => array( 'title' ),
+			'public'          => false,
+			'show_ui'         => true,
+			'show_in_menu'    => 'edit.php?post_type=tix_ticket',
+			// Mirror the sibling tix_ticket CPT: gate every invoice capability behind
+			// manage_options (the cap already required to reach the CampTix menu). Without
+			// this, the capability-less CPT falls into core's 3.0 back-compat branch which
+			// sets map_meta_cap = true, letting a Contributor create and edit their own
+			// tix_invoice drafts. Invoices are still auto-created during checkout because
+			// wp_insert_post()/wp_update_post() do not perform capability checks.
+			'capability_type' => 'tix_invoice',
+			'capabilities'    => array(
+				'publish_posts'       => 'manage_options',
+				'edit_posts'          => 'manage_options',
+				'edit_others_posts'   => 'manage_options',
+				'delete_posts'        => 'manage_options',
+				'delete_others_posts' => 'manage_options',
+				'read_private_posts'  => 'manage_options',
+				'edit_post'           => 'manage_options',
+				'delete_post'         => 'manage_options',
+				'read_post'           => 'manage_options',
+			),
 		)
 	);
 
@@ -80,13 +109,61 @@ function register_tix_invoice() {
 
 	register_post_status( 'cancelled',
 		array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
+
+	// Lock the invoice meta so it cannot be written through generic meta routes
+	// (XML-RPC custom_fields, the REST meta endpoint, or the Custom Fields metabox).
+	// The plugin only ever writes these via direct update_post_meta()/delete_post_meta(),
+	// which bypass auth_callback, so legitimate invoice generation is unaffected. The
+	// sanitize_callback still runs on those direct writes, including the importer's, and
+	// only lets invoice_document keep a filename in the shape the plugin generates.
+	register_post_meta(
+		'tix_invoice',
+		'invoice_document',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => false,
+			'auth_callback'     => '__return_false',
+			'sanitize_callback' => 'ctx_sanitize_invoice_document',
+		)
+	);
+
+	register_post_meta(
+		'tix_invoice',
+		'invoice_number',
+		array(
+			'type'          => 'string',
+			'single'        => true,
+			'show_in_rest'  => false,
+			'auth_callback' => '__return_false',
+		)
+	);
+}
+
+/**
+ * Contain the invoice_document meta to a filename the plugin could have generated.
+ *
+ * Registered as the sanitize_callback for the invoice_document post meta, so it runs on
+ * every add_post_meta() and update_post_meta() for a tix_invoice, including the importer's.
+ * A crafted value can therefore never be persisted with a directory component or a
+ * non-PDF name, even if a future writer forgets to sanitise. Generated names are
+ * `<invoice number>-<12 random letters and digits>.pdf`, and invoice numbers are made of
+ * digits and dashes. Anything else is stored empty, and the next generation picks a new name.
+ *
+ * @param mixed $value The meta value being stored.
+ * @return string The contained filename, or an empty string.
+ */
+function ctx_sanitize_invoice_document( $value ) {
+	$filename = basename( (string) $value );
+
+	return preg_match( '/^[A-Za-z0-9-]*-[A-Za-z0-9]{12}\.pdf\z/', $filename ) ? $filename : '';
 }
 
 /**
@@ -130,10 +207,10 @@ function ctx_append_post_status_list() {
 	$refunded_selected  = '';
 	$cancelled_selected = '';
 	$status             = '';
-	$refunded           = __( 'refunded', 'wordcamporg' );
-	$cancelled          = __( 'cancelled', 'wordcamporg' );
+	$refunded           = 'refunded';
+	$cancelled          = 'cancelled';
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
-	$cancelled_status   = _x( 'Cancelled', 'post', 'wordcamporg' );
+	$cancelled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -176,7 +253,7 @@ function ctx_display_custom_statuses( $states, $post ) {
 
 	if ( 'cancelled' !== $arg ) {
 		if ( 'cancelled' === $post->post_status ) {
-			return array( _x( 'Cancelled', 'post', 'wordcamporg' ) );
+			return array( _x( 'Canceled', 'post', 'wordcamporg' ) );
 		}
 	}
 
@@ -196,8 +273,8 @@ function ctx_append_post_status_bulk_edit() {
 	?>
 	<script>
 		jQuery( document ).ready( function($) {
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'refunded' ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'cancelled' ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php
@@ -510,7 +587,9 @@ add_action( 'camptix_form_attendee_after_registration_information', 'ctx_invoice
  * @param int $invoice_id The invoice id.
  */
 function ctx_get_invoice( $invoice_id ) {
-	$invoice_document = get_post_meta( $invoice_id, 'invoice_document', true );
+	// basename() contains the value to the camptix-invoices directory: the meta must never
+	// resolve to a file outside it, whether it is served for download or attached to email.
+	$invoice_document = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 	$upload_dir       = wp_upload_dir();
 
 	if ( empty( $upload_dir['basedir'] ) ) {
@@ -534,7 +613,7 @@ function ctx_get_invoice( $invoice_id ) {
  */
 function ctx_get_invoice_url( $invoice_id ) {
 
-	$invoice_document = get_post_meta( $invoice_id, 'invoice_document', true );
+	$invoice_document = basename( (string) get_post_meta( $invoice_id, 'invoice_document', true ) );
 	if ( empty( $invoice_document ) ) {
 		return false;
 	}
@@ -585,6 +664,15 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 
 		$invoice_number = get_post_meta( $post->ID, 'invoice_number', true );
 		$invoice_metas  = get_post_meta( $post->ID, 'invoice_metas', true );
+
+		if ( ! is_array( $invoice_metas ) || ! is_string( $invoice_metas['email'] ?? null ) ) {
+			continue;
+		}
+
+		// Only export invoices addressed to this email.
+		if ( strtolower( $invoice_metas['email'] ) !== strtolower( $email_address ) ) {
+			continue;
+		}
 
 		foreach ( $invoice_metas as $key => $value ) {
 

@@ -69,7 +69,14 @@ class SponsorList extends Component {
 	 */
 	render() {
 		const { attributes } = this.props;
-		const { content, featured_image_width, headingAlign, image_align, show_logo, show_name } = attributes;
+		const {
+			content,
+			featured_image_width,
+			headingAlign,
+			image_align,
+			show_logo,
+			show_name,
+		} = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -82,7 +89,13 @@ class SponsorList extends Component {
 		return (
 			<PostList attributes={ attributes } className="wordcamp-sponsors">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ classnames( 'wordcamp-sponsors__post', `slug-${ post.slug }` ) }>
+					<div
+						key={ post.slug }
+						className={ classnames(
+							'wordcamp-sponsors__post',
+							`slug-${ post.slug }`
+						) }
+					>
 						{ show_name && (
 							<ItemTitle
 								className="wordcamp-sponsors__title"
@@ -95,7 +108,11 @@ class SponsorList extends Component {
 
 						{ show_logo && (
 							<FeaturedImage
-								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
+								imageData={ get(
+									post,
+									'_embedded.wp:featuredmedia[0]',
+									{}
+								) }
 								width={ featured_image_width }
 								className={ classnames( [
 									'wordcamp-sponsors__featured-image',
@@ -109,7 +126,11 @@ class SponsorList extends Component {
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-sponsors__content is-${ content }` }
-								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								content={
+									'full' === content
+										? post.content.rendered.trim()
+										: post.excerpt.rendered.trim()
+								}
 							/>
 						) }
 					</div>

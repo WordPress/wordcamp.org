@@ -1,0 +1,34 @@
+/*
+ * On the event page the link is a row of the info card, set like the
+ * "Add to calendar" row beside it: a plain link next to an icon.
+ */
+
+.wporg-event-flyer-link {
+	margin: 0;
+}
+
+/*
+ * On the flyer it's the screen-only bar above the sheet: back on the left,
+ * print on the right, wrapping onto two lines on a narrow screen.
+ */
+
+.wporg-event-flyer-link.is-flyer-toolbar {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	gap: var(--wp--preset--spacing--20);
+	justify-content: space-between;
+}
+
+.wporg-event-flyer-link__print[hidden] {
+	display: none;
+}
+
+@media print {
+
+	.wporg-event-flyer-link.is-flyer-toolbar {
+		display: none;
+	}
+}

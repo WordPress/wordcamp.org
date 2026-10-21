@@ -13,7 +13,10 @@ import UsernameControl from '../components/username-control';
 
 export default function OrganizerInfoPanel() {
 	const [ username, setUsername ] = usePostMeta( '_wcpt_user_name', '' );
-	const [ firstTime, setFirstTime ] = usePostMeta( '_wcb_organizer_first_time', false );
+	const [ firstTime, setFirstTime ] = usePostMeta(
+		'_wcb_organizer_first_time',
+		false
+	);
 
 	return (
 		<PluginDocumentSettingPanel
@@ -27,7 +30,10 @@ export default function OrganizerInfoPanel() {
 				onChange={ setUsername }
 			/>
 			<RadioControl
-				label={ __( 'Is this their first time being an organizer at a WordPress event?', 'wordcamporg' ) }
+				label={ __(
+					'Is this their first time being an organizer at a WordPress event?',
+					'wordcamporg'
+				) }
 				selected={ firstTime }
 				onChange={ ( value ) => setFirstTime( value ) }
 				options={ [

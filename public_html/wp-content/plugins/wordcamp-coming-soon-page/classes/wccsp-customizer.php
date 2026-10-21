@@ -128,6 +128,27 @@ class WCCSP_Customizer {
 		);
 
 		$wp_customize->add_setting(
+			'wccsp_settings[contact_form_page_id]',
+			array(
+				'default'           => 0,
+				'type'              => 'option',
+				'capability'        => $GLOBALS['WCCSP_Settings']::REQUIRED_CAPABILITY,
+				'sanitize_callback' => 'absint',
+			)
+		);
+
+		$wp_customize->add_control(
+			'wccsp_settings[contact_form_page_id]',
+			array(
+				'label'       => __( 'Contact Form Page', 'wordcamporg' ),
+				'description' => __( 'The page whose contact form is shown on the Coming Soon page. When no page is selected, the form on the oldest page that has one is used.', 'wordcamporg' ),
+				'section'     => 'wccsp_live_preview',
+				'type'        => 'dropdown-pages',
+				'capability'  => $GLOBALS['WCCSP_Settings']::REQUIRED_CAPABILITY,
+			)
+		);
+
+		$wp_customize->add_setting(
 			'wccsp_settings[introduction]',
 			array(
 				'default'           => '',
@@ -206,21 +227,28 @@ class WCCSP_Customizer {
 	 * @return boolean           Status of the field validity.
 	 */
 	public function maybe_prevent_disable( $validity, $value ) {
-		// Short circuit when the value is on.
-		if ( 'on' === $value ) {
-			return $validity;
-		}
+		$status = $this->get_status();
 
 		// Short circuit when deputy is changing the value.
 		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return $validity;
 		}
 
-		// If WordCamp is not added to schedule, field is not valid.
-		if ( 'wcpt-scheduled' !== $this->get_status() ) {
-			return new WP_Error( 'wcpt-not-in-schedule', __( 'The Coming Soon page can not be turned off because WordCamp is not yet published in the schedule.' ) );
+		// Prevent enabling Coming Soon on closed events.
+		if ( 'on' === $value && 'wcpt-closed' === $status ) {
+			return new WP_Error( 'wcpt-closed', __( 'The Coming Soon page can not be enabled because this event is closed.', 'wordcamporg' ) );
 		}
 
-		return $validity;
+		// Allow toggling for scheduled or closed events.
+		if ( 'on' === $value ) {
+			return $validity;
+		}
+
+		// Allow disabling for scheduled or closed events.
+		if ( in_array( $status, array( 'wcpt-scheduled', 'wcpt-closed' ), true ) ) {
+			return $validity;
+		}
+
+		return new WP_Error( 'wcpt-not-in-schedule', __( 'The Coming Soon page can not be turned off because WordCamp is not yet published in the schedule.', 'wordcamporg' ) );
 	}
 }

@@ -3,7 +3,8 @@
  * Single WordCamp /info/ template.
  */
 
-get_header(); the_post();
+get_header();
+the_post();
 $wordcamp_title = wcpt_get_wordcamp_title();
 ?>
 

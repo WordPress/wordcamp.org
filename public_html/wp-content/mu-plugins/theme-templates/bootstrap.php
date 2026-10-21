@@ -56,6 +56,10 @@ function get_offline_page() {
 		'order'          => 'asc',
 		'meta_key'       => 'wc_page_offline',
 		'meta_value'     => 'yes',
+		// Unlike a listing, this page is pre-cached by the service worker
+		// and shown with no connection, where a password form could not be
+		// submitted. A protected one falls back to the default message.
+		'has_password'   => false,
 	) );
 	if ( count( $found_pages ) ) {
 		return $found_pages[0];

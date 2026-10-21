@@ -106,6 +106,14 @@ function get_attendees( $ticket_ids = 'all', $registered_after = '', $admin_flag
 
 	$attendees = get_posts( $params );
 
+	// "Unknown Attendee" placeholders have no name to print.
+	$attendees = array_filter(
+		$attendees,
+		function ( $attendee ) {
+			return 'unknown.attendee@example.org' !== $attendee->tix_email;
+		}
+	);
+
 	if ( '' !== $admin_flag ) {
 		$attendees = array_filter( $attendees, function( $attendee ) use ( $admin_flag ) {
 			$flags = get_post_meta( $attendee->ID, 'camptix-admin-flag' );

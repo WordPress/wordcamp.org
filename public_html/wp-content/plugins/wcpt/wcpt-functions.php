@@ -124,3 +124,34 @@ function wcpt_add_note_metabox( $post ) {
 
 	require_once __DIR__ . '/views/common/metabox-notes.php';
 }
+
+/**
+ * Programmatically add a private note to a wordcamp post.
+ *
+ * This is the low-level counterpart to Event_Admin::validate_and_add_note(),
+ * which requires a form submission. Use this when notes are created outside the
+ * admin UI — e.g. from a REST API endpoint or a cron job.
+ *
+ * @param int    $post_id  Post ID.
+ * @param string $message  Note text (plain text; HTML is stripped).
+ * @param int    $user_id  Author user ID. Pass 0 to attribute to the system
+ *                         (displayed as "WordCamp Bot" in the log).
+ * @return int|false       Meta ID on success, false on failure.
+ */
+function wcpt_add_private_note( $post_id, $message, $user_id = 0 ) {
+	$message = sanitize_textarea_field( $message );
+
+	if ( empty( $message ) ) {
+		return false;
+	}
+
+	return add_post_meta(
+		absint( $post_id ),
+		'_note',
+		array(
+			'timestamp' => time(),
+			'user_id'   => absint( $user_id ),
+			'message'   => $message,
+		)
+	);
+}

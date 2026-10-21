@@ -19,6 +19,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		// Sponsor region
 		createSiteCheckboxes.change( self.toggleSponsorRegionRequired );
+		$( '#wcpt_multi-event_sponsor_groups' ).change( self.toggleSponsorRegionRequired );
 		createSiteCheckboxes.trigger( 'change' );
 
 		// Contributor day info
@@ -94,18 +95,17 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.
 	 *
-	 * \WordCamp_New_Site::maybe_create_new_sites() requires it to be set to create a new site.
+	 * \WordCamp_New_Site::maybe_create_new_sites() needs a sponsor region or a sponsor group to create a
+	 * new site. The group picker is only on the screen while sponsor groups are switched on.
 	 *
 	 * @param {object} event
 	 */
 	self.toggleSponsorRegionRequired = function( event ) {
-		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' );
+		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' ),
+			creatingSite = $( '.create-site-checkbox:checked' ).length > 0,
+			sponsorGroups = $( '#wcpt_multi-event_sponsor_groups' ).val() || [];
 
-		if ( $( '.create-site-checkbox:checked' ) ) {
-			sponsorRegion.prop( 'required', true );
-		} else {
-			sponsorRegion.prop( 'required', false );
-		}
+		sponsorRegion.prop( 'required', creatingSite && 0 === sponsorGroups.length );
 	};
 
 	/**

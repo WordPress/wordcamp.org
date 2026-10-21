@@ -164,6 +164,13 @@ function get_export_types() {
 			'callback'  => __NAMESPACE__ . '\_generate_payment_report_jpm_checks',
 			'filename'  => 'wordcamp-payments-%s-%s-jpm-checks.csv',
 		),
+
+		'sepa' => array(
+			'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
+			'mime_type' => 'application/xml',
+			'callback'  => __NAMESPACE__ . '\_generate_payment_report_sepa',
+			'filename'  => 'WordCampPayments%s%sSEPA.xml',
+		),
 	);
 }
 
@@ -627,6 +634,30 @@ function _generate_payment_report_jpm_wires( $args ) {
 }
 
 /**
+ * SEPA Credit Transfer – ISO 20022 XML
+ *
+ * @param array $args
+ *
+ * @return string
+ */
+function _generate_payment_report_sepa( $args ) {
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
+
+	if ( 'wcp_payment_request' === $args['post_type'] ) {
+		return WCP_Payment_Request::_generate_payment_report_sepa( $args );
+	} elseif ( 'wcb_reimbursement' === $args['post_type'] ) {
+		return Reimbursement_Requests\_generate_payment_report_sepa( $args );
+	}
+}
+
+/**
  * Exclude weekends and JPM holidays.
  *
  * Needs to be updated every year.
@@ -906,7 +937,7 @@ function process_import_request() {
 	$header  = array();
 	$results = array();
 
-	while ( ( $line = fgetcsv( $handle ) ) !== false ) {
+	while ( ( $line = fgetcsv( $handle, null, ',', '"', '\\' ) ) !== false ) {
 		// Skip first line.
 		if ( ++$count == 1 ) {
 			continue;

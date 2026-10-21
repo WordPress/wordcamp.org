@@ -24,9 +24,9 @@ export function ScheduleEdit( { attributes, setAttributes } ) {
 	}
 
 	const contextValues = {
-		allTracks: allTracks,
-		attributes: attributes,
-		settings: settings,
+		allTracks,
+		attributes,
+		settings,
 		renderEnvironment: 'editor',
 	};
 

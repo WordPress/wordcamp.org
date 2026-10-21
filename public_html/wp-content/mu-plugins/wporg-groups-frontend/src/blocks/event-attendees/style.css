@@ -1,0 +1,70 @@
+/**
+ * Event Attendees block styles.
+ */
+
+.wporg-event-attendees__heading {
+	margin: 0 0 var(--wp--preset--spacing--20);
+}
+
+.wporg-event-attendees__list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: var(--wp--preset--spacing--20);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wporg-event-attendees__name {
+	min-width: 0;
+	overflow-wrap: break-word;
+	line-height: 1.4;
+}
+
+.wporg-event-attendees__toggle {
+	width: fit-content;
+	cursor: pointer;
+	color: var(--wp--preset--color--blueberry-1);
+	font-weight: 600;
+}
+
+.wporg-event-attendees__toggle:hover {
+	color: var(--wp--preset--color--deep-blueberry);
+}
+
+.wporg-event-attendees__link {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+	min-width: 0;
+	color: var(--wp--preset--color--charcoal-0);
+	font-size: var(--wp--preset--font-size--small);
+	text-decoration: none;
+}
+
+.wporg-event-attendees__link:hover .wporg-event-attendees__name {
+	color: var(--wp--preset--color--blueberry-1);
+	text-decoration: underline;
+}
+
+.wporg-event-attendees__link:focus-visible,
+.wporg-event-attendees__toggle:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+}
+
+.wporg-event-attendees__avatar {
+	flex: 0 0 auto;
+	width: 40px;
+	height: 40px;
+	border-radius: 9999px;
+	object-fit: cover;
+}
+
+.wporg-event-attendees__more {
+	margin-top: var(--wp--preset--spacing--20);
+}
+
+.wporg-event-attendees__more[open] .wporg-event-attendees__toggle {
+	margin-bottom: var(--wp--preset--spacing--20);
+}

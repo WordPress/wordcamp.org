@@ -1175,16 +1175,36 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return $post_data;
 			}
 
+			/*
+			 * Nobody can report attendance for an event that has not happened. The field is
+			 * read-only until the end date passes, so requiring it earlier would refuse the
+			 * close and then name a box the screen will not let anyone type into. It would also
+			 * strand a camp with no dates at all, which cron never closes either.
+			 */
+			if ( ! self::event_has_ended( $post_data_raw['ID'] ) ) {
+				return $post_data;
+			}
+
 			$missing_fields = array();
 
 			foreach ( self::get_required_fields( 'closed', $post_data_raw['ID'] ) as $field ) {
 				$key = wcpt_key_to_str( $field, 'wcpt_' );
 
-				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-				$value = isset( $_POST[ $key ] )
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- as above.
-					? sanitize_text_field( wp_unslash( $_POST[ $key ] ) )
-					: (string) get_post_meta( $post_data_raw['ID'], $field, true );
+				/*
+				 * A protected field is read from storage, never from the form, the same way
+				 * `has_sponsor_groups()` reads it: the box is rendered `readonly`, which still
+				 * submits, so a posted value would let somebody satisfy a requirement for a
+				 * field they are not allowed to edit and that `metabox_save()` would discard.
+				 */
+				if ( self::is_protected_field( $field ) ) {
+					$value = (string) get_post_meta( $post_data_raw['ID'], $field, true );
+				} else {
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+					$value = isset( $_POST[ $key ] )
+						// phpcs:ignore WordPress.Security.NonceVerification.Missing -- as above.
+						? sanitize_text_field( wp_unslash( $_POST[ $key ] ) )
+						: (string) get_post_meta( $post_data_raw['ID'], $field, true );
+				}
 
 				/*
 				 * Not `empty()`: `empty( '0' )` is true, and an event nobody attended is a
@@ -1410,17 +1430,23 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * `close_wordcamps_after_event()` uses, so a field that unlocks here cannot disagree with
 		 * the cron that closes the post.
 		 *
+		 * @param int|null $post_id The post to read, or null for the one being edited.
+		 *
 		 * @return bool False when there is no post, or no dates on it.
 		 */
-		protected static function event_has_ended() {
-			$post = get_post();
+		protected static function event_has_ended( $post_id = null ) {
+			if ( ! $post_id ) {
+				$post = get_post();
 
-			if ( ! $post ) {
-				return false;
+				if ( ! $post ) {
+					return false;
+				}
+
+				$post_id = $post->ID;
 			}
 
-			$start_date = get_post_meta( $post->ID, 'Start Date (YYYY-mm-dd)', true );
-			$end_date   = get_post_meta( $post->ID, 'End Date (YYYY-mm-dd)', true );
+			$start_date = get_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', true );
+			$end_date   = get_post_meta( $post_id, 'End Date (YYYY-mm-dd)', true );
 
 			if ( empty( $end_date ) ) {
 				$end_date = $start_date;

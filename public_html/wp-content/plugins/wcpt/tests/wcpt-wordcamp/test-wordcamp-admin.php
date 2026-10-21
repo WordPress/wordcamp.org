@@ -56,6 +56,24 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Create a WordCamp whose event has already happened.
+	 *
+	 * The attendance requirement only applies once there is attendance to report, so a camp
+	 * with no dates is exempt from it. Every test that expects a refusal needs one of these.
+	 *
+	 * @param string $status The desired post status.
+	 *
+	 * @return int Post ID.
+	 */
+	private function create_past_wordcamp( $status = 'wcpt-scheduled' ) {
+		$post_id = $this->create_wordcamp( $status );
+
+		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '-7 days' ) );
+
+		return $post_id;
+	}
+
+	/**
 	 * @covers WordCamp_Admin::get_required_fields
 	 */
 	public function test_get_required_fields_closed_includes_actual_attendees() {
@@ -84,7 +102,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_blocked_without_actual_attendees() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		// Simulate no Actual Attendees in POST data.
 		$_POST = array();
@@ -110,7 +128,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_allowed_with_actual_attendees() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		// Simulate Actual Attendees in POST data.
 		$_POST = array(
@@ -250,7 +268,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_stores_missing_fields_transient() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		$_POST = array();
 
@@ -280,7 +298,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_recorded_zero_is_a_count() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		$_POST = array(
 			'wcpt_actual_attendees' => '0',
@@ -305,7 +323,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_stored_meta_satisfies_the_requirement_when_the_form_posts_nothing() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		update_post_meta( $post_id, 'Actual Attendees', '120' );
 
@@ -331,7 +349,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_cron_closes_an_event_with_no_count() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		$_POST = array();
 
@@ -358,7 +376,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_cron_closes_an_event_that_already_has_a_count() {
-		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+		$post_id = $this->create_past_wordcamp();
 
 		update_post_meta( $post_id, 'Actual Attendees', '95' );
 
@@ -376,6 +394,103 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 		remove_filter( 'wp_doing_cron', '__return_true' );
 
 		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'Cron should close an event that already has a count.' );
+	}
+
+	/**
+	 * A blank attendance box must not record zero.
+	 *
+	 * This is the defect the first version of this branch shipped. With the field visible,
+	 * `Event_Admin::metabox_save()` reached it on every save and `floatval( '' )` is 0.0, so an
+	 * unrelated edit wrote `Actual Attendees = 0`. The requirement then passed on a figure
+	 * nobody typed, and the event closed recording no attendees. A blank can be chased; a
+	 * fabricated zero cannot be told apart from an event nobody came to.
+	 *
+	 * @covers Event_Admin::metabox_save
+	 */
+	public function test_a_blank_attendance_box_does_not_record_zero() {
+		$post_id = $this->create_past_wordcamp();
+
+		$_POST = array(
+			'action'                => 'editpost',
+			'wcpt_actual_attendees' => '',
+		);
+
+		self::$admin->metabox_save( $post_id, get_post( $post_id ), false );
+
+		$this->assertSame(
+			'',
+			get_post_meta( $post_id, 'Actual Attendees', true ),
+			'A blank attendance box should leave no value, not a zero.'
+		);
+	}
+
+	/**
+	 * A figure that was typed in is still saved.
+	 *
+	 * The guard above must not stop a real number reaching the database.
+	 *
+	 * @covers Event_Admin::metabox_save
+	 */
+	public function test_a_typed_attendance_figure_is_saved() {
+		$post_id = $this->create_past_wordcamp();
+
+		$_POST = array(
+			'action'                => 'editpost',
+			'wcpt_actual_attendees' => '87',
+		);
+
+		self::$admin->metabox_save( $post_id, get_post( $post_id ), false );
+
+		$this->assertEquals( 87, get_post_meta( $post_id, 'Actual Attendees', true ), 'A typed figure should be saved.' );
+	}
+
+	/**
+	 * An event that has not happened yet is exempt from the requirement.
+	 *
+	 * Nobody can report attendance for an event still ahead, and the box is read-only until the
+	 * end date passes, so requiring it earlier refuses the close and then names a field the
+	 * screen will not let anyone fill in.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_an_event_still_ahead_is_exempt() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
+
+		$_POST = array();
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'An event that has not happened should close without a count.' );
+	}
+
+	/**
+	 * A camp with no dates at all can still be closed.
+	 *
+	 * Cron skips a camp with no start date, so one stranded in Cancelled or On Hold with dates
+	 * never filled in would otherwise have no way to reach Closed at all.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_a_camp_with_no_dates_can_be_closed() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		$_POST = array();
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'A camp with no dates should not be stranded.' );
 	}
 
 	/**

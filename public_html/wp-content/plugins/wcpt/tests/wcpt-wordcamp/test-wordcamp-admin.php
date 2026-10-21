@@ -56,6 +56,29 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A complete edit-screen POST, with every field the save loop reads present and empty.
+	 *
+	 * `metabox_save()` reads each known key without checking it is set, so a partial request
+	 * emits "Undefined array key" warnings, and this suite fails the build on any unexpected
+	 * entry in the error log.
+	 *
+	 * @param string $actual_attendees The value for the attendance box.
+	 *
+	 * @return array
+	 */
+	private function editpost_request( $actual_attendees ) {
+		$request = array( 'action' => 'editpost' );
+
+		foreach ( array_keys( WordCamp_Admin::meta_keys( 'all' ) ) as $key ) {
+			$request[ wcpt_key_to_str( $key, 'wcpt_' ) ] = '';
+		}
+
+		$request['wcpt_actual_attendees'] = $actual_attendees;
+
+		return $request;
+	}
+
+	/**
 	 * Create a WordCamp whose event has already happened.
 	 *
 	 * The attendance requirement only applies once there is attendance to report, so a camp
@@ -345,10 +368,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	public function test_a_blank_attendance_box_does_not_record_zero() {
 		$post_id = $this->create_past_wordcamp();
 
-		$_POST = array(
-			'action'                => 'editpost',
-			'wcpt_actual_attendees' => '',
-		);
+		$_POST = $this->editpost_request( '' );
 
 		self::$admin->metabox_save( $post_id, get_post( $post_id ), false );
 
@@ -369,10 +389,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	public function test_a_typed_attendance_figure_is_saved() {
 		$post_id = $this->create_past_wordcamp();
 
-		$_POST = array(
-			'action'                => 'editpost',
-			'wcpt_actual_attendees' => '87',
-		);
+		$_POST = $this->editpost_request( '87' );
 
 		self::$admin->metabox_save( $post_id, get_post( $post_id ), false );
 

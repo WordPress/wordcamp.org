@@ -38,7 +38,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 	let timeFormat = settings.time_format || 'g:i a';
 	// Append the timezone if it's not included.
-	if ( ! timeFormat.includes( 'T' ) ) {
+	if ( attributes.showTimezone && ! timeFormat.includes( 'T' ) ) {
 		timeFormat += ' T';
 	}
 

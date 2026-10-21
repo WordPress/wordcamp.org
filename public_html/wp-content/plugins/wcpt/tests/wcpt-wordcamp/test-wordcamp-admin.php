@@ -194,73 +194,8 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 		$this->assertEquals( $post_data, $result, 'Non-WordCamp post data should not be modified.' );
 	}
 
-	/**
-	 * Actual Attendees should be protected before the event end date passes.
-	 *
-	 * @covers WordCamp_Admin::get_protected_fields
-	 */
-	public function test_actual_attendees_protected_before_end_date() {
-		$post_id = $this->create_wordcamp();
 
-		// Set end date to the future.
-		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
 
-		// get_protected_fields() uses get_post() which relies on the global $post.
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
-		$GLOBALS['post'] = get_post( $post_id );
-
-		$protected = WordCamp_Admin::get_protected_fields();
-
-		$this->assertContains( 'Actual Attendees', $protected, 'Actual Attendees should be protected before the event ends.' );
-
-		// Clean up.
-		unset( $GLOBALS['post'] );
-	}
-
-	/**
-	 * Actual Attendees should not be protected after the event end date passes.
-	 *
-	 * @covers WordCamp_Admin::get_protected_fields
-	 */
-	public function test_actual_attendees_not_protected_after_end_date() {
-		$post_id = $this->create_wordcamp();
-
-		// Set end date to the past.
-		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '-30 days' ) );
-
-		// get_protected_fields() uses get_post() which relies on the global $post.
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
-		$GLOBALS['post'] = get_post( $post_id );
-
-		$protected = WordCamp_Admin::get_protected_fields();
-
-		$this->assertNotContains( 'Actual Attendees', $protected, 'Actual Attendees should not be protected after the event ends.' );
-
-		// Clean up.
-		unset( $GLOBALS['post'] );
-	}
-
-	/**
-	 * When no end date is set, start date should be used for protection.
-	 *
-	 * @covers WordCamp_Admin::get_protected_fields
-	 */
-	public function test_actual_attendees_uses_start_date_when_no_end_date() {
-		$post_id = $this->create_wordcamp();
-
-		// Set only start date in the future, no end date.
-		update_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
-		$GLOBALS['post'] = get_post( $post_id );
-
-		$protected = WordCamp_Admin::get_protected_fields();
-
-		$this->assertContains( 'Actual Attendees', $protected, 'Actual Attendees should be protected using start date when no end date is set.' );
-
-		// Clean up.
-		unset( $GLOBALS['post'] );
-	}
 
 	/**
 	 * Closing should store missing fields in a transient.

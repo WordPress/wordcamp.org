@@ -1191,20 +1191,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				$key = wcpt_key_to_str( $field, 'wcpt_' );
 
 				/*
-				 * A protected field is read from storage, never from the form, the same way
-				 * `has_sponsor_groups()` reads it: the box is rendered `readonly`, which still
-				 * submits, so a posted value would let somebody satisfy a requirement for a
-				 * field they are not allowed to edit and that `metabox_save()` would discard.
+				 * The form first, then what is stored. A save that changes something else posts
+				 * the box as it stands, and a figure recorded earlier still counts.
 				 */
-				if ( self::is_protected_field( $field ) ) {
-					$value = (string) get_post_meta( $post_data_raw['ID'], $field, true );
-				} else {
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = isset( $_POST[ $key ] )
-						// phpcs:ignore WordPress.Security.NonceVerification.Missing -- as above.
-						? sanitize_text_field( wp_unslash( $_POST[ $key ] ) )
-						: (string) get_post_meta( $post_data_raw['ID'], $field, true );
-				}
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+				$value = isset( $_POST[ $key ] )
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- as above.
+					? sanitize_text_field( wp_unslash( $_POST[ $key ] ) )
+					: (string) get_post_meta( $post_data_raw['ID'], $field, true );
 
 				/*
 				 * Not `empty()`: `empty( '0' )` is true, and an event nobody attended is a
@@ -1375,17 +1369,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Series Event',
 					)
 				);
-			}
-
-			/*
-			 * "Actual Attendees" is shown at every status but can only be typed in once the event
-			 * has happened. It used to be hidden until `wcpt-closed`, which made the requirement in
-			 * #1603 impossible to satisfy: an organizer could not fill the field in before closing,
-			 * and then could not close. Protected rather than hidden, so the number is visible on
-			 * the screen and in an export while the event is still ahead.
-			 */
-			if ( ! self::event_has_ended() ) {
-				$protected_fields[] = 'Actual Attendees';
 			}
 
 			return $protected_fields;

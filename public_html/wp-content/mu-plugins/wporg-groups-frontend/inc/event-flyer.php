@@ -11,12 +11,23 @@
  * occurrence of a recurring series gets its own flyer, `…/{date}/flyer/`,
  * with that date on it and a QR code to that date's page.
  *
+ * The flyer prints a short URL rather than the event's permalink (#2222):
+ * `…/e/{ID}/`, or `…/e/{ID}/{Ymd}/` for a date of a series, which redirects
+ * to the event. A permalink carries the event's slug, which is too long to
+ * type off a sheet of paper. A wp.me link can't name an occurrence, so a
+ * series' flyer would open on whichever date the series page picks.
+ *
  * @package WordCamp\Groups\Frontend
  */
 
 namespace WordCamp\Groups\Frontend\Event_Flyer;
 
 use GatherPress\Core\Event\Event;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+use WP;
+use WP_Post;
 
 defined( 'WPINC' ) || die();
 
@@ -26,12 +37,20 @@ defined( 'WPINC' ) || die();
 const QUERY_VAR = 'wporg_event_flyer';
 const ENDPOINT  = 'flyer';
 
+/**
+ * Query vars a short URL carries, and the URL segment it lives under.
+ */
+const SHORT_QUERY_VAR      = 'wporg_event_short';
+const SHORT_DATE_QUERY_VAR = 'wporg_event_short_date';
+const SHORT_BASE           = 'e';
+
 /** Registers the flyer route and what the page needs around it. */
 function bootstrap(): void {
 	// After GatherPress has registered the event post type, whose rewrite
 	// slug the rules are built from.
 	add_action( 'init', __NAMESPACE__ . '\register_rewrite_rules', 20 );
 	add_filter( 'query_vars', __NAMESPACE__ . '\add_query_var' );
+	add_action( 'parse_request', __NAMESPACE__ . '\redirect_short_url' );
 	// Ahead of core's `_wp_admin_bar_init` (priority 0), which queues the
 	// toolbar's 32px page offset if the toolbar is still on at that point.
 	add_action( 'template_redirect', __NAMESPACE__ . '\prepare_request', -1 );
@@ -73,6 +92,24 @@ function get_rewrite_rules(): array {
 }
 
 /**
+ * The rewrite rules for a short URL, keyed by pattern.
+ *
+ * The date takes the same form as an occurrence URL's, though the flyer only
+ * ever prints the `Ymd` part: a series repeats weekly at most, so a day
+ * names one date.
+ *
+ * @return array<string, string>
+ */
+function get_short_url_rewrite_rules(): array {
+	return array(
+		'^' . SHORT_BASE . '/([0-9]+)/([0-9]{8}(?:T[0-9]{6})?)/?$' =>
+			'index.php?' . SHORT_QUERY_VAR . '=$matches[1]&' . SHORT_DATE_QUERY_VAR . '=$matches[2]',
+		'^' . SHORT_BASE . '/([0-9]+)/?$'                          =>
+			'index.php?' . SHORT_QUERY_VAR . '=$matches[1]',
+	);
+}
+
+/**
  * Adds the flyer rewrite rules, flushing the stored rules when they're missing.
  *
  * Follows GatherPress's calendar endpoints (`Calendar\Endpoint`): dropping the
@@ -83,7 +120,7 @@ function get_rewrite_rules(): array {
 function register_rewrite_rules(): void {
 	$stored = get_option( 'rewrite_rules' );
 
-	foreach ( get_rewrite_rules() as $pattern => $query ) {
+	foreach ( array_merge( get_rewrite_rules(), get_short_url_rewrite_rules() ) as $pattern => $query ) {
 		add_rewrite_rule( $pattern, $query, 'top' );
 
 		if ( is_array( $stored ) && ( $stored[ $pattern ] ?? null ) !== $query ) {
@@ -101,6 +138,8 @@ function register_rewrite_rules(): void {
  */
 function add_query_var( array $query_vars ): array {
 	$query_vars[] = QUERY_VAR;
+	$query_vars[] = SHORT_QUERY_VAR;
+	$query_vars[] = SHORT_DATE_QUERY_VAR;
 
 	return $query_vars;
 }
@@ -123,6 +162,121 @@ function is_flyer_request(): bool {
  */
 function get_flyer_url( int $event_id ): string {
 	return trailingslashit( (string) get_permalink( $event_id ) ) . ENDPOINT . '/';
+}
+
+/**
+ * The short URL for an event, dated when its permalink is.
+ *
+ * Follows `get_permalink()` rather than the request: where the permalink is
+ * an occurrence's URL the short URL names that date too, and a series' own
+ * undated flyer gets an undated short URL, like its permalink.
+ *
+ * @param int $event_id Event post ID.
+ */
+function get_short_url( int $event_id ): string {
+	$url = home_url( SHORT_BASE . '/' . $event_id . '/' );
+
+	if ( ! class_exists( Context::class ) || '' === Context::recurrence_id() ) {
+		return $url;
+	}
+
+	$recurrence_id = Context::recurrence_id();
+
+	if ( trailingslashit( (string) get_permalink( $event_id ) ) !== Context::occurrence_url( $event_id, $recurrence_id ) ) {
+		return $url;
+	}
+
+	return $url . substr( $recurrence_id, 0, 8 ) . '/';
+}
+
+/**
+ * Where a short URL leads: the event's permalink, or a date's page.
+ *
+ * Empty for anything that isn't an event the visitor can read, so an ID
+ * can't be walked to find the slugs of drafts, and for a date the series
+ * doesn't have.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $date     `Ymd`, a full recurrence ID, or empty.
+ */
+function get_short_url_target( int $event_id, string $date = '' ): string {
+	$post = get_post( $event_id );
+
+	if ( ! $post instanceof WP_Post || Event::POST_TYPE !== $post->post_type ) {
+		return '';
+	}
+
+	if ( ! is_post_publicly_viewable( $post ) && ! current_user_can( 'read_post', $post->ID ) ) {
+		return '';
+	}
+
+	if ( '' === $date ) {
+		return (string) get_permalink( $post );
+	}
+
+	if ( ! class_exists( Occurrences::class ) ) {
+		return '';
+	}
+
+	$occurrence = Occurrences::get( $post->ID, $date ) ?? find_occurrence_on( $post->ID, $date );
+
+	return $occurrence ? Context::occurrence_url( $post->ID, (string) $occurrence->recurrence_id ) : '';
+}
+
+/**
+ * The occurrence of a series on a given day.
+ *
+ * An occurrence's ID carries its start time (`Ymd\THis`) unless it's all
+ * day, and the flyer prints only the day.
+ *
+ * @param int    $event_id Series post ID.
+ * @param string $date     `Ymd`.
+ */
+function find_occurrence_on( int $event_id, string $date ): ?object {
+	global $wpdb;
+
+	if ( ! preg_match( '/^[0-9]{8}$/', $date ) ) {
+		return null;
+	}
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+	$row = $wpdb->get_row(
+		$wpdb->prepare(
+			'SELECT * FROM %i WHERE series_post_id = %d AND recurrence_id LIKE %s ORDER BY recurrence_id LIMIT 1',
+			Recurring_Events_Database::occurrences_table(),
+			$event_id,
+			$wpdb->esc_like( $date . 'T' ) . '%'
+		)
+	);
+
+	return is_object( $row ) ? $row : null;
+}
+
+/**
+ * Sends a short URL on to the event, or 404s it.
+ *
+ * Runs once the request is parsed, before the main query, which a short URL
+ * has no use for.
+ *
+ * @param WP $wp Current WordPress environment.
+ */
+function redirect_short_url( WP $wp ): void {
+	if ( empty( $wp->query_vars[ SHORT_QUERY_VAR ] ) ) {
+		return;
+	}
+
+	$target = get_short_url_target(
+		absint( $wp->query_vars[ SHORT_QUERY_VAR ] ),
+		(string) ( $wp->query_vars[ SHORT_DATE_QUERY_VAR ] ?? '' )
+	);
+
+	if ( '' === $target ) {
+		$wp->query_vars = array( 'error' => '404' );
+		return;
+	}
+
+	wp_safe_redirect( $target, 301 );
+	exit;
 }
 
 /**

@@ -261,14 +261,16 @@ function find_occurrence_on( int $event_id, string $date ): ?object {
  * @param WP $wp Current WordPress environment.
  */
 function redirect_short_url( WP $wp ): void {
-	if ( empty( $wp->query_vars[ SHORT_QUERY_VAR ] ) ) {
+	$event_id = $wp->query_vars[ SHORT_QUERY_VAR ] ?? '';
+	$date     = $wp->query_vars[ SHORT_DATE_QUERY_VAR ] ?? '';
+
+	// Not `empty()`: `…/e/0/` is a short URL too, and 404s. Core lets an
+	// array through from the query string.
+	if ( ! is_scalar( $event_id ) || '' === (string) $event_id ) {
 		return;
 	}
 
-	$target = get_short_url_target(
-		absint( $wp->query_vars[ SHORT_QUERY_VAR ] ),
-		(string) ( $wp->query_vars[ SHORT_DATE_QUERY_VAR ] ?? '' )
-	);
+	$target = get_short_url_target( absint( $event_id ), is_scalar( $date ) ? (string) $date : '' );
 
 	if ( '' === $target ) {
 		$wp->query_vars = array( 'error' => '404' );

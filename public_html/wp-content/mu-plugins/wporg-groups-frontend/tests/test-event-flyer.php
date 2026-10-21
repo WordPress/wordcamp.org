@@ -495,10 +495,21 @@ class Test_Event_Flyer extends Groups_TestCase {
 	public function test_short_url_to_a_non_event_is_a_404() {
 		$post_id = self::factory()->post->create( array( 'post_title' => 'A news post' ) );
 
+		// A redirect would exit and end the suite green, so fail on it instead.
+		add_filter(
+			'wp_redirect',
+			static function () {
+				throw new \RuntimeException( 'Unexpected redirect.' );
+			}
+		);
+
 		$this->go_to( home_url( "e/{$post_id}/" ) );
 		$this->assertTrue( is_404() );
 
 		$this->go_to( home_url( 'e/999999/' ) );
+		$this->assertTrue( is_404() );
+
+		$this->go_to( home_url( 'e/0/' ) );
 		$this->assertTrue( is_404() );
 	}
 

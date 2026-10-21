@@ -917,13 +917,8 @@ function get_existing_event_fields( int $event_id ): array {
 		$fields['time_end'] = $m[1];
 	}
 
-	$fields['venue_id'] = get_event_venue_post_id( $event_id );
-
-	$venue_taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
-	$venue_terms    = get_the_terms( $event_id, $venue_taxonomy );
-
-	$fields['is_online']         = is_array( $venue_terms )
-		&& in_array( 'online-event', wp_list_pluck( $venue_terms, 'slug' ), true );
+	$fields['venue_id']          = get_event_venue_post_id( $event_id );
+	$fields['is_online']         = ( new Event( $event_id ) )->is_online();
 	$fields['online_event_link'] = (string) get_post_meta(
 		$event_id,
 		'gatherpress_online_event_link',
@@ -1247,13 +1242,9 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		)
 	);
-	sync_event_venue_terms(
+	sync_event_venue(
 		$saved_id,
 		$venue_id,
-		(bool) $request->get_param( 'is_online' )
-	);
-	sync_online_event_link(
-		$saved_id,
 		(bool) $request->get_param( 'is_online' ),
 		(string) $request->get_param( 'online_event_link' )
 	);
@@ -1481,8 +1472,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 
 	// Physical and online venues.
 	$venue_id = resolve_venue_id( $fields );
-	sync_event_venue_terms( $saved_id, $venue_id, $fields['is_online'] );
-	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
+	sync_event_venue( $saved_id, $venue_id, $fields['is_online'], $fields['online_event_link'] );
 
 	set_event_language( $saved_id, $fields['language'] );
 	maybe_save_topics( $saved_id, $request );
@@ -1602,18 +1592,20 @@ function resolve_venue_id( array $fields ): int {
 }
 
 /**
- * Synchronize an event's physical venue and online-event terms.
+ * Synchronize an event's physical venue and online state.
  *
  * GatherPress models hybrid events by assigning both a physical venue's
  * shadow term and the `online-event` sentinel term. Replacing the full term
  * set here also clears a previously selected physical venue when an event is
- * changed to online-only.
+ * changed to online-only; `Event::set_online()` then adds the sentinel back
+ * and owns the meeting link that goes with it.
  *
- * @param int  $event_id     Event post ID.
- * @param int  $venue_post_id Physical venue post ID, or zero for none.
- * @param bool $is_online    Whether to assign the online-event term.
+ * @param int    $event_id          Event post ID.
+ * @param int    $venue_post_id     Physical venue post ID, or zero for none.
+ * @param bool   $is_online         Whether the event is online.
+ * @param string $online_event_link Online meeting URL.
  */
-function sync_event_venue_terms( int $event_id, int $venue_post_id, bool $is_online ): void {
+function sync_event_venue( int $event_id, int $venue_post_id, bool $is_online, string $online_event_link ): void {
 	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
 	$term_ids = array();
 
@@ -1626,32 +1618,15 @@ function sync_event_venue_terms( int $event_id, int $venue_post_id, bool $is_onl
 		}
 	}
 
-	if ( $is_online ) {
-		$online_term = term_exists( 'online-event', $taxonomy );
-		if ( is_array( $online_term ) ) {
-			$term_ids[] = (int) $online_term['term_id'];
-		} elseif ( is_numeric( $online_term ) ) {
-			$term_ids[] = (int) $online_term;
-		}
-	}
-
 	wp_set_object_terms( $event_id, $term_ids, $taxonomy, false );
-}
 
-/**
- * Synchronize the online meeting link with the event's online state.
- *
- * @param int    $event_id         Event post ID.
- * @param bool   $is_online        Whether the event is online.
- * @param string $online_event_link Online meeting URL.
- */
-function sync_online_event_link( int $event_id, bool $is_online, string $online_event_link ): void {
-	if ( $is_online && '' !== $online_event_link ) {
-		update_post_meta( $event_id, 'gatherpress_online_event_link', esc_url_raw( $online_event_link ) );
-		return;
+	( new Event( $event_id ) )->set_online( $is_online, $online_event_link );
+
+	// `set_online()` keeps a saved link when handed an empty one, but here an
+	// empty link means the organizer cleared the field.
+	if ( $is_online && '' === $online_event_link ) {
+		delete_post_meta( $event_id, 'gatherpress_online_event_link' );
 	}
-
-	delete_post_meta( $event_id, 'gatherpress_online_event_link' );
 }
 
 /**

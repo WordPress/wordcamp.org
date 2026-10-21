@@ -2313,12 +2313,12 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * An imported description with headings, lists, and quotes opens in the editor without losing markup.
+	 * An imported description with headings, lists, quotes, and separators opens in the editor without losing markup.
 	 */
 	public function test_rich_description_blocks_load_in_editor() {
 		$raw = $this->raw_event(
 			array(
-				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1</li><li>Talk 2</li></ul>\n<blockquote>Note this</blockquote>\n<pre>console.log(\"hello\");</pre>",
+				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1<ul><li>Sub 1</li><li>Sub 2</li></ul></li><li>Talk 2</li></ul>\n<hr>\n<blockquote>Note this</blockquote>\n<pre>console.log(\"hello\");</pre>",
 			)
 		);
 
@@ -2336,13 +2336,30 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( '<!-- wp:list -->', $loaded );
 		$this->assertStringContainsString( '<ul class="wp-block-list">', $loaded );
 		$this->assertStringContainsString( '<!-- wp:list-item -->', $loaded );
-		$this->assertStringContainsString( '<li>Talk 1</li>', $loaded );
-		$this->assertStringContainsString( '<li>Talk 2</li>', $loaded );
+		$this->assertStringContainsString( 'Talk 1', $loaded );
+		$this->assertStringContainsString( 'Sub 1', $loaded );
+		$this->assertStringContainsString( 'Sub 2', $loaded );
+		$this->assertStringContainsString( 'Talk 2', $loaded );
+		$this->assertStringContainsString( '<!-- wp:separator -->', $loaded );
+		$this->assertStringContainsString( '<hr class="wp-block-separator has-alpha-channel-opacity"/>', $loaded );
 		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
 		$this->assertStringContainsString( '<blockquote class="wp-block-quote">', $loaded );
 		$this->assertStringContainsString( 'Note this', $loaded );
 		$this->assertStringContainsString( '<!-- wp:code -->', $loaded );
 		$this->assertStringContainsString( '<pre class="wp-block-code"><code>console.log("hello");</code></pre>', $loaded );
+	}
+
+	/**
+	 * Loose block-level elements like table or div are not wrapped inside paragraph tags.
+	 */
+	public function test_to_paragraph_blocks_preserves_block_containers() {
+		$html   = "<table><tr><td>Cell</td></tr></table>\n<div>Container</div>";
+		$result = Meetup_Import\to_paragraph_blocks( $html );
+
+		$this->assertStringNotContainsString( '<p><table>', $result );
+		$this->assertStringNotContainsString( '<p><div>', $result );
+		$this->assertStringContainsString( '<table><tr><td>Cell</td></tr></table>', $result );
+		$this->assertStringContainsString( '<div>Container</div>', $result );
 	}
 
 	/**

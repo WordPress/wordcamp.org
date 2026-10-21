@@ -272,6 +272,113 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A recorded zero is a count, not a gap.
+	 *
+	 * `empty( '0' )` is true in PHP, so a check written with `empty()` refuses an event that
+	 * nobody attended while accepting the equivalent '0.0'.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_recorded_zero_is_a_count() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		$_POST = array(
+			'wcpt_actual_attendees' => '0',
+		);
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'An event nobody attended should still close.' );
+	}
+
+	/**
+	 * A stored count satisfies the requirement when the form posts nothing.
+	 *
+	 * The field is disabled until the event has ended, and a disabled input posts nothing, so a
+	 * save that changes something else must not read the attendance as missing.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_stored_meta_satisfies_the_requirement_when_the_form_posts_nothing() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		update_post_meta( $post_id, 'Actual Attendees', '120' );
+
+		$_POST = array();
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'A stored count should satisfy the requirement.' );
+	}
+
+	/**
+	 * Cron closes an event whose attendance was never recorded.
+	 *
+	 * `close_wordcamps_after_event()` closes every scheduled camp whose end date has passed, with
+	 * no POST data of any kind. Validating there would wedge the event in `wcpt-scheduled` on
+	 * every run, for ever, and silently.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_cron_closes_an_event_with_no_count() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		$_POST = array();
+
+		add_filter( 'wp_doing_cron', '__return_true' );
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		remove_filter( 'wp_doing_cron', '__return_true' );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'Cron should close an event with no recorded attendance.' );
+	}
+
+	/**
+	 * Cron closes an event that already holds a count.
+	 *
+	 * Worth its own test: the validator reads `$_POST` first, which is empty under cron, so an
+	 * event with a recorded number was blocked too before the fallback and the exemption.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_cron_closes_an_event_that_already_has_a_count() {
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
+
+		update_post_meta( $post_id, 'Actual Attendees', '95' );
+
+		$_POST = array();
+
+		add_filter( 'wp_doing_cron', '__return_true' );
+
+		$post_data = array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'wcpt-closed',
+		);
+
+		$result = self::$admin->require_complete_meta_to_publish_wordcamp( $post_data, array( 'ID' => $post_id ) );
+
+		remove_filter( 'wp_doing_cron', '__return_true' );
+
+		$this->assertEquals( 'wcpt-closed', $result['post_status'], 'Cron should close an event that already has a count.' );
+	}
+
+	/**
 	 * Clean up $_POST after each test.
 	 */
 	public function tear_down() {

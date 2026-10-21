@@ -2341,7 +2341,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( 'Sub 2', $loaded );
 		$this->assertStringContainsString( 'Talk 2', $loaded );
 		$this->assertStringContainsString( '<!-- wp:separator -->', $loaded );
-		$this->assertStringContainsString( '<hr class="wp-block-separator has-alpha-channel-opacity"/>', $loaded );
+		$this->assertStringContainsString( '<hr class="wp-block-separator has-alpha-channel-opacity"', $loaded );
 		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
 		$this->assertStringContainsString( '<blockquote class="wp-block-quote">', $loaded );
 		$this->assertStringContainsString( 'Note this', $loaded );

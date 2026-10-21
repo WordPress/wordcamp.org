@@ -1839,7 +1839,7 @@ function to_paragraph_blocks( string $html ): string {
 
 	$html = preg_replace(
 		'#<hr(?:\s+[^>]*)?/?>#is',
-		"<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\"/>\n<!-- /wp:separator -->",
+		"<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\" />\n<!-- /wp:separator -->",
 		$html
 	);
 

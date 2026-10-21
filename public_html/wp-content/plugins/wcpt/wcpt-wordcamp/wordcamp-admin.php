@@ -1417,7 +1417,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 *
 		 * @return bool False when there is no post, or no dates on it.
 		 */
-		protected static function event_has_ended( $post_id = null ) {
+		public static function event_has_ended( $post_id = null ) {
 			if ( ! $post_id ) {
 				$post = get_post();
 
@@ -2114,6 +2114,15 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	global $post_id;
 
 	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
+
+	/*
+	 * Attendance is required to close, and only once the event has happened, so the marker
+	 * appears when it starts applying rather than from the day the camp is created. Without
+	 * this the first anyone hears of the requirement is the refusal.
+	 */
+	if ( WordCamp_Admin::event_has_ended( $post_id ) ) {
+		$required_fields = array_merge( $required_fields, WordCamp_Admin::get_required_fields( 'closed', $post_id ) );
+	}
 
 	// @todo When you refactor meta_keys() to support changing labels -- see note in meta_keys() -- also make it support these notes.
 	$messages = array(

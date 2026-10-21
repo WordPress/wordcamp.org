@@ -505,7 +505,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-
 					break;
 
 				case 'all':
@@ -543,7 +542,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Transparency Report Received'] );
 						unset( $retval['Series Event'] );
 					}
-
 
 					$retval = array_merge(
 						$retval,

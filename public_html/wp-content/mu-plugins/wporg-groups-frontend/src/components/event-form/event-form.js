@@ -30,6 +30,7 @@ import { __, _x } from '@wordpress/i18n';
  * Internal dependencies.
  */
 import RecurrenceControls, { normalizeRecurrence } from '../recurrence-controls';
+import { followEventDate } from '../recurrence-dates';
 import RsvpQuestionsEditor from '../../blocks/event-manage/rsvp-questions-editor';
 import DescriptionEditor, { ensureCoreBlocksRegistered } from './description-editor';
 import buildEventPayload from './build-payload';
@@ -307,7 +308,10 @@ function EventForm(
 					type="date"
 					value={ form.date }
 					min={ isExistingPost ? undefined : MINIMUM_EVENT_DATE }
-					onChange={ ( v ) => updateField( 'date', v ) }
+					onChange={ ( v ) => {
+						setRecurrence( ( current ) => followEventDate( current, form.date, v ) );
+						updateField( 'date', v );
+					} }
 					required
 					__nextHasNoMarginBottom
 				/>

@@ -5,207 +5,151 @@ description: Run the Groups/GatherPress front-end integration compatibility chec
 
 # Groups / GatherPress compatibility checklist
 
-This checklist exists because GatherPress updates fairly often and its
-changes can silently break backwards compatibility with our Groups
-integration. It is self-contained — follow it with no other context. It
-covers three plugins: `mu-plugins/wporg-groups-frontend` (front-end
-event/member management), `mu-plugins/groups/gatherpress-groups-tweaks.php`
-(settings/capability/query overrides), and the `groups-site` block theme.
+GatherPress updates often, and its changes can silently break our Groups
+integration. This checklist is self-contained. It covers
+`mu-plugins/wporg-groups-frontend` (front-end event/member management),
+`mu-plugins/groups/gatherpress-groups-tweaks.php` (settings/capability/query
+overrides) and the `groups-site` block theme.
 
-**Keep this skill current.** This file is a living record, not a one-time
-checklist — whenever a session working on this integration (a version bump,
-a bug fix, a test-flakiness investigation, anything touching the plugins or
-theme above) turns up an essential finding — a real root cause, a bug in
-GatherPress or this integration and its fix, a test-environment gotcha, a
-methodology that generalizes — add it here before the session ends, in the
-section it belongs to (or a new one, if it doesn't fit an existing one).
-"Essential" means: would the next person hit the same wall without it?
-Prefer folding a finding into existing prose over appending a new bullet
-list per session — this file should read as current best understanding, not
-a changelog.
+**Keep this skill current.** When a session on this integration (a version
+bump, a bug fix, a flaky test, anything touching the code above) turns up an
+essential finding (a root cause, a bug and its fix, a test-env gotcha, a
+method that generalizes), add it before the session ends, in the section it
+belongs to. "Essential" means the next person would hit the same wall
+without it. Fold findings into existing prose: this file is current best
+understanding, not a changelog.
 
-**Compact it periodically.** Growth without pruning eventually makes this
-file slower to read than it's worth. Every so often (when a section is
-getting long, or findings start to overlap/repeat), reread the whole file
-and tighten it: merge redundant points, cut anything superseded by a later
-fix or no longer true of the current code, and re-verify specifics (file
-paths, function names, version numbers) against the actual repo rather than
-trusting older prose. Compacting is itself worth a small dedicated pass, not
-just an incidental side effect of adding one more finding.
+**Compact it periodically.** When a section gets long or findings overlap,
+reread the whole file: merge redundant points, cut what is superseded or no
+longer true, and re-verify paths, function names and versions against the
+repo instead of trusting older prose.
 
-Two automated layers exist alongside this manual checklist — run them
-first, then use this checklist for what they can't cover (real browser
-interaction, cross-plugin capability leaks, exploratory checks):
+## Automated layers (run first)
 
-- **PHPUnit** — `docker compose -f docker-compose.phpunit.yml up` (or your
-  usual local phpunit invocation). Covers the `WordCamp Groups` suite:
-  capability logic, `gatherpress-groups-tweaks.php` option/query overrides,
-  `Members_Controller` role rules, REST permission/IDOR checks, draft flow,
-  block registration.
-- **E2E (Playwright)** — `npx playwright test` (or trigger the
-  `e2e-tests.yml` GitHub Action manually; it also runs on any PR touching
-  the paths that workflow lists). **Check it actually ran before trusting a
-  green PR.** The path list is hand-maintained and has already lagged behind
-  what the specs assert on: they reach the recurring-events plugin's
-  occurrence pages and match `groups-site-*` class names only the theme
-  emits, so a change confined to either used to skip E2E entirely. When a
-  spec starts depending on a new path, add it there in the same PR.
-  Covers anonymous front-page rendering, an author creating an event
-  end-to-end through the real browser UI, per-event messaging, the
-  auto-publish-notification email, the member directory, and Reply →
-  Cancel on a group news post's comment form. Needs
-  `organiser1`/`organiser2`/`organiser3`/`organiser4`/`eventorganiser1`/
-  `eventorganiser2`/`eventorganiser3`/`eventorganiser4`/`eventorganiser5`/
-  `eventorganiser6`/`eventorganiser7`/`member1` (all `password`) — **every
-  individual test that logs in as an author has its own dedicated
-  `eventorganiser*` account, not just every spec *file*.** `organiser2`/
-  `3`/`4` (editor tier) are `event-form.spec.js`'s own, one per test, for
-  the same reason.
-  `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
-  its own three tests also run concurrently against each other under
-  `fullyParallel`, not just against other files. Don't consolidate any of
-  these back onto a shared account.
-  **If a spec times out waiting on a UI interaction, don't assume it's
-  `fullyParallel` contention and reach for `--workers=1` — read the actual
-  failure first.** Every Playwright failure writes an `error-context.md`
-  (path is in the terminal output) with a full accessibility-tree snapshot
-  of the page at the moment of timeout: read it before touching the test.
-  Several real, deterministic bugs were all initially mistaken for "just
-  flaky":
-    - A "Choose a pattern" starter-pattern dialog appears on every fresh
-      `post-new.php` visit for a post type with starter patterns
-      (`gatherpress_event` has them) and — unlike the separate "Welcome to
-      the editor" guide the specs already handled — its own Close button
-      and Escape do **not** dismiss it. It silently sat on top of the
-      sidebar, and every subsequent interaction hung until the test
-      timeout. Fixed by `tests/e2e/utils/dismiss-editor-onboarding.js`,
-      which every spec creating an event must call.
-    - Sharing one login across concurrent tests. This environment only
-      supports one active session per user (see the comment in
-      `tests/e2e/utils/login.js`), so under `fullyParallel` one worker's
-      fresh login can invalidate another's already-established session
-      mid-test — the `error-context.md` for that failure shows the page
-      stuck on a login form instead of the expected editor. `login()`'s own
-      retry loop only covers a collision *during the login request itself*;
-      it can't help once a later worker's login invalidates an earlier
-      worker's session that already succeeded. The only real fix is one
-      account per concurrently-running test, including within a single
-      spec file (see above).
-    - GatherPress's "Event settings" document panel (which
-      `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start"
-      button lives inside) is a collapsible `PanelBody` whose open/closed
-      state is a **preference persisted server-side per WordPress user**
-      (WordPress's editor-preferences API), not freshly defaulted each
-      browser session. GatherPress force-opens it once via a `domReady`
-      callback that checks `core/editor`'s `isEditorPanelOpened()` — but
-      that can race the preferences store's own async hydration of that
-      user's saved state, and if it loses the race the panel renders
-      collapsed. Once that happens for a given test account, it stays
-      collapsed on every later editor load too (GatherPress never re-checks
-      after that first callback), which is why this reproduced
-      deterministically for whichever account had ever hit the race, not
-      randomly. Fixed in `pin-event-far-future.js`: check whether the
-      "Date & time start" button is visible first, and if not, click the
-      "Event settings" panel header to expand it before proceeding — don't
-      assume the panel is already open.
-  If a timeout's `error-context.md` shows the *expected* page mid-load
-  (not stuck on a login form, error page, or unrelated dialog), *then*
-  it's reasonable to suspect genuine environment slowness — but confirm
-  that from the evidence, don't default to it.
-  **A test can also be right that something is broken in production, not
-  just in the test.** The auto-publish-notification test
-  (`event-publish-notification.spec.js`) intermittently found zero email
-  after a real publish, with no error logged anywhere. Root cause: multiple
-  events publishing within the same second — which this suite's own
-  `fullyParallel` execution reliably does, and which real usage can do too
-  — raced on `wp_schedule_single_event()`. WordPress core's cron store is a
-  single `wp_options` row (`option_name = 'cron'`) updated via a plain,
-  unsynchronized read-modify-write (`_get_cron_array()` /
-  `_set_cron_array()` in `wp-includes/cron.php`, no locking); two nearly
-  simultaneous callers can silently clobber each other's scheduled job at
-  any point up until wp-cron actually executes it, and
-  `wp_schedule_single_event()`'s own return value can't detect this since
-  it only reflects the calling request's own write. A bounded retry with
-  re-verification around the *scheduling* call closes the common case
-  (confirmed via a dedicated PHPUnit regression test, `pre_option_cron`
-  forced empty to simulate the race) but not the deeper one — a job can
-  still be clobbered *after* being confirmed scheduled, by a totally
-  unrelated later publish, since every `wp_schedule_single_event()` caller
-  on the site shares the same unsynchronized option. The real fix
-  (`schedule_new_event_notification()` in
-  `mu-plugins/wporg-groups-frontend/inc/notifications.php`) bypasses
-  WP-Cron for this entirely: it calls
-  `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
-  directly and synchronously, the same method GatherPress's own
-  `gatherpress_send_emails` cron handler and its "Message all members"
-  REST action both call — trading a brief publish-request delay (already
-  true of GatherPress's own dispatch once cron picks it up) for
-  eliminating the race category outright. The send is deferred *within*
-  the request, though: `transition_post_status` fires inside
-  `wp_insert_post()` before the event's datetimes/venue are written
-  (sending there produced "Date: —" emails), so the hook only queues the
-  event and `send_pending_new_event_notifications()` sends at `shutdown`
-  priority `PHP_INT_MAX` — after GatherPress's own default-priority
-  shutdown datetime resolver. **Going synchronous has a real blast radius
-  beyond the notification feature itself**: since `transition_post_status`
-  now runs on *every* `gatherpress_event` publish, any PHPUnit test that
-  publishes one — not just tests about notifications — would execute real
-  email-template rendering when the queue drains, which needs runtime
-  (theme template functions, etc.) most test bootstraps don't load.
-  `Groups_TestCase::setUp()` removes this action for every test by
-  default; `Test_Groups_Notifications` is the one class that re-adds it
-  (and drains the queue explicitly), for its own coverage. Keep this in
-  mind before converting any other deferred-to-cron integration point to
-  a synchronous call — check whether other tests publish through the same
-  hook first.
+Run both before the manual pass. If either fails, fix that first rather than
+debugging across layers. The manual checklist covers what they can't: real
+browser interaction, cross-plugin capability leaks, exploratory checks.
 
-If either automated suite fails, stop and fix that before doing the manual
-pass below — don't duplicate debugging effort across layers.
+- **PHPUnit**: `docker compose -f docker-compose.phpunit.yml up` (or your
+  usual invocation). The `WordCamp Groups` suite covers capability logic,
+  `gatherpress-groups-tweaks.php` option/query overrides, `Members_Controller`
+  role rules, REST permission/IDOR checks, draft flow, block registration.
+- **E2E (Playwright)**: `npx playwright test`, or the `e2e-tests.yml` Action
+  (manual, or on any PR touching the paths it lists). **Check it actually ran
+  before trusting a green PR.** The path list is hand-maintained and has
+  lagged: specs reach the recurring-events plugin's occurrence pages and
+  match `groups-site-*` classes only the theme emits, so changes confined to
+  either used to skip E2E. When a spec starts depending on a new path, add it
+  there in the same PR.
+  Covers the anonymous front page, an author creating an event through the
+  real UI, per-event messaging, the auto-publish-notification email, the
+  member directory, and Reply → Cancel on a group news post's comment form.
+  Accounts (all `password`): `organiser1`–`4`, `eventorganiser1`–`7`,
+  `member1`. **Every test that logs in has its own account, not just every
+  spec file**: `organiser2`/`3`/`4` (editor tier) are `event-form.spec.js`'s,
+  one per test, and `event-manage-messaging.spec.js` needs
+  `eventorganiser2`/`4`/`5` because its three tests run concurrently under
+  `fullyParallel`. Don't consolidate them onto shared accounts.
+
+### Reading an E2E failure
+
+A timeout on a UI interaction is not `fullyParallel` contention by default,
+so don't reach for `--workers=1`. Every failure writes an `error-context.md`
+(path in the terminal output) holding the page's accessibility tree at the
+moment of timeout. Read it first. These deterministic bugs were all first
+mistaken for flakiness:
+
+- **Starter-pattern dialog.** "Choose a pattern" opens on every fresh
+  `post-new.php` for a post type with starter patterns (`gatherpress_event`
+  has them). Unlike the "Welcome to the editor" guide, its Close button and
+  Escape don't dismiss it. It sat over the sidebar and hung every later
+  interaction. Every spec creating an event must call
+  `tests/e2e/utils/dismiss-editor-onboarding.js`.
+- **Shared logins.** This environment allows one active session per user
+  (see `tests/e2e/utils/login.js`), so one worker's login can invalidate
+  another's established session mid-test; `error-context.md` shows a login
+  form instead of the editor. `login()`'s retry only covers a collision
+  during the login request itself. The only fix is one account per
+  concurrently running test, including within one spec file.
+- **Collapsed "Event settings" panel.** The panel holding
+  `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start" button is a
+  `PanelBody` whose open state is a per-user preference persisted
+  server-side. GatherPress force-opens it once, in a `domReady` callback
+  checking `core/editor`'s `isEditorPanelOpened()`, which can race the
+  preferences store's async hydration. If it loses, the panel stays
+  collapsed for that account on every later load (never re-checked), so it
+  reproduces deterministically per account. `pin-event-far-future.js` checks
+  whether the button is visible and clicks the panel header if not.
+
+Suspect genuine environment slowness only when `error-context.md` shows the
+*expected* page mid-load (not a login form, error page or stray dialog), and
+confirm it from the evidence.
+
+**A test can be right that production is broken.**
+`event-publish-notification.spec.js` intermittently found no email after a
+real publish, with nothing logged. Several events publishing in the same
+second (this suite does it under `fullyParallel`, real usage can too) raced
+on `wp_schedule_single_event()`. Core's cron store is one `wp_options` row
+(`cron`) updated by an unlocked read-modify-write (`_get_cron_array()` /
+`_set_cron_array()` in `wp-includes/cron.php`), so concurrent callers can
+clobber each other's job any time before wp-cron runs it, and the return
+value only reflects the caller's own write. A retry with re-verification
+around scheduling (PHPUnit regression test forcing `pre_option_cron` empty)
+closes the common case but not a later clobber by any unrelated publish.
+
+The real fix, `schedule_new_event_notification()` in
+`mu-plugins/wporg-groups-frontend/inc/notifications.php`, bypasses WP-Cron:
+it calls `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
+synchronously, the method GatherPress's `gatherpress_send_emails` cron
+handler and its "Message all members" REST action both call, trading a brief
+publish delay for no race. The send is deferred within the request:
+`transition_post_status` fires inside `wp_insert_post()` before the
+datetimes/venue are written (sending there produced "Date: —" emails), so
+the hook only queues the event and `send_pending_new_event_notifications()`
+sends at `shutdown` priority `PHP_INT_MAX`, after GatherPress's
+default-priority shutdown datetime resolver.
+
+Going synchronous has a blast radius: any PHPUnit test publishing a
+`gatherpress_event` would render real email templates when the queue
+drains, needing runtime (theme template functions, etc.) most bootstraps
+don't load. `Groups_TestCase::setUp()` removes the action by default;
+`Test_Groups_Notifications` re-adds it and drains the queue explicitly.
+Before making any other cron-deferred integration point synchronous, check
+which tests publish through the same hook.
 
 ## 0. Before bumping the pinned version
 
-- **Confirm the target version is actually stable**, not a beta/RC:
+- **Confirm the target is stable**, not a beta/RC:
   `curl -s https://api.wordpress.org/plugins/info/1.0/gatherpress.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"`.
-- **Diff GatherPress core itself** for breaking API changes before touching
-  any code here. Clone/pull `github.com/GatherPress/gatherpress` locally and
-  run `git diff <old-tag> <new-tag>` (and `git log <old-tag>..<new-tag>
-  --oneline` for the human-readable summary). Specifically check every class
-  this integration touches directly —
+- **Diff GatherPress core** for breaking API changes before touching code
+  here. In a local clone of `github.com/GatherPress/gatherpress`, run
+  `git diff <old-tag> <new-tag>` and `git log <old-tag>..<new-tag> --oneline`.
+  Check every class this integration touches,
   `GatherPress\Core\{Rsvp\Rsvp,Event\Event,Venue\Venue,Venue\Setup,User,Setup,Blocks\Setup,Blocks\Event_Query}`
   (grep `GatherPress\\\\` across `mu-plugins/groups`,
-  `mu-plugins/wporg-groups-frontend`, and `themes/groups-site` to get the
-  current list) — for renamed/removed constants, changed return types
-  (`Rsvp::get()` went from always-`array` to `array|null` in 0.35.0 and broke
-  a test that indexed it directly), and classes marked `final` (harmless
-  unless something here extends one — check with
+  `mu-plugins/wporg-groups-frontend` and `themes/groups-site` for the current
+  list), for renamed/removed constants, changed return types (`Rsvp::get()`
+  went from `array` to `array|null` in 0.35.0 and broke a test that indexed
+  it), and classes made `final` (harmless unless we extend one:
   `grep -rn "extends.*GatherPress"`).
-  **Checking that a class still exists is not enough** — verify every
-  individual method/constant/property call site, not just the class. A
-  wrong-but-existing class import (`Blocks\Event_Query` vs. the real
-  `Event\Query`) passed every "does this class exist" check across two
-  GatherPress versions and only surfaced as a live production fatal,
-  because nothing had verified the *specific methods called* actually
-  existed on *that specific class*. Section 8 below has the exhaustive,
-  mechanical version of this check — run it now too, not just after
-  landing, since catching this before the bump is cheaper than catching it
-  in production.
-- **Grep theme templates for GatherPress block usage**, not just PHP:
+  **A class existing is not enough.** Verify every method/constant/property
+  call site. A wrong-but-existing import (`Blocks\Event_Query` vs. the real
+  `Event\Query`) passed every existence check across two versions and only
+  surfaced as a production fatal. Run Section 8's audit now too, not only
+  after landing.
+- **Grep theme templates for GatherPress blocks**, not just PHP:
   `grep -rn "wp:gatherpress" public_html/wp-content/themes/groups-site`.
-  GatherPress Alpha's migration (see below) only rewrites block content
-  *stored in the database* — it does not touch theme `.html` template
-  files. If a version bump removes/renames a block GatherPress itself used
-  to ship (e.g. `gatherpress/icon` → core `core/icon` in 0.35.0), any
-  in-repo template using it needs a manual, matching edit or it silently
-  renders blank.
-- **Find every place the version string is pinned** — there is no single
-  source of truth, so grep for the old version across the whole repo before
-  declaring the bump done:
+  GatherPress Alpha's migration only rewrites block content stored in the
+  database, never theme `.html` files. A removed/renamed block (e.g.
+  `gatherpress/icon` → `core/icon` in 0.35.0) needs a matching template edit
+  or it silently renders blank.
+- **Find every pinned copy of the version** (there is no single source of
+  truth):
   `grep -rln "<old-version>" . --include="*.yml" --include="*.php" --include="*.md" --include="*.sh" | grep -v "plugins/gatherpress"`.
-  As of the 0.35.0 bump these were: `.github/workflows/e2e-tests.yml`,
+  At the 0.35.0 bump: `.github/workflows/e2e-tests.yml`,
   `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`
-  (which was *already* stale at a different, older version than the two
-  CI workflows — don't assume they're in sync), and this skill's own
-  install command below.
+  (already stale at an older version than the workflows, so don't assume
+  they agree), and this skill's install commands below.
 
 ## 1. Environment setup
 
@@ -229,30 +173,28 @@ docker compose exec wordcamp.test wp plugin install \
 Environment gotchas:
 
 - Adding/removing a `groups-site` pattern requires a theme `Version:` bump.
-  Locally, clear the otherwise-stale scan with
+  Locally, clear the stale scan with
   `wp eval 'wp_get_theme()->delete_pattern_cache();' --url=<site>`;
   `wp cache flush` does not clear it.
-- If PHPUnit cannot read a mounted file that exists on the host, run
+- If PHPUnit can't read a mounted file that exists on the host, run
   `docker compose -f docker-compose.phpunit.yml up -d --force-recreate phpunit_wp`.
-- Hooks loaded in `wpSetUpBeforeClass()` disappear after the first test in
-  a full suite because `WP_UnitTestCase` restores a process-wide hook
-  snapshot. Re-add named callbacks in `setUp()`.
-- `go_to( get_permalink( $id ) )` does not establish a singular query in
-  this fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
-- If a new test account's first E2E run fails in
-  `dismissEditorOnboarding`, rerun once only when `error-context.md` shows
-  the Welcome dialog reinitializing.
+- Hooks added in `wpSetUpBeforeClass()` vanish after the first test of a full
+  suite, because `WP_UnitTestCase` restores a process-wide hook snapshot.
+  Re-add named callbacks in `setUp()`.
+- `go_to( get_permalink( $id ) )` doesn't establish a singular query in this
+  fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
+- If a new test account's first E2E run fails in `dismissEditorOnboarding`,
+  rerun once, and only when `error-context.md` shows the Welcome dialog
+  reinitializing.
 
-**After bumping the pinned GatherPress version, also install/update
+**After bumping the pin, install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
 (version-locked to core) and run its one-time migration.** GatherPress ships
-breaking *content* migrations (old `gatherpress/icon` block usage, old
+breaking content migrations (old `gatherpress/icon` usage, old
 `gatherpress/venue-map` width/height attributes, renamed RSVP settings
-values) through this companion plugin rather than an automatic upgrade
-routine. Skipping this step is exactly what it looks like when a venue's
-address/phone/website/map silently vanish from the front end after a version
-bump — it reads like a GatherPress regression but is actually just unmigrated
-data:
+values) through it instead of an upgrade routine. Skipping it looks like a
+GatherPress regression (a venue's address/phone/website/map vanish from the
+front end) but is just unmigrated data:
 
 ```bash
 docker compose exec wordcamp.test wp plugin install \
@@ -261,9 +203,8 @@ docker compose exec wordcamp.test wp plugin install \
 docker compose exec wordcamp.test wp gatherpress alpha fix --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
-Create one test user per role tier, with **both** a browser login password
-and a REST application password (the browser pass needs the former, the
-REST pass needs the latter):
+Create one user per role tier with **both** a login password (browser pass)
+and an application password (REST pass):
 
 ```bash
 for pair in "organiser1:editor" eventorganiser{1..7}:author "member1:subscriber"; do
@@ -287,8 +228,7 @@ BASE="https://events.wordpress.test/group/sunshine-coast-qld"
 
 ## 2. Direct REST pass (bypass the UI)
 
-Namespace `wporg-groups/v1` should expose these routes — confirm the full
-list first:
+Confirm the `wporg-groups/v1` route list first:
 
 ```bash
 curl -sk "$BASE/wp-json/wporg-groups/v1" | python3 -c "
@@ -299,8 +239,7 @@ for r, v in sorted(d['routes'].items()):
 "
 ```
 
-Expect these 27 routes plus the namespace root. Methods are POST unless
-noted:
+Expect these 27 routes plus the root. Methods are POST unless noted:
 
 - `rest.php`: `event-form-data` (GET), `event-templates` (GET), `event`,
   `event/{id}`, `event/{id}/rsvp`, `drafts` (GET), `draft`, `draft/{id}`,
@@ -316,115 +255,95 @@ noted:
   `ownership-transfer/initiate`, `ownership-transfer/accept`,
   `ownership-transfer/decline`, `ownership-transfer/cancel`
 
-A route missing from the live list is a regression. A route not listed here
-is new, so add it to this list before you continue. To regenerate the list
-from code, run
+A route missing from the live list is a regression; one not listed here is
+new, so add it before continuing. Regenerate from code with
 `grep -rn -A3 register_rest_route public_html/wp-content/mu-plugins/wporg-groups-frontend/inc`.
 
-Checks (run as anonymous + each role where relevant):
+Checks (anonymous and each role where relevant):
 
-- [ ] **`GET /event-form-data` as author** → 200, populated `fields` +
-  `venues`.
-- [ ] **`POST /event` as editor** → creates a published event, 200 with
-  `{id, permalink, title}`.
-- [ ] **Overnight rollover** — `date=2026-08-20 time_start=22:00 time_end=01:00`
-  → `gatherpress_datetime_end` meta on the created post is the *next*
-  calendar day, not rejected as zero-length:
-  ```bash
-  docker compose exec wordcamp.test wp post meta get <id> gatherpress_datetime_end --url=$BASE
-  ```
-- [ ] **IDOR — author cannot hijack another author's event**:
-  `POST /event/<other_authors_event_id>` as `$AUTHOR` → 403 `rest_forbidden`,
-  original title unchanged.
-- [ ] **Author CAN edit their own event** → 200.
-- [ ] **`GET /members`** — public, paginated (`per_page` default 100, max
-  250 via `Members_Controller::MAX_PER_PAGE`) — confirm `X-WP-Total`/
-  `X-WP-TotalPages` headers present. `per_page=250` → 200, and
-  `per_page=9999` → 400 `rest_invalid_param`: `validate_per_page()` rejects
-  the request outright instead of capping it. Each member has
+- [ ] **`GET /event-form-data` as author** → 200, populated `fields` + `venues`.
+- [ ] **`POST /event` as editor** → published event, 200 with `{id, permalink, title}`.
+- [ ] **Overnight rollover**: `date=2026-08-20 time_start=22:00 time_end=01:00`
+  → `gatherpress_datetime_end` is the *next* day, not rejected as zero-length:
+  `docker compose exec wordcamp.test wp post meta get <id> gatherpress_datetime_end --url=$BASE`.
+- [ ] **IDOR**: `POST /event/<other_authors_event_id>` as `$AUTHOR` → 403
+  `rest_forbidden`, title unchanged.
+- [ ] **Author can edit their own event** → 200.
+- [ ] **`GET /members`** is public and paginated (`per_page` default 100, max
+  250 via `Members_Controller::MAX_PER_PAGE`): `X-WP-Total`/`X-WP-TotalPages`
+  present. `per_page=250` → 200; `per_page=9999` → 400 `rest_invalid_param`
+  (`validate_per_page()` rejects rather than caps). Each member has
   `role`/`roleLabel` (`administrator`/`editor→Organizer`,
   `author→Event Organizer`, `contributor`/`subscriber→Member`, per
   `Members_Controller::ROLE_LABELS`).
 - [ ] **Editor promotes subscriber → author**:
   `POST /members/<member1_id>/role -d role=author` as `$ORG` → 200; confirm
-  via `wp user get <id> --field=roles`.
+  with `wp user get <id> --field=roles`.
 - [ ] **Author blocked from role changes** → 403 `rest_cannot_edit_roles`
-  (author passes `current_user_can_manage_events()` but fails
-  `current_user_can_manage_group_settings()` — both are required).
+  (passes `current_user_can_manage_events()`, fails
+  `current_user_can_manage_group_settings()`; both are required).
 - [ ] **Editor blocked from `role=administrator`** → 400 `rest_invalid_param`
-  (rejected by `ASSIGNABLE_ROLES` at the schema/args layer, before the
-  permission callback even runs).
+  (`ASSIGNABLE_ROLES` rejects it at the args layer, before the permission
+  callback).
 - [ ] **Can't change your own role** → 403 `cannot_change_own_role`.
-- [ ] **Can't demote the last organizer** — with only one editor/admin on
-  the site, attempting to demote them → 403 `cannot_remove_last_organizer`.
-- [ ] **Draft flow** — `POST /draft` (save) → `GET /drafts` (list) →
-  `POST /draft/{id}` (update) → `POST /draft/{id}/publish`; confirm
-  `post_status` transitions draft → publish via `wp post get <id> --field=post_status`.
-- [ ] **`/group-info` is Organizer-only** — `GET` as `$ORG` → 200, as
-  `$AUTHOR` and `$MEM` → 403. The About and Design tabs read and write
-  through this route because core's `/wp/v2/settings` requires
-  `manage_options`.
-- [ ] **`DELETE /members/leave` + `POST /members/join` round-trip** as
-  `$MEM`. Leave returns `{"success":true,"rsvps_cancelled":N}`, and join
-  returns `{"success":true,"memberCount":N}`. Sending leave as a `POST` gets
-  404 `rest_no_route`. Confirm the nonce header on the request is non-empty (this is the exact failure mode of
-  #1804 — a front-end-only bug, but worth confirming the REST layer itself
-  works when hit directly with a valid nonce/app-password).
+- [ ] **Can't demote the last organizer** (only one editor/admin on the site)
+  → 403 `cannot_remove_last_organizer`.
+- [ ] **Draft flow**: `POST /draft` → `GET /drafts` → `POST /draft/{id}` →
+  `POST /draft/{id}/publish`; `wp post get <id> --field=post_status` goes
+  draft → publish.
+- [ ] **`/group-info` is Organizer-only**: `GET` as `$ORG` → 200, as
+  `$AUTHOR`/`$MEM` → 403. The About and Design tabs go through it because
+  core's `/wp/v2/settings` requires `manage_options`.
+- [ ] **`DELETE /members/leave` + `POST /members/join`** as `$MEM`: leave
+  returns `{"success":true,"rsvps_cancelled":N}`, join
+  `{"success":true,"memberCount":N}`; leave as `POST` gets 404
+  `rest_no_route`. Confirm a non-empty nonce header. #1804 was a
+  front-end-only bug; this confirms the REST layer works with a valid
+  nonce/app-password.
 
 ## 3. Per-role browser pass
 
-Log in as each role in turn (`$BASE/wp-login.php`) and walk the actual UI —
-don't just check curl responses render correctly, click through:
+Log in as each role (`$BASE/wp-login.php`) and click through the UI, don't
+just check curl output:
 
-- **Event create/edit** — via the front-end modal (not wp-admin). Confirm
-  the venue picker, date/time fields, and featured image work.
-- **Also open the block editor for a `gatherpress_event` post in wp-admin**
-  (not just the front-end modal) and check the browser console / PHP error
-  log for fatals. WordPress enumerates *every* registered block pattern —
-  including `Inserter: no` ones never placed in any template — via
-  `/wp/v2/block-patterns/patterns` on every block-editor page load,
-  executing each pattern's PHP to build the response. A pattern that's
-  broken but unused on the front end (wrong query, undefined method, etc.)
-  only surfaces here. This is exactly how a pre-existing bug (three
-  `groups-site` event-cards patterns importing the wrong GatherPress class —
-  fixed in #1874) went undetected through multiple GatherPress versions
-  until a real production rollout finally hit it.
-- **RSVP** — as Member and as Event Organizer.
+- **Event create/edit** via the front-end modal (not wp-admin): venue picker,
+  date/time fields, featured image.
+- **Also open a `gatherpress_event` in the wp-admin block editor** and check
+  the console / PHP error log for fatals. Every block-editor load fetches
+  `/wp/v2/block-patterns/patterns`, executing the PHP of *every* registered
+  pattern, `Inserter: no` and unplaced ones included. A broken but unused
+  pattern only surfaces here: three `groups-site` event-card patterns
+  importing the wrong GatherPress class (fixed in #1874) went unnoticed
+  through several versions until a production rollout hit it.
+- **RSVP** as Member and as Event Organizer.
 - **Group settings tabs** (Events / Venues / Members / Design / About /
-  Export) — confirm each tab loads without a console error or 403, and that
-  Organizer-only tabs are entirely absent (not just disabled) for lower
-  roles.
-- **Member directory** (`/members/`) — role labels correct, join/leave
-  buttons behave. If this 404s, check `wp post list --post_type=page` for a
-  page with slug `members` before assuming it's broken — the theme resolves
-  it via the `page-members.html` template, so it needs an actual WP page
-  with that slug to exist; a fresh/reset dev site may simply be missing it
-  (`wp post create --post_type=page --post_title=Members --post_name=members
-  --post_status=publish`).
-- **wp-admin, not just the front end** — capability leaks (like the fixed
-  `promote_users` escalation) only show up here. Log in as each non-admin
-  role and check: can they reach Users → a role-promotion UI beyond what
-  the front-end allows? Can they reach Site Editor (should be yes for
-  editors, via the `edit_theme_options` grant — confirm that grant doesn't
-  also unlock anything broader)?
-- **Anonymous (logged out)** — public pages render; every interactive
-  action (RSVP, join, edit) redirects to login rather than silently
-  failing or 403ing with no feedback.
+  Export) load
+  without console errors or 403s; Organizer-only tabs are absent (not
+  disabled) for lower roles.
+- **Member directory** (`/members/`): role labels correct, join/leave work.
+  A 404 usually means a fresh/reset site has no page with slug `members`
+  (the theme renders it via `page-members.html`; check
+  `wp post list --post_type=page`, create with
+  `wp post create --post_type=page --post_title=Members --post_name=members --post_status=publish`).
+- **wp-admin as each non-admin role**: capability leaks (like the fixed
+  `promote_users` escalation) only show here. Can they reach a Users
+  role-promotion UI beyond what the front end allows? Site Editor should be
+  reachable for editors (the `edit_theme_options` grant); confirm the grant
+  unlocks nothing broader.
+- **Anonymous**: public pages render; every interactive action (RSVP, join,
+  edit) redirects to login rather than failing silently or 403ing with no
+  feedback.
 
-Explicitly note what's *absent* for each lower role, not just what's
-disabled — a Member should see **no** event-management UI rendered at all,
-not a greyed-out button.
+Note what is *absent* per lower role, not just disabled: a Member sees **no**
+event-management UI at all, not a greyed-out button.
 
 ## 4. GatherPress-deactivated pass
 
-**`wp plugin deactivate gatherpress` does NOT work in this environment** —
+**`wp plugin deactivate gatherpress` doesn't work here.**
 `mu-plugins/wcorg-network-plugin-control.php` force-activates
 `gatherpress/gatherpress.php` on every request for the groups network
-(`GROUPS_NETWORK_ID`), silently re-activating it immediately after
-deactivation. Verified: `wp plugin deactivate gatherpress --network` reports
-success, but the plugin's REST routes/classes are still live on the very
-next request. To genuinely test with GatherPress absent, remove the plugin
-files instead:
+(`GROUPS_NETWORK_ID`); even `--network` reports success while routes/classes
+stay live on the next request. Move the files instead:
 
 ```bash
 docker compose exec wordcamp.test mv wp-content/plugins/gatherpress wp-content/plugins/gatherpress.disabled
@@ -432,100 +351,78 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress wp-content/p
 docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-content/plugins/gatherpress
 ```
 
-- [ ] Visit every groups-network page (front page, single event, single
-  venue, `/members/`) and wp-admin — confirm **no PHP fatals** anywhere in
-  the network, not just the groups site.
-- [ ] Grep both plugins for every GatherPress class/function reference and
-  confirm each call site is guarded:
+- [ ] Every groups-network page (front page, single event, single venue,
+  `/members/`) and wp-admin: **no PHP fatals** anywhere on the network.
+- [ ] Every GatherPress reference is guarded:
   ```bash
   grep -rn "GatherPress\\\\Core\|gatherpress_" \
     public_html/wp-content/mu-plugins/wporg-groups-frontend \
     public_html/wp-content/mu-plugins/groups \
     --include="*.php" | grep -v "class_exists\|function_exists"
   ```
-  Any hit here that isn't inside a code path already gated by an earlier
-  `class_exists()`/`function_exists()` check (e.g. the plugin-level guard
-  in `wporg-groups-frontend.php`'s bootstrap, or
+  A hit not already behind an earlier `class_exists()`/`function_exists()`
+  (e.g. `wporg-groups-frontend.php`'s bootstrap guard,
   `gatherpress-groups-tweaks.php`'s per-function guards) is a gap.
-- [ ] Reactivate GatherPress and confirm everything returns to normal
-  before continuing.
+- [ ] Restore GatherPress and confirm everything is back to normal.
 
 ## 5. Security-focused pass
 
-- [ ] Enumerate every `user_has_cap`/`map_meta_cap` filter across both
-  plugins:
+- [ ] Enumerate every `user_has_cap`/`map_meta_cap` filter:
   ```bash
   grep -rn "user_has_cap\|map_meta_cap" \
     public_html/wp-content/mu-plugins/wporg-groups-frontend \
     public_html/wp-content/mu-plugins/groups --include="*.php"
   ```
-  For each, confirm it grants only a plugin-scoped or clearly-intentional
-  capability (e.g. `edit_theme_options` for editors, for Site Editor
-  access) — and never an unscoped core capability reachable from stock
-  wp-admin without an equivalent plugin-level ceiling. This is the exact
-  shape of the fixed privilege-escalation bug (editors were granted
-  `promote_users`, which worked correctly through this plugin's own REST
-  route but also silently unlocked stock wp-admin's user-role screen).
-  Regression-check it explicitly: `wp eval 'var_dump( user_can( <editor_id>, "promote_users" ) );' --url=$BASE` → must be `false`.
-- [ ] `GET /members` is intentionally public (no auth) — this is a known,
-  tracked product/privacy question (see the repo's open issue tracker for
-  the current decision), not an oversight. Confirm the fields returned
-  match whatever the current decision is (as of writing: name, avatar,
-  profile link, bio, role — no email, no `registered` date).
-- [ ] Spot-check sanitization/escaping on user-controlled data that reaches
-  storage or output: event title/description (`persist_event()`/
-  `build_post_content()` in `inc/rest.php`), venue address
-  (`resolve_venue_id()`), draft fields. Try an XSS payload
-  (`<script>alert(1)</script>`) in an event title via `POST /event` and
-  confirm it's escaped on render, not executed.
-- [ ] `featured_image_id` on event create/update rejects an attachment ID
-  the current user can't read (`current_user_can_use_attachment()` in
-  `inc/rest.php`) — try passing another user's private attachment ID as a
-  lower-privileged role and confirm rejection.
+  Each must grant only a plugin-scoped or clearly intentional capability
+  (e.g. `edit_theme_options` for editors' Site Editor access), never an
+  unscoped core capability reachable from stock wp-admin without a
+  plugin-level ceiling. That was the fixed escalation: editors got
+  `promote_users`, correct through our REST route but also unlocking stock
+  wp-admin's role screen. Regression check:
+  `wp eval 'var_dump( user_can( <editor_id>, "promote_users" ) );' --url=$BASE`
+  → `false`.
+- [ ] `GET /members` is public on purpose, a tracked product/privacy question
+  (see the issue tracker for the current decision). Fields should match it:
+  as of writing name, avatar, profile link, bio, role; no email, no
+  `registered` date.
+- [ ] Sanitization/escaping of user data reaching storage or output: event
+  title/description (`persist_event()`/`build_post_content()` in
+  `inc/rest.php`), venue address (`resolve_venue_id()`), draft fields. Send
+  `<script>alert(1)</script>` as an event title via `POST /event`; it must
+  render escaped.
+- [ ] `featured_image_id` rejects an attachment the user can't read
+  (`current_user_can_use_attachment()` in `inc/rest.php`): pass another
+  user's private attachment ID as a lower role.
 
 ## 6. Performance sanity check
 
-- [ ] `GET /members` is paginated (see section 2) — not an unconditional
-  full-network user dump.
-- [ ] Front page / event archive / member directory queries don't scale
-  linearly with total network size — check for `posts_per_page`/`number`
-  caps in the relevant `WP_Query`/`WP_User_Query` calls
+- [ ] `GET /members` is paginated (section 2), not a full-network user dump.
+- [ ] Front page / event archive / member directory queries carry
+  `posts_per_page`/`number` caps and don't scale with network size
   (`gatherpress-groups-tweaks.php`'s `pre_get_posts` filter,
   `Members_Controller::get_items()`).
-- [ ] `group-members` and `event-rsvp` blocks batch their per-user meta
-  lookups rather than querying per row (this was a specific fix in #1793 —
-  confirm it hasn't regressed by checking query count on a page with many
-  members/RSVPs, e.g. via Query Monitor or `$wpdb->num_queries`).
+- [ ] `group-members` and `event-rsvp` blocks batch per-user meta lookups
+  (#1793). Check query count on a page with many members/RSVPs (Query Monitor
+  or `$wpdb->num_queries`).
 
 ## 7. Production rollout notes
 
-Once the passes above are green and the version-bump PR is merged, the
-actual production deploy has its own gotchas — found the hard way during
-the 0.35.0 rollout on `events.wordpress.org`.
+Found the hard way during the 0.35.0 rollout on `events.wordpress.org`.
 
-- **`wp plugin update` alone is not sufficient/durable on production.**
-  `wp-content/plugins` there is managed via `svn:externals` pinned to a
-  specific tag per plugin. Check what's actually tracked *before* updating
-  anything: `svn propget svn:externals -R` (run from `wp-content/plugins`).
-  `wp plugin update` only replaces files on disk — it does **not** update
-  the tracked external pin, so the change is a silent, undurable override
-  that the next `svn update` (run by anyone, any time, for any reason)
-  would silently revert. To make it durable: `svn propedit svn:externals .`
-  and hand-edit only the one plugin's line (this property holds ~30
-  plugins' pins in a single multi-line blob — don't reconstruct it with a
-  scripted find/replace, one wrong character corrupts every other plugin's
-  pin too). Review with `svn diff --depth=empty .` and confirm **only**
-  that one line changed before committing. Then `svn commit` and
-  `svn update` — this should reconcile with zero file churn, since it's
-  the same code `wp plugin update` already fetched from the same wp.org
-  release.
-
-- **Run GatherPress Alpha's fix per-site with visible progress, not the
-  bare `wp gatherpress alpha fix` command** — not only because of the
-  100-site cap (see the `[gatherpress-alpha#66]` note above), but because
-  the bare command is completely silent until it finishes, which reads as
-  "hung" on a slow/first-ever run and invites a premature Ctrl-C. Call the
-  same underlying method directly instead, scoped to one site:
+- **`wp plugin update` alone isn't durable on production.**
+  `wp-content/plugins` there is `svn:externals` pinned to a tag per plugin;
+  check with `svn propget svn:externals -R` (from `wp-content/plugins`).
+  `wp plugin update` only replaces files, so the next `svn update` by anyone
+  silently reverts it. Instead `svn propedit svn:externals .` and hand-edit
+  only that plugin's line (the property holds ~30 plugins' pins in one blob;
+  a scripted find/replace can corrupt all of them). `svn diff --depth=empty .`
+  must show only that line changed. Then `svn commit` and `svn update`, which
+  should reconcile with zero file churn.
+- **Run GatherPress Alpha's fix per site with visible progress**, not bare
+  `wp gatherpress alpha fix`: the bare command's multisite loop caps at 100
+  sites (gatherpress-alpha#66) and is silent until done, which reads as hung
+  and invites a premature Ctrl-C. Call the underlying method, scoped by
+  `--url`:
   ```bash
   wp eval '
   $setup = \GatherPress_Alpha\Setup::get_instance();
@@ -538,51 +435,34 @@ the 0.35.0 rollout on `events.wordpress.org`.
   echo "gatherpress_alpha_last_version: " . get_option( "gatherpress_alpha_last_version" ) . "\n";
   ' --url=<site>
   ```
-  This runs the exact same code `fix()` would call — `fix()` itself only
-  adds a capability check (irrelevant under CLI) and the buggy/capped
-  multisite loop, both irrelevant/skipped here since `--url` already scopes
-  wp-cli to one site. If a run does get interrupted early, it's safe:
-  GatherPress Alpha's fixes are idempotent (confirmed by an upstream
-  reviewer on PR #1873, and again live here — an interrupted run left no
-  `gatherpress_alpha_last_version` recorded at all, so re-running just
-  started clean with nothing partially applied).
-
-- **Checking whether a site is exposed to the RSVP migration-gap bug
-  (gatherpress#2135) needs the raw DB value, not `wp option get`.**
-  `gatherpress-groups-tweaks.php` installs a `pre_option_gatherpress_settings`
-  filter that unconditionally returns a synthetic
-  `{show_timezone, enable_anonymous_rsvp}` array regardless of what's
-  actually in the database — so `wp option get gatherpress_settings`
-  always looks identical and tells you nothing about `rsvp_mode`. Query
-  the DB directly instead:
+  `fix()` adds only a capability check (irrelevant under CLI) and that
+  loop. The fixes are idempotent (confirmed upstream on PR #1873 and live: an
+  interrupted run recorded no `gatherpress_alpha_last_version` and a re-run
+  started clean).
+- **Checking exposure to the RSVP migration gap (gatherpress#2135) needs the
+  raw DB value.** `gatherpress-groups-tweaks.php`'s
+  `pre_option_gatherpress_settings` filter always returns a synthetic
+  `{show_timezone, enable_anonymous_rsvp}` array, so `wp option get` tells you
+  nothing about `rsvp_mode`:
   ```bash
   wp eval 'global $wpdb; var_dump( $wpdb->get_var( $wpdb->prepare(
     "SELECT option_value FROM $wpdb->options WHERE option_name = %s",
     "gatherpress_settings" ) ) );' --url=<site>
   ```
-
-- **A WP-CLI command producing no output for N seconds is not the same as
-  a hung one** — don't judge by wall-clock time alone, check for an
-  actually-live query. This environment didn't have the `mysqladmin`/`mysql`
-  CLI binaries available (DB reachable only through PHP's own driver), so
-  use `wp eval` with `$wpdb` instead:
+- **No output for N seconds isn't a hang.** Check for a live query. There
+  were no `mysql`/`mysqladmin` binaries (DB reachable only via PHP), so:
   ```bash
   wp eval 'global $wpdb; foreach ( $wpdb->get_results( "SHOW FULL PROCESSLIST" ) as $row ) { if ( "Sleep" !== $row->Command ) { print_r( $row ); } }' --url=<site>
   ```
 
-## 8. Post-upgrade code audit (mandatory, run after every version bump lands)
+## 8. Post-upgrade code audit (mandatory after every bump)
 
-Run this once the plugin update is live (locally after bumping the pin, and
-again after the production rollout) — it's what would have caught the
-`Blocks\Event_Query` vs. `Event\Query` wrong-class bug (#1874) before it hit
-production instead of after, since that bug passed every class-existence
-check across two GatherPress versions and only surfaced as a live fatal.
-The point isn't spot-checking "the classes we remember using" — it's
-mechanically verifying *every* call site, including the ones nobody's
-thought about in months.
+Run locally after bumping the pin and again after the production rollout.
+It would have caught #1874's `Blocks\Event_Query` vs. `Event\Query` before
+production. The point is mechanically verifying *every* call site, not the
+ones you remember.
 
-1. **Extract every GatherPress class this integration actually imports**,
-   across all three plugins:
+1. **List every GatherPress class imported**, across all three plugins:
    ```bash
    grep -rn "^use GatherPress\|GatherPress\\\\Core" \
      public_html/wp-content/mu-plugins/groups \
@@ -590,161 +470,117 @@ thought about in months.
      public_html/wp-content/themes/groups-site \
      --include="*.php" | grep -v "/tests/\|/build/"
    ```
-   (Exclude `/build/` — it's compiled from `/src/`; diff the two afterward
-   with plain `diff` to confirm they're actually in sync rather than
-   assuming it.)
-
-2. **For each imported class, extract every method/constant/property call
-   site** — not just the ones near the `use` statement. A call several
-   functions away from the import, or reached through a differently-named
-   local variable, is exactly the kind of thing a quick skim misses. Grep
-   broadly per class/alias: `ClassName::`, `new ClassName(`, and
-   `$lowercase_var->method(` for every plausible variable name that
-   instance might be assigned to (`$event`, `$rsvp`, `$venue`, `$query`,
-   `$setup` — check the surrounding code when a grep for `$obj->` comes up
-   empty, since the call is often on the next line rather than the same
-   one, e.g. `$venue = new Venue(...);` then `$term = $venue->get_term();`
-   two lines later).
-
-3. **Cross-check each one against the actual GatherPress source** for the
-   *now-installed* version (not the old one):
+   `/build/` is compiled from `/src/`; `diff` the two afterward to confirm
+   they're in sync.
+2. **For each class, find every method/constant/property call site**, not
+   just those near the `use`: grep `ClassName::`, `new ClassName(`, and
+   `$var->method(` for every plausible variable name (`$event`, `$rsvp`,
+   `$venue`, `$query`, `$setup`). When `$obj->` finds nothing, read the
+   surrounding code; the call is often lines later
+   (`$venue = new Venue(...);` then `$term = $venue->get_term();`).
+3. **Cross-check against the installed version's source**, from a clone of
+   `github.com/GatherPress/gatherpress`:
    ```bash
-   # from a local clone of github.com/GatherPress/gatherpress
    git show <new-tag>:path/to/class-file.php | grep -n "function method_name\|const CONST_NAME"
    ```
-   A hit confirms it; nothing confirms a break. Also diff the whole file
-   against the previous tag (`git diff <old-tag> <new-tag> -- path`) — an
-   empty diff is the strongest possible signal that nothing there changed.
+   A hit confirms it; no hit is a break. Also
+   `git diff <old-tag> <new-tag> -- path`: an empty diff is the strongest
+   signal nothing changed.
+4. **Report clean only when every call site is individually confirmed.**
+   "The class exists" or "the diff was small" are not substitutes.
+5. Record the audit's scope and result in the version-bump PR and the
+   tracking issue, like the test passes.
 
-4. **Report clean only when every single call site has been individually
-   confirmed** — "the class exists" or "the file's diff was small" are not
-   substitutes for "this exact method still exists with this signature."
+## 9. Extend automated coverage (mandatory after every bump)
 
-5. Note the audit's scope and result in the version-bump PR description and
-   the tracking issue, the same way the manual/automated test passes are
-   recorded.
+Every bump so far surfaced something the suites missed (tracked by
+[#1863](https://github.com/WordPress/wordcamp.org/issues/1863), "Identify
+gaps in unit and e2e test coverage"). Turn each finding into a permanent
+regression test before moving on.
 
-## 9. Extend automated test coverage (mandatory, run after every version bump)
+Reference tests live in `mu-plugins/groups/tests/`, not
+`themes/groups-site/tests/` (doesn't exist, not in `phpunit.xml.dist`; theme
+code is tested from there by including the real theme files):
 
-Every version bump so far has surfaced at least one thing the automated
-suites didn't catch — that's exactly the gap tracked by
-[issue #1863](https://github.com/WordPress/wordcamp.org/issues/1863)
-("Identify gaps in unit and e2e test coverage"). Manually re-discovering
-the same class of bug on the *next* upgrade is a wasted rediscovery — turn
-what this pass found into a permanent regression test before moving on,
-not a one-off fix.
+- **`test-gatherpress-api-contract.php`**: data-provider test asserting
+  every GatherPress class/method/constant we call still exists, from
+  Section 8's list. Extend `CONTRACT` whenever the audit finds an uncovered
+  call site, and prune entries when call sites disappear (0.36.0's
+  `Event::$post` went once check-in stopped reading it). Section 8's greps
+  match comments too, and our comments name plenty of GatherPress methods
+  nothing calls: strip comments with `token_get_all()` before deciding a
+  call site exists. The test also fails on any name GatherPress keeps only
+  through `includes/core/register-class-aliases.php` (`GatherPress\Core\Venue`
+  and the like): a `class_exists()` guard on an alias stays true until the
+  shim is dropped, then the guarded code goes dormant without an error.
+- **`test-groups-site-gatherpress-blocks.php`**: the PHP contract can't see
+  blocks, and a dropped block renders blank. This scans the theme's
+  templates, parts and patterns for `wp:gatherpress/*` and asserts each is
+  registered, and checks the event Query Loops' `namespace` still equals
+  `Blocks\Event_Query::BLOCK_NAME`, the only thing that makes GatherPress
+  apply its event query. Blocks placed from PHP strings outside those three
+  directories aren't scanned.
+- **`test-groups-site-event-cards.php`** (successor to the removed
+  `test-groups-site-event-cards-patterns.php`) preserves thumbnail cache
+  priming that core can't infer through a `core/pattern` reference. Directly
+  include any future orphaned PHP pattern that normal template rendering
+  can't exercise.
 
-The remaining reference test lives in
-`mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
-exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
-there by including the real theme files directly):
+For anything a bump or this checklist caught that CI didn't:
 
-- **`test-gatherpress-api-contract.php`** — a data-provider-driven test
-  asserting every GatherPress class/method/constant this integration calls
-  still exists, sourced from the same list Section 8's audit builds. This
-  is what makes Section 8's audit durable instead of a one-time manual pass
-  that has to be redone by hand on every future bump — extend `CONTRACT`
-  in that file whenever the audit finds a call site it doesn't cover yet,
-  rather than leaving the gap for next time. Section 8's greps match
-  comments too, and comments here name plenty of GatherPress methods that
-  nothing calls. Strip comments with `token_get_all()` before deciding
-  that a call site exists. The same file fails on any reference to a name
-  GatherPress keeps only through `includes/core/register-class-aliases.php`
-  (`GatherPress\Core\Venue` and the like). A `class_exists()` guard on an
-  alias stays true until the shim is dropped, and then the guarded code
-  goes dormant without an error.
-- **`test-groups-site-gatherpress-blocks.php`** — the PHP contract can't see
-  blocks, and a block GatherPress drops renders blank. This test scans the
-  theme's templates, parts and patterns for `wp:gatherpress/*` and asserts
-  each one is registered. It also checks that the event Query Loops'
-  `namespace` still equals `Blocks\Event_Query::BLOCK_NAME`, the only
-  thing that makes GatherPress apply its event query. Blocks placed from
-  PHP strings outside those three directories aren't scanned.
+1. Find *why*: which code path, and what (if anything) exercises it in CI.
+2. Write the smallest test that fails before the fix and passes after.
+   Prove it: `git stash` the fix, confirm a clear failure, `git stash pop`.
+3. Prefer extending a contract-style test (`CONTRACT`) over a one-off when
+   the gap is "we don't check X across the board".
+4. Note what was added and why in the PR and tracking issue, and in #1863 if
+   it changes *how* this integration should be tested.
 
-`test-groups-site-event-cards-patterns.php` was removed with the old PHP
-event-card patterns. Directly include any future orphaned PHP pattern that
-normal template rendering cannot exercise.
+## 10. Event email rewrites (mandatory after every bump)
 
-Its successor, `test-groups-site-event-cards.php`, preserves thumbnail
-cache priming that core cannot infer through a `core/pattern` reference.
-
-Prune `CONTRACT` entries when call sites disappear. 0.36.0's
-`Event::$post` went this way once check-in stopped reading it.
-
-When a version bump (or this checklist) surfaces something that wasn't
-caught automatically, before moving on:
-
-1. Identify *why* it wasn't caught — what code path was it in, and what
-   (if anything) currently exercises that path in CI.
-2. Write the smallest test that would have failed before the fix and
-   passes after it. Verify this concretely, not just in principle — run
-   the test against the broken state (e.g. `git stash` the fix, run the
-   test, confirm it fails with a clear message, `git stash pop`) before
-   trusting it as a regression guard.
-3. Prefer extending an existing data-provider/contract-style test (like
-   `test-gatherpress-api-contract.php`'s `CONTRACT` list) over writing a
-   narrow one-off test, when the gap is really "we don't check X across
-   the board" rather than "this one specific call is wrong."
-4. Note what was added (and why) in the version-bump PR description, the
-   tracking issue, and — if it changes the shape of *how* this integration
-   should be tested going forward, not just *what* — issue #1863 too.
-
-## 10. Event email rewrites (mandatory, run after every version bump)
-
-GatherPress renders every event email (the publish notification, "Message
-all members", "Message attendees") from
-`includes/templates/admin/emails/event-email.php`. That template is neither
-filterable nor theme-overridable: `Rest_Api::send_event_email_to_recipient()`
-renders it from a hardcoded path. So this integration corrects the rendered
-body on its way out, with `wp_mail` filters keyed off the template's own
-marker comments (`<!-- Featured Image -->`, `<!-- Event Title -->`,
-`<!-- RSVP Button -->`):
+GatherPress renders every event email (publish notification, "Message all
+members", "Message attendees") from
+`includes/templates/admin/emails/event-email.php`, which is neither
+filterable nor theme-overridable (`Rest_Api::send_event_email_to_recipient()`
+uses a hardcoded path). We correct the body on the way out with `wp_mail`
+filters keyed on the template's marker comments (`<!-- Featured Image -->`,
+`<!-- Event Title -->`, `<!-- RSVP Button -->`):
 
 - `wporg-groups-frontend/inc/event-email.php` gives the featured image
-  `height: auto` (it ships real `width`/`height` attributes and a
-  `max-width: 100%` cap, so phones squash it) and rebuilds the RSVP button
-  as a table (an inline `<a>` carrying its own padding overlaps the line
-  above it in clients that ignore padding on inline elements, e.g. Help
-  Scout, Outlook).
+  `height: auto` (it ships real `width`/`height` attributes plus a
+  `max-width: 100%` cap, so phones squash it) and rebuilds the RSVP button as
+  a table (an inline `<a>` with its own padding overlaps the line above in
+  clients ignoring inline padding, e.g. Help Scout, Outlook).
 - `wporg-groups-frontend/inc/notifications.php` tailors the publish
-  notification per recipient, stripping that same button from the author's
-  own copy.
+  notification per recipient, stripping that button from the author's copy.
 
-**A bump can break all of this silently**, because a marker that no longer
-matches produces a correct-looking email with the old bug back. After every
-bump, diff the template (`git diff <old-tag> <new-tag> -- includes/templates/admin/emails/event-email.php`)
-and confirm the three marker comments and the button's wrapper `<div>` are
-still there and still that shape. `test-event-email.php` and
-`test-notifications.php` pin the interaction between the two rewrites, so
-run them before trusting a bump. `test_fixes_apply_to_the_real_template()`
-sends through GatherPress's own template with a featured image, so a
-renamed marker fails there rather than shipping. The other cases use a
-copied body, which can't drift. Since 0.36.0 the template writes
-`height: auto` on the image itself, so the image fix only matters on
-older versions.
+**A bump can break this silently**: a marker that stops matching yields a
+correct-looking email with the old bug back. After every bump, run
+`git diff <old-tag> <new-tag> -- includes/templates/admin/emails/event-email.php`
+and confirm the three markers and the button's wrapper `<div>` keep their
+shape. Run `test-event-email.php` and `test-notifications.php`, which pin how
+the two rewrites interact. `test_fixes_apply_to_the_real_template()` sends
+through GatherPress's own template with a featured image, so a renamed
+marker fails there rather than shipping; the other cases use a copied body,
+which can't drift. Since 0.36.0 the template writes `height: auto` on the
+image itself, so the image fix only matters on older versions.
 
-Two rules for writing any filter of this kind, both learned the hard way:
+Two rules for any such filter:
 
-- **Bound it to the template, not just to the send.** Scoping a `wp_mail`
-  filter to one `send_emails()` call with `add_filter`/`finally` is not
-  enough on its own: anything else that sends mail inside that window (a
-  plugin acting on a hook GatherPress fires per recipient) gets rewritten
-  too. A password-reset email came out subjected "Your event has been
-  published". Require a template marker in the body before touching
-  anything.
-- **A regex over rendered HTML must fail closed.** Matching
-  `<div\b[^>]*>.*?</div>` stops at the *first* `</div>`, so a nested one
-  would cut the match short and leave a dangling closing tag: a broken
-  email rather than the old one. Exclude the tag from the body of the
-  match (`(?:(?!</?div\b).)*?`) so an unexpected shape declines to match
-  instead.
+- **Bound it to the template, not just the send.** Scoping a `wp_mail` filter
+  to one `send_emails()` call with `add_filter`/`finally` isn't enough: other
+  mail sent in that window (a plugin acting on a per-recipient GatherPress
+  hook) gets rewritten too. A password-reset email went out subjected "Your
+  event has been published". Require a template marker in the body first.
+- **A regex over rendered HTML must fail closed.** `<div\b[^>]*>.*?</div>`
+  stops at the *first* `</div>`, so a nested one leaves a dangling tag and a
+  broken email. Exclude the tag from the match body (`(?:(?!</?div\b).)*?`)
+  so an unexpected shape doesn't match.
 
-To check email locally: MailCatcher runs in the stack being tested. Its host
-port is 1080 only for a stack started with the default ports; a second stack
-(a worktree running next to the main one, or one with
-`WORDCAMP_MAILCATCHER_PORT` set) has its own MailCatcher on another port, and
-1080 then shows the *other* stack's inbox. Ask the stack you're driving, from
-its own checkout:
+Checking email locally: MailCatcher's host port is 1080 only for a stack on
+default ports. A second stack (a worktree beside the main one, or
+`WORDCAMP_MAILCATCHER_PORT` set) has its own, and 1080 then shows the
+*other* stack's inbox. Ask the stack you're driving, from its checkout:
 
 ```bash
 MAIL="http://localhost:$(docker compose port wordcamp.test 1080 | head -1 | sed 's/.*://')"
@@ -753,137 +589,116 @@ curl -s "$MAIL/messages/<id>.html"    # one body
 curl -s -X DELETE "$MAIL/messages"    # clear
 ```
 
-Publishing through the real front-end dialog exercises the true
-path; `do_action( 'shutdown' )` after a `wp_update_post()` in `wp eval`
-flushes the notification queue when driving it headlessly. To read a
-delivered body at phone width, open it in the browser and measure:
-`getBoundingClientRect()` on the `img` catches an aspect-ratio regression
-that eyeballing will not.
+Publishing through the real front-end dialog exercises the true path;
+headlessly, `do_action( 'shutdown' )` after `wp_update_post()` in `wp eval`
+flushes the notification queue. To judge a body at phone width, open it in
+the browser and measure the `img` with `getBoundingClientRect()`; eyeballing
+misses aspect-ratio regressions.
 
-## 11. Timezones, and series-level data reaching its occurrences
+## 11. Timezones, and series-level data reaching occurrences
 
-Three traps, all found by a browser pass that the automated suites had passed
-clean (#2021).
+Found by a browser pass the automated suites passed clean (#2021).
 
-- **GatherPress spells a UTC offset two ways.** The choices core builds
-  (`Utility::timezone_choices()`, parsed out of `wp_timezone_choice()`) say
-  `UTC+10`; the events table, `wp_timezone_string()` and
-  `Utility::list_timezone_and_utc_offsets()` all say `+10:00`.
-  `Utility::normalize_timezone_string()` maps the first onto the second, except
-  at zero, which it collapses to `UTC` while `wp_timezone_string()` keeps
-  saying `+00:00`. Anything round-tripping a zone between a form and the events
-  table has to canonicalize both sides (see
-  `wporg-groups-frontend/inc/event-timezone.php`). The failure is silent and
-  destructive: a `<select>` whose `value` matches no option falls back to its
-  first one, so an organizer opening an event and pressing save rescheduled it
-  into Africa/Abidjan.
-- **`show_timezone` is read before the block attribute**, so the block's own
-  `showTimezone` does nothing until the global setting is on. Section 13 has
-  the detail, alongside the format filters, which resolve the opposite way
-  round.
-- **Series-level data does not reach already-projected occurrences unless the
-  projection updates them.** `Occurrences::project()` upserts rather than
-  `INSERT IGNORE`s for this reason, updating the schedule columns while leaving
-  `status` and `created_gmt` alone so a cancelled occurrence survives. Anything
-  else that becomes series-level later needs the same treatment, and a test
-  that cancels an occurrence and re-projects.
-- **`save_post` is the wrong moment to project from.** GatherPress writes the
-  schedule on `wp_after_insert_post` (or, for a brand-new post, at `shutdown`),
-  and the front-end event form writes it directly after `wp_update_post()` has
-  returned. Either way `save_post_gatherpress_event` runs first and projects
-  the *previous* schedule, then sets the 6-hour `gpre_projected_` freshness
-  marker that stops `maybe_project()` repairing it — so a changed zone sat
-  stale until the daily cron. `Occurrences::reproject_on_schedule_write()`
-  watches the per-field meta `Event::save_datetimes()` writes instead, which is
-  the only thing it makes observable: it fires no action of its own. Verify a
-  schedule change by reading the occurrence rows back after a plain save, never
-  by calling `project()` yourself — an explicit call passes whether or not the
-  hook works.
-
+- **GatherPress spells a UTC offset two ways.** `Utility::timezone_choices()`
+  (parsed from `wp_timezone_choice()`) says `UTC+10`; the events table,
+  `wp_timezone_string()` and `Utility::list_timezone_and_utc_offsets()` say
+  `+10:00`. `Utility::normalize_timezone_string()` maps the first to the
+  second except at zero, which becomes `UTC` while `wp_timezone_string()`
+  says `+00:00`. Anything round-tripping a zone between a form and the events
+  table must canonicalize both sides (`wporg-groups-frontend/inc/event-timezone.php`).
+  Silent and destructive: a `<select>` whose value matches no option falls
+  back to the first, so opening an event and saving rescheduled it into
+  Africa/Abidjan.
+- **`show_timezone` is read before the block attribute**; see Section 13.
+- **Series data doesn't reach already-projected occurrences unless the
+  projection updates them.** `Occurrences::project()` upserts (not
+  `INSERT IGNORE`), updating schedule columns but keeping `status` and
+  `created_gmt` so a cancelled occurrence survives. Anything else that
+  becomes series-level needs the same, plus a test that cancels an occurrence
+  and re-projects.
+- **`save_post` is the wrong moment to project.** GatherPress writes the
+  schedule on `wp_after_insert_post` (at `shutdown` for a new post), and the
+  front-end form writes it after `wp_update_post()` returns. Either way
+  `save_post_gatherpress_event` projects the *previous* schedule and sets the
+  6-hour `gpre_projected_` marker that stops `maybe_project()` repairing it,
+  so a changed zone stayed stale until the daily cron.
+  `Occurrences::reproject_on_schedule_write()` watches the per-field meta
+  `Event::save_datetimes()` writes, the only observable signal (it fires no
+  action). Verify by reading occurrence rows after a plain save, never by
+  calling `project()` yourself; that passes whether the hook works or not.
 - **Anything GatherPress caches per post is shared by every occurrence.** An
   occurrence is the series post plus the `gpre_occurrence` query var, so a
-  cache keyed on the queried post serves one date's output for all of them.
-  0.36.0's iCal cache did exactly this: every occurrence's `.ics` carried
-  the first date downloaded. `Plugin::calendar_max_age()` turns the cache
-  off for occurrence requests. After each bump, download two occurrences'
-  `.ics` files and compare their `DTSTART`; also look for new caches in the
-  changelog.
+  cache keyed on the queried post serves one date to all of them. 0.36.0's
+  iCal cache gave every occurrence's `.ics` the first downloaded date;
+  `Plugin::calendar_max_age()` disables it for occurrence requests. After
+  each bump, compare two occurrences' `.ics` `DTSTART`, and look for new
+  caches in the changelog.
 
-An occurrence page reads its date through `Context::metadata()`, which serves
-the occurrence row's own columns, so checking the series post's meta is not a
-check that the page will render what you expect. Look at the
-`{prefix}gatherpress_occurrences` row.
+An occurrence page reads its date via `Context::metadata()`, from the
+occurrence row's own columns. Checking the series post's meta doesn't
+predict the page; look at the `{prefix}gatherpress_occurrences` row.
 
 ## 12. Adding an events-archive filter
 
-The archive's filters (`event_time`, `event_format`, `event_language`) all
-live in `gatherpress-groups-tweaks.php` and share three constraints that are
-easy to break one at a time.
+The archive filters (`event_time`, `event_format`, `event_language`) live in
+`gatherpress-groups-tweaks.php` and share three easily broken constraints:
 
 - **Resolve every ID-based filter into one `post__in`.** WP_Query's
-  `parse_where()` treats `post__in` and `post__not_in` as an if/elseif, so a
-  filter expressed as `post__not_in` (the in-person view, since an event with
-  no venue is in person) is dropped without a word the moment another filter
-  sets `post__in`. Narrow one filter's own ID set in PHP rather than giving
-  each filter its own query var. An empty result must be `array( 0 )`, since
-  WP_Query ignores an empty `post__in` and would show the whole archive.
-- **Keep the join off the archive's own query.** A `tax_query` or
-  `meta_query` on the main query makes WP_Query select `DISTINCT`, which
-  collapses the duplicate rows `gatherpress-recurring-events` adds in
-  `Query::clauses()` to turn a series into one row per date — a weekly series
-  then appears once instead of on each of its dates, silently and only while
-  a filter is applied. Resolve the IDs in a separate `fields => ids` query
-  (which `Query::clauses()` bails on, so it does not expand occurrences
-  either), and prime the meta cache once for the set.
-- **Each `wporg/query-filter` renders a form holding only its own control**,
-  so every filter must carry the others' state, and the search form must
-  carry all of them, or submitting one silently resets the rest.
+  `parse_where()` treats `post__in`/`post__not_in` as if/elseif, so a
+  `post__not_in` filter (in-person: no venue) is silently dropped once another
+  sets `post__in`. Narrow one ID set in PHP instead of a query var per filter.
+  An empty result must be `array( 0 )`; an empty `post__in` is ignored and
+  shows the whole archive.
+- **Keep joins off the archive's own query.** A `tax_query`/`meta_query` on
+  the main query makes it `DISTINCT`, collapsing the duplicate rows
+  `gatherpress-recurring-events`'s `Query::clauses()` adds for one row per
+  date, so a weekly series shows once, only while filtered. Resolve IDs in a
+  separate `fields => ids` query (`Query::clauses()` bails on it, so no
+  expansion) and prime the meta cache once for the set.
+- **Each `wporg/query-filter` form holds only its own control**, so every
+  filter must carry the others' state and the search form all of them, or
+  submitting one resets the rest.
 
-Two more things to check before adding a fourth: the filter row is laid out
-`nowrap`, and three toggles already come to roughly 410px against about
-360px of usable width at 400px (it wraps below 781px in `responsive.css` for
-exactly that reason); and a control whose options come from the data should
-return an empty options array when there is nothing to choose between, which
-is what makes `wporg/query-filter` render nothing at all.
+Before adding a fourth: the row is `nowrap`, and three toggles already take
+~410px of ~360px usable at 400px (it wraps below 781px in `responsive.css`
+for that reason). A data-driven control should return an empty options
+array when there's nothing to choose, which makes `wporg/query-filter`
+render nothing.
 
 ## 13. Influencing how a GatherPress date renders
 
-Which lever works depends on which half of the format you are after, and the
-two answers are opposites — worth checking rather than assuming (#2033, #2021).
+The lever depends on which half of the format you want, and the answers are
+opposites (#2033, #2021).
 
 - **An explicit block format beats the filters.**
-  `Event::get_display_datetime()` resolves `gatherpress_date_format` and
-  `gatherpress_time_format` only when the block passed no format of its own,
-  and the groups-site templates pass explicit ones. Reaching those blocks means
-  rewriting the attribute in a `render_block_data` filter; the two GatherPress
-  filters then cover only what has no explicit format, which is every event
-  email. `wporg-groups-frontend/inc/event-date-format.php` needs both for that
-  reason.
-- **`show_timezone` is the other way round.** The same method resolves the
-  global setting *before* the block's `showTimezone` attribute and formats the
-  zone with an empty string when the setting is off, so the attribute alone
-  does nothing. Turning the global on is therefore the only lever that reaches
-  the event emails, which call `get_display_datetime()` with no arguments at
-  all; a block that wants to stay quiet then opts out with
-  `showTimezone: "no"`, which does win once the global is on.
+  `Event::get_display_datetime()` applies `gatherpress_date_format`/
+  `gatherpress_time_format` only when the block passes no format, and
+  groups-site templates pass explicit ones. Reaching them means rewriting the
+  attribute in `render_block_data`; the GatherPress filters then cover only
+  unformatted calls, i.e. every event email.
+  `wporg-groups-frontend/inc/event-date-format.php` needs both.
+- **`show_timezone` is the other way round.** The global setting is resolved
+  *before* the block's `showTimezone`, and the zone is an empty string when
+  it's off, so the attribute alone does nothing. Turning the global on is the
+  only lever reaching event emails (which call `get_display_datetime()` with
+  no arguments); a block that should stay quiet then sets
+  `showTimezone: "no"`, which wins once the global is on.
 
-When a template block has to carry a marker for one of these filters, put it in
-`className` rather than in a block attribute the block does not declare in its
-`block.json`. Gutenberg drops undeclared attributes when someone opens the
-template in the Site Editor and saves, and the marker goes with them silently;
-a class name survives.
+A template block carrying a marker for one of these filters should use
+`className`, not an attribute missing from the block's `block.json`:
+Gutenberg drops undeclared attributes when the template is saved in the Site
+Editor; a class name survives.
 
 ## Known-issues appendix
 
-Use this to distinguish "this checklist found something new" from
-"this is a known, already-filed issue." Check your repo's issue tracker for
-current status before treating any of these as new bugs:
+Separates "new finding" from "already filed". Check the issue tracker for
+current status before treating any as new:
 
 | Symptom | Exercised by | Notes |
 |---|---|---|
-| Join/leave silently 403s via the UI (nonce lookup finds nothing on the front end) | Section 3, join/leave click-through | Front-end-only bug — the REST layer itself works fine when hit directly with a valid nonce (section 2's join/leave check). |
-| `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organizers manage events fine via wp-admin. |
-| `/members` fully public with no membership/auth requirement | Section 5 | Open product/privacy question, not a bug in itself — confirm current decision, don't assume it's wrong. |
-| `my-events` block empty for a user who created events but never RSVP'd | Section 3, per-role browser pass as an event creator | RSVP-attendance based by design — confirm this still matches the current product decision. |
-| A departing member's RSVP row still in `wp_comments` after leaving, with `comment_approved = trash` | Section 3, leave-group click-through, then inspect the comment rows | Expected, not a leak. `Leave_Cleanup\cancel_future_rsvps()` cancels future RSVPs with `wp_delete_comment()` and no force flag, matching GatherPress's own `no_status` path (`Rsvp\Storage::save()`); with a trash configured, which is the default, that trashes rather than deletes. The seat is released either way, since everything counting an RSVP reads approved comments only. Consequence to know: `deleted_comment` does not fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied, not at once. Past RSVPs are kept on purpose (attendance history). |
-| `groups-site` theme activatable on non-groups-network sites | Not covered by this checklist (network-admin action, not a groups-site page) | If auditing this, attempt `wp theme activate groups-site --url=<non-groups-network-site>` and confirm it's blocked. |
+| Join/leave silently 403s via the UI (front-end nonce lookup finds nothing) | Section 3 join/leave | Front-end only; REST works with a valid nonce (section 2). |
+| `wporg/event-manage` registered but in no template | Section 3/4 grep, or a `wp eval` block-registry dump | Dead code; Event Organizers manage events via wp-admin. |
+| `/members` fully public | Section 5 | Open product/privacy question, not a bug in itself. |
+| `my-events` empty for a creator who never RSVP'd | Section 3 as an event creator | RSVP-based by design; confirm it still matches the product decision. |
+| A departed member's RSVP still in `wp_comments` with `comment_approved = trash` | Section 3 leave-group, then inspect the comment rows | Expected. `Leave_Cleanup\cancel_future_rsvps()` uses `wp_delete_comment()` without force, matching GatherPress's `no_status` path (`Rsvp\Storage::save()`), so with trash enabled (default) it trashes. The seat is released either way (RSVP counts read approved comments only). `deleted_comment` doesn't fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied. Past RSVPs kept on purpose (attendance history). |
+| `groups-site` activatable on non-groups-network sites | Not covered (network-admin action) | Try `wp theme activate groups-site --url=<non-groups-network-site>`; it should be blocked. |

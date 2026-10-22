@@ -163,7 +163,7 @@ class Test_Groups_Leave_Cleanup extends Groups_TestCase {
 	 */
 	public function test_freed_seat_promotes_the_waiting_list() {
 		$event_id = $this->create_event( false );
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 
 		$leaver_id  = $this->create_member();
 		$waiting_id = $this->create_member();

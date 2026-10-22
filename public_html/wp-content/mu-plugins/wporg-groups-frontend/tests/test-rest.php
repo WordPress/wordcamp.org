@@ -770,6 +770,29 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * GatherPress 0.36.0 snaps an "All day" event to midnight on every save.
+	 * The form always sends times, so the flag must not survive its save.
+	 */
+	public function test_update_event_clears_all_day_flag() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		update_post_meta( $event_id, 'gatherpress_is_all_day', true );
+
+		$update = $this->event_request( $this->base_event_params() + array( 'id' => $event_id ) );
+		$this->assertNotWPError( update_event( $update ) );
+
+		$this->assertSame( '', get_post_meta( $event_id, 'gatherpress_is_all_day', true ) );
+		$this->assertStringEndsWith(
+			'18:00:00',
+			( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
 	 * Saving an unrelated field leaves a location with a stale country intact.
 	 */
 	public function test_group_info_update_without_location_preserves_stale_country() {

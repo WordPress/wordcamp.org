@@ -37,7 +37,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		update_option(
 			'gatherpress_settings',
 			array(
-				'max_guest_limit'  => 5,
+				'guest_limit'      => 5,
 				'enable_open_rsvp' => 1,
 				'show_timezone'    => 0,
 			)
@@ -46,7 +46,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$settings = get_option( 'gatherpress_settings' );
 
 		// Unrelated stored setting is preserved.
-		$this->assertSame( 5, $settings['max_guest_limit'] );
+		$this->assertSame( 5, $settings['guest_limit'] );
 
 		// Forced keys win regardless of what was stored.
 		$this->assertSame( 1, $settings['show_timezone'] );
@@ -1270,6 +1270,42 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * A protected event's `geo_*` meta stays out of REST even on the read
+	 * that GatherPress refreshes it.
+	 *
+	 * GatherPress 0.36.0 copies the venue's address and coordinates onto the
+	 * event as `geo_*` meta, and `Geo_Sync` writes freshly computed values
+	 * back into the response when the stored ones are stale: the first read
+	 * after the upgrade, or after a venue change. Run through the real hook,
+	 * so the gate has to run after that refresh to keep them out.
+	 */
+	public function test_rest_hides_protected_event_geo_meta_after_a_refresh() {
+		$event_id = $this->create_dated_event_with_venue( 'secret-pass' );
+		$event    = get_post( $event_id );
+		$geo_keys = array( 'geo_address', 'geo_latitude', 'geo_longitude', 'geo_public' );
+
+		$prepare = static function () use ( $event, $geo_keys ): array {
+			// Stale, as on the first read after the upgrade.
+			foreach ( $geo_keys as $key ) {
+				delete_post_meta( $event->ID, $key );
+			}
+
+			$response = new \WP_REST_Response( array( 'meta' => array() ) );
+
+			return apply_filters( 'rest_prepare_gatherpress_event', $response, $event )->get_data()['meta'];
+		};
+
+		wp_set_current_user( 0 );
+		$visitor = $prepare();
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$editor = $prepare();
+
+		$this->assertNotEmpty( $editor['geo_address'] ?? '', 'GatherPress did not refresh the geo meta, so nothing was tested.' );
+		$this->assertSame( array(), array_intersect_key( $visitor, array_flip( $geo_keys ) ), 'A geo_* field reached a logged-out visitor.' );
+	}
+
+	/**
 	 * `post_class()` drops the venue term class for a password-protected event.
 	 */
 	public function test_post_class_drops_venue_class_for_protected_event() {
@@ -1521,7 +1557,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			'The venue render gate is not hooked where it fires.'
 		);
 		$this->assertSame(
-			10,
+			20,
 			has_filter( 'rest_prepare_gatherpress_event', $ns . 'hide_event_details_in_rest' ),
 			'The REST item gate is not hooked where it fires.'
 		);
@@ -1622,6 +1658,44 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			( new \GatherPress\Core\Event\Event( $protected_id ) )->get_venue_information()['name'],
 			'The venue was withheld outside a calendar request.'
 		);
+	}
+
+	/**
+	 * A protected event's calendar download isn't shared between viewers.
+	 *
+	 * GatherPress 0.36.0 caches one copy per event for everyone, but the venue
+	 * gate above makes the download differ per viewer. An editor downloading
+	 * first must not hand the venue to a logged-out visitor after them.
+	 */
+	public function test_calendar_download_is_not_cached_across_viewers() {
+		global $wp_query;
+
+		$event_id = $this->create_dated_event_with_venue( 'secret-pass' );
+		$setup    = \GatherPress\Core\Calendar\Setup::get_instance();
+
+		$wp_query->queried_object    = get_post( $event_id );
+		$wp_query->queried_object_id = $event_id;
+		set_query_var( 'gatherpress_calendar', 'ical' );
+
+		try {
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			$editor_copy = $setup->get_ics_body();
+
+			wp_set_current_user( 0 );
+			$visitor_copy = $setup->get_ics_body();
+		} finally {
+			set_query_var( 'gatherpress_calendar', '' );
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+
+		$this->assertStringContainsString( 'Salty Spaces', $editor_copy );
+		$this->assertStringNotContainsString(
+			'Salty Spaces',
+			$visitor_copy,
+			'A logged-out visitor was served the editor\'s cached download, venue included.'
+		);
+		$this->assertSame( 0, \GatherPress\Core\Calendar\Cache::get_instance()->get_max_age() );
 	}
 
 	/**

@@ -37,6 +37,7 @@ namespace WordCamp\Groups\Frontend\REST;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
 use WP_Error;
@@ -569,12 +570,11 @@ function save_rsvp( WP_REST_Request $request ) {
 	}
 
 	$event = new Event( $event_id );
+	$rsvp  = new Rsvp( $event_id );
 
-	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
-	// which the post-type check above already guarantees. The meaningful gate
-	// is whether RSVP is switched on for this event — without it
+	// The gate is whether RSVP is switched on for this event — without it
 	// `Rsvp::save()` is a no-op that would otherwise look like success.
-	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+	if ( ! $rsvp->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -614,7 +614,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
 	}
 
-	$record     = $event->rsvp->save( $user_id, $status );
+	$record     = $rsvp->save( $user_id, $status );
 	$comment_id = (int) ( $record['comment_id'] ?? 0 );
 
 	if ( ! $comment_id ) {
@@ -636,7 +636,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		array(
 			'success'           => true,
 			'status'            => $record['status'] ?? 'no_status',
-			'responses'         => $event->rsvp->responses(),
+			'responses'         => $rsvp->responses(),
 			// Empty for everyone the link isn't for, on exactly the terms the
 			// online-event block renders it with. Sent so an RSVP made without
 			// a reload can reveal or withdraw the meeting link in place (#2094).
@@ -1226,6 +1226,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_start )
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
 	) {
+		clear_all_day( $saved_id );
+
 		$event = new Event( $saved_id );
 		$event->save_datetimes(
 			array(
@@ -1316,6 +1318,20 @@ function update_event( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
 	}
 	return persist_event( $event_id, $request );
+}
+
+/**
+ * Drop GatherPress's "All day" flag before the form saves an event's times.
+ *
+ * Since 0.36.0, `Event::save_datetimes()` snaps the start and end to 00:00:00
+ * and 23:59:59 whenever `gatherpress_is_all_day` is set. The form has no
+ * all-day field and always submits explicit times, so an event once ticked
+ * "All day" in wp-admin would otherwise ignore every time typed here.
+ *
+ * @param int $event_id Event post ID.
+ */
+function clear_all_day( int $event_id ): void {
+	delete_post_meta( $event_id, 'gatherpress_is_all_day' );
 }
 
 /**
@@ -1450,6 +1466,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$timezone = storable_timezone( $fields['timezone'] );
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
+
+	clear_all_day( $saved_id );
 
 	$event = new Event( $saved_id );
 	$event->save_datetimes(

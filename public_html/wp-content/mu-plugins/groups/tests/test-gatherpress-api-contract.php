@@ -40,13 +40,15 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 	 * exists.
 	 */
 	const CONTRACT = array(
+		// 0.36.0 dropped `Event::$rsvp`; RSVPs are reached through their own
+		// `Rsvp` instance, and `Event::$post` replaced `Event::$event`.
 		'GatherPress\Core\Rsvp\Rsvp'        => array(
-			'methods' => array( 'get', 'save', 'responses' ),
+			'methods' => array( 'get', 'save', 'responses', 'is_enabled' ),
 		),
 		'GatherPress\Core\Event\Event'      => array(
 			'methods'    => array( 'save_datetimes', 'get_venue_information', 'has_event_past' ),
 			'constants'  => array( 'TABLE_FORMAT' ),
-			'properties' => array( 'rsvp' ),
+			'properties' => array( 'post' ),
 		),
 		'GatherPress\Core\Event\Setup'      => array(
 			'methods' => array( 'handle_event_archive_redirect' ),

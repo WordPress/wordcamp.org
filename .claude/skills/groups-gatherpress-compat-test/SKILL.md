@@ -222,7 +222,7 @@ docker compose ps   # expect wordcamp.test + wordcamp.db running
 docker compose exec wordcamp.test wp plugin list --url=events.wordpress.test/group/sunshine-coast-qld/ | grep gatherpress
 # If missing/inactive:
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress/releases/download/0.35.0/gatherpress.0.35.0.zip \
+  https://github.com/GatherPress/gatherpress/releases/download/0.36.0/gatherpress.0.36.0.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
@@ -256,7 +256,7 @@ data:
 
 ```bash
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.35.0/gatherpress-alpha.0.35.0.zip \
+  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.36.0/gatherpress-alpha.0.36.0.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 docker compose exec wordcamp.test wp gatherpress alpha fix --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
@@ -749,6 +749,15 @@ clean (#2021).
   schedule change by reading the occurrence rows back after a plain save, never
   by calling `project()` yourself — an explicit call passes whether or not the
   hook works.
+
+- **Anything GatherPress caches per post is shared by every occurrence.** An
+  occurrence is the series post plus the `gpre_occurrence` query var, so a
+  cache keyed on the queried post serves one date's output for all of them.
+  0.36.0's iCal cache did exactly this: every occurrence's `.ics` carried
+  the first date downloaded. `Plugin::calendar_max_age()` turns the cache
+  off for occurrence requests. After each bump, download two occurrences'
+  `.ics` files and compare their `DTSTART`; also look for new caches in the
+  changelog.
 
 An occurrence page reads its date through `Context::metadata()`, which serves
 the occurrence row's own columns, so checking the series post's meta is not a

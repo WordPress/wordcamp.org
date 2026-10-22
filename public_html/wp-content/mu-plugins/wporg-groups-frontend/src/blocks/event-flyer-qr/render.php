@@ -8,11 +8,14 @@
  * QR service so the event's address isn't handed to a third party, and the
  * printed URL means the flyer still works if the script never runs.
  *
- * On a dated occurrence of a recurring series `get_permalink()` returns that
- * occurrence's URL, so the code opens the date the flyer is for.
+ * Both use the event's short URL (#2222), which is shorter to type than its
+ * permalink. On a dated occurrence of a recurring series it names that date,
+ * so the code opens the date the flyer is for.
  *
  * @package WordCamp\Groups\Frontend
  */
+
+use function WordCamp\Groups\Frontend\Event_Flyer\get_short_url;
 
 $event_post_id = $block->context['postId'] ?? get_the_ID();
 
@@ -20,7 +23,7 @@ if ( ! $event_post_id ) {
 	$event_post_id = get_queried_object_id();
 }
 
-$event_url = $event_post_id ? (string) get_permalink( $event_post_id ) : '';
+$event_url = $event_post_id && get_permalink( $event_post_id ) ? get_short_url( (int) $event_post_id ) : '';
 
 if ( '' === $event_url ) {
 	return;

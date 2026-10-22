@@ -492,12 +492,12 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 	 *
 	 * Only records the document once the PDF verifiably exists:
 	 * `WordCamp_Docs_PDF_Generator::generate_pdf_from_file()` returns its intended output
-	 * path unconditionally, right after `exec()`, without checking that anything was
-	 * written. Recording the filename regardless would leave the letter advertising a
-	 * download that 404s -- the same defect as #1760.
+	 * path unconditionally, even when rendering failed and nothing was written.
+	 * Recording the filename regardless would leave the letter advertising a download
+	 * that 404s -- the same defect as #1760.
 	 *
 	 * Split out from `create_letter_document()` so these branches are assertable without
-	 * invoking wkhtmltopdf.
+	 * rendering a PDF.
 	 *
 	 * @param int    $letter_id The visa letter ID.
 	 * @param string $tmp_path  Path the generator reports having written the PDF to.
@@ -514,7 +514,7 @@ class CampTix_Addon_Visa_Letters extends \CampTix_Addon {
 
 		if ( ! $tmp_path || ! file_exists( $tmp_path ) || ! filesize( $tmp_path ) ) {
 			$camptix->log(
-				__( 'Visa letter PDF generation failed: wkhtmltopdf produced no output.', 'wordcamporg' ),
+				__( 'Visa letter PDF generation failed: the PDF generator produced no output.', 'wordcamporg' ),
 				$letter_id,
 				array( 'filename' => $filename )
 			);

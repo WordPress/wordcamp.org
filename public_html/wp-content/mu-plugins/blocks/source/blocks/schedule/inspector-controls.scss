@@ -1,6 +1,11 @@
 .wordcamp-schedule__control-container {
 	margin-top: 24px;
 
+	// The toggle is the only child of the legend, so it misses the spacing that controls get between siblings.
+	legend:not(:last-child) {
+		margin-bottom: 16px;
+	}
+
 	.notice.has-no-dates,
 	.notice.has-no-tracks {
 		margin-left: 5px;

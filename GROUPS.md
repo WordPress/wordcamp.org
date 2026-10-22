@@ -22,7 +22,7 @@ public_html/wp-content/
 
 ### `plugins/gatherpress`
 
-Upstream [GatherPress](https://github.com/GatherPress/gatherpress) plugin — the core events/RSVP/venue engine this whole project is built on. Vendored as-is (not WordCamp-authored); upgraded by pulling in new releases rather than editing in place. In production, this is an SVN mirror fixed to a specific GatherPress version — updated via `svn up` as part of the deploy steps below, not via git.
+Upstream [GatherPress](https://github.com/GatherPress/gatherpress) plugin — the core events/RSVP/venue engine this whole project is built on. Vendored as-is (not WordCamp-authored); upgraded by pulling in new releases rather than editing in place. In production, it is pinned to a specific GatherPress release through `svn:externals` on `wp-content/plugins/`, not via git. See [GatherPress upgrade](#gatherpress-upgrade).
 
 - `includes/core/classes` — core PHP classes (events, RSVPs, venues, etc.)
 - `includes/core/templates`, `includes/templates/blocks|calendar|admin` — block and admin markup
@@ -123,3 +123,72 @@ deploy-wordcamp.sh
 
 - Smoketest `skopje.wordcamp.org`, `wordcamp.org`, `events.wordpress.org` and https://events.wordpress.org/group/internal-testing-group/
 - Test shipped changes in production
+
+### GatherPress upgrade
+
+1. Locally, switch `plugins/gatherpress` to the new version, then run the [`groups-gatherpress-compat-test`](https://github.com/WordPress/wordcamp.org/blob/production/.claude/skills/groups-gatherpress-compat-test/SKILL.md) skill and an end-to-end pass on it.
+2. Open a PR with any compatibility fixes, test it manually, then squash and merge.
+3. SSH to your sandbox and pull it in:
+
+   ```
+   cd /home/wordcamp/public_html
+   git pull origin production
+   svnup-all.sh
+   ```
+
+4. Bump the pinned version. GatherPress is pinned through `svn:externals`, so change its tag in the editor, then update the directory that holds the property (not `gatherpress/` itself, which would refresh against the old URL):
+
+   ```
+   cd /home/wordcamp/public_html/wp-content/plugins
+   svn propedit svn:externals .
+   svn update .
+   ../../bin/wp-cli/wp plugin get gatherpress --field=version --url=https://events.wordpress.org/
+   ```
+
+5. Commit and deploy as usual:
+
+   ```
+   cd /home/wordcamp/public_html
+   php bin/php/multiple-use/miscellaneous/sync-svn-with-git.php
+   deploy-wordcamp.sh
+   ```
+
+6. Run `svnup-all.sh` again so that you fetch the new GP version on your sandbox
+7. Run the `gatherpress-alpha` migrations below right away, then do the [post-deploy](#post-deploy) checks.
+
+#### Running the `gatherpress-alpha` migrations
+
+Most GatherPress releases change stored data (block markup, post meta, options). [`gatherpress-alpha`](https://github.com/GatherPress/gatherpress-alpha) ships the matching fixes, and `wp gatherpress alpha fix` applies them to every site that has GatherPress. Each site records the last alpha version it ran, so only the new fixes run.
+
+The alpha version must match the deployed GatherPress version exactly, otherwise the plugin stays inert. Only run this after step 5.
+
+```
+cd /home/wordcamp/public_html
+VERSION=0.36.0 # the GatherPress version you just deployed
+URL=events.wordpress.org/group/internal-testing-group/
+
+bin/wp-cli/wp plugin install "https://github.com/GatherPress/gatherpress-alpha/releases/download/${VERSION}/gatherpress-alpha.${VERSION}.zip" --activate --url=$URL
+bin/wp-cli/wp gatherpress alpha fix --url=$URL
+# Success: Fixes applied to N sites.
+```
+
+Next, run GatherPress's own per-site upgrade. It normally runs on `admin_init`, so a site stays on the old version (no `dbDelta` on its tables, no rewrite flush, stale `gatherpress_version`) until someone opens its wp-admin. This runs it now on every site alpha fixed, and prints each site with its new version:
+
+```
+bin/wp-cli/wp eval 'foreach ( get_sites( array( "number" => 0 ) ) as $s ) { switch_to_blog( $s->blog_id ); if ( get_option( "gatherpress_alpha_last_version" ) === GATHERPRESS_VERSION && get_option( "gatherpress_version" ) !== GATHERPRESS_VERSION ) { GatherPress\Core\Setup::get_instance()->check_plugin_version(); echo $s->domain . $s->path, " ", get_option( "gatherpress_version" ), PHP_EOL; } restore_current_blog(); }' --url=$URL
+```
+
+Then verify. This lists every site that has GatherPress with its `gatherpress_version` and `gatherpress_alpha_last_version`. Both columns should show the new version on every group site:
+
+```
+bin/wp-cli/wp eval 'foreach ( get_sites( array( "number" => 0 ) ) as $s ) { $v = get_blog_option( $s->blog_id, "gatherpress_version" ); if ( $v ) { echo $s->domain . $s->path, " ", $v, " ", get_blog_option( $s->blog_id, "gatherpress_alpha_last_version", "-" ), PHP_EOL; } }'
+```
+
+`bin/wp-cli/wp plugin get gatherpress --field=version` shows the deployed version.
+
+Finally, clean up. The sandbox shares the production database, so the fixes above applied to production directly, but the plugin files only exist on your sandbox:
+
+```
+bin/wp-cli/wp plugin deactivate gatherpress-alpha --url=$URL
+rm -rf wp-content/plugins/gatherpress-alpha
+```

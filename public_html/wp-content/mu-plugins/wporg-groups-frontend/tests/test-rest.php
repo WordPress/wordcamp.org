@@ -138,6 +138,45 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A monthly series repeats on its start date's day, even when the form
+	 * still sends the day of a date it was moved off (#2227).
+	 */
+	public function test_monthly_series_repeats_on_the_start_day(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$start  = current_datetime()->modify( 'first day of +2 months' );
+		$date   = $start->setDate( (int) $start->format( 'Y' ), (int) $start->format( 'n' ), 24 )->format( 'Y-m-d' );
+		$params = array_merge(
+			$this->base_event_params(),
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency'    => 'monthly',
+					'interval'     => 1,
+					'monthly_mode' => 'day',
+					'monthly_day'  => 29,
+					'end_type'     => 'count',
+					'count'        => 3,
+				),
+			)
+		);
+
+		Recurring_Events_Database::maybe_install();
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( 24, (int) get_post_meta( $event_id, Rule::META_PREFIX . 'monthly_day', true ) );
+
+		$days = array_map(
+			static fn( $occurrence ): string => substr( $occurrence->datetime_start, 8, 2 ),
+			Occurrences::all( $event_id )
+		);
+		$this->assertSame( array( '24', '24', '24' ), $days );
+	}
+
+	/**
 	 * Occurrence navigation retains earlier upcoming dates.
 	 */
 	public function test_occurrence_navigation_retains_earlier_upcoming_dates(): void {

@@ -301,6 +301,7 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	 * @testWith ["draft"]
 	 *           ["pending"]
 	 *           ["cancel"]
+	 *           ["timeout"]
 	 */
 	public function test_payment_result_publishes_unpaid_attendee( $status ) {
 		/** @var CampTix_Plugin $camptix */
@@ -312,6 +313,128 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
 
 		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * A payment that lands after the order was cancelled, timed out or failed (a slow UPI or
+	 * bank confirmation, say) recovers the order, and the buyer gets their ticket and receipt
+	 * as for any other purchase. Until now only a draft order sent one.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 * @covers CampTix_Plugin::email_tickets
+	 * @testWith ["cancel"]
+	 *           ["timeout"]
+	 *           ["failed"]
+	 */
+	public function test_late_payment_sends_the_ticket( $status ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_late_' . $status;
+		$attendee_id   = $this->create_attendee( $payment_token, $status );
+
+		reset_phpmailer_instance();
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+
+		$mailer = tests_retrieve_phpmailer_instance();
+		$this->assertCount( 1, $mailer->mock_sent );
+		$this->assertSame( 'receipt@example.test', $mailer->get_recipient( 'to' )->address );
+	}
+
+	/**
+	 * A late payment for an order with several attendees sends each of them their own ticket, and
+	 * the buyer the receipt, as a draft order does.
+	 *
+	 * @covers CampTix_Plugin::email_tickets
+	 * @testWith ["cancel"]
+	 *           ["timeout"]
+	 *           ["failed"]
+	 */
+	public function test_late_payment_emails_every_attendee_their_ticket( $status ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_late_group_' . $status;
+		$buyer_id      = $this->create_attendee( $payment_token, $status );
+		$guest_id      = $this->create_attendee( $payment_token, $status );
+		update_post_meta( $buyer_id, 'tix_email', 'receipt@example.test' );
+		update_post_meta( $guest_id, 'tix_email', 'guest@example.test' );
+
+		reset_phpmailer_instance();
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$recipients = array_map(
+			function ( $email ) {
+				return $email['to'][0][0];
+			},
+			tests_retrieve_phpmailer_instance()->mock_sent
+		);
+		sort( $recipients );
+
+		$this->assertSame(
+			array( 'guest@example.test', 'receipt@example.test', 'receipt@example.test' ),
+			$recipients,
+			'a ticket to each attendee, and the receipt to the buyer'
+		);
+	}
+
+	/**
+	 * A late delayed payment (Stripe reports it complete but not yet paid) sends the receipt
+	 * with the pending note, as it does for a draft.
+	 *
+	 * @covers CampTix_Plugin::email_tickets
+	 */
+	public function test_late_pending_payment_sends_the_receipt() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_late_pending';
+		$attendee_id   = $this->create_attendee( $payment_token, 'cancel' );
+
+		reset_phpmailer_instance();
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, array(), false );
+
+		$this->assertSame( 'pending', get_post_status( $attendee_id ) );
+		$this->assertCount( 1, tests_retrieve_phpmailer_instance()->mock_sent );
+	}
+
+	/**
+	 * Moving between unpaid states sends nothing: there's no ticket to send.
+	 *
+	 * @covers CampTix_Plugin::email_tickets
+	 */
+	public function test_unpaid_status_change_sends_nothing() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_still_unpaid';
+		$attendee_id   = $this->create_attendee( $payment_token, 'cancel' );
+
+		reset_phpmailer_instance();
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, array(), false );
+
+		$this->assertSame( 'failed', get_post_status( $attendee_id ) );
+		$this->assertCount( 0, tests_retrieve_phpmailer_instance()->mock_sent );
+	}
+
+	/**
+	 * A repeated timeout for a timed-out order leaves it alone.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_repeated_timeout_leaves_a_timed_out_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_timeout_again';
+		$attendee_id   = $this->create_attendee( $payment_token, 'timeout' );
+
+		$result = $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_TIMEOUT, array(), false );
+
+		$this->assertFalse( $result );
+		$this->assertSame( 'timeout', get_post_status( $attendee_id ) );
 	}
 
 	/**

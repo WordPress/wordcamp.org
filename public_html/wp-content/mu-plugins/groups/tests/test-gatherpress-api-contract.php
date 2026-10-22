@@ -50,6 +50,15 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		'GatherPress\Core\Rsvp\Cache'       => array(
 			'methods' => array( 'delete' ),
 		),
+		// Check-in is stored as this flag, and `on_flag_changed()` matches
+		// GatherPress's flag hooks against its slug.
+		'GatherPress\Core\Rsvp\Flag\Check_In' => array(
+			'methods'   => array( 'has', 'add', 'remove' ),
+			'constants' => array( 'SLUG' ),
+		),
+		'GatherPress\Core\Rsvp\Query'       => array(
+			'methods' => array( 'get_rsvps' ),
+		),
 		// An enum: `ATTENDING` is a case, which `defined()` also reports.
 		'GatherPress\Core\Rsvp\Response\Status' => array(
 			'constants' => array( 'TAXONOMY', 'ATTENDING' ),

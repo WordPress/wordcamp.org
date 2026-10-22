@@ -14,6 +14,7 @@ use GatherPress\Core\Rsvp\Rsvp;
 
 use function WordCamp\Groups\Frontend\Check_In\event_has_check_ins;
 use function WordCamp\Groups\Frontend\Check_In\is_checked_in;
+use function WordCamp\Groups\Frontend\Check_In\prime_check_ins;
 
 $event_post_id = ! empty( $block->context['postId'] )
 	? (int) $block->context['postId']
@@ -42,7 +43,7 @@ $is_past   = ( new Event( $event_post_id ) )->has_event_past();
 // "Attended" would credit the no-shows.
 $recurrence_id = (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_post_id );
 if ( $is_past && $records && event_has_check_ins( $event_post_id, $recurrence_id ) ) {
-	update_meta_cache( 'comment', array_filter( wp_list_pluck( $records, 'commentId' ) ) );
+	prime_check_ins( wp_list_pluck( $records, 'commentId' ) );
 
 	$records = array_values(
 		array_filter(

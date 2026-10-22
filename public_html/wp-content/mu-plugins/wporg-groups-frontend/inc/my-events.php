@@ -124,7 +124,7 @@ function filter_to_attended( array $candidates ): array {
 		return array();
 	}
 
-	update_meta_cache( 'comment', array_column( $candidates, 'comment_id' ) );
+	Check_In\prime_check_ins( array_column( $candidates, 'comment_id' ) );
 
 	return array_values(
 		array_filter(

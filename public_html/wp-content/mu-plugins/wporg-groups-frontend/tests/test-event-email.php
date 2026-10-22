@@ -4,7 +4,9 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Event_Email\fix_event_email_markup;
 use function WordCamp\Groups\Frontend\Event_Email\fix_featured_image;
+use function WordCamp\Groups\Frontend\Event_Email\add_missing_button;
 use function WordCamp\Groups\Frontend\Event_Email\make_button_bulletproof;
+use function WordCamp\Groups\Frontend\Event_Email\sanitize_message;
 
 defined( 'WPINC' ) || die();
 
@@ -221,5 +223,171 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 		$this->assertNotNull( $captured );
 		$this->assertStringContainsString( '<table role="presentation"', $captured['message'] );
 		$this->assertStringContainsString( 'height: auto;', $captured['message'] );
+	}
+
+	/**
+	 * Send GatherPress's own "Message members" email about an event, to one
+	 * new member, and return what reached `wp_mail()`.
+	 *
+	 * @param string $start Event start, site time.
+	 * @return array `wp_mail()` arguments for the member's copy.
+	 */
+	private function send_member_email( string $start ): array {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => $start,
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $start ) + 2 * HOUR_IN_SECONDS ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$member_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $member_id, 'subscriber' );
+
+		$sent = array();
+		$grab = static function ( $short_circuit, $atts ) use ( &$sent ) {
+			$sent[] = $atts;
+
+			return true;
+		};
+
+		add_filter( 'pre_wp_mail', $grab, 10, 2 );
+
+		\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails(
+			$event_id,
+			array(
+				'all'           => true,
+				'attending'     => false,
+				'waiting_list'  => false,
+				'not_attending' => false,
+			),
+			'Hello'
+		);
+
+		remove_filter( 'pre_wp_mail', $grab, 10 );
+
+		$email = get_userdata( $member_id )->user_email;
+
+		foreach ( $sent as $atts ) {
+			if ( $email === $atts['to'] ) {
+				return $atts + array( 'event_id' => $event_id );
+			}
+		}
+
+		$this->fail( 'The member did not get the email.' );
+	}
+
+	/**
+	 * GatherPress 0.36.0 drops the RSVP button once an event has passed, and
+	 * with it the email's only link. A series is judged by its first date
+	 * here, so this is what every email about a running series looked like.
+	 */
+	public function test_email_without_rsvp_button_still_links_to_the_event() {
+		$mail = $this->send_member_email( '2020-05-20 10:00:00' );
+
+		$this->assertStringNotContainsString( 'RSVP Now', $mail['message'] );
+		$this->assertStringContainsString( 'View event', $mail['message'] );
+		$this->assertStringContainsString( 'href="' . esc_url( get_permalink( $mail['event_id'] ) ) . '"', $mail['message'] );
+	}
+
+	/**
+	 * An email that still has its RSVP button gets no second one.
+	 */
+	public function test_email_with_rsvp_button_gets_no_extra_link() {
+		$mail = $this->send_member_email( '2031-05-20 10:00:00' );
+
+		$this->assertStringContainsString( 'RSVP Now', $mail['message'] );
+		$this->assertStringNotContainsString( 'View event', $mail['message'] );
+	}
+
+	/**
+	 * The added button sits where the RSVP button would, so the publish
+	 * notification can still take it out of the organizer's own copy.
+	 */
+	public function test_added_button_is_strippable() {
+		$body  = '<h1>Probe</h1><!-- RSVP Button: only when registration is still open. --><!-- Excerpt --><p>An excerpt.</p>';
+		$added = add_missing_button( $body, self::factory()->post->create() );
+
+		$this->assertStringContainsString( 'View event', $added );
+		$this->assertSame(
+			'<h1>Probe</h1><!-- Excerpt --><p>An excerpt.</p>',
+			\WordCamp\Groups\Frontend\Notifications\strip_rsvp_button( $added )
+		);
+	}
+
+	/**
+	 * Without a noted event there is nothing to link to, so the body is left
+	 * as GatherPress rendered it.
+	 */
+	public function test_missing_button_needs_an_event() {
+		$body = '<!-- RSVP Button: only when registration is still open. --><p>An excerpt.</p>';
+
+		$this->assertSame( $body, add_missing_button( $body, 0 ) );
+	}
+
+	/**
+	 * Core's text sanitizers delete every `%XX` sequence, which takes the
+	 * path out of a link to a page with a non-Latin slug.
+	 */
+	public function test_message_keeps_percent_encoding() {
+		$url = 'https://example.org/%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88/';
+
+		$this->assertSame(
+			"See {$url}\nbold &amp; plain",
+			sanitize_message( "  See {$url}\n<b>bold</b> & plain  " )
+		);
+		$this->assertSame( '', sanitize_message( array( 'not a string' ) ) );
+	}
+
+	/**
+	 * GatherPress's email route runs the message through our sanitizer, all
+	 * the way to the cron job that sends it.
+	 */
+	public function test_email_route_keeps_percent_encoding() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+		$message  = 'Slides: https://example.org/%D1%81%D0%BB%D0%B0%D0%B9%D0%B4%D1%8B/';
+
+		$request = new \WP_REST_Request( 'POST', '/gatherpress/v1/event/email' );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body(
+			wp_json_encode(
+				array(
+					'post_id' => $event_id,
+					'message' => $message,
+					'send'    => array(
+						'all'           => true,
+						'attending'     => false,
+						'waiting_list'  => false,
+						'not_attending' => false,
+					),
+				)
+			)
+		);
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+
+		$scheduled = array();
+		foreach ( _get_cron_array() as $hooks ) {
+			foreach ( $hooks['gatherpress_send_emails'] ?? array() as $job ) {
+				$scheduled[] = $job['args'][2];
+			}
+		}
+
+		$this->assertContains( $message, $scheduled );
 	}
 }

@@ -39,10 +39,85 @@ const BUTTON_MARKER_PATTERN = '<!-- RSVP Button\b[^>]*-->';
 const BUTTON_MARKUP = '<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;"><tr><td align="center" bgcolor="#0a58ca" style="background-color: #0a58ca; border-radius: 4px;"><a href="%1$s" style="display: inline-block; padding: 12px 20px; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; font-weight: bold; color: #ffffff; text-decoration: none; border-radius: 4px;">%2$s</a></td></tr></table>';
 
 /**
- * Register the filter.
+ * Register the filters.
  */
 function bootstrap(): void {
 	add_filter( 'wp_mail', __NAMESPACE__ . '\fix_event_email_markup' );
+	add_filter( 'gatherpress_email_subject', __NAMESPACE__ . '\remember_event_id', 10, 2 );
+	add_filter( 'rest_endpoints', __NAMESPACE__ . '\keep_message_percent_encoding' );
+}
+
+/**
+ * Sanitize the email route's message without dropping percent-encoded text.
+ *
+ * GatherPress 0.36.0 runs the message through `sanitize_textarea_field()`,
+ * which removes every `%XX` sequence, so a link to
+ * `/%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88/` in "Message members" arrives with
+ * its path gone. Tags still go: the template's own `wp_kses()` would drop
+ * them anyway.
+ *
+ * @param array $endpoints Registered REST endpoints.
+ * @return array
+ */
+function keep_message_percent_encoding( array $endpoints ): array {
+	$route = '/gatherpress/v1/event/email';
+
+	if ( empty( $endpoints[ $route ] ) ) {
+		return $endpoints;
+	}
+
+	foreach ( $endpoints[ $route ] as $index => $handler ) {
+		if ( isset( $handler['args']['message']['sanitize_callback'] ) ) {
+			$endpoints[ $route ][ $index ]['args']['message']['sanitize_callback'] = __NAMESPACE__ . '\sanitize_message';
+		}
+	}
+
+	return $endpoints;
+}
+
+/**
+ * Plain text with line breaks and percent-encoding intact.
+ *
+ * @param mixed $message Submitted message.
+ */
+function sanitize_message( $message ): string {
+	if ( ! is_string( $message ) ) {
+		return '';
+	}
+
+	return trim( wp_kses( wp_check_invalid_utf8( $message ), array() ) );
+}
+
+/**
+ * Note which event GatherPress is about to email about.
+ *
+ * `wp_mail` only sees the rendered body, and the button that carried the
+ * event's link may be missing from it. GatherPress applies this filter once
+ * per recipient, right before it renders and sends that recipient's copy.
+ *
+ * @param string $subject Email subject.
+ * @param int    $post_id Event post ID.
+ * @return string Unchanged subject.
+ */
+function remember_event_id( $subject, $post_id ) {
+	current_event_id( (int) $post_id );
+
+	return $subject;
+}
+
+/**
+ * The event the next event email is about, as noted by `remember_event_id()`.
+ *
+ * @param int|null $event_id Event post ID to note, or null to read.
+ */
+function current_event_id( ?int $event_id = null ): int {
+	static $current = 0;
+
+	if ( null !== $event_id ) {
+		$current = $event_id;
+	}
+
+	return $current;
 }
 
 /**
@@ -61,7 +136,11 @@ function bootstrap(): void {
  * @return array
  */
 function fix_event_email_markup( array $atts ): array {
-	$message = $atts['message'] ?? '';
+	$message  = $atts['message'] ?? '';
+	$event_id = current_event_id();
+
+	// Each noted ID is for one email only.
+	current_event_id( 0 );
 
 	if ( ! is_string( $message ) || '' === $message ) {
 		return $atts;
@@ -72,7 +151,7 @@ function fix_event_email_markup( array $atts ): array {
 		return $atts;
 	}
 
-	$atts['message'] = make_button_bulletproof( fix_featured_image( $message ) );
+	$atts['message'] = add_missing_button( make_button_bulletproof( fix_featured_image( $message ) ), $event_id );
 
 	return $atts;
 }
@@ -139,6 +218,45 @@ function make_button_bulletproof( string $message ): string {
 
 			return $matches[1] . $button . $matches[4];
 		},
+		$message,
+		1
+	);
+
+	return null === $fixed ? $message : $fixed;
+}
+
+/**
+ * Link to the event when GatherPress left the RSVP button out.
+ *
+ * Since 0.36.0 the template shows the button only while the event hasn't
+ * passed and RSVP is open, and the button is the email's only link to the
+ * event. Emails are sent outside any request for a date, so a recurring
+ * series is judged by its first date: once that has passed, every
+ * "Message members" email about the series went out with no link at all.
+ *
+ * The button goes back under the same marker and wrapper, so the publish
+ * notification can still strip it from the organizer's own copy.
+ *
+ * @param string $message  Rendered email body.
+ * @param int    $event_id Event the email is about, or 0 when unknown.
+ * @return string
+ */
+function add_missing_button( string $message, int $event_id ): string {
+	if ( ! $event_id || preg_match( '#' . BUTTON_MARKER_PATTERN . '\s*<div\b#', $message ) ) {
+		return $message;
+	}
+
+	$url = get_permalink( $event_id );
+
+	if ( ! $url ) {
+		return $message;
+	}
+
+	$button = sprintf( BUTTON_MARKUP, esc_url( $url ), esc_html__( 'View event', 'wordcamporg' ) );
+
+	$fixed = preg_replace_callback(
+		'#' . BUTTON_MARKER_PATTERN . '#',
+		static fn( array $matches ): string => $matches[0] . '<div style="text-align: center; margin-top: 20px;">' . $button . '</div>',
 		$message,
 		1
 	);

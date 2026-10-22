@@ -372,10 +372,10 @@ function set_walk_in_count( int $event_id, string $recurrence_id, int $count ): 
 /**
  * The date of the event in context, or `''` for a plain event.
  *
- * @param Event $event The event, after `resolve_event()`.
+ * @param int $event_id Event post ID, after `resolve_event()`.
  */
-function current_scope( Event $event ): string {
-	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', (int) $event->post->ID );
+function current_scope( int $event_id ): string {
+	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_id );
 }
 
 /**
@@ -449,11 +449,16 @@ function assert_open( Event $event ) {
  * Attending and waiting list only: someone who said they weren't coming is
  * added back through the walk-in field if they turn up anyway.
  *
- * @param Event $event The event, with its occurrence in context.
+ * The event ID is passed alongside the event because GatherPress renamed the
+ * property holding its post (`$event` to `$post` in 0.36.0), so reading it
+ * would tie this file to one version.
+ *
+ * @param Event $event    The event, with its occurrence in context.
+ * @param int   $event_id Event post ID.
  * @return array{attendees: array, checkedInCount: int, walkInsWithoutAccount: int, isOpen: bool}
  */
-function build_list( Event $event ): array {
-	$responses = ( new Rsvp( (int) $event->post->ID ) )->responses();
+function build_list( Event $event, int $event_id ): array {
+	$responses = ( new Rsvp( $event_id ) )->responses();
 	$records   = array_merge(
 		$responses['attending']['records'] ?? array(),
 		$responses['waiting_list']['records'] ?? array()
@@ -503,7 +508,7 @@ function build_list( Event $event ): array {
 	return array(
 		'attendees'             => $attendees,
 		'checkedInCount'        => $checked,
-		'walkInsWithoutAccount' => get_walk_in_count( (int) $event->post->ID, current_scope( $event ) ),
+		'walkInsWithoutAccount' => get_walk_in_count( $event_id, current_scope( $event_id ) ),
 		'isOpen'                => is_open( $event ),
 	);
 }
@@ -520,7 +525,7 @@ function get_check_in_list( WP_REST_Request $request ) {
 		return $event;
 	}
 
-	return new WP_REST_Response( build_list( $event ) );
+	return new WP_REST_Response( build_list( $event, (int) $request->get_param( 'id' ) ) );
 }
 
 /**
@@ -540,6 +545,7 @@ function update_check_in( WP_REST_Request $request ) {
 		return $open;
 	}
 
+	$event_id   = (int) $request->get_param( 'id' );
 	$comment_id = (int) $request->get_param( 'comment_id' );
 	$comment    = get_comment( $comment_id );
 
@@ -556,7 +562,7 @@ function update_check_in( WP_REST_Request $request ) {
 	 *   - A "not attending" RSVP: it would switch the date to check-in,
 	 *     dropping everyone who RSVP'd yes from "Events I attended".
 	 */
-	$offered = wp_list_pluck( build_list( $event )['attendees'], 'commentId' );
+	$offered = wp_list_pluck( build_list( $event, $event_id )['attendees'], 'commentId' );
 
 	if ( ! $comment instanceof WP_Comment || ! in_array( $comment_id, $offered, true ) ) {
 		return new WP_Error( 'wporg_groups_invalid_rsvp', 'Invalid RSVP.', array( 'status' => 404 ) );
@@ -564,7 +570,7 @@ function update_check_in( WP_REST_Request $request ) {
 
 	set_checked_in( $comment, (bool) $request->get_param( 'checked_in' ) );
 
-	return new WP_REST_Response( build_list( $event ) );
+	return new WP_REST_Response( build_list( $event, $event_id ) );
 }
 
 /**
@@ -615,7 +621,8 @@ function add_walk_in( WP_REST_Request $request ) {
 		);
 	}
 
-	$rsvp     = new Rsvp( (int) $event->post->ID );
+	$event_id = (int) $request->get_param( 'id' );
+	$rsvp     = new Rsvp( $event_id );
 	$existing = $rsvp->get( $user->ID );
 	$status   = (string) ( $existing['status'] ?? '' );
 
@@ -639,7 +646,7 @@ function add_walk_in( WP_REST_Request $request ) {
 
 	set_checked_in( $comment, true );
 
-	$response            = build_list( $event );
+	$response            = build_list( $event, $event_id );
 	$response['added']   = (int) $comment->comment_ID;
 	$response['message'] = sprintf(
 		/* translators: %s: attendee's display name. */
@@ -667,7 +674,9 @@ function update_walk_in_count( WP_REST_Request $request ) {
 		return $open;
 	}
 
-	set_walk_in_count( (int) $event->post->ID, current_scope( $event ), (int) $request->get_param( 'count' ) );
+	$event_id = (int) $request->get_param( 'id' );
 
-	return new WP_REST_Response( build_list( $event ) );
+	set_walk_in_count( $event_id, current_scope( $event_id ), (int) $request->get_param( 'count' ) );
+
+	return new WP_REST_Response( build_list( $event, $event_id ) );
 }

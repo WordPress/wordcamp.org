@@ -5,6 +5,7 @@ namespace WordCamp\Groups\Tests;
 use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Flag\Check_In as Check_In_Flag;
 use GatherPress\Core\Rsvp\Rsvp;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
@@ -154,6 +155,51 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		$this->assertSame( 1, $data['checkedInCount'] );
 		$this->assertCount( 2, $data['attendees'] );
 		$this->assertTrue( $data['isOpen'] );
+	}
+
+	/**
+	 * A check-in from this page is GatherPress's own flag, so the wp-admin
+	 * RSVPs screen shows it too (#2213).
+	 */
+	public function test_check_in_is_the_gatherpress_flag() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+
+		$this->toggle( $event_id, $comment_id, true );
+
+		$this->assertTrue( ( new Check_In_Flag( $comment_id ) )->has() );
+		$this->assertSame( 1, Check_In_Flag::count( $event_id ) );
+
+		$this->toggle( $event_id, $comment_id, false );
+
+		$this->assertFalse( ( new Check_In_Flag( $comment_id ) )->has() );
+	}
+
+	/**
+	 * A check-in made in wp-admin shows on this page and counts as the date
+	 * using check-in, and undoing it there switches "attended" back.
+	 */
+	public function test_check_in_from_wp_admin_is_picked_up() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+		list( , $no_show )    = $this->rsvp( $event_id );
+
+		( new Check_In_Flag( $comment_id ) )->add();
+
+		$this->assertTrue( is_checked_in( $comment_id ) );
+		$this->assertTrue( event_has_check_ins( $event_id ) );
+
+		$request = new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" );
+		$data    = rest_do_request( $request )->get_data();
+		$checked = wp_list_pluck( $data['attendees'], 'checkedIn', 'commentId' );
+
+		$this->assertSame( 1, $data['checkedInCount'] );
+		$this->assertTrue( $checked[ $comment_id ] );
+		$this->assertFalse( $checked[ $no_show ] );
+
+		( new Check_In_Flag( $comment_id ) )->remove();
+
+		$this->assertFalse( event_has_check_ins( $event_id ) );
 	}
 
 	/**

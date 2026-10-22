@@ -885,6 +885,7 @@ function get_event_rsvps( array $event_ids ) {
 
 	$comment_ids = array_map( 'intval', wp_list_pluck( $comments, 'comment_ID' ) );
 	update_meta_cache( 'comment', $comment_ids );
+	Check_In\prime_check_ins( $comment_ids );
 
 	$status_terms = wp_get_object_terms(
 		$comment_ids,

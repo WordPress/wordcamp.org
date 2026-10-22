@@ -225,12 +225,15 @@ class Multi_Event_Sponsors {
 	 * @param string $grouped_by
 	 *     'ungrouped' will return a one-dimensional array, newest sponsor first;
 	 *     'sponsor_level' will return an associative array with sponsors grouped by their level and indexed by level ID
+	 * @param int    $include_draft_id
+	 *     A draft sponsor to consider as well, for pushing a staged brand to camps (#1208). Only this
+	 *     one draft is added; everything else is still published sponsors only.
 	 *
 	 * Either way each sponsor carries its resolved level for this camp as `->sponsorship_level`.
 	 *
 	 * @return array
 	 */
-	public function get_wordcamp_me_sponsors( $wordcamp_id, $grouped_by = 'ungrouped' ) {
+	public function get_wordcamp_me_sponsors( $wordcamp_id, $grouped_by = 'ungrouped', $include_draft_id = 0 ) {
 		$wordcamp_sponsors = array();
 
 		// Legacy single region (kept for back-compat until the groups migration completes).
@@ -246,6 +249,12 @@ class Multi_Event_Sponsors {
 			'post_type'   => MES_Sponsor::POST_TYPE_SLUG,
 			'numberposts' => -1
 		) );
+
+		$draft = $include_draft_id ? get_post( $include_draft_id ) : null;
+
+		if ( $draft && MES_Sponsor::POST_TYPE_SLUG === $draft->post_type && 'draft' === $draft->post_status ) {
+			$all_me_sponsors[] = $draft;
+		}
 
 		foreach ( $all_me_sponsors as $sponsor ) {
 			$level_id = $this->get_sponsor_level_for_camp( $sponsor->ID, $wordcamp_region, $camp_groups );

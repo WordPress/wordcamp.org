@@ -26,7 +26,7 @@ A review is an independent attempt to make the change fail.
 - An old PR may already be superseded. Before reading the diff of a branch far behind, run `git log origin/production` on the files it touches and read what landed since. Rebasing a superseded branch can quietly revert the newer fix.
 - "Covered by tests" means go and find the test.
 - A green CI run says the suite passed, not that the suite covers this.
-- A green run can be a run that stopped. CampTix redirects end in `die()`, which exits PHPUnit with 0 and skips every later test. Compare the test count with the suite's, and make tests turn `wp_redirect` into `WPDieException` (see `test-require-login.php`).
+- A green run can be a run that stopped. CampTix redirects end in `die()`, and any `wp_safe_redirect(); exit;` reached through `go_to()` does the same: PHPUnit exits 0 and skips every later test. Compare the test count with the suite's, and make tests turn `wp_redirect` into `WPDieException` (see `test-require-login.php`). Do it in every test that drives the route, not just the one expecting a redirect, or a regression that starts redirecting where it should 404 ends the suite green (#2225).
 
 ## Reproducing
 
@@ -35,7 +35,7 @@ A review is an independent attempt to make the change fail.
 - A fix can be correct, tested, passing, and leave the bug in place.
 - Assert on the surface that broke, not on the helper behind it.
 - Check the fix at the layer the user sees. Data being right is not the page being right.
-- For anything that loops over camps (a CLI command, a cron, a sweep), read which camps it selects before what it does to them. `post_status => any` on `wordcamp` is every camp since 2006, closed ones too. All three local camps with sites are past, so a dry run on them already shows whether history gets written to.
+- For anything that loops over camps (a CLI command, a cron, a sweep), read which camps it selects before what it does to them. `post_status => any` on `wordcamp` is every camp since 2006, closed ones too. All three local camps with sites are past, so a dry run on them already shows whether history gets written to. Groups are their own network (`events.wordpress.org/group/`, network 4 locally), not the events root's: a sweep of `$wpdb->blogs` for `get_current_network_id()` run with `--url=events.wordpress.org` sees no group site and reports nothing to do (#2231).
 - Any CampTix change that moves an attendee's status outside `payment_result()` skips more than the status. The central Ticket Revenue report counts sales and refunds only from the exact log line `Attendee status has been changed to <status>`, and `camptix_payment_result` listeners (refund stats, page-cache clear, invoices) never fire. Grep for both before accepting a direct `wp_update_post()` on a `tix_attendee`.
 - Camps come in classic and block themes, and the local stack may only have one. Block-theme camps render `mu-plugins/theme-templates/block-templates/` around the post, so blocks there (session speakers, speaker sessions) sit outside the password form. To check, switch a camp to `twentytwentyfour` and put it back (see Afterwards). Seattle and shinynew point at `twentytwenty`, which isn't installed locally, so they render a blank page until you do. Their Coming Soon is on too, so anonymous gets the placeholder.
 
@@ -46,6 +46,7 @@ A review is an independent attempt to make the change fail.
 - Cookie flags, response headers and delivered markup are read off the response, never off the source.
 - Walk it as every actor the change touches. Log out between them.
 - Anonymous is an actor. Gated-content findings live there more often than anywhere else.
+- "A save with no author field" isn't the classic form: it always posts a hidden `post_author`. Reproduce by removing `#post_author` before submitting, or over REST with `author` set to yourself (no `edit_others_posts` check when that's you).
 - Malformed input goes in the request, not the form. A field the page will not let you type into is not a field an attacker cannot send.
 - Check who answers the URL first. Another local stack can hold 443; `curl -ksi` and read the headers. The WordCamp container is also on `:8443`.
 - Block assets ship with a fixed `?ver=1.0.0`. After a rebuild, hard-reload (`cmd+shift+r`) before judging any styling, or you are looking at the old CSS.
@@ -58,7 +59,7 @@ A review is an independent attempt to make the change fail.
 - Refs go stale too when React re-mounts a control. Re-`find` right before each `form_input`.
 - Login submit can silently no-op here. Press `Return` in the password field, then confirm on the toolbar before trusting anything after it.
 - Opening `wp-admin/customize.php` on a camp whose theme isn't installed (Seattle, shinynew) makes core's `validate_current_theme()` switch it to `twentytwentyfour` for real. On `:8443` the Coming Soon section also fails to swap the preview to `?wccsp-preview`; set it with `wp.customize.previewer.previewUrl.set()`, then read the preview iframe's DOM. A Customizer tab with unsaved changes hangs `tabs_close_mcp` on its leave-page prompt and leaves an `auto-draft` `customize_changeset` behind. Prefer checking saved state over WP-CLI and curl.
-- Never click a `window.confirm()` button. It blocks the page and automation cannot answer the dialog. Submit the form directly instead. The event modal's Cancel is one once a field has changed; if a tab freezes, close it with `tabs_close_mcp`.
+- Never click a `window.confirm()` button. It blocks the page and automation cannot answer the dialog. Submit the form directly instead. The event modal's Cancel is one once a field has changed; if a tab freezes, close it with `tabs_close_mcp`. Any block-editor tab with a loaded post counts as unsaved, so its leave-page prompt blocks `navigate` and hangs `tabs_close_mcp`; open new pages in a fresh tab instead of navigating away. Judge generated block markup with `wp.blocks.parse()` in that tab (`isValid` on every inner block), not by eye. It is lenient: a raw nested `<ul>` inside a list item passes, so a mutation that stops converting it isn't a failure. Then run the PR's new test against the pre-fix code; an assertion on text alone ("Sub 1") passes on broken markup too.
 - Decode a QR code in the page with Chrome's `BarcodeDetector` (draw the SVG to a canvas first). Asserting on `data-url` only proves the input, not the code.
 - A print claim ("fits one page") is checked with headless Chrome's `--print-to-pdf`, then count the PDF's pages. It can hang after writing the file; kill it.
 - Chrome won't zoom or screenshot-inspect a PDF opened from a `blob:` URL. To judge a generated PDF, rasterize it with `gs -sDEVICE=png16m` and crop with `sips`. For RTL or shaped text, `gs -sDEVICE=txtwrite` prints the glyphs in drawn order, which settles word order where your eyes won't.
@@ -74,6 +75,7 @@ A review is an independent attempt to make the change fail.
 - A test can pass for a reason you did not intend. Mutate the exact line you think it pins.
 - Confirm the mutation landed before trusting a green run. Count the changed lines in `git diff`; a `sed` that misses a quote changes nothing and "passes".
 - Beware tests that do the work themselves. Drive the real trigger, then read the result back.
+- A filter the code adds only so tests can inject data (`…_groups`, `…_count` returning non-null) skips the real source. Run the real path once in the container. #2175's suite was green while its WordCamp count fatalled: `get_wordcamps()` assigns `->meta` to every result, so `'fields' => 'ids'` dies on an int.
 - A test that registers the very callback it asserts was removed proves the `remove_action` argument matches itself, not the vendor. Go read the vendor's `add_action` for the hook, callable and priority.
 - A test that calls a filter callback directly cannot catch a wrong hook name. Unhook it and rerun. If the suite stays green, prove the hook fires with a real request.
 - Exercise the edges the PR claims in prose. Those are the wrong ones most often.
@@ -89,6 +91,9 @@ A review is an independent attempt to make the change fail.
 - No local camp has sessions. For Speaker Feedback, seed a published `wcb_session` with `_wcpt_session_type=session` and a past `_wcpt_session_time`; the form is at `…/session/<slug>/feedback/` and saved answers wait in moderation until approved.
 - Logo and featured-image sideloads from Central fail locally with cURL error 60 (self-signed cert), so a missing thumbnail on a camp site proves nothing. Re-run the WP-CLI command with `--require` a file that calls `WP_CLI::add_wp_hook( 'https_ssl_verify', '__return_false' )` (plain `add_filter` isn't loaded yet at `--require` time).
 - Seattle and Shiny New 2023 point at a missing `twentytwenty` theme, so the page body renders empty. Set `template`/`stylesheet` to `campsite-2017` and put it back after.
+- `wp-config.php` globals (`$trusted_deputies`, `$wcorg_subroles`) aren't global under WP-CLI, so `user_can( 6, 'wcb_approve_budget' )` says no there. Judge deputy access in the browser.
+- CampTix's meta log is empty locally. To read the log lines (and mail sends) of a web request, a throwaway mu-plugin can append `camptix_log_raw` and `wp_mail` to a file in the container; `chmod 666` it, or php-fpm can't write a file WP-CLI created.
+- MES decides "organizer edited this copy" by `post_modified !== post_date`, and core resets a draft's `post_date` on every save. Edits to a draft copy, or made in the save that publishes it, look untouched and get overwritten by Push to Active Camps. Seed an organizer edit on a draft copy before trusting any "skips edited copies" claim.
 - The attendee Status dropdown on Edit Attendee renders only for `manage_sites`. A camp organizer refunds through the front-end Refund Request link, so test both paths when a change hooks attendee status.
 - Seed through the real API, then read it back. GatherPress drops what the event or site forbids: group sites force anonymous RSVPs off, so a saved "anonymous" RSVP is an ordinary one.
 - Publishing a seeded event emails every group member "New event". Harmless locally, but seed as a draft first if the mail log matters to the review.
@@ -96,7 +101,7 @@ A review is an independent attempt to make the change fail.
 - Past the checkout, a Stripe order needs no test keys. Seed the draft attendees, call `record_checkout_session()`, and stub `api.stripe.com` with a throwaway mu-plugin on `pre_http_request` that answers from an option, so each case is one option write. Then drive `?tix_action=payment_return|payment_cancel&tix_payment_token=…&tix_payment_method=stripe` as a logged-in buyer (camps require a login) and run the real `wp cron event run tix_scheduled_every_ten_minutes`. Seed alphanumeric `tix_access_token`s: CampTix rejects anything `ctype_alnum()` refuses, and an underscore looks like a broken redirect. `camptix-invoices` is per-camp and inactive locally, and invoice PDFs land in `blogs.dir/<id>/files/camptix-invoices/`. Paying a seeded order bumps `camptix_stats` and `invoice_current_number`; put both back. Any attendee status change moves `camptix_stats` too, and seeding then refunding doesn't cancel out (`wp_insert_post` as `publish` counts before the price meta exists, and `remaining` clamps at 0), so save the whole option before seeding and write it back. To refund a seeded order, the camp also needs an enabled payment method, or the form falls back to the ticket list.
 - Require Login ties each attendee to one account, so the buyer's session can't open another attendee's `tix_edit_token` link (`require_login_edit_attendee_duplicate_username`). To see what attendee 2 sees, open their link as a second user.
 - Seattle 2023's Tickets page (ID 13) is a draft holding organizer copy. Publishing it with `post_content => '[camptix]'` wipes that copy and its date, and no revision keeps the original. Append the shortcode instead, or restore the row from `.docker/data/wordcamp_dev.sql`, the stack's seed dump.
-- Some paths can't run locally, so don't read silence as a pass. `WCOR_Mailer::mail()` fatals under WP-CLI because it needs the admin-only `$wordcamp_admin` global, so drive WCOR triggers from wp-admin. Visa-letter and Docs PDFs need `wkhtmltopdf`, which the container lacks, so no file is ever written. `wordcamp-qbo` isn't active, so the sponsor-invoice approve button can't run.
+- Some paths can't run locally, so don't read silence as a pass. `WCOR_Mailer::mail()` fatals under WP-CLI because it needs the admin-only `$wordcamp_admin` global, so drive WCOR triggers from wp-admin. Docs, invoice and visa-letter PDFs render through DomPDF and do work locally (the image's `wkhtmltopdf` is dead weight that can't start on arm64). To check one without a download, replay the Docs steps with `fetch()` in the wp-admin tab and read the response's `%PDF-` header, `/Producer` and page count. `wordcamp-qbo` isn't active, so the sponsor-invoice approve button can't run.
 - Name fixtures so core's 404 slug guessing can't match them. A post called `flyer-review-…` turned every unrouted `…/flyer/` into a 301 to it.
 - On any route that takes a `recurrence_id`, send one that doesn't match the target RSVP's own date. Gates read the request's date, not the object's, and while that context is set `get_comments()` only returns that date's RSVPs, so derived state goes silently wrong too.
 - Then send none at all on a series. With no date in context the series reads as one event: lists merge every date's RSVPs and time gates read the series start, so a future date's RSVP passes a gate the mismatched-date case was fixed for.
@@ -201,7 +206,9 @@ docker compose exec -T phpunit_wp php -r '<snippet>'
 # The name is `wordpress_logged_in_` + COOKIEHASH: empty on the events network,
 # hashed on wordcamp.test camps (`wp eval 'echo LOGGED_IN_COOKIE;'`). An old session cookie on a
 # narrower path wins over one set on `/`, so expire those first and check who
-# the toolbar says you are. That gets you the front end only: wp-admin bounces
+# the toolbar says you are. Over HTTPS core reads `wordpress_sec_` before the
+# logged_in cookie, so a stray one on a broad path wins on the front end too.
+# That gets you the front end only: wp-admin bounces
 # to wp-login until you also mint "secure_auth" and set it as SECURE_AUTH_COOKIE
 # on path=/wp-admin (document.cookie can set a narrower path)
 docker compose exec -T wordcamp.test wp eval \

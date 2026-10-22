@@ -15,6 +15,11 @@ class MES_Sponsor {
 	public const POST_TYPE_SLUG = 'mes';
 
 	/**
+	 * Meta on a camp's `wcb_sponsor` copy: the fingerprint of what was last pushed to it.
+	 */
+	public const PUSHED_FINGERPRINT_META = '_mes_pushed_fingerprint';
+
+	/**
 	 * Get a sponsor's group → sponsorship-level map, for deciding where it sponsors.
 	 *
 	 * Empty while the sponsor-groups flag is off; see MES_Sponsor_Group::get_camp_groups(). Use
@@ -117,17 +122,76 @@ class MES_Sponsor {
 					'permission_callback' => function() {
 						return current_user_can( 'manage_network' );
 					},
+					'args'                => array(
+						'sponsorId' => array(
+							'type'     => 'integer',
+							'required' => true,
+						),
+						'dryRun'    => array(
+							'type'    => 'boolean',
+							'default' => false,
+						),
+					),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Copy the contents of MES posts to their forked posts on active camp sites.
+	 * Push a Multi-Event Sponsor to the active camp sites.
+	 *
+	 * Copies its title, content and meta to the camp copies organizers haven't edited. A draft is a
+	 * brand the working group is staging (#1208), so it's also added, as a draft copy, to the active
+	 * camps in its regions or groups that don't have it yet, the way `wp mes propagate` adds a new
+	 * sponsor. A published sponsor is only updated, as before.
+	 *
+	 * With `dryRun`, nothing is written: the response says what a push would do, so the editor can
+	 * show it and ask for confirmation first.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return array { success, dry_run, added, updated, skipped_posts }, or { success, error }.
 	 */
 	public function push_to_active_camps( WP_REST_Request $request ) : array {
+		$source_post = get_post( absint( $request->get_param( 'sponsorId' ) ) );
+		$dry_run     = (bool) $request->get_param( 'dryRun' );
+
+		if ( ! $source_post || self::POST_TYPE_SLUG !== $source_post->post_type ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'That is not a Multi-Event Sponsor.', 'wordcamporg' ),
+			);
+		}
+
+		// Update first, so copies added below aren't counted as updated too.
+		$forks = $this->update_forks( $source_post, $dry_run );
+		$added = array();
+
+		if ( 'draft' === $source_post->post_status ) {
+			$summary = MES_Propagator::run( $source_post->ID, $dry_run, true );
+			$added   = array_values( array_map( 'html_entity_decode', $summary['camps_added'] ) );
+		}
+
+		return array(
+			'success'       => true,
+			'dry_run'       => $dry_run,
+			'added'         => $added,
+			'updated'       => $forks['updated'],
+			'skipped_posts' => $forks['skipped'],
+		);
+	}
+
+	/**
+	 * Copy the contents of a MES post to its forked posts on active camp sites.
+	 *
+	 * @param WP_Post $source_post
+	 * @param bool    $dry_run If true, only find out which copies would be updated.
+	 *
+	 * @return array { updated: site names, skipped: { edit_url, site_name } for copies organizers edited }
+	 */
+	protected function update_forks( WP_Post $source_post, $dry_run ): array {
+		$updated       = array();
 		$skipped_posts = array();
-		$source_post   = get_post( $request->get_param( 'sponsorId' ) );
 		$wordcamps     = get_wordcamps( array(
 			'post_status' => array_merge(
 				// Any status where the camp might have a site created, and the event isn't over.
@@ -170,6 +234,13 @@ class MES_Sponsor {
 				continue;
 			}
 
+			$updated[] = get_wordcamp_name();
+
+			if ( $dry_run ) {
+				restore_current_blog();
+				continue;
+			}
+
 			wp_update_post( array(
 				'ID'           => $fork_post->ID,
 				'post_title'   => $source_post->post_title,
@@ -179,7 +250,9 @@ class MES_Sponsor {
 				'meta_input'   => WordCamp_New_Site::get_stub_me_sponsors_meta( $source_post ),
 			) );
 
-			// Reset date so that post_has_been_edited() will continue detecting that it hasn't been edited (by a user).
+			self::record_pushed_copy( $fork_post->ID );
+
+			// Reset date so that post_has_been_edited() still works for copies pushed before the fingerprint was recorded.
 			self::reset_post_modified_date( $fork_post );
 
 			// Default to Gutenberg since all the source posts now use it.
@@ -191,18 +264,62 @@ class MES_Sponsor {
 		}
 
 		return array(
-			'success'       => true,
-			'skipped_posts' => $skipped_posts,
+			'updated' => $updated,
+			'skipped' => $skipped_posts,
 		);
 	}
 
 	/**
-	 * Check if the post has been edited since it was created.
+	 * Check if organizers have edited a camp's copy since it was last pushed.
 	 *
-	 * WP will update modified date when saving posts, even if only post meta is changed and the title/content are untouched.
+	 * Compares the copy with the fingerprint recorded when it was pushed. Dates can't tell: WP resets a
+	 * draft's post date on every save, so an edited draft copy (or one edited in the save that publishes
+	 * it) has matching post and modified dates, and looks untouched.
+	 *
+	 * Copies pushed before the fingerprint was recorded fall back to the dates. WP updates the modified
+	 * date when saving posts, even if only post meta is changed and the title/content are untouched.
 	 */
 	public static function post_has_been_edited( int $post_id ) : bool {
+		$pushed = get_post_meta( $post_id, self::PUSHED_FINGERPRINT_META, true );
+
+		if ( $pushed ) {
+			return ! hash_equals( $pushed, self::get_copy_fingerprint( $post_id ) );
+		}
+
 		return get_the_modified_time( 'U', $post_id ) !== get_the_time( 'U', $post_id );
+	}
+
+	/**
+	 * Record what was pushed to a camp's copy, so post_has_been_edited() can tell later edits apart.
+	 *
+	 * Call it on the camp site, after the copy's title, content and meta are written.
+	 *
+	 * @param int $post_id The `wcb_sponsor` copy.
+	 */
+	public static function record_pushed_copy( int $post_id ): void {
+		update_post_meta( $post_id, self::PUSHED_FINGERPRINT_META, self::get_copy_fingerprint( $post_id ) );
+	}
+
+	/**
+	 * A fingerprint of the parts of a camp's copy that a push writes: title, content and sponsor meta.
+	 *
+	 * @param int $post_id The `wcb_sponsor` copy.
+	 *
+	 * @return string
+	 */
+	protected static function get_copy_fingerprint( int $post_id ): string {
+		$post = get_post( $post_id );
+		$meta = array();
+
+		foreach ( get_post_meta( $post_id ) as $key => $values ) {
+			if ( 0 === strpos( $key, '_wcpt_sponsor_' ) ) {
+				$meta[ $key ] = $values;
+			}
+		}
+
+		ksort( $meta );
+
+		return md5( wp_json_encode( array( $post->post_title ?? '', $post->post_content ?? '', $meta ) ) );
 	}
 
 	/**

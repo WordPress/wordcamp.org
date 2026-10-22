@@ -243,7 +243,6 @@ trait Visa_Letter_Fixtures {
 	/**
 	 * Attach a stub PDF to a letter through the real recording path.
 	 *
-	 * The wkhtmltopdf binary is not available in the test environment, and
 	 * `wordcamp-docs` is deliberately not loaded, so a generated PDF is simulated with a
 	 * real file handed to `record_letter_document()`. Everything downstream of
 	 * generation -- storage location, download URL, deletion, erasure -- is then

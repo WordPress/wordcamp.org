@@ -7523,10 +7523,12 @@ class CampTix_Plugin {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
 
+		// Timed-out orders are included, so a payment that completes after the session timed
+		// out still recovers the order, as it does for a cancelled one.
 		$attendees = get_posts( array(
 			'posts_per_page' => -1,
 			'post_type' => 'tix_attendee',
-			'post_status' => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed' ),
+			'post_status' => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed', 'timeout' ),
 			'meta_query' => array(
 				array(
 					'key' => 'tix_payment_token',
@@ -7832,12 +7834,19 @@ class CampTix_Plugin {
 			}
 		}
 
+		/*
+		 * A payment can land after the order was cancelled, timed out or failed while the buyer
+		 * waited (a slow UPI or bank confirmation). The buyer has no ticket for it yet, so that
+		 * recovery is a purchase too.
+		 */
+		$is_purchase = in_array( $from_status, array( 'draft', 'cancel', 'timeout', 'failed' ), true );
+
 		/**
 		 * If there's more than one attendee we should e-mail a separate ticket to each attendee,
 		 * but only if the payment was from draft to completed or pending.For non-draft to ... tickets
 		 * we send out a receipt only.
 		 */
-		if ( count( $attendees ) > 1 && $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
+		if ( count( $attendees ) > 1 && $is_purchase && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 			foreach ( $attendees as $attendee ) {
 				$this->email_attendee_ticket_multiple_template( $attendee );
 			}
@@ -7869,7 +7878,7 @@ class CampTix_Plugin {
 		/**
 		 * Let's now e-mail the receipt, directly after a purchase has been made.
 		 */
-		if ( $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
+		if ( $is_purchase && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 
 			// Fetch the attendee who's supposed to get the receipt.
 			$receipt_attendee = $attendees[0]; // default to the first one.

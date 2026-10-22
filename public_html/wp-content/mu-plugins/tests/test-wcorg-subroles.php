@@ -608,4 +608,27 @@ class Test_SubRoles extends Database_TestCase {
 		$this->assertNotWPError( $result );
 		$this->assertSame( $author, $result['post_author'] );
 	}
+	/**
+	 * A save that posts no author field: core falls back to the current user and asks for no
+	 * capability, so without the author guard the mentor became the camp's author.
+	 *
+	 * @covers \WordCamp_Status_Guard::enforce_post_author
+	 * @ticket 2189
+	 */
+	public function test_mentor_save_without_an_author_field_keeps_the_author() {
+		list( $mentor, $author, $post_id ) = $this->become_mentor_of_someone_elses_camp();
+
+		$result = $this->translate_update_with_author_fields( $post_id, array() );
+		$this->assertNotWPError( $result );
+		$this->assertSame( $mentor, $result['post_author'], 'core falls back to the current user' );
+
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_author' => $result['post_author'],
+			)
+		);
+
+		$this->assertSame( $author, (int) get_post( $post_id )->post_author );
+	}
 }

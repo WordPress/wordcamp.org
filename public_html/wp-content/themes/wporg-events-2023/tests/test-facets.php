@@ -3,7 +3,7 @@
 namespace WordPressdotorg\Theme\Events_2023\Tests;
 
 use WP_UnitTestCase;
-use function WordPressdotorg\Events_2023\get_query_var_facets;
+use function WordPressdotorg\Events_2023\{ get_query_var_facets, set_query_vars_from_pretty_url };
 
 defined( 'WPINC' ) || die();
 
@@ -99,5 +99,41 @@ class Test_Facets extends WP_UnitTestCase {
 		$this->assertSame( array( 'in-person', 'online' ), $facets['format'] );
 		$this->assertSame( array( '02', '03' ), $facets['month'] );
 		$this->assertSame( array( 'US' ), $facets['country'] );
+	}
+
+	/**
+	 * Only the event filters are read from the URL. Any other key, like a core query var, is dropped.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\get_query_var_facets
+	 */
+	public function test_unknown_keys_are_dropped() {
+		$facets = $this->facets_for( 'post_status/private-draft/format/online/post_type/page/perm/editable/p/1/' );
+
+		$this->assertSame( array( 'format' ), array_keys( $facets ) );
+		$this->assertSame( array( 'online' ), $facets['format'] );
+	}
+
+	/**
+	 * Each filter is set on the main request under its own query var, and nothing else is.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\set_query_vars_from_pretty_url
+	 */
+	public function test_only_filter_query_vars_are_set() {
+		global $wp;
+
+		$wp->query_vars = array( 'event_facets' => 'type/wordcamp/post_status/private-draft/format/online/month/05/country/US/' );
+
+		set_query_vars_from_pretty_url( $wp );
+
+		$this->assertSame(
+			array(
+				'event_facets' => 'type/wordcamp/post_status/private-draft/format/online/month/05/country/US/',
+				'event_type'   => array( 'wordcamp' ),
+				'format_type'  => array( 'online' ),
+				'month'        => array( '05' ),
+				'country'      => array( 'US' ),
+			),
+			$wp->query_vars
+		);
 	}
 }

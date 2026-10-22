@@ -726,10 +726,21 @@ Two rules for writing any filter of this kind, both learned the hard way:
   match (`(?:(?!</?div\b).)*?`) so an unexpected shape declines to match
   instead.
 
-To check email locally: MailCatcher runs in the dev stack on
-`http://localhost:1080` (`curl -s http://localhost:1080/messages` for the
-list, `/messages/<id>.html` for a body, `curl -X DELETE .../messages` to
-clear). Publishing through the real front-end dialog exercises the true
+To check email locally: MailCatcher runs in the stack being tested. Its host
+port is 1080 only for a stack started with the default ports; a second stack
+(a worktree running next to the main one, or one with
+`WORDCAMP_MAILCATCHER_PORT` set) has its own MailCatcher on another port, and
+1080 then shows the *other* stack's inbox. Ask the stack you're driving, from
+its own checkout:
+
+```bash
+MAIL="http://localhost:$(docker compose port wordcamp.test 1080 | head -1 | sed 's/.*://')"
+curl -s "$MAIL/messages"              # the list
+curl -s "$MAIL/messages/<id>.html"    # one body
+curl -s -X DELETE "$MAIL/messages"    # clear
+```
+
+Publishing through the real front-end dialog exercises the true
 path; `do_action( 'shutdown' )` after a `wp_update_post()` in `wp eval`
 flushes the notification queue when driving it headlessly. To read a
 delivered body at phone width, open it in the browser and measure:

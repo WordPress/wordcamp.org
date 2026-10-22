@@ -419,3 +419,24 @@ tr#row-payment-method label {
 .wcb-budget-attendees th {
 	border-left: none;
 }
+
+.wcb-budget-notes {
+	max-width: 800px;
+	margin-top: 2em;
+}
+
+.wcb-budget-notes-list {
+	list-style: none;
+	margin: 1em 0;
+}
+
+.wcb-budget-note {
+	padding: 0.75em 0;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wcb-budget-note-meta {
+	display: block;
+	margin-bottom: 0.25em;
+	color: #646970;
+}

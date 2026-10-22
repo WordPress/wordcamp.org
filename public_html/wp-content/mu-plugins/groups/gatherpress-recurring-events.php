@@ -261,11 +261,15 @@ function normalize_recurring_event_rule( array $input, string $date ): array {
 	$weekdays        = array_filter( $weekdays, 'is_scalar' );
 	$weekdays        = array_values( array_intersect( Rule::weekdays(), array_map( static fn( $value ): string => strtoupper( sanitize_key( $value ) ), $weekdays ) ) );
 	$frequency       = sanitize_key( (string) ( $input['frequency'] ?? '' ) );
-	$monthly_day     = min( 31, max( 1, (int) ( $input['monthly_day'] ?? $day ) ) );
 	$monthly_mode    = sanitize_key( (string) ( $input['monthly_mode'] ?? 'day' ) );
 	$monthly_order   = sanitize_key( (string) ( $input['monthly_order'] ?? 'first' ) );
 	$monthly_weekday = strtoupper( sanitize_key( (string) ( $input['monthly_weekday'] ?? $weekday ) ) );
 	$end_type        = sanitize_key( (string) ( $input['end_type'] ?? 'never' ) );
+
+	// The form has no control for the day of the month; it is always the
+	// start date's. Taking it from the date keeps a stale value from a form
+	// whose date changed out of the saved series (#2227).
+	$monthly_day = $start ? $day : min( 31, max( 1, (int) ( $input['monthly_day'] ?? $day ) ) );
 
 	if ( 'weekly' === $frequency && empty( $weekdays ) ) {
 		$weekdays = array( $weekday );

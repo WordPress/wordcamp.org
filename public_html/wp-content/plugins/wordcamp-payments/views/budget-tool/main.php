@@ -157,6 +157,10 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
         </p>
         <?php endif; ?>
     </form>
+
+    <?php if ( WordCamp_Budget_Tool::can_manage_notes() ) : ?>
+        <?php require __DIR__ . '/notes.php'; ?>
+    <?php endif; ?>
 </div>
 
 <script type="text/template" id="wcb-tmpl-summary">

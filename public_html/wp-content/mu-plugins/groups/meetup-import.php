@@ -45,6 +45,7 @@ use DOMElement;
 use DOMXPath;
 use Exception;
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Venue;
 use WordCamp\Groups\Frontend\Check_In;
 use WordCamp\Groups\Frontend\Event_Hosts;
@@ -2632,9 +2633,9 @@ function import_hosts( int $post_id, array $emails ): void {
 function import_rsvps( int $post_id, string $meetup_event_id ): array {
 	$counts = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
 	$raw    = fetch_event_rsvps( $meetup_event_id );
-	$rsvp   = ( new Event( $post_id ) )->rsvp;
+	$rsvp   = new Rsvp( $post_id );
 
-	if ( is_wp_error( $raw ) || ! $rsvp ) {
+	if ( is_wp_error( $raw ) ) {
 		++$counts['failed'];
 		return $counts;
 	}

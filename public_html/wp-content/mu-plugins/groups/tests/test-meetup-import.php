@@ -724,7 +724,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->on_site(
 			function () use ( $post, $user_id ) {
-				$rsvp = ( new Event( $post->ID ) )->rsvp->get( $user_id );
+				$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $post->ID ) )->get( $user_id );
 				$this->assertSame( 'attending', $rsvp['status'] );
 			}
 		);
@@ -1626,7 +1626,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->on_site(
 			function () use ( $post, $users ) {
-				$rsvp   = ( new Event( $post->ID ) )->rsvp;
+				$rsvp   = new \GatherPress\Core\Rsvp\Rsvp( $post->ID );
 				$status = static function ( int $user_id ) use ( $rsvp ) {
 					return $rsvp->get( $user_id )['status'] ?? null;
 				};

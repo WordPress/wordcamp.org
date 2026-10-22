@@ -13,6 +13,8 @@ import {
 import { createElement as h } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
+import { defaultsForDate } from './recurrence-dates';
+
 const WEEKDAYS = [
 	{ value: 'MO', label: __( 'Mon', 'wordcamporg' ) },
 	{ value: 'TU', label: __( 'Tue', 'wordcamporg' ) },
@@ -55,27 +57,6 @@ export function normalizeRecurrence( value ) {
 		end_type: value.end_type || 'never',
 		until: value.until || '',
 		count: Math.max( 1, Number( value.count ) || 12 ),
-	};
-}
-
-/**
- * Returns recurrence defaults derived from the event date.
- *
- * @param {string} date Event date in YYYY-MM-DD format.
- * @return {Object} Date-derived recurrence fields.
- */
-function defaultsForDate( date ) {
-	const parsed = date ? new Date( `${ date }T12:00:00` ) : null;
-	const valid = parsed && ! Number.isNaN( parsed.getTime() );
-	const weekday = valid ? [ 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' ][ parsed.getDay() ] : 'MO';
-	const day = valid ? parsed.getDate() : 1;
-	const orderIndex = Math.min( 3, Math.max( 0, Math.ceil( day / 7 ) - 1 ) );
-
-	return {
-		weekdays: [ weekday ],
-		monthly_day: day,
-		monthly_order: day > 28 ? 'last' : ORDERS[ orderIndex ].value,
-		monthly_weekday: weekday,
 	};
 }
 

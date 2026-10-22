@@ -640,12 +640,26 @@ exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
 there by including the real theme files directly):
 
 - **`test-gatherpress-api-contract.php`** — a data-provider-driven test
-  asserting every GatherPress class/method/constant/property this
-  integration calls still exists, sourced from the same list Section 8's
-  audit builds. This is what makes Section 8's audit durable instead of
-  a one-time manual pass that has to be redone by hand on every future
-  bump — extend `CONTRACT` in that file whenever the audit finds a call
-  site it doesn't cover yet, rather than leaving the gap for next time.
+  asserting every GatherPress class/method/constant this integration calls
+  still exists, sourced from the same list Section 8's audit builds. This
+  is what makes Section 8's audit durable instead of a one-time manual pass
+  that has to be redone by hand on every future bump — extend `CONTRACT`
+  in that file whenever the audit finds a call site it doesn't cover yet,
+  rather than leaving the gap for next time. Section 8's greps match
+  comments too, and comments here name plenty of GatherPress methods that
+  nothing calls. Strip comments with `token_get_all()` before deciding
+  that a call site exists. The same file fails on any reference to a name
+  GatherPress keeps only through `includes/core/register-class-aliases.php`
+  (`GatherPress\Core\Venue` and the like). A `class_exists()` guard on an
+  alias stays true until the shim is dropped, and then the guarded code
+  goes dormant without an error.
+- **`test-groups-site-gatherpress-blocks.php`** — the PHP contract can't see
+  blocks, and a block GatherPress drops renders blank. This test scans the
+  theme's templates, parts and patterns for `wp:gatherpress/*` and asserts
+  each one is registered. It also checks that the event Query Loops'
+  `namespace` still equals `Blocks\Event_Query::BLOCK_NAME`, the only
+  thing that makes GatherPress apply its event query. Blocks placed from
+  PHP strings outside those three directories aren't scanned.
 
 `test-groups-site-event-cards-patterns.php` was removed with the old PHP
 event-card patterns. Directly include any future orphaned PHP pattern that
@@ -654,14 +668,8 @@ normal template rendering cannot exercise.
 Its successor, `test-groups-site-event-cards.php`, preserves thumbnail
 cache priming that core cannot infer through a `core/pattern` reference.
 
-The PHP API contract does not detect missing blocks, which render blank.
-Also audit the theme's dependencies: `gatherpress/event-date`,
-`gatherpress/rsvp-count`,
-`gatherpress/venue`, `gatherpress/venue-detail`, `gatherpress/venue-map`,
-`gatherpress/online-event`, `gatherpress/online-event-link`,
-`gatherpress/add-to-calendar`, and the `gatherpress-event-query` query
-variation; `wporg-groups-frontend/tests/test-blocks.php` asserts only
-`wporg/*` blocks. Prune `CONTRACT` entries when call sites disappear.
+Prune `CONTRACT` entries when call sites disappear. 0.36.0's
+`Event::$post` went this way once check-in stopped reading it.
 
 When a version bump (or this checklist) surfaces something that wasn't
 caught automatically, before moving on:
@@ -708,7 +716,12 @@ bump, diff the template (`git diff <old-tag> <new-tag> -- includes/templates/adm
 and confirm the three marker comments and the button's wrapper `<div>` are
 still there and still that shape. `test-event-email.php` and
 `test-notifications.php` pin the interaction between the two rewrites, so
-run them before trusting a bump.
+run them before trusting a bump. `test_fixes_apply_to_the_real_template()`
+sends through GatherPress's own template with a featured image, so a
+renamed marker fails there rather than shipping. The other cases use a
+copied body, which can't drift. Since 0.36.0 the template writes
+`height: auto` on the image itself, so the image fix only matters on
+older versions.
 
 Two rules for writing any filter of this kind, both learned the hard way:
 

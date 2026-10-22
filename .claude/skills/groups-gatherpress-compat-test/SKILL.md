@@ -279,8 +279,8 @@ done
 Save the printed application passwords, then:
 
 ```bash
-ORG="organiser1:<app-password>"       # editor tier — "Organiser"
-AUTHOR="eventorganiser1:<app-password>" # author tier — "Event Organiser"
+ORG="organiser1:<app-password>"       # editor tier — "Organizer"
+AUTHOR="eventorganiser1:<app-password>" # author tier — "Event Organizer"
 MEM="member1:<app-password>"          # subscriber tier — "Member"
 BASE="https://events.wordpress.test/group/sunshine-coast-qld"
 ```
@@ -294,14 +294,32 @@ list first:
 curl -sk "$BASE/wp-json/wporg-groups/v1" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
-for r in sorted(d['routes'].keys()): print(r)
+for r, v in sorted(d['routes'].items()):
+    print(r, sorted({m for e in v['endpoints'] for m in e['methods']}))
 "
 ```
 
-Expect: `event-form-data`, `event`, `event/{id}`, `drafts`, `draft`,
-`draft/{id}`, `draft/{id}/publish`, `members`, `members/{id}`,
-`members/{id}/role`, `members/join`, `members/leave` (plus the namespace
-root).
+Expect these 27 routes plus the namespace root. Methods are POST unless
+noted:
+
+- `rest.php`: `event-form-data` (GET), `event-templates` (GET), `event`,
+  `event/{id}`, `event/{id}/rsvp`, `drafts` (GET), `draft`, `draft/{id}`,
+  `draft/{id}/publish`, `group-info` (GET and POST)
+- `check-in.php`: `event/{id}/check-in` (GET),
+  `event/{id}/check-in/{comment_id}`, `event/{id}/walk-in`,
+  `event/{id}/walk-in-count`
+- `export.php`: `export` (GET)
+- `Members_Controller`: `members` (GET), `members/{id}` (GET),
+  `members/{id}/role`, `members/me/role`, `members/join`, `members/leave`
+  (DELETE), `members/notification-preference`
+- `Ownership_Transfer_Controller`: `ownership-transfer` (GET),
+  `ownership-transfer/initiate`, `ownership-transfer/accept`,
+  `ownership-transfer/decline`, `ownership-transfer/cancel`
+
+A route missing from the live list is a regression. A route not listed here
+is new, so add it to this list before you continue. To regenerate the list
+from code, run
+`grep -rn -A3 register_rest_route public_html/wp-content/mu-plugins/wporg-groups-frontend/inc`.
 
 Checks (run as anonymous + each role where relevant):
 
@@ -321,9 +339,12 @@ Checks (run as anonymous + each role where relevant):
 - [ ] **Author CAN edit their own event** → 200.
 - [ ] **`GET /members`** — public, paginated (`per_page` default 100, max
   250 via `Members_Controller::MAX_PER_PAGE`) — confirm `X-WP-Total`/
-  `X-WP-TotalPages` headers present and a `per_page=9999` request is capped,
-  not unbounded. Each member has `role`/`roleLabel`
-  (`editor→Organiser`, `author→Event Organiser`, `subscriber→Member`).
+  `X-WP-TotalPages` headers present. `per_page=250` → 200, and
+  `per_page=9999` → 400 `rest_invalid_param`: `validate_per_page()` rejects
+  the request outright instead of capping it. Each member has
+  `role`/`roleLabel` (`administrator`/`editor→Organizer`,
+  `author→Event Organizer`, `contributor`/`subscriber→Member`, per
+  `Members_Controller::ROLE_LABELS`).
 - [ ] **Editor promotes subscriber → author**:
   `POST /members/<member1_id>/role -d role=author` as `$ORG` → 200; confirm
   via `wp user get <id> --field=roles`.
@@ -334,14 +355,19 @@ Checks (run as anonymous + each role where relevant):
   (rejected by `ASSIGNABLE_ROLES` at the schema/args layer, before the
   permission callback even runs).
 - [ ] **Can't change your own role** → 403 `cannot_change_own_role`.
-- [ ] **Can't demote the last organiser** — with only one editor/admin on
+- [ ] **Can't demote the last organizer** — with only one editor/admin on
   the site, attempting to demote them → 403 `cannot_remove_last_organizer`.
 - [ ] **Draft flow** — `POST /draft` (save) → `GET /drafts` (list) →
   `POST /draft/{id}` (update) → `POST /draft/{id}/publish`; confirm
   `post_status` transitions draft → publish via `wp post get <id> --field=post_status`.
-- [ ] **`/members/leave` + `/members/join` round-trip** as `$MEM` — both
-  return `{"success":true}` (join includes `memberCount`); confirm nonce
-  header on the request is non-empty (this is the exact failure mode of
+- [ ] **`/group-info` is Organizer-only** — `GET` as `$ORG` → 200, as
+  `$AUTHOR` and `$MEM` → 403. The About and Design tabs read and write
+  through this route because core's `/wp/v2/settings` requires
+  `manage_options`.
+- [ ] **`DELETE /members/leave` + `POST /members/join` round-trip** as
+  `$MEM`. Leave returns `{"success":true,"rsvps_cancelled":N}`, and join
+  returns `{"success":true,"memberCount":N}`. Sending leave as a `POST` gets
+  404 `rest_no_route`. Confirm the nonce header on the request is non-empty (this is the exact failure mode of
   #1804 — a front-end-only bug, but worth confirming the REST layer itself
   works when hit directly with a valid nonce/app-password).
 
@@ -363,10 +389,10 @@ don't just check curl responses render correctly, click through:
   `groups-site` event-cards patterns importing the wrong GatherPress class —
   fixed in #1874) went undetected through multiple GatherPress versions
   until a real production rollout finally hit it.
-- **RSVP** — as Member and as Event Organiser.
-- **Group settings tabs** (Events / Venues / Members / Design / About) —
-  confirm each tab loads without a console error or 403, and that
-  Organiser-only tabs are entirely absent (not just disabled) for lower
+- **RSVP** — as Member and as Event Organizer.
+- **Group settings tabs** (Events / Venues / Members / Design / About /
+  Export) — confirm each tab loads without a console error or 403, and that
+  Organizer-only tabs are entirely absent (not just disabled) for lower
   roles.
 - **Member directory** (`/members/`) — role labels correct, join/leave
   buttons behave. If this 404s, check `wp post list --post_type=page` for a
@@ -832,8 +858,7 @@ current status before treating any of these as new bugs:
 | Symptom | Exercised by | Notes |
 |---|---|---|
 | Join/leave silently 403s via the UI (nonce lookup finds nothing on the front end) | Section 3, join/leave click-through | Front-end-only bug — the REST layer itself works fine when hit directly with a valid nonce (section 2's join/leave check). |
-| Group Settings → About tab 403s for Organisers | Section 3, About tab | Calls a core admin-only REST endpoint directly instead of a plugin-scoped one. |
-| `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organisers manage events fine via wp-admin. |
+| `wporg/event-manage` block registered but not placed in any template | Section 3/4 grep, or `wp eval` block-registry dump | Dead code, not a functional gap — Event Organizers manage events fine via wp-admin. |
 | `/members` fully public with no membership/auth requirement | Section 5 | Open product/privacy question, not a bug in itself — confirm current decision, don't assume it's wrong. |
 | `my-events` block empty for a user who created events but never RSVP'd | Section 3, per-role browser pass as an event creator | RSVP-attendance based by design — confirm this still matches the current product decision. |
 | A departing member's RSVP row still in `wp_comments` after leaving, with `comment_approved = trash` | Section 3, leave-group click-through, then inspect the comment rows | Expected, not a leak. `Leave_Cleanup\cancel_future_rsvps()` cancels future RSVPs with `wp_delete_comment()` and no force flag, matching GatherPress's own `no_status` path (`Rsvp\Storage::save()`); with a trash configured, which is the default, that trashes rather than deletes. The seat is released either way, since everything counting an RSVP reads approved comments only. Consequence to know: `deleted_comment` does not fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied, not at once. Past RSVPs are kept on purpose (attendance history). |

@@ -40,6 +40,9 @@ namespace WordCamp\Groups\Meetup_Import;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use Exception;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Venue\Venue;
@@ -1191,18 +1194,44 @@ function is_meetup_connected(): bool {
  * Turn what an admin pasted into a Meetup group urlname.
  *
  * Accepts a bare urlname or any meetup.com URL under the group, e.g. an event
- * page.
+ * page, including localized URLs (such as /pl-PL/group-name/ or /de-DE/group-name/).
  *
  * @param string $input Group URL or urlname.
  */
 function parse_group_urlname( string $input ): string {
 	$input = trim( $input );
 
-	if ( preg_match( '#^(?:https?://)?(?:www\.)?meetup\.com/([^/?\#]+)#i', $input, $matches ) ) {
-		$input = $matches[1];
+	$page_names = array( 'events', 'members', 'photos', 'discussions', 'about' );
+
+	if ( preg_match( '#^(?:https?://)?(?:www\.)?meetup\.com(?:/.*)?$#i', $input ) ) {
+		$path     = preg_replace( '#^(?:https?://)?(?:www\.)?meetup\.com/?#i', '', $input );
+		$path     = preg_replace( '#[?\#].*$#', '', $path );
+		$segments = array_values( array_filter( explode( '/', trim( $path, '/' ) ) ) );
+
+		if ( ! empty( $segments ) ) {
+			if ( preg_match( '/^[a-z]{2,3}-[a-z]{2,4}$/i', $segments[0] ) ) {
+				array_shift( $segments );
+			} elseif (
+				preg_match( '/^[a-z]{2}$/i', $segments[0] ) &&
+				isset( $segments[1] ) &&
+				! in_array( strtolower( $segments[1] ), $page_names, true )
+			) {
+				array_shift( $segments );
+			}
+		}
+
+		if ( empty( $segments ) || in_array( strtolower( $segments[0] ), $page_names, true ) ) {
+			return '';
+		}
+
+		$input = $segments[0];
 	}
 
 	$input = trim( $input, '/' );
+
+	if ( in_array( strtolower( $input ), $page_names, true ) ) {
+		return '';
+	}
 
 	return preg_match( '/^[A-Za-z0-9_-]+$/', $input ) ? $input : '';
 }
@@ -1680,21 +1709,187 @@ function is_past_status( array $raw ): bool {
 	return 'PAST' === strtoupper( (string) ( $raw['meetupStatus'] ?? $raw['status'] ?? '' ) );
 }
 
+// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMDocument native properties.
 /**
- * Turn HTML paragraphs into serialized paragraph blocks.
+ * Recursively convert a DOM list element (ul or ol) to Gutenberg list block markup.
  *
- * The event editor only loads content made of blocks
+ * Each list item can contain inner blocks, supporting nested unordered and ordered
+ * lists to arbitrary depth without breaking block validation.
+ *
+ * @param DOMElement  $node The ul or ol element to convert.
+ * @param DOMDocument $doc  The owning document for serializing child nodes.
+ * @return string Gutenberg block markup for the list and its items.
+ */
+function convert_list_node_to_block( DOMElement $node, DOMDocument $doc ): string {
+	$ordered = 'ol' === strtolower( $node->nodeName );
+	$tag     = $ordered ? 'ol' : 'ul';
+	$attrs   = $ordered ? ' {"ordered":true}' : '';
+	$items   = array();
+
+	foreach ( $node->childNodes as $child ) {
+		if ( ! ( $child instanceof DOMElement ) || 'li' !== strtolower( $child->nodeName ) ) {
+			continue;
+		}
+
+		$li_content = '';
+		foreach ( $child->childNodes as $li_child ) {
+			if ( $li_child instanceof DOMElement && in_array( strtolower( $li_child->nodeName ), array( 'ul', 'ol' ), true ) ) {
+				$li_content .= convert_list_node_to_block( $li_child, $doc );
+			} else {
+				$li_content .= $doc->saveHTML( $li_child );
+			}
+		}
+
+		$li_content = trim( $li_content );
+		$items[]    = "<!-- wp:list-item -->\n<li>" . $li_content . "</li>\n<!-- /wp:list-item -->";
+	}
+
+	$inner = implode( "\n", $items );
+
+	return "<!-- wp:list{$attrs} -->\n<{$tag} class=\"wp-block-list\">{$inner}</{$tag}>\n<!-- /wp:list -->";
+}
+
+/**
+ * Convert HTML unordered and ordered lists into Gutenberg list blocks.
+ *
+ * Uses DOMDocument to properly handle nested lists that regex cannot parse reliably.
+ *
+ * @param string $html HTML content.
+ * @return string HTML content with lists converted to Gutenberg blocks.
+ */
+function convert_lists_to_blocks( string $html ): string {
+	if ( false === stripos( $html, '<ul' ) && false === stripos( $html, '<ol' ) ) {
+		return $html;
+	}
+
+	$dom = new DOMDocument();
+	libxml_use_internal_errors( true );
+	$loaded = $dom->loadHTML( '<?xml encoding="utf-8" ?><div>' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+	libxml_clear_errors();
+
+	if ( ! $loaded ) {
+		return $html;
+	}
+
+	$xpath     = new DOMXPath( $dom );
+	$top_lists = $xpath->query( '//ul[not(ancestor::li)] | //ol[not(ancestor::li)]' );
+
+	if ( ! $top_lists || 0 === $top_lists->length ) {
+		return $html;
+	}
+
+	$replacements = array();
+	$idx          = 0;
+
+	foreach ( $top_lists as $list ) {
+		$token                  = "___WP_LIST_BLOCK_{$idx}___";
+		$replacements[ $token ] = convert_list_node_to_block( $list, $dom );
+		$placeholder            = $dom->createTextNode( $token );
+		$list->parentNode->replaceChild( $placeholder, $list );
+		++$idx;
+	}
+
+	$container = $dom->getElementsByTagName( 'div' )->item( 0 );
+	if ( ! $container ) {
+		return $html;
+	}
+
+	$inner_html = '';
+	foreach ( $container->childNodes as $child ) {
+		$inner_html .= $dom->saveHTML( $child );
+	}
+
+	return strtr( $inner_html, $replacements );
+}
+// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+
+/**
+ * Turn HTML content into serialized Gutenberg blocks.
+ *
+ * The event editor only loads content made of supported blocks
  * (`Frontend\Defaults\extract_description_blocks()` drops anything else), so
- * plain HTML would open as an empty description, and saving would erase it.
+ * plain HTML outside block comments would open as an empty description, and
+ * saving would erase it. Converts paragraphs, headings, lists, quotes, separators,
+ * and code into their respective block markup, encapsulating any freeform text
+ * into paragraph blocks without wrapping block-level elements.
  *
- * @param string $html Paragraph HTML, as `wpautop()` produces.
+ * @param string $html HTML content, as `wpautop()` produces.
  */
 function to_paragraph_blocks( string $html ): string {
-	return str_replace(
-		array( '<p>', '</p>' ),
-		array( '<!-- wp:paragraph -->' . "\n" . '<p>', '</p>' . "\n" . '<!-- /wp:paragraph -->' ),
-		trim( $html )
+	$html = trim( $html );
+
+	if ( '' === $html ) {
+		return '';
+	}
+
+	$html = preg_replace( '#<p(?:\s+[^>]*)?>(.*?)</p>#is', "<!-- wp:paragraph -->\n<p>$1</p>\n<!-- /wp:paragraph -->", $html );
+
+	$html = preg_replace_callback(
+		'#<h([1-6])(?:\s+[^>]*)?>(.*?)</h[1-6]>#is',
+		static function ( $matches ) {
+			$level   = (int) $matches[1];
+			$attrs   = 2 === $level ? '' : ' {"level":' . $level . '}';
+			$content = trim( $matches[2] );
+			return "<!-- wp:heading{$attrs} -->\n<h{$level} class=\"wp-block-heading\">{$content}</h{$level}>\n<!-- /wp:heading -->";
+		},
+		$html
 	);
+
+	$html = convert_lists_to_blocks( $html );
+
+	$html = preg_replace(
+		'#<hr(?:\s+[^>]*)?/?>#is',
+		"<!-- wp:separator -->\n<hr class=\"wp-block-separator has-alpha-channel-opacity\" />\n<!-- /wp:separator -->",
+		$html
+	);
+
+	$html = preg_replace( '#<blockquote(?:\s+[^>]*)?>(.*?)</blockquote>#is', "<!-- wp:quote -->\n<blockquote class=\"wp-block-quote\">$1</blockquote>\n<!-- /wp:quote -->", $html );
+
+	$html = preg_replace_callback(
+		'#<pre(?:\s+[^>]*)?>(.*?)</pre>#is',
+		static function ( $matches ) {
+			$content = trim( $matches[1] );
+			if ( ! preg_match( '#^<code(?:\s+[^>]*)?>(.*)</code>$#is', $content, $code_match ) ) {
+				$content = '<code>' . $content . '</code>';
+			} else {
+				$content = '<code>' . trim( $code_match[1] ) . '</code>';
+			}
+			return "<!-- wp:code -->\n<pre class=\"wp-block-code\">{$content}</pre>\n<!-- /wp:code -->";
+		},
+		$html
+	);
+
+	$blocks     = parse_blocks( $html );
+	$normalized = array();
+
+	foreach ( $blocks as $block ) {
+		if ( null !== $block['blockName'] ) {
+			$normalized[] = $block;
+		} elseif ( '' !== trim( (string) ( $block['innerHTML'] ?? '' ) ) ) {
+			$content = trim( (string) $block['innerHTML'] );
+			if ( preg_match( '#^<(?:table|div|section|article|aside|figure|blockquote|header|footer|nav)\b#i', $content ) ) {
+				$normalized[] = $block;
+			} elseif ( preg_match( '#^<p\b#i', $content ) ) {
+				$normalized[] = array(
+					'blockName'    => 'core/paragraph',
+					'attrs'        => array(),
+					'innerBlocks'  => array(),
+					'innerHTML'    => $content,
+					'innerContent' => array( $content ),
+				);
+			} else {
+				$normalized[] = array(
+					'blockName'    => 'core/paragraph',
+					'attrs'        => array(),
+					'innerBlocks'  => array(),
+					'innerHTML'    => '<p>' . $content . '</p>',
+					'innerContent' => array( '<p>' . $content . '</p>' ),
+				);
+			}
+		}
+	}
+
+	return trim( serialize_blocks( $normalized ) );
 }
 
 /**

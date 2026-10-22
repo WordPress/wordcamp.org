@@ -225,14 +225,24 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 */
 	public function data_parse_group_urlname(): array {
 		return array(
-			'bare urlname'    => array( 'wma-wordpress-meetup', 'wma-wordpress-meetup' ),
-			'group url'       => array( 'https://www.meetup.com/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
-			'event url'       => array( 'https://www.meetup.com/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
-			'no scheme'       => array( 'meetup.com/wma-wordpress-meetup', 'wma-wordpress-meetup' ),
-			'query string'    => array( 'https://www.meetup.com/wma-wordpress-meetup?utm=x', 'wma-wordpress-meetup' ),
-			'other domain'    => array( 'https://example.com/wma-wordpress-meetup/', '' ),
-			'invalid chars'   => array( 'foo bar', '' ),
-			'empty'           => array( '', '' ),
+			'bare urlname'     => array( 'wma-wordpress-meetup', 'wma-wordpress-meetup' ),
+			'group url'        => array( 'https://www.meetup.com/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'event url'        => array( 'https://www.meetup.com/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
+			'no scheme'        => array( 'meetup.com/wma-wordpress-meetup', 'wma-wordpress-meetup' ),
+			'query string'     => array( 'https://www.meetup.com/wma-wordpress-meetup?utm=x', 'wma-wordpress-meetup' ),
+			'other domain'     => array( 'https://example.com/wma-wordpress-meetup/', '' ),
+			'invalid chars'    => array( 'foo bar', '' ),
+			'empty'            => array( '', '' ),
+			'localized url pl' => array( 'https://www.meetup.com/pl-PL/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'localized url de' => array( 'https://www.meetup.com/de-DE/wma-wordpress-meetup/events/315889299/', 'wma-wordpress-meetup' ),
+			'localized url es'              => array( 'https://www.meetup.com/es/wma-wordpress-meetup/', 'wma-wordpress-meetup' ),
+			'localized url pt'              => array( 'https://meetup.com/pt-BR/rio-wordpress', 'rio-wordpress' ),
+			'two-letter group with subpage' => array( 'https://www.meetup.com/wp/events/123/', 'wp' ),
+			'two-letter group bare'         => array( 'https://www.meetup.com/wp/', 'wp' ),
+			'two-letter group in localized' => array( 'https://www.meetup.com/pl-PL/wp/events/123/', 'wp' ),
+			'meetup page url events'        => array( 'https://www.meetup.com/events/123/', '' ),
+			'meetup page url members'       => array( 'https://www.meetup.com/members/123/', '' ),
+			'bare meetup page name'         => array( 'events', '' ),
 		);
 	}
 
@@ -2300,6 +2310,56 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( 'Bring a project.', $loaded );
 		$this->assertStringContainsString( 'How to find us: Room E103', $loaded );
 		$this->assertStringContainsString( '<!-- wp:paragraph -->', $loaded );
+	}
+
+	/**
+	 * An imported description with headings, lists, quotes, and separators opens in the editor without losing markup.
+	 */
+	public function test_rich_description_blocks_load_in_editor() {
+		$raw = $this->raw_event(
+			array(
+				'description' => "Welcome!\n\n<h2>Agenda</h2>\n<ul><li>Talk 1<ul><li>Sub 1</li><li>Sub 2</li></ul></li><li>Talk 2</li></ul>\n<hr>\n<blockquote>Note this</blockquote>\n<pre>console.log(\"hello\");</pre>",
+			)
+		);
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $raw ) ) );
+
+		$post   = $this->find_event( '315889305' );
+		$loaded = $this->on_site(
+			static function () use ( $post ) {
+				return \WordCamp\Groups\Frontend\Defaults\extract_description_blocks( $post->ID );
+			}
+		);
+
+		$this->assertStringContainsString( '<!-- wp:heading -->', $loaded );
+		$this->assertStringContainsString( '<h2 class="wp-block-heading">Agenda</h2>', $loaded );
+		$this->assertStringContainsString( '<!-- wp:list -->', $loaded );
+		$this->assertStringContainsString( '<ul class="wp-block-list">', $loaded );
+		$this->assertStringContainsString( '<!-- wp:list-item -->', $loaded );
+		$this->assertStringContainsString( 'Talk 1', $loaded );
+		$this->assertStringContainsString( 'Sub 1', $loaded );
+		$this->assertStringContainsString( 'Sub 2', $loaded );
+		$this->assertStringContainsString( 'Talk 2', $loaded );
+		$this->assertStringContainsString( '<!-- wp:separator -->', $loaded );
+		$this->assertStringContainsString( '<hr class="wp-block-separator has-alpha-channel-opacity"', $loaded );
+		$this->assertStringContainsString( '<!-- wp:quote -->', $loaded );
+		$this->assertStringContainsString( '<blockquote class="wp-block-quote">', $loaded );
+		$this->assertStringContainsString( 'Note this', $loaded );
+		$this->assertStringContainsString( '<!-- wp:code -->', $loaded );
+		$this->assertStringContainsString( '<pre class="wp-block-code"><code>console.log("hello");</code></pre>', $loaded );
+	}
+
+	/**
+	 * Loose block-level elements like table or div are not wrapped inside paragraph tags.
+	 */
+	public function test_to_paragraph_blocks_preserves_block_containers() {
+		$html   = "<table><tr><td>Cell</td></tr></table>\n<div>Container</div>";
+		$result = Meetup_Import\to_paragraph_blocks( $html );
+
+		$this->assertStringNotContainsString( '<p><table>', $result );
+		$this->assertStringNotContainsString( '<p><div>', $result );
+		$this->assertStringContainsString( '<table><tr><td>Cell</td></tr></table>', $result );
+		$this->assertStringContainsString( '<div>Container</div>', $result );
 	}
 
 	/**

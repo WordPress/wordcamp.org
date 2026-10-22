@@ -43,6 +43,7 @@ export default function ScheduleInspectorControls( {
 		chosenDays,
 		chooseSpecificTracks,
 		chosenTrackIds,
+		showTimezone,
 		useClientTimezone,
 	} = attributes;
 	const displayedDays = getDisplayedDays( allSessions );
@@ -92,6 +93,14 @@ export default function ScheduleInspectorControls( {
 					checked={ useClientTimezone }
 					onChange={ ( value ) =>
 						setAttributes( { useClientTimezone: value } )
+					}
+				/>
+
+				<ToggleControl
+					label={ __( 'Show timezone', 'wordcamporg' ) }
+					checked={ showTimezone }
+					onChange={ ( value ) =>
+						setAttributes( { showTimezone: value } )
 					}
 				/>
 			</PanelBody>

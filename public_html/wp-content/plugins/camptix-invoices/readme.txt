@@ -20,8 +20,6 @@ This plugin requires the installation of [Camptix Event Ticketing plugin](https:
 This plugin requires the WordCamp Docs plugin present in every WordCamp site.
 Alternatively, make sure you include the [WordCamp_Docs_PDF_Generator](https://meta.trac.wordpress.org/browser/sites/trunk/wordcamp.org/public_html/wp-content/plugins/wordcamp-docs/classes/class-wordcamp-docs-pdf-generator.php).
 
-Your server must have [wkhtmltopdf](https://wkhtmltopdf.org/) installed.
-
 
 == Installation ==
 

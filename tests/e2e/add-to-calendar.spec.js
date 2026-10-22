@@ -54,13 +54,15 @@ test.describe( 'add to calendar', () => {
 
 		// The hrefs are the assertion that matters: a placeholder left in
 		// place (#gatherpress-google-calendar) renders a visible menu too.
+		// Names are matched from the start only: GatherPress 0.36.0 appends a
+		// visually hidden "(opens in a new tab)" to the links that open one.
 		for ( const [ name, endpoint ] of [
 			[ 'Google Calendar', 'google-calendar' ],
 			[ 'iCal', 'ical' ],
 			[ 'Outlook', 'outlook' ],
 			[ 'Yahoo Calendar', 'yahoo-calendar' ],
 		] ) {
-			await expect( menu.getByRole( 'link', { name, exact: true } ) ).toHaveAttribute(
+			await expect( menu.getByRole( 'link', { name: new RegExp( `^${ name }\\b` ) } ) ).toHaveAttribute(
 				'href',
 				`${ eventUrl }${ endpoint }/`
 			);

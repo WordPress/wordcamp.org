@@ -66,18 +66,20 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function block_unauthenticated_actions() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
+		$tix_action = $this->get_tix_action();
+
 		// Continue normal request, this is not a tickets page.
-		if ( ! isset( $_REQUEST['tix_action'] ) ) {
+		if ( '' === $tix_action ) {
 			return;
 		}
 
 		// Bypass for payment webhook notifications.
-		if ( 'payment_notify' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_payment_token'] ) ) {
+		if ( 'payment_notify' === $tix_action && isset( $_REQUEST['tix_payment_token'] ) ) {
 			return;
 		}
 
 		// Bypass for coupon validation- the `tix_coupon_submit` value is set when "Apply Coupon" button is clicked.
-		if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_coupon'], $_REQUEST['tix_coupon_submit'] ) ) {
+		if ( 'attendee_info' === $tix_action && isset( $_REQUEST['tix_coupon'], $_REQUEST['tix_coupon_submit'] ) ) {
 			return;
 		}
 
@@ -1200,7 +1202,16 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return bool True if the user is editing or accessing a ticket, false otherwise.
 	 */
 	protected function user_is_editing_ticket() {
-		return isset( $_REQUEST['tix_action'] ) && in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
+		return in_array( $this->get_tix_action(), array( 'access_tickets', 'edit_attendee' ), true );
+	}
+
+	/**
+	 * Get the current ticketing step, read the same way CampTix_Plugin::template_redirect() reads it.
+	 *
+	 * @return string The step, or an empty string when there is none.
+	 */
+	protected function get_tix_action() {
+		return sanitize_text_field( wp_unslash( $_GET['tix_action'] ?? '' ) );
 	}
 
 	/**

@@ -10,6 +10,9 @@ use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WordCamp\Groups\Frontend\Event_Date_Format;
 use function WordCamp\Groups\Frontend\Event_Flyer\get_flyer_url;
 use function WordCamp\Groups\Frontend\Event_Flyer\get_rewrite_rules;
+use function WordCamp\Groups\Frontend\Event_Flyer\get_short_url;
+use function WordCamp\Groups\Frontend\Event_Flyer\get_short_url_rewrite_rules;
+use function WordCamp\Groups\Frontend\Event_Flyer\get_short_url_target;
 use function WordCamp\Groups\Frontend\Event_Flyer\is_flyer_request;
 use function WordCamp\Groups\Frontend\Event_Flyer\keep_flyer_url;
 use function WordCamp\Groups\Frontend\Event_Flyer\prepare_request;
@@ -406,19 +409,155 @@ class Test_Event_Flyer extends Groups_TestCase {
 	}
 
 	/**
-	 * The QR code encodes the event's URL, and the URL is printed under it.
+	 * The QR code encodes the event's short URL, and the same URL is printed
+	 * under it.
 	 */
-	public function test_qr_code_encodes_the_event_url() {
+	public function test_qr_code_encodes_the_short_url() {
 		$event_id = $this->create_event();
+		$short    = home_url( "e/{$event_id}/" );
 
 		$this->go_to( get_flyer_url( $event_id ) );
 		$output = do_blocks( '<!-- wp:wporg/event-flyer-qr /-->' );
 
-		$this->assertStringContainsString( 'data-url="' . esc_attr( get_permalink( $event_id ) ) . '"', $output );
+		$this->assertSame( $short, get_short_url( $event_id ) );
+		$this->assertStringContainsString( 'data-url="' . esc_attr( $short ) . '"', $output );
 		$this->assertStringContainsString(
-			esc_html( untrailingslashit( preg_replace( '#^https?://#', '', get_permalink( $event_id ) ) ) ),
+			esc_html( untrailingslashit( preg_replace( '#^https?://#', '', $short ) ) ),
 			$output
 		);
+		$this->assertStringNotContainsString( get_post_field( 'post_name', $event_id ), $output );
+	}
+
+	/**
+	 * The short rules are flushed in on deploy like the flyer's own.
+	 */
+	public function test_missing_short_url_rules_are_flushed() {
+		$rules = get_option( 'rewrite_rules' );
+
+		foreach ( array_keys( get_short_url_rewrite_rules() ) as $pattern ) {
+			$this->assertArrayHasKey( $pattern, $rules, 'Precondition: the short rules are stored.' );
+			unset( $rules[ $pattern ] );
+		}
+		update_option( 'rewrite_rules', $rules );
+
+		register_rewrite_rules();
+
+		$this->assertFalse( get_option( 'rewrite_rules' ) );
+	}
+
+	/**
+	 * `…/e/{ID}/` and `…/e/{ID}/{date}/` carry the ID and the date.
+	 */
+	public function test_short_url_routes_its_id_and_date() {
+		// Parsing only: the redirect itself would exit.
+		remove_action( 'parse_request', 'WordCamp\\Groups\\Frontend\\Event_Flyer\\redirect_short_url' );
+
+		$this->go_to( home_url( 'e/123/' ) );
+		$this->assertSame( '123', get_query_var( 'wporg_event_short' ) );
+		$this->assertSame( '', get_query_var( 'wporg_event_short_date' ) );
+
+		$this->go_to( home_url( 'e/123/20261105/' ) );
+		$this->assertSame( '123', get_query_var( 'wporg_event_short' ) );
+		$this->assertSame( '20261105', get_query_var( 'wporg_event_short_date' ) );
+	}
+
+	/**
+	 * A short URL is a permanent redirect to the event.
+	 */
+	public function test_short_url_redirects_to_the_event() {
+		$event_id = $this->create_event();
+		$redirect = null;
+
+		// Stop at the redirect, ahead of the `exit` that follows it.
+		add_filter(
+			'wp_redirect',
+			static function ( $location, $status ) use ( &$redirect ) {
+				$redirect = array( $status, $location );
+				throw new \RuntimeException( 'Redirected.' );
+			},
+			10,
+			2
+		);
+
+		try {
+			$this->go_to( home_url( "e/{$event_id}/" ) );
+		} catch ( \RuntimeException $e ) {
+			// Expected.
+			unset( $e );
+		}
+
+		$this->assertSame( array( 301, get_permalink( $event_id ) ), $redirect );
+	}
+
+	/**
+	 * Anything that doesn't lead to an event 404s.
+	 */
+	public function test_short_url_to_a_non_event_is_a_404() {
+		$post_id = self::factory()->post->create( array( 'post_title' => 'A news post' ) );
+
+		// A redirect would exit and end the suite green, so fail on it instead.
+		add_filter(
+			'wp_redirect',
+			static function () {
+				throw new \RuntimeException( 'Unexpected redirect.' );
+			}
+		);
+
+		$this->go_to( home_url( "e/{$post_id}/" ) );
+		$this->assertTrue( is_404() );
+
+		$this->go_to( home_url( 'e/999999/' ) );
+		$this->assertTrue( is_404() );
+
+		$this->go_to( home_url( 'e/0/' ) );
+		$this->assertTrue( is_404() );
+	}
+
+	/**
+	 * A short URL doesn't give away the slug of an event the visitor can't
+	 * read, but works for someone who can.
+	 *
+	 * @dataProvider data_unreadable_statuses
+	 *
+	 * @param string $status Post status.
+	 */
+	public function test_short_url_to_an_unreadable_event_is_empty( string $status ) {
+		$event_id = $this->create_event( array( 'post_status' => $status ) );
+
+		wp_set_current_user( 0 );
+		$this->assertSame( '', get_short_url_target( $event_id ) );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertSame( get_permalink( $event_id ), get_short_url_target( $event_id ) );
+	}
+
+	/**
+	 * A dated short URL leads to that date, by day or by full recurrence ID,
+	 * and only to a date the series has.
+	 */
+	public function test_dated_short_url_leads_to_its_occurrence() {
+		$event_id = $this->create_recurring_event();
+		$second   = Occurrences::all( $event_id, 'upcoming', 10 )[1];
+		$expected = Context::occurrence_url( $event_id, $second->recurrence_id );
+
+		$this->assertSame( $expected, get_short_url_target( $event_id, substr( $second->recurrence_id, 0, 8 ) ) );
+		$this->assertSame( $expected, get_short_url_target( $event_id, $second->recurrence_id ) );
+		$this->assertSame( '', get_short_url_target( $event_id, '19990101' ) );
+		$this->assertSame( '', get_short_url_target( $this->create_event(), substr( $second->recurrence_id, 0, 8 ) ) );
+	}
+
+	/**
+	 * A series' own undated flyer gets an undated short URL, like its
+	 * permalink.
+	 */
+	public function test_undated_series_flyer_has_an_undated_short_url() {
+		$event_id = $this->create_recurring_event();
+
+		$this->go_to( get_flyer_url( $event_id ) );
+		Context::resolve();
+		$this->assertNotSame( '', Context::recurrence_id(), 'Precondition: the series page picked a date.' );
+
+		$this->assertSame( home_url( "e/{$event_id}/" ), get_short_url( $event_id ) );
 	}
 
 	/**
@@ -451,10 +590,12 @@ class Test_Event_Flyer extends Groups_TestCase {
 		$this->assertStringNotContainsString( $other, $date );
 
 		$occurrence_url = Context::occurrence_url( $event_id, $second->recurrence_id );
+		$short_url      = home_url( "e/{$event_id}/" . substr( $second->recurrence_id, 0, 8 ) . '/' );
 		$qr             = do_blocks( '<!-- wp:wporg/event-flyer-qr /-->' );
 		$toolbar        = do_blocks( '<!-- wp:wporg/event-flyer-link {"variant":"flyer"} /-->' );
 
-		$this->assertStringContainsString( 'data-url="' . esc_attr( $occurrence_url ) . '"', $qr );
+		$this->assertStringContainsString( 'data-url="' . esc_attr( $short_url ) . '"', $qr );
+		$this->assertSame( $occurrence_url, get_short_url_target( $event_id, substr( $second->recurrence_id, 0, 8 ) ) );
 		$this->assertStringContainsString( 'href="' . esc_url( $occurrence_url ) . '"', $toolbar );
 	}
 

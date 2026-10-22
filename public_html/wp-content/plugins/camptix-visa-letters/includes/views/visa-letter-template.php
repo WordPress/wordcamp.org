@@ -71,7 +71,7 @@ if ( function_exists( 'get_wordcamp_post' ) ) {
 <html>
 <head>
 	<meta charset="UTF-8">
-	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
+	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by DomPDF, so additional libraries are included directly. ?>
 	<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css"/>
 	<style type="text/css">
 		body {

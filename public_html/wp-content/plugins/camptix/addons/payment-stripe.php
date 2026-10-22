@@ -30,8 +30,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	);
 
 	public $supported_features = array(
-		'refund-single' => true,
-		'refund-all'    => true,
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => true,
 	);
 
 	/**
@@ -866,13 +867,44 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Send a request to Stripe to refund a transaction.
+	 * Refund part of a charge, leaving the order's other tickets paid.
+	 *
+	 * The last refund on an order is sent without an amount, so Stripe refunds whatever
+	 * is left of the charge. Charges are made from truncated per-item amounts (see
+	 * get_expected_fractional_total()), so that is the only way the refunds add up to
+	 * exactly what was charged.
 	 *
 	 * @param string $payment_token
+	 * @param float  $amount            The amount to refund, in the currency's base unit.
+	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token ) {
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token, $refunds_remainder ? null : $amount );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+
+			$camptix->log( 'Stripe partial refund failed', $order['attendee_id'] ?? null, $result, 'stripe' );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Send a request to Stripe to refund a transaction.
+	 *
+	 * @param string     $payment_token
+	 * @param float|null $amount Optional. The amount to refund, in the currency's base unit.
+	 *                           Null refunds whatever is left of the charge.
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token, $amount = null ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -893,7 +925,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$metadata = array(
-			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
+			// Null without a POST body, e.g. when the refund-all cron sends it.
+			'Refund reason' => (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
 		// Create a new Idempotency token for the refund request.
@@ -901,8 +934,19 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$idempotency_token = md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
 		$credentials       = $this->get_api_credentials();
 
+		$fractional_amount = null;
+		if ( null !== $amount ) {
+			try {
+				$fractional_amount = $this->get_fractional_unit_amount( $this->camptix_options['currency'], $amount );
+			} catch ( Exception $e ) {
+				$result['refund_transaction_details'] = $e->getMessage();
+
+				return $result;
+			}
+		}
+
 		$stripe = new CampTix_Stripe_API_Client( $idempotency_token, $credentials['api_secret_key'] );
-		$refund = $stripe->request_refund( $transaction_id, $metadata );
+		$refund = $stripe->request_refund( $transaction_id, $metadata, $fractional_amount );
 
 		if ( is_wp_error( $refund ) ) {
 			$result['refund_transaction_details'] = array(
@@ -960,8 +1004,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * moments and neither the return nor the webhook reached us), a complete-but-unpaid one is
 	 * a delayed payment still in flight and goes pending, a failed one fails. A session Stripe
 	 * still reports open has its expiry re-recorded from Stripe and the sweep checks the release
-	 * time again, so it keeps its seat until then (Stripe expires sessions a little after the
-	 * timestamp, so an open session past it is timed out in the same pass). If Stripe can't be
+	 * time again, so it keeps its seat until then. Stripe expires sessions a little after the
+	 * timestamp, and a payment can still be confirming then (UPI, bank redirects), so an open
+	 * session already past it is kept for the next sweep, like one Stripe can't be asked about,
+	 * rather than timed out while it can still be paid. If Stripe can't be
 	 * asked, or answers with an error, the draft is kept for the next sweep to try again, for
 	 * up to 24 hours: not knowing is not evidence the session died, and a timed-out order can't
 	 * be revived. That includes a 404, which only says the session isn't on the account and
@@ -1022,10 +1068,16 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		if ( 'open' === $session['status'] ) {
-			$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
-			if ( ! empty( $session['expires_at'] ) ) {
-				$camptix->set_order_session_expiry( $payment_token, (int) $session['expires_at'] );
+			$expires_at = (int) ( $session['expires_at'] ?? 0 );
+
+			if ( $expires_at > time() ) {
+				$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
+				$camptix->set_order_session_expiry( $payment_token, $expires_at );
+				return;
 			}
+
+			// Past its expiry, but Stripe hasn't expired it yet: a payment may still be confirming.
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'the Stripe checkout session is still open past its expiry', $session );
 			return;
 		}
 
@@ -1527,14 +1579,20 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @param string $transaction_id
 	 * @param array  $metadata       Associative array of extra data to store with the transaction.
+	 * @param int    $amount         Optional. The amount to refund, in fractional units (e.g. cents).
+	 *                               Null refunds whatever is left of the charge.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function request_refund( $transaction_id, $metadata = array() ) {
+	public function request_refund( $transaction_id, $metadata = array(), $amount = null ) {
 		$args = array(
 			'charge' => $transaction_id,
 			'reason' => 'requested_by_customer',
 		);
+
+		if ( null !== $amount ) {
+			$args['amount'] = $amount;
+		}
 
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
 			$args['metadata'] = $this->clean_metadata( $metadata );

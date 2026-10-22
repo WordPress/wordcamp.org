@@ -1243,8 +1243,9 @@ add_filter(
  *
  * The event page hides these behind the password, but the REST response still
  * named them: the `_gatherpress_venue` term, the venue's entry in `class_list`
- * (which spells out the venue slug), the venue term link, and the
- * `_event_speakers` roster meta. Strip them while the event requires its
+ * (which spells out the venue slug), the venue term link, the venue's address
+ * and coordinates in the `geo_*` meta, and the `_event_speakers` roster meta.
+ * Strip them while the event requires its
  * password for a caller who cannot edit it, the same way core blanks the
  * protected content; an editor (the event form) still gets them, and a public
  * event is untouched.
@@ -1262,6 +1263,12 @@ function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post
 	$data = $response->get_data();
 
 	unset( $data['_gatherpress_venue'], $data['meta']['_event_speakers'] );
+
+	// GatherPress 0.36.0 copies the venue's address and coordinates onto the
+	// event as `geo_*` meta, for geodata plugins.
+	foreach ( array( 'geo_address', 'geo_latitude', 'geo_longitude', 'geo_public' ) as $key ) {
+		unset( $data['meta'][ $key ] );
+	}
 
 	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
 		$data['class_list'] = array_values(
@@ -1286,7 +1293,12 @@ function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post
 	return $response;
 }
 
-add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 10, 2 );
+/*
+ * Priority 20, after GatherPress's own callbacks at 10: `Geo_Sync` recomputes
+ * stale `geo_*` meta there and writes it back into the response, which put the
+ * address back on the first read after the upgrade or a venue change.
+ */
+add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 20, 2 );
 
 /**
  * Strip the venue term class from a password-protected event's markup.
@@ -1484,6 +1496,18 @@ function hide_venue_in_protected_event_calendar( $terms, $post_id, $taxonomy ) {
 }
 
 add_filter( 'get_the_terms', __NAMESPACE__ . '\hide_venue_in_protected_event_calendar', 10, 3 );
+
+/*
+ * Don't cache calendar responses on group sites.
+ *
+ * GatherPress 0.36.0 keeps one rendered copy of each calendar download and
+ * feed for everyone, and sends it as `Cache-Control: public`. The filter above
+ * makes that output depend on the viewer, so whoever asked first decided
+ * what everyone got: an organiser's copy handed a protected event's venue to
+ * logged-out visitors, and a visitor's copy left it out for the organiser.
+ * Zero renders every response fresh and sends it `no-cache`, as before 0.36.0.
+ */
+add_filter( 'gatherpress_calendar_max_age', '__return_zero' );
 
 /**
  * Don't advertise a password-protected event's venue feed in its page head.

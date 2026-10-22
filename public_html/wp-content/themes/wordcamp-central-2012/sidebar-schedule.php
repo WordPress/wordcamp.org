@@ -13,7 +13,9 @@
 				// Get the upcoming approved (published) WordCamps *with dates*
 				$args = array(
 					'posts_per_page' => -1,
-					'post_status'    => WordCamp_Loader::get_pre_planning_post_statuses(),
+					'post_status'    => WordCamp_Loader::get_planned_post_statuses(),
+					// Approved Campus Connect events, without regular camps pending agreement.
+					'wcpt_campus_connect_planned' => true,
 					'meta_key'       => 'Start Date (YYYY-mm-dd)',
 					'orderby'        => 'meta_value',
 					'order'          => 'ASC',

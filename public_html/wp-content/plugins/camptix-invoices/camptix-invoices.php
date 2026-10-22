@@ -665,6 +665,15 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 		$invoice_number = get_post_meta( $post->ID, 'invoice_number', true );
 		$invoice_metas  = get_post_meta( $post->ID, 'invoice_metas', true );
 
+		if ( ! is_array( $invoice_metas ) || ! is_string( $invoice_metas['email'] ?? null ) ) {
+			continue;
+		}
+
+		// Only export invoices addressed to this email.
+		if ( strtolower( $invoice_metas['email'] ) !== strtolower( $email_address ) ) {
+			continue;
+		}
+
 		foreach ( $invoice_metas as $key => $value ) {
 
 			switch ( $key ) {

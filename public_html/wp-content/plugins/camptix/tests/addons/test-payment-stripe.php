@@ -667,6 +667,49 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * A session Stripe still reports open after its expiry (a UPI or bank confirmation in
+	 * flight) keeps its draft for the next sweep, instead of being timed out in the same pass.
+	 * As when Stripe can't be asked, that stops after 24 hours.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 */
+	public function test_timeout_sweep_keeps_a_draft_whose_session_is_still_open() {
+		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_open_late', 500 );
+		$expired_at                  = time() - 10 * MINUTE_IN_SECONDS;
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_open_late', $expired_at );
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - 40 * MINUTE_IN_SECONDS );
+
+		$calls = 0;
+		$open  = function () use ( &$calls, $token, $expired_at ) {
+			$calls++;
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array(
+					'id'                  => 'cs_open_late',
+					'status'              => 'open',
+					'expires_at'          => $expired_at,
+					'client_reference_id' => get_current_blog_id() . ':' . $token,
+				) ),
+				'headers'  => array(),
+			);
+		};
+
+		$this->sweep_with( $open );
+		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
+		$this->assertGreaterThan( time(), $GLOBALS['camptix']->get_draft_release_at( $attendee_id ), 'retried by a later sweep' );
+		$this->assertSame( 1, $calls, 'asked once: the kept draft is no longer due in this pass' );
+
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - 6 * MINUTE_IN_SECONDS );
+		update_post_meta( $attendee_id, 'tix_session_expires_at', $expired_at );
+		$this->sweep_with( $open );
+		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'not past 24 hours' );
+	}
+
+	/**
 	 * Give a draft a post date. wp_update_post() resets a draft's date to now, so straight to the row.
 	 */
 	protected function date_draft( $attendee_id, $timestamp ) {
@@ -1248,5 +1291,99 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 
 		parent::tear_down();
 		$camptix->load_options();
+	}
+
+	/**
+	 * A partial refund asks Stripe for the tickets' amount. The last one asks for no
+	 * amount, so Stripe refunds whatever is left of the charge.
+	 *
+	 * @dataProvider data_partial_refund_amount
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_refund_partial
+	 * @covers CampTix_Stripe_API_Client::request_refund
+	 *
+	 * @param float    $amount            The amount to refund.
+	 * @param bool     $refunds_remainder Whether this refunds the rest of the order.
+	 * @param int|null $expected          The amount sent to Stripe, in cents.
+	 */
+	public function test_partial_refund_amount( $amount, $refunds_remainder, $expected ) {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee ) = $this->make_stripe_order( 'tok_partial_refund_' . (int) $refunds_remainder, 30 );
+		update_post_meta( $attendee, 'tix_transaction_id', 'ch_test' );
+
+		$sent = null;
+		$stub = function ( $pre, $args ) use ( &$sent ) {
+			$sent = $args['body'];
+
+			return array(
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'body'     => wp_json_encode( array(
+					'id'     => 're_test',
+					'charge' => 'ch_test',
+				) ),
+				'headers'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$result = $stripe->payment_refund_partial( $token, $amount, $refunds_remainder );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
+		$this->assertSame( 're_test', $result['refund_transaction_id'] );
+		$this->assertSame( 'ch_test', $sent['charge'] );
+		$this->assertSame( $expected, $sent['amount'] ?? null );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_partial_refund_amount() {
+		return array(
+			'some tickets'        => array( 10, false, 1000 ),
+			'the rest of the order' => array( 20, true, null ),
+		);
+	}
+
+	/**
+	 * A refused partial refund is reported as failed, not refunded.
+	 *
+	 * @covers CampTix_Payment_Method_Stripe::payment_refund_partial
+	 */
+	public function test_partial_refund_reports_a_refused_refund() {
+		$stripe = $this->make_configured_stripe();
+		list( $token, $attendee ) = $this->make_stripe_order( 'tok_partial_refused', 30 );
+		update_post_meta( $attendee, 'tix_transaction_id', 'ch_test' );
+
+		$stub = function () {
+			return array(
+				'response' => array(
+					'code'    => 400,
+					'message' => 'Bad Request',
+				),
+				'body'     => wp_json_encode( array(
+					'error' => array(
+						'type'    => 'invalid_request_error',
+						'message' => 'Refund amount is greater than unrefunded amount on charge.',
+					),
+				) ),
+				'headers'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+
+		try {
+			$result = $stripe->payment_refund_partial( $token, 40, false );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $result['status'] );
 	}
 }

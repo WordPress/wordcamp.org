@@ -36,18 +36,20 @@ defined( 'WPINC' ) || die();
 final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 
 	/**
-	 * Every class this extension imports, and the methods/constants/
-	 * properties actually called on it (including `save_datetimes()`,
-	 * which only this test suite's own fixtures call, to seed a real
-	 * GatherPress event date the same way GatherPress itself would).
+	 * Every class this extension imports, and the methods/constants
+	 * actually called on it (including `save_datetimes()`, which only this
+	 * test suite's own fixtures call, to seed a real GatherPress event date
+	 * the same way GatherPress itself would).
+	 *
+	 * No properties since 0.36.0 removed `Event::$rsvp`, the only one read;
+	 * a property read here would need its own check again.
 	 */
 	const CONTRACT = array(
 		'GatherPress\Core\Event\Event'          => array(
-			'methods'    => array( 'can_read_rsvps', 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
-			'properties' => array( 'rsvp' ),
+			'methods' => array( 'can_read_rsvps', 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
 		),
 		'GatherPress\Core\Rsvp\Rsvp'            => array(
-			'methods'   => array( 'save', 'responses' ),
+			'methods'   => array( 'save', 'responses', 'is_enabled' ),
 			'constants' => array( 'COMMENT_TYPE' ),
 		),
 		'GatherPress\Core\Rsvp\Cache'           => array(
@@ -111,16 +113,6 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider provide_contract_properties
-	 */
-	public function test_property_exists( string $class, string $property ) {
-		$this->assertTrue(
-			property_exists( $class, $property ),
-			"Expected {$class}::\${$property} to exist."
-		);
-	}
-
-	/**
 	 * The REST namespace this extension appends occurrence identity to.
 	 *
 	 * Not a class member, so it needs its own case: `Rest_API::upstream_context()`
@@ -161,17 +153,6 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 		foreach ( self::CONTRACT as $class => $members ) {
 			foreach ( $members['constants'] ?? array() as $constant ) {
 				$cases[ "{$class}::{$constant}" ] = array( $class, $constant );
-			}
-		}
-		return $cases;
-	}
-
-	/** Data provider: one case per class/property pair in CONTRACT. */
-	public function provide_contract_properties(): array {
-		$cases = array();
-		foreach ( self::CONTRACT as $class => $members ) {
-			foreach ( $members['properties'] ?? array() as $property ) {
-				$cases[ "{$class}::\${$property}" ] = array( $class, $property );
 			}
 		}
 		return $cases;

@@ -596,6 +596,58 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
+	/**
+	 * Each occurrence's `.ics` download carries that occurrence's own date.
+	 *
+	 * GatherPress 0.36.0 caches iCal bodies keyed on the queried post, and
+	 * every occurrence of a series is the same post, so the first date
+	 * anyone downloaded was served for all of them.
+	 */
+	public function test_occurrence_ical_downloads_are_not_shared_through_the_cache(): void {
+		global $wp_query;
+
+		$post_id     = $this->create_published_recurring_event();
+		$bodies      = array();
+		$occurrences = array(
+			'20260810T100000' => '2026-08-10',
+			'20260817T100000' => '2026-08-17',
+		);
+
+		$wp_query->queried_object    = get_post( $post_id );
+		$wp_query->queried_object_id = $post_id;
+
+		try {
+			foreach ( $occurrences as $recurrence_id => $date ) {
+				Context::set(
+					(object) array(
+						'series_post_id'     => $post_id,
+						'recurrence_id'      => $recurrence_id,
+						'datetime_start'     => "$date 10:00:00",
+						'datetime_start_gmt' => "$date 10:00:00",
+						'datetime_end'       => "$date 11:00:00",
+						'datetime_end_gmt'   => "$date 11:00:00",
+						'timezone'           => 'UTC',
+					)
+				);
+				set_query_var( 'gpre_occurrence', $recurrence_id );
+
+				$bodies[ $recurrence_id ] = \GatherPress\Core\Calendar\Setup::get_instance()->get_ics_body();
+			}
+		} finally {
+			set_query_var( 'gpre_occurrence', '' );
+			Context::set( null );
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+
+		$this->assertStringContainsString( 'DTSTART:20260810T100000Z', $bodies['20260810T100000'] );
+		$this->assertStringContainsString(
+			'DTSTART:20260817T100000Z',
+			$bodies['20260817T100000'],
+			'The second occurrence was served the first one\'s cached download.'
+		);
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();
@@ -979,7 +1031,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 1, $projections, 'The five meta writes of one schedule save should project once.' );
 
 		// An unrelated meta write is not a schedule change.
-		update_post_meta( $post_id, 'gatherpress_max_attendance_limit', 20 );
+		update_post_meta( $post_id, 'gatherpress_capacity', 20 );
 
 		$this->assertSame( 1, $projections, 'A meta key that is not part of the schedule should not project.' );
 

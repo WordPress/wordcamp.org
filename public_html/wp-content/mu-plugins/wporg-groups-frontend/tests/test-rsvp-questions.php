@@ -556,7 +556,7 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 		);
 
 		// One seat, already taken, so the next RSVP lands on the waiting list.
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 
 		$first = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $first );

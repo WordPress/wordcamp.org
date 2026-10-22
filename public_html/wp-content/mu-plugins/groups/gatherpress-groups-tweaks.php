@@ -1423,7 +1423,7 @@ function hide_venue_in_protected_event_feed( string $text ): string {
 		return $text;
 	}
 
-	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) || ! class_exists( '\GatherPress\Core\Venue' ) || ! class_exists( '\GatherPress\Core\Utility' ) ) {
+	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) || ! class_exists( '\GatherPress\Core\Venue\Venue' ) || ! class_exists( '\GatherPress\Core\Utility' ) ) {
 		return $text;
 	}
 
@@ -1436,7 +1436,7 @@ function hide_venue_in_protected_event_feed( string $text ): string {
 	$segment = sprintf(
 		/* translators: 1: Singular post type label (e.g. "Venue"), 2: Venue name. */
 		__( '%1$s: %2$s', 'gatherpress' ),
-		\GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue::POST_TYPE ),
+		\GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue\Venue::POST_TYPE ),
 		$venue['name']
 	);
 

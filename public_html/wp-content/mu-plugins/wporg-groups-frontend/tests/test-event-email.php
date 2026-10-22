@@ -229,16 +229,21 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 	 * Send GatherPress's own "Message members" email about an event, to one
 	 * new member, and return what reached `wp_mail()`.
 	 *
-	 * @param string $start Event start, site time.
+	 * @param string $start        Event start, site time.
+	 * @param int    $thumbnail_id Optional featured image.
 	 * @return array `wp_mail()` arguments for the member's copy.
 	 */
-	private function send_member_email( string $start ): array {
+	private function send_member_email( string $start, int $thumbnail_id = 0 ): array {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
 				'post_status' => 'publish',
 			)
 		);
+
+		if ( $thumbnail_id ) {
+			set_post_thumbnail( $event_id, $thumbnail_id );
+		}
 
 		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
 			array(
@@ -306,6 +311,36 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'RSVP Now', $mail['message'] );
 		$this->assertStringNotContainsString( 'View event', $mail['message'] );
+	}
+
+	/**
+	 * Both fixes land on GatherPress's real template, not only on the copy in
+	 * `gatherpress_body()`. Each is keyed off a marker comment, and a marker
+	 * the template no longer writes leaves the old bug in place with nothing
+	 * else failing.
+	 */
+	public function test_fixes_apply_to_the_real_template() {
+		$image_id = self::factory()->attachment->create_object(
+			array(
+				'file'           => 'poster.jpg',
+				'post_mime_type' => 'image/jpeg',
+			)
+		);
+		wp_update_attachment_metadata(
+			$image_id,
+			array(
+				'width'  => 1200,
+				'height' => 630,
+				'file'   => 'poster.jpg',
+				'sizes'  => array(),
+			)
+		);
+
+		$mail = $this->send_member_email( '2031-05-20 10:00:00', $image_id );
+
+		$this->assertStringContainsString( '<table role="presentation"', $mail['message'], 'The RSVP button was not rebuilt; check the marker in event-email.php.' );
+		$this->assertDoesNotMatchRegularExpression( '/<a\b[^>]*style="background-color/', $mail['message'] );
+		$this->assertMatchesRegularExpression( '/<img\b[^>]*poster\.jpg[^>]*height:\s*auto/s', $mail['message'] );
 	}
 
 	/**

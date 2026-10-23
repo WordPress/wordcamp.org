@@ -287,7 +287,7 @@ abstract class Event_Application {
 
 		if ( 0 !== $application_post ) {
 			$message .= sprintf(
-				"\nURL: https://central.wordcamp.org/wp-admin/post.php?post=%1\$d&amp;action=edit",
+				"\nURL: https://central.wordcamp.org/wp-admin/post.php?post=%1\$d&action=edit",
 				absint( $application_post )
 			);
 		}

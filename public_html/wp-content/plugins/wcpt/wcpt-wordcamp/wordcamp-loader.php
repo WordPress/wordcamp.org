@@ -30,6 +30,7 @@ class WordCamp_Loader extends Event_Loader {
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
+		add_action( 'added_post_meta',                 array( $this, 'maybe_default_campus_connect_meta' ), 10, 4 );
 
 		// Registered here rather than from a loader method, because callers reach this file
 		// directly: the Jetpack form bridge requires it from a form handler.
@@ -892,5 +893,32 @@ class WordCamp_Loader extends Event_Loader {
 	public function query_vars( $vars ) {
 		$vars[] = 'wcorg-wordcamp-info';
 		return $vars;
+	}
+
+	/**
+	 * Default "Running money through WPCS PBC" to true for new Campus Connect events.
+	 *
+	 * When a new event tracker record with the campusconnect subtype is created,
+	 * default "Running money through WPCS PBC" to true if not already set.
+	 *
+	 * @param int    $mid         The meta ID after successful update.
+	 * @param int    $object_id   ID of the object metadata is for.
+	 * @param string $meta_key    Metadata key.
+	 * @param mixed  $_meta_value Metadata value.
+	 */
+	public function maybe_default_campus_connect_meta( $mid, $object_id, $meta_key, $_meta_value ) {
+		if ( 'event_subtype' !== $meta_key || 'campusconnect' !== $_meta_value ) {
+			return;
+		}
+
+		if ( get_post_type( $object_id ) !== WCPT_POST_TYPE_ID ) {
+			return;
+		}
+
+		if ( metadata_exists( 'post', $object_id, 'Running money through WPCS PBC' ) ) {
+			return;
+		}
+
+		add_post_meta( $object_id, 'Running money through WPCS PBC', true );
 	}
 }

@@ -10,17 +10,20 @@ License:     GPLv2 or later
 
 use WordPressdotorg\Profiles;
 
-/*
- * Requests will always fail when in local environments, unless the dev is proxied. Proxied devs could test
- * locally if they're careful (especially with user IDs), but it's better to test on w.org sandboxes with
- * test accounts. That prevents real profiles from having test data accidentally added to them.
- */
-if ( 'local' === WORDCAMP_ENVIRONMENT ) {
-	return;
-}
-
 class WordCamp_Participation_Notifier {
 	public const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
+
+	/**
+	 * Usermeta key prefix for WordCamp organizer badge tracking.
+	 *
+	 * Kept for back-compat with keys already stored for typical WordCamp events.
+	 */
+	public const WORDCAMP_ORGANIZER_META_PREFIX = 'wc_wcb_organizer_';
+
+	/**
+	 * Usermeta key prefix for Campus Connect organizer badge tracking.
+	 */
+	public const CAMPUS_CONNECT_ORGANIZER_META_PREFIX = 'wc_campus_connect_organizer_';
 
 	/**
 	 * Constructor
@@ -214,7 +217,7 @@ class WordCamp_Participation_Notifier {
 
 	/**
 	 * Makes a request to remove the speaker or organizer badge from a user, if the user is removed from all
-	 * WordCamps where they were a speaker or organizer.
+	 * events where they hold the same association type.
 	 *
 	 * @param WP_Post $post     Speaker/Organizer Post Object.
 	 * @param int     $user_id  User ID to remove the badge for.
@@ -253,14 +256,17 @@ class WordCamp_Participation_Notifier {
 	/**
 	 * Meta key to store user metadata for organizer/speaker association.
 	 *
-	 * We store meta_key in form of wc_{post_type}_{blog_id}_{post_id} because
+	 * We store meta_key in form of {prefix}{blog_id}_{post_id} because
 	 *
-	 * 1. Since meta_key is indexed, count query on wc_{post_type}% for a specific user_id will be performant. We will use this query to figure out if we want to remove a badge.
+	 * 1. Since meta_key is indexed, count query on {prefix}% for a specific user_id will be performant. We will use this query to figure out if we want to remove a badge.
 	 *
 	 * 2. Adding separate rows per WordCamp per User per Post allows us to avoid incorrect badge removal in some cases.
 	 * For egs, when an organizer accidentally adds same wporg name to multiple speaker post, and then corrects their mistake by removing it in all but one post.
 	 *
 	 * 3. Because of verbosity, deleting user meta entry will be less error prone.
+	 *
+	 * Organizer prefixes are association-specific so WordCamp and Campus Connect badges can be added and
+	 * removed independently when a user organizes both event types.
 	 *
 	 * @param WP_Post $post Sponsor/Organizer post object.
 	 *
@@ -278,7 +284,58 @@ class WordCamp_Participation_Notifier {
 	 * @return string
 	 */
 	private function get_user_meta_key_prefix( $post ) {
-		return 'wc_' .  $post->post_type . '_';
+		if ( 'wcb_organizer' === $post->post_type ) {
+			return $this->get_organizer_meta_key_prefix( $this->get_organizer_association() );
+		}
+
+		return 'wc_' . $post->post_type . '_';
+	}
+
+	/**
+	 * Return the usermeta key prefix for an organizer association slug.
+	 *
+	 * @param string $association Association slug, e.g. `wordcamp-organizer`.
+	 *
+	 * @return string
+	 */
+	private function get_organizer_meta_key_prefix( $association ) {
+		if ( 'campus-connect-organizer' === $association ) {
+			return self::CAMPUS_CONNECT_ORGANIZER_META_PREFIX;
+		}
+
+		return self::WORDCAMP_ORGANIZER_META_PREFIX;
+	}
+
+	/**
+	 * Determine the profiles.w.org organizer association for the current event site.
+	 *
+	 * @param WP_Post|false|null $wordcamp Optional. Central `wordcamp` post with `meta` populated.
+	 *                                     Defaults to the current site's WordCamp post.
+	 *
+	 * @return string `campus-connect-organizer` or `wordcamp-organizer`.
+	 */
+	protected function get_organizer_association( $wordcamp = null ) {
+		if ( null === $wordcamp ) {
+			$wordcamp = get_wordcamp_post();
+		}
+
+		if ( $this->is_campus_connect_event( $wordcamp ) ) {
+			return 'campus-connect-organizer';
+		}
+
+		return 'wordcamp-organizer';
+	}
+
+	/**
+	 * Whether a Central wordcamp post represents a Campus Connect event.
+	 *
+	 * @param WP_Post|false|null $wordcamp Central `wordcamp` post with `meta` populated, or false.
+	 *
+	 * @return bool
+	 */
+	protected function is_campus_connect_event( $wordcamp ) {
+		return $wordcamp
+			&& 'campusconnect' === ( $wordcamp->meta['event_subtype'][0] ?? '' );
 	}
 
 	/**
@@ -470,7 +527,8 @@ class WordCamp_Participation_Notifier {
 				break;
 
 				case 'wcb_organizer':
-					$association['association'] = 'wordcamp-organizer';
+					$wordcamp = 'wordcamp' === $post->post_type ? $post : get_wordcamp_post();
+					$association['association'] = $this->get_organizer_association( $wordcamp );
 				break;
 
 				case 'tix_attendee':
@@ -509,4 +567,13 @@ class WordCamp_Participation_Notifier {
 	}
 }
 
-$GLOBALS['WordCamp_Participation_Notifier'] = new WordCamp_Participation_Notifier();
+/*
+ * Requests will always fail when in local environments, unless the dev is proxied. Proxied devs could test
+ * locally if they're careful (especially with user IDs), but it's better to test on w.org sandboxes with
+ * test accounts. That prevents real profiles from having test data accidentally added to them.
+ *
+ * The class is still defined above so unit tests can exercise helpers without hitting Profiles.
+ */
+if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
+	$GLOBALS['WordCamp_Participation_Notifier'] = new WordCamp_Participation_Notifier();
+}

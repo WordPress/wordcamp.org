@@ -568,7 +568,18 @@ abstract class Event_Admin {
 					break;
 
 				case 'number':
-					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					/*
+					 * An empty number box means "not filled in", not zero. `floatval( '' )` is
+					 * 0.0, so writing it unconditionally fabricates a figure: `Actual Attendees`
+					 * must be recorded before an event can close, and a stored 0 satisfies that
+					 * check while being indistinguishable from an event nobody attended. A blank
+					 * is detectable and can be chased; a fabricated 0 cannot.
+					 */
+					if ( '' === $values[ $key ] ) {
+						delete_post_meta( $post_id, $key );
+					} else {
+						update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					}
 					break;
 
 				case 'checkbox-delete-on-unset':

@@ -1237,6 +1237,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'timezone'       => storable_timezone( (string) $request->get_param( 'timezone' ) ),
 			)
 		);
+		sync_block_editor_datetime( $saved_id );
 	}
 
 	// Physical and online venues — same path as the publish flow.
@@ -1332,6 +1333,39 @@ function update_event( WP_REST_Request $request ) {
  */
 function clear_all_day( int $event_id ): void {
 	delete_post_meta( $event_id, 'gatherpress_is_all_day' );
+}
+
+/**
+ * Copy the schedule the form just saved into `gatherpress_datetime`.
+ *
+ * The block editor keeps an event's schedule in that meta, and GatherPress
+ * rebuilds the schedule from it on every save. Left stale, it would put the
+ * old date back the next time the event is saved anywhere else. An event
+ * without it is left alone, since GatherPress then reads the fields
+ * `Event::save_datetimes()` writes.
+ *
+ * @param int $event_id Event post ID.
+ */
+function sync_block_editor_datetime( int $event_id ): void {
+	if ( empty( get_post_meta( $event_id, 'gatherpress_datetime', true ) ) ) {
+		return;
+	}
+
+	$datetime = ( new Event( $event_id ) )->get_datetime();
+
+	update_post_meta(
+		$event_id,
+		'gatherpress_datetime',
+		wp_slash(
+			wp_json_encode(
+				array(
+					'dateTimeStart' => $datetime['datetime_start'],
+					'dateTimeEnd'   => $datetime['datetime_end'],
+					'timezone'      => $datetime['timezone'],
+				)
+			)
+		)
+	);
 }
 
 /**
@@ -1478,6 +1512,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 			'timezone'       => $timezone,
 		)
 	);
+	sync_block_editor_datetime( $saved_id );
 
 	// Physical and online venues.
 	$venue_id = resolve_venue_id( $fields );

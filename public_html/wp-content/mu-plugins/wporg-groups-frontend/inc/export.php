@@ -808,10 +808,12 @@ function get_event_venue_names( array $event_ids ): array {
 		return array();
 	}
 
+	$venue_setup = Venue_Setup::get_instance();
+
 	// Collect the venue post slugs behind the shadow terms.
 	$post_names = array();
 	foreach ( $terms as $term ) {
-		if ( ! Venue_Setup::get_instance()->is_online_event_term_slug( $term->slug ) ) {
+		if ( $venue_setup->is_venue_term_slug( $term->slug ) ) {
 			$post_names[] = ltrim( $term->slug, '_' );
 		}
 	}
@@ -836,7 +838,7 @@ function get_event_venue_names( array $event_ids ): array {
 	foreach ( $terms as $term ) {
 		$event_id = (int) $term->object_id;
 
-		if ( Venue_Setup::get_instance()->is_online_event_term_slug( $term->slug ) ) {
+		if ( $venue_setup->is_online_event_term_slug( $term->slug ) ) {
 			$name = __( 'Online', 'wordcamporg' );
 		} else {
 			// Decoded for the same reason as the event title: both the venue's

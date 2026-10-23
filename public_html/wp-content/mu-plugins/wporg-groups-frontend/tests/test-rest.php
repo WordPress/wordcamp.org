@@ -56,6 +56,28 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * Creates an event as a new editor with the base params plus overrides, and returns its ID.
+	 */
+	private function create_test_event( array $params ): int {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( array_merge( $this->base_event_params(), $params ) ) );
+		$this->assertNotWPError( $response );
+
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Saves an event through the edit endpoint with the base params plus overrides.
+	 */
+	private function update_test_event( int $event_id, array $params ): void {
+		$request = $this->event_request( array_merge( $this->base_event_params(), $params ) );
+		$request->set_param( 'id', $event_id );
+
+		$this->assertNotWPError( update_event( $request ) );
+	}
+
+	/**
 	 * Dispatches a JSON body through the full REST pipeline, the same way
 	 * the frontend's `apiFetch()` does.
 	 *
@@ -1079,32 +1101,17 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
-	 * Saves an event through the edit endpoint with the base params plus overrides.
-	 */
-	private function update_test_event( int $event_id, array $params ): void {
-		$request = $this->event_request( array_merge( $this->base_event_params(), $params ) );
-		$request->set_param( 'id', $event_id );
-
-		$this->assertNotWPError( update_event( $request ) );
-	}
-
-	/**
 	 * A hybrid event keeps both its physical venue and the online sentinel, and the
 	 * edit form reads both back.
 	 */
 	public function test_hybrid_event_keeps_venue_and_online_state(): void {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$params = array_merge(
-			$this->base_event_params(),
+		$event_id = $this->create_test_event(
 			array(
-				'new_venue_name'    => 'Hybrid Hall ' . uniqid(),
+				'new_venue_name'    => 'Hybrid Hall',
 				'is_online'         => true,
 				'online_event_link' => 'https://meet.example.org/hybrid',
 			)
 		);
-
-		$event_id = create_event( $this->event_request( $params ) )->get_data()['id'];
 
 		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
 		$load->set_param( 'event_id', $event_id );
@@ -1119,18 +1126,13 @@ class Test_Groups_REST extends Groups_TestCase {
 	 * Switching a hybrid event to online-only drops its physical venue but keeps it online.
 	 */
 	public function test_hybrid_to_online_only_drops_venue(): void {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$params = array_merge(
-			$this->base_event_params(),
+		$event_id = $this->create_test_event(
 			array(
-				'new_venue_name'    => 'Hybrid Hall ' . uniqid(),
+				'new_venue_name'    => 'Hybrid Hall',
 				'is_online'         => true,
 				'online_event_link' => 'https://meet.example.org/hybrid',
 			)
 		);
-
-		$event_id = create_event( $this->event_request( $params ) )->get_data()['id'];
 
 		$this->update_test_event(
 			$event_id,
@@ -1148,17 +1150,12 @@ class Test_Groups_REST extends Groups_TestCase {
 	 * Turning an online event offline removes the sentinel term and its link.
 	 */
 	public function test_switching_event_offline_clears_online_state(): void {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$params = array_merge(
-			$this->base_event_params(),
+		$event_id = $this->create_test_event(
 			array(
 				'is_online'         => true,
 				'online_event_link' => 'https://meet.example.org/coffee',
 			)
 		);
-
-		$event_id = create_event( $this->event_request( $params ) )->get_data()['id'];
 		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
 
 		$this->update_test_event( $event_id, array( 'is_online' => false ) );
@@ -1172,17 +1169,12 @@ class Test_Groups_REST extends Groups_TestCase {
 	 * `Event::set_online()` on its own would keep it.
 	 */
 	public function test_clearing_online_link_removes_saved_link(): void {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
-
-		$params = array_merge(
-			$this->base_event_params(),
+		$event_id = $this->create_test_event(
 			array(
 				'is_online'         => true,
 				'online_event_link' => 'https://meet.example.org/coffee',
 			)
 		);
-
-		$event_id = create_event( $this->event_request( $params ) )->get_data()['id'];
 
 		$this->update_test_event(
 			$event_id,

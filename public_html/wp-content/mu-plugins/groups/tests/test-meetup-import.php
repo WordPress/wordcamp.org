@@ -2347,6 +2347,23 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( 'Note this', $loaded );
 		$this->assertStringContainsString( '<!-- wp:code -->', $loaded );
 		$this->assertStringContainsString( '<pre class="wp-block-code"><code>console.log("hello");</code></pre>', $loaded );
+
+		$blocks     = parse_blocks( $loaded );
+		$list_block = null;
+		foreach ( $blocks as $block ) {
+			if ( 'core/list' === $block['blockName'] ) {
+				$list_block = $block;
+				break;
+			}
+		}
+
+		$this->assertNotNull( $list_block );
+		$this->assertSame( 'core/list-item', $list_block['innerBlocks'][0]['blockName'] );
+		$this->assertCount( 1, $list_block['innerBlocks'][0]['innerBlocks'] );
+		$this->assertSame( 'core/list', $list_block['innerBlocks'][0]['innerBlocks'][0]['blockName'] );
+		$this->assertCount( 2, $list_block['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'] );
+		$this->assertSame( 'core/list-item', $list_block['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'][0]['blockName'] );
+		$this->assertSame( 'core/list-item', $list_block['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'][1]['blockName'] );
 	}
 
 	/**

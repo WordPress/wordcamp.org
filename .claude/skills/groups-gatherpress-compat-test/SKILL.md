@@ -307,7 +307,14 @@ Log in as each role (`$BASE/wp-login.php`) and click through the UI, don't
 just check curl output:
 
 - **Event create/edit** via the front-end modal (not wp-admin): venue picker,
-  date/time fields, featured image.
+  date/time fields, featured image. Walk the online states too: hybrid
+  (venue + online), online-only, clearing the link on a still-online event,
+  and back offline, checking `wp post term list <id> _gatherpress_venue` and
+  the `gatherpress_online_event_link` meta after each save.
+  `Event::set_online()` keeps a saved link when handed an empty one, so
+  clearing the field relies on the extra delete in `sync_event_venue()`.
+  Headless, an empty `fill` and Ctrl/Cmd+A don't clear these
+  React-controlled inputs; focus the field and send Backspace per character.
 - **Also open a `gatherpress_event` in the wp-admin block editor** and check
   the console / PHP error log for fatals. Every block-editor load fetches
   `/wp/v2/block-patterns/patterns`, executing the PHP of *every* registered

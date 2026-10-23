@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use GatherPress\Core\Event\Event;
 use WP_REST_Request;
 use WordPressdotorg\GatherPress_Recurring_Events\Admin as Recurring_Events_Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
@@ -52,6 +53,28 @@ class Test_Groups_REST extends Groups_TestCase {
 			'time_start' => '18:00',
 			'time_end'   => '20:00',
 		);
+	}
+
+	/**
+	 * Creates an event as a new editor with the base params plus overrides, and returns its ID.
+	 */
+	private function create_test_event( array $params ): int {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( array_merge( $this->base_event_params(), $params ) ) );
+		$this->assertNotWPError( $response );
+
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Saves an event through the edit endpoint with the base params plus overrides.
+	 */
+	private function update_test_event( int $event_id, array $params ): void {
+		$request = $this->event_request( array_merge( $this->base_event_params(), $params ) );
+		$request->set_param( 'id', $event_id );
+
+		$this->assertNotWPError( update_event( $request ) );
 	}
 
 	/**
@@ -1074,6 +1097,94 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertNotWPError( $response );
 		$event_id = $response->get_data()['id'];
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
+	}
+
+	/**
+	 * A hybrid event keeps both its physical venue and the online sentinel, and the
+	 * edit form reads both back.
+	 */
+	public function test_hybrid_event_keeps_venue_and_online_state(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'new_venue_name'    => 'Hybrid Hall',
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $event_id );
+		$fields = get_event_form_data( $load )->get_data()['fields'];
+
+		$this->assertGreaterThan( 0, $fields['venue_id'] );
+		$this->assertTrue( $fields['is_online'] );
+		$this->assertSame( 'https://meet.example.org/hybrid', $fields['online_event_link'] );
+	}
+
+	/**
+	 * Switching a hybrid event to online-only drops its physical venue but keeps it online.
+	 */
+	public function test_hybrid_to_online_only_drops_venue(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'new_venue_name'    => 'Hybrid Hall',
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$this->update_test_event(
+			$event_id,
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$this->assertSame( 0, get_event_venue_post_id( $event_id ) );
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
+	}
+
+	/**
+	 * Turning an online event offline removes the sentinel term and its link.
+	 */
+	public function test_switching_event_offline_clears_online_state(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/coffee',
+			)
+		);
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
+
+		$this->update_test_event( $event_id, array( 'is_online' => false ) );
+
+		$this->assertFalse( ( new Event( $event_id ) )->is_online() );
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
+	}
+
+	/**
+	 * Clearing the link field on an online event removes the saved link, even though
+	 * `Event::set_online()` on its own would keep it.
+	 */
+	public function test_clearing_online_link_removes_saved_link(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/coffee',
+			)
+		);
+
+		$this->update_test_event(
+			$event_id,
+			array(
+				'is_online'         => true,
+				'online_event_link' => '',
+			)
+		);
+
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
 		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
 	}
 }

@@ -164,7 +164,7 @@ The alpha version must match the deployed GatherPress version exactly, otherwise
 
 ```
 cd /home/wordcamp/public_html
-VERSION=0.36.0 # the GatherPress version you just deployed
+VERSION=0.36.1 # the GatherPress version you just deployed
 URL=events.wordpress.org/group/internal-testing-group/
 
 bin/wp-cli/wp plugin install "https://github.com/GatherPress/gatherpress-alpha/releases/download/${VERSION}/gatherpress-alpha.${VERSION}.zip" --activate --url=$URL

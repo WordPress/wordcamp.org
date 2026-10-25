@@ -1073,7 +1073,7 @@ add_filter(
  * password-protected ones — under the venue's name, naming the venue the
  * password exists to withhold. The taxonomy only links events to venues
  * internally and is never meant to be browsed, so drop its public query var
- * and rewrite. `show_in_rest` stays on (the REST surfaces are gated above), and
+ * and rewrite. `show_in_rest` stays on (GatherPress gates the REST surfaces), and
  * internal term lookups are unaffected.
  */
 add_filter(
@@ -1239,21 +1239,23 @@ add_filter(
 );
 
 /**
- * Keep a password-protected event's venue and speakers out of its REST item.
+ * Keep a password-protected event's speakers out of its REST item.
  *
- * The event page hides these behind the password, but the REST response still
- * named them: the `_gatherpress_venue` term, the venue's entry in `class_list`
- * (which spells out the venue slug), the venue term link, the venue's address
- * and coordinates in the `geo_*` meta, and the `_event_speakers` roster meta.
- * Strip them while the event requires its
+ * The event page hides the `_event_speakers` roster behind the password, but
+ * the REST response still listed it. Strip it while the event requires its
  * password for a caller who cannot edit it, the same way core blanks the
- * protected content; an editor (the event form) still gets them, and a public
+ * protected content; an editor (the event form) still gets it, and a public
  * event is untouched.
+ *
+ * GatherPress 0.36.1 keeps the rest of a protected event out of sight on its
+ * own: the venue in REST, the venue terms route, post classes, venue-filtered
+ * queries, RSS feeds, calendar endpoints and head feed links, and the date
+ * and `geo_*` meta in REST.
  *
  * @param \WP_REST_Response $response The response object.
  * @param \WP_Post          $post     The event being prepared.
  *
- * @return \WP_REST_Response The response, with the details removed when gated.
+ * @return \WP_REST_Response The response, with the speakers removed when gated.
  */
 function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
 	if ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) ) {
@@ -1262,287 +1264,14 @@ function hide_event_details_in_rest( \WP_REST_Response $response, \WP_Post $post
 
 	$data = $response->get_data();
 
-	unset( $data['_gatherpress_venue'], $data['meta']['_event_speakers'] );
-
-	// GatherPress 0.36.0 copies the venue's address and coordinates onto the
-	// event as `geo_*` meta, for geodata plugins.
-	foreach ( array( 'geo_address', 'geo_latitude', 'geo_longitude', 'geo_public' ) as $key ) {
-		unset( $data['meta'][ $key ] );
-	}
-
-	if ( ! empty( $data['class_list'] ) && is_array( $data['class_list'] ) ) {
-		$data['class_list'] = array_values(
-			array_filter(
-				$data['class_list'],
-				static function ( string $class ): bool {
-					return ! str_starts_with( $class, '_gatherpress_venue-' );
-				}
-			)
-		);
-	}
+	unset( $data['meta']['_event_speakers'] );
 
 	$response->set_data( $data );
-
-	// Drop the venue term link while leaving other taxonomies' links in place.
-	foreach ( $response->get_links()['https://api.w.org/term'] ?? array() as $link ) {
-		if ( '_gatherpress_venue' === ( $link['attributes']['taxonomy'] ?? '' ) ) {
-			$response->remove_link( 'https://api.w.org/term', $link['href'] );
-		}
-	}
 
 	return $response;
 }
 
-/*
- * Priority 20, after GatherPress's own callbacks at 10: `Geo_Sync` recomputes
- * stale `geo_*` meta there and writes it back into the response, which put the
- * address back on the first read after the upgrade or a venue change.
- */
 add_filter( 'rest_prepare_gatherpress_event', __NAMESPACE__ . '\hide_event_details_in_rest', 20, 2 );
-
-/**
- * Strip the venue term class from a password-protected event's markup.
- *
- * `post_class()` adds a `_gatherpress_venue-<slug>` class to the event's card
- * in list and archive markup, naming the venue in the HTML even when the venue
- * block itself is gated. Remove it so the card follows the password like the
- * REST `class_list` does.
- *
- * @param string[] $classes The post classes.
- * @param string[] $css_class Additional classes passed to get_post_class() (unused).
- * @param int      $post_id The post the classes are for.
- *
- * @return string[] The classes, without the venue term class when gated.
- */
-function hide_venue_class_for_protected_event( array $classes, $css_class, $post_id ): array {
-	if ( 'gatherpress_event' !== get_post_type( $post_id ) || ! post_password_required( $post_id ) ) {
-		return $classes;
-	}
-
-	return array_values(
-		array_filter(
-			$classes,
-			static function ( string $class ): bool {
-				return ! str_starts_with( $class, '_gatherpress_venue-' );
-			}
-		)
-	);
-}
-
-add_filter( 'post_class', __NAMESPACE__ . '\hide_venue_class_for_protected_event', 10, 3 );
-
-/**
- * Keep password-protected events out of venue-filtered event queries.
- *
- * `GET /wp/v2/gatherpress_events?_gatherpress_venue[_exclude]=<term>` otherwise
- * returns (or omits) a protected event by its venue, naming the venue it uses.
- * For a caller who cannot read private events, drop password-protected events
- * from the result whenever the query filters by venue — include or exclude —
- * the same way the session collection drops them.
- *
- * @param array            $args    WP_Query args.
- * @param \WP_REST_Request $request The REST request.
- *
- * @return array The query args.
- */
-function hide_protected_events_in_venue_filter( array $args, \WP_REST_Request $request ): array {
-	// Both the include and exclude venue params narrow the result by venue, so
-	// either one reveals a protected event's venue (excluding a venue leaves
-	// the event in or out depending on whether it uses that venue).
-	if ( empty( $request['_gatherpress_venue'] ) && empty( $request['_gatherpress_venue_exclude'] ) ) {
-		return $args;
-	}
-
-	$post_type = get_post_type_object( 'gatherpress_event' );
-
-	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
-		return $args;
-	}
-
-	$args['has_password'] = false;
-
-	return $args;
-}
-
-add_filter( 'rest_gatherpress_event_query', __NAMESPACE__ . '\hide_protected_events_in_venue_filter', 10, 2 );
-
-/**
- * Do not reveal a password-protected event's venue through the terms route.
- *
- * `GET /wp/v2/_gatherpress_venue?post=<id>` returns the venue term assigned to
- * a post. Drop any requested event that requires its password from a caller
- * who cannot edit it, so the route returns no venue for a protected event.
- *
- * @param array            $args    WP_Term_Query args.
- * @param \WP_REST_Request $request The REST request.
- *
- * @return array The term query args.
- */
-function hide_venue_terms_for_protected_event( array $args, \WP_REST_Request $request ): array {
-	if ( empty( $args['post'] ) ) {
-		return $args;
-	}
-
-	$visible = array_filter(
-		(array) $args['post'],
-		static function ( $post_id ): bool {
-			return ! post_password_required( (int) $post_id ) || current_user_can( 'edit_post', (int) $post_id );
-		}
-	);
-
-	// `array( 0 )` matches no post, so a request for only gated events returns
-	// no terms rather than the event's venue.
-	$args['post'] = $visible ? array_values( $visible ) : array( 0 );
-
-	return $args;
-}
-
-add_filter( 'rest__gatherpress_venue_query', __NAMESPACE__ . '\hide_venue_terms_for_protected_event', 10, 2 );
-
-/**
- * Keep a password-protected event's venue out of its RSS feed item.
- *
- * GatherPress builds the event feed excerpt and content at priority 10 and
- * appends the venue to the metadata line with no password check
- * ({@see \GatherPress\Core\Feed::get_default_event_excerpt()} and
- * `get_default_event_content()`). Running later (priority 20), rebuild that
- * venue segment with the same translated format GatherPress uses and remove it
- * for a protected event, so the feed follows the password like the page does.
- * Building the exact string avoids guessing at the label's punctuation in a
- * given locale or at what the venue name may contain. If GatherPress's markup
- * changes, the venue simply stays; it is never newly exposed.
- *
- * @param string $text The feed excerpt or content GatherPress built.
- *
- * @return string The text with the venue segment removed for a protected event.
- */
-function hide_venue_in_protected_event_feed( string $text ): string {
-	$event_id = get_the_ID();
-
-	if ( ! $event_id || ! post_password_required( $event_id ) ) {
-		return $text;
-	}
-
-	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) || ! class_exists( '\GatherPress\Core\Venue\Venue' ) || ! class_exists( '\GatherPress\Core\Utility' ) ) {
-		return $text;
-	}
-
-	$venue = ( new \GatherPress\Core\Event\Event( $event_id ) )->get_venue_information();
-
-	if ( empty( $venue['name'] ) ) {
-		return $text;
-	}
-
-	$segment = sprintf(
-		/* translators: 1: Singular post type label (e.g. "Venue"), 2: Venue name. */
-		__( '%1$s: %2$s', 'gatherpress' ),
-		\GatherPress\Core\Utility::post_type_label( 'singular_name', \GatherPress\Core\Venue\Venue::POST_TYPE ),
-		$venue['name']
-	);
-
-	// The venue is the last ` | `-joined token inside the metadata `<strong>`,
-	// so remove it with its separator, or on its own when it is the only token.
-	return str_replace(
-		array( ' | ' . $segment . '</strong>', '<strong>' . $segment . '</strong>' ),
-		array( '</strong>', '<strong></strong>' ),
-		$text
-	);
-}
-
-add_filter( 'gatherpress_event_feed_excerpt', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
-add_filter( 'gatherpress_event_feed_content', __NAMESPACE__ . '\hide_venue_in_protected_event_feed', 20 );
-
-/**
- * Whether the current viewer is kept from a password-protected event's venue.
- *
- * Mirrors the REST gate: the event requires its password and the viewer
- * cannot edit it. A visitor who has entered the password is let through.
- *
- * @param int $event_id The event.
- *
- * @return bool
- */
-function is_event_venue_withheld( int $event_id ): bool {
-	return 'gatherpress_event' === get_post_type( $event_id )
-		&& post_password_required( $event_id )
-		&& ! current_user_can( 'edit_post', $event_id );
-}
-
-/**
- * Keep a password-protected event's venue out of its calendar output.
- *
- * GatherPress's calendar endpoints (the iCal and Outlook downloads, the Google
- * and Yahoo redirects, and every iCal feed) put the venue name and address in
- * the event's LOCATION or redirect URL, with no password check. They read the
- * venue through {@see \GatherPress\Core\Event\Event::get_venue_information()},
- * which takes it from get_the_terms(), so drop the venue term there.
- *
- * Only on calendar requests: the same lookup builds the RSVP confirmation and
- * organiser emails, which go to people the event was shared with.
- *
- * @param \WP_Term[]|false|\WP_Error $terms    The post's terms.
- * @param int                        $post_id  The post.
- * @param string                     $taxonomy The taxonomy.
- *
- * @return \WP_Term[]|false|\WP_Error The terms, without the venue for a protected event.
- */
-function hide_venue_in_protected_event_calendar( $terms, $post_id, $taxonomy ) {
-	// Every GatherPress calendar endpoint is routed through this query var.
-	if ( '_gatherpress_venue' !== $taxonomy || ! is_array( $terms ) || ! get_query_var( 'gatherpress_calendar' ) ) {
-		return $terms;
-	}
-
-	return is_event_venue_withheld( (int) $post_id ) ? array() : $terms;
-}
-
-add_filter( 'get_the_terms', __NAMESPACE__ . '\hide_venue_in_protected_event_calendar', 10, 3 );
-
-/*
- * Don't cache calendar responses on group sites.
- *
- * GatherPress 0.36.0 keeps one rendered copy of each calendar download and
- * feed for everyone, and sends it as `Cache-Control: public`. The filter above
- * makes that output depend on the viewer, so whoever asked first decided
- * what everyone got: an organiser's copy handed a protected event's venue to
- * logged-out visitors, and a visitor's copy left it out for the organiser.
- * Zero renders every response fresh and sends it `no-cache`, as before 0.36.0.
- */
-add_filter( 'gatherpress_calendar_max_age', '__return_zero' );
-
-/**
- * Don't advertise a password-protected event's venue feed in its page head.
- *
- * GatherPress adds an iCal `<link rel="alternate">` for each term on the event
- * ({@see \GatherPress\Core\Calendar\Setup::alternate_links()}), titled with the
- * venue's name. Drop the venue from that term lookup while the head prints.
- *
- * @param \WP_Term[]|int[]|string[] $terms      The terms found.
- * @param string[]|null             $taxonomies The taxonomies queried.
- * @param array                     $args       The term query args.
- *
- * @return array The terms, without the venue for a protected event.
- */
-function hide_venue_feed_link_for_protected_event( $terms, $taxonomies, $args ) {
-	if (
-		! doing_action( 'wp_head' )
-		|| empty( $args['object_ids'] )
-		|| ! in_array( '_gatherpress_venue', (array) $taxonomies, true )
-		|| ! array_filter( array_map( 'intval', (array) $args['object_ids'] ), __NAMESPACE__ . '\is_event_venue_withheld' )
-	) {
-		return $terms;
-	}
-
-	return array_values(
-		array_filter(
-			$terms,
-			static function ( $term ): bool {
-				return ! ( $term instanceof \WP_Term && '_gatherpress_venue' === $term->taxonomy );
-			}
-		)
-	);
-}
-
-add_filter( 'get_terms', __NAMESPACE__ . '\hide_venue_feed_link_for_protected_event', 10, 3 );
 
 /**
  * Generate venue static maps in the background instead of during the save.

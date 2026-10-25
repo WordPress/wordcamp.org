@@ -98,7 +98,7 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 			'methods' => array( 'has_event_updates_opt_in' ),
 		),
 		'GatherPress\Core\Utility'          => array(
-			'methods' => array( 'post_type_label', 'timezone_choices', 'normalize_timezone_string' ),
+			'methods' => array( 'timezone_choices', 'normalize_timezone_string' ),
 		),
 		'GatherPress\Core\Topic'            => array(
 			'constants' => array( 'TAXONOMY' ),

@@ -425,6 +425,12 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   pagination links) don't count. A REST call with the right `?password=`
   sees the venue, like core's content. Editors without the password get the
   event page, not an `.ics`, from a protected event's calendar endpoints.
+  Look at the logged-out page too, not just the grep: when GatherPress
+  blanks a block, a static label beside it in our templates stays. 0.36.1
+  left the sidebar card holding only "Date and time"
+  (`hide_event_info_card_for_protected_event()` in the theme drops it), and
+  the `…/flyer/` view still prints empty "Date and time" and "Location"
+  labels.
 
 ## 6. Performance sanity check
 

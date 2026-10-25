@@ -149,6 +149,33 @@ class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
 	}
 
 	/**
+	 * A password-protected event's card isn't rendered at all.
+	 *
+	 * Since GatherPress 0.36.1 every block in the card renders nothing until
+	 * the password is entered, which left a box holding only the static
+	 * "Date and time" label.
+	 */
+	public function test_info_card_is_dropped_for_a_protected_event() {
+		require_once SUT_WP_CONTENT_DIR . 'themes/groups-site/functions.php';
+		add_filter( 'render_block_core/group', 'WordCamp\\Groups\\Site\\hide_event_info_card_for_protected_event', 10, 2 );
+
+		$event_id = $this->create_event_without_details();
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$this->assertStringContainsString( 'groups-site-event-info-card', render_block( $this->get_info_card_block() ) );
+
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret-pass',
+			)
+		);
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$this->assertSame( '', render_block( $this->get_info_card_block() ) );
+	}
+
+	/**
 	 * The structural half: the card separates its zones with a border on the
 	 * zone, never with a sibling `core/separator` that can outlive it.
 	 */

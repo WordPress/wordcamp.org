@@ -143,6 +143,24 @@ class Test_Review extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Saving a review screen loaded before another reviewer's rejection doesn't undo it.
+	 */
+	public function test_stale_review_screen_keeps_the_status(): void {
+		$post_id = $this->create_application( 'oh-rejected' );
+
+		// What the edit screen sends when it was loaded while the application was still being reviewed.
+		wp_update_post(
+			array(
+				'ID'                   => $post_id,
+				'post_status'          => 'oh-reviewing',
+				'original_post_status' => 'oh-reviewing',
+			)
+		);
+
+		$this->assertSame( 'oh-rejected', get_post_status( $post_id ) );
+	}
+
+	/**
 	 * A reviewer's save leaves the application unowned, so deleting their account doesn't delete it.
 	 */
 	public function test_saving_keeps_the_application_unowned(): void {

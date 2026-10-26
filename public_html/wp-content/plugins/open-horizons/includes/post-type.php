@@ -167,7 +167,14 @@ function enforce_status_transition( array $data, array $postarr ): array {
 
 	$post = get_post( (int) $postarr['ID'] );
 
-	if ( $post && ! is_allowed_transition( $post->post_status, (string) $data['post_status'] ) ) {
+	if ( ! $post ) {
+		return $data;
+	}
+
+	// A review screen loaded before someone else changed the status would otherwise change it back.
+	$is_stale = isset( $postarr['original_post_status'] ) && $postarr['original_post_status'] !== $post->post_status;
+
+	if ( $is_stale || ! is_allowed_transition( $post->post_status, (string) $data['post_status'] ) ) {
 		$data['post_status'] = $post->post_status;
 	}
 

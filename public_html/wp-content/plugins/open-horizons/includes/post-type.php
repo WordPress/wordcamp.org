@@ -14,6 +14,7 @@ defined( 'WPINC' ) || die();
 add_action( 'init', __NAMESPACE__ . '\register_post_type' );
 add_action( 'init', __NAMESPACE__ . '\register_statuses' );
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
+add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );
 add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
 add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
 
@@ -168,6 +169,22 @@ function enforce_status_transition( array $data, array $postarr ): array {
 
 	if ( $post && ! is_allowed_transition( $post->post_status, (string) $data['post_status'] ) ) {
 		$data['post_status'] = $post->post_status;
+	}
+
+	return $data;
+}
+
+/**
+ * Keeps applications unowned, which core's edit screen would otherwise hand to the first reviewer who saves one.
+ *
+ * Ownership matters beyond the list screens: deleting a user from the network deletes every post they authored.
+ *
+ * @param array $data Post data about to be saved.
+ * @return array
+ */
+function keep_unowned( array $data ): array {
+	if ( POST_TYPE === $data['post_type'] ) {
+		$data['post_author'] = 0;
 	}
 
 	return $data;

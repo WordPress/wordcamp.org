@@ -45,7 +45,7 @@ function register_eraser( array $erasers ): array {
 }
 
 /**
- * Exports the applications made with an email address, or by its account.
+ * Exports the applications made by an email address's account.
  *
  * @param string $email The requester's email address.
  * @return array `data` and `done`, as core expects.
@@ -96,7 +96,7 @@ function export_personal_data( string $email ): array {
 }
 
 /**
- * Anonymizes the applications made with an email address, or by its account.
+ * Anonymizes the applications made by an email address's account.
  *
  * @param string $email The requester's email address.
  * @return array `items_removed`, `items_retained`, `messages` and `done`, as core expects.

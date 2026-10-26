@@ -149,7 +149,7 @@ function submit_application( \WP_User $user, array $input ): int|\WP_Error {
  *     Optional.
  *
  *     @type int    $user_id  The applicant's user ID.
- *     @type string $email    The applicant's email address, or their account's.
+ *     @type string $email    The email address of the applicant's account.
  *     @type int    $event_id The flagship event.
  *     @type int    $since    Only applications submitted in the last this many seconds.
  * }
@@ -166,23 +166,17 @@ function find_applications( array $args ): array {
 	}
 
 	if ( ! empty( $args['email'] ) ) {
-		$by_email = array(
-			'relation' => 'OR',
-			array(
-				'key'   => '_oh_applicant_email',
-				'value' => $args['email'],
-			),
-		);
-
 		$user = get_user_by( 'email', $args['email'] );
-		if ( $user ) {
-			$by_email[] = array(
-				'key'   => '_oh_applicant_user_id',
-				'value' => $user->ID,
-			);
+
+		// Not by the typed address: it's unverified, so matching it would hand an application to its owner.
+		if ( ! $user ) {
+			return array();
 		}
 
-		$meta_query[] = $by_email;
+		$meta_query[] = array(
+			'key'   => '_oh_applicant_user_id',
+			'value' => $user->ID,
+		);
 	}
 
 	if ( ! empty( $args['event_id'] ) ) {
@@ -240,7 +234,7 @@ function send_confirmation( \WP_User $user, array $answers, array $event ): void
 		),
 		$answers['name'],
 		$event_name,
-		wp_date( get_option( 'date_format' ), $event['closes'] )
+		wp_date( get_option( 'date_format' ), $event['closes'], new \DateTimeZone( 'UTC' ) )
 	);
 
 	wp_mail(

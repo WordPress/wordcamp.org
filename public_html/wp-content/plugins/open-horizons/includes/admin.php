@@ -479,7 +479,7 @@ function render_settings_page(): void {
 							<span class="description">
 								<?php
 								/* translators: 1: Date applications open. 2: Date they close. */
-								printf( esc_html__( '(applications %1$s to %2$s)', 'wordcamporg' ), esc_html( wp_date( 'Y-m-d', $window['opens'] ) ), esc_html( wp_date( 'Y-m-d', $window['closes'] ) ) );
+								printf( esc_html__( '(applications %1$s to %2$s)', 'wordcamporg' ), esc_html( gmdate( 'Y-m-d', $window['opens'] ) ), esc_html( gmdate( 'Y-m-d', $window['closes'] ) ) );
 								?>
 							</span>
 						<?php endif; ?>

@@ -57,8 +57,7 @@ use WP_User;
 
 use function WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key;
 use function WordCamp\Groups\Frontend\REST\storable_timezone;
-use function WordCamp\Groups\Frontend\REST\sync_event_venue_terms;
-use function WordCamp\Groups\Frontend\REST\sync_online_event_link;
+use function WordCamp\Groups\Frontend\REST\sync_event_venue;
 use const WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META;
 
 defined( 'WPINC' ) || die();
@@ -2137,12 +2136,11 @@ function import_event( array $event, bool $match_people = false ): array {
 		)
 	);
 
-	sync_event_venue_terms( $post_id, find_or_create_venue( $event['venue'] ), $event['is_online'] );
-
 	// Meetup doesn't hand out the meeting link, so the organizer adds it while
 	// reviewing -- and a refresh keeps one they've added.
-	sync_online_event_link(
+	sync_event_venue(
 		$post_id,
+		find_or_create_venue( $event['venue'] ),
 		$event['is_online'],
 		$existing ? (string) get_post_meta( $post_id, 'gatherpress_online_event_link', true ) : ''
 	);

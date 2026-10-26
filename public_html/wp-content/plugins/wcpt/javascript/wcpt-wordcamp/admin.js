@@ -40,6 +40,10 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		$virtualEventCheckbox.change( self.togglePhysicalVenueFields );
 		$virtualEventCheckbox.trigger( 'change' );
+
+		var $subtypeSelect = $( 'select[name="event_subtype"]' );
+		$subtypeSelect.change( self.toggleCampusConnectVenueFields );
+		self.toggleCampusConnectVenueFields();
 		
 		$streamingSelection.find( 'select' ).change( function( event ) {
 			if ( 'other' === $( event.target ).val() ) {
@@ -89,6 +93,33 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		} else {
 			$items.show();
 			$hostRegion.hide();
+			self.toggleCampusConnectVenueFields();
+		}
+	};
+
+	/**
+	 * Toggle the visibility of the Number of venues field for Campus Connect events.
+	 */
+	self.toggleCampusConnectVenueFields = function() {
+		var $subtypeSelect  = $( 'select[name="event_subtype"]' ),
+			isCampusConnect = false;
+
+		if ( $subtypeSelect.length ) {
+			isCampusConnect = 'campusconnect' === $subtypeSelect.val();
+		} else {
+			var $subtypeDisplay = $( '#post-subtype-display' );
+			if ( $subtypeDisplay.length ) {
+				isCampusConnect = 'campusconnect' === $subtypeDisplay.data( 'subtype' );
+			}
+		}
+
+		var isVirtual    = $( '#wcpt_virtual_event_only' ).is( ':checked' ),
+			$venuesField = $( '.field__wcpt_number_of_venues' );
+
+		if ( isCampusConnect && ! isVirtual ) {
+			$venuesField.show();
+		} else {
+			$venuesField.hide();
 		}
 	};
 

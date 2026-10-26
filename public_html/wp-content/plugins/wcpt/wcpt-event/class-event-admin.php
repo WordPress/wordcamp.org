@@ -568,7 +568,16 @@ abstract class Event_Admin {
 					break;
 
 				case 'number':
-					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					if ( 'Number of venues' === $key ) {
+						$num_val = ! empty( $values[ $key ] ) ? absint( $values[ $key ] ) : '';
+						if ( '' !== $num_val && $num_val > 0 ) {
+							update_post_meta( $post_id, $key, $num_val );
+						} else {
+							delete_post_meta( $post_id, $key );
+						}
+					} else {
+						update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					}
 					break;
 
 				case 'checkbox-delete-on-unset':
@@ -863,6 +872,8 @@ abstract class Event_Admin {
 								<?php
 								break;
 							case 'number':
+								$step = ( 'Number of venues' === $key ) ? '1' : 'any';
+								$min  = ( 'Number of venues' === $key ) ? '1' : '0';
 								?>
 
 								<input
@@ -870,8 +881,8 @@ abstract class Event_Admin {
 									name="<?php echo esc_attr( $object_name ); ?>"
 									id="<?php echo esc_attr( $object_name ); ?>"
 									value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-									step="any"
-									min="0"
+									step="<?php echo esc_attr( $step ); ?>"
+									min="<?php echo esc_attr( $min ); ?>"
 									<?php echo esc_attr( $readonly ); ?>
 								/>
 

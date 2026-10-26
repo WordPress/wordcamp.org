@@ -221,8 +221,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$address_key = self::get_address_key( $post_id );
-			$new_address = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
+			$address_key     = self::get_address_key( $post_id );
+			$new_address     = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ] ?? '';
 			$address_changed = empty( $original_meta_values[ $address_key ][0] ) || $new_address !== $original_meta_values[ $address_key ][0];
 
 			// No need to geocode if it hasn't changed.
@@ -455,6 +455,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Website URL'                => 'text',
 						'Contact Information'        => 'textarea',
 						'Exhibition Space Available' => 'checkbox',
+						'Number of venues'           => 'number',
 					);
 					break;
 
@@ -614,6 +615,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 							'Website URL'                      => 'text',
 							'Contact Information'              => 'textarea',
 							'Exhibition Space Available'       => 'checkbox',
+							'Number of venues'                 => 'number',
 
 							'Contributor Day'                  => 'checkbox',
 							'Contributor Day Date (YYYY-mm-dd)' => 'date',
@@ -1300,6 +1302,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
+
+			if ( ! self::is_virtual_event( $post_id ) && WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_id ) ) {
+				$scheduled[] = 'Number of venues';
+			}
 
 			switch ( $status ) {
 				case 'needs-site':
@@ -2064,6 +2070,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Global Sponsorship Grant'        => 'Deprecated.',
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
+		'Number of venues'                => '(Campus Connect only) Total number of participating venues or campuses.',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

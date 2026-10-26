@@ -75,6 +75,7 @@ function _get_network_plugin_state_list( $state ) {
 			'camptix-visa-letters/camptix-visa-letters.php',
 			'liveblog/liveblog.php',
 			'multi-event-sponsors/bootstrap.php',
+			'open-horizons/bootstrap.php',
 			'supportflow/supportflow.php',
 			'wordcamp-api/bootstrap.php',
 			'wordcamp-organizer-reminders/bootstrap.php',

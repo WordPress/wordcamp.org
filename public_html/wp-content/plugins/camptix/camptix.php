@@ -4692,7 +4692,7 @@ class CampTix_Plugin {
 			$available_tickets = 0; // Don't bother to show the ticketing form.
 		}
 
-		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( (array) $_REQUEST['tix_errors'] ) : array();
+		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( array_filter( (array) $_REQUEST['tix_errors'], 'is_string' ) ) : array();
 
 		if ( isset( $redirected_error_flags['payment_failed'] ) ) {
 			/** @todo explain error */

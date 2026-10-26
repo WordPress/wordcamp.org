@@ -93,6 +93,8 @@ defined( 'WPINC' ) || die();
 					<td>
 						<?php if ( ! empty( $camp['attendance_measured'] ) ) : ?>
 							<?php echo esc_html( number_format_i18n( $camp['attended'] ) ); ?>
+						<?php elseif ( ! empty( $camp['attended'] ) ) : ?>
+							not measured (only <?php echo esc_html( number_format_i18n( $camp['attended'] ) ); ?> checked in)
 						<?php else : ?>
 							not measured
 						<?php endif; ?>
@@ -106,7 +108,7 @@ defined( 'WPINC' ) || die();
 	<p class="description" style="margin-top: 16px;">
 		Spend counts paid invoices only (optionally paid + sent), normalized to USD at the event-date exchange rate.
 		Registered = published attendee records; Checked In = attendees marked as attended via CampTix check-in.
-		"Not measured" means in-platform check-in wasn't used at that event — the attendance there is unknown, not zero.
+		"Not measured" means in-platform check-in wasn't used at that event, or too few attendees were checked in (under 25% by default) to count — the attendance there is unknown, not zero.
 		Reach numbers are whole-event audiences reached by the sponsor's placement, not per-sponsor interactions.
 	</p>
 <?php endif; ?>

@@ -289,11 +289,6 @@ class Test_Groups_Export extends Groups_TestCase {
 	public function test_export_venue_names() {
 		$physical_id = $this->create_test_event( array( 'new_venue_name' => 'Community Hall' ) );
 
-		// The `online-event` sentinel term normally exists on a production
-		// site; the fixture blog starts without it.
-		if ( ! term_exists( 'online-event', '_gatherpress_venue' ) ) {
-			wp_insert_term( 'Online event', '_gatherpress_venue', array( 'slug' => 'online-event' ) );
-		}
 		$online_id = $this->create_test_event(
 			array(
 				'is_online'         => true,

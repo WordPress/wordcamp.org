@@ -249,12 +249,12 @@ class CampusConnect_Details extends WordCamp_Details {
 	 * which in a private context holds organiser e-mail addresses and telephone
 	 * numbers.
 	 *
-	 * `Actual Attendees` is here on purpose, and its presence is subtler than it
-	 * looks: `meta_keys()` unsets it whenever `get_post()` returns a post whose
-	 * status is not `wcpt-closed`. It survives a REST dispatch only because
-	 * there is no global `$post` at that point. If a future change sets up
-	 * postdata before this runs, the field will disappear from the response --
-	 * so that is a deliberate dependency, not an accident.
+	 * `Actual Attendees` is here on purpose. It used to reach this response only by
+	 * accident: `meta_keys()` unset it whenever `get_post()` returned a post that was
+	 * not closed, and it survived a REST dispatch purely because there is no global
+	 * `$post` at that point. That dependency is gone. Since #1603 the field is in
+	 * `meta_keys()` at every status, so this response no longer rests on the absence
+	 * of postdata.
 	 *
 	 * `Tracker URL` is deliberately absent: it comes from `get_edit_post_link()`,
 	 * which returns null for callers who cannot edit the post -- precisely the

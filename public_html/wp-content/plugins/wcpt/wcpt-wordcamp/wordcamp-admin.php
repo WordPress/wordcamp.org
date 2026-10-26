@@ -506,15 +506,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
-					}
-
 					break;
 
 				case 'all':
@@ -551,15 +542,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( ! current_user_can( 'manage_options' ) ) {
 						unset( $retval['Transparency Report Received'] );
 						unset( $retval['Series Event'] );
-					}
-
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
 					}
 
 					$retval = array_merge(
@@ -1234,6 +1216,94 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				}
 			}
 
+			// Closed.
+			if ( 'wcpt-closed' == $post_data['post_status'] ) {
+				$post_data = $this->validate_closed_status( $post_data, $post_data_raw );
+			}
+
+			return $post_data;
+		}
+
+		/**
+		 * Refuse a move to `wcpt-closed` while the event's attendance has not been recorded.
+		 *
+		 * Reads what the screen posted, falling back to what is stored: the field is disabled
+		 * until the event has ended, and a disabled input posts nothing, so a save that only
+		 * changes something else would otherwise read the attendance as missing.
+		 *
+		 * Already-closed posts pass straight through. The requirement is on the transition, not
+		 * on the status, so a camp closed before this rule existed stays editable.
+		 *
+		 * @param array $post_data     Sanitized post data.
+		 * @param array $post_data_raw Raw post data.
+		 *
+		 * @return array The post data, with the status put back when a required field is empty.
+		 */
+		private function validate_closed_status( $post_data, $post_data_raw ) {
+			/*
+			 * Cron and WP-CLI without a user are the workflow's own writers, the same exemption
+			 * `WordCamp_Status_Guard::enforce_post_status()` makes and for the same reason:
+			 * `close_wordcamps_after_event()` sets `wcpt-closed` from cron with no form behind it.
+			 * A person pressing Close can be asked for the number; a cron closing an event months
+			 * later cannot, and an event wedged in `wcpt-scheduled` for ever misreports more than
+			 * one closed with the figure missing. #1603 says as much about events already closed
+			 * without a value: flag them in reports, do not block them.
+			 */
+			if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI && ! is_user_logged_in() ) ) {
+				return $post_data;
+			}
+
+			if ( empty( $post_data_raw['ID'] ) ) {
+				return $post_data;
+			}
+
+			$post = get_post( $post_data_raw['ID'] );
+
+			if ( ! $post || 'wcpt-closed' === $post->post_status ) {
+				return $post_data;
+			}
+
+			/*
+			 * Nobody can report attendance for an event that has not happened. The field is
+			 * read-only until the end date passes, so requiring it earlier would refuse the
+			 * close and then name a box the screen will not let anyone type into. It would also
+			 * strand a camp with no dates at all, which cron never closes either.
+			 */
+			if ( ! self::event_has_ended( $post_data_raw['ID'] ) ) {
+				return $post_data;
+			}
+
+			$missing_fields = array();
+
+			foreach ( self::get_required_fields( 'closed', $post_data_raw['ID'] ) as $field ) {
+				$key = wcpt_key_to_str( $field, 'wcpt_' );
+
+				/*
+				 * The form first, then what is stored. A save that changes something else posts
+				 * the box as it stands, and a figure recorded earlier still counts.
+				 */
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+				$value = isset( $_POST[ $key ] )
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- as above.
+					? sanitize_text_field( wp_unslash( $_POST[ $key ] ) )
+					: (string) get_post_meta( $post_data_raw['ID'], $field, true );
+
+				/*
+				 * Not `empty()`: `empty( '0' )` is true, and an event nobody attended is a
+				 * recorded zero rather than a gap. Only an empty string is missing.
+				 */
+				if ( '' === trim( $value ) || 'null' === $value ) {
+					$missing_fields[] = $field;
+				}
+			}
+
+			if ( ! empty( $missing_fields ) ) {
+				$post_data['post_status']     = $post->post_status;
+				$this->active_admin_notices[] = 6;
+
+				set_transient( 'wcpt_missing_fields_' . $post_data_raw['ID'], $missing_fields, MINUTE_IN_SECONDS );
+			}
+
 			return $post_data;
 		}
 
@@ -1301,6 +1371,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
 
+			$closed = array(
+				'Actual Attendees',
+			);
+
 			switch ( $status ) {
 				case 'needs-site':
 					$required_fields = $needs_site;
@@ -1308,6 +1382,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'scheduled':
 					$required_fields = $scheduled;
+					break;
+
+				case 'closed':
+					$required_fields = $closed;
 					break;
 
 				case 'any':
@@ -1385,6 +1463,74 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * The sentence shown when a close was refused, naming what is missing.
+		 *
+		 * Reads the transient `validate_closed_status()` left behind, because the notice is drawn
+		 * on the request after the redirect and the posted values are gone by then.
+		 *
+		 * @param int $post_id
+		 *
+		 * @return string
+		 */
+		private static function get_close_validation_notice( $post_id ) {
+			$missing = get_transient( 'wcpt_missing_fields_' . $post_id );
+
+			if ( empty( $missing ) || ! is_array( $missing ) ) {
+				return __( 'This event could not be closed because a required field is empty.', 'wordcamporg' );
+			}
+
+			delete_transient( 'wcpt_missing_fields_' . $post_id );
+
+			return sprintf(
+				/* translators: %s is a comma-separated list of field names. */
+				_n(
+					'This event could not be closed because %s is empty. Fill it in and close the event again.',
+					'This event could not be closed because these fields are empty: %s. Fill them in and close the event again.',
+					count( $missing ),
+					'wordcamporg'
+				),
+				implode( ', ', $missing )
+			);
+		}
+
+		/**
+		 * Whether the event being edited is over.
+		 *
+		 * Reads the end date, falling back to the start date when it is empty, and treats the day
+		 * itself as part of the event: the same precedence and the same 23:59 cutoff that
+		 * `close_wordcamps_after_event()` uses, so a field that unlocks here cannot disagree with
+		 * the cron that closes the post.
+		 *
+		 * @param int|null $post_id The post to read, or null for the one being edited.
+		 *
+		 * @return bool False when there is no post, or no dates on it.
+		 */
+		public static function event_has_ended( $post_id = null ) {
+			if ( ! $post_id ) {
+				$post = get_post();
+
+				if ( ! $post ) {
+					return false;
+				}
+
+				$post_id = $post->ID;
+			}
+
+			$start_date = get_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', true );
+			$end_date   = get_post_meta( $post_id, 'End Date (YYYY-mm-dd)', true );
+
+			if ( empty( $end_date ) ) {
+				$end_date = $start_date;
+			}
+
+			if ( empty( $end_date ) ) {
+				return false;
+			}
+
+			return strtotime( '23:59', $end_date ) <= time();
+		}
+
+		/**
 		 * Check if a field should be readonly, based on the current user's caps.
 		 *
 		 * @param string $field_name The field to check.
@@ -1445,6 +1591,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				5 => array(
 					'type'   => 'updated',
 					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation and a note has been added to the log. The organizer notification email is sent by the Automated Reminder assigned to the "Campus Connect application needs orientation" trigger — if no reminder is assigned, no email goes out.', 'wordcamporg' ),
+				),
+
+				6 => array(
+					'type'   => 'error',
+					'notice' => self::get_close_validation_notice( $post->ID ),
 				),
 			);
 
@@ -2051,6 +2202,15 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	global $post_id;
 
 	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
+
+	/*
+	 * Attendance is required to close, and only once the event has happened, so the marker
+	 * appears when it starts applying rather than from the day the camp is created. Without
+	 * this the first anyone hears of the requirement is the refusal.
+	 */
+	if ( WordCamp_Admin::event_has_ended( $post_id ) ) {
+		$required_fields = array_merge( $required_fields, WordCamp_Admin::get_required_fields( 'closed', $post_id ) );
+	}
 
 	// @todo When you refactor meta_keys() to support changing labels -- see note in meta_keys() -- also make it support these notes.
 	$messages = array(

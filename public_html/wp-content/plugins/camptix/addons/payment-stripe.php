@@ -880,11 +880,11 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 *
 	 * @return array
 	 */
-	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder, $idempotency_key = '' ) {
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		$result = $this->send_refund_request( $payment_token, $refunds_remainder ? null : $amount, $idempotency_key );
+		$result = $this->send_refund_request( $payment_token, $refunds_remainder ? null : $amount );
 
 		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
 			$order = $this->get_order( $payment_token );
@@ -901,13 +901,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @param string     $payment_token
 	 * @param float|null $amount Optional. The amount to refund, in the currency's base unit.
 	 *                           Null refunds whatever is left of the charge.
-	 * @param string     $idempotency_key Optional. A stable key for this refund. When given, Stripe
-	 *                                    returns the first refund for a repeated key instead of
-	 *                                    making another, so duplicate requests can't refund twice.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token, $amount = null, $idempotency_key = '' ) {
+	public function send_refund_request( $payment_token, $amount = null ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -934,13 +931,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// Create a new Idempotency token for the refund request.
 		// The same token can't be used for both a charge and a refund.
-		//
-		// When the caller passes a stable key (partial refunds do), use it so Stripe collapses a
-		// duplicate of the same refund instead of accepting a second one. Otherwise fall back to a
-		// per-call random token, which keeps the full-refund cron's behaviour unchanged.
-		$idempotency_token = $idempotency_key
-			? md5( 'tix-idempotency-token' . $idempotency_key )
-			: md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
+		$idempotency_token = md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
 		$credentials       = $this->get_api_credentials();
 
 		$fractional_amount = null;

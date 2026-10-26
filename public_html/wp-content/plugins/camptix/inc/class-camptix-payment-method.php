@@ -244,8 +244,6 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 * @param string $payment_token
 	 * @param float  $amount            The amount to refund, in the currency's base unit (e.g. dollars).
 	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
-	 * @param string $idempotency_key   Optional. A key identifying this exact refund, so the gateway
-	 *                                  can collapse a duplicate request instead of refunding twice.
 	 *
 	 * @return array {
 	 *     @type int    $status                     PAYMENT_STATUS_REFUNDED on success.
@@ -253,7 +251,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 *     @type mixed  $refund_transaction_details The gateway's response.
 	 * }
 	 */
-	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder, $idempotency_key = '' ) {
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
 		/** @var $camptix Camptix_Plugin  */
 		global $camptix;
 

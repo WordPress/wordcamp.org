@@ -54,7 +54,6 @@ class CampTix_Plugin {
 	protected $checkout_lock_open  = false;
 	protected $checkout_lock_names = array();
 	protected $refund_lock_name    = '';
-	protected $refund_lock_timeout = 10;
 	protected $abandoned_draft_attendee_ids;
 	protected $did_checkout;
 	protected $shortcode_contents;
@@ -5761,7 +5760,7 @@ class CampTix_Plugin {
 
 			if ( ! $check ) {
 				$this->error( __( 'You have to agree to the terms to request a refund.', 'wordcamporg' ) );
-			} elseif ( ! $this->lock_order_refund( $access_token ) ) {
+			} elseif ( ! $this->lock_order_refund( $tix_payment_token ) ) {
 				// Another refund for this order is already in flight. Refusing here, rather than
 				// reading the tickets as still paid and refunding them again, is the whole point:
 				// it closes the window between checking a ticket's status and marking it refunded.
@@ -5774,8 +5773,11 @@ class CampTix_Plugin {
 				$attendees = $this->get_order_active_attendees( $access_token );
 				list( $refunded_attendee_ids, $refundable_amount, $supports_partial ) = $this->get_order_refund_state( $tix_payment_token, $transaction, $attendees );
 
+				// Once part of the order was refunded, only the tickets the request names are refunded,
+				// even with a single ticket left and no choice offered. Otherwise a request naming a
+				// ticket another request has just refunded would refund the one left instead.
 				$attendees_to_refund = $attendees;
-				if ( $supports_partial ) {
+				if ( $supports_partial || $refunded_attendee_ids ) {
 					$selected_ids        = array_map( 'absint', (array) ( $_POST['tix_refund_attendee_ids'] ?? array() ) );
 					$attendees_to_refund = array_values( array_filter( $attendees, function ( $attendee ) use ( $selected_ids ) {
 						return in_array( $attendee->ID, $selected_ids, true );
@@ -5860,6 +5862,12 @@ class CampTix_Plugin {
 			<?php do_action( 'camptix_notices' ); ?>
 			<form action="<?php echo esc_url( add_query_arg( 'tix_action', 'refund_request' ) ); ?>#tix" method="POST">
 				<input type="hidden" name="tix_refund_request_submit" value="1" />
+				<?php if ( ! $supports_partial && $refunded_attendee_ids ) : ?>
+					<?php // No choice is left to offer, but the request still names the tickets it refunds, so a stale request for a ticket refunded meanwhile refunds nothing. ?>
+					<?php foreach ( $attendees as $attendee ) : ?>
+						<input type="hidden" name="tix_refund_attendee_ids[]" value="<?php echo esc_attr( $attendee->ID ); ?>" />
+					<?php endforeach; ?>
+				<?php endif; ?>
 
 				<h2><?php _e( 'Refund Request', 'wordcamporg' ); ?></h2>
 				<table class="tix_tickets_table tix-attendee-form">
@@ -6132,17 +6140,7 @@ class CampTix_Plugin {
 		}
 
 		$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
-
-		// A key identifying this exact refund, so the gateway can collapse a duplicate: two identical
-		// requests send the same key (the gateway returns the first refund instead of making a
-		// second), while a later refund of different tickets sends a different key and goes through.
-		// Belt and braces behind the order lock in form_refund_request(). It's the refund's identity,
-		// not its wire format: each gateway normalizes it to its own idempotency header.
-		$attendee_ids = wp_list_pluck( $attendees_to_refund, 'ID' );
-		sort( $attendee_ids );
-		$idempotency_key = 'tix-partial-refund|' . $payment_token . '|' . implode( ',', $attendee_ids ) . '|' . $amount;
-
-		$data = $payment_method_obj->payment_refund_partial( $transaction['payment_token'], $amount, $refunds_remainder, $idempotency_key );
+		$data               = $payment_method_obj->payment_refund_partial( $transaction['payment_token'], $amount, $refunds_remainder );
 
 		if ( self::PAYMENT_STATUS_REFUNDED != $data['status'] ) {
 			return self::PAYMENT_STATUS_REFUND_FAILED;
@@ -7303,13 +7301,16 @@ class CampTix_Plugin {
 	 * reads the latest rows, including a refund another request has just committed. Reads are
 	 * pinned to the master for the same reason as lock_checkout_rows().
 	 *
-	 * @param string $access_token The order's access token.
+	 * Keyed on the payment token stored on the order's attendees rather than on anything from the
+	 * request, so every request for the order contends for the same lock.
+	 *
+	 * @param string $payment_token The order's payment token, as stored on its attendees.
 	 * @return bool Whether the lock is held.
 	 */
-	function lock_order_refund( $access_token ) {
+	function lock_order_refund( $payment_token ) {
 		global $wpdb;
 
-		$name = sprintf( 'camptix_refund_%d_%s', get_current_blog_id(), $access_token );
+		$name = sprintf( 'camptix_refund_%d_%s', get_current_blog_id(), $payment_token );
 
 		// GET_LOCK is a SELECT, which WordPress.org's HyperDB would send to a replica where nobody
 		// else is waiting on it; pin the request to the master. Plain wpdb has one connection.
@@ -7322,9 +7323,10 @@ class CampTix_Plugin {
 		// after a normal release.
 		register_shutdown_function( array( $this, 'release_order_refund_lock' ) );
 
-		// Seconds to wait for another request's refund of the same order to finish before giving up
-		// and asking the buyer to try again.
-		$got = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, %d )', $name, $this->refund_lock_timeout ) );
+		// Don't wait for another request's refund of the same order to finish. A request that loses the
+		// race is refused and the buyer asked to try again, rather than waiting and then acting on an
+		// order the other request has just changed.
+		$got = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK( %s, 0 )', $name ) );
 		if ( '1' !== (string) $got ) {
 			$this->log( 'Could not take a refund lock.', null, array( 'lock' => $name, 'result' => $got, 'error' => $wpdb->last_error ) );
 			return false;

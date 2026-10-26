@@ -229,6 +229,9 @@ function find_applications( array $args ): array {
 function send_confirmation( \WP_User $user, array $answers, array $event ): void {
 	$headers = defined( 'OPEN_HORIZONS_EMAIL' ) ? array( 'Reply-To: ' . OPEN_HORIZONS_EMAIL ) : array();
 
+	// The email is plain text, and get_the_title() encodes entities.
+	$event_name = html_entity_decode( $event['name'], ENT_QUOTES, 'UTF-8' );
+
 	$message = sprintf(
 		/* translators: 1: Applicant's name. 2: Event name. 3: Date applications close. */
 		__(
@@ -236,14 +239,14 @@ function send_confirmation( \WP_User $user, array $answers, array $event ): void
 			'wordcamporg'
 		),
 		$answers['name'],
-		$event['name'],
+		$event_name,
 		wp_date( get_option( 'date_format' ), $event['closes'] )
 	);
 
 	wp_mail(
 		$user->user_email,
 		/* translators: %s: Event name. */
-		sprintf( __( 'We received your Open Horizons Scholarship application for %s', 'wordcamporg' ), $event['name'] ),
+		sprintf( __( 'We received your Open Horizons Scholarship application for %s', 'wordcamporg' ), $event_name ),
 		$message,
 		$headers
 	);

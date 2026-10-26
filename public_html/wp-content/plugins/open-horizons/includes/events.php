@@ -31,7 +31,8 @@ function get_flagship_event_ids(): array {
  * Four months leaves time for visas; closing two months out leaves time to decide and to travel.
  *
  * @param int $wordcamp_id A `wordcamp` post ID.
- * @return array|null `start`, `opens` and `closes` timestamps, or null without a start date.
+ * @return array|null `start`, `opens` and `closes` (the last second applications are taken) timestamps, or null
+ *                    without a start date.
  */
 function get_application_window( int $wordcamp_id ): ?array {
 	$start = (int) get_post_meta( $wordcamp_id, 'Start Date (YYYY-mm-dd)', true );
@@ -43,7 +44,8 @@ function get_application_window( int $wordcamp_id ): ?array {
 	return array(
 		'start'  => $start,
 		'opens'  => strtotime( '-4 months', $start ),
-		'closes' => strtotime( '-2 months', $start ),
+		// Inclusive, so the date shown to applicants is the last day they can apply.
+		'closes' => strtotime( '-2 months', $start ) - 1,
 	);
 }
 
@@ -59,7 +61,7 @@ function get_open_events(): array {
 	foreach ( get_flagship_event_ids() as $wordcamp_id ) {
 		$window = get_application_window( $wordcamp_id );
 
-		if ( $window && $window['opens'] <= $now && $now < $window['closes'] ) {
+		if ( $window && $window['opens'] <= $now && $now <= $window['closes'] ) {
 			$events[ $wordcamp_id ] = array(
 				'name'   => get_the_title( $wordcamp_id ),
 				'closes' => $window['closes'],

@@ -10,6 +10,7 @@ declare( strict_types = 1 );
 namespace WordCamp\Open_Horizons\Tests;
 
 use WP_UnitTestCase;
+use function WordCamp\Open_Horizons\get_application_window;
 use function WordCamp\Open_Horizons\submit_application;
 use const WordCamp\Open_Horizons\EVENTS_OPTION;
 
@@ -131,6 +132,13 @@ class Test_Application extends WP_UnitTestCase {
 	 * address, not the one typed into the form, so the form can't email strangers.
 	 */
 	public function test_submit_stores_the_application_and_confirms_it(): void {
+		wp_update_post(
+			array(
+				'ID'         => $this->event_id,
+				'post_title' => "WordCamp Asia's 2027",
+			)
+		);
+
 		$post_id = submit_application( $this->applicant, $this->get_input() );
 
 		$this->assertIsInt( $post_id );
@@ -141,7 +149,19 @@ class Test_Application extends WP_UnitTestCase {
 
 		$this->assertCount( 1, $this->mail );
 		$this->assertSame( 'applicant@example.org', $this->mail[0]['to'] );
-		$this->assertSame( 'We received your Open Horizons Scholarship application for WordCamp Asia 2027', $this->mail[0]['subject'] );
+		$this->assertSame( 'We received your Open Horizons Scholarship application for WordCamp Asia’s 2027', $this->mail[0]['subject'] );
+	}
+
+	/**
+	 * The closing date applicants are told is the last day they can still apply.
+	 */
+	public function test_window_closes_at_the_end_of_the_date_shown(): void {
+		update_post_meta( $this->event_id, 'Start Date (YYYY-mm-dd)', strtotime( '2027-03-30' ) );
+
+		$closes = get_application_window( $this->event_id )['closes'];
+
+		$this->assertSame( '2027-01-29', wp_date( 'Y-m-d', $closes ) );
+		$this->assertSame( '2027-01-30', wp_date( 'Y-m-d', $closes + 1 ) );
 	}
 
 	/**

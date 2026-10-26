@@ -533,4 +533,40 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 			$received
 		);
 	}
+	/**
+	 * Each attendee in an order gets its own edit token.
+	 *
+	 * @covers CampTix_Plugin::insert_attendee_drafts
+	 */
+	public function test_insert_attendee_drafts_gives_each_attendee_its_own_edit_token() {
+		global $camptix;
+
+		$ticket_id = self::factory()->post->create( array( 'post_type' => 'tix_ticket' ) );
+		$attendees = array();
+
+		foreach ( array( 'One', 'Two' ) as $name ) {
+			$attendee             = new stdClass();
+			$attendee->ticket_id  = $ticket_id;
+			$attendee->first_name = $name;
+			$attendee->last_name  = 'Attendee';
+			$attendee->email      = strtolower( $name ) . '@example.test';
+			$attendee->answers    = array();
+			$attendee->username   = '';
+			$attendees[]          = $attendee;
+		}
+
+		$drafts = $camptix->insert_attendee_drafts( $attendees, 'stripe', 'receipt@example.test', 'accesstoken', 'paymenttoken' );
+		$tokens = array();
+
+		foreach ( $drafts as $draft ) {
+			$this->attendee_ids[] = $draft->post_id;
+
+			$tokens[] = get_post_meta( $draft->post_id, 'tix_edit_token', true );
+		}
+
+		$this->assertCount( 2, $tokens );
+		$this->assertMatchesRegularExpression( '/^[a-f0-9]{32}$/', $tokens[0] );
+		$this->assertMatchesRegularExpression( '/^[a-f0-9]{32}$/', $tokens[1] );
+		$this->assertNotSame( $tokens[0], $tokens[1] );
+	}
 }

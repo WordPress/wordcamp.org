@@ -110,8 +110,8 @@ function erase_personal_data( string $email ): array {
 
 	return array(
 		'items_removed'  => count( $post_ids ) > 0,
-		'items_retained' => false,
-		'messages'       => array(),
+		'items_retained' => count( $post_ids ) > 0,
+		'messages'       => $post_ids ? array( __( 'Open Horizons applications were anonymized. Their event, status, and funding are kept for the program\'s accounting.', 'wordcamporg' ) ) : array(),
 		'done'           => true,
 	);
 }
@@ -125,6 +125,15 @@ function erase_personal_data( string $email ): array {
  * @param int $post_id The application.
  */
 function anonymize( int $post_id ): void {
+	$applicant_id = (int) get_post_meta( $post_id, '_oh_applicant_user_id', true );
+
+	// The applicant logged their own submission; reviewers' entries aren't about them.
+	foreach ( get_post_meta( $post_id, '_oh_status_change', false ) as $entry ) {
+		if ( $applicant_id && $applicant_id === (int) $entry['user_id'] ) {
+			update_post_meta( $post_id, '_oh_status_change', array_merge( $entry, array( 'user_id' => 0 ) ), $entry );
+		}
+	}
+
 	$personal = array(
 		'_oh_applicant_user_id',
 		'_oh_applicant_email',

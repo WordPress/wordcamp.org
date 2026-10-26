@@ -92,9 +92,32 @@ class Test_Review extends WP_UnitTestCase {
 	public function test_eraser_anonymizes_and_keeps_the_event_status_and_amount(): void {
 		$post_id = $this->create_application( 'oh-funded' );
 
+		update_post_meta( $post_id, '_oh_applicant_user_id', 7 );
+		$log = array(
+			7 => 'oh-received',
+			3 => 'oh-reviewing',
+		);
+
+		foreach ( $log as $user_id => $to ) {
+			add_post_meta(
+				$post_id,
+				'_oh_status_change',
+				array(
+					'user_id' => $user_id,
+					'time'    => 1,
+					'from'    => 'new',
+					'to'      => $to,
+				)
+			);
+		}
+
 		$result = erase_personal_data( 'ana@example.org' );
 
 		$this->assertTrue( $result['items_removed'] );
+		$this->assertTrue( $result['items_retained'] );
+		$log_authors = array_column( get_post_meta( $post_id, '_oh_status_change', false ), 'user_id' );
+		$this->assertNotContains( 7, $log_authors );
+		$this->assertContains( 3, $log_authors );
 		$this->assertSame( 'Anonymized application', get_the_title( $post_id ) );
 		$this->assertStringNotContainsString( 'ana', get_post_field( 'post_name', $post_id ) );
 		$this->assertSame( '', get_post_meta( $post_id, '_oh_application', true ) );

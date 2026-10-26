@@ -19,6 +19,9 @@ namespace WordCamp\Open_Horizons;
 
 defined( 'WPINC' ) || die();
 
+/**
+ * The application post type.
+ */
 const POST_TYPE = 'oh_application';
 
 /**

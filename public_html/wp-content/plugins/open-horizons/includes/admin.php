@@ -411,7 +411,7 @@ function register_settings(): void {
 		EVENTS_OPTION,
 		array(
 			'type'              => 'array',
-			'sanitize_callback' => static fn( $ids ): array => array_values(
+			'sanitize_callback' => static fn( mixed $ids ): array => array_values(
 				array_filter(
 					array_map( 'absint', (array) $ids ),
 					static fn( int $id ): bool => defined( 'WCPT_POST_TYPE_ID' ) && WCPT_POST_TYPE_ID === get_post_type( $id )
@@ -423,13 +423,14 @@ function register_settings(): void {
 }
 
 /**
- * Renders the flagship events screen: upcoming WordCamps, with the picked ones checked.
+ * Renders the flagship events screen: upcoming WordCamps, plus past ones still picked, with the picked ones checked.
  */
 function render_settings_page(): void {
+	$post_type = defined( 'WCPT_POST_TYPE_ID' ) ? WCPT_POST_TYPE_ID : 'wordcamp';
 	$selected  = get_flagship_event_ids();
 	$wordcamps = get_posts(
 		array(
-			'post_type'      => defined( 'WCPT_POST_TYPE_ID' ) ? WCPT_POST_TYPE_ID : 'wordcamp',
+			'post_type'      => $post_type,
 			'post_status'    => 'any',
 			'posts_per_page' => 100,
 			'meta_key'       => 'Start Date (YYYY-mm-dd)', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Admin screen, few rows.
@@ -440,6 +441,26 @@ function render_settings_page(): void {
 			'order'          => 'ASC',
 		)
 	);
+
+	// Past flagships stay listed, or saving the form would unpick them while their applications are still processed.
+	$past = array_diff( $selected, wp_list_pluck( $wordcamps, 'ID' ) );
+
+	if ( $past ) {
+		$wordcamps = array_merge(
+			get_posts(
+				array(
+					'post_type'      => $post_type,
+					'post_status'    => 'any',
+					'post__in'       => $past,
+					'posts_per_page' => count( $past ),
+					'meta_key'       => 'Start Date (YYYY-mm-dd)', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Admin screen, few rows.
+					'orderby'        => 'meta_value_num',
+					'order'          => 'ASC',
+				)
+			),
+			$wordcamps
+		);
+	}
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Flagship Events', 'wordcamporg' ); ?></h1>

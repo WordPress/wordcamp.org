@@ -59,7 +59,7 @@ class Test_Application extends WP_UnitTestCase {
 		update_option( EVENTS_OPTION, array( $this->event_id ) );
 
 		$this->mail         = array();
-		$this->capture_mail = function ( $short_circuit, array $args ): bool {
+		$this->capture_mail = function ( ?bool $short_circuit, array $args ): bool {
 			$this->mail[] = $args;
 
 			return true;

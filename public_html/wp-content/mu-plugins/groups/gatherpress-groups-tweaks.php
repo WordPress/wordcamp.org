@@ -771,7 +771,7 @@ add_action(
 			$carried['event_topic'] = get_event_topic_filter();
 		}
 
-		if ( isset( $_GET['s'] ) && '' !== trim( (string) wp_unslash( $_GET['s'] ) ) ) {
+		if ( isset( $_GET['s'] ) && '' !== trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) ) {
 			$carried['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -843,7 +843,7 @@ add_filter(
 		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
 
 		// An empty search query should not force the "all" time view.
-		if ( isset( $_GET['s'] ) && '' === trim( (string) $_GET['s'] ) && 'all' === $time_filter ) {
+		if ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time_filter ) {
 			$time_filter = 'upcoming';
 		}
 

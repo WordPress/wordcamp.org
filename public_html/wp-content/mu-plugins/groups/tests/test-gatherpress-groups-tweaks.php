@@ -583,6 +583,26 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * A nested `s[r]=x` query arg is treated as an empty search instead of
+	 * raising an "Array to string conversion" warning.
+	 */
+	public function test_array_search_param_is_treated_as_empty() {
+		$_GET['event_time'] = 'all';
+		$_GET['s']          = array( 'r' => 'x' );
+
+		ob_start();
+		do_action( 'wporg_query_filter_in_form', 'event_time' );
+		$time_form = ob_get_clean();
+
+		$query_vars = $this->get_archive_query_vars( null );
+
+		unset( $_GET['event_time'], $_GET['s'] );
+
+		$this->assertStringNotContainsString( 'name="s"', $time_form );
+		$this->assertArrayNotHasKey( 'orderby', $query_vars, 'An empty search falls back to the upcoming view.' );
+	}
+
+	/**
 	 * Nothing applied, nothing carried: a default view should not litter the
 	 * form with hidden inputs restating the default.
 	 */

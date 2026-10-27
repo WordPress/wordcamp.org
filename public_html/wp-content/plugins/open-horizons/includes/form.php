@@ -246,7 +246,7 @@ function send_confirmation( int $post_id, \WP_User $user, array $answers, array 
 
 	$conversation = FreeScout::send(
 		array(
-			'mailbox' => defined( 'FREESCOUT_SCHOLARSHIPS_MAILBOX_ID' ) ? (int) FREESCOUT_SCHOLARSHIPS_MAILBOX_ID : 0,
+			'mailbox' => 'scholarships',
 			'to'      => $user->user_email,
 			/* translators: %s: Event name. */
 			'subject' => sprintf( __( 'We received your Open Horizons Scholarship application for %s', 'wordcamporg' ), $event_name ),

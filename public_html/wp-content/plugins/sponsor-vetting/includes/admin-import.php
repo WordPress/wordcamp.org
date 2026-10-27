@@ -11,8 +11,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'admin_menu', __NAMESPACE__ . '\add_import_page' );
-
 /**
  * Adds the import screen under Sponsor Vetting.
  */
@@ -34,6 +32,7 @@ function add_import_page(): void {
 		add_action( 'load-' . $hook, __NAMESPACE__ . '\handle_import' );
 	}
 }
+add_action( 'admin_menu', __NAMESPACE__ . '\add_import_page' );
 
 /**
  * The transient holding the current user's uploaded rows or import results between steps.

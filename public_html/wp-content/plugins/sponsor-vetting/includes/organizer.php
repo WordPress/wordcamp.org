@@ -13,11 +13,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'add_meta_boxes_wcb_sponsor', __NAMESPACE__ . '\add_organizer_meta_box' );
-add_filter( 'manage_wcb_sponsor_posts_columns', __NAMESPACE__ . '\add_organizer_column', 20 );
-add_action( 'manage_wcb_sponsor_posts_custom_column', __NAMESPACE__ . '\render_organizer_column', 10, 2 );
-add_action( 'admin_post_sv_request_vetting', __NAMESPACE__ . '\handle_vetting_request' );
-
 /**
  * Gets where each of the current camp's sponsors stands, as organizers may see it.
  *
@@ -128,6 +123,7 @@ function add_organizer_meta_box(): void {
 		add_meta_box( 'sv-vetting', __( 'Sponsor Vetting', 'wordcamporg' ), __NAMESPACE__ . '\render_organizer_meta_box', 'wcb_sponsor', 'side' );
 	}
 }
+add_action( 'add_meta_boxes_wcb_sponsor', __NAMESPACE__ . '\add_organizer_meta_box' );
 
 /**
  * Renders where the sponsor's vetting stands, with a way to request it.
@@ -172,6 +168,7 @@ function add_organizer_column( array $columns ): array {
 
 	return $columns;
 }
+add_filter( 'manage_wcb_sponsor_posts_columns', __NAMESPACE__ . '\add_organizer_column', 20 );
 
 /**
  * Renders the vetting column, looking up every sponsor on the page at once.
@@ -192,6 +189,7 @@ function render_organizer_column( string $column, int $sponsor_id ): void {
 
 	echo esc_html( $statuses[ $sponsor_id ]['label'] ?? '' );
 }
+add_action( 'manage_wcb_sponsor_posts_custom_column', __NAMESPACE__ . '\render_organizer_column', 10, 2 );
 
 /**
  * Requests vetting for a camp's sponsor, from its edit screen.
@@ -216,3 +214,4 @@ function handle_vetting_request(): void {
 	wp_safe_redirect( admin_url( 'post.php?post=' . $sponsor_id . '&action=edit' ) );
 	exit;
 }
+add_action( 'admin_post_sv_request_vetting', __NAMESPACE__ . '\handle_vetting_request' );

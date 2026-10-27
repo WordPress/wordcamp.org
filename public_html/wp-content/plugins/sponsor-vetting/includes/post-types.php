@@ -14,9 +14,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'init', __NAMESPACE__ . '\register_on_central' );
-add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );
-
 /**
  * The company statuses: the vetting pipeline.
  *
@@ -70,6 +67,7 @@ function register_on_central(): void {
 		register_types();
 	}
 }
+add_action( 'init', __NAMESPACE__ . '\register_on_central' );
 
 /**
  * Registers the post types and statuses, once per request.
@@ -227,3 +225,4 @@ function keep_unowned( array $data ): array {
 
 	return $data;
 }
+add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );

@@ -11,9 +11,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'admin_notices', __NAMESPACE__ . '\render_notices' );
-add_filter( 'post_updated_messages', __NAMESPACE__ . '\get_updated_messages' );
-
 /**
  * Queues a notice for the current user's next screen, since saving redirects before it can be shown.
  *
@@ -55,6 +52,7 @@ function render_notices(): void {
 		);
 	}
 }
+add_action( 'admin_notices', __NAMESPACE__ . '\render_notices' );
 
 /**
  * Words the notices after saving for companies and sponsorships, not posts.
@@ -68,6 +66,7 @@ function get_updated_messages( array $messages ): array {
 
 	return $messages;
 }
+add_filter( 'post_updated_messages', __NAMESPACE__ . '\get_updated_messages' );
 
 /**
  * Tracks whether a screen's save handler is running, since the actions it takes save the post again.

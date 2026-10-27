@@ -11,11 +11,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'manage_' . COMPANY_POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_company_columns' );
-add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
-add_action( 'add_meta_boxes_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\add_company_meta_boxes' );
-add_action( 'save_post_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\save_company' );
-
 /**
  * Sets the company list's columns.
  *
@@ -32,6 +27,7 @@ function get_company_columns( array $columns ): array {
 		'sv_sponsorships' => __( 'Sponsorships', 'wordcamporg' ),
 	);
 }
+add_filter( 'manage_' . COMPANY_POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_company_columns' );
 
 /**
  * Renders a custom column of the company list.
@@ -71,6 +67,7 @@ function render_company_column( string $column, int $company_id ): void {
 			break;
 	}
 }
+add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
 
 /**
  * Counts the sponsorships of the companies on the list screen, in one query for the page.
@@ -180,6 +177,7 @@ function add_company_meta_boxes(): void {
 	add_meta_box( 'sv-sponsorships', __( 'Sponsorships', 'wordcamporg' ), __NAMESPACE__ . '\render_company_sponsorships_box', COMPANY_POST_TYPE, 'normal' );
 	add_meta_box( 'sv-log', __( 'Notes and History', 'wordcamporg' ), __NAMESPACE__ . '\render_log_box', COMPANY_POST_TYPE, 'normal', 'low' );
 }
+add_action( 'add_meta_boxes_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\add_company_meta_boxes' );
 
 /**
  * Renders the status, its dates and flags, and the Save button.
@@ -424,6 +422,7 @@ function save_company( int $post_id ): void {
 
 	is_saving( false );
 }
+add_action( 'save_post_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\save_company' );
 
 /**
  * Words a sending error for the reviewer, warning them when FreeScout may have sent it anyway.

@@ -14,9 +14,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_exporter' );
-add_filter( 'wp_privacy_personal_data_erasers', __NAMESPACE__ . '\register_eraser' );
-
 /**
  * The meta keys that hold a company contact's personal data.
  *
@@ -46,6 +43,7 @@ function register_exporter( array $exporters ): array {
 
 	return $exporters;
 }
+add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_exporter' );
 
 /**
  * Registers the eraser on Central.
@@ -63,6 +61,7 @@ function register_eraser( array $erasers ): array {
 
 	return $erasers;
 }
+add_filter( 'wp_privacy_personal_data_erasers', __NAMESPACE__ . '\register_eraser' );
 
 /**
  * Finds the companies an email address is the contact for.

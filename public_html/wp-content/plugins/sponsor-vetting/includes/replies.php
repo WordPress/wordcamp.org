@@ -15,9 +15,6 @@ use WordPressdotorg\MU_Plugins\Utilities\FreeScout;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'init', __NAMESPACE__ . '\schedule_reply_check' );
-add_action( 'sv_check_replies', __NAMESPACE__ . '\check_replies' );
-
 /**
  * Schedules the hourly reply check on Central.
  */
@@ -26,6 +23,7 @@ function schedule_reply_check(): void {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', 'sv_check_replies' );
 	}
 }
+add_action( 'init', __NAMESPACE__ . '\schedule_reply_check' );
 
 /**
  * Flags each company in Compliance Requested whose sponsor wrote last in its latest compliance conversation.
@@ -75,6 +73,7 @@ function check_replies(): void {
 		}
 	}
 }
+add_action( 'sv_check_replies', __NAMESPACE__ . '\check_replies' );
 
 /**
  * Whether the customer wrote the latest message in a conversation.

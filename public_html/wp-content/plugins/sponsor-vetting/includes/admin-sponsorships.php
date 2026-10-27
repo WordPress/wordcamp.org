@@ -11,13 +11,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_sponsorship_columns' );
-add_action( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_sponsorship_column', 10, 2 );
-add_filter( 'views_edit-' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_unlinked_view' );
-add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
-add_action( 'add_meta_boxes_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_sponsorship_meta_boxes' );
-add_action( 'save_post_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\save_sponsorship' );
-
 /**
  * Sets the sponsorship list's columns.
  *
@@ -33,6 +26,7 @@ function get_sponsorship_columns( array $columns ): array {
 		'sv_approved' => __( 'Approved', 'wordcamporg' ),
 	);
 }
+add_filter( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_sponsorship_columns' );
 
 /**
  * Renders a custom column of the sponsorship list.
@@ -68,6 +62,7 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 			break;
 	}
 }
+add_action( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_sponsorship_column', 10, 2 );
 
 /**
  * Loads the companies and approvers of the sponsorships on the list screen at once, instead of one row at a time.
@@ -141,6 +136,7 @@ function add_unlinked_view( array $views ): array {
 
 	return $views;
 }
+add_filter( 'views_edit-' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_unlinked_view' );
 
 /**
  * Limits the sponsorship list to one company's, or to the ones without a company.
@@ -160,6 +156,7 @@ function filter_sponsorships( \WP_Query $query ): void {
 	}
 	// phpcs:enable
 }
+add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
 
 /**
  * Replaces core's Publish box with the review boxes.
@@ -172,6 +169,7 @@ function add_sponsorship_meta_boxes(): void {
 	add_meta_box( 'sv-sponsor', __( 'Event Sponsor', 'wordcamporg' ), __NAMESPACE__ . '\render_camp_sponsor_box', SPONSORSHIP_POST_TYPE, 'normal', 'high' );
 	add_meta_box( 'sv-log', __( 'Notes and History', 'wordcamporg' ), __NAMESPACE__ . '\render_log_box', SPONSORSHIP_POST_TYPE, 'normal', 'low' );
 }
+add_action( 'add_meta_boxes_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_sponsorship_meta_boxes' );
 
 /**
  * Renders the status, the approval actions, and the Save button.
@@ -387,3 +385,4 @@ function save_sponsorship( int $post_id ): void {
 
 	is_saving( false );
 }
+add_action( 'save_post_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\save_sponsorship' );

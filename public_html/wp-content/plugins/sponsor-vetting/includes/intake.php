@@ -13,8 +13,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'wp_after_insert_post', __NAMESPACE__ . '\request_vetting_on_invoice', 10, 4 );
-
 /**
  * Requests vetting for a camp's sponsor.
  *
@@ -114,6 +112,7 @@ function request_vetting_on_invoice( int $post_id, \WP_Post $post, bool $update,
 		);
 	}
 }
+add_action( 'wp_after_insert_post', __NAMESPACE__ . '\request_vetting_on_invoice', 10, 4 );
 
 /**
  * Reads what intake needs from a camp's sponsor.

@@ -14,11 +14,6 @@ namespace WordCamp\Sponsor_Vetting;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
-add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
-add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );
-add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
-
 /**
  * The statuses each status may change to.
  *
@@ -125,6 +120,7 @@ function enforce_status_transition( array $data, array $postarr ): array {
 
 	return $data;
 }
+add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
 
 /**
  * Whether a sponsorship may be approved.
@@ -282,6 +278,7 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
 		)
 	);
 }
+add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
 
 /**
  * Keeps the dates and flags that follow from a status in step with it.
@@ -315,6 +312,7 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 		update_post_meta( $post->ID, '_sv_approved_by', get_current_user_id() );
 	}
 }
+add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );
 
 /**
  * Puts an untrashed record back in the status it had, instead of core's `draft`.
@@ -327,6 +325,7 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 function restore_status_on_untrash( string $new_status, int $post_id, string $previous_status ): string {
 	return isset( get_statuses( (string) get_post_type( $post_id ) )[ $previous_status ] ) ? $previous_status : $new_status;
 }
+add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
 
 /**
  * Adds a private note to a company or sponsorship.

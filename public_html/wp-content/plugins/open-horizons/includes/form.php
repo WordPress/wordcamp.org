@@ -9,6 +9,8 @@ declare( strict_types = 1 );
 
 namespace WordCamp\Open_Horizons;
 
+use WordPressdotorg\MU_Plugins\Utilities\FreeScout;
+
 defined( 'WPINC' ) || die();
 
 add_shortcode( 'open-horizons-application', __NAMESPACE__ . '\render_shortcode' );
@@ -18,6 +20,11 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\register_styles' );
  * How many applications one person may submit in an hour.
  */
 const HOURLY_LIMIT = 3;
+
+/**
+ * The FreeScout agent confirmations are sent as: wordpressdotorg.
+ */
+const FREESCOUT_AGENT_ID = 81;
 
 /**
  * Registers the form's styles, enqueued when the form renders.
@@ -137,7 +144,7 @@ function submit_application( \WP_User $user, array $input ): int|\WP_Error {
 		}
 	}
 
-	send_confirmation( $user, $answers, $events[ $event_id ] );
+	send_confirmation( $post_id, $user, $answers, $events[ $event_id ] );
 
 	return $post_id;
 }
@@ -209,21 +216,22 @@ function find_applications( array $args ): array {
 }
 
 /**
- * Emails the applicant that their application arrived.
+ * Emails the applicant that their application arrived, as a closed conversation in the scholarships mailbox.
  *
- * Sent with wp_mail(), not through FreeScout: it needs no reply, and a conversation per applicant would flood
- * the mailbox. Replies still reach the scholarships mailbox through Reply-To.
+ * The conversation is linked from the application, so the decision can be sent as a reply to it. A reply from the
+ * applicant reopens it.
  *
  * Goes to the account's address, not the one typed into the form, so the form can't send mail to strangers.
  *
+ * Needs `FREESCOUT_API_KEY` and `FREESCOUT_SCHOLARSHIPS_MAILBOX_ID`.
+ *
+ * @param int      $post_id The application.
  * @param \WP_User $user    The applicant.
  * @param array    $answers The application's answers.
  * @param array    $event   The event: `name` and `closes`.
  */
-function send_confirmation( \WP_User $user, array $answers, array $event ): void {
-	$headers = defined( 'EMAIL_OPEN_HORIZONS' ) ? array( 'Reply-To: ' . EMAIL_OPEN_HORIZONS ) : array();
-
-	// The email is plain text, and get_the_title() encodes entities.
+function send_confirmation( int $post_id, \WP_User $user, array $answers, array $event ): void {
+	// The subject is plain text, and get_the_title() encodes entities.
 	$event_name = html_entity_decode( $event['name'], ENT_QUOTES, 'UTF-8' );
 
 	$message = sprintf(
@@ -237,13 +245,26 @@ function send_confirmation( \WP_User $user, array $answers, array $event ): void
 		wp_date( get_option( 'date_format' ), $event['closes'], new \DateTimeZone( 'UTC' ) )
 	);
 
-	wp_mail(
-		$user->user_email,
-		/* translators: %s: Event name. */
-		sprintf( __( 'We received your Open Horizons Scholarship application for %s', 'wordcamporg' ), $event_name ),
-		$message,
-		$headers
+	$conversation = FreeScout::send(
+		array(
+			'mailbox' => defined( 'FREESCOUT_SCHOLARSHIPS_MAILBOX_ID' ) ? (int) FREESCOUT_SCHOLARSHIPS_MAILBOX_ID : 0,
+			'to'      => $user->user_email,
+			/* translators: %s: Event name. */
+			'subject' => sprintf( __( 'We received your Open Horizons Scholarship application for %s', 'wordcamporg' ), $event_name ),
+			'body'    => wpautop( esc_html( $message ) ),
+			'status'  => 'closed',
+			'user'    => FREESCOUT_AGENT_ID,
+		)
 	);
+
+	if ( is_wp_error( $conversation ) ) {
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error, WordPress.Security.EscapeOutput.OutputNotEscaped -- Logged, not shown.
+		trigger_error( "Open Horizons confirmation for application $post_id failed: " . $conversation->get_error_message(), E_USER_WARNING );
+
+		return;
+	}
+
+	update_post_meta( $post_id, '_oh_freescout_links', array( $conversation['url'] ) );
 }
 
 /**

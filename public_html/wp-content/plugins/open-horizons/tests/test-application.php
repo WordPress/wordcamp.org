@@ -21,18 +21,28 @@ defined( 'WPINC' ) || die();
  */
 class Test_Application extends WP_UnitTestCase {
 	/**
-	 * Mail wp_mail() was asked to send.
+	 * Conversations FreeScout was asked to start.
 	 *
 	 * @var array[]
 	 */
 	protected array $mail = array();
 
 	/**
-	 * Captures mail instead of sending it.
+	 * Captures FreeScout requests instead of sending them.
 	 *
 	 * @var \Closure
 	 */
 	protected \Closure $capture_mail;
+
+	/**
+	 * Configures FreeScout.
+	 */
+	public static function set_up_before_class(): void {
+		parent::set_up_before_class();
+
+		defined( 'FREESCOUT_API_KEY' ) || define( 'FREESCOUT_API_KEY', 'test' );
+		defined( 'FREESCOUT_SCHOLARSHIPS_MAILBOX_ID' ) || define( 'FREESCOUT_SCHOLARSHIPS_MAILBOX_ID', 7 );
+	}
 
 	/**
 	 * A flagship WordCamp taking applications.
@@ -60,20 +70,23 @@ class Test_Application extends WP_UnitTestCase {
 		update_option( EVENTS_OPTION, array( $this->event_id ) );
 
 		$this->mail         = array();
-		$this->capture_mail = function ( ?bool $short_circuit, array $args ): bool {
-			$this->mail[] = $args;
+		$this->capture_mail = function ( mixed $response, array $args ): array {
+			$this->mail[] = json_decode( $args['body'], true );
 
-			return true;
+			return array(
+				'response' => array( 'code' => 201 ),
+				'body'     => wp_json_encode( array( 'id' => 123 ) ),
+			);
 		};
 
-		add_filter( 'pre_wp_mail', $this->capture_mail, 10, 2 );
+		add_filter( 'pre_http_request', $this->capture_mail, 10, 2 );
 	}
 
 	/**
 	 * Stops capturing mail.
 	 */
 	public function tear_down(): void {
-		remove_filter( 'pre_wp_mail', $this->capture_mail, 10 );
+		remove_filter( 'pre_http_request', $this->capture_mail, 10 );
 
 		parent::tear_down();
 	}
@@ -148,8 +161,11 @@ class Test_Application extends WP_UnitTestCase {
 		$this->assertSame( array( 'travel', 'visa' ), get_post_meta( $post_id, '_oh_application', true )['support'] );
 
 		$this->assertCount( 1, $this->mail );
-		$this->assertSame( 'applicant@example.org', $this->mail[0]['to'] );
+		$this->assertSame( 7, $this->mail[0]['mailboxId'] );
+		$this->assertSame( 'applicant@example.org', $this->mail[0]['customer']['email'] );
 		$this->assertSame( 'We received your Open Horizons Scholarship application for WordCamp Asia’s 2027', $this->mail[0]['subject'] );
+		$this->assertSame( 'closed', $this->mail[0]['status'] );
+		$this->assertSame( array( 'https://freescout.wordpress.net/conversation/123' ), get_post_meta( $post_id, '_oh_freescout_links', true ) );
 	}
 
 	/**

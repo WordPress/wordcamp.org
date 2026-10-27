@@ -287,10 +287,17 @@ function create_company( array $sponsor ): int|\WP_Error {
 /**
  * Links a sponsorship to its company. Runs on Central.
  *
+ * An approved sponsorship keeps its company: its approval was for that company's vetting.
+ *
  * @param int $sponsorship_id The sponsorship.
  * @param int $company_id     The company.
+ * @return true|\WP_Error
  */
-function link_sponsorship( int $sponsorship_id, int $company_id ): void {
+function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Error {
+	if ( 'svs-approved' === get_post_status( $sponsorship_id ) ) {
+		return new \WP_Error( 'sv_approved', __( 'An approved sponsorship can’t move to another company. Cancel it and reopen it first, then approve it again once it’s moved.', 'wordcamporg' ) );
+	}
+
 	wp_update_post(
 		array(
 			'ID'          => $sponsorship_id,
@@ -302,6 +309,8 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): void {
 
 	/* translators: %s: Company name. */
 	add_note( $sponsorship_id, sprintf( __( 'Linked to “%s”.', 'wordcamporg' ), get_the_title( $company_id ) ) );
+
+	return true;
 }
 
 /**

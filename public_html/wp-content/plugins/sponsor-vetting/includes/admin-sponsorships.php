@@ -251,6 +251,11 @@ function render_sponsorship_company_box( \WP_Post $post ): void {
 		echo '<p>' . esc_html__( 'Not linked to a company yet.', 'wordcamporg' ) . '</p>';
 	}
 
+	if ( 'svs-approved' === $post->post_status ) {
+		echo '<p class="description">' . esc_html__( 'To move an approved sponsorship to another company, cancel it and reopen it first.', 'wordcamporg' ) . '</p>';
+		return;
+	}
+
 	$companies = get_posts(
 		array(
 			'post_type'      => COMPANY_POST_TYPE,
@@ -346,8 +351,13 @@ function save_sponsorship( int $post_id ): void {
 	}
 
 	if ( $company_id && COMPANY_POST_TYPE === get_post_type( $company_id ) && (int) get_post_field( 'post_parent', $post_id ) !== $company_id ) {
-		link_sponsorship( $post_id, $company_id );
-		queue_company( $post_id );
+		$linked = link_sponsorship( $post_id, $company_id );
+
+		if ( is_wp_error( $linked ) ) {
+			add_notice( 'error', $linked->get_error_message() );
+		} else {
+			queue_company( $post_id );
+		}
 	}
 
 	save_note( $post_id );

@@ -12,6 +12,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WP_UnitTestCase;
 use function WordCamp\Sponsor_Vetting\approve_sponsorship;
 use function WordCamp\Sponsor_Vetting\get_vetting_state;
+use function WordCamp\Sponsor_Vetting\link_sponsorship;
 use function WordCamp\Sponsor_Vetting\register_types;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 use const WordCamp\Sponsor_Vetting\GOOD_FAITH_DAYS;
@@ -237,6 +238,19 @@ class Test_Workflow extends WP_UnitTestCase {
 			'in progress, in good faith'       => array( 'sv-in-progress', '-1 month', true, false ),
 			'no company'                       => array( '', '-1 month', false, false ),
 		);
+	}
+
+	/**
+	 * An approved sponsorship can't move to another company: its approval was for the first company's vetting.
+	 */
+	public function test_an_approved_sponsorship_keeps_its_company(): void {
+		$company_id     = $this->create_company( 'sv-compliant', (int) strtotime( '-1 month' ) );
+		$other_id       = $this->create_company( 'sv-needs-vetting' );
+		$sponsorship_id = $this->create_sponsorship( $company_id );
+
+		$this->assertTrue( approve_sponsorship( $sponsorship_id ) );
+		$this->assertWPError( link_sponsorship( $sponsorship_id, $other_id ) );
+		$this->assertSame( $company_id, (int) get_post_field( 'post_parent', $sponsorship_id ) );
 	}
 
 	/**

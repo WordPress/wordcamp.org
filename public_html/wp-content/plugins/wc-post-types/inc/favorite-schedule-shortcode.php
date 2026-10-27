@@ -580,7 +580,11 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	if ( wp_mail( $email_address, $subject, $message, $headers ) ) {
 		return new WP_REST_Response(
 			array(
-				'message' => esc_html__( 'Email sent successfully to ', 'wordcamporg' ) . " $email_address.",
+				'message' => sprintf(
+					/* translators: %s: recipient email address */
+					esc_html__( 'Email sent successfully to %s.', 'wordcamporg' ),
+					$email_address
+				),
 			),
 			200
 		);

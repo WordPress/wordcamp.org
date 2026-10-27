@@ -209,7 +209,12 @@ class WordCamp_Details extends Base_Details {
 
 				switch ( $key ) {
 					case 'Status':
-						$row[ $key ] = $all_statuses[ $value ];
+						/*
+						 * `post_status => 'any'` also matches core statuses such as
+						 * `draft`, which have no entry here -- fall back to the raw
+						 * slug rather than emitting null on an undefined key.
+						 */
+						$row[ $key ] = $all_statuses[ $value ] ?? $value;
 						break;
 					case 'Tickets':
 					case 'Speakers':
@@ -447,6 +452,7 @@ class WordCamp_Details extends Base_Details {
 		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
 		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$fields     = is_array( $fields ) ? $fields : array();
 		$action     = wp_unslash( $_POST['action'] ?? '' );
 		$nonce      = wp_unslash( $_POST[ static::$slug . '-nonce' ] ?? '' );
 

@@ -10,6 +10,9 @@
 
 namespace WordCamp\Groups\Frontend\Members;
 
+use WordCamp\Groups\Frontend\Leave_Cleanup;
+use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -18,8 +21,10 @@ defined( 'WPINC' ) || die();
  * Routes:
  *   GET    /wporg-groups/v1/members       — list group members
  *   GET    /wporg-groups/v1/members/{id}  — single member
+ *   POST   /wporg-groups/v1/members/me/role — change your own role (beta groups only)
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
+ *   POST   /wporg-groups/v1/members/notification-preference — update event email preference
  */
 class Members_Controller extends \WP_REST_Users_Controller {
 
@@ -36,9 +41,9 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @var array<string, string>
 	 */
 	const ROLE_LABELS = array(
-		'administrator' => 'Organiser',
-		'editor'        => 'Organiser',
-		'author'        => 'Event Organiser',
+		'administrator' => 'Organizer',
+		'editor'        => 'Organizer',
+		'author'        => 'Event Organizer',
 		'contributor'   => 'Member',
 		'subscriber'    => 'Member',
 	);
@@ -143,6 +148,32 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			)
 		);
 
+		// Self-serve role change: POST /members/me/role.
+		//
+		// Distinct from `/members/{id}/role` rather than a relaxation of it:
+		// that endpoint is the organizer-facing member manager and explicitly
+		// refuses self-changes, and it should keep doing so. `me` can't
+		// collide with it because the `{id}` route only matches digits.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/me/role',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'update_own_role' ),
+					'permission_callback' => array( $this, 'update_own_role_permissions_check' ),
+					'args'                => array(
+						'role' => array(
+							'type'              => 'string',
+							'required'          => true,
+							'sanitize_callback' => 'sanitize_key',
+							'validate_callback' => array( $this, 'validate_assignable_role' ),
+						),
+					),
+				),
+			)
+		);
+
 		// Join: POST /members/join.
 		register_rest_route(
 			$this->namespace,
@@ -165,6 +196,26 @@ class Members_Controller extends \WP_REST_Users_Controller {
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'leave_group' ),
 					'permission_callback' => array( $this, 'leave_permissions_check' ),
+				),
+			)
+		);
+
+		// Event email preference: POST /members/notification-preference.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/notification-preference',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'update_notification_preference' ),
+					'permission_callback' => array( $this, 'notification_preference_permissions_check' ),
+					'args'                => array(
+						'opt_in' => array(
+							'type'              => 'boolean',
+							'required'          => true,
+							'sanitize_callback' => 'rest_sanitize_boolean',
+						),
+					),
 				),
 			)
 		);
@@ -198,7 +249,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$query = new \WP_User_Query( $query_args );
 		$users = $query->get_results();
 
-		// Sort: organisers first, then event organisers, then members.
+		// Sort: organizers first, then event organizers, then members.
 		usort( $users, array( $this, 'sort_by_role' ) );
 
 		$data = array();
@@ -228,7 +279,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $user || ! is_user_member_of_blog( $user_id ) ) {
 			return new \WP_Error(
 				'rest_user_not_found',
-				__( 'User not found.', 'wporg-groups-frontend' ),
+				__( 'User not found.', 'wordcamporg' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -249,7 +300,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( is_user_member_of_blog( $user_id, $blog_id ) ) {
 			return new \WP_Error(
 				'already_member',
-				__( 'You are already a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are already a member of this group.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -279,7 +330,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -287,7 +338,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_member_of_blog() ) {
 			return new \WP_Error(
 				'not_a_member',
-				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				__( 'You are not a member of this group.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -306,18 +357,77 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$blog_id = get_current_blog_id();
 		$user    = get_userdata( $user_id );
 
-		// Prevent organisers from leaving without demotion.
-		if ( $user && array_intersect( $user->roles, array( 'administrator', 'editor' ) ) ) {
+		// Prevent organizers from leaving without demotion.
+		if ( $user && array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
 			return new \WP_Error(
 				'cannot_leave',
-				__( 'Organisers cannot leave the group. Ask another organiser to change your role first.', 'wporg-groups-frontend' ),
+				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
 
+		// Before the removal, while the RSVPs still belong to a member: a
+		// seat held for a date they will not be at is a seat nobody else
+		// can take (#2022). Past dates are left alone -- they are what the
+		// member attended, not a commitment to undo.
+		$cancelled = Leave_Cleanup\cancel_future_rsvps( $user_id );
+
 		remove_user_from_blog( $user_id, $blog_id );
 
-		return rest_ensure_response( array( 'success' => true ) );
+		return rest_ensure_response(
+			array(
+				'success'         => true,
+				'rsvps_cancelled' => $cancelled,
+			)
+		);
+	}
+
+	/**
+	 * Check permissions for updating the current user's notification preference.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function notification_preference_permissions_check() {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in.', 'wordcamporg' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		if ( ! is_user_member_of_blog() ) {
+			return new \WP_Error(
+				'not_a_member',
+				__( 'You are not a member of this group.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update the current user's GatherPress event email preference.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response
+	 */
+	public function update_notification_preference( $request ) {
+		$opt_in = (bool) $request->get_param( 'opt_in' );
+
+		update_user_meta(
+			get_current_user_id(),
+			'gatherpress_event_updates_opt_in',
+			$opt_in ? 1 : 0
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'optIn'   => $opt_in,
+			)
+		);
 	}
 
 	/**
@@ -332,7 +442,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! is_user_logged_in() ) {
 			return new \WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				__( 'You must be logged in.', 'wordcamporg' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -340,7 +450,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events() ) {
 			return new \WP_Error(
 				'rest_cannot_manage_group',
-				__( 'Sorry, you are not allowed to manage this group.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to manage this group.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -348,7 +458,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings() ) {
 			return new \WP_Error(
 				'rest_cannot_edit_roles',
-				__( 'Sorry, you are not allowed to edit roles of this user.', 'wporg-groups-frontend' ),
+				__( 'Sorry, you are not allowed to edit roles of this user.', 'wordcamporg' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 		}
@@ -371,7 +481,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $user || ! is_user_member_of_blog( $user_id, $blog_id ) ) {
 			return new \WP_Error(
 				'rest_user_not_found',
-				__( 'User not found.', 'wporg-groups-frontend' ),
+				__( 'User not found.', 'wordcamporg' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -379,7 +489,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( in_array( 'administrator', $user->roles, true ) ) {
 			return new \WP_Error(
 				'cannot_manage_administrator',
-				__( 'Site administrators must be managed in wp-admin.', 'wporg-groups-frontend' ),
+				__( 'Site administrators must be managed in wp-admin.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -387,7 +497,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( get_current_user_id() === $user_id ) {
 			return new \WP_Error(
 				'cannot_change_own_role',
-				__( 'You cannot change your own group role.', 'wporg-groups-frontend' ),
+				__( 'You cannot change your own group role.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -395,7 +505,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->validate_assignable_role( $role ) ) {
 			return new \WP_Error(
 				'invalid_role',
-				__( 'Invalid role.', 'wporg-groups-frontend' ),
+				__( 'Invalid role.', 'wordcamporg' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -403,7 +513,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->can_demote_organizer( $user, $role ) ) {
 			return new \WP_Error(
 				'cannot_remove_last_organizer',
-				__( 'A group must have at least one organiser.', 'wporg-groups-frontend' ),
+				__( 'A group must have at least one organizer.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -412,6 +522,95 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$user = get_userdata( $user_id );
 
 		return rest_ensure_response( $this->prepare_member( $user ) );
+	}
+
+	/**
+	 * Check permissions for changing the current user's own role.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return true|\WP_Error
+	 */
+	public function update_own_role_permissions_check( $request ) {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in.', 'wordcamporg' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		if ( ! \WordCamp\Groups\Frontend\Capabilities\self_serve_roles_enabled() ) {
+			return new \WP_Error(
+				'rest_self_serve_roles_disabled',
+				__( 'Changing your own role is not available on this group.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		if ( ! is_user_member_of_blog() ) {
+			return new \WP_Error(
+				'not_a_member',
+				__( 'You are not a member of this group.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		if ( in_array( 'administrator', wp_get_current_user()->roles, true ) ) {
+			return new \WP_Error(
+				'cannot_manage_administrator',
+				__( 'Site administrators must be managed in wp-admin.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		// Catch-all, so the endpoint can never be more permissive than the
+		// check that decides whether to render the button in the first place.
+		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role() ) {
+			return new \WP_Error(
+				'rest_cannot_change_own_role',
+				__( 'Sorry, you are not allowed to change your role on this group.', 'wordcamporg' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Change the current user's own role within this group.
+	 *
+	 * Only reachable on the beta groups listed in `SELF_SERVE_ROLE_GROUPS`;
+	 * see that constant for why this isn't a general capability.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function update_own_role( $request ) {
+		$role = (string) $request->get_param( 'role' );
+		$user = wp_get_current_user();
+
+		if ( ! $this->validate_assignable_role( $role ) ) {
+			return new \WP_Error(
+				'invalid_role',
+				__( 'Invalid role.', 'wordcamporg' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// The same floor `update_member_role()` enforces: the last organizer
+		// can't step down and leave the group unmanageable, whether another
+		// organizer demotes them or they demote themselves.
+		if ( ! $this->can_demote_organizer( $user, $role ) ) {
+			return new \WP_Error(
+				'cannot_remove_last_organizer',
+				__( 'A group must have at least one organizer. Promote someone else first.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$user->set_role( $role );
+
+		return rest_ensure_response( $this->prepare_member( get_userdata( $user->ID ) ) );
 	}
 
 	/**
@@ -437,7 +636,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	}
 
 	/**
-	 * Sort users by role weight (organisers first).
+	 * Sort users by role weight (organizers first).
 	 *
 	 * @param \WP_User $a First user.
 	 * @param \WP_User $b Second user.
@@ -554,16 +753,14 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @return bool
 	 */
 	private function can_demote_organizer( \WP_User $user, string $new_role ): bool {
-		$organizer_roles = array( 'administrator', 'editor' );
-
-		if ( ! array_intersect( $user->roles, $organizer_roles ) || in_array( $new_role, $organizer_roles, true ) ) {
+		if ( ! array_intersect( $user->roles, ORGANIZER_ROLES ) || in_array( $new_role, ORGANIZER_ROLES, true ) ) {
 			return true;
 		}
 
 		$other_organizers = get_users(
 			array(
 				'blog_id'     => get_current_blog_id(),
-				'role__in'    => $organizer_roles,
+				'role__in'    => ORGANIZER_ROLES,
 				'exclude'     => array( $user->ID ),
 				'number'      => 1,
 				'count_total' => false,

@@ -36,6 +36,7 @@
  * The `lessc_formatter` takes a CSS tree, and dumps it to a formatted string,
  * handling things like indentation.
  */
+#[\AllowDynamicProperties]
 class lessc {
 	static public $VERSION = "v0.5.0";
 
@@ -2279,6 +2280,7 @@ class lessc {
 
 // responsible for taking a string of LESS code and converting it into a
 // syntax tree
+#[\AllowDynamicProperties]
 class lessc_parser {
 	static protected $nextBlockId = 0; // used to uniquely identify blocks
 
@@ -3515,7 +3517,7 @@ class lessc_parser {
 		if ($eatWhitespace === null) $eatWhitespace = $this->eatWhiteDefault;
 
 		$r = '/'.$regex.($eatWhitespace && !$this->writeComments ? '\s*' : '').'/Ais';
-		if (preg_match($r, $this->buffer, $out, null, $this->count)) {
+		if (preg_match($r, $this->buffer, $out, 0, $this->count)) {
 			$this->count += strlen($out[0]);
 			if ($eatWhitespace && $this->writeComments) $this->whitespace();
 			return true;
@@ -3527,7 +3529,7 @@ class lessc_parser {
 	protected function whitespace() {
 		if ($this->writeComments) {
 			$gotWhite = false;
-			while (preg_match(self::$whitePattern, $this->buffer, $m, null, $this->count)) {
+			while (preg_match(self::$whitePattern, $this->buffer, $m, 0, $this->count)) {
 				if (isset($m[1]) && empty($this->seenComments[$this->count])) {
 					$this->append(array("comment", $m[1]));
 					$this->seenComments[$this->count] = true;
@@ -3546,7 +3548,7 @@ class lessc_parser {
 	protected function peek($regex, &$out = null, $from=null) {
 		if (is_null($from)) $from = $this->count;
 		$r = '/'.$regex.'/Ais';
-		$result = preg_match($r, $this->buffer, $out, null, $from);
+		$result = preg_match($r, $this->buffer, $out, 0, $from);
 
 		return $result;
 	}

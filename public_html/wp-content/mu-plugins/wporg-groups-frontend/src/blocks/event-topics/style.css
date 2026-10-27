@@ -1,0 +1,51 @@
+/*
+ * One more label/value pair in the event info card, with the same eyebrow as
+ * the language row above it (see event-language/style.css). The value is a
+ * wrapping row of links rather than one line of text, since an event can
+ * carry several topics and each one leads somewhere.
+ */
+
+.wporg-event-topics__label {
+	color: var(--wp--preset--color--charcoal-4);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	margin: 0 0 var(--wp--preset--spacing--10);
+}
+
+.wporg-event-topics__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--10);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.wporg-event-topics__item {
+	margin: 0;
+}
+
+.wporg-event-topics__link {
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 2px;
+	color: var(--wp--preset--color--blueberry-1);
+	display: inline-block;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+	padding: 2px var(--wp--preset--spacing--10);
+	text-decoration: none;
+}
+
+.wporg-event-topics__link:hover {
+	border-color: var(--wp--preset--color--deep-blueberry);
+	color: var(--wp--preset--color--deep-blueberry);
+	text-decoration: underline;
+}
+
+.wporg-event-topics__link:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+}

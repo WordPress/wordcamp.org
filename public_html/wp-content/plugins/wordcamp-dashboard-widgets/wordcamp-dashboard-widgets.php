@@ -112,7 +112,7 @@ class WordCamp_Dashboard_Widgets {
 		) );
 
 		foreach ( $published_pages as $page ) {
-			if ( has_shortcode( $page->post_content, 'camptix' ) ) {
+			if ( has_shortcode( $page->post_content, 'camptix' ) || has_block( 'wordcamp/camptix', $page->post_content ) ) {
 				$found_registration = true;
 			}
 

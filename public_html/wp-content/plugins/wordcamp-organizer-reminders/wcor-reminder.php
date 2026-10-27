@@ -51,6 +51,27 @@ class WCOR_Reminder {
 			'show_in_nav_menus'   => false,
 			'hierarchical'        => false,
 			'capability_type'     => 'post',
+
+			/*
+			 * The menu page these live under requires `manage_options`, but the post type accepted
+			 * core's generic `edit_posts`, so `post-new.php`, which does not consult the menu, opened
+			 * without it. `map_meta_cap` needs setting here because it only defaults to true while
+			 * `capabilities` is empty.
+			 */
+			'capabilities'        => array(
+				'create_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_others_posts'    => self::REQUIRED_CAPABILITY,
+				'delete_posts'           => self::REQUIRED_CAPABILITY,
+				'delete_private_posts'   => self::REQUIRED_CAPABILITY,
+				'delete_published_posts' => self::REQUIRED_CAPABILITY,
+				'edit_others_posts'      => self::REQUIRED_CAPABILITY,
+				'edit_posts'             => self::REQUIRED_CAPABILITY,
+				'edit_private_posts'     => self::REQUIRED_CAPABILITY,
+				'edit_published_posts'   => self::REQUIRED_CAPABILITY,
+				'publish_posts'          => self::REQUIRED_CAPABILITY,
+				'read_private_posts'     => self::REQUIRED_CAPABILITY,
+			),
+			'map_meta_cap'        => true,
 			'has_archive'         => false,
 			'rewrite'             => false,
 			'query_var'           => false,
@@ -185,7 +206,7 @@ class WCOR_Reminder {
 			return;
 		}
 
-		if ( ! current_user_can( 'edit_posts', $post_id ) ) {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
 

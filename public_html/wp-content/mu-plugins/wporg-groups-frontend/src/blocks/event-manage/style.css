@@ -2,29 +2,150 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
-/* === Trigger buttons === */
+@import "../../components/recurrence-controls.css";
+@import "../../components/component-accents.css";
 
-.wporg-event-manage__button {
-	font-size: 14px;
-	cursor: pointer;
+/* === Message members modal === */
+
+.wporg-groups-message-modal .components-modal__content {
+	padding: 24px 32px 32px;
 }
 
-.wporg-event-manage__button--edit {
-	background: transparent !important;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
-	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
+.wporg-groups-message-modal__form,
+.wporg-groups-message-modal__success {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	min-width: min(520px, 75vw);
 }
 
-.wporg-event-manage__button--edit:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
+.wporg-groups-message-modal__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+}
+
+.wporg-groups-message-modal__recipients {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
+}
+
+.wporg-groups-message-modal__recipients legend {
+	padding: 0 4px;
+	font-weight: 600;
+}
+
+/* === Check-in modal === */
+
+.wporg-groups-check-in-modal .components-modal__content {
+	padding: 24px 32px 32px;
+}
+
+.wporg-groups-check-in-modal__body,
+.wporg-groups-check-in-modal__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--20);
+	min-width: min(520px, 75vw);
+}
+
+.wporg-groups-check-in-modal__count {
+	margin: 0;
+	font-weight: 600;
+}
+
+.wporg-groups-check-in-modal__walk-in {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__walk-in .components-base-control {
+	flex: 1 1 240px;
+}
+
+/* Line the button up with the input rather than the label above it. */
+.wporg-groups-check-in-modal__walk-in .components-button {
+	margin-top: 24px;
+}
+
+.wporg-groups-check-in-modal__walk-in-count {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__walk-in-count-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.wporg-groups-check-in-modal__walk-in-count-help {
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wporg-groups-check-in-modal__stepper {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__stepper .components-button {
+	justify-content: center;
+	min-width: 40px;
+}
+
+.wporg-groups-check-in-modal__stepper-value {
+	min-width: 3ch;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+
+.wporg-groups-check-in-modal__loading {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-check-in-modal__attendees {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.wporg-groups-check-in-modal__attendee {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--10);
+	padding: 10px 0;
+	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.wporg-groups-check-in-modal__avatar {
+	flex: none;
+	border-radius: 50%;
+}
+
+.wporg-groups-check-in-modal__actions {
+	display: flex;
+	justify-content: flex-end;
 }
 
 /* === Modal — override wp-components Modal defaults === */
 
+/* Prevent modal body scroll leak when editor is focused. */
 .wporg-groups-event-modal .components-modal__content {
 	padding: 24px 32px 32px;
+	overscroll-behavior: contain;
 }
 
 .wporg-groups-event-modal {
@@ -76,6 +197,7 @@
 }
 
 @media (max-width: 600px) {
+
 	.wporg-groups-event-modal__row {
 		grid-template-columns: 1fr;
 	}
@@ -127,6 +249,22 @@
 	max-width: none;
 }
 
+/* === Online event === */
+
+.wporg-groups-event-modal__online-event {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	background: #f6f6f6;
+}
+
+.wporg-groups-event-modal__online-event input[type="url"] {
+	max-width: 600px;
+}
+
 /* === Loading === */
 
 .wporg-groups-event-modal__loading {
@@ -154,7 +292,7 @@
 }
 
 .wporg-groups-event-modal__autosave--saving {
-	color: #2271b1;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__autosave--saved {
@@ -165,8 +303,15 @@
 	color: #d63638;
 }
 
-/* === Draft picker === */
+/* === Template and draft pickers === */
 
+.wporg-groups-event-modal__pickers {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.wporg-groups-event-modal__template-picker,
 .wporg-groups-event-modal__draft-picker {
 	padding: 12px 14px;
 	border: 1px dashed #c3c4c7;
@@ -187,8 +332,8 @@
 }
 
 .wporg-groups-event-modal__editor:focus-within {
-	border-color: #3858e9;
-	box-shadow: 0 0 0 1px #3858e9;
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__editor .block-editor-block-list__layout {
@@ -237,11 +382,6 @@
 
 .wporg-groups-event-modal__editor li {
 	margin-block: 0.35em;
-}
-
-/* Prevent modal body scroll leak when editor is focused. */
-.wporg-groups-event-modal .components-modal__content {
-	overscroll-behavior: contain;
 }
 
 /* === Venue editor overlay === */
@@ -341,6 +481,7 @@
 	height: 250px;
 	border-radius: 4px;
 	border: 1px solid #d9d9d9;
+	isolation: isolate;
 }
 
 .wporg-groups-venue-editor__actions {
@@ -353,4 +494,31 @@
 .wporg-groups-event-modal__edit-venue {
 	font-size: 12px;
 	margin-top: 4px;
+}
+
+/* === Registration questions === */
+
+.wporg-groups-rsvp-questions__help {
+	font-size: 12px;
+	color: #757575;
+	margin: 0 0 8px;
+}
+
+.wporg-groups-rsvp-questions__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.wporg-groups-rsvp-questions__row > .components-base-control {
+	flex: 1 1 auto;
+}
+
+.wporg-groups-rsvp-questions__row-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+	padding-bottom: 4px;
 }

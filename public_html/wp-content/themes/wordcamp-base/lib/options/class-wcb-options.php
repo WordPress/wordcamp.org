@@ -142,15 +142,15 @@ class WCB_Options extends WCB_Loader {
 
 		?>
 		<div class="wrap">
-			<h1><?php _e( 'WordCamp Base Theme Options', 'wordcamporg' ); ?></h1>
+			<h1><?php esc_html_e( 'WordCamp Base Theme Options', 'wordcamporg' ); ?></h1>
 
 			<?php if ( false !== $_REQUEST['updated'] ) : ?>
-				<div class="updated fade"><p><strong><?php _e( 'Options saved', 'wordcamporg' ); ?></strong></p></div>
+				<div class="updated fade"><p><strong><?php esc_html_e( 'Options saved', 'wordcamporg' ); ?></strong></p></div>
 			<?php endif; ?>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'wcb_theme_options' ); ?>
-				<h3><?php _e('General Options', 'wordcamporg'); ?></h3>
+				<h3><?php esc_html_e( 'General Options', 'wordcamporg' ); ?></h3>
 				<table class="form-table">
 					<?php
 					$this->options['grid']->render();
@@ -159,7 +159,7 @@ class WCB_Options extends WCB_Loader {
 					?>
 				</table>
 
-				<h3><?php _e('Theme Layout', 'wordcamporg'); ?></h3>
+				<h3><?php esc_html_e( 'Theme Layout', 'wordcamporg' ); ?></h3>
 				<table class="form-table">
 					<?php
 					$rows = array( 'after_header', 'before_content', 'content', 'after_content', 'before_footer' ); ?>
@@ -184,7 +184,7 @@ class WCB_Options extends WCB_Loader {
 
 				</table>
 				<p class="submit">
-					<input type="submit" class="button-primary" value="<?php _e( 'Save Options', 'wordcamporg' ); ?>" />
+					<input type="submit" class="button-primary" value="<?php esc_attr_e( 'Save Options', 'wordcamporg' ); ?>" />
 				</p>
 			</form>
 		</div>

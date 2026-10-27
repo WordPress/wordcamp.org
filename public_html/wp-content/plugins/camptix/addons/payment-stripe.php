@@ -30,8 +30,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	);
 
 	public $supported_features = array(
-		'refund-single' => true,
-		'refund-all'    => true,
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => true,
 	);
 
 	/**
@@ -39,6 +40,18 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * Use `$this->get_payment_options()` to retrieve them.
 	 */
 	protected $options = array();
+
+	/**
+	 * Orders whose Checkout Session the timeout sweep has already looked up this pass, by
+	 * payment token, and whether a lookup has already failed to reach Stripe this pass.
+	 */
+	protected $sessions_looked_up = array();
+	protected $stripe_unreachable = false;
+
+	/**
+	 * Orders the pending sweep has already looked up this pass, by payment token.
+	 */
+	protected $pending_looked_up = array();
 
 	/**
 	 * Runs during camptix_init, loads our options and sets some actions.
@@ -49,15 +62,36 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$this->load_options();
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+		add_action( 'camptix_timeout_sweep_start', array( $this, 'reset_timeout_sweep_state' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
+		// After CampTix's own draft timeout sweep, so a pass that found Stripe down skips this too.
+		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'review_pending_payments' ), 20 );
 
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 
-		// Use specific name for INR as we support UPI via Stripe.
-		if ( 'INR' === ( $this->camptix_options['currency'] ?? '' ) ) {
-			$this->name = 'Credit Card or UPI (Stripe)';
-			$this->description = 'Credit card and UPI processing, powered by Stripe.';
+		// Use specific name for EUR/INR as we support some local payment methods via Stripe.
+		switch ( $this->camptix_options['currency'] ?? '' ) {
+			case 'INR':
+				$this->name = 'Credit Card or UPI (Stripe)';
+				$this->description = 'Credit card and UPI processing, powered by Stripe.';
+				break;
+			case 'EUR':
+				// iDEAL, Bancontact and EPS each only work in one country, so only name the
+				// one that works where the event is held. Other EUR events keep the default.
+				$local_methods = array(
+					'NL' => 'iDEAL',
+					'BE' => 'Bancontact',
+					'AT' => 'EPS',
+				);
+				$wordcamp      = function_exists( 'get_wordcamp_post' ) ? get_wordcamp_post() : false;
+				$country       = $wordcamp ? strtoupper( $wordcamp->meta['_venue_country_code'][0] ?? '' ) : '';
+
+				if ( isset( $local_methods[ $country ] ) ) {
+					$this->name        = sprintf( 'Credit Card or %s (Stripe)', $local_methods[ $country ] );
+					$this->description = sprintf( 'Credit card and %s processing, powered by Stripe.', $local_methods[ $country ] );
+				}
+				break;
 		}
 	}
 
@@ -82,6 +116,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			),
 			$this->get_payment_options()
 		);
+	}
+
+	/**
+	 * How long a Checkout Session stays payable. Stripe allows 30 minutes to 24 hours and
+	 * defaults to 24; 30 minutes is plenty for a ticket and keeps an abandoned draft's seat
+	 * held for the shortest time. A filtered value is clamped to Stripe's range. Sent as the
+	 * session's expires_at and recorded on the order, so the draft dies when the session does.
+	 *
+	 * @return int Seconds.
+	 */
+	public function get_checkout_session_lifetime() {
+		$lifetime = (int) apply_filters( 'camptix_stripe_checkout_session_lifetime', 30 * MINUTE_IN_SECONDS );
+
+		return max( 30 * MINUTE_IN_SECONDS, min( DAY_IN_SECONDS, $lifetime ) );
 	}
 
 	/**
@@ -617,6 +665,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			wp_die( 'empty token' );
 		}
 
+		// The buyer can reach the cancel URL after the session completed, e.g. by going back
+		// from Stripe in another tab. Settle the order from the session in that case, since
+		// without the webhook nothing would revive a cancelled order that was paid.
+		$session = $this->get_draft_order_session( $payment_token );
+		if ( $session && 'complete' === ( $session['status'] ?? '' ) ) {
+			$order = $this->get_order( $payment_token );
+
+			if ( $order ) {
+				$camptix->log( 'Stripe session already complete at cancel; processing it instead.', $order['attendee_id'], $session );
+
+				return $this->process_payment_return_session( $payment_token, $session, $order );
+			}
+		}
+
 		// Set the associated attendees to cancelled.
 		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
 	}
@@ -656,6 +718,13 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		// Fetch the Payment details.
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
 		$session = $stripe->get_session( $stripe_session );
+
+		// Stripe didn't answer (e.g. the request timed out). Leave the order as it is: the
+		// webhook or the timeout sweep will settle it once Stripe can be reached.
+		if ( is_wp_error( $session ) ) {
+			$camptix->log( 'Could not fetch the Stripe session on return', $order['attendee_id'], $session );
+			wp_die( esc_html__( 'We could not confirm your payment with Stripe just now. If you completed the payment, your tickets will be confirmed automatically and you will receive an email. Please do not pay again.', 'wordcamporg' ) );
+		}
 
 		return $this->process_payment_return_session( $payment_token, $session, $order );
 	}
@@ -734,22 +803,23 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			$receipt_email = end( $_REQUEST['tix_attendee_info'] )['email'];
 		}
 
-		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->create_session( $this->camptix_options['event_name'], $order_items, $receipt_email, $return_url, $cancel_url, $metadata );
+		$stripe     = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$expires_at = time() + $this->get_checkout_session_lifetime();
+		$session    = $stripe->create_session( $this->camptix_options['event_name'], $order_items, $receipt_email, $return_url, $cancel_url, $metadata, $expires_at );
 
 		if ( ! is_wp_error( $session ) && ! empty( $session['url'] ) ) {
 			$camptix->log(
 				'Got Stripe checkout session.',
 				$order['attendee_id'],
 				array(
-					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ) ),
+					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ?? '' ) ),
 					'camptix_payment_token' => $payment_token,
 					'request_payload'       => compact( 'order_items', 'receipt_email' ),
 					'response'              => $session,
 				)
 			);
 
-			update_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', wp_slash( $session['id'] ) );
+			$this->record_checkout_session( $payment_token, $session['id'], $expires_at );
 
 			wp_redirect( esc_url_raw( $session['url'] ) );
 			die();
@@ -797,13 +867,44 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Send a request to Stripe to refund a transaction.
+	 * Refund part of a charge, leaving the order's other tickets paid.
+	 *
+	 * The last refund on an order is sent without an amount, so Stripe refunds whatever
+	 * is left of the charge. Charges are made from truncated per-item amounts (see
+	 * get_expected_fractional_total()), so that is the only way the refunds add up to
+	 * exactly what was charged.
 	 *
 	 * @param string $payment_token
+	 * @param float  $amount            The amount to refund, in the currency's base unit.
+	 * @param bool   $refunds_remainder Whether this refunds everything still paid on the order.
 	 *
 	 * @return array
 	 */
-	public function send_refund_request( $payment_token ) {
+	public function payment_refund_partial( $payment_token, $amount, $refunds_remainder ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token, $refunds_remainder ? null : $amount );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+
+			$camptix->log( 'Stripe partial refund failed', $order['attendee_id'] ?? null, $result, 'stripe' );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Send a request to Stripe to refund a transaction.
+	 *
+	 * @param string     $payment_token
+	 * @param float|null $amount Optional. The amount to refund, in the currency's base unit.
+	 *                           Null refunds whatever is left of the charge.
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token, $amount = null ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -824,7 +925,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$metadata = array(
-			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
+			// Null without a POST body, e.g. when the refund-all cron sends it.
+			'Refund reason' => (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
 		// Create a new Idempotency token for the refund request.
@@ -832,8 +934,19 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$idempotency_token = md5( 'tix-idempotency-token' . $payment_token . time() . rand( 1, 9999 ) );
 		$credentials       = $this->get_api_credentials();
 
+		$fractional_amount = null;
+		if ( null !== $amount ) {
+			try {
+				$fractional_amount = $this->get_fractional_unit_amount( $this->camptix_options['currency'], $amount );
+			} catch ( Exception $e ) {
+				$result['refund_transaction_details'] = $e->getMessage();
+
+				return $result;
+			}
+		}
+
 		$stripe = new CampTix_Stripe_API_Client( $idempotency_token, $credentials['api_secret_key'] );
-		$refund = $stripe->request_refund( $transaction_id, $metadata );
+		$refund = $stripe->request_refund( $transaction_id, $metadata, $fractional_amount );
 
 		if ( is_wp_error( $refund ) ) {
 			$result['refund_transaction_details'] = array(
@@ -858,7 +971,53 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Check if a stripe session timed out.
+	 * Record the Checkout Session on every attendee of the order: its id, so the timeout
+	 * backstop can look it up from whichever attendee the sweep reaches first, and its expiry.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 * @param string $session_id    Stripe Checkout Session id.
+	 * @param int    $expires_at    Unix timestamp the session expires at.
+	 */
+	public function record_checkout_session( $payment_token, $session_id, $expires_at ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			update_post_meta( $attendee_id, '_stripe_checkout_session_id', wp_slash( $session_id ) );
+			update_post_meta( $attendee_id, 'tix_session_expires_at', (int) $expires_at );
+		}
+	}
+
+	/**
+	 * A new sweep pass: forget which orders were looked up and whether Stripe was reachable.
+	 */
+	public function reset_timeout_sweep_state() {
+		$this->sessions_looked_up = array();
+		$this->stripe_unreachable = false;
+	}
+
+	/**
+	 * Before the sweep times a draft out, ask Stripe what became of its Checkout Session.
+	 *
+	 * Only an expired session is left for the sweep. Anything else goes through the normal
+	 * return handling: a paid session completes the order (the buyer paid in the session's last
+	 * moments and neither the return nor the webhook reached us), a complete-but-unpaid one is
+	 * a delayed payment still in flight and goes pending, a failed one fails. A session Stripe
+	 * still reports open has its expiry re-recorded from Stripe and the sweep checks the release
+	 * time again, so it keeps its seat until then. Stripe expires sessions a little after the
+	 * timestamp, and a payment can still be confirming then (UPI, bank redirects), so an open
+	 * session already past it is kept for the next sweep, like one Stripe can't be asked about,
+	 * rather than timed out while it can still be paid. If Stripe can't be
+	 * asked, or answers with an error, the draft is kept for the next sweep to try again, for
+	 * up to 24 hours: not knowing is not evidence the session died, and a timed-out order can't
+	 * be revived. That includes a 404, which only says the session isn't on the account and
+	 * mode of the key asking; after a credentials edit every in-flight session 404s while
+	 * still payable on the other key.
+	 *
+	 * One lookup per order per pass: the attendees of an order share the session and settling
+	 * it settles them all. And once a lookup has failed to reach Stripe at all (a transport
+	 * error or an unreadable response, as opposed to Stripe answering with an error), the rest
+	 * of the pass keeps its drafts without waiting on a lookup each.
 	 */
 	public function pre_attendee_timeout( $attendee_id ) {
 		/** @var CampTix_Plugin $camptix */
@@ -875,26 +1034,264 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return;
 		}
 
-		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session_id );
+		if ( isset( $this->sessions_looked_up[ $payment_token ] ) ) {
+			return;
+		}
+		$this->sessions_looked_up[ $payment_token ] = true;
 
-		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
+		if ( $this->stripe_unreachable ) {
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe was unreachable earlier this sweep, not asking', null );
 			return;
 		}
 
-		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
-		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
-			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
+		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$session = $stripe->get_session( $stripe_session_id );
 
-			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-			$payment_data   = array(
-				'transaction_id'      => $transaction_id,
-				'transaction_details' => array(
-					'raw' => $session,
+		if ( is_wp_error( $session ) ) {
+			if ( 0 !== strpos( $session->get_error_code(), 'camptix_stripe_request_error_' ) ) {
+				$this->stripe_unreachable = true;
+				$this->keep_for_next_sweep( $attendee_id, $payment_token, 'could not reach Stripe', $session );
+				return;
+			}
+
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered with an error', $session );
+			return;
+		}
+
+		if ( empty( $session['status'] ) ) {
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered without a session status', $session );
+			return;
+		}
+
+		if ( 'expired' === $session['status'] ) {
+			return;
+		}
+
+		if ( 'open' === $session['status'] ) {
+			$expires_at = (int) ( $session['expires_at'] ?? 0 );
+
+			if ( $expires_at > time() ) {
+				$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
+				$camptix->set_order_session_expiry( $payment_token, $expires_at );
+				return;
+			}
+
+			// Past its expiry, but Stripe hasn't expired it yet: a payment may still be confirming.
+			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'the Stripe checkout session is still open past its expiry', $session );
+			return;
+		}
+
+		$camptix->log( 'Stripe checkout timed out, but the session settled; processing it.', $attendee_id, $session );
+
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return;
+		}
+
+		$this->process_payment_return_session( $payment_token, $session, $order, false /* non-interactive */ );
+	}
+
+	/**
+	 * The session couldn't be looked up: keep the order's drafts for the next sweep, unless the
+	 * order is already past the 24 hours (plus grace) a draft with no recorded expiry gets, so a
+	 * broken lookup can't hold seats forever. The checkout time is tix_timestamp, or the post
+	 * date if that is missing, so the cap always has a floor.
+	 */
+	protected function keep_for_next_sweep( $attendee_id, $payment_token, $why, $data ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$checked_out = (int) get_post_meta( $attendee_id, 'tix_timestamp', true ) ?: (int) get_post_timestamp( $attendee_id );
+		if ( $checked_out + DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE <= time() ) {
+			$camptix->log( sprintf( 'At timeout, %s; giving up after 24 hours.', $why ), $attendee_id, $data );
+			return;
+		}
+
+		$camptix->log( sprintf( 'At timeout, %s; keeping the draft for the next sweep.', $why ), $attendee_id, $data );
+		$camptix->set_order_session_expiry( $payment_token, time() );
+	}
+
+	/**
+	 * The Checkout Session of an order that is still in draft, fresh from Stripe.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return array|false The session, or false if the order has no draft with a session or Stripe can't be asked.
+	 */
+	protected function get_draft_order_session( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+			if ( ! $stripe_session_id ) {
+				continue;
+			}
+
+			$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+			$session = $stripe->get_session( $stripe_session_id );
+
+			if ( is_wp_error( $session ) ) {
+				$camptix->log( 'Could not fetch the Stripe session.', $attendee_id, $session );
+				return false;
+			}
+
+			return $session;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Settle `pending` Stripe orders whose webhook never arrived.
+	 *
+	 * A delayed payment (boleto, OXXO) leaves the order pending until Stripe reports the outcome
+	 * through the webhook. If that webhook is lost, ask Stripe directly: once an order has been
+	 * pending for an hour, and then at most once an hour. There's no age limit, since a voucher
+	 * can stay payable for weeks.
+	 */
+	public function review_pending_payments() {
+		if ( ! empty( $this->camptix_options['archived'] ) || $this->stripe_unreachable ) {
+			return;
+		}
+
+		$this->pending_looked_up = array();
+		$current_loop            = 1;
+		$max_loops               = 50;
+		$an_hour_ago             = time() - HOUR_IN_SECONDS;
+
+		// Each order reviewed is stamped as checked, so the set shrinks as it's worked through.
+		while ( $attendees = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'pending',
+			'posts_per_page' => 100,
+			'cache_results'  => false,
+			'date_query'     => array(
+				array(
+					'column' => 'post_modified_gmt',
+					'before' => gmdate( 'Y-m-d H:i:s', $an_hour_ago ),
 				),
-			);
+			),
+			'meta_query'     => array(
+				array(
+					'key'     => '_stripe_checkout_session_id',
+					'compare' => 'EXISTS',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'     => '_stripe_pending_checked_at',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'     => '_stripe_pending_checked_at',
+						'compare' => '<',
+						'value'   => $an_hour_ago,
+						'type'    => 'NUMERIC',
+					),
+				),
+			),
+		) ) ) {
+			foreach ( $attendees as $attendee_id ) {
+				$this->review_pending_order( $attendee_id );
 
-			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+				if ( $this->stripe_unreachable ) {
+					return;
+				}
+			}
+
+			// Just in case we get stuck in here.
+			if ( $current_loop++ >= $max_loops ) {
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Ask Stripe about one pending order and settle it if the payment has succeeded or failed.
+	 *
+	 * Orders parked as pending because the amount paid didn't match the order total are left
+	 * for the organizer: Stripe already reported those paid, so asking again changes nothing.
+	 *
+	 * @param int $attendee_id Any pending attendee of the order.
+	 */
+	protected function review_pending_order( $attendee_id ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+		if ( ! $payment_token || ! $stripe_session_id || isset( $this->pending_looked_up[ $payment_token ] ) ) {
+			return;
+		}
+		$this->pending_looked_up[ $payment_token ] = true;
+
+		$order_attendee_ids = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'pending',
+			'posts_per_page' => -1,
+			'meta_query'     => array(
+				array(
+					'key'   => 'tix_payment_token',
+					'value' => $payment_token,
+				),
+			),
+		) );
+
+		$recorded = get_post_meta( $attendee_id, 'tix_transaction_details', true );
+		if ( in_array( $recorded['raw']['payment_status'] ?? '', array( 'paid', 'no_payment_required' ), true ) ) {
+			$this->stamp_pending_checked( $order_attendee_ids );
+			return;
+		}
+
+		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$session = $stripe->get_session( $stripe_session_id );
+
+		if ( is_wp_error( $session ) ) {
+			// Stripe answered with an error: try again in an hour. Stripe didn't answer at all:
+			// leave the order unstamped and stop asking for the rest of this pass.
+			if ( 0 === strpos( $session->get_error_code(), 'camptix_stripe_request_error_' ) ) {
+				$this->stamp_pending_checked( $order_attendee_ids );
+			} else {
+				$this->stripe_unreachable = true;
+			}
+
+			$camptix->log( 'Could not look up a pending Stripe order.', $attendee_id, $session );
+			return;
+		}
+
+		$this->stamp_pending_checked( $order_attendee_ids );
+
+		$payment_intent = $session['payment_intent'] ?? array();
+		$intent_status  = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
+		$paid           = in_array( $session['payment_status'] ?? '', array( 'paid', 'no_payment_required' ), true );
+		$failed         = in_array( $intent_status, array( 'canceled', 'requires_payment_method' ), true );
+
+		// Still in flight.
+		if ( ! $paid && ! $failed ) {
+			return;
+		}
+
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return;
+		}
+
+		$camptix->log( 'Pending Stripe order settled without a webhook; processing it.', $attendee_id, $session );
+
+		$this->process_payment_return_session( $payment_token, $session, $order, false /* non-interactive */ );
+	}
+
+	/**
+	 * Record that the pending sweep has just asked Stripe about these attendees.
+	 *
+	 * @param int[] $attendee_ids Attendee IDs.
+	 */
+	protected function stamp_pending_checked( $attendee_ids ) {
+		foreach ( $attendee_ids as $attendee_id ) {
+			update_post_meta( $attendee_id, '_stripe_pending_checked_at', time() );
 		}
 	}
 }
@@ -907,6 +1304,18 @@ camptix_register_addon( 'CampTix_Payment_Method_Stripe' );
  * A simple client for the Stripe API to handle the simple needs of CampTix.
  */
 class CampTix_Stripe_API_Client {
+	/**
+	 * The Stripe API version every request is pinned to.
+	 *
+	 * Without this, requests run on the account's default version, which Stripe rate-limits once it is
+	 * more than seven years old. Review the changelog for breaking changes before moving to a new major release.
+	 *
+	 * @see https://docs.stripe.com/upgrades
+	 *
+	 * @var string
+	 */
+	public const API_VERSION = '2026-09-30.endive';
+
 	/**
 	 * @var string
 	 */
@@ -1004,6 +1413,7 @@ class CampTix_Stripe_API_Client {
 			'headers' => array(
 				'Authorization'   => 'Bearer ' . $this->api_secret_key,
 				'Idempotency-Key' => $this->payment_token,
+				'Stripe-Version'  => self::API_VERSION,
 			),
 		);
 
@@ -1089,14 +1499,15 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @return array|WP_Error
 	 */
-	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
+	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata, $expires_at = 0 ) {
 		$line_items = array();
 		foreach ( $items as $item ) {
 			$line_item = array(
 				'quantity'     => $item['quantity'],
 				'price_data'   => array(
 					'product_data' => array(
-						'name'        => $item['name'],
+						'name'       => $item['name'],
+						'unit_label' => 'Ticket',
 					),
 					'unit_amount' => $item['fractional_price'],
 					'currency'    => $this->currency,
@@ -1131,6 +1542,11 @@ class CampTix_Stripe_API_Client {
 			$args['customer_email'] = $receipt_email;
 		}
 
+		// When the session stops being payable; CampTix holds the draft's seat until then.
+		if ( $expires_at > 0 ) {
+			$args['expires_at'] = (int) $expires_at;
+		}
+
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
 			$args['payment_intent_data']['metadata'] = $this->clean_metadata( $metadata );
 		}
@@ -1163,14 +1579,20 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @param string $transaction_id
 	 * @param array  $metadata       Associative array of extra data to store with the transaction.
+	 * @param int    $amount         Optional. The amount to refund, in fractional units (e.g. cents).
+	 *                               Null refunds whatever is left of the charge.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function request_refund( $transaction_id, $metadata = array() ) {
+	public function request_refund( $transaction_id, $metadata = array(), $amount = null ) {
 		$args = array(
 			'charge' => $transaction_id,
 			'reason' => 'requested_by_customer',
 		);
+
+		if ( null !== $amount ) {
+			$args['amount'] = $amount;
+		}
 
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
 			$args['metadata'] = $this->clean_metadata( $metadata );

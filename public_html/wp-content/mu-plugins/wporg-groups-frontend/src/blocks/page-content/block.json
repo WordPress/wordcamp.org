@@ -6,15 +6,28 @@
 	"title": "Page Content",
 	"category": "widgets",
 	"icon": "media-text",
-	"description": "Embeds a page's content by slug. Organisers see an edit link to modify the page.",
+	"description": "Embeds a page's content by slug. Organizers see an edit link to modify the page.",
 	"attributes": {
 		"slug": {
 			"type": "string",
 			"default": ""
+		},
+		"heading": {
+			"type": "string",
+			"default": ""
+		},
+		"headingLevel": {
+			"type": "number",
+			"default": 2
+		},
+		"excerpt": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {
-		"html": false
+		"html": false,
+		"anchor": true
 	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js"

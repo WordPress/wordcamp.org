@@ -71,10 +71,10 @@ class MES_Region {
 		$taxonomy = get_taxonomy( self::TAXONOMY_SLUG );
 
 		if ( is_a( $wp_list_table, 'WP_Terms_List_Table' ) && 'editedtag' == $wp_list_table->current_action() ) {
-			$nonce_value  = $_POST['mes_edit_region_meta_nonce'];
+			$nonce_value  = $_POST['mes_edit_region_meta_nonce'] ?? '';
 			$nonce_action = "mes_edit_region_{$term_id}_meta";
 		} else {
-			$nonce_value  = $_POST['mes_add_region_meta_nonce'];
+			$nonce_value  = $_POST['mes_add_region_meta_nonce'] ?? '';
 			$nonce_action = 'mes_add_region_meta';
 		}
 
@@ -83,7 +83,7 @@ class MES_Region {
 		}
 
 		$camera_wranglers      = get_option( 'mes_region_camera_wranglers', array() );
-		$camera_wrangler_email = $_POST['camera-wrangler-email'];
+		$camera_wrangler_email = $_POST['camera-wrangler-email'] ?? '';
 
 		if ( is_email( $camera_wrangler_email ) ) {
 			$camera_wranglers[ $term_id ] = $camera_wrangler_email;

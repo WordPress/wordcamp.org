@@ -401,7 +401,7 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['Twitter'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/' . $wordcamp_meta['Twitter'][0] ),
 			empty( $wordcamp_meta['WordCamp Hashtag'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/hashtag/' . $wordcamp_meta['WordCamp Hashtag'][0] ),
 			empty( $wordcamp_meta['Number of Anticipated Attendees'][0] ) ? '' : absint( $wordcamp_meta['Number of Anticipated Attendees'][0] ),
-			empty( $wordcamp_meta['Multi-Event Sponsor Region'][0] ) ? '' : get_term( $wordcamp_meta['Multi-Event Sponsor Region'][0], MES_Region::TAXONOMY_SLUG )->name,
+			$this->get_mes_audience_label( $wordcamp->ID, $wordcamp_meta['Multi-Event Sponsor Region'][0] ?? '' ),
 			$event_subtype_name,
 
 			// The organizing team
@@ -473,9 +473,10 @@ class WCOR_Mailer {
 		/** @var $multi_event_sponsors Multi_Event_Sponsors */
 		global $multi_event_sponsors;
 
+		// Newest sponsor first, as the email has always listed them. Each sponsor carries its
+		// resolved level for this camp, whether it came from a group or the legacy region.
 		$sponsors     = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id );
 		$sponsor_info = $multi_event_sponsors->get_sponsor_info( $sponsors );
-		$region_id    = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
 
 		if ( ! $sponsors || ! $sponsor_info ) {
 			return '';
@@ -483,14 +484,14 @@ class WCOR_Mailer {
 
 		ob_start();
 
-		foreach ( $sponsor_info as $sponsor ) {
-			$sponsorship_level = get_post( $sponsor['sponsorship_levels'][ $region_id ] ); // we can assume this exists because otherwise the sponsor wouldn't be in $sponsors / $sponsor_info
+		foreach ( $sponsors as $sponsor_post ) {
+			$sponsor = $sponsor_info[ $sponsor_post->ID ];
 
 			?>
 
 			Company: <?php echo esc_html( $sponsor['company_name'] ); ?>
 
-			Sponsorship Level: <?php echo esc_html( $sponsorship_level->post_title ); ?>
+			Sponsorship Level: <?php echo esc_html( $sponsor_post->sponsorship_level->post_title ); ?>
 
 			Contact: <?php echo sprintf(
 				'%s %s, %s',
@@ -503,6 +504,44 @@ class WCOR_Mailer {
 		}
 
 		return trim( str_replace( "\t", '', ob_get_clean() ) );
+	}
+
+	/**
+	 * Human-readable label for the audience a camp's Multi-Event Sponsors target.
+	 *
+	 * The legacy region name when one is set; otherwise the camp's sponsor-group
+	 * names (comma-separated), so group-only camps don't render an empty
+	 * [multi_event_sponsor_region] placeholder.
+	 *
+	 * @param int        $wordcamp_id
+	 * @param int|string $region_id   The camp's legacy region term ID ('' if none).
+	 *
+	 * @return string
+	 */
+	protected function get_mes_audience_label( $wordcamp_id, $region_id ) {
+		if ( $region_id ) {
+			$region = get_term( $region_id, MES_Region::TAXONOMY_SLUG );
+
+			if ( $region && ! is_wp_error( $region ) ) {
+				return $region->name;
+			}
+		}
+
+		if ( ! class_exists( 'MES_Sponsor_Group' ) ) {
+			return '';
+		}
+
+		$names = array();
+
+		foreach ( MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) as $group_id ) {
+			$group = get_term( $group_id, MES_Sponsor_Group::TAXONOMY_SLUG );
+
+			if ( $group && ! is_wp_error( $group ) ) {
+				$names[] = $group->name;
+			}
+		}
+
+		return implode( ', ', $names );
 	}
 
 	/**
@@ -601,8 +640,13 @@ class WCOR_Mailer {
 		}
 
 		if ( in_array( 'wcor_send_camera_wrangler', $send_where ) ) {
-			$region_id = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+			$region_id    = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
 			$recipients[] = MES_Region::get_camera_wranger_from_region( $region_id );
+
+			// A camp in sponsor groups may have no region, so its groups' wranglers count too.
+			if ( class_exists( 'MES_Sponsor_Group' ) ) {
+				$recipients = array_merge( $recipients, MES_Sponsor_Group::get_camera_wranglers_for_camp( $wordcamp_id ) );
+			}
 		}
 
 		if ( in_array( 'wcor_send_mentor', $send_where ) ) {
@@ -1002,6 +1046,13 @@ class WCOR_Mailer {
 		$emails         = $this->get_triggered_posts( $trigger );
 		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
+		if ( ! $emails ) {
+			log( 'trigger_has_no_reminders', compact( 'trigger', 'wordcamp' ) );
+			return;
+		}
+
+		$sent = 0;
+
 		foreach( $emails as $email ) {
 			if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
 				continue;
@@ -1015,8 +1066,13 @@ class WCOR_Mailer {
 
 			if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
 				$sent_email_ids[] = $email->ID;
+				$sent++;
 				update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
 			}
+		}
+
+		if ( ! $sent ) {
+			log( 'trigger_sent_no_reminders', compact( 'trigger', 'wordcamp' ) );
 		}
 	}
 }

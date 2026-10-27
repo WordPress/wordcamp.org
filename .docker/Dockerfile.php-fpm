@@ -43,12 +43,6 @@ COPY config/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY wordcamp.test.pem     /etc/ssl/certs/wordcamp.test.pem
 COPY wordcamp.test.key.pem /etc/ssl/private/wordcamp.test.key.pem
 
-# Install `wkhtmltopdf` for WordCamp Docs, CampTix Invoices, etc. See https://stackoverflow.com/a/38336153/1845153
-RUN curl -L https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz -o wkhtmltox.tar.xz \
-    && tar xf wkhtmltox.tar.xz \
-    && mv wkhtmltox/bin/wkhtmlto* /usr/bin/ \
-    && rm -rf wkhtmltox*
-
 # Install WP-CLI.
 RUN curl -fsSL -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && chmod +x /usr/local/bin/wp

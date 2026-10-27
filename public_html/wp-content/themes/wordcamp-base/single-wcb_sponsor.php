@@ -32,14 +32,18 @@ get_header(); ?>
 
 					<div class="entry-content">
 						<?php the_content(); ?>
-						<?php wp_link_pages( array(
-						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
-						'after' => '</div>',
-) ); ?>
+						<?php
+						wp_link_pages(
+							array(
+								'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
+								'after'  => '</div>',
+							)
+						);
+						?>
 					</div><!-- .entry-content -->
 
 					<div class="entry-utility">
-						<?php edit_post_link( __( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
+						<?php edit_post_link( esc_html__( 'Edit', 'wordcamporg' ), '<span class="edit-link">', '</span>' ); ?>
 					</div><!-- .entry-utility -->
 				</div><!-- #post-## -->
 

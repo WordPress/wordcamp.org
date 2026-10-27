@@ -482,7 +482,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		return false;
 	}
 
-	return sprintf( 'https://%s.wordcamp.%s/%s%s', $city, $tld, $year, $request_uri );
+	return sprintf( 'https://%s.wordcamp.%s%s/%s%s', $city, $tld, get_url_port(), $year, $request_uri );
 }
 
 /**
@@ -574,8 +574,9 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 	$is_file = false !== stripos( $request_uri, '/files/' ) && false !== stripos( basename( $request_uri ), '.' );
 
 	$corrected_url = sprintf(
-		'https://%s%s%s',
+		'https://%s%s%s%s',
 		untrailingslashit( $referer_parts['host'] ),
+		get_url_port(),
 		untrailingslashit( $referer_site_path ),
 		$is_file ? $request_uri : trailingslashit( $request_uri )
 	);
@@ -640,7 +641,7 @@ function get_canonical_year_url( $domain, $path ) {
 
 	$latest = get_latest_site( $domain );
 
-	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+	return $latest ? 'https://' . $latest->domain . get_url_port() . $latest->path : false;
 }
 
 /**
@@ -729,8 +730,9 @@ function get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structur
 	}
 
 	return sprintf(
-		'https://%s%s%s',
+		'https://%s%s%s%s',
 		$domain,
+		get_url_port(),
 		$path,
 		$matches[3]
 	);

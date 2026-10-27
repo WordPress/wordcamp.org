@@ -48,6 +48,10 @@ function load_includes() {
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 
+	if ( class_exists( 'CampTix_Plugin' ) ) {
+		require_once $blocks_dir . 'camptix/controller.php';
+	}
+
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';
 

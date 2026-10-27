@@ -48,10 +48,14 @@ store( 'wporg/group-membership', {
 				const resp = await fetch( ctx.joinApi, {
 					method: 'POST',
 					credentials: 'same-origin',
-					headers: { 'X-WP-Nonce': await getNonce() },
+					headers: { 'X-WP-Nonce': await getNonce( ctx ) },
 				} );
 
 				const data = await resp.json();
+
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
 
 				if ( data.success ) {
 					ctx.isMember = true;
@@ -60,8 +64,9 @@ store( 'wporg/group-membership', {
 					// Reload to get the full member UI server-rendered.
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group join failed:', error );
 			} finally {
 				ctx.loading = false;
 			}
@@ -84,20 +89,70 @@ store( 'wporg/group-membership', {
 				const resp = await fetch( ctx.leaveApi, {
 					method: 'DELETE',
 					credentials: 'same-origin',
-					headers: { 'X-WP-Nonce': await getNonce() },
+					headers: { 'X-WP-Nonce': await getNonce( ctx ) },
 				} );
 
 				const data = await resp.json();
+
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
 
 				if ( data.success ) {
 					ctx.isMember = false;
 					ctx.memberCount = Math.max( 0, ctx.memberCount - 1 );
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group leave failed:', error );
 			} finally {
 				ctx.loading = false;
+			}
+		},
+
+		async updateNotificationPreference( event ) {
+			const ctx = getContext();
+
+			if ( ! ctx.isMember || ctx.preferenceSaving ) {
+				return;
+			}
+
+			const previousValue = ctx.notificationOptIn;
+			const optIn = Boolean( event.target.checked );
+
+			ctx.notificationOptIn = optIn;
+			ctx.preferenceSaving = true;
+			ctx.preferenceMessage = '';
+			ctx.preferenceNoticeSuccess = false;
+			ctx.preferenceNoticeError = false;
+
+			try {
+				const resp = await fetch( ctx.preferenceApi, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': await getNonce( ctx ),
+					},
+					body: JSON.stringify( { opt_in: optIn } ),
+				} );
+
+				const data = await resp.json();
+
+				if ( ! resp.ok || ! data.success ) {
+					throw new Error( 'Unable to save email preference.' );
+				}
+
+				ctx.notificationOptIn = Boolean( data.optIn );
+				ctx.preferenceMessage = ctx.preferenceSavedLabel;
+				ctx.preferenceNoticeSuccess = true;
+			} catch {
+				ctx.notificationOptIn = previousValue;
+				ctx.preferenceMessage = ctx.preferenceErrorLabel;
+				ctx.preferenceNoticeError = true;
+			} finally {
+				ctx.preferenceSaving = false;
 			}
 		},
 	},
@@ -105,8 +160,12 @@ store( 'wporg/group-membership', {
 
 let cachedNonce = null;
 
-async function getNonce() {
+async function getNonce( ctx ) {
 	if ( cachedNonce ) {
+		return cachedNonce;
+	}
+	if ( ctx.restNonce ) {
+		cachedNonce = ctx.restNonce;
 		return cachedNonce;
 	}
 	if ( window.wpApiSettings?.nonce ) {

@@ -937,7 +937,7 @@ function process_import_request() {
 	$header  = array();
 	$results = array();
 
-	while ( ( $line = fgetcsv( $handle ) ) !== false ) {
+	while ( ( $line = fgetcsv( $handle, null, ',', '"', '\\' ) ) !== false ) {
 		// Skip first line.
 		if ( ++$count == 1 ) {
 			continue;

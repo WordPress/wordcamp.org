@@ -121,7 +121,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'organizer'            => __( 'Organizer',      'wordcamporg' ),
 				'date'                 => __( 'Date',           'wordcamporg' ),
 				'meetup.com_url'       => __( 'Meetup URL',     'wordcamporg' ),
-				'helpscout_url'        => __( 'HelpScout Link', 'wordcamporg' ),
+				'freescout_url'        => __( 'FreeScout Link', 'wordcamporg' ),
 			);
 
 			return $columns;
@@ -173,8 +173,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				case 'meetup.com_url':
 					$this->print_clickable_link( get_post_meta( $post_id, 'Meetup URL', true ) );
 					break;
-				case 'helpscout_url':
-					$this->print_clickable_link( get_post_meta( $post_id, 'HelpScout link', true ) );
+				case 'freescout_url':
+					$this->print_clickable_link( get_post_meta( $post_id, 'FreeScout link', true ) );
 					break;
 			}
 		}
@@ -186,7 +186,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 */
 		protected function print_clickable_link( $link ) {
 			?>
-		<a href="<?php echo esc_attr( $link ); ?>" target="_blank">
+		<a href="<?php echo esc_url( $link ); ?>" target="_blank">
 			<?php echo esc_html( $link ); ?>
 		</a>
 			<?php
@@ -374,7 +374,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return $group_details;
 			}
 
-			if ( isset( $group_details['errors'] ) ) {
+			if ( ! is_array( $group_details ) || isset( $group_details['errors'] ) ) {
 				return new WP_Error( 'invalid-response', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
@@ -389,22 +389,23 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return $group_leads;
 			}
 
-			if ( isset( $group_leads['errors'] ) ) {
+			if ( ! is_array( $group_leads ) || isset( $group_leads['errors'] ) ) {
 				return new WP_Error( 'invalid-response-leads', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
 			$event_hosts = array();
-			if ( isset( $group_leads ) && is_array( $group_leads ) ) {
-				foreach ( $group_leads as $event_host ) {
-					// Skip WordPress admin user.
-					if ( WCPT_WORDPRESS_MEETUP_ID === (int) $event_host['id'] ) {
-						continue;
-					}
-					$event_hosts[] = array(
-						'name' => $event_host['name'],
-						'id'   => $event_host['id'],
-					);
+			foreach ( $group_leads as $event_host ) {
+				if ( ! is_array( $event_host ) ) {
+					continue;
 				}
+				// Skip WordPress admin user.
+				if ( WCPT_WORDPRESS_MEETUP_ID === (int) $event_host['id'] ) {
+					continue;
+				}
+				$event_hosts[] = array(
+					'name' => $event_host['name'],
+					'id'   => $event_host['id'],
+				);
 			}
 
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
@@ -655,7 +656,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Number of past meetups'                       => 'text',
 				'Last meetup on'                               => 'date',
 				'Last meetup RSVP count'                       => 'text',
-				'HelpScout link'                               => 'text',
+				'FreeScout link'                               => 'text',
 				'Meetup Location'                              => 'text',
 			);
 

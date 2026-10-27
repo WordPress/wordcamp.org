@@ -222,7 +222,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
 			$address_key     = self::get_address_key( $post_id );
-			$new_address     = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ] ?? '';
+			$new_address     = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
 			$address_changed = empty( $original_meta_values[ $address_key ][0] ) || $new_address !== $original_meta_values[ $address_key ][0];
 
 			// No need to geocode if it hasn't changed.
@@ -1221,6 +1221,24 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 					// A sponsor group stands in for the region while groups are on, as it does for creating the site.
 					if ( 'Multi-Event Sponsor Region' === $field && $this->has_sponsor_groups( $post_data_raw['ID'] ) ) {
+						continue;
+					}
+
+					if ( 'Number of venues' === $field ) {
+						// Only require when transitioning to Scheduled, not when updating an already scheduled event.
+						if ( 'wcpt-scheduled' === get_post_status( $post_data_raw['ID'] ) ) {
+							continue;
+						}
+
+						// Validate as a positive whole number (e.g. at least 1).
+						if ( empty( $value ) || ! is_numeric( $value ) || intval( $value ) < 1 || (string) intval( $value ) !== trim( (string) $value ) ) {
+							$post_data['post_status']     = WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_data_raw['ID'] )
+								? 'wcpt-approved-pre-pl'
+								: 'wcpt-needs-schedule';
+							$this->active_admin_notices[] = 3;
+							break;
+						}
+
 						continue;
 					}
 

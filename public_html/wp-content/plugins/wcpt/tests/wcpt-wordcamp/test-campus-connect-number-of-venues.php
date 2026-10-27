@@ -177,13 +177,58 @@ class Test_Campus_Connect_Number_Of_Venues extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Saving Number of venues sanitizes to a positive integer or deletes when empty.
+	 * Campus Connect events cannot be scheduled with non-numeric or negative Number of venues.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_campus_connect_cannot_be_scheduled_with_invalid_number_of_venues() {
+		update_post_meta( $this->event_id, 'event_subtype', 'campusconnect' );
+		$_POST['event_subtype'] = 'campusconnect';
+
+		$this->post_required_fields();
+
+		// Non-numeric value falls back to pre-planning.
+		$_POST['wcpt_number_of_venues'] = 'abc';
+		$this->assertSame( 'wcpt-approved-pre-pl', $this->schedule_event() );
+
+		// Negative value falls back to pre-planning.
+		$_POST['wcpt_number_of_venues'] = '-3';
+		$this->assertSame( 'wcpt-approved-pre-pl', $this->schedule_event() );
+	}
+
+	/**
+	 * Already scheduled Campus Connect events do not get bumped back on save when Number of venues is empty.
+	 *
+	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
+	 */
+	public function test_already_scheduled_campus_connect_not_bumped_back_when_venues_empty() {
+		update_post_meta( $this->event_id, 'event_subtype', 'campusconnect' );
+		$_POST['event_subtype'] = 'campusconnect';
+
+		// Schedule it first with valid venue count.
+		$this->post_required_fields();
+		$_POST['wcpt_number_of_venues'] = '2';
+		$this->assertSame( 'wcpt-scheduled', $this->schedule_event() );
+
+		// Simulate legacy existing event in database without venue count.
+		delete_post_meta( $this->event_id, 'Number of venues' );
+		$this->assertSame( '', get_post_meta( $this->event_id, 'Number of venues', true ) );
+
+		// Re-saving the already-scheduled event keeps it scheduled even if field is empty.
+		$this->post_required_fields();
+		unset( $_POST['wcpt_number_of_venues'] );
+		$this->assertSame( 'wcpt-scheduled', $this->schedule_event() );
+	}
+
+	/**
+	 * Saving Number of venues sanitizes to a positive integer or deletes when empty or invalid.
 	 *
 	 * @covers Event_Admin::metabox_save
 	 */
 	public function test_saving_number_of_venues_sanitization() {
-		$admin           = $GLOBALS['wordcamp_admin'];
-		$_POST['action'] = 'editpost';
+		$admin                          = $GLOBALS['wordcamp_admin'];
+		$_POST['action']                = 'editpost';
+		$_POST['wcpt_physical_address'] = '';
 
 		// Valid positive integer.
 		$_POST['wcpt_number_of_venues'] = '5';
@@ -195,8 +240,18 @@ class Test_Campus_Connect_Number_Of_Venues extends WP_UnitTestCase {
 		$admin->metabox_save( $this->event_id, get_post( $this->event_id ), false );
 		$this->assertSame( '', get_post_meta( $this->event_id, 'Number of venues', true ) );
 
-		// Zero or negative deletes meta.
+		// Zero deletes meta.
 		$_POST['wcpt_number_of_venues'] = '0';
+		$admin->metabox_save( $this->event_id, get_post( $this->event_id ), false );
+		$this->assertSame( '', get_post_meta( $this->event_id, 'Number of venues', true ) );
+
+		// Negative number deletes meta (does not convert to positive).
+		$_POST['wcpt_number_of_venues'] = '-3';
+		$admin->metabox_save( $this->event_id, get_post( $this->event_id ), false );
+		$this->assertSame( '', get_post_meta( $this->event_id, 'Number of venues', true ) );
+
+		// Non-numeric string deletes meta.
+		$_POST['wcpt_number_of_venues'] = 'abc';
 		$admin->metabox_save( $this->event_id, get_post( $this->event_id ), false );
 		$this->assertSame( '', get_post_meta( $this->event_id, 'Number of venues', true ) );
 	}

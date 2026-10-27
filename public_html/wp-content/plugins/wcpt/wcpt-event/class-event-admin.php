@@ -569,9 +569,9 @@ abstract class Event_Admin {
 
 				case 'number':
 					if ( 'Number of venues' === $key ) {
-						$num_val = ! empty( $values[ $key ] ) ? absint( $values[ $key ] ) : '';
-						if ( '' !== $num_val && $num_val > 0 ) {
-							update_post_meta( $post_id, $key, $num_val );
+						$raw_val = $values[ $key ] ?? '';
+						if ( '' !== $raw_val && is_numeric( $raw_val ) && intval( $raw_val ) >= 1 && (string) intval( $raw_val ) === trim( (string) $raw_val ) ) {
+							update_post_meta( $post_id, $key, intval( $raw_val ) );
 						} else {
 							delete_post_meta( $post_id, $key );
 						}
@@ -854,7 +854,7 @@ abstract class Event_Admin {
 
 					<p>
 						<label for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
-						<?php if ( in_array( $key, $required_fields, true ) ) : ?>
+						<?php if ( in_array( $key, $required_fields, true ) || 'Number of venues' === $key ) : ?>
 							<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 						<?php endif; ?>
 					</p>

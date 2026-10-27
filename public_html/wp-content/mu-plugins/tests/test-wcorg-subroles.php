@@ -247,6 +247,12 @@ class Test_SubRoles extends Database_TestCase {
 				'primitive_cap' => 'view_campus_connect_report',
 				'meta_cap'      => 'view_campus_connect_report',
 			),
+
+			'scholarship_reviewer' => array(
+				'subrole'       => 'scholarship_reviewer',
+				'primitive_cap' => 'wordcamp_review_scholarships',
+				'meta_cap'      => 'wordcamp_review_scholarships',
+			),
 		);
 	}
 

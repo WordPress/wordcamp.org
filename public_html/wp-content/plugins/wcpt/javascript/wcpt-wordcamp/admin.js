@@ -54,6 +54,36 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		} );
 		$streamingSelection.find( 'select' ).trigger( 'change' );
 
+		var $subtypeSelect  = $( 'select[name="event_subtype"]' ),
+			$runningMoney   = $( '#wcpt_running_money_through_wpcs_pbc' ),
+			originalSubtype = $subtypeSelect.val(),
+			originalChecked = $runningMoney.is( ':checked' ),
+			userModified    = false;
+
+		$runningMoney.on( 'click change', function() {
+			userModified = true;
+		} );
+
+		$subtypeSelect.on( 'change', function() {
+			if ( userModified || ! $runningMoney.length ) {
+				return;
+			}
+
+			if ( 'campusconnect' === $( this ).val() ) {
+				if ( 'campusconnect' === originalSubtype ) {
+					$runningMoney.prop( 'checked', originalChecked );
+				} else {
+					$runningMoney.prop( 'checked', true );
+				}
+			} else {
+				if ( 'campusconnect' === originalSubtype ) {
+					$runningMoney.prop( 'checked', false );
+				} else {
+					$runningMoney.prop( 'checked', originalChecked );
+				}
+			}
+		} );
+
 		// If the value has changed, mark it as dirty and disable the checkbox.
 		$wcUrlFields.on( 'change', function() {
 			var $this = $(this),

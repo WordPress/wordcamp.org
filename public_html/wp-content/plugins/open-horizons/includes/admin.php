@@ -11,18 +11,6 @@ namespace WordCamp\Open_Horizons;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'manage_' . POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_columns' );
-add_filter( 'manage_edit-' . POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_columns' );
-add_action( 'manage_' . POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_column', 10, 2 );
-add_filter( 'post_updated_messages', __NAMESPACE__ . '\get_updated_messages' );
-add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_event_filter' );
-add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_by_event' );
-add_action( 'add_meta_boxes_' . POST_TYPE, __NAMESPACE__ . '\add_meta_boxes' );
-add_action( 'save_post_' . POST_TYPE, __NAMESPACE__ . '\save_review' );
-add_action( 'admin_menu', __NAMESPACE__ . '\add_settings_page' );
-add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
-add_filter( 'option_page_capability_oh_settings', static fn(): string => CAPABILITY );
-
 /**
  * Sets the list's columns.
  *
@@ -41,6 +29,8 @@ function get_columns( array $columns ): array {
 	);
 }
 
+add_filter( 'manage_' . POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_columns' );
+
 /**
  * Sorts the Submitted column by submission date.
  *
@@ -53,6 +43,8 @@ function get_sortable_columns( array $columns ): array {
 	return $columns;
 }
 
+add_filter( 'manage_edit-' . POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_columns' );
+
 /**
  * Words the notices after saving for applications, not posts.
  *
@@ -64,6 +56,8 @@ function get_updated_messages( array $messages ): array {
 
 	return $messages;
 }
+
+add_filter( 'post_updated_messages', __NAMESPACE__ . '\get_updated_messages' );
 
 /**
  * Renders a custom column.
@@ -93,6 +87,8 @@ function render_column( string $column, int $post_id ): void {
 	}
 }
 
+add_action( 'manage_' . POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_column', 10, 2 );
+
 /**
  * Renders the event filter above the list.
  *
@@ -114,6 +110,8 @@ function render_event_filter( string $post_type ): void {
 	</select>
 	<?php
 }
+
+add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_event_filter' );
 
 /**
  * Limits the list to the chosen event.
@@ -138,6 +136,8 @@ function filter_by_event( \WP_Query $query ): void {
 	);
 }
 
+add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_by_event' );
+
 /**
  * Replaces core's Publish box with the review boxes.
  *
@@ -155,6 +155,8 @@ function add_meta_boxes( \WP_Post $post ): void {
 
 	add_meta_box( 'oh-log', __( 'Notes and History', 'wordcamporg' ), __NAMESPACE__ . '\render_log_box', POST_TYPE, 'normal', 'low' );
 }
+
+add_action( 'add_meta_boxes_' . POST_TYPE, __NAMESPACE__ . '\add_meta_boxes' );
 
 /**
  * Renders the status, the review fields, and the Save button.
@@ -388,6 +390,8 @@ function save_review( int $post_id ): void {
 	}
 }
 
+add_action( 'save_post_' . POST_TYPE, __NAMESPACE__ . '\save_review' );
+
 /**
  * Adds the screen for picking which flagship events take applications.
  */
@@ -401,6 +405,8 @@ function add_settings_page(): void {
 		__NAMESPACE__ . '\render_settings_page'
 	);
 }
+
+add_action( 'admin_menu', __NAMESPACE__ . '\add_settings_page' );
 
 /**
  * Registers the flagship events setting.
@@ -421,6 +427,9 @@ function register_settings(): void {
 		)
 	);
 }
+
+add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+add_filter( 'option_page_capability_oh_settings', static fn(): string => CAPABILITY );
 
 /**
  * Renders the flagship events screen: upcoming WordCamps, plus past ones still picked, with the picked ones checked.

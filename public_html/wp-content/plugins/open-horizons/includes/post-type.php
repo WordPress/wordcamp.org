@@ -11,13 +11,6 @@ namespace WordCamp\Open_Horizons;
 
 defined( 'WPINC' ) || die();
 
-add_action( 'init', __NAMESPACE__ . '\register_post_type' );
-add_action( 'init', __NAMESPACE__ . '\register_statuses' );
-add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
-add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );
-add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
-add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
-
 /**
  * The statuses an application moves through.
  *
@@ -120,6 +113,8 @@ function register_post_type(): void {
 	);
 }
 
+add_action( 'init', __NAMESPACE__ . '\register_post_type' );
+
 /**
  * Registers the application statuses: none are public, so applications are never shown on the front end.
  */
@@ -149,6 +144,8 @@ function register_statuses(): void {
 		);
 	}
 }
+
+add_action( 'init', __NAMESPACE__ . '\register_statuses' );
 
 /**
  * Keeps an application's status when a save would move it somewhere the workflow doesn't go.
@@ -181,6 +178,8 @@ function enforce_status_transition( array $data, array $postarr ): array {
 	return $data;
 }
 
+add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
+
 /**
  * Keeps applications unowned, which core's edit screen would otherwise hand to the first reviewer who saves one.
  *
@@ -196,6 +195,8 @@ function keep_unowned( array $data ): array {
 
 	return $data;
 }
+
+add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );
 
 /**
  * Logs every status change, whoever made it and however.
@@ -221,6 +222,8 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
 	);
 }
 
+add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
+
 /**
  * Puts an untrashed application back in the status it had, instead of core's `draft`.
  *
@@ -232,6 +235,8 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
 function restore_status_on_untrash( string $new_status, int $post_id, string $previous_status ): string {
 	return POST_TYPE === get_post_type( $post_id ) && isset( get_statuses()[ $previous_status ] ) ? $previous_status : $new_status;
 }
+
+add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
 
 /**
  * Adds a private note to an application.

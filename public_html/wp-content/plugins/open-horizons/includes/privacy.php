@@ -11,9 +11,6 @@ namespace WordCamp\Open_Horizons;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_exporter' );
-add_filter( 'wp_privacy_personal_data_erasers', __NAMESPACE__ . '\register_eraser' );
-
 /**
  * Registers the exporter.
  *
@@ -29,6 +26,8 @@ function register_exporter( array $exporters ): array {
 	return $exporters;
 }
 
+add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_exporter' );
+
 /**
  * Registers the eraser.
  *
@@ -43,6 +42,8 @@ function register_eraser( array $erasers ): array {
 
 	return $erasers;
 }
+
+add_filter( 'wp_privacy_personal_data_erasers', __NAMESPACE__ . '\register_eraser' );
 
 /**
  * Exports the applications made by an email address's account.

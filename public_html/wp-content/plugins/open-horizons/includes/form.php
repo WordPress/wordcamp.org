@@ -303,10 +303,11 @@ function render_form( array $events, array $input, ?\WP_Error $errors ): string 
 				'<strong>' . esc_html( $user->user_login ) . '</strong>'
 			);
 			?>
+			<?php esc_html_e( 'All questions are required unless marked optional.', 'wordcamporg' ); ?>
 		</p>
 
 		<p>
-			<label for="oh-event"><?php esc_html_e( 'Event you’re requesting the scholarship for', 'wordcamporg' ); ?> <span aria-hidden="true">*</span></label><br>
+			<label for="oh-event"><?php esc_html_e( 'Event you’re requesting the scholarship for', 'wordcamporg' ); ?></label>
 			<select id="oh-event" name="oh[event]" required>
 				<option value=""></option>
 				<?php foreach ( $events as $event_id => $event ) : ?>
@@ -329,7 +330,8 @@ function render_form( array $events, array $input, ?\WP_Error $errors ): string 
 
 			<?php
 			foreach ( get_identity_fields() as $key => $field ) {
-				render_field( 'oh[identity][' . $key . ']', 'oh-identity-' . $key, $field, $input['identity'][ $key ] ?? null );
+				// The section's legend already says it's optional.
+				render_field( 'oh[identity][' . $key . ']', 'oh-identity-' . $key, $field, $input['identity'][ $key ] ?? null, false );
 			}
 			?>
 
@@ -342,7 +344,7 @@ function render_form( array $events, array $input, ?\WP_Error $errors ): string 
 		</fieldset>
 
 		<?php wp_nonce_field( 'oh_apply', 'oh_apply_nonce' ); ?>
-		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Submit application', 'wordcamporg' ); ?></button></p>
+		<p><button type="submit"><?php esc_html_e( 'Submit application', 'wordcamporg' ); ?></button></p>
 	</form>
 
 	<?php
@@ -352,23 +354,26 @@ function render_form( array $events, array $input, ?\WP_Error $errors ): string 
 /**
  * Renders one question.
  *
- * @param string $name  The input's name.
- * @param string $id    The input's ID.
- * @param array  $field The field, as get_fields() describes it.
- * @param mixed  $value The current answer.
+ * Nearly every question is required, so the few that aren't are marked instead.
+ *
+ * @param string $name          The input's name.
+ * @param string $id            The input's ID.
+ * @param array  $field         The field, as get_fields() describes it.
+ * @param mixed  $value         The current answer.
+ * @param bool   $mark_optional Optional. Whether to mark the question as optional when it is. Default true.
  */
-function render_field( string $name, string $id, array $field, mixed $value ): void {
-	$required = $field['required'] ? '<span aria-hidden="true">*</span>' : '';
+function render_field( string $name, string $id, array $field, mixed $value, bool $mark_optional = true ): void {
+	$optional = $mark_optional && ! $field['required'] ? ' <span>' . esc_html__( '(optional)', 'wordcamporg' ) . '</span>' : '';
 
 	if ( 'multi' === $field['type'] ) {
 		?>
 		<fieldset>
-			<legend><?php echo esc_html( $field['label'] ); ?> <?php echo $required; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed markup. ?></legend>
+			<legend><?php echo esc_html( $field['label'] ) . $optional; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above. ?></legend>
 			<?php foreach ( $field['options'] as $option => $label ) : ?>
 				<label>
 					<input type="checkbox" name="<?php echo esc_attr( $name ); ?>[]" value="<?php echo esc_attr( $option ); ?>" <?php checked( in_array( $option, (array) $value, true ) ); ?>>
 					<?php echo esc_html( $label ); ?>
-				</label><br>
+				</label>
 			<?php endforeach; ?>
 		</fieldset>
 		<?php
@@ -380,7 +385,7 @@ function render_field( string $name, string $id, array $field, mixed $value ): v
 		<p>
 			<label>
 				<input type="checkbox" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> <?php echo $field['required'] ? 'required' : ''; ?>>
-				<?php echo esc_html( $field['label'] ); ?> <?php echo $required; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed markup. ?>
+				<?php echo esc_html( $field['label'] ) . $optional; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above. ?>
 			</label>
 		</p>
 		<?php
@@ -392,7 +397,7 @@ function render_field( string $name, string $id, array $field, mixed $value ): v
 		: ( $field['options'] ?? array() );
 	?>
 	<p>
-		<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $field['label'] ); ?> <?php echo $required; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed markup. ?></label><br>
+		<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $field['label'] ) . $optional; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above. ?></label>
 
 		<?php if ( 'textarea' === $field['type'] ) : ?>
 			<textarea id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $name ); ?>" rows="5" cols="60" <?php echo $field['required'] ? 'required' : ''; ?>><?php echo esc_textarea( (string) $value ); ?></textarea>

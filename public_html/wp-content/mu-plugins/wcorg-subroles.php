@@ -139,6 +139,23 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 					);
 				}
 				break;
+
+			/**
+			 * Sponsor Vetter
+			 *
+			 * - Vet sponsor companies and approve sponsorships on Central.
+			 *
+			 * Separate from the wrangler subroles, which grant far more than the registry needs.
+			 */
+			case 'sponsor_vetter':
+				// These capabilities only apply on central.wordcamp.org.
+				if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
+					$newcaps = array(
+						'read'                  => true, // Access to wp-admin.
+						'wordcamp_vet_sponsors' => true,
+					);
+				}
+				break;
 		}
 
 		$allcaps = array_merge( $allcaps, $newcaps );

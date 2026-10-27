@@ -23,11 +23,17 @@ function autoload( $class_name ) {
 			$file_name = str_replace( 'WordPressdotorg\MU_Plugins\Utilities\\', '', $class_name );
 			$file_name = str_replace( '_', '-', strtolower( $file_name ) );
 
-			require_once( sprintf(
+			// Relative to this file, like `load-other-mu-plugins.php`: in tests, `WP_CONTENT_DIR` is the test suite's.
+			$file_path = sprintf(
 				'%s/mu-plugins-private/wporg-mu-plugins/pub-sync/utilities/class-%s.php',
-				WP_CONTENT_DIR,
+				dirname( __DIR__ ),
 				$file_name
-			) );
+			);
+
+			// A utility that hasn't been synced yet makes `class_exists()` false, rather than a fatal error.
+			if ( is_readable( $file_path ) ) {
+				require_once $file_path;
+			}
 			break;
 	}
 }

@@ -416,6 +416,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 .wc-button:link,
 .wc-button:visited,
 #content input[type=submit],
+#content button[type=submit],
 #content input#submit {
 	background-color: #00a1c8;
 	background-image: -webkit-gradient(linear, left top, left bottom, from(rgb(0, 161, 200)), to(rgb(0, 116, 168)));
@@ -449,6 +450,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 .wc-button:hover,
 #content input[type=submit]:hover,
+#content button[type=submit]:hover,
 #content input#submit:hover {
 	background-color: #00aace;
 	background-image: -webkit-gradient(linear, left top, left bottom, from(rgb(0, 170, 206)), to(rgb(0, 104, 160)));
@@ -462,6 +464,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 .wc-button:hover:active,
 #content input[type=submit]:active,
+#content button[type=submit]:active,
 #content input#submit:active {
 	background: #00a1c8;
 }
@@ -1917,11 +1920,41 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 #content .grunion-field-label span,
 #content .contact-form label span,
-#content .contact-form label {
+#content .contact-form label,
+#content .entry-content label span,
+#content .entry-content label {
 	/* Small, semi-opaque text is not accessible. */
 	font-size: 100%;
 	opacity: 1;
 	color: #373737;
+}
+
+/* A question sits above its answer; a choice sits beside its box. */
+#content .entry-content label:not(:has(input[type=checkbox], input[type=radio])) {
+	display: block;
+	margin-bottom: 0.25em;
+	font-weight: 700;
+}
+
+#content .entry-content label > span {
+	font-weight: 400;
+}
+
+#content .entry-content label:has(input[type=checkbox], input[type=radio]) {
+	display: flex;
+	gap: 0.5em;
+	align-items: baseline;
+}
+
+/* Fields are spaced by what holds them, not by margins of their own. */
+#content .entry-content input,
+#content .entry-content select {
+	margin-bottom: 0;
+}
+
+#content .entry-content textarea {
+	box-sizing: border-box;
+	width: 100%;
 }
 
 #content div.wpcf7-response-output {

@@ -288,7 +288,8 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
  * @param \WP_Post $post       The record.
  */
 function apply_status_side_effects( string $new_status, string $old_status, \WP_Post $post ): void {
-	if ( $new_status === $old_status ) {
+	// Restoring from the trash isn't a decision, so it keeps the dates the record had.
+	if ( $new_status === $old_status || 'trash' === $old_status ) {
 		return;
 	}
 

@@ -202,6 +202,10 @@ function has_invoice( int $blog_id, int $sponsor_id ): bool {
  * @return array|\WP_Error The conversation.
  */
 function send_compliance_request( int $company_id, int $sponsorship_id ): array|\WP_Error {
+	if ( ! is_allowed_transition( COMPANY_POST_TYPE, (string) get_post_status( $company_id ), 'sv-compliance-req' ) ) {
+		return new \WP_Error( 'sv_not_requestable', __( 'Move the company to In Progress before requesting changes.', 'wordcamporg' ) );
+	}
+
 	$email = build_compliance_email( $company_id, $sponsorship_id );
 
 	if ( is_wp_error( $email ) ) {

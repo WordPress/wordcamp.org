@@ -384,10 +384,12 @@ function save_company( int $post_id ): void {
 		'_sv_contact_first_name' => sanitize_text_field( (string) ( $fields['_sv_contact_first_name'] ?? '' ) ),
 		'_sv_contact_last_name'  => sanitize_text_field( (string) ( $fields['_sv_contact_last_name'] ?? '' ) ),
 		'_sv_contact_email'      => strtolower( sanitize_email( (string) ( $fields['_sv_contact_email'] ?? '' ) ) ),
-		'_sv_gpl_findings'       => sanitize_textarea_field( (string) ( $fields['_sv_gpl_findings'] ?? '' ) ),
-		'_sv_trademark_findings' => sanitize_textarea_field( (string) ( $fields['_sv_trademark_findings'] ?? '' ) ),
+		// Markdown, kept as written: esc_textarea() in the form, render_markdown() in the email.
+		'_sv_gpl_findings'       => (string) ( $fields['_sv_gpl_findings'] ?? '' ),
+		'_sv_trademark_findings' => (string) ( $fields['_sv_trademark_findings'] ?? '' ),
 		'_sv_not_eligible_until' => get_posted_date( 'sv_not_eligible_until' ),
-		'_sv_good_faith_due'     => get_posted_date( 'sv_good_faith_due' ),
+		// The form was loaded before core saved the status, so Compliant's cleared due date would come back.
+		'_sv_good_faith_due'     => 'sv-compliant' === get_post_status( $post_id ) ? '' : get_posted_date( 'sv_good_faith_due' ),
 	);
 
 	foreach ( $values as $meta_key => $value ) {

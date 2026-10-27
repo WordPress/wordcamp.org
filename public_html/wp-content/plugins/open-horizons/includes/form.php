@@ -29,7 +29,6 @@ const FREESCOUT_AGENT_ID = 81;
 function register_styles(): void {
 	wp_register_style( 'open-horizons-form', plugins_url( 'css/form.css', __DIR__ ), array(), (string) filemtime( dirname( __DIR__ ) . '/css/form.css' ) );
 }
-
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\register_styles' );
 
 /**
@@ -69,7 +68,6 @@ function render_shortcode(): string {
 
 	return render_form( $events, $input, $errors );
 }
-
 add_shortcode( 'open-horizons-application', __NAMESPACE__ . '\render_shortcode' );
 
 /**

@@ -112,7 +112,6 @@ function register_post_type(): void {
 		)
 	);
 }
-
 add_action( 'init', __NAMESPACE__ . '\register_post_type' );
 
 /**
@@ -144,7 +143,6 @@ function register_statuses(): void {
 		);
 	}
 }
-
 add_action( 'init', __NAMESPACE__ . '\register_statuses' );
 
 /**
@@ -177,7 +175,6 @@ function enforce_status_transition( array $data, array $postarr ): array {
 
 	return $data;
 }
-
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition', 9, 2 );
 
 /**
@@ -195,7 +192,6 @@ function keep_unowned( array $data ): array {
 
 	return $data;
 }
-
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\keep_unowned' );
 
 /**
@@ -221,7 +217,6 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
 		)
 	);
 }
-
 add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 3 );
 
 /**
@@ -235,7 +230,6 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\log_status_change', 10, 
 function restore_status_on_untrash( string $new_status, int $post_id, string $previous_status ): string {
 	return POST_TYPE === get_post_type( $post_id ) && isset( get_statuses()[ $previous_status ] ) ? $previous_status : $new_status;
 }
-
 add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
 
 /**

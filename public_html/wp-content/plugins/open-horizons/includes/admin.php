@@ -28,7 +28,6 @@ function get_columns( array $columns ): array {
 		'oh_submitted' => __( 'Submitted', 'wordcamporg' ),
 	);
 }
-
 add_filter( 'manage_' . POST_TYPE . '_posts_columns', __NAMESPACE__ . '\get_columns' );
 
 /**
@@ -42,7 +41,6 @@ function get_sortable_columns( array $columns ): array {
 
 	return $columns;
 }
-
 add_filter( 'manage_edit-' . POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_columns' );
 
 /**
@@ -56,7 +54,6 @@ function get_updated_messages( array $messages ): array {
 
 	return $messages;
 }
-
 add_filter( 'post_updated_messages', __NAMESPACE__ . '\get_updated_messages' );
 
 /**
@@ -86,7 +83,6 @@ function render_column( string $column, int $post_id ): void {
 			break;
 	}
 }
-
 add_action( 'manage_' . POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_column', 10, 2 );
 
 /**
@@ -110,7 +106,6 @@ function render_event_filter( string $post_type ): void {
 	</select>
 	<?php
 }
-
 add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_event_filter' );
 
 /**
@@ -135,7 +130,6 @@ function filter_by_event( \WP_Query $query ): void {
 		)
 	);
 }
-
 add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_by_event' );
 
 /**
@@ -155,7 +149,6 @@ function add_meta_boxes( \WP_Post $post ): void {
 
 	add_meta_box( 'oh-log', __( 'Notes and History', 'wordcamporg' ), __NAMESPACE__ . '\render_log_box', POST_TYPE, 'normal', 'low' );
 }
-
 add_action( 'add_meta_boxes_' . POST_TYPE, __NAMESPACE__ . '\add_meta_boxes' );
 
 /**
@@ -389,7 +382,6 @@ function save_review( int $post_id ): void {
 		add_note( $post_id, $note );
 	}
 }
-
 add_action( 'save_post_' . POST_TYPE, __NAMESPACE__ . '\save_review' );
 
 /**
@@ -405,7 +397,6 @@ function add_settings_page(): void {
 		__NAMESPACE__ . '\render_settings_page'
 	);
 }
-
 add_action( 'admin_menu', __NAMESPACE__ . '\add_settings_page' );
 
 /**
@@ -427,7 +418,6 @@ function register_settings(): void {
 		)
 	);
 }
-
 add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
 add_filter( 'option_page_capability_oh_settings', static fn(): string => CAPABILITY );
 

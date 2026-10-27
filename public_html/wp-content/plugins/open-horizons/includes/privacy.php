@@ -25,7 +25,6 @@ function register_exporter( array $exporters ): array {
 
 	return $exporters;
 }
-
 add_filter( 'wp_privacy_personal_data_exporters', __NAMESPACE__ . '\register_exporter' );
 
 /**
@@ -42,7 +41,6 @@ function register_eraser( array $erasers ): array {
 
 	return $erasers;
 }
-
 add_filter( 'wp_privacy_personal_data_erasers', __NAMESPACE__ . '\register_eraser' );
 
 /**

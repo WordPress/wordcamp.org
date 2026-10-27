@@ -13,3 +13,26 @@
 .oh-application-notice p {
 	margin: 0.5em 0;
 }
+
+/* One column of full-width fields. */
+.oh-application :is(input[type=text], input[type=email], select) {
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.oh-application .oh-identity {
+	padding-top: 24px;
+	border-top: 1px solid #ddd;
+}
+
+/* Floated, so it sits below the rule rather than in it. */
+.oh-application .oh-identity > legend {
+	float: left;
+	width: 100%;
+	margin-bottom: 12px;
+	font-size: 18px;
+}
+
+.oh-application .oh-identity > legend + * {
+	clear: left;
+}

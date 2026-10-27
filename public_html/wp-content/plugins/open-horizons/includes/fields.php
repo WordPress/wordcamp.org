@@ -198,7 +198,13 @@ function validate_answers( array $fields, array $input ): array|\WP_Error {
 
 		switch ( $field['type'] ) {
 			case 'email':
-				$value = sanitize_email( is_string( $value ) ? $value : '' );
+				$value = is_string( $value ) ? trim( $value ) : '';
+
+				// Refused rather than run through sanitize_email(), which would quietly change the address.
+				if ( '' !== $value && ! is_email( $value ) ) {
+					/* translators: %s: The question. */
+					$errors->add( 'oh_invalid_' . $key, sprintf( __( 'Please enter a valid email address for: %s', 'wordcamporg' ), $field['label'] ) );
+				}
 				break;
 
 			case 'textarea':

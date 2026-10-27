@@ -228,6 +228,16 @@ class Test_Application extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An address that isn't one is refused, instead of being stored changed.
+	 */
+	public function test_submit_refuses_an_invalid_email(): void {
+		$result = submit_application( $this->applicant, $this->get_input( array( 'email' => 'ana@example' ) ) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( array( 'oh_invalid_email' ), $result->get_error_codes() );
+	}
+
+	/**
 	 * Identity & Background answers are only kept with the applicant's explicit consent.
 	 *
 	 * @dataProvider data_identity_consent

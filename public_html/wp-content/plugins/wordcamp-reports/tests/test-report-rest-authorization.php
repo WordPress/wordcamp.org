@@ -105,6 +105,7 @@ class Test_Report_Rest_Authorization extends WP_UnitTestCase {
 		update_post_meta( self::$event_id, '_venue_city', 'Cape Town' );
 		update_post_meta( self::$event_id, '_venue_country_name', 'South Africa' );
 		update_post_meta( self::$event_id, 'Number of Anticipated Attendees', '120' );
+		update_post_meta( self::$event_id, 'Number of venues', 3 );
 		update_post_meta( self::$event_id, 'Series Event', 1 );
 
 		// Canaries: private fields that are in the safelist but must not ship.

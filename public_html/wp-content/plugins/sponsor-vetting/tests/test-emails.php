@@ -140,6 +140,11 @@ class Test_Emails extends Database_TestCase {
 	 * (`PUT /api/conversations/{id}/tags`). The responses follow the API's shape.
 	 */
 	public function test_sending_the_compliance_request_records_the_conversation(): void {
+		// CI installs the client, so missing it there is a broken setup, not a reason to lose this test quietly.
+		if ( ! freescout_available() && getenv( 'GITHUB_ACTIONS' ) ) {
+			$this->fail( 'The FreeScout client from wporg-mu-plugins didn’t load: check that `composer install` put pub-sync/utilities/class-freescout.php in place.' );
+		}
+
 		if ( ! freescout_available() ) {
 			$this->markTestSkipped( 'The FreeScout client from wporg-mu-plugins isn’t installed.' );
 		}

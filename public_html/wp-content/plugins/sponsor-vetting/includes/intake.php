@@ -211,8 +211,10 @@ function get_mes_company( int $mes_id ): int {
 /**
  * Links a new sponsorship to its company where that's certain, and otherwise leaves it for a reviewer.
  *
- * - A Multi-Event Sponsor's copy links to the company its `mes` post is linked to, read now rather than stamped
- *   on the copy, so copies organizers have edited (which the propagator no longer updates) resolve too.
+ * - A Multi-Event Sponsor's copy resolves to the company its `mes` post is linked to, read now rather than stamped
+ *   on the copy, so copies organizers have edited (which the propagator no longer updates) resolve too. It links
+ *   only while the copy's website is one of the company's domains; a copy pointed at another site is only
+ *   suggested, since organizers can repurpose a copy as a different sponsor.
  * - A domain an existing company uses is only suggested: a reviewer confirms it.
  * - A domain no company uses gets a new company.
  * - Without a domain, a reviewer links it.
@@ -224,13 +226,17 @@ function get_mes_company( int $mes_id ): int {
  */
 function resolve_company( int $sponsorship_id, array $sponsor ): void {
 	$company_id = get_mes_company( $sponsor['mes_id'] );
+	$domain     = normalize_domain( $sponsor['website'] );
 
 	if ( $company_id ) {
-		link_sponsorship( $sponsorship_id, $company_id );
+		if ( '' !== $domain && in_array( $domain, get_company_domains( $company_id ), true ) ) {
+			link_sponsorship( $sponsorship_id, $company_id );
+		} else {
+			update_post_meta( $sponsorship_id, '_sv_suggested_company', $company_id );
+		}
+
 		return;
 	}
-
-	$domain = normalize_domain( $sponsor['website'] );
 
 	if ( '' === $domain ) {
 		return;

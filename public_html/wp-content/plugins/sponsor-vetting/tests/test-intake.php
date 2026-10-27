@@ -146,8 +146,9 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * A Multi-Event Sponsor's copy links to its company even after organizers edit it; a website a company already
-	 * uses is only suggested, for a reviewer to confirm; one without a website waits for a reviewer.
+	 * A Multi-Event Sponsor's copy links to its company even after organizers edit it, as long as its website is
+	 * still the company's; a copy pointed at another site, or a website a company already uses, is only suggested,
+	 * for a reviewer to confirm; one without a website waits for a reviewer.
 	 *
 	 * @dataProvider data_company_resolution
 	 *
@@ -191,7 +192,8 @@ class Test_Intake extends Database_TestCase {
 	 */
 	public function data_company_resolution(): array {
 		return array(
-			'multi-event copy, website edited' => array( 'https://edited.example', true, 'linked' ),
+			'multi-event copy, details edited' => array( 'https://www.acme.example/sponsors', true, 'linked' ),
+			'multi-event copy, other website'  => array( 'https://edited.example', true, 'suggested' ),
 			'website a company uses'           => array( 'https://www.acme.example/', false, 'suggested' ),
 			'website no company uses'          => array( 'https://new.example', false, 'new' ),
 			'no website'                       => array( '', false, 'none' ),

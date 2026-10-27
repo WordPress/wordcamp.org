@@ -30,7 +30,6 @@
 			<th scope="row">
 				<label for="_wcb_sponsor_amount">
 					<?php esc_html_e( 'Amount', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -52,7 +51,6 @@
 			<th scope="row">
 				<label for="_wcb_sponsor_currency">
 					<?php esc_html_e( 'Currency', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -75,11 +73,13 @@
 		<tr>
 			<th scope="row">
 				<?php esc_html_e( 'Is this their first time being a sponsor at a WordPress event?', 'wordcamporg' ); ?>
+				<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 			</th>
 			<td>
 				<fieldset>
 					<legend class="screen-reader-text">
 						<?php esc_html_e( 'Is this their first time being a sponsor at a WordPress event?', 'wordcamporg' ); ?>
+						<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 					</legend>
 
 					<label for="_wcb_sponsor_first_time_yes">
@@ -130,7 +130,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_company_name">
 					<?php esc_html_e( 'Company Name', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -149,7 +148,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_website">
 					<?php esc_html_e( 'Website', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -167,7 +165,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_first_name">
 					<?php esc_html_e( 'First Name', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -185,7 +182,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_last_name">
 					<?php esc_html_e( 'Last Name', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -203,7 +199,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_email_address">
 					<?php esc_html_e( 'Email Address', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -221,7 +216,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_phone_number">
 					<?php esc_html_e( 'Phone Number', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -240,6 +234,7 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_twitter_handle">
 					<?php esc_html_e( 'Twitter Handle', 'wordcamporg' ); ?>
+					<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -256,6 +251,7 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_vat_number">
 					<?php esc_html_e( 'VAT Number', 'wordcamporg' ); ?>
+					<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -284,11 +280,10 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_country">
 					<?php esc_html_e( 'Country', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
-				<select id="_wcpt_sponsor_country" name="_wcpt_sponsor_country">
+				<select id="_wcpt_sponsor_country" name="_wcpt_sponsor_country" required>
 					<option value="" <?php selected( $country, '' ); ?>>
 						<?php esc_html_e( '-- Select a Country --', 'wordcamporg' ); ?>
 					</option>
@@ -313,7 +308,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_street_address1">
 					<?php esc_html_e( 'Street Address 1', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -331,6 +325,7 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_street_address2">
 					<?php esc_html_e( 'Street Address 2', 'wordcamporg' ); ?>
+					<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -347,7 +342,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_city">
 					<?php esc_html_e( 'City', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -365,6 +359,7 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_state">
 					<?php esc_html_e( 'State / Province', 'wordcamporg' ); ?>
+					<span class="description"><?php esc_html_e( '(optional)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>
@@ -383,7 +378,6 @@
 			<th scope="row">
 				<label for="_wcpt_sponsor_zip_code">
 					<?php esc_html_e( 'ZIP / Postal Code', 'wordcamporg' ); ?>
-					<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 				</label>
 			</th>
 			<td>

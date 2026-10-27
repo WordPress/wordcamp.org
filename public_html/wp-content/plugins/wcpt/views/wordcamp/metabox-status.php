@@ -26,8 +26,8 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 						<?php if ( current_user_can( $edit_capability ) ) : ?>
 
-							<span id="post-status-display">
-							<select name="event_subtype">
+							<span id="post-subtype-select-container">
+							<select name="event_subtype" id="wcpt_event_subtype">
 								<?php
 								// If the stored subtype is not in the list, add it so saving never
 								// silently mutates it, the same as the status dropdown below.
@@ -49,7 +49,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 						<?php else : ?>
 
-							<span id="post-status-display">
+							<span id="post-subtype-display" data-subtype="<?php echo esc_attr( $event_subtype ); ?>">
 							<?php echo esc_html( $event_subtypes[ $event_subtype ] ?? $event_subtype ); ?>
 						</span>
 

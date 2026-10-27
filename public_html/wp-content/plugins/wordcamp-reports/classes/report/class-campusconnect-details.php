@@ -101,6 +101,7 @@ class CampusConnect_Details extends WordCamp_Details {
 				'Name',
 				'Organizer Name',
 				'Venue Name',
+				'Number of venues',
 				'_venue_city',
 				'_venue_country_name',
 				'Number of Anticipated Attendees',
@@ -127,6 +128,7 @@ class CampusConnect_Details extends WordCamp_Details {
 
 		$rename = array(
 			'Venue Name'         => 'Institution Name',
+			'Number of venues'   => 'Number of Venues',
 			'_venue_city'         => 'City',
 			'_venue_country_name' => 'Country',
 		);
@@ -275,6 +277,7 @@ class CampusConnect_Details extends WordCamp_Details {
 			'Status',
 			'Name',
 			'Venue Name',
+			'Number of venues',
 			'_venue_city',
 			'_venue_country_name',
 			'Number of Anticipated Attendees',
@@ -378,6 +381,7 @@ class CampusConnect_Details extends WordCamp_Details {
 			'Name'                            => 'checked',
 			'Organizer Name'                  => 'checked',
 			'Venue Name'                      => 'checked',
+			'Number of venues'                => 'checked',
 			'_venue_city'                     => 'checked',
 			'_venue_country_name'             => 'checked',
 			'Number of Anticipated Attendees' => 'checked',

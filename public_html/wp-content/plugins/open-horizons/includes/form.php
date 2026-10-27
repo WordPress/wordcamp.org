@@ -303,6 +303,7 @@ function render_form( array $events, array $input, ?\WP_Error $errors ): string 
 				'<strong>' . esc_html( $user->user_login ) . '</strong>'
 			);
 			?>
+			<?php esc_html_e( 'All questions are required unless marked optional.', 'wordcamporg' ); ?>
 		</p>
 
 		<p>

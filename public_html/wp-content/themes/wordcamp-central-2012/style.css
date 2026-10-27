@@ -1921,38 +1921,44 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 #content .grunion-field-label span,
 #content .contact-form label span,
 #content .contact-form label,
-#content .entry-content label span,
-#content .entry-content label {
+#content .entry-content form:not(.contact-form) label {
 	/* Small, semi-opaque text is not accessible. */
 	font-size: 100%;
 	opacity: 1;
 	color: #373737;
 }
 
-/* A question sits above its answer; a choice sits beside its box. */
-#content .entry-content label:not(:has(input[type=checkbox], input[type=radio])) {
+/* Jetpack lays out its own forms; these are for the others. A question sits above its answer. */
+#content .entry-content form:not(.contact-form) label:not(:has(input)) {
 	display: block;
 	margin-bottom: 0.25em;
 	font-weight: 700;
 }
 
-#content .entry-content label > span {
+#content .entry-content form:not(.contact-form) label > span,
+#content .entry-content form:not(.contact-form) legend > span {
 	font-weight: 400;
 }
 
-#content .entry-content label:has(input[type=checkbox], input[type=radio]) {
-	display: flex;
-	gap: 0.5em;
-	align-items: baseline;
+/* A choice sits beside its box, and wraps clear of it. */
+#content .entry-content form:not(.contact-form) label:has(> input[type=checkbox], > input[type=radio]) {
+	display: block;
+	padding-left: 1.5em;
+}
+
+#content .entry-content form:not(.contact-form) label > input:is([type=checkbox], [type=radio]) {
+	width: 1em;
+	/* With the space that follows it, 1.5em: the label's indent. */
+	margin: 0 0.25em 0 -1.5em;
 }
 
 /* Fields are spaced by what holds them, not by margins of their own. */
-#content .entry-content input,
-#content .entry-content select {
+#content .entry-content form:not(.contact-form) input,
+#content .entry-content form:not(.contact-form) select {
 	margin-bottom: 0;
 }
 
-#content .entry-content textarea {
+#content .entry-content form:not(.contact-form) textarea {
 	box-sizing: border-box;
 	width: 100%;
 }

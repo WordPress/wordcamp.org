@@ -221,7 +221,7 @@ function find_applications( array $args ): array {
  * @param array    $event   The event: `name` and `closes`.
  */
 function send_confirmation( \WP_User $user, array $answers, array $event ): void {
-	$headers = defined( 'OPEN_HORIZONS_EMAIL' ) ? array( 'Reply-To: ' . OPEN_HORIZONS_EMAIL ) : array();
+	$headers = defined( 'EMAIL_OPEN_HORIZONS' ) ? array( 'Reply-To: ' . EMAIL_OPEN_HORIZONS ) : array();
 
 	// The email is plain text, and get_the_title() encodes entities.
 	$event_name = html_entity_decode( $event['name'], ENT_QUOTES, 'UTF-8' );

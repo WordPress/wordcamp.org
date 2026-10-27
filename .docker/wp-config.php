@@ -189,7 +189,7 @@ define( 'WORDCAMP_UTILITIES_DIR',  WP_CONTENT_DIR . '/mu-plugins/utilities' );
 
 define( 'EMAIL_DEVELOPER_NOTIFICATIONS', 'developers@example.test' );
 define( 'EMAIL_CENTRAL_SUPPORT',         'support@wordcamp.test' );
-define( 'OPEN_HORIZONS_EMAIL',           'scholarships@wordcamp.test' );
+define( 'EMAIL_OPEN_HORIZONS',           'scholarships@wordcamp.test' );
 
 $trusted_deputies = array(
 	6, // contributorrole.

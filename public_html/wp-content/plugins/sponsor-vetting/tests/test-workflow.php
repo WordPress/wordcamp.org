@@ -255,7 +255,7 @@ class Test_Workflow extends WP_UnitTestCase {
 
 	/**
 	 * A Good Faith approval covers its own sponsorship only: the company's next one still needs Compliant, or a
-	 * Good Faith approval of its own.
+	 * Good Faith approval of its own, which keeps the deadline the first one set.
 	 */
 	public function test_good_faith_approval_never_carries_over(): void {
 		$company_id = $this->create_company( 'sv-compliance-req', (int) strtotime( '-1 month' ) );
@@ -272,5 +272,10 @@ class Test_Workflow extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'svs-pending', get_post_status( $second_id ) );
+
+		update_post_meta( $company_id, '_sv_good_faith_due', '2026-01-15' );
+
+		$this->assertTrue( approve_sponsorship( $second_id, true ) );
+		$this->assertSame( '2026-01-15', get_post_meta( $company_id, '_sv_good_faith_due', true ) );
 	}
 }

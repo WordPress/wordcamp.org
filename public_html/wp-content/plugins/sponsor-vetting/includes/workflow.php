@@ -212,7 +212,10 @@ function approve_sponsorship( int $sponsorship_id, bool $good_faith = false ): t
 				'time'    => time(),
 			)
 		);
-		update_post_meta( $sponsorship->post_parent, '_sv_good_faith_due', gmdate( 'Y-m-d', time() + GOOD_FAITH_DAYS * DAY_IN_SECONDS ) );
+		// A later Good Faith approval doesn't move the deadline the sponsor already has.
+		if ( ! get_post_meta( $sponsorship->post_parent, '_sv_good_faith_due', true ) ) {
+			update_post_meta( $sponsorship->post_parent, '_sv_good_faith_due', gmdate( 'Y-m-d', time() + GOOD_FAITH_DAYS * DAY_IN_SECONDS ) );
+		}
 		/* translators: %s: Sponsorship title. */
 		add_note( $sponsorship->post_parent, sprintf( __( 'Approved “%s” in good faith.', 'wordcamporg' ), $sponsorship->post_title ) );
 	}

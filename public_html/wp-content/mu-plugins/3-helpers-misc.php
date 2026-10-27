@@ -363,24 +363,6 @@ function wcorg_redundant_remote_get( $request_url, $request_args = array() ) {
 }
 
 /**
- * Display the indicator that marks a form field as required
- */
-function wcorg_required_indicator() {
-	?>
-
-	<span class="wcorg-required" aria-hidden="true">
-		<?php // translators: The symbol to indicate the form field is required. ?>
-		<?php esc_html_e( '*', 'wordcamporg' ); ?>
-	</span>
-
-	<span class="screen-reader-text">
-		<?php esc_html_e( 'required field', 'wordcamporg' ); ?>
-	</span>
-
-	<?php
-}
-
-/**
  * Get the URL of Jetpack's Custom CSS file.
  *
  * Core normally just prints the CSS inline, but Jetpack enqueues it if it's longer than 2k characters. Jetpack

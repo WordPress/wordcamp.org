@@ -313,11 +313,6 @@ function render_compliance_box( \WP_Post $post ): void {
 
 	render_conversations( get_conversations( $post->ID, 'compliance' ) );
 
-	if ( ! freescout_available() ) {
-		echo '<p>' . esc_html__( 'Emails can’t be sent: the FreeScout client isn’t available.', 'wordcamporg' ) . '</p>';
-		return;
-	}
-
 	if ( ! $pending ) {
 		echo '<p>' . esc_html__( 'A compliance request needs a pending sponsorship, which names the event and copies it in.', 'wordcamporg' ) . '</p>';
 		return;

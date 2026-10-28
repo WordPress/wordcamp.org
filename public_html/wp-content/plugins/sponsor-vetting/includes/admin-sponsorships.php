@@ -211,7 +211,7 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 
 	<?php if ( 'svs-approved' === $post->post_status ) : ?>
 		<?php render_conversations( get_conversations( $post->ID, 'approval' ) ); ?>
-		<?php if ( freescout_available() && needs_approval_email( $post->ID ) ) : ?>
+		<?php if ( needs_approval_email( $post->ID ) ) : ?>
 			<p><button type="submit" name="sv_action" value="send_approval" class="button"><?php esc_html_e( 'Send approval email', 'wordcamporg' ); ?></button></p>
 		<?php endif; ?>
 	<?php endif; ?>

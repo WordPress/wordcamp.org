@@ -14,7 +14,6 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\build_compliance_email;
-use function WordCamp\Sponsor_Vetting\freescout_available;
 use function WordCamp\Sponsor_Vetting\get_conversations;
 use function WordCamp\Sponsor_Vetting\needs_approval_email;
 use function WordCamp\Sponsor_Vetting\record_conversation;
@@ -140,15 +139,6 @@ class Test_Emails extends Database_TestCase {
 	 * (`PUT /api/conversations/{id}/tags`). The responses follow the API's shape.
 	 */
 	public function test_sending_the_compliance_request_records_the_conversation(): void {
-		// CI installs the client, so missing it there is a broken setup, not a reason to lose this test quietly.
-		if ( ! freescout_available() && getenv( 'GITHUB_ACTIONS' ) ) {
-			$this->fail( 'The FreeScout client from wporg-mu-plugins didn’t load: check that `composer install` put pub-sync/utilities/class-freescout.php in place.' );
-		}
-
-		if ( ! freescout_available() ) {
-			$this->markTestSkipped( 'The FreeScout client from wporg-mu-plugins isn’t installed.' );
-		}
-
 		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
 		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
 

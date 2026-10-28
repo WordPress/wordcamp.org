@@ -17,15 +17,6 @@ use WordPressdotorg\MU_Plugins\Utilities\FreeScout;
 defined( 'WPINC' ) || die();
 
 /**
- * Whether the FreeScout client is loaded or can be.
- *
- * @return bool
- */
-function freescout_available(): bool {
-	return class_exists( FreeScout::class );
-}
-
-/**
  * Renders a reviewer's Markdown findings as HTML for an email.
  *
  * @param string $markdown The findings.
@@ -212,10 +203,6 @@ function send_compliance_request( int $company_id, int $sponsorship_id ): array|
 		return $email;
 	}
 
-	if ( ! freescout_available() ) {
-		return new \WP_Error( 'sv_no_freescout', __( 'The FreeScout client isn’t available.', 'wordcamporg' ) );
-	}
-
 	$conversation = FreeScout::send( $email );
 
 	if ( is_wp_error( $conversation ) ) {
@@ -254,10 +241,6 @@ function send_approval_email( int $sponsorship_id ): array|\WP_Error|null {
 
 	if ( is_wp_error( $email ) ) {
 		return $email;
-	}
-
-	if ( ! freescout_available() ) {
-		return new \WP_Error( 'sv_no_freescout', __( 'The FreeScout client isn’t available.', 'wordcamporg' ) );
 	}
 
 	$conversation = FreeScout::send( $email );

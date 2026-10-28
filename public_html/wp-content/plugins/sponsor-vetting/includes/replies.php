@@ -29,7 +29,7 @@ add_action( 'init', __NAMESPACE__ . '\schedule_reply_check' );
  * Flags each company in Compliance Requested whose sponsor wrote last in its latest compliance conversation.
  */
 function check_replies(): void {
-	if ( ! is_central() || ! freescout_available() ) {
+	if ( ! is_central() ) {
 		return;
 	}
 

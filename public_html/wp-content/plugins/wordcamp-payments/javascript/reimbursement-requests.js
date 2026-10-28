@@ -140,6 +140,7 @@ jQuery( document ).ready( function( $ ) {
 				if ( $( '#payment_method_sepa_transfer' ).prop( 'checked' ) ) {
 					$( '#payment_method_sepa_transfer' ).prop( 'checked', false );
 					$( '#payment_method_sepa_transfer_fields' ).removeClass( 'active' ).addClass( 'hidden' );
+					wcb.validateSepaFields();
 				}
 			}
 		}

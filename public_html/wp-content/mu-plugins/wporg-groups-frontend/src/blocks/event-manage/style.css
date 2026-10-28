@@ -325,8 +325,7 @@
 	border: 1px solid #d9d9d9;
 	border-radius: 2px;
 	min-height: 200px;
-	max-height: 360px;
-	overflow-y: auto;
+	overflow: clip;
 	background: #fff;
 	isolation: isolate;
 }

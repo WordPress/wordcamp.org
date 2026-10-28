@@ -8,9 +8,7 @@ defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__ ) . '/trait-wordcamp-root-blog.php';
 
-// `camptix-tweaks` loads the addon on `camptix_load_addons`, but this suite doesn't load `camptix-tweaks`.
-require_once SUT_WPMU_PLUGIN_DIR . '/camptix-tweaks/addons/extra-fields.php';
-require_once SUT_WPMU_PLUGIN_DIR . '/camptix-tweaks/addons/extra-fields/privacy.php';
+// The field is loaded by `load_privacy_field()` in the suite's bootstrap.
 
 /**
  * Tests for the "listed on the public Attendees page" answer shown on the Edit Ticket page.

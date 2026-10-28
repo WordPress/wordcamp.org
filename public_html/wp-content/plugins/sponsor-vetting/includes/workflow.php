@@ -112,9 +112,12 @@ function enforce_status_transition( array $data, array $postarr ): array {
 	// A screen loaded before someone else changed the status would otherwise change it back.
 	$is_stale = isset( $postarr['original_post_status'] ) && $postarr['original_post_status'] !== $post->post_status;
 
+	// Restoring an approved sponsorship from the trash isn't a new approval.
+	$is_restoring = 'trash' === $post->post_status && restoring_approval() === $post->ID;
+
 	if ( $is_stale || ! is_allowed_transition( $post->post_type, $post->post_status, $to ) ) {
 		$data['post_status'] = $post->post_status;
-	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && restoring_approval() !== $post->ID && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
+	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && ! $is_restoring && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
 		$data['post_status'] = $post->post_status;
 	}
 
@@ -352,6 +355,14 @@ function restore_status_on_untrash( string $new_status, int $post_id, string $pr
 	return $previous_status;
 }
 add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
+
+/**
+ * Clears the restored approval once the untrash is done, so it can't unlock a later save in the same process.
+ */
+function done_restoring_approval(): void {
+	restoring_approval( 0 );
+}
+add_action( 'untrashed_post', __NAMESPACE__ . '\done_restoring_approval' );
 
 /**
  * Unlinks a deleted company's sponsorships, so they go back to reviewers instead of pointing at nothing.

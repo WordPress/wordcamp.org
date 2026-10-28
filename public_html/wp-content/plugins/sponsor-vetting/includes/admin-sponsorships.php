@@ -241,9 +241,12 @@ function render_sponsorship_company_box( \WP_Post $post ): void {
 		if ( $sponsor && in_array( normalize_domain( $sponsor['website'] ), get_company_domains( $suggested_id ), true ) ) {
 			/* translators: %s: Company name. */
 			$message = __( 'The website matches %s.', 'wordcamporg' );
-		} else {
+		} elseif ( $sponsor && $sponsor['mes_id'] ) {
 			/* translators: %s: Company name. */
 			$message = __( 'This is a copy of the Multi-Event Sponsor of %s, but its website isn’t one of the company’s domains.', 'wordcamporg' );
+		} else {
+			/* translators: %s: Company name. */
+			$message = __( 'Suggested: %s. The website doesn’t match the company’s domains.', 'wordcamporg' );
 		}
 		?>
 		<p>

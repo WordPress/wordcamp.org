@@ -281,7 +281,7 @@ class Test_Workflow extends WP_UnitTestCase {
 
 	/**
 	 * Restoring an approved sponsorship from the trash restores its approval, even one given in good faith, which
-	 * the approval check alone would refuse.
+	 * the approval check alone would refuse. Once restored, a direct save can't approve it that way.
 	 */
 	public function test_untrashing_restores_an_approval(): void {
 		$company_id     = $this->create_company( 'sv-compliance-req', (int) strtotime( '-1 month' ) );
@@ -293,6 +293,16 @@ class Test_Workflow extends WP_UnitTestCase {
 		wp_untrash_post( $sponsorship_id );
 
 		$this->assertSame( 'svs-approved', get_post_status( $sponsorship_id ) );
+
+		wp_trash_post( $sponsorship_id );
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_status' => 'svs-approved',
+			)
+		);
+
+		$this->assertSame( 'trash', get_post_status( $sponsorship_id ) );
 	}
 
 	/**

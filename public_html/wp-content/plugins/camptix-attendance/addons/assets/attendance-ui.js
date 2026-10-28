@@ -253,6 +253,7 @@ jQuery(document).ready(function($){
 		close: function() {
 			this.$overlay.hide();
 			this.remove();
+			this.trigger( 'closed' );
 			return false;
 		}
 	});
@@ -478,13 +479,13 @@ jQuery(document).ready(function($){
 		 * Main Application events/controls.
 		 */
 		events: {
-			'click .dashicons-menu': 'menu',
-			'click .submenu .search': 'searchView',
-			'click header h1': 'searchView',
-			'click .submenu .sort': 'sortView',
-			'click .submenu .refresh': 'refresh',
-			'click .submenu .qr': 'qr',
-			'click .submenu .filter': 'filterView',			
+			'fastClick .dashicons-menu': 'menu',
+			'fastClick .submenu .search': 'searchView',
+			'fastClick header h1': 'searchView',
+			'fastClick .submenu .sort': 'sortView',
+			'fastClick .submenu .refresh': 'refresh',
+			'fastClick .submenu .qr': 'qr',
+			'fastClick .submenu .filter': 'filterView'
 		},
 
 		/**
@@ -505,8 +506,8 @@ jQuery(document).ready(function($){
 
 			this.render();
 
-			this.$header = this.$el.find('header');
-			this.$menu = this.$header.find('.menu');
+			this.$header = this.$el.find( 'header' );
+			this.$menu = this.$header.find( '.menu' );
 
 			this.scroll = _.chain( this.scroll ).bind( this ).value();
 			this.$list = this.$el.find( '.attendees-list' );
@@ -521,13 +522,9 @@ jQuery(document).ready(function($){
 
 			this.setupCollection();
 
-			if (
-				_camptixAttendanceQRScanning !== undefined &&
-				_camptixAttendanceQRScanning
-			) {
+			if ( window._camptixAttendanceQRScanning ) {
 				this.qr();
 			}
-			
 		},
 
 		/**
@@ -667,97 +664,104 @@ jQuery(document).ready(function($){
 			return false;
 		},
 
-		qr: function () {
-			this.$el.toggleClass('qr-scanner-active');
-			this.$menu.removeClass('dropdown');
+		/**
+		 * Show or hide the QR code scanner.
+		 *
+		 * A scan looks up the attendee and opens the same toggle as tapping them in
+		 * the list, so the volunteer still confirms who is checking in.
+		 */
+		qr: function() {
+			var that = this,
+				active = this.$el.toggleClass( 'qr-scanner-active' ).hasClass( 'qr-scanner-active' );
 
-			let that = this;
+			this.$menu.removeClass( 'dropdown' );
 
-			let html5QrcodeScanner;
-			let lastScan;
-			let toggleView;
-			let lastScanTimeout;
-
-			function onScanSuccess(decodedText) {
-				if (lastScan === decodedText) {
-					return;
-				}
-
-				lastScan = decodedText;
-				lastScanTimeout && clearTimeout(lastScanTimeout);
-
-				if (toggleView) toggleView.close();
-				let method = 'read';
-				let model = that.collection;
-				let options = {
-					data: { qrcode: decodedText },
-				};
-				let attendeeModel;
-
-				that.collection
-					.sync(method, model, options)
-					.done(
-						function (res) {
-							// not sure why this is an array
-							attendeeModel = new camptix.models.Attendee(res[0]);
-							toggleView = new camptix.views.AttendeeToggleView({
-								model: attendeeModel,
-								controller: that,
-							});
-							$(document.body).append(toggleView.render().el);
-						}.bind(that)
-					)
-					.fail(function (res) {
-						console.error(res);
-						// play the sound to indicate that the scan is bad
-						window._camptixAttendanceSounds.blm();
-
-						// let the sound play before showing the alert
-						setTimeout(function () {
-							if (typeof res === 'string') {
-								alert(res);
-							} else {
-								alert('[' + res.status + '] ' + res.statusText);
-							}
-							lastScan = null;
-							html5QrcodeScanner.resume();
-						}, 100);
-
-					})
-					.then(() => {
-						// play the sound to indicate that the scan is good
-						window._camptixAttendanceSounds.beep();
-						setTimeout(() => {
-							html5QrcodeScanner.resume();							
-							//lastScan = null;
-							//that.refresh();
-						}, 3000);
-					})
-					.always(() => {
-						lastScanTimeout = setTimeout(() => {
-							// clear last scan to allow for new scan
-							lastScan = null;
-							// play the sound to indicate that the scan is over
-							//window._camptixAttendanceSounds.bob();
-						}, 15000);
-					});
-
-				html5QrcodeScanner.pause();
+			if ( ! this.scanner ) {
+				this.$qrMessage = this.$el.find( '.qr-scanner-message' );
+				this.lastScan = null;
+				this.scanner = new Html5QrcodeScanner( 'qr-scanner', { fps: 10, qrbox: this.qrbox }, false );
+				this.scanner.render( function( decodedText ) {
+					that.onScan( decodedText );
+				} );
+				return false;
 			}
 
-			let qrReader = document.getElementById('qr-scanner').getBoundingClientRect();
-
-			let smallerSide = Math.min(qrReader.width, qrReader.height);
-
-			let qrbox = {
-				width: Math.max(smallerSide * 0.9, 50),
-				height: Math.max(smallerSide * 0.9, 50),
-			};
-
-			html5QrcodeScanner = new Html5QrcodeScanner('qr-scanner', { fps: 10, qrbox: qrbox }, false);
-			html5QrcodeScanner.render(onScanSuccess);
+			if ( active ) {
+				this.scanner.resume();
+			} else {
+				this.scanner.pause( true );
+			}
 
 			return false;
+		},
+
+		/**
+		 * Square scanning box, 90% of the smaller side of the viewfinder.
+		 */
+		qrbox: function( width, height ) {
+			var side = Math.max( Math.min( width, height ) * 0.9, 50 );
+
+			return { width: side, height: side };
+		},
+
+		/**
+		 * Look up a scanned code.
+		 *
+		 * @param {string} decodedText
+		 */
+		onScan: function( decodedText ) {
+			var that = this;
+
+			// The camera reads the same code many times a second while it's held up.
+			if ( this.lastScan === decodedText ) {
+				return;
+			}
+
+			this.lastScan = decodedText;
+			this.scanner.pause( true );
+			this.showScanMessage( '' );
+
+			wp.ajax.send( {
+				type: 'GET',
+				data: {
+					action: 'camptix-attendance',
+					camptix_secret: _camptixAttendanceSecret,
+					qrcode: decodedText
+				}
+			} ).done( function( attendees ) {
+				var toggleView = new camptix.views.AttendeeToggleView( {
+					model: new camptix.models.Attendee( attendees[0] ),
+					controller: that
+				} );
+
+				window._camptixAttendanceSounds.beep();
+				$( document.body ).append( toggleView.render().el );
+
+				// Scan the next person once the volunteer has dealt with this one.
+				toggleView.once( 'closed', function() {
+					that.lastScan = null;
+					that.scanner.resume();
+				} );
+			} ).fail( function( message ) {
+				window._camptixAttendanceSounds.blm();
+				that.showScanMessage( 'string' === typeof message ? message : 'Something went wrong. Please try again.', true );
+
+				// Allow the same code again after a moment, e.g. once it has been fixed.
+				setTimeout( function() {
+					that.lastScan = null;
+					that.scanner.resume();
+				}, 3000 );
+			} );
+		},
+
+		/**
+		 * Show the result of a scan under the scanner.
+		 *
+		 * @param {string}  message
+		 * @param {boolean} isError
+		 */
+		showScanMessage: function( message, isError ) {
+			this.$qrMessage.text( message ).toggleClass( 'is-error', !! isError );
 		},
 
 		/**

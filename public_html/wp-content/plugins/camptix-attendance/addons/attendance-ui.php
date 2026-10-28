@@ -93,7 +93,7 @@ $camptix_options = $camptix->get_options();
 					<span>Loading...</span>
 				</li>
 			</ul>
-			<div class="qr-scanner-wrap"><div id="qr-scanner"></div></div>
+			<div class="qr-scanner-wrap"><div id="qr-scanner"></div><p class="qr-scanner-message" role="status" aria-live="polite"></p></div>
 		</div>
 	</script>
 
@@ -101,7 +101,6 @@ $camptix_options = $camptix->get_options();
 		<a href="#" class="close dashicons dashicons-no"></a>
 		<div class="wrapper">
 			<input type="text" autocomplete="off" placeholder="Search" />
-			<div class="previews"></div>
 		</div>
 	</script>
 

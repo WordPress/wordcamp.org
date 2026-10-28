@@ -11,10 +11,10 @@ defined( 'WPINC' ) || die();
  */
 class QR_Code {
 
-	public const ECC_L = 0; // 7% error correction
-	public const ECC_M = 1; // 15% error correction
-	public const ECC_Q = 2; // 25% error correction
-	public const ECC_H = 3; // 30% error correction
+	public const ECC_L = 0; // 7% error correction.
+	public const ECC_M = 1; // 15% error correction.
+	public const ECC_Q = 2; // 25% error correction.
+	public const ECC_H = 3; // 30% error correction.
 
 	/**
 	 * Capacity table for Byte mode (Version 1 to 10) [L, M, Q, H].
@@ -135,9 +135,9 @@ class QR_Code {
 		for ( $i = 0; $i < 255; $i++ ) {
 			self::$gf_exp[ $i ] = $x;
 			self::$gf_log[ $x ] = $i;
-			$x <<= 1;
+			$x                <<= 1;
 			if ( $x & 0x100 ) {
-				$x ^= 0x11d; // Primitive polynomial x^8 + x^4 + x^3 + x^2 + 1
+				$x ^= 0x11d; // Primitive polynomial x^8 + x^4 + x^3 + x^2 + 1.
 			}
 		}
 		for ( $i = 255; $i < 512; $i++ ) {
@@ -189,7 +189,6 @@ class QR_Code {
 	 *
 	 * @return array<int, array<int, bool>>
 	 */
-
 	public static function get_matrix( string $text, int $ecc_level = self::ECC_M ): array {
 		self::init_gf();
 
@@ -205,7 +204,7 @@ class QR_Code {
 		$size   = 17 + 4 * $version;
 		$matrix = array_fill( 0, $size, array_fill( 0, $size, null ) );
 
-		// Place function patterns
+		// Place function patterns.
 		self::place_finder_pattern( $matrix, 0, 0 );
 		self::place_finder_pattern( $matrix, $size - 7, 0 );
 		self::place_finder_pattern( $matrix, 0, $size - 7 );
@@ -217,10 +216,10 @@ class QR_Code {
 		self::reserve_format_information( $matrix, $size );
 		self::place_version_information( $matrix, $version, $size );
 
-		// Place data modules and choose best mask
-		$best_mask   = 0;
+		// Place data modules and choose best mask.
+		$best_mask    = 0;
 		$best_penalty = PHP_INT_MAX;
-		$best_matrix = array();
+		$best_matrix  = array();
 
 		for ( $mask = 0; $mask < 8; $mask++ ) {
 			$test_matrix = $matrix;
@@ -235,13 +234,17 @@ class QR_Code {
 			}
 		}
 
-		return array_map( function( $row ) {
-			return array_map( function( $val ) {
-				return (bool) $val;
-			}, $row );
-		}, $best_matrix );
+		return array_map(
+			function ( $row ) {
+				return array_map( 'boolval', $row );
+			},
+			$best_matrix
+		);
 	}
 
+	/**
+	 * Find the smallest version that fits the data at the given error correction level.
+	 */
 	private static function get_best_version( int $data_len, int $ecc_level ): int {
 		foreach ( self::$capacity as $version => $limits ) {
 			if ( $data_len <= $limits[ $ecc_level ] ) {
@@ -251,50 +254,50 @@ class QR_Code {
 		return 0;
 	}
 
+	/**
+	 * Encode the text as byte mode data codewords, padded to the version's capacity.
+	 */
 	private static function encode_data( string $text, int $version, int $ecc_level ): array {
 		$bit_buffer = '';
 
-		// Mode Indicator: Byte Mode (0100)
+		// Mode Indicator: Byte Mode (0100).
 		$bit_buffer .= '0100';
 
-		// Character Count Indicator (8 bits for v1-9, 16 bits for v10+)
+		// Character Count Indicator (8 bits for v1-9, 16 bits for v10+).
 		$count_bits  = ( $version <= 9 ) ? 8 : 16;
 		$bit_buffer .= str_pad( decbin( strlen( $text ) ), $count_bits, '0', STR_PAD_LEFT );
 
-		// Data bits
+		// Data bits.
 		$len = strlen( $text );
 		for ( $i = 0; $i < $len; $i++ ) {
 			$bit_buffer .= str_pad( decbin( ord( $text[ $i ] ) ), 8, '0', STR_PAD_LEFT );
 		}
 
-		$ecc_info        = self::$ecc_table[ $version ][ $ecc_level ];
+		$ecc_info         = self::$ecc_table[ $version ][ $ecc_level ];
 		$total_data_bytes = ( $ecc_info[2] * $ecc_info[3] ) + ( $ecc_info[4] * $ecc_info[5] );
 		$total_data_bits  = $total_data_bytes * 8;
 
-		// Terminator
+		// Terminator.
 		$bit_buffer .= str_repeat( '0', min( 4, $total_data_bits - strlen( $bit_buffer ) ) );
 
-		// Pad to byte
+		// Pad to byte.
 		if ( 0 !== strlen( $bit_buffer ) % 8 ) {
 			$bit_buffer .= str_repeat( '0', 8 - ( strlen( $bit_buffer ) % 8 ) );
 		}
 
-		// Pad bytes (0xEC, 0x11)
+		// Pad bytes (0xEC, 0x11).
 		$pad_bytes = array( '11101100', '00010001' );
-		$p         = 0;
-		while ( strlen( $bit_buffer ) < $total_data_bits ) {
+		$pad_count = ( $total_data_bits - strlen( $bit_buffer ) ) / 8;
+		for ( $p = 0; $p < $pad_count; $p++ ) {
 			$bit_buffer .= $pad_bytes[ $p % 2 ];
-			$p++;
 		}
 
-		$codewords = array();
-		for ( $i = 0; $i < strlen( $bit_buffer ); $i += 8 ) {
-			$codewords[] = bindec( substr( $bit_buffer, $i, 8 ) );
-		}
-
-		return $codewords;
+		return array_map( 'bindec', str_split( $bit_buffer, 8 ) );
 	}
 
+	/**
+	 * Split the data into blocks, add error correction, and interleave them as a bit string.
+	 */
 	private static function interleave_blocks( array $data_codewords, int $version, int $ecc_level ): string {
 		$info            = self::$ecc_table[ $version ][ $ecc_level ];
 		$ec_cw_per_block = $info[1];
@@ -324,7 +327,7 @@ class QR_Code {
 		$interleaved = '';
 		$max_data_cw = max( $cw_b1, $cw_b2 );
 
-		// Interleave data codewords
+		// Interleave data codewords.
 		for ( $i = 0; $i < $max_data_cw; $i++ ) {
 			foreach ( $blocks as $b ) {
 				if ( isset( $b[ $i ] ) ) {
@@ -333,7 +336,7 @@ class QR_Code {
 			}
 		}
 
-		// Interleave EC codewords
+		// Interleave EC codewords.
 		for ( $i = 0; $i < $ec_cw_per_block; $i++ ) {
 			foreach ( $ec_blocks as $eb ) {
 				if ( isset( $eb[ $i ] ) ) {
@@ -345,15 +348,21 @@ class QR_Code {
 		return $interleaved;
 	}
 
+	/**
+	 * Generate the Reed-Solomon error correction codewords for one block.
+	 */
 	private static function generate_ec_codewords( array $data, int $num_ec ): array {
 		$generator = self::get_generator_poly( $num_ec );
 		$msg       = array_merge( $data, array_fill( 0, $num_ec, 0 ) );
 
-		for ( $i = 0; $i < count( $data ); $i++ ) {
+		$data_count      = count( $data );
+		$generator_count = count( $generator );
+
+		for ( $i = 0; $i < $data_count; $i++ ) {
 			$lead = $msg[ $i ];
 			if ( 0 !== $lead ) {
 				$lead_log = self::$gf_log[ $lead ];
-				for ( $j = 0; $j < count( $generator ); $j++ ) {
+				for ( $j = 0; $j < $generator_count; $j++ ) {
 					$msg[ $i + $j ] ^= self::$gf_exp[ $lead_log + $generator[ $j ] ];
 				}
 			}
@@ -362,12 +371,16 @@ class QR_Code {
 		return array_slice( $msg, count( $data ), $num_ec );
 	}
 
+	/**
+	 * Get the Reed-Solomon generator polynomial of the given degree, as logs.
+	 */
 	private static function get_generator_poly( int $degree ): array {
 		// Coefficients of ( x - a^0 )( x - a^1 )...( x - a^(degree-1) ), highest power first.
 		$poly = array( 1 );
 		for ( $i = 0; $i < $degree; $i++ ) {
-			$next = array_fill( 0, count( $poly ) + 1, 0 );
-			for ( $j = 0; $j < count( $poly ); $j++ ) {
+			$poly_count = count( $poly );
+			$next       = array_fill( 0, $poly_count + 1, 0 );
+			for ( $j = 0; $j < $poly_count; $j++ ) {
 				$next[ $j ]     ^= $poly[ $j ];
 				$next[ $j + 1 ] ^= self::$gf_exp[ self::$gf_log[ $poly[ $j ] ] + $i ];
 			}
@@ -375,11 +388,17 @@ class QR_Code {
 		}
 
 		// Return as logs, which is what generate_ec_codewords() multiplies with.
-		return array_map( function( $val ) {
-			return self::$gf_log[ $val ];
-		}, $poly );
+		return array_map(
+			function ( $val ) {
+				return self::$gf_log[ $val ];
+			},
+			$poly
+		);
 	}
 
+	/**
+	 * Place a 7x7 finder pattern with its top-left corner at the given position.
+	 */
 	private static function place_finder_pattern( array &$matrix, int $x, int $y ): void {
 		for ( $r = 0; $r < 7; $r++ ) {
 			for ( $c = 0; $c < 7; $c++ ) {
@@ -392,17 +411,23 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Place the light separators around the three finder patterns.
+	 */
 	private static function place_separators( array &$matrix, int $size ): void {
 		for ( $i = 0; $i < 8; $i++ ) {
-			$matrix[7][ $i ]        = 0;
-			$matrix[ $i ][7]        = 0;
-			$matrix[ $size - 8 ][ $i ] = 0;
+			$matrix[7][ $i ]             = 0;
+			$matrix[ $i ][7]             = 0;
+			$matrix[ $size - 8 ][ $i ]   = 0;
 			$matrix[ $size - 1 - $i ][7] = 0;
 			$matrix[7][ $size - 1 - $i ] = 0;
-			$matrix[ $i ][ $size - 8 ] = 0;
+			$matrix[ $i ][ $size - 8 ]   = 0;
 		}
 	}
 
+	/**
+	 * Place the alternating timing patterns in row and column 6.
+	 */
 	private static function place_timing_patterns( array &$matrix, int $size ): void {
 		for ( $i = 8; $i < $size - 8; $i++ ) {
 			if ( null === $matrix[6][ $i ] ) {
@@ -414,6 +439,9 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Place the 5x5 alignment patterns for the version.
+	 */
 	private static function place_alignment_patterns( array &$matrix, int $version ): void {
 		$positions = self::$alignment_patterns[ $version ];
 		$count     = count( $positions );
@@ -423,10 +451,10 @@ class QR_Code {
 				$r = $positions[ $i ];
 				$c = $positions[ $j ];
 
-				// Skip if overlapping with finder patterns
+				// Skip if overlapping with finder patterns.
 				if ( ( 6 === $r && 6 === $c ) ||
-					 ( 6 === $r && $positions[ $count - 1 ] === $c && 0 === $i ) ||
-					 ( $positions[ $count - 1 ] === $r && 6 === $c && 0 === $j ) ) {
+					( 6 === $r && $positions[ $count - 1 ] === $c && 0 === $i ) ||
+					( $positions[ $count - 1 ] === $r && 6 === $c && 0 === $j ) ) {
 					continue;
 				}
 
@@ -443,6 +471,9 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Place the module that is always dark.
+	 */
 	private static function place_dark_module( array &$matrix, int $version ): void {
 		$matrix[ 4 * $version + 9 ][8] = 1;
 	}
@@ -473,6 +504,9 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Reserve the format information areas so data bits skip them.
+	 */
 	private static function reserve_format_information( array &$matrix, int $size ): void {
 		for ( $i = 0; $i < 9; $i++ ) {
 			if ( null === $matrix[8][ $i ] ) {
@@ -492,16 +526,19 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Place the data bits in the zigzag order, applying the mask.
+	 */
 	private static function place_data_bits( array &$matrix, string $bits, int $mask, int $size ): void {
 		$bit_idx = 0;
 		$bit_len = strlen( $bits );
 
 		$x   = $size - 1;
-		$dir = -1; // Moving upwards
+		$dir = -1; // Moving upwards.
 
 		while ( $x > 0 ) {
 			if ( 6 === $x ) {
-				$x--; // Skip vertical timing pattern
+				--$x; // Skip vertical timing pattern.
 			}
 
 			$y = ( -1 === $dir ) ? $size - 1 : 0;
@@ -511,7 +548,7 @@ class QR_Code {
 					$col = $x - $c;
 					if ( null === $matrix[ $y ][ $col ] ) {
 						$bit = ( $bit_idx < $bit_len ) ? (int) $bits[ $bit_idx ] : 0;
-						$bit_idx++;
+						++$bit_idx;
 
 						if ( self::apply_mask( $mask, $y, $col ) ) {
 							$bit ^= 1;
@@ -528,22 +565,29 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Whether the given mask pattern flips the module at the given position.
+	 */
 	private static function apply_mask( int $mask, int $r, int $c ): bool {
-		return match ( $mask ) {
-			0 => ( ( $r + $c ) % 2 === 0 ),
-			1 => ( $r % 2 === 0 ),
-			2 => ( $c % 3 === 0 ),
-			3 => ( ( $r + $c ) % 3 === 0 ),
-			4 => ( ( intdiv( $r, 2 ) + intdiv( $c, 3 ) ) % 2 === 0 ),
-			5 => ( ( ( $r * $c ) % 2 ) + ( ( $r * $c ) % 3 ) === 0 ),
-			6 => ( ( ( ( $r * $c ) % 2 ) + ( ( $r * $c ) % 3 ) ) % 2 === 0 ),
-			7 => ( ( ( ( $r + $c ) % 2 ) + ( ( $r * $c ) % 3 ) ) % 2 === 0 ),
-			default => false,
+		// Each pattern flips the module where its expression is zero.
+		return 0 === match ( $mask ) {
+			0 => ( $r + $c ) % 2,
+			1 => $r % 2,
+			2 => $c % 3,
+			3 => ( $r + $c ) % 3,
+			4 => ( intdiv( $r, 2 ) + intdiv( $c, 3 ) ) % 2,
+			5 => ( $r * $c ) % 2 + ( $r * $c ) % 3,
+			6 => ( ( $r * $c ) % 2 + ( $r * $c ) % 3 ) % 2,
+			7 => ( ( $r + $c ) % 2 + ( $r * $c ) % 3 ) % 2,
+			default => 1,
 		};
 	}
 
+	/**
+	 * Place both copies of the format information for the ECC level and mask.
+	 */
 	private static function place_format_information( array &$matrix, int $ecc_level, int $mask, int $size ): void {
-		// Format string: ECC (2 bits) + Mask (3 bits) + 10 BCH error correction bits, XORed with 0x5412
+		// Format string: ECC (2 bits) + Mask (3 bits) + 10 BCH error correction bits, XORed with 0x5412.
 		$format_bits = array(
 			self::ECC_L => array( 0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976 ),
 			self::ECC_M => array( 0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0 ),
@@ -576,15 +620,18 @@ class QR_Code {
 		}
 	}
 
+	/**
+	 * Score a masked matrix; the lowest score picks the mask.
+	 */
 	private static function calculate_penalty( array $matrix, int $size ): int {
 		$penalty = 0;
 
-		// Condition 1: Runs of same color >= 5
+		// Condition 1: Runs of same color >= 5.
 		for ( $r = 0; $r < $size; $r++ ) {
 			$run_len = 1;
 			for ( $c = 1; $c < $size; $c++ ) {
 				if ( $matrix[ $r ][ $c ] === $matrix[ $r ][ $c - 1 ] ) {
-					$run_len++;
+					++$run_len;
 				} else {
 					if ( $run_len >= 5 ) {
 						$penalty += 3 + ( $run_len - 5 );
@@ -601,7 +648,7 @@ class QR_Code {
 			$run_len = 1;
 			for ( $r = 1; $r < $size; $r++ ) {
 				if ( $matrix[ $r ][ $c ] === $matrix[ $r - 1 ][ $c ] ) {
-					$run_len++;
+					++$run_len;
 				} else {
 					if ( $run_len >= 5 ) {
 						$penalty += 3 + ( $run_len - 5 );
@@ -614,13 +661,13 @@ class QR_Code {
 			}
 		}
 
-		// Condition 2: 2x2 blocks
+		// Condition 2: 2x2 blocks.
 		for ( $r = 0; $r < $size - 1; $r++ ) {
 			for ( $c = 0; $c < $size - 1; $c++ ) {
 				$val = $matrix[ $r ][ $c ];
 				if ( $val === $matrix[ $r + 1 ][ $c ] &&
-					 $val === $matrix[ $r ][ $c + 1 ] &&
-					 $val === $matrix[ $r + 1 ][ $c + 1 ] ) {
+					$val === $matrix[ $r ][ $c + 1 ] &&
+					$val === $matrix[ $r + 1 ][ $c + 1 ] ) {
 					$penalty += 3;
 				}
 			}

@@ -144,6 +144,9 @@
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
 			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Groups Network">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/groups/tests/
 			</directory>

@@ -259,5 +259,9 @@ function get_css_classes( $attendee ) {
 		$classes[] = 'coupon-' . $attendee->coupon;
 	}
 
+	if ( $attendee->qr_code_target_url ) {
+		$classes[] = 'has-qr-code';
+	}
+
 	return implode( ' ', $classes );
 }

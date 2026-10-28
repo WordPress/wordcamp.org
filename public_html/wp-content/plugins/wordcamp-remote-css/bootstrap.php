@@ -19,6 +19,7 @@ if ( is_admin() ) {
 	require_once __DIR__ . '/app/synchronize-remote-css.php';
 	require_once __DIR__ . '/app/user-interface.php';
 	require_once __DIR__ . '/app/webhook-handler.php';
+	require_once __DIR__ . '/app/editor-css.php';
 	require_once __DIR__ . '/platforms/github.php';
 }
 

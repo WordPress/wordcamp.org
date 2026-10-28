@@ -42,11 +42,9 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	$asset_cache_strategy_args = array(
 		'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 		'cacheName' => 'assets',
-		'plugins'   => array(
-			'expiration' => array(
-				'maxEntries'    => 100,
-				'maxAgeSeconds' => DAY_IN_SECONDS,
-			),
+		'expiration' => array(
+			'max_entries'    => 100,
+			'max_age_seconds' => DAY_IN_SECONDS,
 		),
 	);
 
@@ -99,11 +97,9 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 		array(
 			'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 			'cacheName' => 'rest-api',
-			'plugins'   => array(
-				'expiration' => array(
-					'maxEntries'    => 60,
-					'maxAgeSeconds' => 15 * MINUTE_IN_SECONDS,
-				),
+			'expiration' => array(
+				'max_entries'    => 60,
+				'max_age_seconds' => 15 * MINUTE_IN_SECONDS,
 			),
 		)
 	);
@@ -128,8 +124,8 @@ function set_navigation_caching_strategy() {
 	add_filter(
 		'wp_service_worker_navigation_caching_strategy_args',
 		function( $args ) {
-			$args['cacheName']                           = 'pages';
-			$args['plugins']['expiration']['maxEntries'] = 50;
+			$args['cacheName']                    = 'pages';
+			$args['expiration']['max_entries'] = 50;
 
 			return $args;
 		}

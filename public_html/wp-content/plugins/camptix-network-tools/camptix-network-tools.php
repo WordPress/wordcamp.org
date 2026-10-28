@@ -12,7 +12,7 @@
 
 class CampTix_Network_Tools {
 	private $options;
-	private $db_version = 20240226;
+	private $db_version = 20260121;
 	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
@@ -42,13 +42,7 @@ class CampTix_Network_Tools {
 	function upgrade() {
 		global $wpdb;
 
-		$charset_collate = '';
-		if ( ! empty( $wpdb->charset ) ) {
-			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-		}
-		if ( ! empty( $wpdb->collate ) ) {
-			$charset_collate .= " COLLATE $wpdb->collate";
-		}
+		$charset_collate = $wpdb->get_charset_collate();
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$sql        = "CREATE TABLE $table_name (
@@ -60,7 +54,9 @@ class CampTix_Network_Tools {
 			section varchar(32) DEFAULT 'general',
 			data mediumtext NOT NULL,
 			PRIMARY KEY (`id`),
-  			KEY `blog_object` (`blog_id`,`object_id`)
+			KEY `timestamp` (`timestamp`),
+			KEY `blog_object` (`blog_id`,`object_id`),
+			KEY `message_prefix` (`message`(8))
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -158,11 +154,12 @@ class CampTix_Network_Tools {
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$wpdb->insert( $table_name, array(
-			'blog_id' => $blog_id,
+			'timestamp' => current_time( 'mysql' ),
+			'blog_id'   => $blog_id,
 			'object_id' => $post_id,
-			'message' => $message,
-			'data' => $data,
-			'section' => $section,
+			'message'   => $message,
+			'section'   => $section,
+			'data'      => $data,
 		) );
 		$camptix->tmp( 'last_log_id', $wpdb->insert_id );
 

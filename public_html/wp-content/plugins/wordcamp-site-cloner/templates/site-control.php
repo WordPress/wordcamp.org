@@ -17,7 +17,7 @@ $wordcamp = get_wordcamp_post();
 		<span id="wcsc-sites-count" class="title-count wcsc-sites-count"></span>
 	</h3>
 
-	<?php if ( 'wcpt-closed' === $wordcamp->post_status ) : ?>
+	<?php if ( $wordcamp && 'wcpt-closed' === $wordcamp->post_status ) : ?>
 		<div class="notice notice-warning">
 			<p>
 				<?php echo esc_html( sprintf(

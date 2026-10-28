@@ -76,7 +76,7 @@ function redact_keys( & $data ) {
 	);
 
 	$redacted_keys_fuzzy = array(
-		'password', 'nonce', 'apikey', 'api_key', 'secret',
+		'password', 'nonce', 'apikey', 'api_key', 'secret', 'jwt',
 	);
 
 	// Normalize to avoid human error.
@@ -167,7 +167,7 @@ function redact_url( string $raw_url ) : string {
  */
 function get_unique_request_id() {
 	if ( 'cli' === php_sapi_name() ) {
-		$caller = $_SERVER['USER'] . ( $_SERVER['SSH_CONNECTION'] ?? '' );
+		$caller = ( $_SERVER['USER'] ?? '' ) . ( $_SERVER['SSH_CONNECTION'] ?? '' );
 	} else {
 		$caller = $_SERVER['REMOTE_ADDR'] . $_SERVER['REMOTE_PORT'];
 	}

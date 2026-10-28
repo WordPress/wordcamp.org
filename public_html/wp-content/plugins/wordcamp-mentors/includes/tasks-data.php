@@ -326,7 +326,7 @@ function get_task_data() {
 			),
 		),
 		'cxpj' => array(
-			'title'   => __( 'Makes plans for volunteer orientation', 'wordcamporg' ),
+			'title'   => __( 'Make plans for volunteer orientation', 'wordcamporg' ),
 			'excerpt' => __( 'Decide if you will do an in person, video, or text orientation for volunteers and plan accordingly.', 'wordcamporg' ),
 			'cat'     => array( 'volunteer' ),
 			'link'    => array(
@@ -444,7 +444,7 @@ function get_task_data() {
 			'cat'     => array( 'committee', 'speaker' ),
 		),
 		'c46e' => array(
-			'title'   => __( 'Confirm catering ', 'wordcamporg' ),
+			'title'   => __( 'Confirm catering', 'wordcamporg' ),
 			'excerpt' => __( 'Confirm catering menu for any meals or snacks you have arranged based on attendee numbers. Ensure delivery/pickup is scheduled. Please do not run out of coffee. At this time confirm menus for any ancillary events (ie: contributor day, speaker event, after party, etc.) you may be having.', 'wordcamporg' ),
 			'cat'     => array( 'food' ),
 			'link'    => array(
@@ -540,11 +540,11 @@ function get_task_data() {
 		),
 		'gnws' => array(
 			'title'   => __( 'Ship camera kits (if using WordCamp Central kits)', 'wordcamporg' ),
-			'excerpt' => __( 'If you used WordCamp Central\'s camera kits it\'s time to ship them on to the next event or back to their base for service. Someone for WordCamp Central will reach out to you with instructions.', 'wordcamporg' ),
+			'excerpt' => __( 'If you used WordCamp Central\'s camera kits it\'s time to ship them on to the next event or back to their base for service. Someone from WordCamp Central will reach out to you with instructions.', 'wordcamporg' ),
 			'cat'     => array( 'audio-video' ),
 		),
 		'f8k2' => array(
-			'title'   => __( 'Close out your budget ', 'wordcamporg' ),
+			'title'   => __( 'Close out your budget', 'wordcamporg' ),
 			'excerpt' => __( 'Make sure all payment requests are submitted and balance your budget within two weeks of your event. If you have any questions reach out to support@wordcamp.org.', 'wordcamporg' ),
 			'cat'     => array( 'budget' ),
 		),

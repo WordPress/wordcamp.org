@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Latest_Site_Hints;
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\{ get_flagship_canonical_url, get_url_port };
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
@@ -30,9 +30,18 @@ function maybe_add_latest_site_hints() {
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 
-	// Add a banner with a link to the latest WordCamp.
+	/*
+	 * Add a banner linking to the latest WordCamp. It prints in the normal document flow at
+	 * `wp_body_open`; the `wp_footer` hook is a fallback (a bottom-anchored bar) for the request
+	 * where `wp_body_open` never fires.
+	 */
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
-	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
+	add_action( 'wp_body_open', __NAMESPACE__ . '\show_notification_in_flow' );
+	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_overlay' );
+
+	// Close comments on past sites to prevent spam.
+	add_filter( 'comments_open', '__return_false' );
+	add_filter( 'pings_open', '__return_false' );
 }
 
 /**
@@ -67,32 +76,46 @@ function canonical_link_past_home_pages_to_current_year() {
 }
 
 /**
- * Simple styles for the notification.
+ * Print the notification's styles in the document `<head>`.
+ *
+ * One stylesheet covers both variants of the banner:
+ *
+ * - In-flow (default): printed at `wp_body_open`, it sits in the normal document flow as a sticky
+ *   bar at the top of the page, so layout reserves exactly as much room as the text needs however
+ *   many lines it wraps to.
+ * - Overlay (fallback): printed at `wp_footer` when `wp_body_open` never fired. It can't join the
+ *   already-painted flow without shifting content, so it's anchored to the bottom of the viewport
+ *   instead — `position: fixed` reserves no space and causes no layout shift. The doubled class
+ *   keeps the modifier ahead of the base `position` rules wherever in the document it lands.
  */
 function add_notification_styles() { ?>
   <style type="text/css">
-		html:not(#specificity-hack) {
-			/* 44 = 10px x2 for padding, 24px for line height. */
-			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
-		}
-
 		.wordcamp-latest-site-notify {
+			box-sizing: border-box;
 			background: #1d2327;
 			text-align: center;
 			padding: 10px 20px;
 			font-size: 16px;
 			line-height: 1.5;
-			position: fixed;
+			position: sticky;
 			top: var(--wp-admin--admin-bar--height, 0);
-			left: 0;
 			width: 100%;
 			z-index: 99998;
 		}
 
 		@media screen and (max-width: 600px) {
 			.wordcamp-latest-site-notify {
-				position: absolute;
+				/* Scroll away with the page instead of permanently taking up small-screen space. */
+				position: static;
 			}
+		}
+
+		.wordcamp-latest-site-notify.wordcamp-latest-site-notify--overlay {
+			position: fixed;
+			top: auto;
+			bottom: 0;
+			left: 0;
+			right: 0;
 		}
 
 		.wordcamp-latest-site-notify p,
@@ -113,10 +136,40 @@ function add_notification_styles() { ?>
 <?php }
 
 /**
- * Show the actual notification containing link to latest site to user.
+ * Print the banner in the normal document flow at `wp_body_open`.
  */
-function show_notification_about_latest_site() {
+function show_notification_in_flow() {
+	show_notification_about_latest_site( false );
+}
+
+/**
+ * Print the banner as a bottom-anchored overlay at `wp_footer`.
+ *
+ * This is the fallback for requests where `wp_body_open` never fired, like a theme that doesn't
+ * call `wp_body_open()` or the offline/500 template. It self-suppresses when the in-flow banner
+ * has already printed this request.
+ */
+function show_notification_overlay() {
+	show_notification_about_latest_site( true );
+}
+
+/**
+ * Show a notification linking to the latest site for this city.
+ *
+ * Prints at most once per request, guarded by a static flag: in the normal document flow when the
+ * theme fired `wp_body_open`, otherwise as a bottom-anchored overlay at `wp_footer`. The static
+ * guard also means a theme that fires `wp_body_open` more than once still yields a single banner.
+ *
+ * @param bool $is_overlay Whether to render the bottom-anchored `wp_footer` fallback variant rather
+ *                         than the in-flow banner.
+ */
+function show_notification_about_latest_site( $is_overlay = false ) {
 	global $current_blog;
+	static $printed = false;
+
+	if ( $printed ) {
+		return;
+	}
 
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
 
@@ -125,8 +178,15 @@ function show_notification_about_latest_site() {
 		return;
 	}
 
-	echo '<div class="wordcamp-latest-site-notify"><p>' .
-		wp_sprintf( '%s is over. Check out <a href="%s">the next edition</a>!', esc_html( get_blog_details( $current_blog->blog_id )->blogname ), esc_url( $latest_domain ) ) .
+	$printed = true;
+
+	echo '<div class="wordcamp-latest-site-notify' . ( $is_overlay ? ' wordcamp-latest-site-notify--overlay' : '' ) . '"><p>' .
+		wp_kses_post( wp_sprintf(
+			// translators: %1$s is the name of the WordCamp, %2$s is the URL of the next edition.
+			__( '%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),
+			esc_html( get_blog_details( $current_blog->blog_id )->blogname ),
+			esc_url( $latest_domain )
+		) ) .
 	'</p></div>';
 }
 
@@ -161,6 +221,17 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
 		return false;
+	}
+
+	/*
+	 * Flagship camps create next year's site (and sometimes the one after) before the current edition is
+	 * over, so the query below would otherwise link to an event that hasn't happened yet. Until then, stay
+	 * on the current edition. The shared list of dates lives with the redirect logic in sunrise.
+	 */
+	$flagship_url = get_flagship_canonical_url( $current_domain );
+
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
@@ -218,5 +289,5 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
-	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . $latest_site[0]->path ) );
+	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . get_url_port() . $latest_site[0]->path ) );
 }

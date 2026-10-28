@@ -19,6 +19,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		// Sponsor region
 		createSiteCheckboxes.change( self.toggleSponsorRegionRequired );
+		$( '#wcpt_multi-event_sponsor_groups' ).change( self.toggleSponsorRegionRequired );
 		createSiteCheckboxes.trigger( 'change' );
 
 		// Contributor day info
@@ -39,6 +40,10 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		$virtualEventCheckbox.change( self.togglePhysicalVenueFields );
 		$virtualEventCheckbox.trigger( 'change' );
+
+		var $subtypeSelect = $( 'select[name="event_subtype"]' );
+		$subtypeSelect.change( self.toggleCampusConnectVenueFields );
+		self.toggleCampusConnectVenueFields();
 		
 		$streamingSelection.find( 'select' ).change( function( event ) {
 			if ( 'other' === $( event.target ).val() ) {
@@ -48,6 +53,36 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			}
 		} );
 		$streamingSelection.find( 'select' ).trigger( 'change' );
+
+		var $subtypeSelect  = $( 'select[name="event_subtype"]' ),
+			$runningMoney   = $( '#wcpt_running_money_through_wpcs_pbc' ),
+			originalSubtype = $subtypeSelect.val(),
+			originalChecked = $runningMoney.is( ':checked' ),
+			userModified    = false;
+
+		$runningMoney.on( 'click change', function() {
+			userModified = true;
+		} );
+
+		$subtypeSelect.on( 'change', function() {
+			if ( userModified || ! $runningMoney.length ) {
+				return;
+			}
+
+			if ( 'campusconnect' === $( this ).val() ) {
+				if ( 'campusconnect' === originalSubtype ) {
+					$runningMoney.prop( 'checked', originalChecked );
+				} else {
+					$runningMoney.prop( 'checked', true );
+				}
+			} else {
+				if ( 'campusconnect' === originalSubtype ) {
+					$runningMoney.prop( 'checked', false );
+				} else {
+					$runningMoney.prop( 'checked', originalChecked );
+				}
+			}
+		} );
 
 		// If the value has changed, mark it as dirty and disable the checkbox.
 		$wcUrlFields.on( 'change', function() {
@@ -88,24 +123,50 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		} else {
 			$items.show();
 			$hostRegion.hide();
+			self.toggleCampusConnectVenueFields();
+		}
+	};
+
+	/**
+	 * Toggle the visibility of the Number of venues field for Campus Connect events.
+	 */
+	self.toggleCampusConnectVenueFields = function() {
+		var $subtypeSelect  = $( 'select[name="event_subtype"]' ),
+			isCampusConnect = false;
+
+		if ( $subtypeSelect.length ) {
+			isCampusConnect = 'campusconnect' === $subtypeSelect.val();
+		} else {
+			var $subtypeDisplay = $( '#post-subtype-display' );
+			if ( $subtypeDisplay.length ) {
+				isCampusConnect = 'campusconnect' === $subtypeDisplay.data( 'subtype' );
+			}
+		}
+
+		var isVirtual    = $( '#wcpt_virtual_event_only' ).is( ':checked' ),
+			$venuesField = $( '.field__wcpt_number_of_venues' );
+
+		if ( isCampusConnect && ! isVirtual ) {
+			$venuesField.show();
+		} else {
+			$venuesField.hide();
 		}
 	};
 
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.
 	 *
-	 * \WordCamp_New_Site::maybe_create_new_sites() requires it to be set to create a new site.
+	 * \WordCamp_New_Site::maybe_create_new_sites() needs a sponsor region or a sponsor group to create a
+	 * new site. The group picker is only on the screen while sponsor groups are switched on.
 	 *
 	 * @param {object} event
 	 */
 	self.toggleSponsorRegionRequired = function( event ) {
-		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' );
+		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' ),
+			creatingSite = $( '.create-site-checkbox:checked' ).length > 0,
+			sponsorGroups = $( '#wcpt_multi-event_sponsor_groups' ).val() || [];
 
-		if ( $( '.create-site-checkbox:checked' ) ) {
-			sponsorRegion.prop( 'required', true );
-		} else {
-			sponsorRegion.prop( 'required', false );
-		}
+		sponsorRegion.prop( 'required', creatingSite && 0 === sponsorGroups.length );
 	};
 
 	/**

@@ -179,6 +179,11 @@ function get_attributes_schema() {
 			'default' => true,
 		),
 
+		'showTimezone' => array(
+			'type'    => 'boolean',
+			'default' => true,
+		),
+
 		'useClientTimezone' => array(
 			'type'    => 'boolean',
 			// This should default to true when the event is virtual.

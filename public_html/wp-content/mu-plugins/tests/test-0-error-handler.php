@@ -59,11 +59,6 @@ class Test_Error_Handling extends WP_UnitTestCase {
 				true,
 			),
 
-			'hyperdb' => array(
-				WP_PLUGIN_DIR . '/hyperdb/db.php',
-				true,
-			),
-
 			'camptix-paystack' => array(
 				WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php',
 				true,

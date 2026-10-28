@@ -1,0 +1,192 @@
+/**
+ * Responsive styles for the WordPress Group theme.
+ *
+ * @package WordCamp\Groups\Site
+ */
+
+/* Keep authored media inside its column — an oversized image in a group's
+   page content would otherwise force the whole page to scroll sideways on a
+   phone. Scoped to the containers that render authored HTML rather than
+   applied to every `img` on the site: UI chrome (avatars, logos) sets its own
+   dimensions, and a global rule fights those instead of helping them.
+   Editor-inserted images and featured images are already handled by core. */
+
+:where(.wp-block-post-content, .wp-block-comment-content, .wp-block-wporg-page-content)
+	:where(img, video, iframe) {
+	max-width: 100%;
+	height: auto;
+}
+
+@media (max-width: 960px) {
+	.groups-site-home-layout {
+		flex-wrap: wrap !important;
+
+		/* Columns only carry `blockGap.left`, which becomes `column-gap` —
+		   once they wrap there is nothing holding the two apart vertically. */
+		row-gap: var(--wp--preset--spacing--60);
+	}
+
+	.groups-site-home-layout > .wp-block-column {
+		flex-basis: 100% !important;
+	}
+
+	/* The sidebar is second in the source, so wrapping puts it *below* the
+	   main column — its divider belongs on the leading edge. */
+
+	.groups-site-sidebar {
+		padding-left: 0;
+		padding-top: var(--wp--preset--spacing--40);
+	}
+}
+
+/* ==========================================================================
+   Mobile (up to 781px)
+   ========================================================================== */
+
+@media (max-width: 781px) {
+	.wp-block-columns.groups-site-event-layout {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		column-gap: 0;
+		row-gap: var(--wp--preset--spacing--20);
+	}
+
+	.groups-site-event-sidebar,
+	.groups-site-event-content {
+		grid-column: 1;
+		grid-row: auto;
+		max-width: 100%;
+	}
+
+	.groups-site-event-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--wp--preset--spacing--20);
+		padding-top: var(--wp--preset--spacing--20);
+	}
+
+	/* Post hero: the columns stack here, so the featured image jumps from a
+	   side panel to the full width of the band. Left alone that renders a
+	   400px-tall billboard on tablets, pushing the title and the opening
+	   paragraph off the fold — the exact cost the side placement exists to
+	   avoid. Cap the height so it stays a banner strip. Phones are already
+	   under the cap at their natural 16/9, so nothing changes there.
+
+	   The crop is biased above centre because a centred one takes the middle
+	   band of the frame, which is where a photo of people has their necks.
+	   Faces sit in the upper third, so that is the part worth keeping. */
+
+	.groups-site-post-hero-media img {
+		max-height: 200px;
+		object-position: 50% 35%;
+	}
+
+	/* Query Loop event cards: single column. */
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Archive filters: stack search and filter vertically.
+
+	   The row is laid out `nowrap` so the filters read as one control group
+	   on a wide screen. Two of them fit a phone; three do not -- Time,
+	   Format and Language come to roughly 410px of nowrap toggles before a
+	   selected value lengthens any of them (#2035), against about 360px of
+	   usable width at 400px. Let them wrap instead of pushing the page into
+	   a horizontal scroll. `!important` because the block's own generated
+	   layout rule sets `flex-wrap` from the template's `flexWrap` attribute,
+	   the same reason the grid rules above need it. */
+
+	.wporg-query-filters {
+		width: 100%;
+		flex-wrap: wrap !important;
+	}
+
+	/* Members grid: single column on small phones. */
+	.wporg-group-members__grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Group membership block: stack the sidebar variants. Scoped to the
+	   sidebar because the standalone count in the hero meta row stays
+	   inline next to the group location at every width. */
+
+	.groups-site-sidebar .wporg-group-membership {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	/* RSVP modal: full screen. */
+	.wporg-event-rsvp__modal {
+		padding: 0 !important;
+	}
+
+	.wporg-event-rsvp__modal-content {
+		border-radius: 0 !important;
+		max-width: none !important;
+		max-height: none !important;
+		height: 100% !important;
+	}
+}
+
+/* ==========================================================================
+   Small tablet (481-781px): two-column grids
+   ========================================================================== */
+
+@media (min-width: 481px) and (max-width: 781px) {
+
+	/* `minmax(0, 1fr)` rather than a bare `1fr` — a plain `1fr` track's
+	   implicit `min-width: auto` sizes it to its content's min-content
+	   width, which for a member/event card is wider than half the viewport
+	   at this breakpoint and forces the grid to overflow horizontally
+	   instead of letting the card's own content wrap. */
+
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+	}
+
+	.wporg-group-members__grid {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+	}
+}
+
+/* ==========================================================================
+   Desktop (1024px+)
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+
+	/*
+	 * Stick the event sidebar to the top while scrolling.
+	 *
+	 * Applied to the whole column rather than just the info card, because a
+	 * sticky card scrolls *over* anything after it in the same container —
+	 * with the sponsors block below it, the card would slide down and cover
+	 * it. `align-self` stops the column stretching to the row's full height,
+	 * which would leave `sticky` no room to travel in.
+	 *
+	 * The `z-index` has to clear the page content but stay under the local
+	 * navigation bar, which sticks at `z-index: 10`. It can't be dropped
+	 * altogether: the column needs a stacking context of its own to trap the
+	 * venue map, whose Leaflet panes and controls run up to `z-index: 1000`
+	 * and would otherwise paint over the header.
+	 */
+
+	.groups-site-event-sidebar {
+		position: sticky;
+		top: 96px;
+		z-index: 1;
+		align-self: flex-start;
+	}
+
+	/*
+	 * When the RSVP modal inside the sidebar opens, elevate the sidebar's
+	 * stacking context so the full-screen modal and backdrop appear above all
+	 * page content and sibling elements (such as the event-date navigation
+	 * arrows in the main content column and the sticky navigation bar).
+	 */
+
+	.groups-site-event-sidebar:has(.wporg-event-rsvp__modal.is-open) {
+		z-index: 100000;
+	}
+}

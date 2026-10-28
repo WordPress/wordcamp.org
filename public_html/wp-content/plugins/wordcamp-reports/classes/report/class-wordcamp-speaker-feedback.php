@@ -301,9 +301,9 @@ class WordCamp_Speaker_Feedback extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 
 		include get_views_dir_path() . 'report/wordcamp-speaker-feedback.php';
@@ -315,12 +315,12 @@ class WordCamp_Speaker_Feedback extends Base {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date  = filter_input( INPUT_POST, 'start-date' );
-		$end_date    = filter_input( INPUT_POST, 'end-date' );
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 

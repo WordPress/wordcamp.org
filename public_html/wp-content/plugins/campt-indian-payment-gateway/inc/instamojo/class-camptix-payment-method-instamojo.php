@@ -101,7 +101,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_return. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_return. Server data attached.' ), null, $_SERVER );
 
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
@@ -128,17 +127,42 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		}
 		$attendee = reset( $attendees );
 
+		$payment_data = array(
+			'transaction_id'      => $_REQUEST['payment_id'] ?? '',
+			'transaction_details' => $_REQUEST,
+		);
+		unset( $payment_data['transaction_details']['tix_action'], $payment_data['transaction_details']['tix_payment_method'] );
+
+		/*
+		 * A return is public and proves nothing on its own, so it may record a result
+		 * only for a payment Instamojo confirms was credited against the request
+		 * created for this order. Anything else is left alone and shown the ticket
+		 * page: the webhook is what settles orders, and it is signed.
+		 */
 		if ( 'draft' == $attendee->post_status ) {
-			return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING );
-		} else {
-			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
-			$url          = add_query_arg( array(
+			$payment_request_id = isset( $_REQUEST['payment_request_id'] ) ? trim( $_REQUEST['payment_request_id'] ) : '';
+			$request            = $payment_request_id ? $this->get_payment_request( $payment_request_id ) : false;
+			$credit             = $this->payment_request_owns_token( $request, $payment_token ) ? $this->get_credit_payment( $request ) : null;
+
+			if ( $credit ) {
+				// Instamojo's id for the payment it confirmed, not one the browser supplied.
+				$payment_data['transaction_id']  = $credit->payment_id ?? '';
+				$payment_data['payment_request'] = $request;
+
+				return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
+			}
+		}
+
+		$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
+		$url          = add_query_arg(
+			array(
 				'tix_action'       => 'access_tickets',
 				'tix_access_token' => $access_token,
-			), $camptix->get_tickets_url() );
-			wp_safe_redirect( esc_url_raw( $url . '#tix' ) );
-			die();
-		}
+			),
+			$camptix->get_tickets_url()
+		);
+		wp_safe_redirect( esc_url_raw( $url . '#tix' ) );
+		die();
 	}	
 	 /* Runs when Instamjo Money sends an ITN signal. Verify the payload and use $this->payment_result
 	 to signal a transaction result back to CampTix.*/
@@ -147,12 +171,12 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_notify. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_notify. Server data attached.' ), null, $_SERVER );
 
 		//Basic PHP script to handle Instamojo RAP webhook.
 		$instamojo_salt  = $this->options['Instamojo-salt'];
-		$data         = $_POST;
-		$mac_provided = $data['mac'];  // Get the MAC from the POST data
+		// The MAC covers the values Instamojo posted, not the slashes WordPress adds.
+		$data         = wp_unslash( $_POST );
+		$mac_provided = $data['mac'] ?? '';  // Get the MAC from the POST data, if it sent one.
 		unset( $data['mac'] );  // Remove the MAC key from the data.
 		$ver   = explode( '.', phpversion() );
 		$major = (int) $ver[0];
@@ -162,21 +186,145 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		} else {
 			uksort( $data, 'strcasecmp' );
 		}
+
+		$payment_data = array(
+			'transaction_id'      => $data['payment_id'] ?? '',
+			'transaction_details' => $data,
+		);
+		unset( $payment_data['transaction_details']['tix_action'], $payment_data['transaction_details']['tix_payment_method'] );
+
 		// You can get the 'salt' from Instamojo's developers page(make sure to log in first): https://www.instamojo.com/developers
 		// Pass the 'salt' without <>
 		$mac_calculated = hash_hmac( "sha1", implode( "|", $data ), $instamojo_salt );
-		if ( $mac_provided == $mac_calculated ) {
-			if ( $data['status'] == "Credit" ) {
-				// Payment was successful, mark it as successful in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED);	
-			} else {
-				// Payment was unsuccessful, mark it as failed in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED);
-			}
-		} else {
-			$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING);
+
+		/*
+		 * Instamojo signs its webhooks, so a request that does not carry a signature
+		 * made with the merchant salt establishes nothing about an order and must not
+		 * move one. An unconfigured salt is treated the same way: hash_hmac() still
+		 * returns a value for an empty key, but it rests on no secret, so the comparison
+		 * would stop meaning anything.
+		 */
+		if ( ! $instamojo_salt || ! $mac_provided || ! hash_equals( $mac_calculated, (string) $mac_provided ) ) {
+			$this->log( 'Refusing Instamojo webhook: the signature did not verify.', null, array_keys( $data ) );
+
+			wp_die( esc_html__( 'Invalid signature.', 'campt-indian-payment-gateway' ), '', array( 'response' => 403 ) );
 		}
-		
+
+		// Request is valid, but this might be a webhook for a timed out payment / failed payment, where one has actually passed.
+		// Check the payment request to see what other statuses are.
+		$payment_request_id = $data['payment_request_id'] ?? '';
+		$request            = $payment_request_id ? $this->get_payment_request( $payment_request_id ) : false;
+
+		/*
+		 * Instamojo could not be asked, which says nothing about who the payment belongs
+		 * to. Answer 5xx so it retries this webhook rather than 4xx, which would tell it
+		 * not to and leave a paid order unsettled.
+		 */
+		if ( is_wp_error( $request ) ) {
+			$this->log( 'Could not reach Instamojo to confirm a webhook; asking for a retry.', null, array( 'error' => $request->get_error_message() ) );
+
+			wp_die( esc_html__( 'Could not confirm the payment right now.', 'campt-indian-payment-gateway' ), '', array( 'response' => 503 ) );
+		}
+
+		if ( $request ) {
+			$payment_data['payment_request'] = $request;
+		}
+
+		/*
+		 * The signature covers the posted body only. The payment token lives in the
+		 * query string, which it does not cover, so confirm with Instamojo that this
+		 * payment request is the one created for that order.
+		 */
+		$payment_token = isset( $_REQUEST['tix_payment_token'] ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
+
+		if ( ! $this->payment_request_owns_token( $request, $payment_token ) ) {
+			$this->log( 'Refusing Instamojo webhook: it does not belong to the order it names.', null, array_keys( $data ) );
+
+			wp_die( esc_html__( 'Unknown payment request.', 'campt-indian-payment-gateway' ), '', array( 'response' => 400 ) );
+		}
+
+		// Instamojo is calling, not a buyer, so no redirect to a ticket page.
+		$credit = $this->get_credit_payment( $request );
+
+		if ( $credit ) {
+			return $this->payment_result(
+				$payment_token,
+				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+				array(
+					'transaction_id'      => $credit->payment_id,
+					'transaction_details' => $credit,
+					'payment_request'     => $request,
+				),
+				false
+			);
+		}
+
+		/*
+		 * Instamojo has credited nothing against this request. Take the signed body's
+		 * word for a failure, but hold a claimed success it cannot confirm for an
+		 * organizer rather than completing the order on it.
+		 */
+		$status = ( isset( $data['status'] ) && 'Credit' === $data['status'] )
+			? CampTix_Plugin::PAYMENT_STATUS_PENDING
+			: CampTix_Plugin::PAYMENT_STATUS_FAILED;
+
+		return $this->payment_result( $payment_token, $status, $payment_data, false );
+	}
+
+	/**
+	 * Confirm that an Instamojo payment request is the one created for a CampTix order.
+	 *
+	 * Checkout hands Instamojo a redirect and a webhook URL that carry this order's
+	 * payment token, and the API echoes both back. A token read out of a fetched
+	 * request is therefore Instamojo stating which order a payment belongs to, unlike
+	 * the token in an incoming request, which the sender chooses.
+	 *
+	 * @param object|false $request       A payment request from get_payment_request().
+	 * @param string       $payment_token The payment token the incoming request names.
+	 *
+	 * @return bool
+	 */
+	protected function payment_request_owns_token( $request, $payment_token ) {
+		if ( ! $request || is_wp_error( $request ) || ! $payment_token ) {
+			return false;
+		}
+
+		foreach ( array( 'webhook', 'redirect_url' ) as $field ) {
+			if ( empty( $request->$field ) ) {
+				continue;
+			}
+
+			parse_str( (string) wp_parse_url( $request->$field, PHP_URL_QUERY ), $args );
+
+			if ( ! empty( $args['tix_payment_token'] ) && hash_equals( (string) $args['tix_payment_token'], (string) $payment_token ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find the credited payment on an Instamojo payment request, if there is one.
+	 *
+	 * A request can carry several attempts; only a `Credit` one means money moved.
+	 *
+	 * @param object|false $request
+	 *
+	 * @return object|null
+	 */
+	protected function get_credit_payment( $request ) {
+		if ( empty( $request->payments ) ) {
+			return null;
+		}
+
+		foreach ( (array) $request->payments as $payment ) {
+			if ( isset( $payment->status ) && 'Credit' === $payment->status ) {
+				return $payment;
+			}
+		}
+
+		return null;
 	}
 
 	public function payment_checkout( $payment_token ) {
@@ -232,47 +380,29 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 			)
 		);
 
+		// Use the first attendee's details as the buyer info.
 		foreach ( $attendees as $attendee ) {
-			$tix_id             = get_post( get_post_meta( $attendee->ID, 'tix_ticket_id', true ) );
-			$attendee_questions = get_post_meta( $attendee->ID, 'tix_questions', true ); // Array of Attendee Questons
 			$email = $attendee->tix_email;
 			$name  = $attendee->tix_first_name . ' ' . $attendee->tix_last_name;
+			break;
 		}
 
-		$info       = $this->get_order( $payment_token );
-		$extra_info = array(
-			'phone' => get_post_meta( $info['attendee_id'], 'tix_phone', true ),
-		);
+		// Use the first attendee with a valid phone number. This may differ from the buyer.
+		foreach ( $attendees as $attendee ) {
+			$phone = $this->sanitize_phone_for_instamojo( $attendee->tix_phone );
+
+			// Use the first attendee entry with a valid phone number, hopefully the first one.
+			if ( $phone ) {
+				break;
+			}
+		}
 
 		$url = $this->options['sandbox'] ? 'https://test.instamojo.com/api/1.1/payment-requests/' : 'https://www.instamojo.com/api/1.1/payment-requests/';
-         
-		//It will execute when number is complete incomplete for validating instamojo number process.
-        
-		$phone = ltrim( $extra_info['phone'], '0' );
-		$phone = ltrim( $phone, '+91' ); // Remove '+91' CountyCode of India : Not supported by Instamojo. issue #43, #46
-		$phone = ltrim( $phone, '+' ); // Remove '+' for international attendee : Not supported by Instamojo. issue #43, #46
-		$phone = str_replace( array( ' ', '-', '.' ), '', $phone ); // Remove special characters : Not supported by Instamojo. issue #43, #46
-		if ( strlen($phone) > 10 ) {
-		    $attendee_phone = substr( $phone, -10 );
-		    $attendee_phone = ltrim( $attendee_phone, '0' );
-		    if ( strlen($attendee_phone) <= 9 ) {
-			$attendee_phone = str_pad( $attendee_phone, 10, '9', STR_PAD_LEFT);
-			}
-		} elseif ( strlen($phone) <= 9 ) {
-		     $attendee_phone = str_pad( $phone, 10, '9', STR_PAD_LEFT);
-		} else {
-			$attendee_phone = $phone; // Instamojo is expecting a 10 digit value.
-		}
 
-		// Indian mobile numbers start with 9,8,7, or 6. issue #43, #46
-		if ( ! preg_match( "/^[6-9][0-9]{9}$/", $attendee_phone ) ) {
-			$attendee_phone = '9999999999'; // No clearity about international number via API; thus using the example.
-		}
-		
 		$payload = Array(
 			'purpose'                 => substr( $productinfo, 0, 30 ), // https://github.com/wpindiaorg/camptix-indian-payments/issues/45#issuecomment-392804508
 			'amount'                  => $order_amount,
-			'phone'                   => $attendee_phone,
+			'phone'                   => $phone,
 			'buyer_name'              => $name,
 			'redirect_url'            => $return_url,
 			'send_email'              => false,
@@ -299,15 +429,43 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 
 		// GET a response.
 		$response = wp_remote_post( $url, $params );
-		
+
 		// Check to see if the request was valid.
 		if ( ! is_wp_error( $response )  ) {
-
 			$json_decode = json_decode( $response['body']);
+			if ( empty( $json_decode->success ) ) {
+				$error_messages = '';
+				foreach ( $json_decode->message as $key => $value ) {
+					$error_messages .= esc_html( $key . ' : ' . implode( ', ', (array) $value ) ) . '<br />';
+				}
+				wp_die(
+					'<h1>Instamojo Payment Gateway Error</h1>' .
+					sprintf(
+						__( 'Error: %s', 'campt-indian-payment-gateway' ),
+						$error_messages ? $error_messages : 'Unknown error occurred'
+					),
+					'Instamojo Payment Gateway Error'
+				);
+				return;
+			}
+
+			if ( empty(  $json_decode->payment_request->longurl ) ) {
+				wp_die(
+					'<h1>Instamojo Payment Gateway Error</h1>' .
+					__( 'Error: Invalid payment URL from Instamojo', 'campt-indian-payment-gateway' ),
+					'Instamojo Payment Gateway Error'
+				);
+				return;
+			}
+
 			$long_url = $json_decode->payment_request->longurl;
 			header( 'Location:' . $long_url );
 		} else {
-			echo __( 'Invalid Insatmojo Access Key & Token', 'campt-indian-payment-gateway' );
+			wp_die(
+				'<h1>Instamojo Payment Gateway Error</h1>' .
+				__( 'Invalid Instamojo Access Key & Token, or Instamojo unavailable.', 'campt-indian-payment-gateway' ),
+				'Instamojo Payment Gateway Error'
+			);
 			return;
 		}
 
@@ -316,14 +474,44 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Sanitize a phone number into the expected format.
+	 *
+	 * @param string $phone The phone number to sanitize.
+	 * @return bool|string The sanitized phone number, false on failure.
+	 */
+	public function sanitize_phone_for_instamojo( $phone ) {
+		$phone = ltrim( $phone, '0' );
+		$phone = ltrim( $phone, '+91' ); // Remove '+91' CountyCode of India : Not supported by Instamojo. issue #43, #46
+		$phone = ltrim( $phone, '+' ); // Remove '+' for international attendee : Not supported by Instamojo. issue #43, #46
+		$phone = str_replace( array( ' ', '-', '.' ), '', $phone ); // Remove special characters : Not supported by Instamojo. issue #43, #46
+		if ( strlen($phone) > 10 ) {
+			$phone = substr( $phone, -10 );
+			$phone = ltrim( $phone, '0' );
+			if ( strlen($phone) <= 9 ) {
+				$phone = str_pad( $phone, 10, '9', STR_PAD_LEFT);
+			}
+		} elseif ( strlen($phone) <= 9 ) {
+				$phone = str_pad( $phone, 10, '9', STR_PAD_LEFT);
+		} else {
+			$phone = $phone; // Instamojo is expecting a 10 digit value.
+		}
+
+		// Indian mobile numbers start with 9,8,7, or 6. issue #43, #46
+		if ( ! preg_match( "/^[6-9][0-9]{9}$/", $phone ) ) {
+			return false;
+		}
+	
+		return $phone;
+	}
+
+	/**
 	 * Runs when the user cancels their payment during checkout at Instamojo.
 	 * his will simply tell CampTix to put the created attendee drafts into to Cancelled state.
 	 */
-	function payment_cancel() {
+	public function payment_cancel() {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_cancel. Server data attached.' ), null, $_SERVER );
 
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
 
@@ -333,6 +521,46 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		// Set the associated attendees to cancelled.
 		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
 	}
-}
 
-?>
+	/**
+	 * Get payment request details from Instamojo.
+	 *
+	 * "Instamojo says there is no such request" and "Instamojo could not be asked" are
+	 * different answers, and only the first says anything about who a payment belongs
+	 * to, so they are kept apart.
+	 *
+	 * @param string $payment_request_id Payment Request ID.
+	 * @return object|false|WP_Error The payment request; false when there is no such
+	 *                               request; WP_Error when Instamojo was not reached.
+	 */
+	public function get_payment_request( $payment_request_id ) {
+		$url = 'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/payment-requests/' . rawurlencode( $payment_request_id ) . '/';
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Accept'       => 'application/json',
+					'Content-Type' => 'application/json;charset=UTF-8',
+					'X-Api-Key'    => $this->options['Instamojo-Api-Key'],
+					'X-Auth-Token' => $this->options['Instamojo-Auth-Token'],
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+
+		// A 404 is a definitive "no such request"; anything else leaves the question open.
+		if ( 200 !== $code ) {
+			return 404 === $code
+				? false
+				: new WP_Error( 'camptix_instamojo_http_error', sprintf( 'Instamojo returned HTTP %d.', $code ) );
+		}
+
+		return json_decode( wp_remote_retrieve_body( $response ) )->payment_request ?? false;
+	}
+}

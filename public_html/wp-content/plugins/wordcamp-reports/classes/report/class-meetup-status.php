@@ -181,7 +181,7 @@ class Meetup_Status extends Base_Status {
 		$data         = array();
 
 		// Ensure status labels can match status log messages.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		foreach ( $meetup_posts as $meetup ) {
 			$logs = $this->sort_logs( get_post_meta( $meetup->ID, '_status_change' ) );
@@ -219,7 +219,9 @@ class Meetup_Status extends Base_Status {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 
 		$data = $this->filter_data_fields( $data );
 		$this->maybe_cache_data( $data );
@@ -328,12 +330,16 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$status     = filter_input( INPUT_POST, 'status' );
+		if ( ! current_user_can( CAPABILITY ) ) {
+			return;
+		}
+
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$status     = wp_unslash( $_POST['status'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$statuses   = Meetup_Application::get_post_statuses();
 
@@ -405,12 +411,18 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$action = filter_input( INPUT_POST, 'action' );
-		$report = filter_input( INPUT_GET, 'report' );
+		$action = wp_unslash( $_POST['action'] ?? '' );
+		$report = wp_unslash( $_GET['report'] ?? '' );
+		$nonce  = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
+
 		if ( $report !== self::$slug ) {
 			return;
 		}
 		if ( 'Export CSV' !== $action ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

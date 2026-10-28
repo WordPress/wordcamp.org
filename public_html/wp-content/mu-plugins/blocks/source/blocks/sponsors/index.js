@@ -18,10 +18,13 @@ const supports = {
 
 export const SETTINGS = {
 	title: __( 'Sponsors', 'wordcamporg' ),
-	description: __( "We wouldn't have WordCamp without their support.", 'wordcamporg' ),
+	description: __(
+		"We wouldn't have WordCamp without their support.",
+		'wordcamporg'
+	),
 	icon: ICON,
 	category: 'wordcamp',
-	supports: supports,
+	supports,
 	edit: Edit,
 	save: () => null,
 };

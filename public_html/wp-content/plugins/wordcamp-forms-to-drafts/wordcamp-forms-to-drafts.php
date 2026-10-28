@@ -25,6 +25,7 @@ class WordCamp_Forms_To_Drafts {
 		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script' ) );
 		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form' ), 8 );
 		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ), 9 );
+		add_Action( 'jetpack_contact_form_is_spam',       array( $this, 'prevent_form_submission' ) );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers' ), 10, 3 );
@@ -77,12 +78,25 @@ class WordCamp_Forms_To_Drafts {
 	 * @return string
 	 */
 	public function force_login_to_use_form( $content ) {
-		$form_id              = $this->get_current_form_id();
-		$please_login_message = '';
+		$form_id = $this->get_current_form_id();
 
 		if ( ! $this->form_requires_login( $form_id ) ) {
 			return $content;
 		}
+
+		$please_login_message = $this->get_please_login_message( $form_id );
+
+		return $this->inject_disabled_form_elements( $content, $please_login_message );
+	}
+
+	/**
+	 * Get the login message to show to users who need to log in to use the form.
+	 *
+	 * @param string $form_id The form id.
+	 * @return string
+	 */
+	protected function get_please_login_message( $form_id ) {
+		$please_login_message = '';
 
 		switch ( $form_id ) {
 			case 'call-for-speakers':
@@ -93,7 +107,7 @@ class WordCamp_Forms_To_Drafts {
 				break;
 		}
 
-		return $this->inject_disabled_form_elements( $content, $please_login_message );
+		return $please_login_message;
 	}
 
 	/**
@@ -190,6 +204,72 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Mark form submissions as spam if user is not logged in and form requires login.
+	 *
+	 * NOTE: This accepts submissions and marks as spam, it does not inform the submitter.
+	 */
+	public function prevent_form_submission( $is_spam ) {
+		// Already flagged, or the user is signed in and allowed to submit.
+		if ( $is_spam || is_user_logged_in() ) {
+			return $is_spam;
+		}
+
+		// Identify the form from the source Jetpack has authenticated (the signed
+		// JWT), rather than the request-supplied `contact-form-id`. When a token
+		// is present Jetpack routes and stores the submission by the token's
+		// source, and does not require `contact-form-id` to match it, so the
+		// gate has to look at the same source Jetpack does.
+		$source_id = $this->get_verified_form_source_id();
+
+		$form_id = $source_id ? get_post_meta( $source_id, 'wcfd-key', true ) : '';
+
+		if ( $this->form_requires_login( $form_id ) ) {
+			// String not shown when logged out.
+			return new WP_Error( 'spam', $this->get_please_login_message( $form_id ) );
+		}
+
+		return $is_spam;
+	}
+
+	/**
+	 * Resolve the post ID of the form being submitted, from an authenticated source.
+	 *
+	 * When Jetpack renders a form it embeds a signed JWT describing the form and the
+	 * post it lives on. That signed source is the identity Jetpack uses to store the
+	 * feedback and route it, so it is the value our login gate must key on too. The
+	 * `contact-form-id` request field is not bound to that signed source and must not
+	 * drive an access-control decision.
+	 *
+	 * For legacy submissions with no JWT, Jetpack itself validates `contact-form-id`
+	 * against the current post before processing, so it is safe to fall back to.
+	 *
+	 * @return int Post ID of the form's source, or 0 when it cannot be determined.
+	 */
+	protected function get_verified_form_source_id() {
+		$contact_form_class = '\Automattic\Jetpack\Forms\ContactForm\Contact_Form';
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Jetpack verifies the token below.
+		if ( isset( $_POST['jetpack_contact_form_jwt'] ) && class_exists( $contact_form_class ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$jwt = sanitize_text_field( wp_unslash( $_POST['jetpack_contact_form_jwt'] ) );
+
+			try {
+				$form = $contact_form_class::get_instance_from_jwt( $jwt );
+			} catch ( \Exception $e ) {
+				$form = null;
+			}
+
+			// An unverifiable token resolves to no source, so the gate does not
+			// treat it as a known form. Jetpack rejects the same token before it
+			// stores anything, so nothing is created for it downstream either.
+			return $form ? (int) $form->get_source()->get_id() : 0;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		return absint( $_POST['contact-form-id'] ?? 0 );
+	}
+
+	/**
 	 * Get the Grunion field ID
 	 *
 	 * This is a simplified version of what happens in Grunion_Contact_Form_Field::__construct()
@@ -281,6 +361,32 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Decide which WordPress.org account a submission may link its draft to.
+	 *
+	 * With no account named, a logged-in submitter is linked to their own. A named account is linked only if
+	 * the submitter is entitled to it (see `wcorg_get_linkable_user_login()`); otherwise, and for anonymous
+	 * submissions, the draft is left unlinked. In every unlinked case the submitted name is still kept on the
+	 * Jetpack feedback entry for an organizer to resolve during review.
+	 *
+	 * @param string $submitted_username The username from the form.
+	 *
+	 * @return string The username to link, or an empty string.
+	 */
+	protected function resolve_linked_username( $submitted_username ) {
+		$current_user = wp_get_current_user();
+
+		if ( ! $current_user->exists() ) {
+			return '';
+		}
+
+		if ( '' === trim( (string) $submitted_username ) ) {
+			return $current_user->user_login;
+		}
+
+		return wcorg_get_linkable_user_login( $submitted_username, $current_user->ID );
+	}
+
+	/**
 	 * Simulate the existence of a post type.
 	 *
 	 * This plugin may need to insert a form into a different site, and the targeted post type may not be active
@@ -322,6 +428,11 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
+		}
+
 		$all_values              = $this->get_unprefixed_grunion_form_values( $all_values );
 		$sponsor_to_form_key_map = array(
 			'_wcpt_sponsor_website' => 'Website',
@@ -332,8 +443,8 @@ class WordCamp_Forms_To_Drafts {
 		// Create the post.
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_sponsor',
-			'post_title'   => $all_values['Company Name'] ?? '',
-			'post_content' => $all_values['Company Description'] ?? '',
+			'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Name'] ?? '' ) ),
+			'post_content' => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Company Description'] ?? '', true ) ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -364,17 +475,18 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
-
-		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
-		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $speaker_user_id ) {
-			$speaker_user_id                      = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
 		}
 
-		$speaker = $this->get_speaker_from_user_id( $speaker_user_id );
+		$all_values                           = $this->get_unprefixed_grunion_form_values( $all_values );
+		$all_values['WordPress.org Username'] = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
+		$speaker_user_id                      = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
+
+		// Only reuse an existing speaker post for a linked account; unlinked submissions each get their own
+		// draft rather than collapsing onto one another.
+		$speaker = $speaker_user_id ? $this->get_speaker_from_user_id( $speaker_user_id ) : false;
 
 		if ( ! is_a( $speaker, 'WP_Post' ) ) {
 			$speaker_id = $this->create_draft_speaker( $all_values );
@@ -403,21 +515,17 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
-		global $current_user;
-
-		$all_values        = $this->get_unprefixed_grunion_form_values( $all_values );
-		$volunteer_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
-
-		if ( ! $volunteer_user_id ) {
-			$volunteer_user_id                    = $current_user->ID;
-			$all_values['WordPress.org Username'] = $current_user->user_login;
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
 		}
 
-		$volunteer_user = get_user_by( 'id', $volunteer_user_id );
+		$all_values = $this->get_unprefixed_grunion_form_values( $all_values );
+		$user_name  = $this->resolve_linked_username( $all_values['WordPress.org Username'] ?? '' );
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => sanitize_text_field( $all_values['Name'] ?? '' ),
+			'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $all_values['Name'] ?? '' ) ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -427,7 +535,7 @@ class WordCamp_Forms_To_Drafts {
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 
 			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ?? '' ) );
-			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
+			update_post_meta( $draft_id, '_wcpt_user_name', $user_name );
 			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
 	}
@@ -450,9 +558,19 @@ class WordCamp_Forms_To_Drafts {
 		// Get the key from submitted data.
 		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-		// Add speaker as a copy on the email.
+		// Update headers on call for speakers responses.
 		if ( 'call-for-speakers' === $form_key ) {
+			// Add speaker as a copy on the email.
 			$headers .= "Cc: {$reply_to_addr}\r\n";
+
+			$wordcamp = get_wordcamp_post();
+			$reply_to_header = sprintf(
+				'Reply-To: %s <%s>',
+				get_wordcamp_name(),
+				$wordcamp->meta['E-mail Address'][0]
+			);
+			// Swap out the current reply-to for the WordCamp's real email.
+			$headers = preg_replace( '/Reply-To: .*/', $reply_to_header, $headers);
 		}
 
 		return $headers;
@@ -502,9 +620,10 @@ class WordCamp_Forms_To_Drafts {
 		if ( 'call-for-speakers' === $form_key ) {
 			$wordcamp = get_wordcamp_post();
 
-			/* translators: %1$s: email address for organizing team; %2$s: original message; */
+			/* translators: %1$s: WordCamp name; %2$s: email address for organizing team; %3$s: original message. */
 			$message = sprintf(
-				__( 'Hello,<br><br>Thank you for submitting on Call for Speakers! Here is an copy of your submission.<br/><br/>Please do not respond to this email, organizers will update you on the process. If you have any questions, send an email to organisers %1$s.<br/>%2$s', 'wordcamporg' ),
+				__( 'Hello,<br/><br/>Thank you for your interest in speaking at %1$s! We have received your submission, and a copy is included below for your records.<br/><br/>If you have any questions, send an email to %2$s.<br/>%3$s', 'wordcamporg' ),
+				get_wordcamp_name(),
 				$wordcamp->meta['E-mail Address'][0],
 				$message
 			);
@@ -539,6 +658,29 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Escape shortcode delimiters in submitted content.
+	 *
+	 * Submitted free-text is placed into draft posts that organizers later publish and
+	 * render. Encoding the `[` and `]` delimiters keeps that text as literal characters
+	 * instead of letting it run as shortcodes, so a submission is shown as written rather
+	 * than executed. Titles need this as much as bodies do -- the WordCamp blocks and
+	 * `wc-post-types` both concatenate a title into post content.
+	 *
+	 * This only handles the shortcode delimiters, not tags. Jetpack runs a submission through
+	 * `wp_kses_post()` before this hook (see `Contact_Form_Plugin::strip_tags()`), so allow-listed
+	 * markup is kept, not removed. Callers that store free text therefore run the value through
+	 * `wcorg_sanitize_plain_text()` first -- every title, and the description/bio fields -- to keep
+	 * it as text.
+	 *
+	 * @param string $content Submitted title or body.
+	 *
+	 * @return string Content with shortcode delimiters encoded.
+	 */
+	protected function escape_shortcodes( $content ) {
+		return wcorg_escape_shortcodes( $content );
+	}
+
+	/**
 	 * Create a drafted speaker post
 	 *
 	 * @param array $speaker
@@ -546,7 +688,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_speaker( $speaker ) {
-		$content = $speaker['Your Bio'] ?? '';
+		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $speaker['Your Bio'] ?? '', true ) );
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -561,7 +703,7 @@ class WordCamp_Forms_To_Drafts {
 		$speaker_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_speaker',
-				'post_title'   => $speaker['Name'] ?? 'Untitled',
+				'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $speaker['Name'] ?? 'Untitled' ) ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
@@ -579,6 +721,8 @@ class WordCamp_Forms_To_Drafts {
 			}
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
+			// The caller resolves 'WordPress.org Username' through resolve_linked_username() first, so this
+			// writes the entitled account (or nobody), not the raw submitted value.
 			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
 			update_post_meta( $speaker_id, '_wcb_speaker_first_time', $first_time );
 		}
@@ -595,7 +739,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_session( $session, $speaker ) {
-		$content = $session['Topic Description'] ?? '';
+		$content = $this->escape_shortcodes( wcorg_sanitize_plain_text( $session['Topic Description'] ?? '', true ) );
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -609,7 +753,7 @@ class WordCamp_Forms_To_Drafts {
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => $session['Topic Title'] ?? '',
+				'post_title'   => $this->escape_shortcodes( wcorg_sanitize_plain_text( $session['Topic Title'] ?? '' ) ),
 				'post_content' => $content,
 				'post_status'  => 'draft',
 				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),

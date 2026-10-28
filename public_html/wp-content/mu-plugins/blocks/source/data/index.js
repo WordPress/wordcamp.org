@@ -68,7 +68,11 @@ export const filterEntities = ( entities, args ) => {
 		let [ orderby, order ] = split( args.sort, '_', 2 );
 
 		// TODO: Figure out a way to move this out of data store.
-		if ( 'title' === orderby && result.length && result[ 0 ].title.hasOwnProperty( 'rendered' ) ) {
+		if (
+			'title' === orderby &&
+			result.length &&
+			result[ 0 ].title.hasOwnProperty( 'rendered' )
+		) {
 			orderby = 'title.rendered';
 		}
 
@@ -102,7 +106,7 @@ const actions = {
 	setSiteSettings( settings ) {
 		return {
 			type: 'SET_SETTINGS',
-			settings: settings,
+			settings,
 		};
 	},
 };
@@ -130,7 +134,11 @@ const selectors = {
 
 		const mergedArgs = { ...defaultArgs, ...queryArgs };
 
-		return select( 'core' ).getEntityRecords( entityType, entityName, mergedArgs );
+		return select( 'core' ).getEntityRecords(
+			entityType,
+			entityName,
+			mergedArgs
+		);
 	},
 
 	/**
@@ -166,7 +174,9 @@ const reducer = ( state = DEFAULT_STATE, action ) => {
 
 			apiFetch( { path: '/wp/v2/settings' } ).then(
 				( fetchedSettings ) => {
-					dispatch( WC_BLOCKS_STORE ).setSiteSettings( fetchedSettings );
+					dispatch( WC_BLOCKS_STORE ).setSiteSettings(
+						fetchedSettings
+					);
 				}
 			);
 

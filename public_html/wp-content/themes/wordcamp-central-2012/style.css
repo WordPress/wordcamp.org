@@ -1917,11 +1917,112 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 #content .grunion-field-label span,
 #content .contact-form label span,
-#content .contact-form label {
+#content .contact-form label,
+#content .entry-content form:not(.contact-form) label {
 	/* Small, semi-opaque text is not accessible. */
 	font-size: 100%;
 	opacity: 1;
 	color: #373737;
+}
+
+/* Jetpack lays out its own forms; these are for the others. A question sits above its answer. */
+#content .entry-content form:not(.contact-form) label:not(:has(input)) {
+	display: block;
+	margin-bottom: 0.25em;
+	font-weight: 700;
+}
+
+#content .entry-content form:not(.contact-form) label > span,
+#content .entry-content form:not(.contact-form) legend > span {
+	font-weight: 400;
+}
+
+/* A choice sits beside its box, and wraps clear of it. */
+#content .entry-content form:not(.contact-form) label:has(> input[type=checkbox], > input[type=radio]) {
+	display: block;
+	padding-left: 1.5em;
+}
+
+#content .entry-content form:not(.contact-form) label > input:is([type=checkbox], [type=radio]) {
+	width: 1em;
+	/* With the space that follows it, 1.5em: the label's indent. */
+	margin: 0 0.25em 0 -1.5em;
+}
+
+/* Fields are spaced by what holds them, not by margins of their own. */
+#content .entry-content form:not(.contact-form) input,
+#content .entry-content form:not(.contact-form) select {
+	margin-bottom: 0;
+}
+
+#content .entry-content form:not(.contact-form) textarea {
+	box-sizing: border-box;
+	width: 100%;
+}
+
+/* Questions aren't boxed. Kept at low specificity, so a form can still box a section. */
+.entry-content form fieldset {
+	padding: 0;
+	border: 0;
+}
+
+.entry-content form fieldset legend {
+	margin-bottom: 0.25em;
+	padding: 0;
+	color: #373737;
+}
+
+/* Jetpack spaced its fields with Twenty Ten's input margins, which the rules above drop. */
+#content .contact-form .grunion-field-wrap {
+	margin-bottom: 1.5em;
+}
+
+#content .contact-form p.contact-form-field {
+	margin: 0;
+}
+
+/* Fields and buttons in every form, after WordPress's own. */
+#content .entry-content form {
+	accent-color: #028db9;
+}
+
+#content .entry-content form :is(input:not([type=checkbox], [type=radio], [type=submit], [type=hidden]), select, textarea) {
+	padding: 8px 12px;
+	border: 1px solid #949494;
+	border-radius: 2px;
+	background: #fff;
+	font-size: 15px;
+	line-height: 1.5;
+}
+
+#content .entry-content form :is(input:not([type=checkbox], [type=radio], [type=submit]), select, textarea):focus {
+	border-color: #028db9;
+	box-shadow: 0 0 0 1px #028db9;
+	outline: 2px solid transparent;
+}
+
+#content .entry-content form [type=submit] {
+	width: auto;
+	padding: 12px 24px;
+	border: 0;
+	border-radius: 2px;
+	background: #028db9;
+	box-shadow: none;
+	color: #fff;
+	font-family: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	text-shadow: none;
+	cursor: pointer;
+}
+
+#content .entry-content form [type=submit]:hover {
+	background: #0074a8;
+}
+
+#content .entry-content form [type=submit]:focus-visible {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px #028db9;
+	outline: 2px solid transparent;
 }
 
 #content div.wpcf7-response-output {
@@ -2747,8 +2848,9 @@ h3#comments-title {
 }
 
 #content #respond textarea {
-	width: 98.8% !important;
-	height: 185px
+	width: 100% !important;
+	height: 185px;
+	box-sizing: border-box;
 }
 
 #content .comment #respond textarea {

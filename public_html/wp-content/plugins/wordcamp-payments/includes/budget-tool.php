@@ -1,8 +1,19 @@
 <?php
 
 use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
+use function WordCamp\Sunrise\get_top_level_domain;
 
 class WordCamp_Budget_Tool {
+
+	/**
+	 * Option holding the deputies' notes on this camp's budget (#1023).
+	 *
+	 * Kept out of `wcb_budget` on purpose. The budget page prints the whole of `wcb_budget` into a
+	 * hidden field for everyone who can open it, organizers included, and validate() rebuilds the line
+	 * lists on every save. In their own option the notes stay private, and no save, approval, Reset or
+	 * backup rotation touches them.
+	 */
+	public const NOTES_OPTION = 'wcb_budget_notes';
 
 	/**
 	 * Attach hooks & filters on load.
@@ -12,6 +23,7 @@ class WordCamp_Budget_Tool {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
 		add_filter( 'heartbeat_received', array( __CLASS__, 'heartbeat_received' ), 10, 2 );
 		add_filter( 'map_meta_cap', array( __CLASS__, 'map_meta_cap' ), 10, 4 );
+		add_action( 'admin_post_wcb_budget_add_note', array( __CLASS__, 'handle_add_note' ) );
 	}
 
 	/**
@@ -115,20 +127,40 @@ class WordCamp_Budget_Tool {
 			// Submit for Approval.
 			$budget['prelim'] = $data;
 			$budget['status'] = 'pending';
-			$domain           = parse_url( home_url(), PHP_URL_HOST );
-			$link             = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$event_name       = get_wordcamp_name();
+			$budget_link      = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$wordcamp         = get_wordcamp_post();
+			$tracker_link     = self::_get_tracker_url( $wordcamp );
+			$sender           = $wordcamp->meta['E-mail Address'][0] ?? '';
+			$headers          = $sender ? array( 'Reply-To: ' . $sender ) : array();
 
-			$content = "A budget approval request has been submitted for {$domain} by {$user->user_login}:\n\n{$link}\n\nYours, Mr. Budget Tool";
-			wp_mail( 'support@wordcamp.org', 'Budget Approval Requested: ' . $domain, $content );
+			$content  = "A budget approval request has been submitted for {$event_name} by {$user->user_login}:\n\n";
+			$content .= "Budget page: {$budget_link}\n";
+			if ( $tracker_link ) {
+				$content .= "Tracker entry: {$tracker_link}\n";
+			}
+			$content .= "\nYours, Mr. Budget Tool";
+
+			wp_mail( 'support@wordcamp.org', 'Budget Approval Requested: ' . $event_name, $content, $headers );
 
 		} elseif ( 'draft' === $budget['status'] && ! empty( $_POST['wcb-budget-request-review'] ) ) {
 			// Save draft and request review.
 			$budget['prelim'] = $data;
-			$domain           = parse_url( home_url(), PHP_URL_HOST );
-			$link             = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$event_name       = get_wordcamp_name();
+			$budget_link      = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$wordcamp         = get_wordcamp_post();
+			$tracker_link     = self::_get_tracker_url( $wordcamp );
+			$sender           = $wordcamp->meta['E-mail Address'][0] ?? '';
+			$headers          = $sender ? array( 'Reply-To: ' . $sender ) : array();
 
-			$content = "A budget review has been requested for {$domain} by {$user->user_login}:\n\n{$link}\n\nYours, Mr. Budget Tool";
-			wp_mail( 'support@wordcamp.org', 'Budget Review Requested: ' . $domain, $content );
+			$content  = "A budget review has been requested for {$event_name} by {$user->user_login}:\n\n";
+			$content .= "Budget page: {$budget_link}\n";
+			if ( $tracker_link ) {
+				$content .= "Tracker entry: {$tracker_link}\n";
+			}
+			$content .= "\nYours, Mr. Budget Tool";
+
+			wp_mail( 'support@wordcamp.org', 'Budget Review Requested: ' . $event_name, $content, $headers );
 
 		} elseif ( 'pending' === $budget['status'] && current_user_can( 'wcb_approve_budget' ) ) {
 			if ( ! empty( $_POST['wcb-budget-reject'] ) ) {
@@ -153,6 +185,105 @@ class WordCamp_Budget_Tool {
 		self::rotate_backups();
 		update_option( 'wcb_budget', $budget, 'no' );
 		return;
+	}
+
+	/**
+	 * Whether the current user can read and add budget notes.
+	 *
+	 * Notes are internal to deputies and program managers, so this is the same check as the
+	 * Approve and Reject buttons. Organizers don't see them.
+	 *
+	 * @return bool
+	 */
+	public static function can_manage_notes() {
+		return current_user_can( 'wcb_approve_budget' );
+	}
+
+	/**
+	 * Get the notes on this camp's budget, oldest first.
+	 *
+	 * @return array[] Each note has `timestamp`, `author_id`, `message` and `status`, the budget's
+	 *                 status when the note was written.
+	 */
+	public static function get_notes() {
+		$notes = get_option( self::NOTES_OPTION, array() );
+
+		return is_array( $notes ) ? $notes : array();
+	}
+
+	/**
+	 * Add a note to this camp's budget. It doesn't change the budget itself.
+	 *
+	 * @param string $message   The note, unslashed.
+	 * @param int    $author_id
+	 *
+	 * @return bool False when the note is empty.
+	 */
+	public static function add_note( $message, $author_id ) {
+		$message = sanitize_textarea_field( $message );
+
+		if ( '' === $message ) {
+			return false;
+		}
+
+		$notes   = self::get_notes();
+		$notes[] = array(
+			'timestamp' => time(),
+			'author_id' => (int) $author_id,
+			'message'   => $message,
+			'status'    => self::_get_budget()['status'],
+		);
+
+		return update_option( self::NOTES_OPTION, $notes, false );
+	}
+
+	/**
+	 * Save a note from the budget page's notes form, then go back to the tab it was added on.
+	 */
+	public static function handle_add_note() {
+		check_admin_referer( 'wcb_budget_add_note', 'wcb_budget_note_nonce' );
+
+		if ( ! self::can_manage_notes() ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to add budget notes.', 'wordcamporg' ), 403 );
+		}
+
+		$message = isset( $_POST['wcb_budget_note'] ) ? wp_unslash( $_POST['wcb_budget_note'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in add_note().
+		$added   = self::add_note( $message, get_current_user_id() );
+
+		// Not a query arg: the page's tab links and the budget form's referer would carry it on, and
+		// the notice would show again after the next save or approval.
+		set_transient( self::note_notice_key(), $added ? 'added' : 'empty', MINUTE_IN_SECONDS );
+
+		$view = isset( $_POST['wcb-view'] ) ? sanitize_key( $_POST['wcb-view'] ) : '';
+		$args = array( 'page' => 'wordcamp-budget' );
+
+		if ( in_array( $view, array( 'prelim', 'working', 'approved' ), true ) ) {
+			$args['wcb-view'] = $view;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Get the result of the current user's last note, and clear it so it's only shown once.
+	 *
+	 * @return string `added`, `empty`, or an empty string when there's nothing to show.
+	 */
+	public static function pop_note_notice() {
+		$notice = get_transient( self::note_notice_key() );
+		delete_transient( self::note_notice_key() );
+
+		return in_array( $notice, array( 'added', 'empty' ), true ) ? $notice : '';
+	}
+
+	/**
+	 * The transient holding the current user's note result, for the notice after the redirect.
+	 *
+	 * @return string
+	 */
+	private static function note_notice_key() {
+		return 'wcb_budget_note_notice_' . get_current_user_id();
 	}
 
 	/**
@@ -250,6 +381,24 @@ class WordCamp_Budget_Tool {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Get the URL to the WordCamp tracker entry on central.wordcamp.org.
+	 */
+	private static function _get_tracker_url( $wordcamp = null ) {
+		if ( ! $wordcamp ) {
+			$wordcamp = get_wordcamp_post();
+		}
+		if ( ! $wordcamp ) {
+			return '';
+		}
+
+		return sprintf(
+			'https://central.wordcamp.%s/wp-admin/post.php?post=%d&action=edit',
+			get_top_level_domain(),
+			$wordcamp->ID
+		);
 	}
 
 	/**

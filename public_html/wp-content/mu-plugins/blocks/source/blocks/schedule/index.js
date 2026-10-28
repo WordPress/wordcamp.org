@@ -46,12 +46,15 @@ const styles = [
 
 export const SETTINGS = {
 	title: __( 'Schedule', 'wordcamporg' ),
-	description: __( "Display your WordCamp's awesome schedule.", 'wordcamporg' ),
+	description: __(
+		"Display your WordCamp's awesome schedule.",
+		'wordcamporg'
+	),
 	icon: ICON,
-	example: example,
+	example,
 	category: 'wordcamp',
-	supports: supports,
-	styles: styles,
+	supports,
+	styles,
 	edit: ScheduleEdit,
 	save: () => null,
 };

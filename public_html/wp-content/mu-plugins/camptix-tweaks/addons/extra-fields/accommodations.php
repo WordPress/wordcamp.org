@@ -16,7 +16,7 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\CampTix_Tweaks
  */
 class Accommodations_Field extends Extra_Fields {
-	const SLUG = 'accommodations';
+	public const SLUG = 'accommodations';
 
 	public $question_order = 30;
 

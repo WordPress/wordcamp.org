@@ -37,4 +37,15 @@ function load_addons( $addons ) {
 }
 tests_add_filter( 'camptix_default_addons', __NAMESPACE__ . '\load_addons' );
 
+/**
+ * Load the Privacy field from `camptix-tweaks`, which isn't loaded in this suite.
+ *
+ * Like `load_addons()`, it has to register before `camptix_init`, so it can't be loaded from inside a test.
+ */
+function load_privacy_field() {
+	require_once SUT_WPMU_PLUGIN_DIR . '/camptix-tweaks/addons/extra-fields.php';
+	require_once SUT_WPMU_PLUGIN_DIR . '/camptix-tweaks/addons/extra-fields/privacy.php';
+}
+tests_add_filter( 'camptix_load_addons', __NAMESPACE__ . '\load_privacy_field', 11 );
+
 require $core_tests_directory . '/includes/bootstrap.php';

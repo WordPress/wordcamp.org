@@ -27,7 +27,6 @@ function manually_load_plugins() {
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise-events.php';
 
-	require_once dirname( __DIR__ ) . '/2-autoloader.php';
 	require_once dirname( __DIR__ ) . '/3-helpers-misc.php';
 	require_once dirname( __DIR__ ) . '/site-url-history.php';
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';

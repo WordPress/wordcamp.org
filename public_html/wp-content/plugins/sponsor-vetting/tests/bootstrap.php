@@ -21,6 +21,8 @@ tests_add_filter(
 	static function (): void {
 		// For the event names and email addresses the emails use.
 		require_once SUT_WPMU_PLUGIN_DIR . '/4-helpers-wcpt.php';
+		// CI installs it from `wporg/wporg-mu-plugins`; production loads it through `2-autoloader.php`.
+		require_once SUT_WP_CONTENT_DIR . '/mu-plugins-private/wporg-mu-plugins/pub-sync/utilities/class-freescout.php';
 		require_once dirname( __DIR__ ) . '/bootstrap.php';
 	}
 );

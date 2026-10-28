@@ -679,6 +679,13 @@ jQuery(document).ready(function($){
 			if ( ! this.scanner ) {
 				this.$qrMessage = this.$el.find( '.qr-scanner-message' );
 				this.lastScan = null;
+
+				// On touch devices, jquery.fastbutton handles taps anywhere in the app and then cancels the
+				// click that follows. The scanner's own buttons only listen for that click, so keep its taps away.
+				this.$el.find( '.qr-scanner-wrap' ).on( 'touchstart', function( event ) {
+					event.stopPropagation();
+				} );
+
 				this.scanner = new Html5QrcodeScanner( 'qr-scanner', { fps: 10, qrbox: this.qrbox }, false );
 				this.scanner.render( function( decodedText ) {
 					that.onScan( decodedText );

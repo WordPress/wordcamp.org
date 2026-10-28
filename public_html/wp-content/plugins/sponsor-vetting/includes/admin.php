@@ -194,7 +194,7 @@ function render_log_box( \WP_Post $post ): void {
 				<?php echo esc_html( $author ? $author->user_login : __( 'System', 'wordcamporg' ) ); ?>:
 				<?php
 				if ( isset( $entry['text'] ) ) {
-					echo esc_html( $entry['text'] );
+					echo nl2br( esc_html( $entry['text'] ) );
 				} elseif ( 'new' === $entry['from'] ) {
 					/* translators: %s: Status. */
 					printf( esc_html__( 'Created as %s.', 'wordcamporg' ), esc_html( $statuses[ $entry['to'] ] ?? $entry['to'] ) );

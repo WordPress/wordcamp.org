@@ -884,11 +884,20 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		$edit_link = $camptix->get_edit_attendee_link( $attendee->ID, get_post_meta( $attendee->ID, 'tix_edit_token', true ) );
 
-		return $content . "\n\n" . sprintf(
+		$checkin_text = "\n\n" . sprintf(
 			/* translators: %s: Link to the page with the attendee's QR code. */
 			__( "Show your check-in QR code at registration to get in faster. You'll find it here:\n\n%s", 'wordcamporg' ),
 			$edit_link
 		);
+
+		// Keep it above the sponsors footer that camptix-tweaks adds to WordCamp.org templates.
+		$footer_position = strpos( $content, "\n\n===\n\n" );
+
+		if ( false === $footer_position ) {
+			return $content . $checkin_text;
+		}
+
+		return substr_replace( $content, $checkin_text, $footer_position, 0 );
 	}
 
 	/**

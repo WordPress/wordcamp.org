@@ -202,6 +202,16 @@ class Test_Checkin_QR extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers CampTix_Attendance::add_checkin_link_to_email
+	 */
+	public function test_email_link_goes_above_sponsors_footer() {
+		$content = $this->addon->add_checkin_link_to_email( "Hi there!\n\n===\n\nSponsors", $this->make_attendee() );
+
+		$this->assertStringStartsWith( "Hi there!\n\nShow your check-in QR code", $content );
+		$this->assertStringEndsWith( "\n\n===\n\nSponsors", $content );
+	}
+
+	/**
 	 * Pending orders get the link once the payment completes.
 	 *
 	 * @covers CampTix_Attendance::add_checkin_link_to_email

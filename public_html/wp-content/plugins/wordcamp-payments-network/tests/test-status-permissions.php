@@ -55,6 +55,7 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$_GET     = array();
 		$_POST    = array();
 		$_REQUEST = array();
 
@@ -87,6 +88,24 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 			'post_status' => 'draft',
 			'post_author' => self::$requester_id,
 		) );
+	}
+
+	/**
+	 * Trash a stored draft of the given budget CPT as its requester, the way the Trash link does.
+	 *
+	 * @param string $post_type The budget CPT to create the draft as.
+	 *
+	 * @return string The draft's status afterwards.
+	 */
+	protected function trash_draft_as_requester( $post_type ) {
+		wp_set_current_user( self::$requester_id );
+		$draft = $this->create_draft( $post_type );
+
+		$_GET['action']     = 'trash';
+		$_REQUEST['action'] = 'trash';
+		wp_trash_post( $draft );
+
+		return get_post_status( $draft );
 	}
 
 	// -- Reimbursement requests -------------------------------------------------------------------------
@@ -155,6 +174,13 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$this->assertSame( 'wcb-approved', $result['post_status'] );
 	}
 
+	/**
+	 * A requester trashing their own draft reimbursement sends it to the trash.
+	 */
+	public function test_requester_can_trash_draft_reimbursement() {
+		$this->assertSame( 'trash', $this->trash_draft_as_requester( 'wcb_reimbursement' ) );
+	}
+
 	// -- Vendor payment requests ------------------------------------------------------------------------
 
 	/**
@@ -201,6 +227,13 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'wcb-approved', $result['post_status'] );
+	}
+
+	/**
+	 * A requester trashing their own draft payment sends it to the trash, rather than submitting it.
+	 */
+	public function test_requester_can_trash_draft_payment() {
+		$this->assertSame( 'trash', $this->trash_draft_as_requester( 'wcp_payment_request' ) );
 	}
 
 	// -- Sponsor invoices -------------------------------------------------------------------------------
@@ -253,6 +286,13 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'wcbsi_approved', $result['post_status'] );
+	}
+
+	/**
+	 * A requester trashing their own draft invoice sends it to the trash.
+	 */
+	public function test_requester_can_trash_draft_invoice() {
+		$this->assertSame( 'trash', $this->trash_draft_as_requester( 'wcb_sponsor_invoice' ) );
 	}
 
 	/**

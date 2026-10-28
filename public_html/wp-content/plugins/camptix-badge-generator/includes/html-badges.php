@@ -17,6 +17,7 @@ add_action( 'customize_controls_print_styles',    __NAMESPACE__ . '\print_custom
 add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\remove_all_previewer_styles', 998 );
 add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\enqueue_previewer_scripts',   999 );  // after remove_all_previewer_styles().
 add_filter( 'template_include',                   __NAMESPACE__ . '\use_badges_template'              );
+add_filter( 'show_admin_bar',                     __NAMESPACE__ . '\hide_admin_bar_on_badges'         );
 
 /**
  * Register our Customizer settings, panels, sections, and controls
@@ -224,6 +225,19 @@ function print_customizer_styles() {
  */
 function is_badges_preview() {
 	return isset( $_GET['camptix-badges'] ) && is_customize_preview();
+}
+
+/**
+ * Hide the admin bar on the Badges page
+ *
+ * The page drops all theme and core styles, so the admin bar would show up unstyled across the badges.
+ *
+ * @param bool $show
+ *
+ * @return bool
+ */
+function hide_admin_bar_on_badges( $show ) {
+	return is_badges_preview() ? false : $show;
 }
 
 /**

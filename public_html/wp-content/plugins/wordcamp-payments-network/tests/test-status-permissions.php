@@ -236,6 +236,33 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$this->assertSame( 'trash', $this->trash_draft_as_requester( 'wcp_payment_request' ) );
 	}
 
+	/**
+	 * A requester can't move their own incomplete payment to the trash, since only drafts are theirs to delete.
+	 */
+	public function test_requester_cannot_trash_incomplete_payment() {
+		wp_set_current_user( self::$requester_id );
+		$incomplete = self::factory()->post->create( array(
+			'post_type'   => 'wcp_payment_request',
+			'post_status' => 'wcb-incomplete',
+			'post_author' => self::$requester_id,
+		) );
+
+		$result = $GLOBALS['wcp_payment_request']->wp_insert_post_data(
+			array(
+				'post_type'     => 'wcp_payment_request',
+				'post_status'   => 'trash',
+				'post_date'     => '2020-01-01 00:00:00',
+				'post_date_gmt' => '2020-01-01 00:00:00',
+			),
+			array(
+				'ID'          => $incomplete,
+				'post_status' => 'trash',
+			)
+		);
+
+		$this->assertSame( 'wcb-pending-approval', $result['post_status'] );
+	}
+
 	// -- Sponsor invoices -------------------------------------------------------------------------------
 
 	/**

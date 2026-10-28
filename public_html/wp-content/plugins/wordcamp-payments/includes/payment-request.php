@@ -635,14 +635,20 @@ class WCP_Payment_Request {
 			/*
 			 * Statuses past pending approval (approval, payment, etc.) are reserved for network admins. For
 			 * everyone else, keep the status within the set a requester can set, defaulting to pending
-			 * approval. Trash is part of that set, since requesters may delete their own drafts.
+			 * approval.
 			 *
 			 * Keyed on the stored status, so this only applies while the request is still requester-editable
 			 * (draft/incomplete). Status changes made once it's further along, and the initial insert of a
 			 * new post, are left as-is.
 			 */
 			$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
-			$requester_statuses = array_merge( $editable_statuses, array( 'wcb-pending-approval', 'trash' ) );
+			$requester_statuses = array_merge( $editable_statuses, array( 'wcb-pending-approval' ) );
+
+			// Requesters may delete their own drafts, matching `modify_capabilities()`.
+			if ( in_array( $stored_status, array( 'auto-draft', 'draft' ), true ) ) {
+				$requester_statuses[] = 'trash';
+			}
+
 			if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 				$post_data['post_status'] = 'wcb-pending-approval';
 			}

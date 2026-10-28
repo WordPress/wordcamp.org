@@ -189,6 +189,7 @@ class QR_Code {
 	 *
 	 * @return array<int, array<int, bool>>
 	 */
+
 	public static function get_matrix( string $text, int $ecc_level = self::ECC_M ): array {
 		self::init_gf();
 
@@ -214,6 +215,7 @@ class QR_Code {
 		self::place_alignment_patterns( $matrix, $version );
 		self::place_dark_module( $matrix, $version );
 		self::reserve_format_information( $matrix, $size );
+		self::place_version_information( $matrix, $version, $size );
 
 		// Place data modules and choose best mask
 		$best_mask   = 0;
@@ -361,18 +363,21 @@ class QR_Code {
 	}
 
 	private static function get_generator_poly( int $degree ): array {
-		$poly = array( 0 ); // (x - a^0)
-		for ( $i = 1; $i < $degree; $i++ ) {
+		// Coefficients of ( x - a^0 )( x - a^1 )...( x - a^(degree-1) ), highest power first.
+		$poly = array( 1 );
+		for ( $i = 0; $i < $degree; $i++ ) {
 			$next = array_fill( 0, count( $poly ) + 1, 0 );
 			for ( $j = 0; $j < count( $poly ); $j++ ) {
-				$next[ $j ]     ^= self::$gf_exp[ $poly[ $j ] + $i ];
-				$next[ $j + 1 ] ^= self::$gf_exp[ $poly[ $j ] ];
+				$next[ $j ]     ^= $poly[ $j ];
+				$next[ $j + 1 ] ^= self::$gf_exp[ self::$gf_log[ $poly[ $j ] ] + $i ];
 			}
-			$poly = array_map( function( $val ) {
-				return self::$gf_log[ $val ];
-			}, $next );
+			$poly = $next;
 		}
-		return $poly;
+
+		// Return as logs, which is what generate_ec_codewords() multiplies with.
+		return array_map( function( $val ) {
+			return self::$gf_log[ $val ];
+		}, $poly );
 	}
 
 	private static function place_finder_pattern( array &$matrix, int $x, int $y ): void {
@@ -440,6 +445,32 @@ class QR_Code {
 
 	private static function place_dark_module( array &$matrix, int $version ): void {
 		$matrix[ 4 * $version + 9 ][8] = 1;
+	}
+
+	/**
+	 * Version 7 and up carry their version number in two 6x3 blocks, next to the
+	 * top-right and bottom-left finders.
+	 */
+	private static function place_version_information( array &$matrix, int $version, int $size ): void {
+		if ( $version < 7 ) {
+			return;
+		}
+
+		// 12 BCH error correction bits, generator polynomial 0x1F25.
+		$rem = $version;
+		for ( $i = 0; $i < 12; $i++ ) {
+			$rem = ( $rem << 1 ) ^ ( ( $rem >> 11 ) * 0x1F25 );
+		}
+		$bits = ( $version << 12 ) | $rem;
+
+		for ( $i = 0; $i < 18; $i++ ) {
+			$bit = ( $bits >> $i ) & 1;
+			$a   = $size - 11 + ( $i % 3 );
+			$b   = intdiv( $i, 3 );
+
+			$matrix[ $b ][ $a ] = $bit;
+			$matrix[ $a ][ $b ] = $bit;
+		}
 	}
 
 	private static function reserve_format_information( array &$matrix, int $size ): void {
@@ -523,18 +554,20 @@ class QR_Code {
 		$val = $format_bits[ $ecc_level ][ $mask ];
 
 		for ( $i = 0; $i < 15; $i++ ) {
-			$bit = ( $val >> ( 14 - $i ) ) & 1;
+			$bit = ( $val >> $i ) & 1;
 
-			// Top-left
+			// Around the top-left finder, skipping the timing pattern in row and column 6.
 			if ( $i < 6 ) {
 				$matrix[ $i ][8] = $bit;
 			} elseif ( $i < 8 ) {
 				$matrix[ $i + 1 ][8] = $bit;
+			} elseif ( 8 === $i ) {
+				$matrix[8][7] = $bit;
 			} else {
 				$matrix[8][ 14 - $i ] = $bit;
 			}
 
-			// Top-right and bottom-left
+			// Split between the top-right and bottom-left finders.
 			if ( $i < 8 ) {
 				$matrix[8][ $size - 1 - $i ] = $bit;
 			} else {

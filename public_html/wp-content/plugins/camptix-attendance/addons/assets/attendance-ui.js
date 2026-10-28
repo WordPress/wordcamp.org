@@ -729,8 +729,18 @@ jQuery(document).ready(function($){
 					qrcode: decodedText
 				}
 			} ).done( function( attendees ) {
-				var toggleView = new camptix.views.AttendeeToggleView( {
-					model: new camptix.models.Attendee( attendees[0] ),
+				// Use the attendee from the list when it's there, so their row updates once they're checked in.
+				var model = that.collection.get( attendees[0].id ),
+					toggleView;
+
+				if ( model ) {
+					model.set( attendees[0] );
+				} else {
+					model = new camptix.models.Attendee( attendees[0] );
+				}
+
+				toggleView = new camptix.views.AttendeeToggleView( {
+					model: model,
 					controller: that
 				} );
 

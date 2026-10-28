@@ -80,7 +80,9 @@ $camptix_options = $camptix->get_options();
 					<a href="#" class="search">Search</a>
 					<a href="#" class="filter">Sort & Filter</a>
 					<a href="#" class="refresh">Refresh</a>
-					<a href="#" class="qr">QR Scanner</a>
+					<?php if ( ! empty( $camptix_options['attendance-qr-enabled'] ) ) : ?>
+						<a href="#" class="qr">QR Scanner</a>
+					<?php endif; ?>
 				</div>
 			</div>
 			<h1><?php echo esc_html( $camptix_options['event_name'] ); ?></h1>

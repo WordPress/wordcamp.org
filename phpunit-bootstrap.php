@@ -113,6 +113,7 @@ require_once WP_PLUGIN_DIR . '/wordcamp-payments/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-qbo/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-reports/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-attendance/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/camptix-badge-generator/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-invoices/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-visa-letters/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-companion-tickets/tests/bootstrap.php';

@@ -7903,6 +7903,14 @@ class CampTix_Plugin {
 				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_single_purchase', $attendees[0] );
 				$content = do_shortcode( $this->options[ $email_template ] );
 
+				/**
+				 * Filter: The content of a ticket e-mail about a single attendee.
+				 *
+				 * @param string  $content  The e-mail content, after shortcodes.
+				 * @param WP_Post $attendee The attendee the e-mail is about.
+				 */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
+
 				$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 
 				$this->log( sprintf( 'Sent a ticket and receipt to %s.', $receipt_email ), $receipt_attendee->ID );
@@ -7940,6 +7948,11 @@ class CampTix_Plugin {
 			$subject = sprintf( __( "Your Payment for %s", 'wordcamporg' ), $this->options['event_name'] );
 			$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_pending_succeeded', $attendees[0] );
 			$content = do_shortcode( $this->options[ $email_template ] );
+
+			if ( 1 === count( $attendees ) ) {
+				/** This filter is documented in email_tickets() */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
+			}
 
 			$this->log( sprintf( 'Sending completed e-mail notification after IPN to %s.', $receipt_email ), $attendees[0]->ID );
 			$this->wp_mail( $receipt_email, $subject, $content );
@@ -8026,6 +8039,9 @@ class CampTix_Plugin {
 
 		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
 		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		/** This filter is documented in email_tickets() */
+		$content = apply_filters( 'camptix_email_ticket_content', $content, $attendee );
 
 		$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 

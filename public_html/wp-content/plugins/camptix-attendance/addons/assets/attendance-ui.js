@@ -253,6 +253,7 @@ jQuery(document).ready(function($){
 		close: function() {
 			this.$overlay.hide();
 			this.remove();
+			this.trigger( 'closed' );
 			return false;
 		}
 	});
@@ -483,6 +484,7 @@ jQuery(document).ready(function($){
 			'fastClick header h1': 'searchView',
 			'fastClick .submenu .sort': 'sortView',
 			'fastClick .submenu .refresh': 'refresh',
+			'fastClick .submenu .qr': 'qr',
 			'fastClick .submenu .filter': 'filterView'
 		},
 
@@ -519,6 +521,10 @@ jQuery(document).ready(function($){
 			this.on( 'bulk', this.bulkMark, this );
 
 			this.setupCollection();
+
+			if ( window._camptixAttendanceQRScanning ) {
+				this.qr();
+			}
 		},
 
 		/**
@@ -656,6 +662,106 @@ jQuery(document).ready(function($){
 			this.flush();
 			this.setupCollection();
 			return false;
+		},
+
+		/**
+		 * Show or hide the QR code scanner.
+		 *
+		 * A scan looks up the attendee and opens the same toggle as tapping them in
+		 * the list, so the volunteer still confirms who is checking in.
+		 */
+		qr: function() {
+			var that = this,
+				active = this.$el.toggleClass( 'qr-scanner-active' ).hasClass( 'qr-scanner-active' );
+
+			this.$menu.removeClass( 'dropdown' );
+
+			if ( ! this.scanner ) {
+				this.$qrMessage = this.$el.find( '.qr-scanner-message' );
+				this.lastScan = null;
+				this.scanner = new Html5QrcodeScanner( 'qr-scanner', { fps: 10, qrbox: this.qrbox }, false );
+				this.scanner.render( function( decodedText ) {
+					that.onScan( decodedText );
+				} );
+				return false;
+			}
+
+			if ( active ) {
+				this.scanner.resume();
+			} else {
+				this.scanner.pause( true );
+			}
+
+			return false;
+		},
+
+		/**
+		 * Square scanning box, 90% of the smaller side of the viewfinder.
+		 */
+		qrbox: function( width, height ) {
+			var side = Math.max( Math.min( width, height ) * 0.9, 50 );
+
+			return { width: side, height: side };
+		},
+
+		/**
+		 * Look up a scanned code.
+		 *
+		 * @param {string} decodedText
+		 */
+		onScan: function( decodedText ) {
+			var that = this;
+
+			// The camera reads the same code many times a second while it's held up.
+			if ( this.lastScan === decodedText ) {
+				return;
+			}
+
+			this.lastScan = decodedText;
+			this.scanner.pause( true );
+			this.showScanMessage( '' );
+
+			wp.ajax.send( {
+				type: 'GET',
+				data: {
+					action: 'camptix-attendance',
+					camptix_secret: _camptixAttendanceSecret,
+					qrcode: decodedText
+				}
+			} ).done( function( attendees ) {
+				var toggleView = new camptix.views.AttendeeToggleView( {
+					model: new camptix.models.Attendee( attendees[0] ),
+					controller: that
+				} );
+
+				window._camptixAttendanceSounds.beep();
+				$( document.body ).append( toggleView.render().el );
+
+				// Scan the next person once the volunteer has dealt with this one.
+				toggleView.once( 'closed', function() {
+					that.lastScan = null;
+					that.scanner.resume();
+				} );
+			} ).fail( function( message ) {
+				window._camptixAttendanceSounds.blm();
+				that.showScanMessage( 'string' === typeof message ? message : 'Something went wrong. Please try again.', true );
+
+				// Allow the same code again after a moment, e.g. once it has been fixed.
+				setTimeout( function() {
+					that.lastScan = null;
+					that.scanner.resume();
+				}, 3000 );
+			} );
+		},
+
+		/**
+		 * Show the result of a scan under the scanner.
+		 *
+		 * @param {string}  message
+		 * @param {boolean} isError
+		 */
+		showScanMessage: function( message, isError ) {
+			this.$qrMessage.text( message ).toggleClass( 'is-error', !! isError );
 		},
 
 		/**

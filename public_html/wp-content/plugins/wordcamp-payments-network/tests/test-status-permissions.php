@@ -319,6 +319,8 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 	 * A requester trashing their own draft invoice sends it to the trash.
 	 */
 	public function test_requester_can_trash_draft_invoice() {
+		$this->create_complete_sponsor();
+
 		$this->assertSame( 'trash', $this->trash_draft_as_requester( 'wcb_sponsor_invoice' ) );
 	}
 

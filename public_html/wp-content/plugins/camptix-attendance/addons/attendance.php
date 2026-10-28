@@ -746,12 +746,14 @@ class CampTix_Attendance extends CampTix_Addon {
 		if ( 'publish' !== $attendee->post_status ) {
 			$status = get_post_status_object( $attendee->post_status );
 
-			return new WP_Error( 'invalid_status', sprintf(
+			$message = sprintf(
 				/* translators: 1: Attendee name, 2: Ticket status, e.g. Refunded. */
 				__( "%1\$s's ticket is not valid for check-in (%2\$s).", 'wordcamporg' ),
 				$name,
 				$status ? $status->label : $attendee->post_status
-			) );
+			);
+
+			return new WP_Error( 'invalid_status', $message );
 		}
 
 		if ( get_post_meta( $attendee->ID, 'tix_attended', true ) ) {

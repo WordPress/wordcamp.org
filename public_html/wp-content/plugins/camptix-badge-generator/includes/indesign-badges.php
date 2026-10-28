@@ -191,13 +191,6 @@ function get_gravatar_filename( $attendee ) {
 }
 
 /**
- * Get the filename for the Zip file
- *
- * @param string $assets_folder
- *
- * @return string
- */
-/**
  * Generate QR code images for attendees
  *
  * @param array  $attendees
@@ -255,7 +248,7 @@ function get_qr_code_filename( $attendee ) {
  * @return string
  */
 function get_zip_filename( $assets_folder ) {
-	return sprintf(
+	return $zip_filename = sprintf(
 		'%s/%s-badges.zip',
 		$assets_folder,
 		sanitize_file_name( sanitize_title( get_wordcamp_name() ) )
@@ -296,7 +289,7 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 		throw new Exception( __( "Couldn't open CSV file.", 'wordcamporg' ) );
 	}
 
-	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions, $qr_code_type ) ), ',', '"', '', "\n" );
+	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions, $qr_code_type ) ), ',', '"', '\\', "\n" );
 
 	foreach ( $attendees as $attendee ) {
 		$row = get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions, $qr_folder, $qr_code_type );
@@ -305,7 +298,7 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 			continue;
 		}
 
-		fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '', "\n" );
+		fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\\', "\n" );
 	}
 
 	fclose( $csv_handle );

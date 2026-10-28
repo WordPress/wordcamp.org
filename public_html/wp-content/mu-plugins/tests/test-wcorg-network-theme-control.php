@@ -14,6 +14,13 @@ require_once __DIR__ . '/../wporg-groups-frontend/tests/class-groups-testcase.ph
  */
 class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 	/**
+	 * Uses the Central site.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = true;
+
+	/**
 	 * @var \WP_Network
 	 */
 	private $original_current_site;

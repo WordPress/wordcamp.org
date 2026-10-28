@@ -464,9 +464,9 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 		$css = file_get_contents( self::THEME_DIR . 'assets/css/custom.css' );
 
 		$this->assertMatchesRegularExpression(
-			'/:lang\(ja\)[^{]*\.wp-block-post-title[^{]*\{[^}]*word-break:\s*auto-phrase;/',
+			'/:lang\(ja\)[^{]*\.wp-block-post-title[^{]*\{[^}]*word-break:\s*auto-phrase;[^}]*overflow-wrap:\s*anywhere;/',
 			$css,
-			'custom.css must set word-break: auto-phrase under :lang(ja) for titles.'
+			'custom.css must set word-break: auto-phrase and overflow-wrap: anywhere under :lang(ja) for post titles.'
 		);
 	}
 

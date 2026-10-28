@@ -530,12 +530,14 @@ body.error404 .site-content-container h1 {
 
 /* Japanese (CJK) phrases break unnaturally on balanced or pretty headings (#2258).
    `word-break: auto-phrase` tells the browser's phrase segmenter to break at
-   semantic phrase boundaries rather than arbitrary characters. Scoped to
-   `:lang(ja)` so Latin titles wrap as before. */
+   semantic phrase boundaries rather than arbitrary characters.
+   `overflow-wrap: anywhere` ensures phrases wider than narrow card widths
+   still break instead of overflowing. Scoped to `:lang(ja)` so Latin titles
+   wrap as before. */
 
-:lang(ja) .wp-block-post-title,
-:lang(ja) .groups-site-hero-content .wp-block-site-title {
+:lang(ja) .wp-block-post-title {
 	word-break: auto-phrase;
+	overflow-wrap: anywhere;
 }
 
 /* Full-height flex column so the meta cluster below can pin itself to the

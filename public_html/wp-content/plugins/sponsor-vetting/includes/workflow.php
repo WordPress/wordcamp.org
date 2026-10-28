@@ -114,7 +114,7 @@ function enforce_status_transition( array $data, array $postarr ): array {
 
 	if ( $is_stale || ! is_allowed_transition( $post->post_type, $post->post_status, $to ) ) {
 		$data['post_status'] = $post->post_status;
-	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
+	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && restoring_approval() !== $post->ID && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
 		$data['post_status'] = $post->post_status;
 	}
 
@@ -153,6 +153,24 @@ function may_approve( int $sponsorship_id, int $company_id ): bool {
  * @return int The sponsorship being approved in good faith, or 0.
  */
 function approving_in_good_faith( ?int $sponsorship_id = null ): int {
+	static $current = 0;
+
+	if ( null !== $sponsorship_id ) {
+		$current = $sponsorship_id;
+	}
+
+	return $current;
+}
+
+/**
+ * Tracks the sponsorship being restored from the trash as approved, so restoring it isn't taken for a new approval.
+ *
+ * Kept in memory because core deletes `_wp_trash_meta_status` before it saves the restored status.
+ *
+ * @param int|null $sponsorship_id The sponsorship being restored, or null to read.
+ * @return int The sponsorship being restored as approved, or 0.
+ */
+function restoring_approval( ?int $sponsorship_id = null ): int {
 	static $current = 0;
 
 	if ( null !== $sponsorship_id ) {
@@ -323,9 +341,53 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effect
  * @return string
  */
 function restore_status_on_untrash( string $new_status, int $post_id, string $previous_status ): string {
-	return isset( get_statuses( (string) get_post_type( $post_id ) )[ $previous_status ] ) ? $previous_status : $new_status;
+	if ( ! isset( get_statuses( (string) get_post_type( $post_id ) )[ $previous_status ] ) ) {
+		return $new_status;
+	}
+
+	if ( 'svs-approved' === $previous_status ) {
+		restoring_approval( $post_id );
+	}
+
+	return $previous_status;
 }
 add_filter( 'wp_untrash_post_status', __NAMESPACE__ . '\restore_status_on_untrash', 10, 3 );
+
+/**
+ * Unlinks a deleted company's sponsorships, so they go back to reviewers instead of pointing at nothing.
+ *
+ * Core reparents only children of the deleted post's own type, and emptying the trash deletes companies too.
+ *
+ * @param int      $post_id The post being deleted.
+ * @param \WP_Post $post    The post.
+ */
+function unlink_deleted_company( int $post_id, \WP_Post $post ): void {
+	if ( COMPANY_POST_TYPE !== $post->post_type ) {
+		return;
+	}
+
+	$sponsorship_ids = get_posts(
+		array(
+			'post_type'      => SPONSORSHIP_POST_TYPE,
+			// Not `any`: it leaves out statuses excluded from search, which all of these are.
+			'post_status'    => array_merge( array_keys( get_sponsorship_statuses() ), array( 'trash' ) ),
+			'post_parent'    => $post_id,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		)
+	);
+
+	foreach ( $sponsorship_ids as $sponsorship_id ) {
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_parent' => 0,
+			)
+		);
+	}
+}
+add_action( 'before_delete_post', __NAMESPACE__ . '\unlink_deleted_company', 10, 2 );
 
 /**
  * Adds a private note to a company or sponsorship.

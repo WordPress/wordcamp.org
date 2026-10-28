@@ -205,6 +205,7 @@ function render_company_status_box( \WP_Post $post ): void {
 	<p>
 		<label for="sv-good-faith-due"><strong><?php esc_html_e( 'Good Faith due', 'wordcamporg' ); ?></strong></label><br>
 		<input type="date" id="sv-good-faith-due" name="sv_good_faith_due" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_sv_good_faith_due', true ) ); ?>" class="widefat">
+		<input type="hidden" name="sv_good_faith_due_loaded" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_sv_good_faith_due', true ) ); ?>">
 		<span class="description"><?php esc_html_e( 'Set when a sponsorship is approved in good faith.', 'wordcamporg' ); ?></span>
 	</p>
 	<?php
@@ -373,6 +374,13 @@ function save_company( int $post_id ): void {
 
 	$fields = wp_unslash( (array) ( $_POST['sv_company'] ?? array() ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Missing -- Verified by is_valid_save(), sanitized field by field below.
 
+	// Unchanged on this screen keeps the stored date, which a Good Faith approval in another tab may have set since.
+	$good_faith_due = get_posted_date( 'sv_good_faith_due' );
+
+	if ( get_posted_date( 'sv_good_faith_due_loaded' ) === $good_faith_due ) {
+		$good_faith_due = (string) get_post_meta( $post_id, '_sv_good_faith_due', true );
+	}
+
 	$values = array(
 		'_sv_contact_first_name' => sanitize_text_field( (string) ( $fields['_sv_contact_first_name'] ?? '' ) ),
 		'_sv_contact_last_name'  => sanitize_text_field( (string) ( $fields['_sv_contact_last_name'] ?? '' ) ),
@@ -382,7 +390,7 @@ function save_company( int $post_id ): void {
 		'_sv_trademark_findings' => (string) ( $fields['_sv_trademark_findings'] ?? '' ),
 		'_sv_not_eligible_until' => get_posted_date( 'sv_not_eligible_until' ),
 		// The form was loaded before core saved the status, so Compliant's cleared due date would come back.
-		'_sv_good_faith_due'     => 'sv-compliant' === get_post_status( $post_id ) ? '' : get_posted_date( 'sv_good_faith_due' ),
+		'_sv_good_faith_due'     => 'sv-compliant' === get_post_status( $post_id ) ? '' : $good_faith_due,
 	);
 
 	foreach ( $values as $meta_key => $value ) {

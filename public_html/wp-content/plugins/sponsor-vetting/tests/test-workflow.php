@@ -278,4 +278,32 @@ class Test_Workflow extends WP_UnitTestCase {
 		$this->assertTrue( approve_sponsorship( $second_id, true ) );
 		$this->assertSame( '2026-01-15', get_post_meta( $company_id, '_sv_good_faith_due', true ) );
 	}
+
+	/**
+	 * Restoring an approved sponsorship from the trash restores its approval, even one given in good faith, which
+	 * the approval check alone would refuse.
+	 */
+	public function test_untrashing_restores_an_approval(): void {
+		$company_id     = $this->create_company( 'sv-compliance-req', (int) strtotime( '-1 month' ) );
+		$sponsorship_id = $this->create_sponsorship( $company_id );
+
+		$this->assertTrue( approve_sponsorship( $sponsorship_id, true ) );
+
+		wp_trash_post( $sponsorship_id );
+		wp_untrash_post( $sponsorship_id );
+
+		$this->assertSame( 'svs-approved', get_post_status( $sponsorship_id ) );
+	}
+
+	/**
+	 * Deleting a company sends its sponsorships back to reviewers, as needing a company.
+	 */
+	public function test_deleting_a_company_unlinks_its_sponsorships(): void {
+		$company_id     = $this->create_company( 'sv-needs-vetting' );
+		$sponsorship_id = $this->create_sponsorship( $company_id );
+
+		wp_delete_post( $company_id, true );
+
+		$this->assertSame( 0, (int) get_post_field( 'post_parent', $sponsorship_id ) );
+	}
 }

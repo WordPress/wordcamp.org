@@ -236,12 +236,18 @@ function render_sponsorship_company_box( \WP_Post $post ): void {
 			esc_html( get_company_statuses()[ get_post_status( $company_id ) ] ?? '' )
 		);
 	} elseif ( $suggested_id && COMPANY_POST_TYPE === get_post_type( $suggested_id ) ) {
+		$sponsor = get_camp_sponsor( (int) get_post_meta( $post->ID, '_sv_blog_id', true ), (int) get_post_meta( $post->ID, '_sv_sponsor_id', true ) );
+
+		if ( $sponsor && in_array( normalize_domain( $sponsor['website'] ), get_company_domains( $suggested_id ), true ) ) {
+			/* translators: %s: Company name. */
+			$message = __( 'The website matches %s.', 'wordcamporg' );
+		} else {
+			/* translators: %s: Company name. */
+			$message = __( 'This is a copy of the Multi-Event Sponsor of %s, but its website isn’t one of the company’s domains.', 'wordcamporg' );
+		}
 		?>
 		<p>
-			<?php
-			/* translators: %s: Company name. */
-			printf( esc_html__( 'The website matches %s.', 'wordcamporg' ), '<a href="' . esc_url( (string) get_edit_post_link( $suggested_id ) ) . '">' . esc_html( get_the_title( $suggested_id ) ) . '</a>' );
-			?>
+			<?php printf( esc_html( $message ), '<a href="' . esc_url( (string) get_edit_post_link( $suggested_id ) ) . '">' . esc_html( get_the_title( $suggested_id ) ) . '</a>' ); ?>
 			<button type="submit" name="sv_action" value="confirm_match" class="button"><?php esc_html_e( 'Confirm', 'wordcamporg' ); ?></button>
 		</p>
 		<?php
@@ -378,6 +384,8 @@ function save_sponsorship( int $post_id ): void {
 			add_notice( 'error', get_send_error_message( $sent ) );
 		} elseif ( $sent ) {
 			add_notice( 'success', __( 'The approval email was sent to the event.', 'wordcamporg' ) );
+		} elseif ( get_conversations( $post_id, 'approval' ) ) {
+			add_notice( 'success', __( 'No approval email was sent: the event already has one.', 'wordcamporg' ) );
 		} else {
 			add_notice( 'success', __( 'No approval email was needed: the event has invoiced the sponsor, and approving the invoice tells them.', 'wordcamporg' ) );
 		}

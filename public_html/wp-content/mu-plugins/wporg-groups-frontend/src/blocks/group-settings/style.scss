@@ -30,6 +30,17 @@
 		flex-direction: column;
 	}
 
+	// The modal wraps its children in this container, which breaks the flex
+	// chain: without it the tab panel and single-event view grow to their
+	// content, the whole modal scrolls instead, and sticky children (the tab
+	// bar, the description editor's toolbar) scroll away with it.
+	.components-modal__children-container {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+	}
+
 	// Tab panel fills the available space.
 	&__tabs {
 		display: flex;

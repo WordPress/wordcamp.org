@@ -13,6 +13,23 @@ class WCP_Encryption {
 	public static $hmac_key = null;
 
 	/**
+	 * The previous encryption key, so data encrypted with it stays readable during a rotation.
+	 *
+	 * Temporary: deploy, run the migration script, then remove. Don't rename it -- the script nulls
+	 * it by name via property_exists() to keep its own key comparisons exact.
+	 *
+	 * @var string|null
+	 */
+	public static $fallback_key = null;
+
+	/**
+	 * The previous HMAC key, paired with self::$fallback_key. Same caveats.
+	 *
+	 * @var string|null
+	 */
+	public static $fallback_hmac_key = null;
+
+	/**
 	 * Read some secrets.
 	 */
 	public static function init() {
@@ -26,6 +43,14 @@ class WCP_Encryption {
 
 			if ( defined( 'WORDCAMP_PAYMENTS_HMAC_KEY' ) && WORDCAMP_PAYMENTS_HMAC_KEY ) {
 				self::$hmac_key = WORDCAMP_PAYMENTS_HMAC_KEY;
+			}
+
+			if ( defined( 'WORDCAMP_PAYMENTS_ENCRYPTION_KEY__OLD' ) && WORDCAMP_PAYMENTS_ENCRYPTION_KEY__OLD ) {
+				self::$fallback_key = WORDCAMP_PAYMENTS_ENCRYPTION_KEY__OLD;
+			}
+
+			if ( defined( 'WORDCAMP_PAYMENTS_HMAC_KEY__OLD' ) && WORDCAMP_PAYMENTS_HMAC_KEY__OLD ) {
+				self::$fallback_hmac_key = WORDCAMP_PAYMENTS_HMAC_KEY__OLD;
 			}
 		}
 
@@ -94,6 +119,15 @@ class WCP_Encryption {
 
 		// Verify hmac.
 		if ( ! hash_equals( hash_hmac( 'sha256', $data, self::$hmac_key, true ), $hmac ) ) {
+			// Verify the fallback HMAC first: aes-256-ctr returns garbage rather than failing on a wrong key.
+			if (
+				! empty( self::$fallback_key ) &&
+				! empty( self::$fallback_hmac_key ) &&
+				hash_equals( hash_hmac( 'sha256', $data, self::$fallback_hmac_key, true ), $hmac )
+			) {
+				return openssl_decrypt( $data, 'aes-256-ctr', self::$fallback_key, true, $iv );
+			}
+
 			return new WP_Error( 'encryption-error', 'HMAC mismatch.' );
 		}
 

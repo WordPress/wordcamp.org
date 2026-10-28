@@ -626,7 +626,7 @@ function render_notice(): void {
 					'Message queued for %s group. Delivery runs in the background.',
 					'Message queued for %s groups. Delivery runs in the background.',
 					$groups,
-					'wporg-groups-frontend'
+					'wordcamporg'
 				),
 				number_format_i18n( $groups )
 			),

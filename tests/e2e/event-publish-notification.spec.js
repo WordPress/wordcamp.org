@@ -2,6 +2,7 @@ const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
 const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
+const { mailcatcherUrl } = require( './utils/env' );
 
 /**
  * Automatic "event published" notification (#1829): publishing a
@@ -13,15 +14,16 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
  *
  * Requires the `eventorganiser3` / `password` test user from the
  * groups-gatherpress-compat-test skill's environment-setup step, and a
- * reachable MailCatcher instance at http://localhost:1080 (the local dev
- * stack's mail sink — see .docker/readme.md). Uses a dedicated account
+ * reachable MailCatcher instance (the local dev stack's mail sink — at
+ * http://localhost:1080 unless `.env` overrides the binding; see
+ * .docker/readme.md). Uses a dedicated account
  * (not `eventorganiser1`, shared by event-organiser.spec.js) since this
  * spec can run concurrently with the others under `fullyParallel` — this
  * environment only supports one active session per user, so sharing an
  * account risked one worker's login invalidating another's mid-test.
  */
 test.describe( 'event publish notification', () => {
-	const MAILCATCHER_URL = 'http://localhost:1080';
+	const MAILCATCHER_URL = mailcatcherUrl();
 
 	/**
 	 * Creates and publishes a fresh event as `eventorganiser3` via the

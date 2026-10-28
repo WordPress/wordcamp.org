@@ -32,11 +32,13 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';
 	require_once dirname( __DIR__ ) . '/wordcamp/lets-encrypt-helper.php';
 	require_once dirname( __DIR__ ) . '/latest-site-hints.php';
+	require_once dirname( __DIR__ ) . '/dangling-hosts.php';
 	require_once dirname( __DIR__ ) . '/trusted-deputy-capabilities.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 	require_once dirname( __DIR__ ) . '/wcorg-network-theme-control.php';
 	require_once dirname( __DIR__ ) . '/jetpack-tweaks/import-meta.php';
 	require_once dirname( __DIR__ ) . '/importer-tweaks.php';
+	require_once dirname( __DIR__ ) . '/sponsor-agreements.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );

@@ -24,6 +24,7 @@ class WordCamp_Loader extends Event_Loader {
 		parent::__construct();
 		add_action( 'wp_insert_post_data',             array( $this, 'set_scheduled_date' ), 20 );
 		add_filter( 'posts_where',                     array( $this, 'hide_unscheduled_cancellations' ), 10, 2 );
+		add_filter( 'posts_where',                     array( $this, 'limit_campus_connect_planned' ), 10, 2 );
 		add_filter( 'wordcamp_rewrite_rules',          array( $this, 'wordcamp_rewrite_rules'            ) );
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
@@ -131,7 +132,15 @@ class WordCamp_Loader extends Event_Loader {
 				'delete_others_posts'    => 'wordcamp_wrangle_wordcamps',
 				'delete_private_posts'   => 'wordcamp_wrangle_wordcamps',
 				'delete_published_posts' => 'wordcamp_wrangle_wordcamps',
-				'edit_others_posts'      => 'wordcamp_wrangle_wordcamps',
+
+				/*
+				 * Its own capability, not the wrangler one, so it can be granted more narrowly: wranglers get
+				 * it through `wcorg-subroles.php`, and a mentor gets it only while saving their mentee's camp.
+				 * Mapping it straight to `wordcamp_wrangle_wordcamps` made core's save path demand wrangler
+				 * rights from a mentor, and widening that cap for the save would also have let them change the
+				 * status and the protected fields, which check `wordcamp_wrangle_wordcamps` directly.
+				 */
+				'edit_others_posts'      => 'edit_others_wordcamps',
 				'edit_private_posts'     => 'wordcamp_wrangle_wordcamps',
 				'edit_published_posts'   => 'wordcamp_wrangle_wordcamps',
 				'publish_posts'          => 'wordcamp_wrangle_wordcamps',
@@ -209,7 +218,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => _x( 'On Hold',                                     'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                                    'wordcamp status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                                   'wordcamp status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                                    'wordcamp status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved for Pre-Planning Pending Agreement', 'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
@@ -496,6 +505,70 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
+	 * Statuses in which a Campus Connect event is planned, beyond the regular pre-planning ones.
+	 *
+	 * A Campus Connect application goes from Approved For Pre-Planning straight to WordCamp
+	 * Scheduled, and never enters `get_pre_planning_post_statuses()` (#1714). For a regular camp
+	 * the same status is "Approved for Pre-Planning Pending Agreement", which isn't planned yet,
+	 * so these count only for Campus Connect posts. See `limit_campus_connect_planned()`.
+	 *
+	 * @return array Post status names.
+	 */
+	public static function get_campus_connect_planned_post_statuses() {
+		return array(
+			'wcpt-approved-pre-pl',
+		);
+	}
+
+	/**
+	 * Statuses for Central's Planned list, Campus Connect events included.
+	 *
+	 * Query these with `wcpt_campus_connect_planned` set, or regular camps that are still
+	 * waiting on their agreement are listed too.
+	 *
+	 * @return array Post status names.
+	 */
+	public static function get_planned_post_statuses() {
+		return array_merge(
+			self::get_pre_planning_post_statuses(),
+			self::get_campus_connect_planned_post_statuses()
+		);
+	}
+
+	/**
+	 * Keep the Campus Connect planned statuses to Campus Connect posts.
+	 *
+	 * `post_status` is per status and this is per post, so the query decides, as in
+	 * `hide_unscheduled_cancellations()`. It only applies to a query that sets
+	 * `wcpt_campus_connect_planned`, so the wp-admin list and every other query naming the
+	 * status still see regular camps in it.
+	 *
+	 * @param string   $where
+	 * @param WP_Query $query
+	 *
+	 * @return string
+	 */
+	public function limit_campus_connect_planned( $where, $query ) {
+		global $wpdb;
+
+		if ( ! $query->get( 'wcpt_campus_connect_planned' ) ) {
+			return $where;
+		}
+
+		$statuses     = self::get_campus_connect_planned_post_statuses();
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- `$placeholders` is one `%s` per status, filled by this prepare().
+		return $where . $wpdb->prepare(
+			" AND ( {$wpdb->posts}.post_status NOT IN ( $placeholders ) OR {$wpdb->posts}.ID IN (
+				SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s
+			) )",
+			array_merge( $statuses, array( 'event_subtype', 'campusconnect' ) )
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * Get the statuses where camps should have a mentor
 	 *
 	 * @return array
@@ -551,6 +624,7 @@ class WordCamp_Loader extends Event_Loader {
 		$milestones = array(
 			'wcpt-needs-vetting'   => 'Application received',
 			'wcpt-needs-orientati' => 'Application vetted',
+			'wcpt-needs-action'    => 'Application vetted',
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
 			'wcpt-rejected'        => 'Sent response',
@@ -688,8 +762,8 @@ class WordCamp_Loader extends Event_Loader {
 					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin. This is a true Unix timestamp in UTC, not local time.', 'wordcamporg' ),
 				),
 				'get_callback' => function( $object, $field_name ) {
-					// Short out if the event is not scheduled.
-					if ( 'wcpt-scheduled' !== $object['status'] ) {
+					// Short out if the event is not scheduled. `status` isn't in `$object` when `_fields` omits it.
+					if ( 'wcpt-scheduled' !== get_post_status( $object['id'] ) ) {
 						return 0;
 					}
 
@@ -721,7 +795,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                 'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                  'campus connect status', 'wordcamporg' ),
 		);
 	}
 
@@ -739,6 +813,8 @@ class WordCamp_Loader extends Event_Loader {
 	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
 	 *   WordCamp Closed      → Declined, Cancelled, On Hold
 	 *   Declined / Cancelled / On Hold → any CC status
+	 *   Any older, non-CC workflow status → On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, WordCamp Closed, Declined, Cancelled
 	 *
 	 * @param string $status Current status slug.
 	 * @return array Array of valid next-status slugs.
@@ -758,10 +834,23 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => $all_cc,
 		);
 
+		if ( isset( $transitions[ $status ] ) ) {
+			return $transitions[ $status ];
+		}
+
+		// Applications from before the CC workflow are still in the older statuses, like In
+		// Pre-Planning. With nothing to move to, their status couldn't be changed at all (#1714).
+		// They can go anywhere past intake: not back to Needs Vetting, which queues them for the
+		// vetting agent again, Needs Action, the agent's hand-off, or Needs Orientation, which sends
+		// the organizer email.
+		if ( array_key_exists( $status, self::get_post_statuses() ) ) {
+			return array( 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled' );
+		}
+
 		// For an unexpected/mid-transition status, allow no transitions rather than
 		// defaulting to a real status: the metabox keeps the current status selectable
 		// (as a disabled option) so it is never silently mutated.
-		return $transitions[ $status ] ?? array();
+		return array();
 	}
 
 	/**

@@ -50,7 +50,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button"
 				data-wporg-settings-open="events"
 				data-wporg-settings-event-id="<?php echo (int) $event_post_id; ?>"
-			>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+			>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php else : ?>
 		<div class="wp-block-button<?php echo $needs_setup ? '' : ' is-style-outline'; ?>">
@@ -60,10 +60,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				data-wporg-settings-open="<?php echo $needs_setup ? 'about' : ''; ?>"
 			>
 				<?php if ( $needs_setup ) : ?>
-					<?php esc_html_e( 'Set up your group', 'wporg-groups-frontend' ); ?>
+					<?php esc_html_e( 'Set up your group', 'wordcamporg' ); ?>
 				<?php else : ?>
 					<span class="dashicons dashicons-admin-generic"></span>
-					<?php esc_html_e( 'Settings', 'wporg-groups-frontend' ); ?>
+					<?php esc_html_e( 'Settings', 'wordcamporg' ); ?>
 				<?php endif; ?>
 			</button>
 		</div>

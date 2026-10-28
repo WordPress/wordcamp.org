@@ -43,6 +43,13 @@ function render( $attributes, $content, $block ) {
 	}
 
 	$post_ID = $block->context['postId'];
+
+	// A password-protected post withholds its content; its meta links must
+	// follow the same gate rather than printing above the password form.
+	if ( post_password_required( $post_ID ) ) {
+		return '';
+	}
+
 	$url     = get_post_meta( $post_ID, $attributes['key'], true );
 	$text    = $attributes['text'];
 

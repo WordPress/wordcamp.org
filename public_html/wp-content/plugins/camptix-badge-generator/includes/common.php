@@ -106,18 +106,13 @@ function get_attendees( $ticket_ids = 'all', $registered_after = '', $admin_flag
 
 	$attendees = get_posts( $params );
 
-	// Exclude placeholder and unconfirmed attendee records.
-	$attendees = array_filter( $attendees, function( $attendee ) {
-		if ( 'unknown.attendee@example.org' === $attendee->tix_email ) {
-			return false;
+	// "Unknown Attendee" placeholders have no name to print.
+	$attendees = array_filter(
+		$attendees,
+		function ( $attendee ) {
+			return 'unknown.attendee@example.org' !== $attendee->tix_email;
 		}
-
-		if ( '[[ unconfirmed ]]' === $attendee->tix_username ) {
-			return false;
-		}
-
-		return true;
-	} );
+	);
 
 	if ( '' !== $admin_flag ) {
 		$attendees = array_filter( $attendees, function( $attendee ) use ( $admin_flag ) {
@@ -127,7 +122,7 @@ function get_attendees( $ticket_ids = 'all', $registered_after = '', $admin_flag
 		} );
 	}
 
-	return array_values( $attendees );
+	return $attendees;
 }
 
 /**
@@ -202,8 +197,9 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 			break;
 
 		case 'wporg_profile_url':
-			$username = get_wporg_username( $attendee );
-			$value    = ! empty( $username ) ? 'https://w.org/@' . rawurlencode( $username ) : '';
+			// Profile URLs use the nicename, which differs from the login for names with spaces, capitals, etc.
+			$user  = get_user_by( 'login', get_wporg_username( $attendee ) );
+			$value = $user ? 'https://w.org/@' . rawurlencode( $user->user_nicename ) : '';
 			break;
 
 		case 'qr_code_target_url':
@@ -237,27 +233,13 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
  * @return string
  */
 function get_wporg_username( $attendee ) {
-	/** @global CampTix_Plugin $camptix */
-	global $camptix;
-
 	$username = get_post_meta( $attendee->ID, 'tix_username', true );
 
-	if ( ! empty( $username ) && '[[ unconfirmed ]]' !== $username ) {
-		return trim( $username );
+	if ( empty( $username ) || '[[ unconfirmed ]]' === $username ) {
+		return '';
 	}
 
-	if ( isset( $camptix ) && is_object( $camptix ) && method_exists( $camptix, 'get_all_questions' ) ) {
-		foreach ( $camptix->get_all_questions() as $question ) {
-			if ( false !== stripos( $question->post_title, 'username' ) || false !== stripos( $question->post_title, 'WordPress.org' ) ) {
-				$answers = (array) $attendee->tix_questions;
-				if ( ! empty( $answers[ $question->ID ] ) ) {
-					return trim( (string) $answers[ $question->ID ] );
-				}
-			}
-		}
-	}
-
-	return '';
+	return trim( $username );
 }
 
 /**

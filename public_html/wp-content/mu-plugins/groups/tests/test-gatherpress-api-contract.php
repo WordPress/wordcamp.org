@@ -32,21 +32,54 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
 class Test_GatherPress_Api_Contract extends Groups_TestCase {
 
 	/**
-	 * Every class this integration imports, and the methods/constants/
-	 * properties actually called on it. `type` distinguishes how each
+	 * Every class this integration imports, and the methods/constants
+	 * actually called on it. `type` distinguishes how each
 	 * member is checked; `static` methods are additionally invoked via
 	 * `get_instance()` (all of these classes are GatherPress singletons)
 	 * to confirm the call itself doesn't throw, not just that the method
 	 * exists.
 	 */
 	const CONTRACT = array(
+		// 0.36.0 dropped `Event::$rsvp`; RSVPs are reached through their own
+		// `Rsvp` instance. It also renamed `Event::$event` to `Event::$post`,
+		// which check-in no longer reads, so no property is listed here.
 		'GatherPress\Core\Rsvp\Rsvp'        => array(
-			'methods' => array( 'get', 'save', 'responses' ),
+			'methods'   => array( 'get', 'save', 'responses', 'is_enabled', 'check_waiting_list' ),
+			'constants' => array( 'COMMENT_TYPE' ),
+		),
+		'GatherPress\Core\Rsvp\Cache'       => array(
+			'methods' => array( 'delete' ),
+		),
+		// Check-in is stored as this flag, and `on_flag_changed()` matches
+		// GatherPress's flag hooks against its slug.
+		'GatherPress\Core\Rsvp\Flag\Check_In' => array(
+			'methods'   => array( 'has', 'add', 'remove' ),
+			'constants' => array( 'SLUG' ),
+		),
+		'GatherPress\Core\Rsvp\Query'       => array(
+			'methods' => array( 'get_rsvps' ),
+		),
+		// An enum: `ATTENDING` is a case, which `defined()` also reports.
+		'GatherPress\Core\Rsvp\Response\Status' => array(
+			'constants' => array( 'TAXONOMY', 'ATTENDING' ),
 		),
 		'GatherPress\Core\Event\Event'      => array(
-			'methods'    => array( 'save_datetimes', 'get_venue_information', 'has_event_past' ),
-			'constants'  => array( 'TABLE_FORMAT' ),
-			'properties' => array( 'rsvp' ),
+			'methods'   => array(
+				'save_datetimes',
+				'get_venue_information',
+				'has_event_past',
+				'has_event_started',
+				'get_datetime',
+				'get_display_datetime',
+				'maybe_get_online_event_link',
+				'can_read_rsvps',
+			),
+			'constants' => array( 'POST_TYPE', 'TABLE_FORMAT', 'DATETIME_PLACEHOLDER' ),
+		),
+		// The publish notification calls this directly instead of going
+		// through WP-Cron, so a rename would stop every notification.
+		'GatherPress\Core\Event\Rest_Api'   => array(
+			'methods' => array( 'send_emails' ),
 		),
 		'GatherPress\Core\Event\Setup'      => array(
 			'methods' => array( 'handle_event_archive_redirect' ),
@@ -64,6 +97,33 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		'GatherPress\Core\User'             => array(
 			'methods' => array( 'has_event_updates_opt_in' ),
 		),
+		'GatherPress\Core\Utility'          => array(
+			'methods' => array( 'timezone_choices', 'normalize_timezone_string' ),
+		),
+		'GatherPress\Core\Topic'            => array(
+			'constants' => array( 'TAXONOMY' ),
+		),
+		// The RSVP confirmation email links to the same on-site endpoints the
+		// event page's add-to-calendar control does, so a rename upstream
+		// would silently drop those lines from the email.
+		'GatherPress\Core\Calendar\Calendar' => array(
+			'methods' => array( 'get_google_url', 'get_ical_url', 'get_outlook_url', 'get_yahoo_url' ),
+		),
+	);
+
+	/**
+	 * Names GatherPress keeps resolvable only through
+	 * `includes/core/register-class-aliases.php`, since the classes moved
+	 * into subnamespaces in 0.34.0. `class_exists()` on one of these stays
+	 * true only while that shim ships, so code guarded by it would go dormant
+	 * without a fatal the day the alias is dropped.
+	 */
+	const DEPRECATED_ALIASES = array(
+		'GatherPress\Core\Calendar',
+		'GatherPress\Core\Event',
+		'GatherPress\Core\Rsvp',
+		'GatherPress\Core\Venue',
+		'GatherPress\Core\Venue\Map',
 	);
 
 	/**
@@ -97,13 +157,49 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 	}
 
 	/**
-	 * @dataProvider provide_contract_properties
+	 * The integration names every GatherPress class by its current location,
+	 * never by a deprecated alias. The feed's venue filter did, guarding on
+	 * `class_exists( '\GatherPress\Core\Venue' )`, and would have quietly
+	 * stopped hiding a protected event's venue once the alias went away.
 	 */
-	public function test_property_exists( string $class, string $property ) {
-		$this->assertTrue(
-			property_exists( $class, $property ),
-			"Expected {$class}::\${$property} to exist."
+	public function test_code_does_not_use_deprecated_aliases() {
+		$roots = array(
+			SUT_WP_CONTENT_DIR . 'mu-plugins/groups',
+			SUT_WP_CONTENT_DIR . 'mu-plugins/wporg-groups-frontend',
+			SUT_WP_CONTENT_DIR . 'themes/groups-site',
 		);
+		$names = implode( '|', array_map( static fn( $alias ) => preg_quote( $alias, '/' ), self::DEPRECATED_ALIASES ) );
+		$hits  = array();
+
+		foreach ( $roots as $root ) {
+			$files = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ) );
+
+			foreach ( $files as $file ) {
+				$path = $file->getPathname();
+
+				if ( ! str_ends_with( $path, '.php' ) || preg_match( '#/(tests|build|vendor|node_modules)/#', $path ) ) {
+					continue;
+				}
+
+				// Comments may name an alias when explaining history.
+				$code = '';
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a source file from disk.
+				foreach ( token_get_all( file_get_contents( $path ) ) as $token ) {
+					if ( ! is_array( $token ) || ! in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+						$code .= is_array( $token ) ? $token[1] : $token;
+					}
+				}
+
+				// A single or doubled separator, as in a string literal.
+				$code = str_replace( '\\\\', '\\', $code );
+
+				if ( preg_match_all( '/\\\\?\b(' . $names . ')\b(?!\\\\)/', $code, $matches ) ) {
+					$hits[] = str_replace( SUT_WP_CONTENT_DIR, '', $path ) . ': ' . implode( ', ', array_unique( $matches[1] ) );
+				}
+			}
+		}
+
+		$this->assertSame( array(), $hits, 'Use the class each alias points to; see register-class-aliases.php in GatherPress.' );
 	}
 
 	/**
@@ -138,19 +234,6 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		foreach ( self::CONTRACT as $class => $members ) {
 			foreach ( $members['constants'] ?? array() as $constant ) {
 				$cases[ "{$class}::{$constant}" ] = array( $class, $constant );
-			}
-		}
-		return $cases;
-	}
-
-	/**
-	 * Data provider: one case per class/property pair in CONTRACT.
-	 */
-	public function provide_contract_properties(): array {
-		$cases = array();
-		foreach ( self::CONTRACT as $class => $members ) {
-			foreach ( $members['properties'] ?? array() as $property ) {
-				$cases[ "{$class}::\${$property}" ] = array( $class, $property );
 			}
 		}
 		return $cases;

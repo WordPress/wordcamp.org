@@ -202,6 +202,99 @@ class Test_WordCamp_Status_Guard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The author guard is in force on every write path too.
+	 *
+	 * @covers WordCamp_Status_Guard::init
+	 */
+	public function test_the_author_guard_is_registered() {
+		$this->assertNotFalse(
+			has_filter( 'wp_insert_post_data', array( 'WordCamp_Status_Guard', 'enforce_post_author' ) )
+		);
+	}
+
+	/**
+	 * Changing who authors a camp is a wrangler's call. Without this, a save that names no
+	 * author makes core fall back to the current user, so a mentor's save made them the author.
+	 *
+	 * @covers WordCamp_Status_Guard::enforce_post_author
+	 * @ticket 2189
+	 */
+	public function test_author_change_by_a_non_wrangler_is_reverted() {
+		$mentor = $this->become_contributor();
+
+		$this->set_author( $mentor );
+
+		$this->assertSame( $this->organizer, (int) get_post( $this->camp )->post_author );
+	}
+
+	/**
+	 * A wrangler can still reassign a camp.
+	 *
+	 * @covers WordCamp_Status_Guard::enforce_post_author
+	 * @ticket 2189
+	 */
+	public function test_author_change_by_a_wrangler_is_kept() {
+		$new_lead = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$this->become_contributor();
+		$this->become_wrangler();
+
+		$this->set_author( $new_lead );
+
+		$this->assertSame( $new_lead, (int) get_post( $this->camp )->post_author );
+	}
+
+	/**
+	 * Cron and WP-CLI without a user are trusted with the author, as with the status.
+	 *
+	 * @covers WordCamp_Status_Guard::enforce_post_author
+	 * @ticket 2189
+	 */
+	public function test_cron_can_change_the_author() {
+		$new_lead = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		wp_set_current_user( 0 );
+		add_filter( 'wp_doing_cron', '__return_true' );
+
+		$this->set_author( $new_lead );
+
+		remove_filter( 'wp_doing_cron', '__return_true' );
+
+		$this->assertSame( $new_lead, (int) get_post( $this->camp )->post_author );
+	}
+
+	/**
+	 * A new camp keeps the author its creator gives it: only updates are pinned. With a global
+	 * `$post` set, `get_post()` of an empty ID returns that post, so this also checks the new camp
+	 * doesn't take another post's author.
+	 *
+	 * @covers WordCamp_Status_Guard::enforce_post_author
+	 * @ticket 2189
+	 */
+	public function test_a_new_camp_keeps_its_given_author() {
+		$lead            = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$GLOBALS['post'] = get_post( $this->camp ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Stands in for a request inside a loop; reset below.
+
+		$camp = $this->create_wordcamp( $lead );
+
+		$GLOBALS['post'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the test's default.
+
+		$this->assertSame( $lead, (int) get_post( $camp )->post_author );
+	}
+
+	/**
+	 * Write an author straight to the camp.
+	 *
+	 * @param int $author_id The author to write.
+	 */
+	protected function set_author( $author_id ) {
+		wp_update_post(
+			array(
+				'ID'          => $this->camp,
+				'post_author' => $author_id,
+			)
+		);
+	}
+
+	/**
 	 * Write a status straight to the post.
 	 *
 	 * @param string $status The status to write.

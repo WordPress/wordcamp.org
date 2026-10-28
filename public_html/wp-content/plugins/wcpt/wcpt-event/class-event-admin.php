@@ -568,7 +568,16 @@ abstract class Event_Admin {
 					break;
 
 				case 'number':
-					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					if ( 'Number of venues' === $key ) {
+						$raw_val = $values[ $key ] ?? '';
+						if ( '' !== $raw_val && is_numeric( $raw_val ) && intval( $raw_val ) >= 1 && (string) intval( $raw_val ) === trim( (string) $raw_val ) ) {
+							update_post_meta( $post_id, $key, intval( $raw_val ) );
+						} else {
+							delete_post_meta( $post_id, $key );
+						}
+					} else {
+						update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					}
 					break;
 
 				case 'checkbox-delete-on-unset':
@@ -845,7 +854,7 @@ abstract class Event_Admin {
 
 					<p>
 						<label for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
-						<?php if ( in_array( $key, $required_fields, true ) ) : ?>
+						<?php if ( in_array( $key, $required_fields, true ) || 'Number of venues' === $key ) : ?>
 							<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 						<?php endif; ?>
 					</p>
@@ -863,6 +872,8 @@ abstract class Event_Admin {
 								<?php
 								break;
 							case 'number':
+								$step = ( 'Number of venues' === $key ) ? '1' : 'any';
+								$min  = ( 'Number of venues' === $key ) ? '1' : '0';
 								?>
 
 								<input
@@ -870,8 +881,8 @@ abstract class Event_Admin {
 									name="<?php echo esc_attr( $object_name ); ?>"
 									id="<?php echo esc_attr( $object_name ); ?>"
 									value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-									step="any"
-									min="0"
+									step="<?php echo esc_attr( $step ); ?>"
+									min="<?php echo esc_attr( $min ); ?>"
 									<?php echo esc_attr( $readonly ); ?>
 								/>
 

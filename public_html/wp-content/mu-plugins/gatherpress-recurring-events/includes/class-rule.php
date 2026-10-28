@@ -40,19 +40,20 @@ final class Rule {
 	 * @return array Normalized rule.
 	 */
 	public static function from_post( int $post_id ): array {
-		$weekdays = get_post_meta( $post_id, self::META_PREFIX . 'weekdays', true );
+		$weekdays        = get_post_meta( $post_id, self::META_PREFIX . 'weekdays', true );
+		$monthly_weekday = strtoupper( sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_weekday', true ) ) );
 
 		return array(
-			'frequency'     => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'frequency', true ) ),
-			'interval'      => max( 1, (int) get_post_meta( $post_id, self::META_PREFIX . 'interval', true ) ),
-			'weekdays'      => is_array( $weekdays ) ? array_values( array_intersect( self::weekdays(), $weekdays ) ) : array(),
-			'monthly_mode'  => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_mode', true ) ),
-			'monthly_day'   => (int) get_post_meta( $post_id, self::META_PREFIX . 'monthly_day', true ),
-			'monthly_order' => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_order', true ) ),
-			'monthly_weekday' => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_weekday', true ) ),
-			'end_type'      => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'end_type', true ) ),
-			'until'         => sanitize_text_field( get_post_meta( $post_id, self::META_PREFIX . 'until', true ) ),
-			'count'         => max( 1, (int) get_post_meta( $post_id, self::META_PREFIX . 'count', true ) ),
+			'frequency'       => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'frequency', true ) ),
+			'interval'        => max( 1, (int) get_post_meta( $post_id, self::META_PREFIX . 'interval', true ) ),
+			'weekdays'        => is_array( $weekdays ) ? array_values( array_intersect( self::weekdays(), $weekdays ) ) : array(),
+			'monthly_mode'    => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_mode', true ) ),
+			'monthly_day'     => (int) get_post_meta( $post_id, self::META_PREFIX . 'monthly_day', true ),
+			'monthly_order'   => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'monthly_order', true ) ),
+			'monthly_weekday' => in_array( $monthly_weekday, self::weekdays(), true ) ? $monthly_weekday : 'MO',
+			'end_type'        => sanitize_key( get_post_meta( $post_id, self::META_PREFIX . 'end_type', true ) ),
+			'until'           => sanitize_text_field( get_post_meta( $post_id, self::META_PREFIX . 'until', true ) ),
+			'count'           => max( 1, (int) get_post_meta( $post_id, self::META_PREFIX . 'count', true ) ),
 		);
 	}
 

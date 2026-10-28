@@ -416,10 +416,11 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		// The sponsor region is required so we can import the relevant sponsors and levels.
+		// A sponsor region or group membership is required so we can import the relevant sponsors and levels.
 		$sponsor_region = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
-		if ( ! $sponsor_region ) {
-			Logger\log( 'return_no_region', compact( 'wordcamp_id', 'sponsor_region' ) );
+		$sponsor_groups = class_exists( 'MES_Sponsor_Group' ) ? MES_Sponsor_Group::get_camp_groups( $wordcamp_id ) : array();
+		if ( ! $sponsor_region && ! $sponsor_groups ) {
+			Logger\log( 'return_no_region', compact( 'wordcamp_id', 'sponsor_region', 'sponsor_groups' ) );
 			return;
 		}
 
@@ -527,8 +528,11 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		// The sponsor region is required so we can import the relevant sponsors and levels.
-		if ( ! get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true ) ) {
+		// A sponsor region or group membership is required so we can import the relevant sponsors and levels.
+		$has_region = (bool) get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
+		$has_groups = class_exists( 'MES_Sponsor_Group' ) && MES_Sponsor_Group::get_camp_groups( $wordcamp_id );
+
+		if ( ! $has_region && ! $has_groups ) {
 			return;
 		}
 
@@ -587,6 +591,11 @@ class WordCamp_New_Site {
 			if ( $new_post_id ) {
 				foreach ( $me_stub['meta'] as $key => $value ) {
 					update_post_meta( $new_post_id, $key, $value );
+				}
+
+				// So a later Push to Active WordCamps can tell whether organizers edited it.
+				if ( is_callable( array( 'MES_Sponsor', 'record_pushed_copy' ) ) ) {
+					MES_Sponsor::record_pushed_copy( $new_post_id );
 				}
 
 				// Set featured image.

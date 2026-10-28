@@ -16,19 +16,12 @@ defined('WPINC') || die();
 <html>
 <head>
 	<meta charset="UTF-8">
-	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css"/>
+	<?php WordCamp_Docs_Template::font_header_html(); ?>
 	<style type="text/css">
 		#camptix-invoice-page {
 			margin: 5em;
-			font-family: 'Open Sans', sans-serif;
 			font-size: 14px;
-			font-weight: 300;
 			color: #222;
-		}
-
-		#camptix-invoice-page strong {
-			font-weight: 700;
 		}
 
 		#camptix-invoice-page p {
@@ -59,20 +52,17 @@ defined('WPINC') || die();
 			max-width: 50%;
 		}
 
+		<?php /* A table rather than floats: DomPDF doesn't grow an overflow: hidden box to fit its floats. */ ?>
 		#camptix-invoice-page .camptix-inovice-header {
-			padding-bottom: 1em;
-			overflow: hidden;
+			width: 100%;
+			border-collapse: collapse;
 			border-bottom: 1px solid #999;
 		}
 
-		#camptix-invoice-page .camptix-inovice-header .camptix-invoice-from-box {
-			width: 48%;
-			float: left;
-		}
-
-		#camptix-invoice-page .camptix-inovice-header .camptix-invoice-to-box {
-			width: 48%;
-			float: right;
+		#camptix-invoice-page .camptix-inovice-header td {
+			width: 50%;
+			padding: 0 0 1em;
+			vertical-align: top;
 		}
 
 		#camptix-invoice-page .camptix-inovice-header .camptix-invoice-from-box p,
@@ -117,10 +107,6 @@ defined('WPINC') || die();
 			padding: 3em 0;
 		}
 
-		#camptix-invoice-page .camptix-invoice-payment-status p {
-			font-weight: 700;
-		}
-
 	</style>
 </head>
 <body>
@@ -128,14 +114,14 @@ defined('WPINC') || die();
 	<div class="camptix-invoice-logo-holder">
 		<img src="<?php echo esc_url($logo); ?>">
 	</div>
-	<div class="camptix-inovice-header">
-		<div class="camptix-invoice-from-box text-left">
+	<table class="camptix-inovice-header"><tr>
+		<td class="camptix-invoice-from-box text-left">
 			<strong><?php esc_html_e( 'From', 'wordcamporg' ); ?>:</strong>
 			<p class="text-left">
 				<?php echo nl2br( esc_html( $camptix_opts['invoice-company'] ) ); ?>
 			</p>
-		</div>
-		<div class="camptix-invoice-to-box text-right">
+		</td>
+		<td class="camptix-invoice-to-box text-right">
 			<strong><?php esc_html_e('To', 'wordcamporg'); ?>:</strong>
 			<p class="text-right">
 				<?php echo esc_html( $invoice_metas['name'] ); ?><br/>
@@ -145,8 +131,8 @@ defined('WPINC') || die();
 				<strong><?php esc_html_e('VAT no', 'wordcamporg'); ?>:</strong>
 				<?php echo esc_html( $invoice_metas['vat-number'] ); ?>
 			<?php } ?>
-		</div>
-	</div>
+		</td>
+	</tr></table>
 	<div class="camptix-invoice-data text-right">
 		<p class="text-right">
 			<strong><?php esc_html_e( 'Invoice no', 'wordcamporg' ); ?>:</strong>
@@ -204,7 +190,7 @@ defined('WPINC') || die();
 	</div>
 	<div class="camptix-invoice-payment-status">
 		<p>
-			<?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?>
+			<strong><?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?></strong>
 		</p>
 	</div>
 	<div class="camptix-invoice-note">

@@ -51,6 +51,8 @@ add_action(
 		add_action( 'wporg_groups_frontend_event_draft_saved', __NAMESPACE__ . '\\save_recurring_event_draft', 10, 2 );
 		add_action( 'wporg_groups_frontend_event_saved', __NAMESPACE__ . '\\save_recurring_event', 10, 3 );
 		add_filter( 'wporg_groups_frontend_before_rsvp', __NAMESPACE__ . '\\set_rsvp_occurrence_context', 10, 3 );
+		add_filter( 'wporg_groups_frontend_current_recurrence_id', array( Context::class, 'recurrence_id' ), 10, 0 );
+		add_filter( 'wporg_groups_frontend_is_recurring_event', __NAMESPACE__ . '\\is_recurring_event', 10, 2 );
 	},
 	30
 );
@@ -259,11 +261,15 @@ function normalize_recurring_event_rule( array $input, string $date ): array {
 	$weekdays        = array_filter( $weekdays, 'is_scalar' );
 	$weekdays        = array_values( array_intersect( Rule::weekdays(), array_map( static fn( $value ): string => strtoupper( sanitize_key( $value ) ), $weekdays ) ) );
 	$frequency       = sanitize_key( (string) ( $input['frequency'] ?? '' ) );
-	$monthly_day     = min( 31, max( 1, (int) ( $input['monthly_day'] ?? $day ) ) );
 	$monthly_mode    = sanitize_key( (string) ( $input['monthly_mode'] ?? 'day' ) );
 	$monthly_order   = sanitize_key( (string) ( $input['monthly_order'] ?? 'first' ) );
 	$monthly_weekday = strtoupper( sanitize_key( (string) ( $input['monthly_weekday'] ?? $weekday ) ) );
 	$end_type        = sanitize_key( (string) ( $input['end_type'] ?? 'never' ) );
+
+	// The form has no control for the day of the month; it is always the
+	// start date's. Taking it from the date keeps a stale value from a form
+	// whose date changed out of the saved series (#2227).
+	$monthly_day = $start ? $day : min( 31, max( 1, (int) ( $input['monthly_day'] ?? $day ) ) );
 
 	if ( 'weekly' === $frequency && empty( $weekdays ) ) {
 		$weekdays = array( $weekday );
@@ -314,4 +320,16 @@ function set_rsvp_occurrence_context( $error, int $event_id, WP_REST_Request $re
 	Context::set( $occurrence );
 
 	return $error;
+}
+
+/**
+ * Tells the front end which events are series, so routes that act on one
+ * date can insist on being told which.
+ *
+ * @param bool $is_recurring Whether another filter already said so.
+ * @param int  $event_id     Event post ID.
+ * @return bool Whether the event recurs.
+ */
+function is_recurring_event( $is_recurring, int $event_id ): bool {
+	return (bool) $is_recurring || Rule::is_recurring( $event_id );
 }

@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'CTX_INV_VER', '1.0.1' );
 define( 'CTX_INV_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
-define( 'CTX_INV_DIR', untrailingslashit( dirname( __FILE__ ) ) );
+define( 'CTX_INV_DIR', untrailingslashit( __DIR__ ) );
 define( 'CTX_INV_ADMIN_URL', CTX_INV_URL . '/admin' );
 
 /**
@@ -25,7 +25,18 @@ function ctx_load_docs_pdf_generator() {
 	}//end if
 	require_once WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php';
 }
-add_action( 'init', 'ctx_load_docs_pdf_generator' );
+
+/**
+ * Download the invoice fonts ahead of time, so the first invoice after a deploy doesn't wait on them during checkout.
+ */
+function ctx_warm_pdf_font_cache() {
+	ctx_load_docs_pdf_generator();
+
+	if ( class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+		WordCamp_Docs_PDF_Generator::warm_font_cache();
+	}
+}
+add_action( 'tix_scheduled_daily', 'ctx_warm_pdf_font_cache' );
 
 /**
  * Load invoice addon.
@@ -98,11 +109,11 @@ function register_tix_invoice() {
 
 	register_post_status( 'cancelled',
 		array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
 
@@ -110,8 +121,8 @@ function register_tix_invoice() {
 	// (XML-RPC custom_fields, the REST meta endpoint, or the Custom Fields metabox).
 	// The plugin only ever writes these via direct update_post_meta()/delete_post_meta(),
 	// which bypass auth_callback, so legitimate invoice generation is unaffected. The
-	// sanitize_callback additionally contains invoice_document to a bare filename at the
-	// storage layer, neutralising any path component before it is ever persisted.
+	// sanitize_callback still runs on those direct writes, including the importer's, and
+	// only lets invoice_document keep a filename in the shape the plugin generates.
 	register_post_meta(
 		'tix_invoice',
 		'invoice_document',
@@ -137,18 +148,22 @@ function register_tix_invoice() {
 }
 
 /**
- * Contain the invoice_document meta to a bare filename at the storage layer.
+ * Contain the invoice_document meta to a filename the plugin could have generated.
  *
  * Registered as the sanitize_callback for the invoice_document post meta, so it runs on
- * every update_post_meta() for a tix_invoice. A crafted value can therefore never be
- * persisted with a directory component, even if a future writer forgets to sanitise.
- * basename() is a no-op for the flat filenames the plugin itself generates.
+ * every add_post_meta() and update_post_meta() for a tix_invoice, including the importer's.
+ * A crafted value can therefore never be persisted with a directory component or a
+ * non-PDF name, even if a future writer forgets to sanitise. Generated names are
+ * `<invoice number>-<12 random letters and digits>.pdf`, and invoice numbers are made of
+ * digits and dashes. Anything else is stored empty, and the next generation picks a new name.
  *
  * @param mixed $value The meta value being stored.
- * @return string The contained filename.
+ * @return string The contained filename, or an empty string.
  */
 function ctx_sanitize_invoice_document( $value ) {
-	return basename( (string) $value );
+	$filename = basename( (string) $value );
+
+	return preg_match( '/^[A-Za-z0-9-]*-[A-Za-z0-9]{12}\.pdf\z/', $filename ) ? $filename : '';
 }
 
 /**
@@ -192,10 +207,10 @@ function ctx_append_post_status_list() {
 	$refunded_selected  = '';
 	$cancelled_selected = '';
 	$status             = '';
-	$refunded           = __( 'refunded', 'wordcamporg' );
-	$cancelled          = __( 'cancelled', 'wordcamporg' );
+	$refunded           = 'refunded';
+	$cancelled          = 'cancelled';
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
-	$cancelled_status   = _x( 'Cancelled', 'post', 'wordcamporg' );
+	$cancelled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -238,7 +253,7 @@ function ctx_display_custom_statuses( $states, $post ) {
 
 	if ( 'cancelled' !== $arg ) {
 		if ( 'cancelled' === $post->post_status ) {
-			return array( _x( 'Cancelled', 'post', 'wordcamporg' ) );
+			return array( _x( 'Canceled', 'post', 'wordcamporg' ) );
 		}
 	}
 
@@ -258,8 +273,8 @@ function ctx_append_post_status_bulk_edit() {
 	?>
 	<script>
 		jQuery( document ).ready( function($) {
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'refunded' ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'cancelled' ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php
@@ -649,6 +664,15 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 
 		$invoice_number = get_post_meta( $post->ID, 'invoice_number', true );
 		$invoice_metas  = get_post_meta( $post->ID, 'invoice_metas', true );
+
+		if ( ! is_array( $invoice_metas ) || ! is_string( $invoice_metas['email'] ?? null ) ) {
+			continue;
+		}
+
+		// Only export invoices addressed to this email.
+		if ( strtolower( $invoice_metas['email'] ) !== strtolower( $email_address ) ) {
+			continue;
+		}
 
 		foreach ( $invoice_metas as $key => $value ) {
 

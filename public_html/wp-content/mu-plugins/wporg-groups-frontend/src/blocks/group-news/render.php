@@ -26,7 +26,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core. ?>>
-	<h2 class="wporg-section-heading wporg-group-news__heading"><?php esc_html_e( 'News', 'wporg-groups-frontend' ); ?></h2>
+	<h2 class="wporg-section-heading wporg-group-news__heading"><?php esc_html_e( 'News', 'wordcamporg' ); ?></h2>
 
 	<div class="wporg-group-news__list">
 		<?php foreach ( $wporg_posts as $wporg_post ) : ?>
@@ -41,7 +41,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 					<a href="<?php echo esc_url( get_permalink( $wporg_post ) ); ?>">
 						<?php
 						$wporg_title = get_the_title( $wporg_post );
-						echo esc_html( '' !== $wporg_title ? $wporg_title : __( '(Untitled)', 'wporg-groups-frontend' ) );
+						echo esc_html( '' !== $wporg_title ? $wporg_title : __( '(Untitled)', 'wordcamporg' ) );
 						?>
 					</a>
 				</h3>

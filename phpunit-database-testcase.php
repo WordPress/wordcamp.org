@@ -26,6 +26,16 @@ class Database_TestCase extends WP_UnitTestCase {
 	protected static $events_rome_training_site_id;
 
 	/**
+	 * Whether to create the WordCamp/Events sites beyond the two network roots.
+	 *
+	 * Creating and deleting them costs about half a second per test class, so subclasses that don't use them should
+	 * set this to false.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = true;
+
+	/**
 	 * Create sites we'll need for the tests.
 	 *
 	 * @param WP_UnitTest_Factory $factory
@@ -63,6 +73,10 @@ class Database_TestCase extends WP_UnitTestCase {
 			'blog_id'    => EVENTS_ROOT_BLOG_ID,
 			'network_id' => EVENTS_NETWORK_ID,
 		) );
+
+		if ( ! static::$create_event_sites ) {
+			return;
+		}
 
 		self::$central_site_id = $factory->blog->create( array(
 			'domain'     => 'central.wordcamp.test',
@@ -131,15 +145,18 @@ class Database_TestCase extends WP_UnitTestCase {
 	public static function wpTearDownAfterClass() {
 		global $wpdb;
 
-		wp_delete_site( self::$central_site_id );
 		wp_delete_site( self::$wordcamp_root_site_id );
 		wp_delete_site( self::$events_root_site_id );
-		wp_delete_site( self::$year_dot_2018_site_id );
-		wp_delete_site( self::$year_dot_2019_site_id );
-		wp_delete_site( self::$slash_year_2016_site_id );
-		wp_delete_site( self::$slash_year_2018_dev_site_id );
-		wp_delete_site( self::$slash_year_2020_site_id );
-		wp_delete_site( self::$events_rome_training_site_id );
+
+		if ( static::$create_event_sites ) {
+			wp_delete_site( self::$central_site_id );
+			wp_delete_site( self::$year_dot_2018_site_id );
+			wp_delete_site( self::$year_dot_2019_site_id );
+			wp_delete_site( self::$slash_year_2016_site_id );
+			wp_delete_site( self::$slash_year_2018_dev_site_id );
+			wp_delete_site( self::$slash_year_2020_site_id );
+			wp_delete_site( self::$events_rome_training_site_id );
+		}
 
 		foreach ( [ WORDCAMP_NETWORK_ID, EVENTS_NETWORK_ID ] as $network_id ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", $network_id ) );

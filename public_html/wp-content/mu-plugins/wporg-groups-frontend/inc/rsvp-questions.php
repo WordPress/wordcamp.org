@@ -7,14 +7,20 @@
  * is a single-line text field, and the count is capped so this stays a couple
  * of extra questions at signup rather than a form builder.
  *
- * Storage:
+ * Storage follows GatherPress's own RSVP custom fields, so the data is shaped
+ * the way GatherPress reads, validates and uninstalls it:
  *
- *   - **Questions** live in one `wporg_groups_rsvp_questions` post meta on the
- *     event: a list of `array( 'id', 'label', 'required' )`.
- *   - **Answers** live in one `wporg_groups_rsvp_answers` comment meta on the
- *     GatherPress RSVP comment, keyed by question id. Keeping them on the
- *     comment means cancelling an RSVP takes the answers with it, and no
- *     orphaned answers survive the RSVP they belong to.
+ *   - **Questions** are one form schema, `SCHEMA_ID`, inside the event's
+ *     `gatherpress_rsvp_form_schemas` post meta. Each question is a field keyed
+ *     by its id. Schemas from RSVP Form blocks in the same meta are left alone.
+ *   - **Answers** are `gatherpress_custom_{question id}` comment meta on the
+ *     GatherPress RSVP comment. Keeping them on the comment means cancelling
+ *     an RSVP takes the answers with it, and no orphaned answers survive the
+ *     RSVP they belong to.
+ *
+ * GatherPress only validates and saves custom fields on its open-RSVP form
+ * route, which group sites switch off. RSVPs go through our own route in
+ * `rest.php` instead, which validates and stores the answers itself.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -25,8 +31,14 @@ defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Rsvp\Rsvp;
 
-const QUESTIONS_META = 'wporg_groups_rsvp_questions';
-const ANSWERS_META   = 'wporg_groups_rsvp_answers';
+const SCHEMAS_META       = 'gatherpress_rsvp_form_schemas';
+const ANSWER_META_PREFIX = 'gatherpress_custom_';
+
+/**
+ * Our form's key in `gatherpress_rsvp_form_schemas`. Block-derived schemas are
+ * keyed `form_N` or `N_form_M`, so this can never collide with one.
+ */
+const SCHEMA_ID = 'wporg_groups';
 
 /**
  * Hard cap on questions per event. Meetup.com's own profile questions cap at
@@ -42,10 +54,33 @@ const MAX_QUESTIONS = 5;
 const MAX_ANSWER_LENGTH = 500;
 
 /**
- * Hook the guard on GatherPress's own RSVP route.
+ * Hook the guard on GatherPress's own RSVP route, and keep our schema when
+ * GatherPress rebuilds the schemas on save.
  */
 function bootstrap(): void {
 	add_filter( 'rest_endpoints', __NAMESPACE__ . '\guard_gatherpress_rsvp_route' );
+	add_filter( 'gatherpress_rsvp_form_schemas', __NAMESPACE__ . '\keep_schema', 10, 2 );
+}
+
+/**
+ * Carry our schema over when GatherPress rebuilds an event's schemas.
+ *
+ * GatherPress derives the whole `gatherpress_rsvp_form_schemas` meta from the
+ * post's RSVP Form blocks on every save. Our questions aren't blocks, so
+ * without this an event edited in wp-admin would lose them.
+ *
+ * @param array $schemas Schemas derived from the post's RSVP Form blocks.
+ * @param int   $post_id The post being saved.
+ * @return array The schemas to store.
+ */
+function keep_schema( array $schemas, int $post_id ): array {
+	$stored = get_post_meta( $post_id, SCHEMAS_META, true );
+
+	if ( is_array( $stored ) && isset( $stored[ SCHEMA_ID ] ) ) {
+		$schemas[ SCHEMA_ID ] = $stored[ SCHEMA_ID ];
+	}
+
+	return $schemas;
 }
 
 /**
@@ -123,7 +158,7 @@ function rsvp_answers_satisfied( $request ) {
 		'wporg_groups_missing_answers',
 		sprintf(
 			/* translators: %s: comma-separated list of question labels. */
-			__( 'Please answer: %s', 'wporg-groups-frontend' ),
+			__( 'Please answer: %s', 'wordcamporg' ),
 			implode( ', ', $missing )
 		),
 		array( 'status' => 400 )
@@ -137,9 +172,26 @@ function rsvp_answers_satisfied( $request ) {
  * @return array List of `array{id:string, label:string, required:bool}`.
  */
 function get_questions( int $event_id ): array {
-	$stored = get_post_meta( $event_id, QUESTIONS_META, true );
+	$schemas = get_post_meta( $event_id, SCHEMAS_META, true );
+	$fields  = $schemas[ SCHEMA_ID ]['fields'] ?? null;
 
-	return is_array( $stored ) ? sanitize_questions( $stored ) : array();
+	if ( ! is_array( $fields ) ) {
+		return array();
+	}
+
+	$questions = array();
+
+	foreach ( $fields as $id => $field ) {
+		if ( is_array( $field ) ) {
+			$questions[] = array(
+				'id'       => (string) $id,
+				'label'    => $field['label'] ?? '',
+				'required' => $field['required'] ?? false,
+			);
+		}
+	}
+
+	return sanitize_questions( $questions );
 }
 
 /**
@@ -150,13 +202,50 @@ function get_questions( int $event_id ): array {
  */
 function save_questions( int $event_id, $raw ): void {
 	$questions = sanitize_questions( $raw );
+	$schemas   = get_post_meta( $event_id, SCHEMAS_META, true );
+	$schemas   = is_array( $schemas ) ? $schemas : array();
 
-	if ( empty( $questions ) ) {
-		delete_post_meta( $event_id, QUESTIONS_META );
+	unset( $schemas[ SCHEMA_ID ] );
+
+	if ( $questions ) {
+		$schemas[ SCHEMA_ID ] = build_schema( $questions );
+	}
+
+	if ( empty( $schemas ) ) {
+		delete_post_meta( $event_id, SCHEMAS_META );
 		return;
 	}
 
-	update_post_meta( $event_id, QUESTIONS_META, $questions );
+	update_post_meta( $event_id, SCHEMAS_META, $schemas );
+}
+
+/**
+ * Turn a question list into a GatherPress form schema.
+ *
+ * Fields have the shape GatherPress extracts from Form Field blocks, so its
+ * own validation and sanitizing work on them unchanged. Every question is a
+ * single-line text field for now.
+ *
+ * @param array $questions Sanitized question list.
+ * @return array A schema for `gatherpress_rsvp_form_schemas`.
+ */
+function build_schema( array $questions ): array {
+	$fields = array();
+
+	foreach ( $questions as $question ) {
+		$fields[ $question['id'] ] = array(
+			'name'        => $question['id'],
+			'type'        => 'text',
+			'required'    => $question['required'],
+			'label'       => $question['label'],
+			'placeholder' => '',
+		);
+	}
+
+	return array(
+		'fields' => $fields,
+		'hash'   => wp_hash( (string) wp_json_encode( $fields ) ),
+	);
 }
 
 /**
@@ -313,18 +402,23 @@ function get_missing_required( array $questions, array $answers ): array {
 }
 
 /**
- * Store the answers on an RSVP, or clear them when there are none.
+ * Store the answers on an RSVP, replacing whatever was there before.
+ *
+ * Answers not in the map are deleted, so an empty map clears them all.
  *
  * @param int   $comment_id RSVP comment ID.
  * @param array $answers    Sanitized answer map.
  */
 function save_answers( int $comment_id, array $answers ): void {
-	if ( ! $answers ) {
-		delete_comment_meta( $comment_id, ANSWERS_META );
-		return;
+	foreach ( array_keys( get_answers( $comment_id ) ) as $id ) {
+		if ( ! isset( $answers[ $id ] ) ) {
+			delete_comment_meta( $comment_id, ANSWER_META_PREFIX . $id );
+		}
 	}
 
-	update_comment_meta( $comment_id, ANSWERS_META, $answers );
+	foreach ( $answers as $id => $answer ) {
+		update_comment_meta( $comment_id, ANSWER_META_PREFIX . $id, $answer );
+	}
 }
 
 /**
@@ -334,9 +428,15 @@ function save_answers( int $comment_id, array $answers ): void {
  * @return array `question id => answer` map.
  */
 function get_answers( int $comment_id ): array {
-	$stored = get_comment_meta( $comment_id, ANSWERS_META, true );
+	$answers = array();
 
-	return is_array( $stored ) ? $stored : array();
+	foreach ( get_comment_meta( $comment_id ) as $key => $values ) {
+		if ( str_starts_with( $key, ANSWER_META_PREFIX ) ) {
+			$answers[ substr( $key, strlen( ANSWER_META_PREFIX ) ) ] = (string) maybe_unserialize( $values[0] );
+		}
+	}
+
+	return $answers;
 }
 
 /**

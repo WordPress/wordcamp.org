@@ -282,13 +282,100 @@ class Test_Draft_Content extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Formatting and percent-encoded URLs a submitter typed still reach the draft body.
-	 *
-	 * Jetpack runs `wp_kses_post()` over these values before the handler sees them, so the
-	 * allow-listed markup is deliberate and is left alone here.
+	 * A submitted Company Name is neutralized in the generated draft Sponsor.
 	 */
-	public function test_body_keeps_formatting_and_percent_encoding() {
-		$body = 'Bio with <strong>bold</strong>. See https://example.org/My%20Notes.pdf';
+	public function test_sponsor_title_shortcodes_are_escaped() {
+		$this->plugin->call_for_sponsors(
+			$this->make_submission( 'call-for-sponsors' ),
+			array(
+				'Company Name'        => self::SHORTCODE_INPUT,
+				'Company Description' => 'A description.',
+				'Website'             => 'https://example.org',
+			),
+			array()
+		);
+
+		$sponsor = get_posts( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $sponsor );
+		$this->assertShortcodeNeutralized( $sponsor[0]->post_title );
+	}
+
+	/**
+	 * A submitted volunteer Name is neutralized in the generated draft Volunteer.
+	 */
+	public function test_volunteer_title_shortcodes_are_escaped() {
+		$this->plugin->call_for_volunteers(
+			$this->make_submission( 'call-for-volunteers' ),
+			array(
+				'Name'                   => self::SHORTCODE_INPUT,
+				'Email'                  => 'volunteer@example.org',
+				'WordPress.org Username' => 'nonexistent-user-for-tests',
+			),
+			array()
+		);
+
+		$volunteer = get_posts( array(
+			'post_type'   => 'wcb_volunteer',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $volunteer );
+		$this->assertShortcodeNeutralized( $volunteer[0]->post_title );
+	}
+
+	/**
+	 * A submitted speaker Name and Topic Title are neutralized in the generated drafts.
+	 *
+	 * The session's `_wcb_session_speakers` meta is a copy of the speaker title, so it is
+	 * covered by the same write.
+	 */
+	public function test_speaker_and_session_title_shortcodes_are_escaped() {
+		$this->plugin->call_for_speakers(
+			$this->make_submission( 'call-for-speakers' ),
+			array(
+				'Name'                   => self::SHORTCODE_INPUT,
+				'Email Address'          => 'speaker@example.org',
+				'WordPress.org Username' => 'nonexistent-user-for-tests',
+				'Your Bio'               => 'A bio.',
+				'Topic Title'            => self::SHORTCODE_INPUT,
+				'Topic Description'      => 'A description.',
+			),
+			array()
+		);
+
+		$speaker = get_posts( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $speaker );
+		$this->assertShortcodeNeutralized( $speaker[0]->post_title );
+
+		$session = get_posts( array(
+			'post_type'   => 'wcb_session',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $session );
+		$this->assertShortcodeNeutralized( $session[0]->post_title );
+		$this->assertShortcodeNeutralized(
+			get_post_meta( $session[0]->ID, '_wcb_session_speakers', true )
+		);
+	}
+
+	/**
+	 * A draft body keeps the submitter's text and paragraphs.
+	 *
+	 * The body is stored as plain text, like the titles, and a bio written in several paragraphs
+	 * stays that way rather than collapsing to one. (The helper keeps line breaks here; collapsing
+	 * them is the single-line default used for titles.)
+	 */
+	public function test_body_keeps_paragraphs() {
+		$body = "First paragraph of the bio.\n\nSecond paragraph.";
 
 		$this->plugin->call_for_speakers(
 			$this->make_submission( 'call-for-speakers' ),
@@ -309,8 +396,9 @@ class Test_Draft_Content extends WP_UnitTestCase {
 			'numberposts' => 1,
 		) );
 		$this->assertNotEmpty( $speaker );
-		$this->assertStringContainsString( '<strong>bold</strong>', $speaker[0]->post_content );
-		$this->assertStringContainsString( 'My%20Notes.pdf', $speaker[0]->post_content );
+		$this->assertStringContainsString( 'First paragraph of the bio.', $speaker[0]->post_content );
+		// The two submitted paragraphs survive as two paragraph blocks.
+		$this->assertSame( 2, substr_count( $speaker[0]->post_content, '<!-- wp:paragraph -->' ) );
 	}
 
 	/**
@@ -337,5 +425,84 @@ class Test_Draft_Content extends WP_UnitTestCase {
 		) );
 		$this->assertNotEmpty( $sponsor );
 		$this->assertTitleIsText( $sponsor[0]->post_title, 'Test Co' );
+	}
+
+	/**
+	 * Markup in a body, in the already-formed shape Jetpack's `wp_kses_post()` pass produces before
+	 * the handler sees it. Stored verbatim it would be a live element in the published page.
+	 *
+	 * @var string
+	 */
+	const MARKUP_BODY = 'Intro <math data-wp-interactive="core/navigation" data-wp-bind--onfocusin="context.p">x</math> outro';
+
+	/**
+	 * Assert a draft body keeps its surrounding text while the markup is not stored as a live tag.
+	 *
+	 * The tag-like chunk is reduced to text, not kept verbatim, so the words around it survive but
+	 * no element does.
+	 *
+	 * @param string $content The stored draft content.
+	 */
+	protected function assertBodyHasNoLiveMarkup( $content ) {
+		$this->assertStringNotContainsString( '<math', $content, 'A live element was stored.' );
+		$this->assertStringContainsString( 'Intro', $content, 'Text before the markup was lost.' );
+		$this->assertStringContainsString( 'outro', $content, 'Text after the markup was lost.' );
+	}
+
+	/**
+	 * Markup in a Company Description is reduced to text, not stored as a live element.
+	 */
+	public function test_sponsor_description_markup_is_neutralized() {
+		$this->plugin->call_for_sponsors(
+			$this->make_submission( 'call-for-sponsors' ),
+			array(
+				'Company Name'        => 'Test Co',
+				'Company Description' => self::MARKUP_BODY,
+				'Website'             => 'https://example.org',
+			),
+			array()
+		);
+
+		$sponsor = get_posts( array(
+			'post_type'   => 'wcb_sponsor',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $sponsor );
+		$this->assertBodyHasNoLiveMarkup( $sponsor[0]->post_content );
+	}
+
+	/**
+	 * Markup in a speaker Bio and a session Topic Description is reduced to text.
+	 */
+	public function test_speaker_and_session_body_markup_is_neutralized() {
+		$this->plugin->call_for_speakers(
+			$this->make_submission( 'call-for-speakers' ),
+			array(
+				'Name'                   => 'Test Speaker',
+				'Email Address'          => 'speaker@example.org',
+				'WordPress.org Username' => 'nonexistent-user-for-tests',
+				'Your Bio'               => self::MARKUP_BODY,
+				'Topic Title'            => 'A talk',
+				'Topic Description'      => self::MARKUP_BODY,
+			),
+			array()
+		);
+
+		$speaker = get_posts( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $speaker );
+		$this->assertBodyHasNoLiveMarkup( $speaker[0]->post_content );
+
+		$session = get_posts( array(
+			'post_type'   => 'wcb_session',
+			'post_status' => 'draft',
+			'numberposts' => 1,
+		) );
+		$this->assertNotEmpty( $session );
+		$this->assertBodyHasNoLiveMarkup( $session[0]->post_content );
 	}
 }

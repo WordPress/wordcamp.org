@@ -60,7 +60,7 @@ if ( $shows_count ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
 	$member_count = $user_count['total_users'] ?? 0;
 	$count_label  = sprintf(
-		_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
+		_n( '%s member', '%s members', $member_count, 'wordcamporg' ),
 		number_format_i18n( $member_count )
 	);
 
@@ -97,9 +97,9 @@ if ( $shows_membership ) {
 		$context,
 		array(
 			'roleLabel'    => $role_label,
-			'memberLabel'  => __( 'Member', 'wporg-groups-frontend' ),
-			'joinLabel'    => __( 'Join this group', 'wporg-groups-frontend' ),
-			'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
+			'memberLabel'  => __( 'Member', 'wordcamporg' ),
+			'joinLabel'    => __( 'Join this group', 'wordcamporg' ),
+			'leaveConfirm' => __( 'Leave this group?', 'wordcamporg' ),
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
 			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
@@ -120,7 +120,7 @@ if ( $shows_membership || $shows_count ) {
 	if ( $shows_membership ) {
 		$interactivity_state['buttonLabel'] = $is_member
 			? $role_label
-			: __( 'Join this group', 'wporg-groups-frontend' );
+			: __( 'Join this group', 'wordcamporg' );
 	}
 
 	if ( $shows_count ) {
@@ -141,8 +141,8 @@ if ( $renders_preference ) {
 			'preferenceMessage'       => '',
 			'preferenceNoticeSuccess' => false,
 			'preferenceNoticeError'   => false,
-			'preferenceSavedLabel'    => __( 'Email preference saved.', 'wporg-groups-frontend' ),
-			'preferenceErrorLabel'    => __( 'The email preference could not be saved. Please try again.', 'wporg-groups-frontend' ),
+			'preferenceSavedLabel'    => __( 'Email preference saved.', 'wordcamporg' ),
+			'preferenceErrorLabel'    => __( 'The email preference could not be saved. Please try again.', 'wordcamporg' ),
 		)
 	);
 }
@@ -159,7 +159,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php if ( $shows_membership ) : ?>
 		<?php if ( 'membership' === $variant ) : ?>
 			<h2 class="wporg-group-membership__heading">
-				<?php esc_html_e( 'Membership', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'Membership', 'wordcamporg' ); ?>
 			</h2>
 		<?php endif; ?>
 
@@ -178,7 +178,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-text="state.buttonLabel"
 					data-wp-bind--disabled="context.loading"
 					data-wp-bind--aria-busy="context.loading"
-				><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
+				><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
 			</div>
 		<?php endif; ?>
 	<?php endif; ?>
@@ -207,7 +207,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-on--click="actions.leave"
 					data-wp-bind--disabled="context.loading"
 					data-wp-bind--aria-busy="context.loading"
-				><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+				><?php esc_html_e( 'Leave group', 'wordcamporg' ); ?></button>
 			<?php endif; ?>
 		</div>
 	<?php endif; ?>
@@ -215,7 +215,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php if ( $renders_preference ) : ?>
 		<?php if ( 'preference' === $variant ) : ?>
 			<h2 class="wporg-group-membership__preference-heading">
-				<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'Email preferences', 'wordcamporg' ); ?>
 			</h2>
 		<?php endif; ?>
 
@@ -228,10 +228,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-bind--checked="context.notificationOptIn"
 					data-wp-bind--disabled="context.preferenceSaving"
 				/>
-				<span><?php esc_html_e( 'Email me updates and information about events from organizers.', 'wporg-groups-frontend' ); ?></span>
+				<span><?php esc_html_e( 'Email me updates and information about events from organizers.', 'wordcamporg' ); ?></span>
 			</label>
 			<span class="wporg-group-membership__preference-help">
-				<?php esc_html_e( 'This preference applies to this group only. Set it separately for each group you belong to.', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'This preference applies to this group only. Set it separately for each group you belong to.', 'wordcamporg' ); ?>
 			</span>
 			<span
 				class="wporg-group-membership__preference-status"

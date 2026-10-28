@@ -9,7 +9,13 @@ if ( ! defined( 'ABSPATH' ) || 'cli' === php_sapi_name() ) {
 
 // Redirects for plan.wordcamp.org front-end only.
 $tld = get_top_level_domain();
-if ( ( $_SERVER['HTTP_HOST'] ?? '' ) != "plan.wordcamp.$tld" || is_admin() || wp_doing_cron() ) {
+
+// `strtok()` drops any `:port` suffix -- a Host header may legitimately carry
+// one, and the local dev stack does exactly that when bound to a non-default
+// HTTPS port (see the `0-local-https-port` mu-plugin).
+$host = strtok( $_SERVER['HTTP_HOST'] ?? '', ':' );
+
+if ( "plan.wordcamp.$tld" !== $host || is_admin() || wp_doing_cron() ) {
 	return;
 }
 

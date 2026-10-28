@@ -452,6 +452,7 @@ class WordCamp_Details extends Base_Details {
 		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
 		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$fields     = is_array( $fields ) ? $fields : array();
 		$action     = wp_unslash( $_POST['action'] ?? '' );
 		$nonce      = wp_unslash( $_POST[ static::$slug . '-nonce' ] ?? '' );
 

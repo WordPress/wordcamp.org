@@ -64,6 +64,7 @@ function _get_network_plugin_state_list( $state ) {
 		'deactivated' => array(
 			'bbpress/bbpress.php',
 			'campt-indian-payment-gateway/campt-indian-payment-gateway.php',
+			'camptix-companion-tickets/camptix-companion-tickets.php',
 			'camptix-invoices/camptix-invoices.php',
 			'camptix-mailchimp/camptix-mailchimp.php',
 			'camptix-mercadopago/camptix-mercadopago.php',
@@ -71,8 +72,10 @@ function _get_network_plugin_state_list( $state ) {
 			'camptix-payfast-gateway/camptix-payfast.php',
 			'camptix-trustcard/camptix-trustcard.php',
 			'camptix-trustpay/camptix-trustpay.php',
+			'camptix-visa-letters/camptix-visa-letters.php',
 			'liveblog/liveblog.php',
 			'multi-event-sponsors/bootstrap.php',
+			'open-horizons/bootstrap.php',
 			'supportflow/supportflow.php',
 			'wordcamp-api/bootstrap.php',
 			'wordcamp-organizer-reminders/bootstrap.php',

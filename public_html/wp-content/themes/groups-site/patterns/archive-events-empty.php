@@ -1,6 +1,6 @@
 <?php
 /**
- * Title: Archive — events empty state
+ * Title: Archive - events empty state
  * Slug: groups-site/archive-events-empty
  * Categories: groups-site
  * Inserter: no
@@ -20,21 +20,26 @@ defined( 'ABSPATH' ) || exit;
 // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
 $search_term = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 $time_filter = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+if ( function_exists( '\WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter' ) ) {
+	$time_filter = \WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter( $time_filter, $search_term );
+} elseif ( '' === $search_term && 'all' === $time_filter ) {
+	$time_filter = 'upcoming';
+}
 // phpcs:enable
 
 $archive_url = get_post_type_archive_link( 'gatherpress_event' );
 $is_filtered = '' !== $search_term || 'upcoming' !== $time_filter;
 
 if ( $is_filtered ) {
-	$message   = __( 'No events match.', 'groups-site' );
-	$hint      = __( 'Try a different search, or switch the time filter.', 'groups-site' );
+	$message   = __( 'No events match.', 'wordcamporg' );
+	$hint      = __( 'Try a different search, or switch the time filter.', 'wordcamporg' );
 	$link_url  = $archive_url;
-	$link_text = __( 'View all upcoming events', 'groups-site' );
+	$link_text = __( 'View all upcoming events', 'wordcamporg' );
 } else {
-	$message   = __( 'Nothing on the calendar yet.', 'groups-site' );
-	$hint      = __( 'The organizers haven&rsquo;t scheduled the next event. Check back soon.', 'groups-site' );
+	$message   = __( 'Nothing on the calendar yet.', 'wordcamporg' );
+	$hint      = __( 'The organizers haven&rsquo;t scheduled the next event. Check back soon.', 'wordcamporg' );
 	$link_url  = add_query_arg( 'event_time', 'past', $archive_url );
-	$link_text = __( 'See past events', 'groups-site' );
+	$link_text = __( 'See past events', 'wordcamporg' );
 }
 ?>
 <!-- wp:group {"className":"groups-site-events-empty","layout":{"type":"constrained","justifyContent":"left"}} -->

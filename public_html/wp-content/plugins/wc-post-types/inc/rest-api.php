@@ -183,7 +183,16 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_slides',
 		array(
-			'show_in_rest'  => true,
+			// Session pages render these links through a server-side meta-link
+			// block, so the REST field only needs the edit context. Limiting it
+			// there keeps the value out of the default view response for a
+			// session whose body is withheld by a password.
+			'show_in_rest'  => array(
+				'schema' => array(
+					'type'    => 'string',
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'        => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
@@ -192,7 +201,12 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_video',
 		array(
-			'show_in_rest'      => true,
+			'show_in_rest'      => array(
+				'schema' => array(
+					'type'    => 'string',
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function ( $value ) {
@@ -746,6 +760,12 @@ function prepare_session_query_args( $args, $request ) {
 	$post_type = get_post_type_object( 'wcb_session' );
 	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
 		$args['post_status'][] = 'private';
+	} else {
+		// Password-protected sessions are `publish`, so they would otherwise
+		// appear in the public collection with their meta, and the wc_meta_key
+		// / wc_meta_value filter above would confirm a value against them. Keep
+		// them out for callers who could not open them anyway.
+		$args['has_password'] = false;
 	}
 
 	return $args;
@@ -918,7 +938,7 @@ function register_fav_sessions_email() {
  * @return \WP_REST_Response
  */
 function link_speaker_to_sessions( $response, $post ) {
-	$sessions = get_posts( array(
+	$query = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => 100,
 		'fields'         => 'ids',
@@ -929,7 +949,17 @@ function link_speaker_to_sessions( $response, $post ) {
 				'value' => $post->ID,
 			),
 		),
-	) );
+	);
+
+	// A password-protected session is published, so it would otherwise be
+	// linked (and `_embed`ed) from the speaker, naming a session the password
+	// withholds. Drop protected sessions for a caller who cannot read them.
+	$session_type = get_post_type_object( 'wcb_session' );
+	if ( ! $session_type || ! current_user_can( $session_type->cap->read_private_posts ) ) {
+		$query['has_password'] = false;
+	}
+
+	$sessions = get_posts( $query );
 
 	foreach ( $sessions as $session_id ) {
 		$response->add_link(
@@ -961,6 +991,21 @@ function link_speaker_to_sessions( $response, $post ) {
  * @return \WP_REST_Response
  */
 function link_session_to_speakers( $response, $post ) {
+	// A password-protected session hides its speakers the way the event page
+	// hides the venue and event speakers: drop the speaker meta, the resolved
+	// `session_speakers` list and the speaker links for a caller who cannot
+	// edit it. An editor (the session form) still gets everything.
+	if ( post_password_required( $post ) && ! current_user_can( 'edit_post', $post->ID ) ) {
+		$data = $response->get_data();
+		unset( $data['meta']['_wcpt_speaker_id'] );
+		if ( isset( $data['session_speakers'] ) ) {
+			$data['session_speakers'] = array();
+		}
+		$response->set_data( $data );
+
+		return $response;
+	}
+
 	$speaker_ids = get_post_meta( $post->ID, '_wcpt_speaker_id', false );
 
 	foreach ( $speaker_ids as $speaker_id ) {

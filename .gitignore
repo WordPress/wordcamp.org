@@ -9,6 +9,9 @@
 .docker/test_suite
 docker-compose.override.yaml
 
+# Local port/bind overrides for docker-compose.yaml -- see .env.example.
+.env
+
 
 #
 # Misc

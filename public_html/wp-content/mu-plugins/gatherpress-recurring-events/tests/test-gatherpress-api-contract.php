@@ -8,6 +8,7 @@
 
 namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 
+use WordPressdotorg\GatherPress_Recurring_Events\Rest_API;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -35,21 +36,28 @@ defined( 'WPINC' ) || die();
 final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 
 	/**
-	 * Every class this extension imports, and the methods/constants/
-	 * properties actually called on it (including `save_datetimes()`,
-	 * which only this test suite's own fixtures call, to seed a real
-	 * GatherPress event date the same way GatherPress itself would).
+	 * Every class this extension imports, and the methods/constants
+	 * actually called on it (including `save_datetimes()`, which only this
+	 * test suite's own fixtures call, to seed a real GatherPress event date
+	 * the same way GatherPress itself would).
+	 *
+	 * No properties since 0.36.0 removed `Event::$rsvp`, the only one read;
+	 * a property read here would need its own check again.
 	 */
 	const CONTRACT = array(
 		'GatherPress\Core\Event\Event'          => array(
-			'methods'    => array( 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
-			'properties' => array( 'rsvp' ),
+			'methods' => array( 'can_read_rsvps', 'has_event_past', 'maybe_get_online_event_link', 'save_datetimes' ),
 		),
 		'GatherPress\Core\Rsvp\Rsvp'            => array(
-			'methods' => array( 'save', 'responses' ),
+			'methods'   => array( 'save', 'responses', 'is_enabled' ),
+			'constants' => array( 'COMMENT_TYPE' ),
 		),
 		'GatherPress\Core\Rsvp\Cache'           => array(
-			'methods' => array( 'get', 'set', 'delete' ),
+			'methods'   => array( 'get', 'set', 'delete' ),
+			// `Rsvp_Cache` filters the transient this names, so a rename
+			// upstream would silently stop guarding the cache rather than
+			// fatal. Nothing else would catch that.
+			'constants' => array( 'CACHE_KEY' ),
 		),
 		'GatherPress\Core\Rsvp\Response\Status' => array(
 			'methods' => array( 'values' ),
@@ -57,8 +65,20 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 		'GatherPress\Core\Calendar\Calendar'    => array(
 			'methods' => array( 'get_ical_event_string' ),
 		),
+		// Only this suite's fixtures call this, to sign a block template the
+		// same way the server does when it emits one.
+		'GatherPress\Core\Blocks\Rsvp_Template' => array(
+			'methods' => array( 'sign_template', 'verify_template' ),
+		),
 		'GatherPress\Core\Utility'              => array(
-			'methods' => array( 'ensure_user_authentication' ),
+			'methods' => array(
+				'ensure_user_authentication',
+				// The front-end event form's Time zone control is built from
+				// these two: the grouped choices it offers, and the allowlist
+				// it validates a submission against (#2021).
+				'timezone_choices',
+				'list_timezone_and_utc_offsets',
+			),
 		),
 	);
 
@@ -93,13 +113,18 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @dataProvider provide_contract_properties
+	 * The REST namespace this extension appends occurrence identity to.
+	 *
+	 * Not a class member, so it needs its own case: `Rest_API::upstream_context()`
+	 * matches route names against it, and a silent fallback would leave
+	 * GatherPress's own RSVP routes unscoped again.
 	 */
-	public function test_property_exists( string $class, string $property ) {
+	public function test_rest_namespace_constant_exists() {
 		$this->assertTrue(
-			property_exists( $class, $property ),
-			"Expected {$class}::\${$property} to exist."
+			defined( 'GATHERPRESS_REST_NAMESPACE' ),
+			'Expected GATHERPRESS_REST_NAMESPACE to be defined.'
 		);
+		$this->assertSame( GATHERPRESS_REST_NAMESPACE, Rest_API::upstream_namespace() );
 	}
 
 	/** Data provider: one case per class in CONTRACT. */
@@ -128,17 +153,6 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 		foreach ( self::CONTRACT as $class => $members ) {
 			foreach ( $members['constants'] ?? array() as $constant ) {
 				$cases[ "{$class}::{$constant}" ] = array( $class, $constant );
-			}
-		}
-		return $cases;
-	}
-
-	/** Data provider: one case per class/property pair in CONTRACT. */
-	public function provide_contract_properties(): array {
-		$cases = array();
-		foreach ( self::CONTRACT as $class => $members ) {
-			foreach ( $members['properties'] ?? array() as $property ) {
-				$cases[ "{$class}::\${$property}" ] = array( $class, $property );
 			}
 		}
 		return $cases;

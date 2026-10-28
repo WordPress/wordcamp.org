@@ -26,9 +26,51 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Attendance">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-attendance/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="CampTix Invoices">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-invoices/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="CampTix Indian Payments">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/campt-indian-payment-gateway/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="CampTix BD Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-bd-payments/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="CampTix Visa Letters">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-visa-letters/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="CampTix Activity Tickets">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-companion-tickets/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="Multi-Event Sponsors">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/multi-event-sponsors/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="Open Horizons">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/open-horizons/tests/
 			</directory>
 		</testsuite>
 
@@ -41,6 +83,12 @@
 		<testsuite name="WordCamp Budgets Dashboard">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-payments-network/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp QBO">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-qbo/tests/
 			</directory>
 		</testsuite>
 
@@ -96,8 +144,17 @@
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
 			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Groups Network">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/groups/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="Events 2023 Theme">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/themes/wporg-events-2023/tests/
 			</directory>
 		</testsuite>
 

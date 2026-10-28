@@ -58,7 +58,6 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',
 			'wordpress-importer/wordpress-importer.php',
-			'sponsor-vetting/bootstrap.php',
 			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
 			'wp-super-cache/wp-cache.php',
 		),

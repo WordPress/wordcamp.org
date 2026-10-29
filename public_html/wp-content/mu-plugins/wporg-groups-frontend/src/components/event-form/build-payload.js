@@ -27,6 +27,8 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		language: form.language || '',
 		topics: form.topics || [],
 		hosts: ( form.hosts || [] ).map( ( host ) => host.id ),
+		// Empty means no limit, which GatherPress stores as 0.
+		capacity: Math.max( 0, parseInt( form.capacity, 10 ) || 0 ),
 		// Include recurrence while the schedule is editable, including for drafts.
 		// Published schedules are locked, so omit it from later updates.
 		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),

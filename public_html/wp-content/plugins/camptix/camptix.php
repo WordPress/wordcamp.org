@@ -4693,7 +4693,7 @@ class CampTix_Plugin {
 			$available_tickets = 0; // Don't bother to show the ticketing form.
 		}
 
-		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( (array) $_REQUEST['tix_errors'] ) : array();
+		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( array_filter( (array) $_REQUEST['tix_errors'], 'is_string' ) ) : array();
 
 		if ( isset( $redirected_error_flags['payment_failed'] ) ) {
 			/** @todo explain error */
@@ -6938,8 +6938,8 @@ class CampTix_Plugin {
 
 			// This count, under the lock, is the one that decides; the earlier checks may be stale.
 			if ( ! $this->error_flags ) {
-				$access_token  = md5( 'tix-access-token' . print_r( $_POST, true ) . time() . rand( 1, 9999 ) );
-				$payment_token = md5( 'tix-payment-token' . $access_token . time() . rand( 1, 9999 ) );
+				$access_token  = bin2hex( random_bytes( 16 ) );
+				$payment_token = bin2hex( random_bytes( 16 ) );
 				$inserted      = $this->insert_attendee_drafts( $attendees, $payment_method, $receipt_email, $access_token, $payment_token );
 
 				if ( false === $inserted ) {
@@ -7174,7 +7174,7 @@ class CampTix_Plugin {
 				$created[] = $post_id;
 				$this->log( 'Created attendee draft.', $post_id, $log_data );
 
-				$edit_token = md5( sprintf( 'tix-edit-token-%d-%s-%s', $post_id, $access_token, time() ) );
+				$edit_token = bin2hex( random_bytes( 16 ) );
 
 				update_post_meta( $post_id, 'tix_access_token', $access_token );
 				update_post_meta( $post_id, 'tix_payment_token', $payment_token );
@@ -7665,10 +7665,12 @@ class CampTix_Plugin {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
 
+		// Timed-out orders are included, so a payment that completes after the session timed
+		// out still recovers the order, as it does for a cancelled one.
 		$attendees = get_posts( array(
 			'posts_per_page' => -1,
 			'post_type' => 'tix_attendee',
-			'post_status' => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed' ),
+			'post_status' => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed', 'timeout' ),
 			'meta_query' => array(
 				array(
 					'key' => 'tix_payment_token',
@@ -7974,12 +7976,19 @@ class CampTix_Plugin {
 			}
 		}
 
+		/*
+		 * A payment can land after the order was cancelled, timed out or failed while the buyer
+		 * waited (a slow UPI or bank confirmation). The buyer has no ticket for it yet, so that
+		 * recovery is a purchase too.
+		 */
+		$is_purchase = in_array( $from_status, array( 'draft', 'cancel', 'timeout', 'failed' ), true );
+
 		/**
 		 * If there's more than one attendee we should e-mail a separate ticket to each attendee,
 		 * but only if the payment was from draft to completed or pending.For non-draft to ... tickets
 		 * we send out a receipt only.
 		 */
-		if ( count( $attendees ) > 1 && $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
+		if ( count( $attendees ) > 1 && $is_purchase && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 			foreach ( $attendees as $attendee ) {
 				$this->email_attendee_ticket_multiple_template( $attendee );
 			}
@@ -8011,7 +8020,7 @@ class CampTix_Plugin {
 		/**
 		 * Let's now e-mail the receipt, directly after a purchase has been made.
 		 */
-		if ( $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
+		if ( $is_purchase && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 
 			// Fetch the attendee who's supposed to get the receipt.
 			$receipt_attendee = $attendees[0]; // default to the first one.
@@ -8035,6 +8044,14 @@ class CampTix_Plugin {
 
 				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_single_purchase', $attendees[0] );
 				$content = do_shortcode( $this->options[ $email_template ] );
+
+				/**
+				 * Filter: The content of a ticket e-mail about a single attendee.
+				 *
+				 * @param string  $content  The e-mail content, after shortcodes.
+				 * @param WP_Post $attendee The attendee the e-mail is about.
+				 */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
 
 				$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 
@@ -8073,6 +8090,11 @@ class CampTix_Plugin {
 			$subject = sprintf( __( "Your Payment for %s", 'wordcamporg' ), $this->options['event_name'] );
 			$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_pending_succeeded', $attendees[0] );
 			$content = do_shortcode( $this->options[ $email_template ] );
+
+			if ( 1 === count( $attendees ) ) {
+				/** This filter is documented in email_tickets() */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
+			}
 
 			$this->log( sprintf( 'Sending completed e-mail notification after IPN to %s.', $receipt_email ), $attendees[0]->ID );
 			$this->wp_mail( $receipt_email, $subject, $content );
@@ -8159,6 +8181,9 @@ class CampTix_Plugin {
 
 		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
 		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		/** This filter is documented in email_tickets() */
+		$content = apply_filters( 'camptix_email_ticket_content', $content, $attendee );
 
 		$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 

@@ -75,6 +75,25 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Create published attendees on the current site, the first $checked_in of them checked in.
+	 *
+	 * @param int $registered How many attendees to create.
+	 * @param int $checked_in How many of them are checked in.
+	 */
+	protected function create_attendees( $registered, $checked_in ) {
+		for ( $i = 0; $i < $registered; $i++ ) {
+			$attendee_id = self::factory()->post->create( array(
+				'post_type'   => 'tix_attendee',
+				'post_status' => 'publish',
+			) );
+
+			if ( $i < $checked_in ) {
+				update_post_meta( $attendee_id, 'tix_attended', true );
+			}
+		}
+	}
+
+	/**
 	 * Build a raw data row with sensible defaults, overridden by $overrides.
 	 *
 	 * @param array $overrides Values to override the defaults.
@@ -342,6 +361,88 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A few check-ins at a camp that didn't really use check-in don't count as measured.
+	 */
+	public function test_get_camp_reach_needs_a_minimum_share_checked_in() {
+		$this->create_attendees( 8, 1 ); // 12.5% checked in.
+
+		$reach = $this->invoke( $this->report(), 'get_camp_reach' );
+
+		$this->assertSame( 8, $reach['registered'] );
+		$this->assertSame( 1, $reach['attended'] );
+		$this->assertFalse( $reach['measured'] );
+	}
+
+	/**
+	 * Exactly the minimum share counts as measured.
+	 */
+	public function test_get_camp_reach_counts_the_minimum_share_as_measured() {
+		$this->create_attendees( 4, 1 ); // 25% checked in.
+
+		$reach = $this->invoke( $this->report(), 'get_camp_reach' );
+
+		$this->assertTrue( $reach['measured'] );
+	}
+
+	/**
+	 * A camp with no attendees isn't measured.
+	 */
+	public function test_get_camp_reach_without_attendees_is_not_measured() {
+		$reach = $this->invoke( $this->report(), 'get_camp_reach' );
+
+		$this->assertSame( 0, $reach['registered'] );
+		$this->assertFalse( $reach['measured'] );
+	}
+
+	/**
+	 * The minimum share can be changed with a filter.
+	 */
+	public function test_minimum_checkin_share_is_filterable() {
+		$this->create_attendees( 4, 1 ); // 25% checked in.
+
+		$set_half = function () {
+			return 0.5;
+		};
+		add_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_half );
+		$report = $this->report();
+		remove_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_half );
+
+		$this->assertFalse( $this->invoke( $report, 'get_camp_reach' )['measured'] );
+	}
+
+	/**
+	 * A filtered share below 0 is clamped to 0, and a camp with no check-ins is still not measured.
+	 */
+	public function test_minimum_checkin_share_below_zero_still_needs_a_checkin() {
+		$this->create_attendees( 4, 0 );
+
+		$set_negative = function () {
+			return -1;
+		};
+		add_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_negative );
+		$report = $this->report();
+		remove_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_negative );
+
+		$this->assertFalse( $this->invoke( $report, 'get_camp_reach' )['measured'] );
+	}
+
+	/**
+	 * A filtered share above 1 is clamped to 1, so a camp with everyone checked in is still measured.
+	 */
+	public function test_minimum_checkin_share_above_one_is_clamped() {
+		$this->create_attendees( 4, 4 );
+
+		$set_too_high = function () {
+			return 5;
+		};
+		add_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_too_high );
+		$report = $this->report();
+		remove_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_too_high );
+
+		$this->assertTrue( $this->invoke( $report, 'get_camp_reach' )['measured'] );
+	}
+
+	/**
 	 * `to_base_currency` surfaces other errors.
 	 */
 	public function test_to_base_currency_surfaces_other_errors() {
@@ -473,14 +574,22 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 		$d = new Sponsor_ROI( '2024-01-01', '2024-12-31', 0, array( 'include_sent_invoices' => true ) );
 		$e = new Sponsor_ROI( '2024-01-01', '2024-12-31' );
 
+		$set_half = function () {
+			return 0.5;
+		};
+		add_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_half );
+		$f = new Sponsor_ROI( '2024-01-01', '2024-12-31' );
+		remove_filter( 'wordcamp_reports_sponsor_roi_min_checkin_share', $set_half );
+
 		$keys = array(
 			'a' => $this->invoke( $a, 'get_cache_key' ),
 			'b' => $this->invoke( $b, 'get_cache_key' ),
 			'c' => $this->invoke( $c, 'get_cache_key' ),
 			'd' => $this->invoke( $d, 'get_cache_key' ),
+			'f' => $this->invoke( $f, 'get_cache_key' ),
 		);
 
-		// A different range, MES filter, or status policy must never share a cache entry.
+		// A different range, MES filter, status policy or check-in share must never share a cache entry.
 		$this->assertSame( count( $keys ), count( array_unique( $keys ) ) );
 
 		// Identical parameters must share one.
@@ -553,5 +662,50 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 		$this->assertSame( 450, $totals['attended'] );
 		$this->assertSame( 2, $totals['camp_count'] );
 		$this->assertSame( 1, $totals['unmeasured_camps'] );
+	}
+
+	/**
+	 * `compile_report_data` leaves unmeasured camps' spend out of cost per checked-in attendee.
+	 */
+	public function test_compile_report_data_cost_per_attended_uses_measured_spend_only() {
+		$rows = array(
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 1, 'spend_usd' => 1000.0, 'registered' => 500, 'attended' => 400, 'attendance_measured' => true,
+			) ),
+			// Its check-ins don't count, so neither may its spend.
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 2, 'spend_usd' => 3000.0, 'registered' => 300, 'attended' => 10, 'attendance_measured' => false,
+			) ),
+		);
+
+		$compiled = $this->report()->compile_report_data( $rows );
+
+		$portfolio = $compiled['42'];
+
+		$this->assertSame( 4000.0, $portfolio['totals']['spend_usd'] );
+		$this->assertSame( 1000.0, $portfolio['totals']['measured_spend_usd'] );
+
+		// 1000 / 400, not 4000 / 400.
+		$this->assertEqualsWithDelta( 2.5, $portfolio['ratios']['cost_per_attended'], 0.001 );
+
+		// Registered is counted at every camp, so it keeps the full spend: 4000 / 800.
+		$this->assertEqualsWithDelta( 5.0, $portfolio['ratios']['cost_per_registered'], 0.001 );
+	}
+
+	/**
+	 * `compile_report_data` null cost per checked-in attendee when no camp was measured.
+	 */
+	public function test_compile_report_data_null_cost_per_attended_when_nothing_measured() {
+		$rows = array(
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 1, 'spend_usd' => 1000.0, 'registered' => 500, 'attended' => 5, 'attendance_measured' => false,
+			) ),
+		);
+
+		$compiled = $this->report()->compile_report_data( $rows );
+
+		$this->assertSame( 0.0, $compiled['42']['totals']['measured_spend_usd'] );
+		$this->assertNull( $compiled['42']['ratios']['cost_per_attended'] );
+		$this->assertEqualsWithDelta( 2.0, $compiled['42']['ratios']['cost_per_registered'], 0.001 );
 	}
 }

@@ -217,13 +217,21 @@
 	gap: 14px;
 }
 
+/* The same 16:9 crop the image gets on the site, so the preview shows what
+   will be cut off. */
 .wporg-groups-event-modal__featured-preview img {
-	max-width: 160px;
-	max-height: 100px;
+	aspect-ratio: 16 / 9;
+	width: 160px;
 	object-fit: cover;
 	border-radius: 2px;
 	border: 1px solid #d9d9d9;
 	background: #f6f6f6;
+}
+
+.wporg-groups-event-modal__featured-help {
+	font-size: 12px;
+	color: #757575;
+	margin: 0;
 }
 
 .wporg-groups-event-modal__featured-actions {
@@ -325,8 +333,7 @@
 	border: 1px solid #d9d9d9;
 	border-radius: 2px;
 	min-height: 200px;
-	max-height: 360px;
-	overflow-y: auto;
+	overflow: clip;
 	background: #fff;
 	isolation: isolate;
 }

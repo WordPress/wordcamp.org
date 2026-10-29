@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-short-link",
+	"version": "1.0.0",
+	"title": "Event Short Link",
+	"category": "widgets",
+	"icon": "share",
+	"description": "Shows an event's short link, with a button to copy it.",
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false,
+		"inserter": false,
+		"spacing": { "margin": true }
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"viewScriptModule": "file:./view.js",
+	"style": "file:./style-index.css"
+}

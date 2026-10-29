@@ -47,6 +47,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'wcpt_approved_for_pre_planning', array( $this, 'mark_date_added_to_planning_schedule' ), 10 );
 			// Priority 11 so the organizer email (sent by WCOR_Mailer at 10) goes out first.
 			add_action( 'wcpt_cc_needs_orientation', array( $this, 'handle_cc_needs_orientation' ), 11 );
+			add_action( 'wcpt_cc_needs_orientation', array( $this, 'add_campus_connect_organizer_to_central' ), 12 );
 
 			add_filter(
 				'wp_insert_post_data',
@@ -220,8 +221,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$address_key = self::get_address_key( $post_id );
-			$new_address = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
+			$address_key     = self::get_address_key( $post_id );
+			$new_address     = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
 			$address_changed = empty( $original_meta_values[ $address_key ][0] ) || $new_address !== $original_meta_values[ $address_key ][0];
 
 			// No need to geocode if it hasn't changed.
@@ -454,6 +455,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Website URL'                => 'text',
 						'Contact Information'        => 'textarea',
 						'Exhibition Space Available' => 'checkbox',
+						'Number of venues'           => 'number',
 					);
 					break;
 
@@ -613,6 +615,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 							'Website URL'                      => 'text',
 							'Contact Information'              => 'textarea',
 							'Exhibition Space Available'       => 'checkbox',
+							'Number of venues'                 => 'number',
 
 							'Contributor Day'                  => 'checkbox',
 							'Contributor Day Date (YYYY-mm-dd)' => 'date',
@@ -1019,6 +1022,93 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Add a Campus Connect organizer to Central, and make them the application's author.
+		 *
+		 * The Campus Connect counterpart of `add_organizer_to_central()`, which runs on
+		 * `wcpt_approved_for_pre_planning` and so never for these (#1714). Bridged applications
+		 * are owned by the `wordcamp` service account, and the event list only shows people the
+		 * applications they author or mentor, so a role alone wouldn't let the organizer open
+		 * theirs. The username comes from a public form, and is trusted here only because a
+		 * wrangler has reviewed the application to move it to Needs Orientation.
+		 *
+		 * `wcor_organizer_added_to_central` isn't fired: its reminder is written for regular
+		 * camps, and the organizer gets the Needs Orientation email at this step instead.
+		 *
+		 * @param WP_Post $post
+		 */
+		public function add_campus_connect_organizer_to_central( WP_Post $post ) {
+			global $wpdb;
+
+			// The status changes before the edit screen's meta is saved, so a username corrected
+			// in the same save is only in the request.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The admin edit screen has already verified its nonce.
+			$username = sanitize_user( wp_unslash( $_POST['wcpt_wordpress_org_username'] ?? '' ) );
+
+			if ( ! $username ) {
+				$username = get_post_meta( $post->ID, 'WordPress.org Username', true );
+			}
+
+			if ( ! $username ) {
+				return;
+			}
+
+			$organizer = get_user_by( 'login', $username );
+
+			if ( ! $organizer ) {
+				$this->add_campus_connect_note(
+					$post,
+					sprintf(
+						/* translators: %s: WordPress.org username */
+						__( 'Could not add the organizer to Central: no WordPress.org account is named "%s".', 'wordcamporg' ),
+						$username
+					)
+				);
+
+				return;
+			}
+
+			// `add_user_to_blog()` replaces the role, so only add someone who has none here.
+			if ( ! is_user_member_of_blog( $organizer->ID, get_current_blog_id() ) ) {
+				add_user_to_blog( get_current_blog_id(), $organizer->ID, 'contributor' );
+			}
+
+			/*
+			 * Written directly rather than through `wp_update_post()`, which would run the whole
+			 * save again, meta boxes included, from inside this one. The row is already written
+			 * by now, so nothing later in the save puts the old author back.
+			 */
+			$wpdb->update( $wpdb->posts, array( 'post_author' => $organizer->ID ), array( 'ID' => $post->ID ) );
+			clean_post_cache( $post->ID );
+
+			$this->add_campus_connect_note(
+				$post,
+				sprintf(
+					/* translators: %s: WordPress.org username */
+					__( 'Added %s to Central and made them the author of this application.', 'wordcamporg' ),
+					$organizer->user_login
+				)
+			);
+		}
+
+		/**
+		 * Add a note to a Campus Connect application's log.
+		 *
+		 * @param WP_Post $post
+		 * @param string  $message
+		 */
+		protected function add_campus_connect_note( WP_Post $post, $message ) {
+			add_post_meta(
+				$post->ID,
+				'_note',
+				array(
+					'timestamp' => time(),
+					'user_id'   => get_current_user_id(),
+					'message'   => $message,
+				)
+			);
+		}
+
+		/**
 		 * Record when the WordCamp was added to the planning schedule.
 		 *
 		 * This is used by the Organizer Reminders plugin to send automated e-mails at certain points after the camp
@@ -1134,6 +1224,24 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						continue;
 					}
 
+					if ( 'Number of venues' === $field ) {
+						// Only require when transitioning to Scheduled, not when updating an already scheduled event.
+						if ( 'wcpt-scheduled' === get_post_status( $post_data_raw['ID'] ) ) {
+							continue;
+						}
+
+						// Validate as a positive whole number (e.g. at least 1).
+						if ( empty( $value ) || ! is_numeric( $value ) || intval( $value ) < 1 || (string) intval( $value ) !== trim( (string) $value ) ) {
+							$post_data['post_status']     = WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_data_raw['ID'] )
+								? 'wcpt-approved-pre-pl'
+								: 'wcpt-needs-schedule';
+							$this->active_admin_notices[] = 3;
+							break;
+						}
+
+						continue;
+					}
+
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
@@ -1212,6 +1320,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
+
+			if ( ! self::is_virtual_event( $post_id ) && WordCamp_Status_Guard::is_campus_connect_post_for_save( $post_id ) ) {
+				$scheduled[] = 'Number of venues';
+			}
 
 			switch ( $status ) {
 				case 'needs-site':
@@ -1976,6 +2088,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Global Sponsorship Grant'        => 'Deprecated.',
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
+		'Number of venues'                => '(Campus Connect only) Total number of participating venues or campuses.',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

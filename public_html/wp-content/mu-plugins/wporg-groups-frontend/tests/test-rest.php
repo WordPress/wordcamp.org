@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use GatherPress\Core\Event\Event;
 use WP_REST_Request;
 use WordPressdotorg\GatherPress_Recurring_Events\Admin as Recurring_Events_Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
@@ -55,6 +56,28 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * Creates an event as a new editor with the base params plus overrides, and returns its ID.
+	 */
+	private function create_test_event( array $params ): int {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( array_merge( $this->base_event_params(), $params ) ) );
+		$this->assertNotWPError( $response );
+
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Saves an event through the edit endpoint with the base params plus overrides.
+	 */
+	private function update_test_event( int $event_id, array $params ): void {
+		$request = $this->event_request( array_merge( $this->base_event_params(), $params ) );
+		$request->set_param( 'id', $event_id );
+
+		$this->assertNotWPError( update_event( $request ) );
+	}
+
+	/**
 	 * Dispatches a JSON body through the full REST pipeline, the same way
 	 * the frontend's `apiFetch()` does.
 	 *
@@ -72,6 +95,28 @@ class Test_Groups_REST extends Groups_TestCase {
 		$request->set_body( wp_json_encode( $body ) );
 
 		return rest_do_request( $request );
+	}
+
+	/**
+	 * Stores the event's current schedule in `gatherpress_datetime`, as the
+	 * block editor does for an event created or saved in wp-admin.
+	 */
+	private function add_block_editor_datetime( int $event_id ): void {
+		$datetime = ( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime();
+
+		update_post_meta(
+			$event_id,
+			'gatherpress_datetime',
+			wp_slash(
+				wp_json_encode(
+					array(
+						'dateTimeStart' => $datetime['datetime_start'],
+						'dateTimeEnd'   => $datetime['datetime_end'],
+						'timezone'      => $datetime['timezone'],
+					)
+				)
+			)
+		);
 	}
 
 	/**
@@ -135,6 +180,45 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'weekly', get_post_meta( $event_id, Rule::META_PREFIX . 'frequency', true ) );
 		$this->assertSame( 3, (int) get_post_meta( $event_id, Rule::META_PREFIX . 'count', true ) );
 		$this->assertCount( 3, Occurrences::all( $event_id ) );
+	}
+
+	/**
+	 * A monthly series repeats on its start date's day, even when the form
+	 * still sends the day of a date it was moved off (#2227).
+	 */
+	public function test_monthly_series_repeats_on_the_start_day(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$start  = current_datetime()->modify( 'first day of +2 months' );
+		$date   = $start->setDate( (int) $start->format( 'Y' ), (int) $start->format( 'n' ), 24 )->format( 'Y-m-d' );
+		$params = array_merge(
+			$this->base_event_params(),
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency'    => 'monthly',
+					'interval'     => 1,
+					'monthly_mode' => 'day',
+					'monthly_day'  => 29,
+					'end_type'     => 'count',
+					'count'        => 3,
+				),
+			)
+		);
+
+		Recurring_Events_Database::maybe_install();
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( 24, (int) get_post_meta( $event_id, Rule::META_PREFIX . 'monthly_day', true ) );
+
+		$days = array_map(
+			static fn( $occurrence ): string => substr( $occurrence->datetime_start, 8, 2 ),
+			Occurrences::all( $event_id )
+		);
+		$this->assertSame( array( '24', '24', '24' ), $days );
 	}
 
 	/**
@@ -770,6 +854,119 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * GatherPress 0.36.0 snaps an "All day" event to midnight on every save.
+	 * The form always sends times, so the flag must not survive its save.
+	 */
+	public function test_update_event_clears_all_day_flag() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		update_post_meta( $event_id, 'gatherpress_is_all_day', true );
+
+		$update = $this->event_request( $this->base_event_params() + array( 'id' => $event_id ) );
+		$this->assertNotWPError( update_event( $update ) );
+
+		$this->assertSame( '', get_post_meta( $event_id, 'gatherpress_is_all_day', true ) );
+		$this->assertStringEndsWith(
+			'18:00:00',
+			( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
+	 * GatherPress rebuilds an event's schedule from `gatherpress_datetime` on
+	 * every save, so a date changed in the form must still be there after a
+	 * later save made somewhere else, such as wp-admin.
+	 */
+	public function test_updated_schedule_survives_a_later_save() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+		$this->add_block_editor_datetime( $event_id );
+
+		$new_date = current_datetime()->modify( '+3 weeks' )->format( 'Y-m-d' );
+		$update   = $this->event_request(
+			array(
+				'id'         => $event_id,
+				'date'       => $new_date,
+				'time_start' => '09:00',
+				'time_end'   => '10:00',
+			) + $this->base_event_params()
+		);
+		$this->assertNotWPError( update_event( $update ) );
+
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_excerpt' => 'Edited somewhere else.',
+			)
+		);
+
+		$this->assertSame(
+			$new_date . ' 09:00:00',
+			( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
+	 * Same as above for a draft, which is saved through its own path.
+	 */
+	public function test_draft_schedule_survives_a_later_save() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$request->set_param( 'title', 'Draft with dates' );
+		$request->set_param( 'date', current_datetime()->modify( '+1 month' )->format( 'Y-m-d' ) );
+		$request->set_param( 'time_start', '19:00' );
+		$request->set_param( 'time_end', '21:00' );
+		$draft_id = (int) save_draft( $request )->get_data()['id'];
+		$this->add_block_editor_datetime( $draft_id );
+
+		$new_date = current_datetime()->modify( '+5 weeks' )->format( 'Y-m-d' );
+		$update   = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft/' . $draft_id );
+		$update->set_param( 'id', $draft_id );
+		$update->set_param( 'title', 'Draft with dates' );
+		$update->set_param( 'date', $new_date );
+		$update->set_param( 'time_start', '08:00' );
+		$update->set_param( 'time_end', '09:00' );
+		save_draft( $update );
+
+		wp_update_post(
+			array(
+				'ID'           => $draft_id,
+				'post_excerpt' => 'Edited somewhere else.',
+			)
+		);
+
+		$this->assertSame(
+			$new_date . ' 08:00:00',
+			( new \GatherPress\Core\Event\Event( $draft_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
+	 * An event saved only through the form keeps no `gatherpress_datetime`:
+	 * GatherPress falls back to the fields the form writes, so it needs none.
+	 */
+	public function test_form_does_not_add_block_editor_datetime() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		$update = $this->event_request( $this->base_event_params() + array( 'id' => $event_id ) );
+		$this->assertNotWPError( update_event( $update ) );
+
+		$this->assertSame( '', get_post_meta( $event_id, 'gatherpress_datetime', true ) );
+	}
+
+	/**
 	 * Saving an unrelated field leaves a location with a stale country intact.
 	 */
 	public function test_group_info_update_without_location_preserves_stale_country() {
@@ -1012,6 +1209,94 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertNotWPError( $response );
 		$event_id = $response->get_data()['id'];
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
+	}
+
+	/**
+	 * A hybrid event keeps both its physical venue and the online sentinel, and the
+	 * edit form reads both back.
+	 */
+	public function test_hybrid_event_keeps_venue_and_online_state(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'new_venue_name'    => 'Hybrid Hall',
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$load = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $event_id );
+		$fields = get_event_form_data( $load )->get_data()['fields'];
+
+		$this->assertGreaterThan( 0, $fields['venue_id'] );
+		$this->assertTrue( $fields['is_online'] );
+		$this->assertSame( 'https://meet.example.org/hybrid', $fields['online_event_link'] );
+	}
+
+	/**
+	 * Switching a hybrid event to online-only drops its physical venue but keeps it online.
+	 */
+	public function test_hybrid_to_online_only_drops_venue(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'new_venue_name'    => 'Hybrid Hall',
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$this->update_test_event(
+			$event_id,
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/hybrid',
+			)
+		);
+
+		$this->assertSame( 0, get_event_venue_post_id( $event_id ) );
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
+	}
+
+	/**
+	 * Turning an online event offline removes the sentinel term and its link.
+	 */
+	public function test_switching_event_offline_clears_online_state(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/coffee',
+			)
+		);
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
+
+		$this->update_test_event( $event_id, array( 'is_online' => false ) );
+
+		$this->assertFalse( ( new Event( $event_id ) )->is_online() );
+		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
+	}
+
+	/**
+	 * Clearing the link field on an online event removes the saved link, even though
+	 * `Event::set_online()` on its own would keep it.
+	 */
+	public function test_clearing_online_link_removes_saved_link(): void {
+		$event_id = $this->create_test_event(
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/coffee',
+			)
+		);
+
+		$this->update_test_event(
+			$event_id,
+			array(
+				'is_online'         => true,
+				'online_event_link' => '',
+			)
+		);
+
+		$this->assertTrue( ( new Event( $event_id ) )->is_online() );
 		$this->assertSame( '', (string) get_post_meta( $event_id, 'gatherpress_online_event_link', true ) );
 	}
 }

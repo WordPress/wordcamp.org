@@ -17,6 +17,7 @@ add_action( 'customize_controls_print_styles',    __NAMESPACE__ . '\print_custom
 add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\remove_all_previewer_styles', 998 );
 add_action( 'wp_enqueue_scripts',                 __NAMESPACE__ . '\enqueue_previewer_scripts',   999 );  // after remove_all_previewer_styles().
 add_filter( 'template_include',                   __NAMESPACE__ . '\use_badges_template'              );
+add_filter( 'show_admin_bar',                     __NAMESPACE__ . '\hide_admin_bar_on_badges'         );
 
 /**
  * Register our Customizer settings, panels, sections, and controls
@@ -69,6 +70,33 @@ function register_customizer_components( $wp_customize ) {
 	);
 
 	$wp_customize->add_setting(
+		'cbg_qr_code_type',
+		array(
+			'default'           => 'none',
+			'type'              => 'option',
+			'capability'        => Badge_Generator\REQUIRED_CAPABILITY,
+			'transport'         => 'refresh',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_qr_code_type',
+		)
+	);
+
+	$wp_customize->add_control(
+		'cbg_qr_code_type',
+		array(
+			'section'     => 'camptix_html_badges',
+			'type'        => 'select',
+			'priority'    => 2,
+			'label'       => __( 'QR Code Destination', 'wordcamporg' ),
+			'description' => __( 'Optionally include a QR code on each badge linking to the attendee profile.', 'wordcamporg' ),
+			'choices'     => array(
+				'none'     => __( 'None', 'wordcamporg' ),
+				'gravatar' => __( 'Gravatar Profile (gravatar.com/...)', 'wordcamporg' ),
+				'wporg'    => __( 'WordPress.org Profile (w.org/@username)', 'wordcamporg' ),
+			),
+		)
+	);
+
+	$wp_customize->add_setting(
 		'cbg_badge_css',
 		array(
 			'default'           => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
@@ -84,10 +112,23 @@ function register_customizer_components( $wp_customize ) {
 		array(
 			'section'  => 'camptix_html_badges',
 			'type'     => 'textarea',
-			'priority' => 2,
+			'priority' => 3,
 			'label'    => __( 'Customize Badge CSS', 'wordcamporg' ),
 		)
 	);
+}
+
+/**
+ * Sanitize QR code type setting
+ *
+ * @param string $value
+ *
+ * @return string
+ */
+function sanitize_qr_code_type( $value ) {
+	$valid_types = array( 'none', 'gravatar', 'wporg' );
+
+	return in_array( $value, $valid_types, true ) ? $value : 'none';
 }
 
 /**
@@ -184,6 +225,19 @@ function print_customizer_styles() {
  */
 function is_badges_preview() {
 	return isset( $_GET['camptix-badges'] ) && is_customize_preview();
+}
+
+/**
+ * Hide the admin bar on the Badges page
+ *
+ * The page drops all theme and core styles, so the admin bar would show up unstyled across the badges.
+ *
+ * @param bool $show
+ *
+ * @return bool
+ */
+function hide_admin_bar_on_badges( $show ) {
+	return is_badges_preview() ? false : $show;
 }
 
 /**

@@ -7,6 +7,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	public $secret_generated = '';
 	public $questions        = array();
 	public $secret_expiry    = '2 weeks';
+	public $qr_enabled       = false;
 	public $tickets;
 
 	/**
@@ -31,6 +32,17 @@ class CampTix_Attendance extends CampTix_Addon {
 		}
 
 		$camptix_options = $camptix->get_options();
+
+		// Attendees keep their check-in QR codes when the secret link expires or is regenerated.
+		if ( ! empty( $camptix_options['attendance-qr-enabled'] ) ) {
+			$this->qr_enabled = true;
+
+			add_filter( 'camptix_email_ticket_content', array( $this, 'add_checkin_link_to_email' ), 10, 2 );
+			add_action( 'camptix_form_edit_attendee_additional_info', array( $this, 'render_checkin_qr_row' ) );
+			add_action( 'add_meta_boxes_tix_attendee', array( $this, 'add_checkin_metabox' ) );
+			add_action( 'admin_post_camptix_reissue_checkin_code', array( $this, 'reissue_checkin_code' ) );
+		}
+
 		if ( empty( $camptix_options['attendance-secret'] ) )
 			return;
 
@@ -73,9 +85,14 @@ class CampTix_Attendance extends CampTix_Addon {
 	public function setup_attendance_ui( $template ) {
 		global $camptix;
 
+		// html5-qrcode 2.3.8 (Apache-2.0), unmodified from https://www.npmjs.com/package/html5-qrcode.
+		wp_register_script( 'html5-qr-scanner', plugins_url( '/assets/html5-qrcode.min.js', __FILE__ ), array(), '2.3.8' );
+		// Version by modification time, so devices used at past events don't keep running a cached copy.
+		wp_register_script( 'camptix-attendance-ui-sounds', plugins_url( '/assets/attendance-ui-sounds.js', __FILE__ ), array(), filemtime( __DIR__ . '/assets/attendance-ui-sounds.js' ) );
+
 		wp_enqueue_script( 'jquery-fastbutton', plugins_url( '/assets/jquery.fastbutton.js', __FILE__ ), array( 'jquery' ) );
-		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js' , __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton' ) );
-		wp_enqueue_style( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.css', __FILE__ ), array( 'dashicons' ) );
+		wp_enqueue_style( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.css', __FILE__ ), array( 'dashicons' ), filemtime( __DIR__ . '/assets/attendance-ui.css' ) );
+		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js', __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton', 'camptix-attendance-ui-sounds', 'html5-qr-scanner' ), filemtime( __DIR__ . '/assets/attendance-ui.js' ) );
 
 		$camptix->tmp( 'attendance_tickets', $this->get_tickets() );
 		return dirname( __FILE__ ) . '/attendance-ui.php';
@@ -90,6 +107,10 @@ class CampTix_Attendance extends CampTix_Addon {
 	public function ajax_callback() {
 		if ( empty( $_REQUEST['camptix_secret'] ) || $_REQUEST['camptix_secret'] != $this->secret )
 			return;
+
+		if ( isset( $_GET['qrcode'] ) ) {
+			return $this->_ajax_qrcode();
+		}
 
 		$action = $_REQUEST['camptix_action'];
 		if ( 'sync-model' == $action ) {
@@ -685,6 +706,273 @@ class CampTix_Attendance extends CampTix_Addon {
 	}
 
 	/**
+	 * Look up the attendee for a scanned check-in QR code.
+	 */
+	public function _ajax_qrcode() {
+		$attendee = $this->get_attendee_for_checkin( wp_unslash( $_GET['qrcode'] ) );
+
+		if ( is_wp_error( $attendee ) ) {
+			return wp_send_json_error( $attendee->get_error_message() );
+		}
+
+		return wp_send_json_success( array( $this->_make_object( $attendee ) ) );
+	}
+
+	/**
+	 * Find the attendee a scanned code belongs to, if they can check in.
+	 *
+	 * @param string $code The scanned text.
+	 *
+	 * @return WP_Post|WP_Error The attendee, or a message for the scanner to show.
+	 */
+	public function get_attendee_for_checkin( $code ) {
+		if ( ! $this->qr_enabled ) {
+			return new WP_Error( 'qr_disabled', __( 'QR code scanning is turned off.', 'wordcamporg' ) );
+		}
+
+		$code = strtolower( trim( sanitize_text_field( $code ) ) );
+
+		if ( ! preg_match( '/^[0-9a-f]{16}$/', $code ) ) {
+			return new WP_Error( 'invalid_code', __( 'This is not a check-in QR code.', 'wordcamporg' ) );
+		}
+
+		$attendee = $this->get_attendee_by_checkin_code( $code );
+
+		if ( ! $attendee ) {
+			return new WP_Error( 'unknown_code', __( 'No attendee has this QR code. It may have been reissued.', 'wordcamporg' ) );
+		}
+
+		$name = trim( $attendee->tix_first_name . ' ' . $attendee->tix_last_name );
+
+		if ( 'publish' !== $attendee->post_status ) {
+			$status = get_post_status_object( $attendee->post_status );
+
+			$message = sprintf(
+				/* translators: 1: Attendee name, 2: Ticket status, e.g. Refunded. */
+				__( "%1\$s's ticket is not valid for check-in (%2\$s).", 'wordcamporg' ),
+				$name,
+				$status ? $status->label : $attendee->post_status
+			);
+
+			return new WP_Error( 'invalid_status', $message );
+		}
+
+		if ( get_post_meta( $attendee->ID, 'tix_attended', true ) ) {
+			/* translators: %s: Attendee name. */
+			return new WP_Error( 'already_attended', sprintf( __( '%s is already checked in.', 'wordcamporg' ), $name ) );
+		}
+
+		return $attendee;
+	}
+
+	/**
+	 * Get an attendee's check-in code, creating one the first time it's needed.
+	 *
+	 * The code is random rather than derived from the access or edit token, so a
+	 * photo of someone's QR code reveals nothing else, and it can be reissued.
+	 *
+	 * @param int $attendee_id
+	 *
+	 * @return string 16 hex characters.
+	 */
+	public static function get_checkin_code( $attendee_id ) {
+		$code = get_post_meta( $attendee_id, 'tix_checkin_code', true );
+
+		if ( ! $code ) {
+			$code = self::generate_checkin_code( $attendee_id );
+		}
+
+		return $code;
+	}
+
+	/**
+	 * Give an attendee a new check-in code, replacing any previous one.
+	 *
+	 * @param int $attendee_id
+	 *
+	 * @return string
+	 */
+	public static function generate_checkin_code( $attendee_id ) {
+		$code = bin2hex( random_bytes( 8 ) );
+		update_post_meta( $attendee_id, 'tix_checkin_code', $code );
+
+		return $code;
+	}
+
+	/**
+	 * Find the attendee with the given check-in code.
+	 *
+	 * @param string $code
+	 *
+	 * @return WP_Post|null
+	 */
+	public function get_attendee_by_checkin_code( $code ) {
+		$attendees = get_posts( array(
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'meta_key'       => 'tix_checkin_code',
+			'meta_value'     => $code,
+		) );
+
+		return $attendees[0] ?? null;
+	}
+
+	/**
+	 * Get the check-in QR code for an attendee, as an SVG.
+	 *
+	 * @param int $attendee_id
+	 *
+	 * @return string Empty when the Badge Generator, which has the QR code encoder, isn't loaded.
+	 */
+	public function get_checkin_qr_svg( $attendee_id ) {
+		if ( ! class_exists( '\CampTix\Badge_Generator\QR_Code' ) ) {
+			return '';
+		}
+
+		return \CampTix\Badge_Generator\QR_Code::get_svg( self::get_checkin_code( $attendee_id ) );
+	}
+
+	/**
+	 * Show the attendee their check-in QR code on the Edit Ticket page.
+	 *
+	 * @param WP_Post $attendee
+	 */
+	public function render_checkin_qr_row( $attendee ) {
+		if ( 'publish' !== $attendee->post_status ) {
+			return;
+		}
+
+		$svg = $this->get_checkin_qr_svg( $attendee->ID );
+
+		if ( ! $svg ) {
+			return;
+		}
+
+		?>
+
+		<tr class="tix-checkin-qr">
+			<td class="tix-left"><?php esc_html_e( 'Check-in QR code', 'wordcamporg' ); ?></td>
+			<td class="tix-right">
+				<?php // Dark on light whatever the theme, since some scanners can't read an inverted code. ?>
+				<div style="width: 200px; max-width: 100%; padding: 8px; background: #fff; color: #000;">
+					<?php echo $svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated markup, contains only the path. ?>
+				</div>
+				<p><?php esc_html_e( 'Show this at registration to check in quickly.', 'wordcamporg' ); ?></p>
+			</td>
+		</tr>
+
+		<?php
+	}
+
+	/**
+	 * Link to the attendee's check-in QR code from their ticket e-mail.
+	 *
+	 * Appended instead of offered as a template shortcode, so it works without
+	 * organizers editing their saved e-mail templates.
+	 *
+	 * @param string  $content
+	 * @param WP_Post $attendee
+	 *
+	 * @return string
+	 */
+	public function add_checkin_link_to_email( $content, $attendee ) {
+		global $camptix;
+
+		if ( 'publish' !== $attendee->post_status || ! $this->get_checkin_qr_svg( $attendee->ID ) ) {
+			return $content;
+		}
+
+		$edit_link = $camptix->get_edit_attendee_link( $attendee->ID, get_post_meta( $attendee->ID, 'tix_edit_token', true ) );
+
+		$checkin_text = "\n\n" . sprintf(
+			/* translators: %s: Link to the page with the attendee's QR code. */
+			__( "Show your check-in QR code at registration to get in faster. You'll find it here:\n\n%s", 'wordcamporg' ),
+			$edit_link
+		);
+
+		// Keep it above the sponsors footer that camptix-tweaks adds to WordCamp.org templates.
+		$footer_position = strpos( $content, "\n\n===\n\n" );
+
+		if ( false === $footer_position ) {
+			return $content . $checkin_text;
+		}
+
+		return substr_replace( $content, $checkin_text, $footer_position, 0 );
+	}
+
+	/**
+	 * Register the check-in QR code meta box for attendees.
+	 */
+	public function add_checkin_metabox() {
+		add_meta_box( 'tix_attendee_checkin_qr', __( 'Check-in QR Code', 'wordcamporg' ), array( $this, 'render_checkin_metabox' ), 'tix_attendee', 'side' );
+	}
+
+	/**
+	 * Show the attendee's check-in QR code, with a way to reissue it.
+	 *
+	 * @param WP_Post $attendee
+	 */
+	public function render_checkin_metabox( $attendee ) {
+		$svg = $this->get_checkin_qr_svg( $attendee->ID );
+
+		if ( ! $svg ) {
+			esc_html_e( 'The CampTix Badge Generator plugin is needed to show QR codes.', 'wordcamporg' );
+			return;
+		}
+
+		$reissue_url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'      => 'camptix_reissue_checkin_code',
+					'attendee_id' => $attendee->ID,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'camptix_reissue_checkin_code_' . $attendee->ID
+		);
+
+		?>
+
+		<?php if ( isset( $_GET['tix_checkin_code_reissued'] ) ) : ?>
+			<p><strong><?php esc_html_e( 'A new code was issued. The old one no longer works.', 'wordcamporg' ); ?></strong></p>
+		<?php endif; ?>
+
+		<div style="width: 150px;">
+			<?php echo $svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated markup, contains only the path. ?>
+		</div>
+
+		<p>
+			<?php esc_html_e( 'If this code was shared or leaked, reissue it. The attendee can see the new one on their Edit Ticket page.', 'wordcamporg' ); ?>
+		</p>
+
+		<p><a class="button" href="<?php echo esc_url( $reissue_url ); ?>"><?php esc_html_e( 'Reissue code', 'wordcamporg' ); ?></a></p>
+
+		<?php
+	}
+
+	/**
+	 * Replace an attendee's check-in code.
+	 */
+	public function reissue_checkin_code() {
+		global $camptix;
+
+		$attendee_id = absint( $_GET['attendee_id'] ?? 0 );
+
+		check_admin_referer( 'camptix_reissue_checkin_code_' . $attendee_id );
+
+		if ( 'tix_attendee' !== get_post_type( $attendee_id ) || ! current_user_can( $camptix->caps['manage_attendees'] ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'wordcamporg' ), 403 );
+		}
+
+		self::generate_checkin_code( $attendee_id );
+		$camptix->log( 'Reissued the check-in QR code.', $attendee_id );
+
+		wp_safe_redirect( add_query_arg( 'tix_checkin_code_reissued', 1, get_edit_post_link( $attendee_id, 'url' ) ) );
+		exit;
+	}
+
+	/**
 	 * Synchronize a single attendee model.
 	 *
 	 * Sets or removes the attended flag for a given camptix_id.
@@ -933,6 +1221,8 @@ class CampTix_Attendance extends CampTix_Addon {
 		// Fields
 		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general' );
 
+		$camptix->add_settings_field_helper( 'attendance-qr-enabled', esc_html__( 'QR Code Scanning', 'wordcamporg' ), 'field_yesno', 'general' );
+
 		add_settings_field( 'attendance-questions', esc_html__( 'Questions', 'wordcamporg' ), array( $this, 'field_questions' ), 'camptix_options', 'general', esc_html__( 'Show these additional ticket questions in the UI.', 'wordcamporg' ) );
 
 		add_settings_field( 'attendance-secret', esc_html__( 'Secret Link', 'wordcamporg' ), array( $this, 'field_secret' ), 'camptix_options', 'general' );
@@ -1004,6 +1294,10 @@ class CampTix_Attendance extends CampTix_Addon {
 	public function validate_options( $output, $input ) {
 		if ( isset( $input['attendance-enabled'] ) )
 			$output['attendance-enabled'] = (bool) $input['attendance-enabled'];
+
+		if ( isset( $input['attendance-qr-enabled'] ) ) {
+			$output['attendance-qr-enabled'] = (bool) $input['attendance-qr-enabled'];
+		}
 
 		if ( ! empty( $input['attendance-generate'] ) ) {
 			$output['attendance-secret'] = wp_generate_password( 32, false, false );

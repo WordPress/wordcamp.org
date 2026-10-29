@@ -12,6 +12,7 @@ use DateTimeZone;
 use GatherPress\Core\Blocks\Rsvp_Template;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Cache;
+use GatherPress\Core\Rsvp\Rsvp;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Rsvp_Cache;
@@ -378,7 +379,7 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 
 		// What a notification email or a cron job does: ask for the roster
 		// with no request and no occurrence anywhere in sight.
-		$responses = ( new Event( $series['post_id'] ) )->rsvp->responses();
+		$responses = ( new Rsvp( $series['post_id'] ) )->responses();
 
 		$this->assertSame( 2, $responses['attending']['count'], 'Precondition: an unscoped read still answers for the whole series.' );
 		$this->assertNull(
@@ -428,7 +429,7 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 	/** A one-off event has no dates to confuse, so its cache is untouched. */
 	public function test_a_non_recurring_event_is_left_alone(): void {
 		$post_id = $this->create_event();
-		( new Event( $post_id ) )->rsvp->save( self::factory()->user->create(), 'attending' );
+		( new Rsvp( $post_id ) )->save( self::factory()->user->create(), 'attending' );
 
 		$this->assertSame( 1, $this->responses( $post_id )['attending']['count'] );
 		$this->assertNotNull( Cache::get( $post_id ) );
@@ -472,7 +473,7 @@ final class Test_Upstream_Rsvp_Context extends WP_UnitTestCase {
 
 		foreach ( $users as $index => $user_id ) {
 			Context::set( $dates[ $index ] );
-			( new Event( $post_id ) )->rsvp->save( $user_id, 'attending' );
+			( new Rsvp( $post_id ) )->save( $user_id, 'attending' );
 		}
 
 		Context::set( null );

@@ -457,6 +457,19 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 		$this->assertStringContainsString( 'Hybrid', $output );
 	}
 
+	/**
+	 * Japanese titles on cards and heroes use phrase-boundary word breaking (#2258).
+	 */
+	public function test_japanese_titles_have_auto_phrase_word_break() {
+		$css = file_get_contents( self::THEME_DIR . 'assets/css/custom.css' );
+
+		$this->assertMatchesRegularExpression(
+			'/:lang\(ja\)[^{]*\.wp-block-post-title[^{]*\{[^}]*word-break:\s*auto-phrase;[^}]*overflow-wrap:\s*anywhere;/',
+			$css,
+			'custom.css must set word-break: auto-phrase and overflow-wrap: anywhere under :lang(ja) for post titles.'
+		);
+	}
+
 
 	/**
 	 * Find the first block of a given name in a parsed block tree.

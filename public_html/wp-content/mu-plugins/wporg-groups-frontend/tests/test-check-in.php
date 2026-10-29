@@ -5,6 +5,7 @@ namespace WordCamp\Groups\Tests;
 use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Flag\Check_In as Check_In_Flag;
 use GatherPress\Core\Rsvp\Rsvp;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
@@ -154,6 +155,51 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		$this->assertSame( 1, $data['checkedInCount'] );
 		$this->assertCount( 2, $data['attendees'] );
 		$this->assertTrue( $data['isOpen'] );
+	}
+
+	/**
+	 * A check-in from this page is GatherPress's own flag, so the wp-admin
+	 * RSVPs screen shows it too (#2213).
+	 */
+	public function test_check_in_is_the_gatherpress_flag() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+
+		$this->toggle( $event_id, $comment_id, true );
+
+		$this->assertTrue( ( new Check_In_Flag( $comment_id ) )->has() );
+		$this->assertSame( 1, Check_In_Flag::count( $event_id ) );
+
+		$this->toggle( $event_id, $comment_id, false );
+
+		$this->assertFalse( ( new Check_In_Flag( $comment_id ) )->has() );
+	}
+
+	/**
+	 * A check-in made in wp-admin shows on this page and counts as the date
+	 * using check-in, and undoing it there switches "attended" back.
+	 */
+	public function test_check_in_from_wp_admin_is_picked_up() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+		list( , $no_show )    = $this->rsvp( $event_id );
+
+		( new Check_In_Flag( $comment_id ) )->add();
+
+		$this->assertTrue( is_checked_in( $comment_id ) );
+		$this->assertTrue( event_has_check_ins( $event_id ) );
+
+		$request = new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" );
+		$data    = rest_do_request( $request )->get_data();
+		$checked = wp_list_pluck( $data['attendees'], 'checkedIn', 'commentId' );
+
+		$this->assertSame( 1, $data['checkedInCount'] );
+		$this->assertTrue( $checked[ $comment_id ] );
+		$this->assertFalse( $checked[ $no_show ] );
+
+		( new Check_In_Flag( $comment_id ) )->remove();
+
+		$this->assertFalse( event_has_check_ins( $event_id ) );
 	}
 
 	/**
@@ -381,6 +427,41 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	}
 
 	/**
+	 * With RSVP switched off, check-in refuses the event outright: no list,
+	 * and no walk-in RSVP saved behind the setting's back.
+	 */
+	public function test_rsvp_disabled_event_is_refused() {
+		$event_id             = $this->create_event();
+		list( , $comment_id ) = $this->rsvp( $event_id );
+		$walk_in_id           = self::factory()->user->create();
+
+		// `pre_option_*`, like the RSVP route's test: the groups tweaks
+		// short-circuit the stored settings, so the mode is injected there.
+		$disable_rsvp = static function ( $value ) {
+			$value              = is_array( $value ) ? $value : array();
+			$value['rsvp_mode'] = 'disabled';
+
+			return $value;
+		};
+		add_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+
+		try {
+			$list    = rest_do_request( new WP_REST_Request( 'GET', "/wporg-groups/v1/event/{$event_id}/check-in" ) );
+			$toggle  = $this->toggle( $event_id, $comment_id, true );
+			$walk_in = $this->walk_in( $event_id, get_userdata( $walk_in_id )->user_login );
+		} finally {
+			remove_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+		}
+
+		foreach ( array( $list, $toggle, $walk_in ) as $response ) {
+			$this->assertSame( 400, $response->get_status() );
+			$this->assertSame( 'wporg_groups_rsvp_unavailable', $response->get_data()['code'] );
+		}
+		$this->assertFalse( is_checked_in( $comment_id ) );
+		$this->assertSame( 'no_status', ( new Rsvp( $event_id ) )->get( $walk_in_id )['status'] ?? 'no_status' );
+	}
+
+	/**
 	 * A walk-in found by username gets an RSVP and is checked in, without
 	 * being made a member of the group.
 	 */
@@ -465,7 +546,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	 */
 	public function test_walk_in_at_capacity_is_still_checked_in() {
 		$event_id = $this->create_event();
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 		$this->rsvp( $event_id );
 
 		$user_id  = self::factory()->user->create();
@@ -508,7 +589,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 		$event_id = $this->create_event();
 
 		// Without a limit GatherPress promotes the waiting list straight away.
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 2 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 2 );
 
 		list( $came_id, $came_comment )           = $this->rsvp( $event_id );
 		list( $no_show_id, )                      = $this->rsvp( $event_id );
@@ -530,7 +611,7 @@ class Test_Groups_Check_In extends Groups_TestCase {
 	 */
 	public function test_attended_falls_back_to_rsvps() {
 		$event_id = $this->create_event();
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 
 		list( $attendee_id, )   = $this->rsvp( $event_id );
 		list( $waitlisted_id, ) = $this->rsvp( $event_id, 'waiting_list' );

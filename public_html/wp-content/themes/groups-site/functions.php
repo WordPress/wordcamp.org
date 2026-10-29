@@ -241,6 +241,31 @@ function hide_empty_more_events_section( $block_content, $parsed_block ) {
 add_filter( 'render_block_core/query', __NAMESPACE__ . '\hide_empty_more_events_section', 10, 2 );
 
 /**
+ * Drop the event sidebar's info card while the event's password is required.
+ *
+ * Every block in the card hides itself behind the password: GatherPress's
+ * date, venue, online event and add-to-calendar blocks since 0.36.1, and our
+ * RSVP, language and topics blocks. The card's "Date and time" label is
+ * static text, so without this the viewer gets a bordered box holding only
+ * that label.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The parsed block.
+ *
+ * @return string The block, or an empty string.
+ */
+function hide_event_info_card_for_protected_event( $block_content, $parsed_block ) {
+	$class_name = $parsed_block['attrs']['className'] ?? '';
+
+	if ( ! in_array( 'groups-site-event-info-card', explode( ' ', $class_name ), true ) ) {
+		return $block_content;
+	}
+
+	return post_password_required() ? '' : $block_content;
+}
+add_filter( 'render_block_core/group', __NAMESPACE__ . '\hide_event_info_card_for_protected_event', 10, 2 );
+
+/**
  * Describe the events archive's view state on `<body>` so the stylesheet can
  * react to it.
  *

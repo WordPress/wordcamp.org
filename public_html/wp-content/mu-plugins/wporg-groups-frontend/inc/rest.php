@@ -37,6 +37,7 @@ namespace WordCamp\Groups\Frontend\REST;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
 use WP_Error;
@@ -569,12 +570,11 @@ function save_rsvp( WP_REST_Request $request ) {
 	}
 
 	$event = new Event( $event_id );
+	$rsvp  = new Rsvp( $event_id );
 
-	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
-	// which the post-type check above already guarantees. The meaningful gate
-	// is whether RSVP is switched on for this event — without it
+	// The gate is whether RSVP is switched on for this event — without it
 	// `Rsvp::save()` is a no-op that would otherwise look like success.
-	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+	if ( ! $rsvp->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -614,7 +614,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
 	}
 
-	$record     = $event->rsvp->save( $user_id, $status );
+	$record     = $rsvp->save( $user_id, $status );
 	$comment_id = (int) ( $record['comment_id'] ?? 0 );
 
 	if ( ! $comment_id ) {
@@ -636,7 +636,7 @@ function save_rsvp( WP_REST_Request $request ) {
 		array(
 			'success'           => true,
 			'status'            => $record['status'] ?? 'no_status',
-			'responses'         => $event->rsvp->responses(),
+			'responses'         => $rsvp->responses(),
 			// Empty for everyone the link isn't for, on exactly the terms the
 			// online-event block renders it with. Sent so an RSVP made without
 			// a reload can reveal or withdraw the meeting link in place (#2094).
@@ -917,13 +917,8 @@ function get_existing_event_fields( int $event_id ): array {
 		$fields['time_end'] = $m[1];
 	}
 
-	$fields['venue_id'] = get_event_venue_post_id( $event_id );
-
-	$venue_taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
-	$venue_terms    = get_the_terms( $event_id, $venue_taxonomy );
-
-	$fields['is_online']         = is_array( $venue_terms )
-		&& in_array( 'online-event', wp_list_pluck( $venue_terms, 'slug' ), true );
+	$fields['venue_id']          = get_event_venue_post_id( $event_id );
+	$fields['is_online']         = ( new Event( $event_id ) )->is_online();
 	$fields['online_event_link'] = (string) get_post_meta(
 		$event_id,
 		'gatherpress_online_event_link',
@@ -1226,6 +1221,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_start )
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
 	) {
+		clear_all_day( $saved_id );
+
 		$event = new Event( $saved_id );
 		$event->save_datetimes(
 			array(
@@ -1235,6 +1232,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'timezone'       => storable_timezone( (string) $request->get_param( 'timezone' ) ),
 			)
 		);
+		sync_block_editor_datetime( $saved_id );
 	}
 
 	// Physical and online venues — same path as the publish flow.
@@ -1245,13 +1243,9 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		)
 	);
-	sync_event_venue_terms(
+	sync_event_venue(
 		$saved_id,
 		$venue_id,
-		(bool) $request->get_param( 'is_online' )
-	);
-	sync_online_event_link(
-		$saved_id,
 		(bool) $request->get_param( 'is_online' ),
 		(string) $request->get_param( 'online_event_link' )
 	);
@@ -1316,6 +1310,53 @@ function update_event( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
 	}
 	return persist_event( $event_id, $request );
+}
+
+/**
+ * Drop GatherPress's "All day" flag before the form saves an event's times.
+ *
+ * Since 0.36.0, `Event::save_datetimes()` snaps the start and end to 00:00:00
+ * and 23:59:59 whenever `gatherpress_is_all_day` is set. The form has no
+ * all-day field and always submits explicit times, so an event once ticked
+ * "All day" in wp-admin would otherwise ignore every time typed here.
+ *
+ * @param int $event_id Event post ID.
+ */
+function clear_all_day( int $event_id ): void {
+	delete_post_meta( $event_id, 'gatherpress_is_all_day' );
+}
+
+/**
+ * Copy the schedule the form just saved into `gatherpress_datetime`.
+ *
+ * The block editor keeps an event's schedule in that meta, and GatherPress
+ * rebuilds the schedule from it on every save. Left stale, it would put the
+ * old date back the next time the event is saved anywhere else. An event
+ * without it is left alone, since GatherPress then reads the fields
+ * `Event::save_datetimes()` writes.
+ *
+ * @param int $event_id Event post ID.
+ */
+function sync_block_editor_datetime( int $event_id ): void {
+	if ( empty( get_post_meta( $event_id, 'gatherpress_datetime', true ) ) ) {
+		return;
+	}
+
+	$datetime = ( new Event( $event_id ) )->get_datetime();
+
+	update_post_meta(
+		$event_id,
+		'gatherpress_datetime',
+		wp_slash(
+			wp_json_encode(
+				array(
+					'dateTimeStart' => $datetime['datetime_start'],
+					'dateTimeEnd'   => $datetime['datetime_end'],
+					'timezone'      => $datetime['timezone'],
+				)
+			)
+		)
+	);
 }
 
 /**
@@ -1451,6 +1492,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
+	clear_all_day( $saved_id );
+
 	$event = new Event( $saved_id );
 	$event->save_datetimes(
 		array(
@@ -1460,11 +1503,11 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 			'timezone'       => $timezone,
 		)
 	);
+	sync_block_editor_datetime( $saved_id );
 
 	// Physical and online venues.
 	$venue_id = resolve_venue_id( $fields );
-	sync_event_venue_terms( $saved_id, $venue_id, $fields['is_online'] );
-	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
+	sync_event_venue( $saved_id, $venue_id, $fields['is_online'], $fields['online_event_link'] );
 
 	set_event_language( $saved_id, $fields['language'] );
 	maybe_save_topics( $saved_id, $request );
@@ -1584,18 +1627,20 @@ function resolve_venue_id( array $fields ): int {
 }
 
 /**
- * Synchronize an event's physical venue and online-event terms.
+ * Synchronize an event's physical venue and online state.
  *
  * GatherPress models hybrid events by assigning both a physical venue's
  * shadow term and the `online-event` sentinel term. Replacing the full term
  * set here also clears a previously selected physical venue when an event is
- * changed to online-only.
+ * changed to online-only; `Event::set_online()` then adds the sentinel back
+ * and owns the meeting link that goes with it.
  *
- * @param int  $event_id     Event post ID.
- * @param int  $venue_post_id Physical venue post ID, or zero for none.
- * @param bool $is_online    Whether to assign the online-event term.
+ * @param int    $event_id          Event post ID.
+ * @param int    $venue_post_id     Physical venue post ID, or zero for none.
+ * @param bool   $is_online         Whether the event is online.
+ * @param string $online_event_link Online meeting URL.
  */
-function sync_event_venue_terms( int $event_id, int $venue_post_id, bool $is_online ): void {
+function sync_event_venue( int $event_id, int $venue_post_id, bool $is_online, string $online_event_link ): void {
 	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
 	$term_ids = array();
 
@@ -1608,32 +1653,15 @@ function sync_event_venue_terms( int $event_id, int $venue_post_id, bool $is_onl
 		}
 	}
 
-	if ( $is_online ) {
-		$online_term = term_exists( 'online-event', $taxonomy );
-		if ( is_array( $online_term ) ) {
-			$term_ids[] = (int) $online_term['term_id'];
-		} elseif ( is_numeric( $online_term ) ) {
-			$term_ids[] = (int) $online_term;
-		}
-	}
-
 	wp_set_object_terms( $event_id, $term_ids, $taxonomy, false );
-}
 
-/**
- * Synchronize the online meeting link with the event's online state.
- *
- * @param int    $event_id         Event post ID.
- * @param bool   $is_online        Whether the event is online.
- * @param string $online_event_link Online meeting URL.
- */
-function sync_online_event_link( int $event_id, bool $is_online, string $online_event_link ): void {
-	if ( $is_online && '' !== $online_event_link ) {
-		update_post_meta( $event_id, 'gatherpress_online_event_link', esc_url_raw( $online_event_link ) );
-		return;
+	( new Event( $event_id ) )->set_online( $is_online, $online_event_link );
+
+	// `set_online()` keeps a saved link when handed an empty one, but here an
+	// empty link means the organizer cleared the field.
+	if ( $is_online && '' === $online_event_link ) {
+		delete_post_meta( $event_id, 'gatherpress_online_event_link' );
 	}
-
-	delete_post_meta( $event_id, 'gatherpress_online_event_link' );
 }
 
 /**

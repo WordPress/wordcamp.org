@@ -36,6 +36,7 @@ function register_blocks(): void {
 		'event-hosts',
 		'event-flyer-link',
 		'event-flyer-qr',
+		'event-short-link',
 		'event-topics',
 		'event-speakers',
 		'event-attendees',

@@ -10,10 +10,9 @@
  *
  * Storage:
  *
- *   - **Check-ins** live in one `wporg_groups_checked_in` comment meta on the
- *     GatherPress RSVP comment, holding the GMT time of the check-in. Like the
- *     registration answers in `rsvp-questions.php`, keeping it on the comment
- *     means it goes away with the RSVP it belongs to.
+ *   - **Check-ins** are GatherPress's own `Check_In` flag on the RSVP
+ *     comment, so the wp-admin RSVPs screen and this page show and change
+ *     the same thing (#2213). GatherPress drops the flag with the RSVP.
  *   - **Which dates use check-in** lives in one `wporg_groups_check_in_scopes`
  *     post meta on the event: the recurrence ids (or `''` for a plain event)
  *     with at least one check-in. Consumers deciding what "attended" means
@@ -54,6 +53,8 @@ namespace WordCamp\Groups\Frontend\Check_In;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Flag\Check_In as Check_In_Flag;
+use GatherPress\Core\Rsvp\Query;
 use GatherPress\Core\Rsvp\Rsvp;
 use WP_Comment;
 use WP_Error;
@@ -67,9 +68,8 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_event
 use function WordCamp\Groups\Frontend\My_Events\get_comment_recurrence_ids;
 use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
 
-const CHECKED_IN_META = 'wporg_groups_checked_in';
-const SCOPES_META     = 'wporg_groups_check_in_scopes';
-const WALK_INS_META   = 'wporg_groups_walk_ins_without_account';
+const SCOPES_META   = 'wporg_groups_check_in_scopes';
+const WALK_INS_META = 'wporg_groups_walk_ins_without_account';
 
 /**
  * Upper bound for walk-ins without an account on one date. Far above any
@@ -89,6 +89,27 @@ const OPENS_BEFORE_START = 60;
  */
 function bootstrap(): void {
 	add_action( 'rest_api_init', __NAMESPACE__ . '\register_routes' );
+	add_action( 'gatherpress_rsvp_flag_added', __NAMESPACE__ . '\on_flag_changed', 10, 2 );
+	add_action( 'gatherpress_rsvp_flag_removed', __NAMESPACE__ . '\on_flag_changed', 10, 2 );
+}
+
+/**
+ * Keep the event's record of which dates use check-in in step with every
+ * check-in, including the ones made from the wp-admin RSVPs screen.
+ *
+ * @param int    $comment_id RSVP comment ID.
+ * @param string $flag       Flag slug.
+ */
+function on_flag_changed( int $comment_id, string $flag ): void {
+	$comment = get_comment( $comment_id );
+
+	if ( Check_In_Flag::SLUG !== $flag || ! $comment instanceof WP_Comment ) {
+		return;
+	}
+
+	$scope = get_comment_recurrence_ids( array( $comment_id ) )[ $comment_id ] ?? '';
+
+	sync_scope( (int) $comment->comment_post_ID, $scope );
 }
 
 /**
@@ -212,31 +233,38 @@ function is_open( Event $event ): bool {
  * @param int $comment_id RSVP comment ID.
  */
 function is_checked_in( int $comment_id ): bool {
-	return '' !== (string) get_comment_meta( $comment_id, CHECKED_IN_META, true );
+	return ( new Check_In_Flag( $comment_id ) )->has();
 }
 
 /**
- * Check an RSVP in, or undo it, and keep the event's record of which dates
- * use check-in in step.
+ * Load the check-ins of many RSVPs in one query, ahead of calling
+ * `is_checked_in()` on each.
+ *
+ * @param int[] $comment_ids RSVP comment IDs.
+ */
+function prime_check_ins( array $comment_ids ): void {
+	$comment_ids = array_filter( array_map( 'intval', $comment_ids ) );
+
+	if ( $comment_ids ) {
+		update_object_term_cache( $comment_ids, 'comment' );
+	}
+}
+
+/**
+ * Check an RSVP in, or undo it. `on_flag_changed()` keeps the event's record
+ * of which dates use check-in in step.
  *
  * @param WP_Comment $comment    RSVP comment.
  * @param bool       $checked_in Whether they came.
  */
 function set_checked_in( WP_Comment $comment, bool $checked_in ): void {
-	$comment_id = (int) $comment->comment_ID;
+	$flag = new Check_In_Flag( (int) $comment->comment_ID );
 
 	if ( $checked_in ) {
-		// Keep the original time when someone is checked in twice.
-		if ( ! is_checked_in( $comment_id ) ) {
-			update_comment_meta( $comment_id, CHECKED_IN_META, current_time( 'mysql', true ) );
-		}
+		$flag->add();
 	} else {
-		delete_comment_meta( $comment_id, CHECKED_IN_META );
+		$flag->remove();
 	}
-
-	$scope = get_comment_recurrence_ids( array( $comment_id ) )[ $comment_id ] ?? '';
-
-	sync_scope( (int) $comment->comment_post_ID, $scope );
 }
 
 /**
@@ -249,17 +277,28 @@ function set_checked_in( WP_Comment $comment, bool $checked_in ): void {
  * @param string $scope    Recurrence ID, or `''` for a plain event.
  */
 function sync_scope( int $event_id, string $scope ): void {
-	$checked_in_ids = get_comments(
-		array(
-			'post_id'  => $event_id,
-			'type'     => Rsvp::COMMENT_TYPE,
-			'status'   => 'approve',
-			'meta_key' => CHECKED_IN_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One event's RSVPs.
-			'fields'   => 'ids',
+	/*
+	 * Filtered here rather than with a `tax_query`: `WP_Comment_Query` keys
+	 * its cache on its own query vars only, so a `tax_query` would share a
+	 * cache entry with the same query without it, and GatherPress's list of
+	 * the event's RSVPs would come back holding only the checked-in ones.
+	 */
+	$rsvp_ids = array_map(
+		'intval',
+		Query::get_instance()->get_rsvps(
+			array(
+				'post_id' => $event_id,
+				'status'  => 'approve',
+				'fields'  => 'ids',
+			)
 		)
 	);
 
-	$recurrence_ids = get_comment_recurrence_ids( array_map( 'intval', $checked_in_ids ) );
+	prime_check_ins( $rsvp_ids );
+
+	$checked_in_ids = array_values( array_filter( $rsvp_ids, __NAMESPACE__ . '\is_checked_in' ) );
+
+	$recurrence_ids = get_comment_recurrence_ids( $checked_in_ids );
 	$has_check_ins  = false;
 
 	foreach ( $checked_in_ids as $comment_id ) {
@@ -372,10 +411,10 @@ function set_walk_in_count( int $event_id, string $recurrence_id, int $count ): 
 /**
  * The date of the event in context, or `''` for a plain event.
  *
- * @param Event $event The event, after `resolve_event()`.
+ * @param int $event_id Event post ID, after `resolve_event()`.
  */
-function current_scope( Event $event ): string {
-	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', (int) $event->event->ID );
+function current_scope( int $event_id ): string {
+	return (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_id );
 }
 
 /**
@@ -418,7 +457,7 @@ function resolve_event( WP_REST_Request $request ) {
 
 	$event = new Event( $event_id );
 
-	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+	if ( ! ( new Rsvp( $event_id ) )->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -449,20 +488,22 @@ function assert_open( Event $event ) {
  * Attending and waiting list only: someone who said they weren't coming is
  * added back through the walk-in field if they turn up anyway.
  *
- * @param Event $event The event, with its occurrence in context.
+ * The event ID is passed alongside the event because GatherPress renamed the
+ * property holding its post (`$event` to `$post` in 0.36.0), so reading it
+ * would tie this file to one version.
+ *
+ * @param Event $event    The event, with its occurrence in context.
+ * @param int   $event_id Event post ID.
  * @return array{attendees: array, checkedInCount: int, walkInsWithoutAccount: int, isOpen: bool}
  */
-function build_list( Event $event ): array {
-	$responses = $event->rsvp->responses();
+function build_list( Event $event, int $event_id ): array {
+	$responses = ( new Rsvp( $event_id ) )->responses();
 	$records   = array_merge(
 		$responses['attending']['records'] ?? array(),
 		$responses['waiting_list']['records'] ?? array()
 	);
 
-	$comment_ids = array_filter( array_map( 'intval', wp_list_pluck( $records, 'commentId' ) ) );
-	if ( $comment_ids ) {
-		update_meta_cache( 'comment', $comment_ids );
-	}
+	prime_check_ins( wp_list_pluck( $records, 'commentId' ) );
 
 	$user_ids = array_filter( array_map( 'intval', wp_list_pluck( $records, 'userId' ) ) );
 	if ( $user_ids ) {
@@ -503,7 +544,7 @@ function build_list( Event $event ): array {
 	return array(
 		'attendees'             => $attendees,
 		'checkedInCount'        => $checked,
-		'walkInsWithoutAccount' => get_walk_in_count( (int) $event->event->ID, current_scope( $event ) ),
+		'walkInsWithoutAccount' => get_walk_in_count( $event_id, current_scope( $event_id ) ),
 		'isOpen'                => is_open( $event ),
 	);
 }
@@ -520,7 +561,7 @@ function get_check_in_list( WP_REST_Request $request ) {
 		return $event;
 	}
 
-	return new WP_REST_Response( build_list( $event ) );
+	return new WP_REST_Response( build_list( $event, (int) $request->get_param( 'id' ) ) );
 }
 
 /**
@@ -540,6 +581,7 @@ function update_check_in( WP_REST_Request $request ) {
 		return $open;
 	}
 
+	$event_id   = (int) $request->get_param( 'id' );
 	$comment_id = (int) $request->get_param( 'comment_id' );
 	$comment    = get_comment( $comment_id );
 
@@ -556,7 +598,7 @@ function update_check_in( WP_REST_Request $request ) {
 	 *   - A "not attending" RSVP: it would switch the date to check-in,
 	 *     dropping everyone who RSVP'd yes from "Events I attended".
 	 */
-	$offered = wp_list_pluck( build_list( $event )['attendees'], 'commentId' );
+	$offered = wp_list_pluck( build_list( $event, $event_id )['attendees'], 'commentId' );
 
 	if ( ! $comment instanceof WP_Comment || ! in_array( $comment_id, $offered, true ) ) {
 		return new WP_Error( 'wporg_groups_invalid_rsvp', 'Invalid RSVP.', array( 'status' => 404 ) );
@@ -564,7 +606,7 @@ function update_check_in( WP_REST_Request $request ) {
 
 	set_checked_in( $comment, (bool) $request->get_param( 'checked_in' ) );
 
-	return new WP_REST_Response( build_list( $event ) );
+	return new WP_REST_Response( build_list( $event, $event_id ) );
 }
 
 /**
@@ -615,7 +657,9 @@ function add_walk_in( WP_REST_Request $request ) {
 		);
 	}
 
-	$existing = $event->rsvp->get( $user->ID );
+	$event_id = (int) $request->get_param( 'id' );
+	$rsvp     = new Rsvp( $event_id );
+	$existing = $rsvp->get( $user->ID );
 	$status   = (string) ( $existing['status'] ?? '' );
 
 	// Someone already attending or on the waiting list keeps their RSVP as it
@@ -623,7 +667,7 @@ function add_walk_in( WP_REST_Request $request ) {
 	// on the waiting list, which doesn't matter here: they are checked in,
 	// and check-in is what records that they came.
 	if ( ! in_array( $status, array( 'attending', 'waiting_list' ), true ) ) {
-		$existing = $event->rsvp->save( $user->ID, 'attending' );
+		$existing = $rsvp->save( $user->ID, 'attending' );
 	}
 
 	$comment = get_comment( (int) ( $existing['comment_id'] ?? 0 ) );
@@ -638,7 +682,7 @@ function add_walk_in( WP_REST_Request $request ) {
 
 	set_checked_in( $comment, true );
 
-	$response            = build_list( $event );
+	$response            = build_list( $event, $event_id );
 	$response['added']   = (int) $comment->comment_ID;
 	$response['message'] = sprintf(
 		/* translators: %s: attendee's display name. */
@@ -666,7 +710,9 @@ function update_walk_in_count( WP_REST_Request $request ) {
 		return $open;
 	}
 
-	set_walk_in_count( (int) $event->event->ID, current_scope( $event ), (int) $request->get_param( 'count' ) );
+	$event_id = (int) $request->get_param( 'id' );
 
-	return new WP_REST_Response( build_list( $event ) );
+	set_walk_in_count( $event_id, current_scope( $event_id ), (int) $request->get_param( 'count' ) );
+
+	return new WP_REST_Response( build_list( $event, $event_id ) );
 }

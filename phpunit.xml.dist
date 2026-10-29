@@ -26,6 +26,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Badge Generator">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-badge-generator/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="CampTix Attendance">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/camptix-attendance/tests/
@@ -65,6 +71,12 @@
 		<testsuite name="Multi-Event Sponsors">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/multi-event-sponsors/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="Open Horizons">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/open-horizons/tests/
 			</directory>
 		</testsuite>
 
@@ -138,6 +150,9 @@
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
 			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Groups Network">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/groups/tests/
 			</directory>

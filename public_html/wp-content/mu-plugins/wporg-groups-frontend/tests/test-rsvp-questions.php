@@ -556,7 +556,7 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 		);
 
 		// One seat, already taken, so the next RSVP lands on the waiting list.
-		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+		update_post_meta( $event_id, 'gatherpress_capacity', 1 );
 
 		$first = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $first );
@@ -753,5 +753,107 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 
 		wp_set_current_user( $editor_id );
 		$this->assertTrue( \WordCamp\Groups\Frontend\RSVP_Questions\current_user_can_view_answers( $event_id ) );
+	}
+
+	/**
+	 * Questions are stored as a GatherPress form schema, so GatherPress's own
+	 * validation reads them as custom fields.
+	 */
+	public function test_questions_are_stored_as_a_gatherpress_schema() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'       => 'company',
+					'label'    => 'Company name',
+					'required' => true,
+				),
+			)
+		);
+
+		$fields = \GatherPress\Core\Blocks\Rsvp_Form::get_instance()->get_schema_fields( $event_id, 'wporg_groups' );
+
+		$this->assertSame( array( 'company' ), array_keys( $fields ) );
+		$this->assertSame( 'text', $fields['company']['type'] );
+		$this->assertSame( 'Company name', $fields['company']['label'] );
+		$this->assertTrue( $fields['company']['required'] );
+
+		$errors = \GatherPress\Core\Blocks\Rsvp_Form::get_instance()->validate_custom_fields( $event_id, 'wporg_groups', array() );
+		$this->assertArrayHasKey( 'company', $errors );
+	}
+
+	/**
+	 * GatherPress rebuilds the schemas from RSVP Form blocks on every save.
+	 * Our schema survives that, and schemas from blocks survive ours.
+	 */
+	public function test_schema_survives_a_post_save() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_content' => '<!-- wp:gatherpress/rsvp-form --><!-- wp:gatherpress/form-field {"fieldName":"tshirt","label":"T-shirt"} /--><!-- /wp:gatherpress/rsvp-form -->',
+			)
+		);
+
+		$schemas = get_post_meta( $event_id, 'gatherpress_rsvp_form_schemas', true );
+		$this->assertSame( array( 'form_0', 'wporg_groups' ), array_keys( $schemas ) );
+		$this->assertSame( 'Company name', get_questions( $event_id )[0]['label'] );
+
+		// Clearing our questions leaves the block's schema in place.
+		save_questions( $event_id, array() );
+
+		$schemas = get_post_meta( $event_id, 'gatherpress_rsvp_form_schemas', true );
+		$this->assertSame( array( 'form_0' ), array_keys( $schemas ) );
+		$this->assertSame( array(), get_questions( $event_id ) );
+	}
+
+	/**
+	 * Each answer is its own `gatherpress_custom_*` comment meta, the key
+	 * GatherPress uses for custom fields.
+	 */
+	public function test_answers_are_stored_as_gatherpress_custom_fields() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+				array(
+					'id'    => 'diet',
+					'label' => 'Dietary needs',
+				),
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		save_rsvp(
+			$this->rsvp_request(
+				$event_id,
+				'attending',
+				array(
+					'company' => 'Automattic',
+					'diet'    => 'Vegan',
+				)
+			)
+		);
+
+		$rsvp       = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( get_current_user_id() );
+		$comment_id = (int) $rsvp['comment_id'];
+
+		$this->assertSame( 'Automattic', get_comment_meta( $comment_id, 'gatherpress_custom_company', true ) );
+		$this->assertSame( 'Vegan', get_comment_meta( $comment_id, 'gatherpress_custom_diet', true ) );
+
+		save_rsvp( $this->rsvp_request( $event_id, 'not_attending' ) );
+
+		$this->assertSame( '', get_comment_meta( $comment_id, 'gatherpress_custom_company', true ) );
+		$this->assertSame( '', get_comment_meta( $comment_id, 'gatherpress_custom_diet', true ) );
 	}
 }

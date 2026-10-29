@@ -593,6 +593,11 @@ class WordCamp_New_Site {
 					update_post_meta( $new_post_id, $key, $value );
 				}
 
+				// So a later Push to Active WordCamps can tell whether organizers edited it.
+				if ( is_callable( array( 'MES_Sponsor', 'record_pushed_copy' ) ) ) {
+					MES_Sponsor::record_pushed_copy( $new_post_id );
+				}
+
 				// Set featured image.
 				if ( ! empty( $me_stub['featured_image'] ) ) {
 					$results = media_sideload_image( $me_stub['featured_image'], $new_post_id );

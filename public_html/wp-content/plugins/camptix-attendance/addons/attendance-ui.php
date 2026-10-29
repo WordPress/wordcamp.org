@@ -27,6 +27,7 @@ $camptix_options = $camptix->get_options();
 		// Session-bound CSRF token for bulk actions; only useful when the viewer
 		// is a logged-in organizer (the bulk endpoint requires that anyway).
 		_camptixAttendanceBulkNonce = '<?php echo esc_js( wp_create_nonce( 'camptix-attendance-bulk' ) ); ?>';
+		_camptixAttendanceQRScanning = <?php echo ! empty( $camptix_options['attendance-qr-enabled'] ) ? 'true' : 'false'; ?>;
 	</script>
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
@@ -79,6 +80,9 @@ $camptix_options = $camptix->get_options();
 					<a href="#" class="search">Search</a>
 					<a href="#" class="filter">Sort & Filter</a>
 					<a href="#" class="refresh">Refresh</a>
+					<?php if ( ! empty( $camptix_options['attendance-qr-enabled'] ) ) : ?>
+						<a href="#" class="qr">QR Scanner</a>
+					<?php endif; ?>
 				</div>
 			</div>
 			<h1><?php echo esc_html( $camptix_options['event_name'] ); ?></h1>
@@ -91,6 +95,7 @@ $camptix_options = $camptix->get_options();
 					<span>Loading...</span>
 				</li>
 			</ul>
+			<div class="qr-scanner-wrap"><div id="qr-scanner"></div><p class="qr-scanner-message" role="status" aria-live="polite"></p></div>
 		</div>
 	</script>
 

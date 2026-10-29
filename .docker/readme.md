@@ -2,7 +2,21 @@
 
 Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/). _Assume all command blocks start in the root directory (wordcamp.test) of the project._
 
-1. Make sure you have Docker installed and running on your system.
+1. Make sure you have a Docker runtime installed and running. On macOS, use [Colima](https://github.com/abiosoft/colima). It's free and open source and needs no account.
+    ```bash
+    brew install colima docker docker-compose
+    colima start --cpu 4 --memory 4
+    ```
+
+    Homebrew installs Compose as a Docker CLI plugin outside the CLI's search path. On Apple Silicon, point the CLI at it by adding this property to `~/.docker/config.json`, keeping whatever else is already in the file:
+
+    ```json
+    "cliPluginsExtraDirs": [ "/opt/homebrew/lib/docker/cli-plugins" ]
+    ```
+
+    Colima remembers the CPU and memory settings, so later starts are just `colima start`. To start it at login instead, run `brew services start colima`.
+
+    On Windows, consider using [Rancher Desktop](https://rancherdesktop.io/) with its dockerd (moby) engine, or [Docker Desktop](https://www.docker.com/products/docker-desktop/). On Linux, use [Docker Engine](https://docs.docker.com/engine/install/).
 
 1. Clone the repo:
     ```bash
@@ -167,6 +181,13 @@ free to bind 443 on a *different* address.
 Note that this does not free up `0.0.0.0:443` — another stack that wants to bind
 every interface will still collide with this one. If that's what you're up
 against, change the port instead (above).
+
+### Colima and IPv6
+
+Colima forwards ports to the Mac over IPv4 only, so `[::1]` doesn't answer
+even though the containers bind it. The hosts-file entries point at
+`127.0.0.1` and `localhost` falls back to IPv4, so the sites, MailCatcher and
+MariaDB all work as usual; it only shows up in a tool that insists on `::1`.
 
 ### MailCatcher and MariaDB
 

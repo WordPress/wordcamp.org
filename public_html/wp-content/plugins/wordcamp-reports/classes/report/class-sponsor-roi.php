@@ -35,8 +35,17 @@ class Sponsor_ROI extends Base {
 	/**
 	 * Bump when the shape or meaning of the cached rows changes, so rows cached by an older
 	 * version aren't served after a deploy. 2: tiers read on Central, names decoded (#2193).
+	 * 3: "measured" needs a minimum share checked in (#1946).
 	 */
-	const CACHE_VERSION = 2;
+	const CACHE_VERSION = 3;
+
+	/**
+	 * The share of registered attendees that must be checked in for a camp's attendance
+	 * to count as measured. Filterable with `wordcamp_reports_sponsor_roi_min_checkin_share`.
+	 *
+	 * @var float
+	 */
+	const DEFAULT_MIN_CHECKIN_SHARE = 0.25;
 
 	/**
 	 * Invoice statuses that count toward spend when including sent invoices.
@@ -89,7 +98,7 @@ class Sponsor_ROI extends Base {
 		<ol>
 			<li>Retrieve the WordCamps whose start date falls within the specified date range (WordCamp Details report), skipping camps without a website.</li>
 			<li>On each camp site, list published Sponsor posts. For each sponsor, sum their Sponsor Invoice amounts — paid invoices only by default — grouped by currency, and normalize to USD at the event-date exchange rate.</li>
-			<li>Count the camp's reach: published attendee records (registered) and attendees marked as attended via CampTix check-in (checked in). When no check-in data exists at all, the camp is flagged 'attendance not measured' rather than counted as zero.</li>
+			<li>Count the camp's reach: published attendee records (registered) and attendees marked as attended via CampTix check-in (checked in). When fewer than 25% of registered attendees (by default) were checked in, check-in probably wasn't really used there, so the camp is flagged 'attendance not measured' and both its check-ins and its spend are left out of cost per checked-in attendee rather than counted.</li>
 			<li>Roll the per-camp rows up into one portfolio per Multi-Event Sponsor agreement (sponsors without an agreement stay as single-camp rows) and compute cost per registered / checked-in attendee.</li>
 		</ol>
 	";
@@ -128,6 +137,13 @@ class Sponsor_ROI extends Base {
 	 * @var array|null
 	 */
 	protected $wordcamps = null;
+
+	/**
+	 * The share of registered attendees that must be checked in for attendance to count as measured.
+	 *
+	 * @var float
+	 */
+	protected $min_checkin_share = self::DEFAULT_MIN_CHECKIN_SHARE;
 
 	/**
 	 * Data fields that can be visible in a public context.
@@ -176,6 +192,15 @@ class Sponsor_ROI extends Base {
 
 		$this->mes_id = absint( $mes_id );
 
+		/**
+		 * Filter the share of registered attendees that must be checked in for a camp's
+		 * attendance to count as measured in the Sponsor ROI report.
+		 *
+		 * @param float $min_checkin_share Between 0 and 1. Default 0.25.
+		 */
+		$min_checkin_share       = (float) apply_filters( 'wordcamp_reports_sponsor_roi_min_checkin_share', self::DEFAULT_MIN_CHECKIN_SHARE );
+		$this->min_checkin_share = min( 1.0, max( 0.0, $min_checkin_share ) );
+
 		try {
 			$this->range = validate_date_range( $start_date, $end_date, $options );
 		} catch ( Exception $e ) {
@@ -207,6 +232,10 @@ class Sponsor_ROI extends Base {
 
 		if ( ! empty( $this->options['include_sent_invoices'] ) ) {
 			$cache_key_segments[] = '+sent';
+		}
+
+		if ( self::DEFAULT_MIN_CHECKIN_SHARE !== $this->min_checkin_share ) {
+			$cache_key_segments[] = 'checkin-' . $this->min_checkin_share;
 		}
 
 		return implode( '_', $cache_key_segments );
@@ -469,7 +498,9 @@ class Sponsor_ROI extends Base {
 	 *
 	 * Camps where attendance wasn't measured contribute to `registered` but not
 	 * to `attended` — unknown is not zero — and are counted in `unmeasured_camps`
-	 * so the display layer can caveat the cost-per-attended ratio.
+	 * so the display layer can caveat the cost-per-attended ratio. Their spend is
+	 * left out of `measured_spend_usd` too, so cost per checked-in attendee only
+	 * divides the spend of camps whose check-ins it counts.
 	 *
 	 * @param array $data The data to compile.
 	 *
@@ -488,11 +519,12 @@ class Sponsor_ROI extends Base {
 					'camps'        => array(),
 					'tiers'        => array(),
 					'totals'       => array(
-						'spend_usd'        => 0.0,
-						'registered'       => 0,
-						'attended'         => 0,
-						'camp_count'       => 0,
-						'unmeasured_camps' => 0,
+						'spend_usd'          => 0.0,
+						'measured_spend_usd' => 0.0,
+						'registered'         => 0,
+						'attended'           => 0,
+						'camp_count'         => 0,
+						'unmeasured_camps'   => 0,
 					),
 					'ratios'       => array(
 						'cost_per_registered' => null,
@@ -508,19 +540,21 @@ class Sponsor_ROI extends Base {
 			++$portfolios[ $key ]['totals']['camp_count'];
 
 			if ( ! empty( $row['attendance_measured'] ) ) {
-				$portfolios[ $key ]['totals']['attended'] += $row['attended'];
+				$portfolios[ $key ]['totals']['attended']           += $row['attended'];
+				$portfolios[ $key ]['totals']['measured_spend_usd'] += $row['spend_usd'] ?? 0.0;
 			} else {
 				++$portfolios[ $key ]['totals']['unmeasured_camps'];
 			}
 		}
 
 		foreach ( $portfolios as &$portfolio ) {
-			$spend      = $portfolio['totals']['spend_usd'];
-			$registered = $portfolio['totals']['registered'];
-			$attended   = $portfolio['totals']['attended'];
+			$spend          = $portfolio['totals']['spend_usd'];
+			$measured_spend = $portfolio['totals']['measured_spend_usd'];
+			$registered     = $portfolio['totals']['registered'];
+			$attended       = $portfolio['totals']['attended'];
 
 			$portfolio['ratios']['cost_per_registered'] = $registered > 0 ? $spend / $registered : null;
-			$portfolio['ratios']['cost_per_attended']   = $attended > 0 ? $spend / $attended : null;
+			$portfolio['ratios']['cost_per_attended']   = $attended > 0 ? $measured_spend / $attended : null;
 		}
 		unset( $portfolio );
 
@@ -613,7 +647,9 @@ class Sponsor_ROI extends Base {
 	 * Count registered and checked-in attendees for the current (switched) site.
 	 *
 	 * `measured` distinguishes "check-in wasn't used at this event" from a real zero,
-	 * so events checked in with external tools aren't reported as 100% no-show.
+	 * so events checked in with external tools aren't reported as 100% no-show. A camp
+	 * only counts as measured once a minimum share of its attendees were checked in,
+	 * so a test scan or a handful of check-ins doesn't make the rest look like no-shows.
 	 *
 	 * @return array { 'registered' => int, 'attended' => int, 'measured' => bool }
 	 */
@@ -635,23 +671,13 @@ class Sponsor_ROI extends Base {
 			'meta_value'     => '1', // A boolean true lands in the database as the string '1'.
 		) );
 
-		$measured = new \WP_Query( array(
-			'post_type'      => 'tix_attendee',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-			'meta_query'     => array(
-				array(
-					'key'     => 'tix_attended',
-					'compare' => 'EXISTS',
-				),
-			),
-		) );
+		$registered_count = (int) $registered->found_posts;
+		$attended_count   = (int) $attended->found_posts;
 
 		return array(
-			'registered' => (int) $registered->found_posts,
-			'attended'   => (int) $attended->found_posts,
-			'measured'   => $measured->found_posts > 0,
+			'registered' => $registered_count,
+			'attended'   => $attended_count,
+			'measured'   => $attended_count > 0 && $attended_count >= $registered_count * $this->min_checkin_share,
 		);
 	}
 

@@ -1164,6 +1164,9 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	return new WP_REST_Response(
 		array(
 			'is_editing' => $is_editing,
+			// A draft opened for editing is still published by its next
+			// save, so the form offers what it offers a new event.
+			'is_published' => $is_editing && 'publish' === get_post_status( $event_id ),
 			'event_id'   => $is_editing ? $event_id : 0,
 			'fields'     => $fields,
 			'venues'     => $venues,

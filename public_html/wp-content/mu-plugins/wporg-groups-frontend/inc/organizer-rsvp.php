@@ -30,6 +30,11 @@ defined( 'WPINC' ) || die();
  */
 const PARAM = 'rsvp_organizer';
 
+/**
+ * The RSVP confirmation email's hook callback, skipped for this RSVP.
+ */
+const CONFIRMATION_CALLBACK = 'WordCamp\Groups\Frontend\RSVP_Confirmation\send_confirmation';
+
 /** Registers the hooks. */
 function bootstrap(): void {
 	add_filter( 'wporg_groups_frontend_event_args_schema', __NAMESPACE__ . '\add_arg' );
@@ -100,7 +105,15 @@ function maybe_rsvp_organizer( int $event_id, WP_REST_Request $request, bool $sc
 		Context::set( $occurrence );
 	}
 
+	// No "You're going" email: the organizer already gets one saying the
+	// event is published, and two for a single click is noise.
+	$confirms = remove_action( 'set_object_terms', CONFIRMATION_CALLBACK, 10 );
+
 	$rsvp->save( $user_id, 'attending' );
+
+	if ( $confirms ) {
+		add_action( 'set_object_terms', CONFIRMATION_CALLBACK, 10, 6 );
+	}
 
 	if ( $occurrence ) {
 		Context::set( $previous );

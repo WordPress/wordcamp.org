@@ -108,6 +108,9 @@ function EventForm(
 	// The browser-side minimum date only applies to a brand-new event; the server validates a loaded post's date.
 	const [ isExistingPost, setIsExistingPost ] = useState( false );
 
+	// A draft, even one opened for editing, is published by this form's next save.
+	const [ isPublished, setIsPublished ] = useState( false );
+
 	/**
 	 * Description is intentionally NOT in form state - the inline block editor
 	 * owns it. We grab the current value via `descriptionRef` only at
@@ -171,6 +174,7 @@ function EventForm(
 				setLanguages( res.languages || [] );
 				setTopicSuggestions( res.topics || [] );
 				setIsExistingPost( !! res.is_editing );
+				setIsPublished( !! res.is_published );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( {
 					id: res.fields.featured_image_id || 0,
@@ -192,7 +196,7 @@ function EventForm(
 					// 0 is "no limit", shown as an empty field.
 					capacity: res.fields.capacity ? String( res.fields.capacity ) : '',
 					// Only a new event or a draft is published by this form.
-					rsvp_organizer: ! isEdit,
+					rsvp_organizer: ! res.is_published,
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -411,7 +415,8 @@ function EventForm(
 				onChange={ ( v ) => updateField( 'capacity', v ) }
 				__nextHasNoMarginBottom
 			/>
-			{ ! isEdit && (
+
+			{ ! isPublished && (
 				<CheckboxControl
 					label={ __( "I'm attending", 'wordcamporg' ) }
 					help={ __( 'Adds you to the attendee list when the event is published. For a repeating event, that is the first date.', 'wordcamporg' ) }

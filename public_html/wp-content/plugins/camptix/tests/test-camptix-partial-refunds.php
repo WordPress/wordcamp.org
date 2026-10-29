@@ -189,7 +189,8 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 	 * @param int    $post_id
 	 */
 	public function record_log( $message, $post_id ) {
-		$this->logs[ $post_id ][] = $message;
+		// Some log lines (e.g. a failed lock) carry no attendee; key those under 0.
+		$this->logs[ (int) $post_id ][] = $message;
 	}
 
 	/**
@@ -218,18 +219,21 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 	/**
 	 * Create a paid order, one attendee per price.
 	 *
-	 * @param float[] $prices Each ticket's price, after any coupon.
-	 * @param string  $token  The order's payment and access token.
+	 * @param float[]    $prices Each ticket's price, after any coupon.
+	 * @param string     $token  The order's payment and access token.
+	 * @param float|null $total  The amount actually paid. Defaults to the prices' sum; pass a
+	 *                           smaller value for a discounted order whose ticket prices add up to
+	 *                           more than was charged.
 	 *
 	 * @return int[] The attendee IDs.
 	 */
-	protected function make_order( $prices, $token = 'tokpartial' ) {
+	protected function make_order( $prices, $token = 'tokpartial', $total = null ) {
 		$ticket    = self::factory()->post->create( array(
 			'post_type'   => 'tix_ticket',
 			'post_status' => 'publish',
 			'post_title'  => 'General Admission',
 		) );
-		$total     = array_sum( $prices );
+		$total     = $total ?? array_sum( $prices );
 		$attendees = array();
 
 		foreach ( $prices as $i => $price ) {
@@ -355,7 +359,8 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 
 	/**
 	 * The last ticket left on the order has no checkbox, but is still refunded as the
-	 * remainder of a partially refunded payment.
+	 * remainder of a partially refunded payment. The form names it, so the refund can tell
+	 * it from a stale request for a ticket that was refunded meanwhile.
 	 */
 	public function test_refunding_the_last_ticket_after_a_partial_refund() {
 		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
@@ -363,10 +368,11 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		$this->refund_form( 'tokpartial', array( $first ) );
 
 		$form = $this->refund_form();
-		$this->assertStringNotContainsString( 'tix_refund_attendee_ids', $form );
+		$this->assertStringNotContainsString( 'class="tix-refund-attendee"', $form );
+		$this->assertStringContainsString( '<input type="hidden" name="tix_refund_attendee_ids[]" value="' . $second . '" />', $form );
 		$this->assertStringContainsString( 'data-remainder="15"', $form );
 
-		$this->refund_form( 'tokpartial', array() );
+		$this->refund_form( 'tokpartial', array( $second ) );
 
 		$this->assertSame( array( array( 10.0, false ), array( 15.0, true ) ), $this->gateway->partial_refunds );
 		$this->assertSame( 'refund', get_post_status( $second ) );
@@ -518,5 +524,162 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 		$this->assertSame( 're_1', get_post_meta( $first, 'tix_refund_transaction_id', true ) );
 		$this->assertSame( 're_later', get_post_meta( $second, 'tix_refund_transaction_id', true ) );
 		$this->assertSame( 'refund', get_post_status( $second ) );
+	}
+
+	/**
+	 * A request whose selected ticket was already refunded by an earlier request refunds
+	 * nothing and makes no gateway call. This is the window two parallel requests for the same
+	 * ticket used to race through: both read it as paid, both refunded it, and the order was
+	 * refunded more than once while its other tickets stayed valid. The refund now re-reads the
+	 * order's status before acting, so the second request sees the first's refund.
+	 */
+	public function test_a_stale_selection_of_an_already_refunded_ticket_refunds_nothing() {
+		list( $first, $second, $third ) = $this->make_order( array( 10, 15, 20 ) );
+
+		$this->refund_form( 'tokpartial', array( $first ) );
+		$this->assertCount( 1, $this->gateway->partial_refunds );
+
+		// A second request still naming the ticket the first one just refunded.
+		$output = $this->refund_form( 'tokpartial', array( $first ) );
+
+		$this->assertStringContainsString( 'Please select at least one ticket to refund.', $output );
+		$this->assertCount( 1, $this->gateway->partial_refunds, 'The already-refunded ticket must not be refunded again.' );
+		$this->assertSame( 'refund', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+		$this->assertSame( 'publish', get_post_status( $third ) );
+		$this->assertEquals( 10, get_post_meta( $first, 'tix_refund_amount', true ) );
+	}
+
+	/**
+	 * The same stale request, on an order with a single ticket left, refunds nothing either. With
+	 * one ticket left the form offers no choice, so the request must not fall through to refunding
+	 * whatever is left: that is the ticket nobody asked to refund.
+	 */
+	public function test_a_stale_selection_with_one_ticket_left_refunds_nothing() {
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+
+		$this->refund_form( 'tokpartial', array( $first ) );
+		$this->assertCount( 1, $this->gateway->partial_refunds );
+
+		// A second request still naming the ticket the first one just refunded.
+		$output = $this->refund_form( 'tokpartial', array( $first ) );
+
+		$this->assertStringContainsString( 'Please select at least one ticket to refund.', $output );
+		$this->assertCount( 1, $this->gateway->partial_refunds, 'The ticket that is left must not be refunded.' );
+		$this->assertSame( 'refund', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+	}
+
+	/**
+	 * While another request holds the order's refund lock, a refund is refused rather than
+	 * reading the tickets as still paid and refunding them again. The lock is the order's
+	 * payment token, not the access token the request carries.
+	 */
+	public function test_a_refund_is_refused_while_the_order_is_locked() {
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+
+		update_post_meta( $first, 'tix_payment_token', 'tokpaid' );
+		update_post_meta( $second, 'tix_payment_token', 'tokpaid' );
+
+		// Hold the order's lock on another connection, the way a parallel request would. A second
+		// connection is the point of the test, so $wpdb (one connection) can't stand in here.
+		$held = new mysqli( DB_HOST, DB_USER, DB_PASSWORD, DB_NAME ); // phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- a second connection is the point of the test; $wpdb owns one.
+		$name = sprintf( 'camptix_refund_%d_%s', get_current_blog_id(), 'tokpaid' );
+		$held->query( "SELECT GET_LOCK('" . $held->real_escape_string( $name ) . "', 0)" );
+
+		$output = $this->refund_form( 'tokpartial', array( $first ) );
+
+		$held->query( "SELECT RELEASE_LOCK('" . $held->real_escape_string( $name ) . "')" );
+		$held->close();
+
+		$this->assertStringContainsString( 'Can not refund the transaction at this time.', $output );
+		$this->assertSame( array(), $this->gateway->partial_refunds );
+		$this->assertSame( 'publish', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+	}
+
+	/**
+	 * Under the lock, the amount left to refund is read fresh, not from the meta cache that
+	 * form_refund_request() primed before the lock. A ticket another request refunded while this
+	 * one waited for the lock must count against the refundable amount, or this request would
+	 * over-refund the order. Single process can't race, so this commits the other request's refund
+	 * straight to the DB, leaving this request's primed cache holding the pre-refund value.
+	 */
+	public function test_refundable_amount_is_read_fresh_under_the_lock() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix, $wpdb;
+
+		list( $first ) = $this->make_order( array( 10, 15 ) );
+
+		// Prime this request's meta cache the way the pre-lock loop does: it reads other keys, which
+		// loads the whole meta array for the post, including the (still empty) tix_refund_amount.
+		get_post_meta( $first, 'tix_refund_amount', true );
+
+		// A concurrent request refunded $first: committed to the DB, invisible to the primed cache.
+		$wpdb->insert(
+			$wpdb->postmeta,
+			array(
+				'post_id'    => $first,
+				'meta_key'   => 'tix_refund_amount',
+				'meta_value' => 10,
+			)
+		);
+
+		$lock = new ReflectionProperty( $camptix, 'refund_lock_name' );
+		$lock->setValue( $camptix, 'test-lock' );
+
+		$get_refundable = new ReflectionMethod( $camptix, 'get_refundable_amount' );
+		$refundable = $get_refundable->invoke( $camptix, 25, array( $first ) );
+
+		$lock->setValue( $camptix, '' );
+
+		// 25 - 10, not 25 - 0 (which is what the stale primed cache would give).
+		$this->assertSame( 15.0, $refundable );
+	}
+
+	/**
+	 * Under the lock, the order's active attendees are re-queried fresh, so a ticket another
+	 * request refunded while this one waited drops out of the selection. Without the uncached
+	 * read the cached query would still list it as active and this request could refund it again.
+	 */
+	public function test_active_attendees_are_read_fresh_under_the_lock() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix, $wpdb;
+
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+
+		$method = new ReflectionMethod( $camptix, 'get_order_active_attendees' );
+
+		// Prime the query cache with both tickets active (lock not held → cached).
+		$method->invoke( $camptix, 'tokpartial' );
+
+		// A concurrent request refunded $first: committed to the DB without busting the query cache.
+		$wpdb->update( $wpdb->posts, array( 'post_status' => 'refund' ), array( 'ID' => $first ) );
+
+		$lock = new ReflectionProperty( $camptix, 'refund_lock_name' );
+		$lock->setValue( $camptix, 'test-lock' );
+		$active = $method->invoke( $camptix, 'tokpartial' );
+		$lock->setValue( $camptix, '' );
+
+		$ids = wp_list_pluck( $active, 'ID' );
+		$this->assertNotContains( $first, $ids );
+		$this->assertContains( $second, $ids );
+	}
+
+	/**
+	 * A partial refund never asks the gateway for more than is left on the order, even when the
+	 * selected tickets' prices add up to more — as they can on a discounted order, where the ticket
+	 * prices sum to more than was charged.
+	 */
+	public function test_a_partial_refund_is_capped_at_the_amount_left() {
+		// Three $15 tickets on a $20 order.
+		list( $first, $second, $third ) = $this->make_order( array( 15, 15, 15 ), 'tokcap', 20 );
+
+		// The first refund is the ticket's price; the second is capped at the 5 left, not 15.
+		$this->refund_form( 'tokcap', array( $first ) );
+		$this->refund_form( 'tokcap', array( $second ) );
+
+		$this->assertSame( array( array( 15.0, false ), array( 5.0, false ) ), $this->gateway->partial_refunds );
+		$this->assertEquals( 5, get_post_meta( $second, 'tix_refund_amount', true ) );
 	}
 }

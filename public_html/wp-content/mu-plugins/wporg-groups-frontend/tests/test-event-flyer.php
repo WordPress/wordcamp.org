@@ -648,4 +648,39 @@ class Test_Event_Flyer extends Groups_TestCase {
 			$output
 		);
 	}
+
+	/**
+	 * The event page shows the short link, with a copy button that only
+	 * shows once its script can work it (#2259).
+	 */
+	public function test_event_page_shows_the_short_link() {
+		$event_id = $this->create_event();
+		$short    = home_url( "e/{$event_id}/" );
+
+		$this->go_to( get_permalink( $event_id ) );
+		$output = do_blocks( '<!-- wp:wporg/event-short-link /-->' );
+
+		$this->assertStringContainsString( 'href="' . esc_url( $short ) . '"', $output );
+		$this->assertStringContainsString( '>' . esc_html( preg_replace( '#^https?://#', '', $short ) ) . '</a>', $output );
+		$this->assertStringContainsString( 'data-url="' . esc_url( $short ) . '"', $output );
+		$this->assertMatchesRegularExpression( '/<button[^>]*class="wporg-event-short-link__copy"[^>]*\shidden/', $output );
+	}
+
+	/**
+	 * On a dated event page, the short link is for that date, as on its
+	 * flyer.
+	 */
+	public function test_dated_event_page_shows_its_dated_short_link() {
+		$event_id    = $this->create_recurring_event();
+		$occurrences = Occurrences::all( $event_id, 'upcoming', 10 );
+		$second      = $occurrences[1];
+		$short       = home_url( "e/{$event_id}/" . substr( $second->recurrence_id, 0, 8 ) . '/' );
+
+		$this->go_to( Context::occurrence_url( $event_id, $second->recurrence_id ) );
+		Context::resolve();
+
+		$output = do_blocks( '<!-- wp:wporg/event-short-link /-->' );
+
+		$this->assertStringContainsString( 'href="' . esc_url( $short ) . '"', $output );
+	}
 }

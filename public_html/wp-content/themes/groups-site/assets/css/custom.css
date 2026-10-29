@@ -901,7 +901,8 @@ body.error404 .site-content-container h1 {
 .groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
 .groups-site-event-info-card .groups-site-online-event .wp-block-icon,
 .groups-site-event-info-card .groups-site-add-to-calendar .wp-block-icon,
-.groups-site-event-info-card .groups-site-print-flyer .wp-block-icon {
+.groups-site-event-info-card .groups-site-print-flyer .wp-block-icon,
+.groups-site-event-info-card .groups-site-short-link .wp-block-icon {
 	color: var(--wp--preset--color--charcoal-4);
 	flex: 0 0 auto;
 }

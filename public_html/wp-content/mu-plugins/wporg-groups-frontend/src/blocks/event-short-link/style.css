@@ -1,0 +1,55 @@
+/*
+ * A row of the info card, like "Add to calendar" and "Print flyer": the link
+ * beside its icon, with a small copy button after it. A long site path wraps
+ * rather than pushing the card wider.
+ */
+
+.wporg-event-short-link {
+	align-items: center;
+	display: flex;
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--10);
+	margin: 0;
+	min-width: 0;
+}
+
+.wporg-event-short-link__url {
+	overflow-wrap: anywhere;
+}
+
+.wporg-event-short-link__copy {
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 2px;
+	color: var(--wp--preset--color--charcoal-0);
+	cursor: pointer;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	line-height: 1.5;
+	padding: 2px var(--wp--preset--spacing--10);
+}
+
+.wporg-event-short-link__copy:hover {
+	background: var(--wp--preset--color--light-grey-2);
+}
+
+.wporg-event-short-link__copy:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+}
+
+.wporg-event-short-link__copy[hidden] {
+	display: none;
+}
+
+.wporg-event-short-link__status {
+	color: var(--wp--preset--color--charcoal-4);
+	flex-basis: 100%;
+	font-size: var(--wp--preset--font-size--extra-small);
+}
+
+.wporg-event-short-link__status:empty {
+	display: none;
+}

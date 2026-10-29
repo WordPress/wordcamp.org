@@ -19,6 +19,7 @@ import {
 import {
 	TextControl,
 	Button,
+	CheckboxControl,
 	ToggleControl,
 	Notice,
 	Spinner,
@@ -59,6 +60,7 @@ const EMPTY_FORM = {
 	topics: [],
 	hosts: [],
 	capacity: '',
+	rsvp_organizer: true,
 	rsvp_questions: [],
 };
 
@@ -189,6 +191,8 @@ function EventForm(
 					hosts: res.fields.hosts || [],
 					// 0 is "no limit", shown as an empty field.
 					capacity: res.fields.capacity ? String( res.fields.capacity ) : '',
+					// Only a new event or a draft is published by this form.
+					rsvp_organizer: ! isEdit,
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -407,6 +411,15 @@ function EventForm(
 				onChange={ ( v ) => updateField( 'capacity', v ) }
 				__nextHasNoMarginBottom
 			/>
+			{ ! isEdit && (
+				<CheckboxControl
+					label={ __( "I'm attending", 'wordcamporg' ) }
+					help={ __( 'Adds you to the attendee list when the event is published. For a repeating event, that is the first date.', 'wordcamporg' ) }
+					checked={ !! form.rsvp_organizer }
+					onChange={ ( checked ) => updateField( 'rsvp_organizer', checked ) }
+					__nextHasNoMarginBottom
+				/>
+			) }
 
 			<RsvpQuestionsEditor
 				questions={ form.rsvp_questions }

@@ -41,14 +41,16 @@ test.describe( 'cancelling an RSVP', () => {
 		await modal.getByLabel( 'Date', { exact: true } ).fill( DATE );
 		await modal.getByLabel( 'Start time' ).fill( START );
 		await modal.getByLabel( 'Duration' ).selectOption( { label: '1 hour' } );
+		// Publishing RSVPs the organizer unless they untick this (#2255). Start
+		// from the state any member would see.
+		await modal.getByLabel( "I'm attending" ).uncheck();
 		await modal.getByRole( 'button', { name: 'Create event' } ).click();
 		await page.waitForURL( /\/event\//, { timeout: 30000 } );
 
 		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wp-block-button__link' );
 		const cancel = page.locator( '.wporg-event-rsvp__cancel' );
 
-		// Publishing an event doesn't RSVP the organizer to it, so this starts
-		// from the same state any member would.
+		// Unticked "I'm attending" leaves the organizer without an RSVP.
 		await expect( rsvpButton ).toHaveText( /^RSVP$/ );
 		await expect( cancel ).toHaveCount( 1 );
 		await expect( cancel ).toBeHidden();

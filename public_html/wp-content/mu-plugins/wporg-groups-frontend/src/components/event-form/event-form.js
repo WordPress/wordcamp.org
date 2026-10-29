@@ -58,6 +58,7 @@ const EMPTY_FORM = {
 	language: '',
 	topics: [],
 	hosts: [],
+	capacity: '',
 	rsvp_questions: [],
 };
 
@@ -186,6 +187,8 @@ function EventForm(
 					language: res.fields.language || '',
 					topics: res.fields.topics || [],
 					hosts: res.fields.hosts || [],
+					// 0 is "no limit", shown as an empty field.
+					capacity: res.fields.capacity ? String( res.fields.capacity ) : '',
 					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setEditorKey( ( k ) => k + 1 );
@@ -392,6 +395,17 @@ function EventForm(
 				value={ form.hosts }
 				onChange={ ( v ) => updateField( 'hosts', v ) }
 				classPrefix={ classPrefix }
+			/>
+
+			<TextControl
+				label={ __( 'Attendee limit', 'wordcamporg' ) }
+				help={ __( 'Leave empty for no limit. Once the event is full, new RSVPs go on a waiting list.', 'wordcamporg' ) }
+				type="number"
+				min="1"
+				step="1"
+				value={ form.capacity }
+				onChange={ ( v ) => updateField( 'capacity', v ) }
+				__nextHasNoMarginBottom
 			/>
 
 			<RsvpQuestionsEditor

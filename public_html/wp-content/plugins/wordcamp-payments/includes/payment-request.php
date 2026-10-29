@@ -643,6 +643,12 @@ class WCP_Payment_Request {
 			 */
 			$stored_status      = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
 			$requester_statuses = array_merge( $editable_statuses, array( 'wcb-pending-approval' ) );
+
+			// Requesters may delete their own drafts, matching `modify_capabilities()`.
+			if ( in_array( $stored_status, array( 'auto-draft', 'draft' ), true ) ) {
+				$requester_statuses[] = 'trash';
+			}
+
 			if ( in_array( $stored_status, $editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 				$post_data['post_status'] = 'wcb-pending-approval';
 			}

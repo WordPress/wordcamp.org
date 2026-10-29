@@ -20,6 +20,13 @@ abstract class Groups_TestCase extends Database_TestCase {
 	protected static $groups_root_site_id;
 
 	/**
+	 * Most Groups tests only need the groups-network site.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = false;
+
+	/**
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {

@@ -166,7 +166,7 @@ docker compose ps   # expect wordcamp.test + wordcamp.db running
 docker compose exec wordcamp.test wp plugin list --url=events.wordpress.test/group/sunshine-coast-qld/ | grep gatherpress
 # If missing/inactive:
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress/releases/download/0.36.0/gatherpress.0.36.0.zip \
+  https://github.com/GatherPress/gatherpress/releases/download/0.36.1/gatherpress.0.36.1.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
@@ -186,6 +186,19 @@ Environment gotchas:
 - If a new test account's first E2E run fails in `dismissEditorOnboarding`,
   rerun once, and only when `error-context.md` shows the Welcome dialog
   reinitializing.
+- `is_admin()` is true throughout the PHPUnit suite, so any gate that skips
+  admin screens (GatherPress 0.36.1's `leave_password_protected_events_out()`,
+  core term classes in `get_post_class()`) silently doesn't run. Call
+  `set_current_screen( 'front' )` first. `_gatherpress_venue` also isn't
+  attached to `gatherpress_event` there (`is_object_in_taxonomy()` is false),
+  so test a venue class through `apply_filters( 'post_class', ... )` on a
+  fixed list. GatherPress wires some REST filters on `rest_api_init`, which
+  has already fired; call the registering method directly in the test.
+- Port 80/443 taken by another project's stack: start this one with
+  `WORDCAMP_HTTP_PORT=8080 WORDCAMP_HTTPS_PORT=8443 WORDCAMP_MAILCATCHER_PORT=1081 docker compose up -d`
+  and point curl at it with
+  `--connect-to events.wordpress.test:443:127.0.0.1:8443`. Site URLs stay
+  portless, so the browser pass still needs the real ports.
 
 **After bumping the pin, install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
@@ -198,7 +211,7 @@ front end) but is just unmigrated data:
 
 ```bash
 docker compose exec wordcamp.test wp plugin install \
-  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.36.0/gatherpress-alpha.0.36.0.zip \
+  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.36.1/gatherpress-alpha.0.36.1.zip \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 docker compose exec wordcamp.test wp gatherpress alpha fix --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
@@ -259,11 +272,16 @@ A route missing from the live list is a regression; one not listed here is
 new, so add it before continuing. Regenerate from code with
 `grep -rn -A3 register_rest_route public_html/wp-content/mu-plugins/wporg-groups-frontend/inc`.
 
-Checks (anonymous and each role where relevant):
+Checks (anonymous and each role where relevant). Send a full valid payload
+(`title`, `date`, `time_start`, `time_end`, `timezone`) even on calls that
+only probe a permission: core validates required args before the permission
+callback, so an IDOR or publish probe missing them gets 400
+`rest_missing_callback_param` and never reaches the gate it means to test.
 
 - [ ] **`GET /event-form-data` as author** → 200, populated `fields` + `venues`.
 - [ ] **`POST /event` as editor** → published event, 200 with `{id, permalink, title}`.
-- [ ] **Overnight rollover**: `date=2026-08-20 time_start=22:00 time_end=01:00`
+- [ ] **Overnight rollover**: `date=<a future date> time_start=22:00 time_end=01:00`
+  (a past date is rejected with `wporg_groups_past_event_date` first)
   → `gatherpress_datetime_end` is the *next* day, not rejected as zero-length:
   `docker compose exec wordcamp.test wp post meta get <id> gatherpress_datetime_end --url=$BASE`.
 - [ ] **IDOR**: `POST /event/<other_authors_event_id>` as `$AUTHOR` → 403
@@ -307,7 +325,14 @@ Log in as each role (`$BASE/wp-login.php`) and click through the UI, don't
 just check curl output:
 
 - **Event create/edit** via the front-end modal (not wp-admin): venue picker,
-  date/time fields, featured image.
+  date/time fields, featured image. Walk the online states too: hybrid
+  (venue + online), online-only, clearing the link on a still-online event,
+  and back offline, checking `wp post term list <id> _gatherpress_venue` and
+  the `gatherpress_online_event_link` meta after each save.
+  `Event::set_online()` keeps a saved link when handed an empty one, so
+  clearing the field relies on the extra delete in `sync_event_venue()`.
+  Headless, an empty `fill` and Ctrl/Cmd+A don't clear these
+  React-controlled inputs; focus the field and send Backspace per character.
 - **Also open a `gatherpress_event` in the wp-admin block editor** and check
   the console / PHP error log for fatals. Every block-editor load fetches
   `/wp/v2/block-patterns/patterns`, executing the PHP of *every* registered
@@ -392,7 +417,27 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   render escaped.
 - [ ] `featured_image_id` rejects an attachment the user can't read
   (`current_user_can_use_attachment()` in `inc/rest.php`): pass another
-  user's private attachment ID as a lower role.
+  user's private attachment ID as a lower role. The event still saves with
+  200; the check is that `get_post_thumbnail_id()` stays 0.
+- [ ] **A password-protected event names its venue to no one without the
+  password.** Since 0.36.1 GatherPress gates this itself (REST venue and
+  `geo_*`, the `?post=` terms route, post classes, venue-filtered queries,
+  RSS, calendar endpoints and feeds, head feed links); we only strip
+  `_event_speakers` in REST and gate the venue block. Give the protected
+  event **its own venue**, or a public event at the same venue makes every
+  feed and collection look leaky. Fetch each surface logged out, logged out
+  with the password cookie (`POST wp-login.php?action=postpass`), and as an
+  Organizer, and grep for the venue's name, slug and address. Logged out
+  must show none; hits that only echo the request URL (feed `rel="self"`,
+  pagination links) don't count. A REST call with the right `?password=`
+  sees the venue, like core's content. Editors without the password get the
+  event page, not an `.ics`, from a protected event's calendar endpoints.
+  Look at the logged-out page too, not just the grep: when GatherPress
+  blanks a block, a static label beside it in our templates stays. 0.36.1
+  left the sidebar card holding only "Date and time"
+  (`hide_event_info_card_for_protected_event()` in the theme drops it), and
+  the `…/flyer/` view still prints empty "Date and time" and "Location"
+  labels.
 
 ## 6. Performance sanity check
 

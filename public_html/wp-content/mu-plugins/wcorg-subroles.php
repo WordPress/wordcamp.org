@@ -122,6 +122,23 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 					);
 				}
 				break;
+
+			/**
+			 * Scholarship Reviewer
+			 *
+			 * - Read and review Open Horizons scholarship applications on Central.
+			 *
+			 * Separate from the wrangler subroles: applicants are often wranglers themselves.
+			 */
+			case 'scholarship_reviewer':
+				// These capabilities only apply on central.wordcamp.org.
+				if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
+					$newcaps = array(
+						'read'                         => true, // Access to wp-admin.
+						'wordcamp_review_scholarships' => true,
+					);
+				}
+				break;
 		}
 
 		$allcaps = array_merge( $allcaps, $newcaps );

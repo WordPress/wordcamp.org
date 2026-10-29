@@ -94,6 +94,7 @@ jQuery( document ).ready( function( $ ) {
 			 * wouldn't remove `required` attributes.
 			 */
 			app.toggleIntermediaryBankFields( event );
+			app.validateSepaFields();
 
 			// todo make the transition smoother
 
@@ -211,26 +212,37 @@ jQuery( document ).ready( function( $ ) {
 		setupSepaValidation : function() {
 			$( '#sepa_iban' ).attr( 'minlength', 15 );
 
-			$( '#sepa_iban' ).on( 'blur', function() {
-				var val = $( this ).val().trim();
+			$( '#sepa_iban, #sepa_bic' ).on( 'blur', function() {
+				app.validateSepaFields();
 
-				if ( val && ! app.isValidIban( val ) ) {
-					this.setCustomValidity( 'Please enter a valid IBAN (minimum 15 characters).' );
+				if ( this.validity.customError ) {
 					this.reportValidity();
-				} else {
-					this.setCustomValidity( '' );
 				}
 			} );
+		},
 
-			$( '#sepa_bic' ).on( 'blur', function() {
-				var val = $( this ).val().trim();
+		/**
+		 * Flag an invalid IBAN or BIC while SEPA is the selected payment method, and clear the flags otherwise.
+		 *
+		 * The browser won't submit a form while any field is flagged, even a hidden one, and it can't point
+		 * the user to a hidden field. So the flags must only apply while the SEPA fields are shown.
+		 */
+		validateSepaFields : function() {
+			var isSepa = $( '#payment_method_sepa_transfer' ).prop( 'checked' );
 
-				if ( val && ! app.isValidBic( val ) ) {
-					this.setCustomValidity( 'Please enter a valid BIC/SWIFT code (8 or 11 characters).' );
-					this.reportValidity();
-				} else {
-					this.setCustomValidity( '' );
+			$( '#sepa_iban, #sepa_bic' ).each( function( index, field ) {
+				var val     = $( field ).val().trim(),
+					message = '';
+
+				if ( isSepa && val ) {
+					if ( 'sepa_iban' === field.id && ! app.isValidIban( val ) ) {
+						message = 'Please enter a valid IBAN (minimum 15 characters).';
+					} else if ( 'sepa_bic' === field.id && ! app.isValidBic( val ) ) {
+						message = 'Please enter a valid BIC/SWIFT code (8 or 11 characters).';
+					}
 				}
+
+				field.setCustomValidity( message );
 			} );
 		},
 

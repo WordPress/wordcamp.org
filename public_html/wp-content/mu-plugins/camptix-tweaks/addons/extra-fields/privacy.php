@@ -82,7 +82,10 @@ class Privacy_Field extends Extra_Fields {
 	public function populate_attendee_answer( $ticket_info, $attendee ) {
 		$ticket_info = parent::populate_attendee_answer( $ticket_info, $attendee );
 
-		$ticket_info[ self::SLUG ] = in_array( $ticket_info[ self::SLUG ], [ 'private', 'no' ] ) ? $this->options['no'] : $this->options['yes'];
+		// Answers are stored as the option label ("No"), older ones as `private` or `no` in the attendee meta.
+		$is_private = in_array( $ticket_info[ self::SLUG ], [ 'private', 'no', $this->options['no'] ], true );
+
+		$ticket_info[ self::SLUG ] = $is_private ? $this->options['no'] : $this->options['yes'];
 
 		return $ticket_info;
 	}

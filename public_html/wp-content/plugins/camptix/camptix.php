@@ -4692,7 +4692,7 @@ class CampTix_Plugin {
 			$available_tickets = 0; // Don't bother to show the ticketing form.
 		}
 
-		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( (array) $_REQUEST['tix_errors'] ) : array();
+		$redirected_error_flags = isset( $_REQUEST['tix_errors'] ) ? array_flip( array_filter( (array) $_REQUEST['tix_errors'], 'is_string' ) ) : array();
 
 		if ( isset( $redirected_error_flags['payment_failed'] ) ) {
 			/** @todo explain error */
@@ -6887,8 +6887,8 @@ class CampTix_Plugin {
 
 			// This count, under the lock, is the one that decides; the earlier checks may be stale.
 			if ( ! $this->error_flags ) {
-				$access_token  = md5( 'tix-access-token' . print_r( $_POST, true ) . time() . rand( 1, 9999 ) );
-				$payment_token = md5( 'tix-payment-token' . $access_token . time() . rand( 1, 9999 ) );
+				$access_token  = bin2hex( random_bytes( 16 ) );
+				$payment_token = bin2hex( random_bytes( 16 ) );
 				$inserted      = $this->insert_attendee_drafts( $attendees, $payment_method, $receipt_email, $access_token, $payment_token );
 
 				if ( false === $inserted ) {
@@ -7123,7 +7123,7 @@ class CampTix_Plugin {
 				$created[] = $post_id;
 				$this->log( 'Created attendee draft.', $post_id, $log_data );
 
-				$edit_token = md5( sprintf( 'tix-edit-token-%d-%s-%s', $post_id, $access_token, time() ) );
+				$edit_token = bin2hex( random_bytes( 16 ) );
 
 				update_post_meta( $post_id, 'tix_access_token', $access_token );
 				update_post_meta( $post_id, 'tix_payment_token', $payment_token );
@@ -7903,6 +7903,14 @@ class CampTix_Plugin {
 				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_single_purchase', $attendees[0] );
 				$content = do_shortcode( $this->options[ $email_template ] );
 
+				/**
+				 * Filter: The content of a ticket e-mail about a single attendee.
+				 *
+				 * @param string  $content  The e-mail content, after shortcodes.
+				 * @param WP_Post $attendee The attendee the e-mail is about.
+				 */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
+
 				$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 
 				$this->log( sprintf( 'Sent a ticket and receipt to %s.', $receipt_email ), $receipt_attendee->ID );
@@ -7940,6 +7948,11 @@ class CampTix_Plugin {
 			$subject = sprintf( __( "Your Payment for %s", 'wordcamporg' ), $this->options['event_name'] );
 			$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_pending_succeeded', $attendees[0] );
 			$content = do_shortcode( $this->options[ $email_template ] );
+
+			if ( 1 === count( $attendees ) ) {
+				/** This filter is documented in email_tickets() */
+				$content = apply_filters( 'camptix_email_ticket_content', $content, $attendees[0] );
+			}
 
 			$this->log( sprintf( 'Sending completed e-mail notification after IPN to %s.', $receipt_email ), $attendees[0]->ID );
 			$this->wp_mail( $receipt_email, $subject, $content );
@@ -8026,6 +8039,9 @@ class CampTix_Plugin {
 
 		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
 		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		/** This filter is documented in email_tickets() */
+		$content = apply_filters( 'camptix_email_ticket_content', $content, $attendee );
 
 		$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
 

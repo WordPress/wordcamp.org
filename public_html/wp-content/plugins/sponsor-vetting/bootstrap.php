@@ -37,7 +37,7 @@ const CAPABILITY = 'wordcamp_vet_sponsors';
 /**
  * How many months a Compliant vetting stays good for new sponsorships.
  */
-const REVETTING_MONTHS = 12;
+const REVETTING_MONTHS = 3;
 
 /**
  * How many days a sponsor approved in good faith has to finish their changes.

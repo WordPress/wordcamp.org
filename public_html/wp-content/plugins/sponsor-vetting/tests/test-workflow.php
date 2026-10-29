@@ -141,18 +141,18 @@ class Test_Workflow extends WP_UnitTestCase {
 	 */
 	public function data_vetting_states(): array {
 		return array(
-			'compliant, vetted 11 months ago'    => array(
+			'compliant, vetted 2 months ago'     => array(
 				'sv-compliant',
-				'-11 months',
+				'-2 months',
 				array(),
 				array(
 					'approvable'    => true,
 					'needs_requeue' => false,
 				),
 			),
-			'compliant, vetted 13 months ago'    => array(
+			'compliant, vetted 4 months ago'     => array(
 				'sv-compliant',
-				'-13 months',
+				'-4 months',
 				array(),
 				array(
 					'approvable'    => false,

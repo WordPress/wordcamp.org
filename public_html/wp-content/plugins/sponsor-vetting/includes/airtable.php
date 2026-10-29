@@ -29,8 +29,8 @@ function get_airtable_statuses(): array {
 		'needs vetting'             => 'sv-needs-vetting',
 		'canceled'                  => 'sv-needs-vetting',
 		'needs compliance'          => 'sv-in-progress',
-		'needs follow up'           => 'sv-compliance-req',
-		'double checking'           => 'sv-compliance-req',
+		'needs follow up'           => 'sv-in-progress',
+		'double checking'           => 'sv-in-progress',
 		'compliance requested'      => 'sv-compliance-req',
 		'compliance in progress'    => 'sv-compliance-req',
 		'good faith'                => 'sv-compliance-req',
@@ -222,7 +222,7 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 			update_post_meta( $company_id, '_sv_not_eligible_until', gmdate( 'Y-m-d', $until[0] ) );
 		}
 
-		if ( in_array( strtolower( (string) $row['status'] ), array( 'compliance in progress', 'needs follow up', 'double checking' ), true ) ) {
+		if ( 'compliance in progress' === strtolower( (string) $row['status'] ) ) {
 			update_post_meta( $company_id, '_sv_sponsor_replied', time() );
 		}
 

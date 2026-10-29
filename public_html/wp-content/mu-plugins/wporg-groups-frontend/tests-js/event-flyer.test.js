@@ -1,6 +1,7 @@
 import { encode } from 'uqr';
 import { buildSvg, init as drawCodes } from '../src/blocks/event-flyer-qr/view';
 import { init as wirePrintButtons } from '../src/blocks/event-flyer-link/view';
+import { init as wireCopyButtons } from '../src/blocks/event-short-link/view';
 
 const EVENT_URL = 'https://events.wordpress.test/example/event/meetup/20261010/';
 
@@ -76,5 +77,54 @@ describe( 'event flyer print button', () => {
 		document.querySelector( 'button' ).click();
 
 		expect( window.print ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
+describe( 'event short link copy button', () => {
+	const SHORT_URL = 'https://events.wordpress.test/example/e/12/';
+
+	beforeEach( () => {
+		document.body.innerHTML = `<div class="wporg-event-short-link" data-copied="Link copied." data-failed="Couldn't copy.">
+			<a href="${ SHORT_URL }">events.wordpress.test/example/e/12/</a>
+			<button type="button" class="wporg-event-short-link__copy" data-url="${ SHORT_URL }" hidden>Copy</button>
+			<span class="wporg-event-short-link__status" role="status"></span>
+		</div>`;
+	} );
+
+	afterEach( () => {
+		delete window.navigator.clipboard;
+	} );
+
+	function mockClipboard( writeText ) {
+		Object.defineProperty( window.navigator, 'clipboard', { value: { writeText }, configurable: true } );
+	}
+
+	it( 'stays hidden without a clipboard to copy to', () => {
+		wireCopyButtons();
+
+		expect( document.querySelector( 'button' ).hidden ).toBe( true );
+	} );
+
+	it( 'copies the link and says so', async () => {
+		const writeText = jest.fn().mockResolvedValue();
+		mockClipboard( writeText );
+
+		wireCopyButtons();
+		document.querySelector( 'button' ).click();
+		await Promise.resolve();
+
+		expect( document.querySelector( 'button' ).hidden ).toBe( false );
+		expect( writeText ).toHaveBeenCalledWith( SHORT_URL );
+		expect( document.querySelector( '[role="status"]' ).textContent ).toBe( 'Link copied.' );
+	} );
+
+	it( 'says so when the copy fails', async () => {
+		mockClipboard( jest.fn().mockRejectedValue( new Error( 'denied' ) ) );
+
+		wireCopyButtons();
+		document.querySelector( 'button' ).click();
+		await new Promise( ( resolve ) => setTimeout( resolve ) );
+
+		expect( document.querySelector( '[role="status"]' ).textContent ).toBe( "Couldn't copy." );
 	} );
 } );

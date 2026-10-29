@@ -61,6 +61,13 @@ defined( 'WPINC' ) || die();
 				<td>Cost per checked-in attendee</td>
 				<td>
 					<?php echo null !== $portfolio['ratios']['cost_per_attended'] ? esc_html( number_format_i18n( $portfolio['ratios']['cost_per_attended'], 2 ) ) : '—'; ?>
+					<?php if ( $portfolio['totals']['unmeasured_camps'] > 0 ) : ?>
+						<em>
+							— from the
+							<?php echo esc_html( number_format_i18n( $portfolio['totals']['measured_spend_usd'], 2 ) ); ?>
+							spent at measured events
+						</em>
+					<?php endif; ?>
 				</td>
 			</tr>
 			</tbody>

@@ -98,7 +98,7 @@ class Sponsor_ROI extends Base {
 		<ol>
 			<li>Retrieve the WordCamps whose start date falls within the specified date range (WordCamp Details report), skipping camps without a website.</li>
 			<li>On each camp site, list published Sponsor posts. For each sponsor, sum their Sponsor Invoice amounts — paid invoices only by default — grouped by currency, and normalize to USD at the event-date exchange rate.</li>
-			<li>Count the camp's reach: published attendee records (registered) and attendees marked as attended via CampTix check-in (checked in). When fewer than 25% of registered attendees (by default) were checked in, check-in probably wasn't really used there, so the camp is flagged 'attendance not measured' and its check-ins are left out of cost per checked-in attendee rather than counted.</li>
+			<li>Count the camp's reach: published attendee records (registered) and attendees marked as attended via CampTix check-in (checked in). When fewer than 25% of registered attendees (by default) were checked in, check-in probably wasn't really used there, so the camp is flagged 'attendance not measured' and both its check-ins and its spend are left out of cost per checked-in attendee rather than counted.</li>
 			<li>Roll the per-camp rows up into one portfolio per Multi-Event Sponsor agreement (sponsors without an agreement stay as single-camp rows) and compute cost per registered / checked-in attendee.</li>
 		</ol>
 	";
@@ -498,7 +498,9 @@ class Sponsor_ROI extends Base {
 	 *
 	 * Camps where attendance wasn't measured contribute to `registered` but not
 	 * to `attended` — unknown is not zero — and are counted in `unmeasured_camps`
-	 * so the display layer can caveat the cost-per-attended ratio.
+	 * so the display layer can caveat the cost-per-attended ratio. Their spend is
+	 * left out of `measured_spend_usd` too, so cost per checked-in attendee only
+	 * divides the spend of camps whose check-ins it counts.
 	 *
 	 * @param array $data The data to compile.
 	 *
@@ -517,11 +519,12 @@ class Sponsor_ROI extends Base {
 					'camps'        => array(),
 					'tiers'        => array(),
 					'totals'       => array(
-						'spend_usd'        => 0.0,
-						'registered'       => 0,
-						'attended'         => 0,
-						'camp_count'       => 0,
-						'unmeasured_camps' => 0,
+						'spend_usd'          => 0.0,
+						'measured_spend_usd' => 0.0,
+						'registered'         => 0,
+						'attended'           => 0,
+						'camp_count'         => 0,
+						'unmeasured_camps'   => 0,
 					),
 					'ratios'       => array(
 						'cost_per_registered' => null,
@@ -537,19 +540,21 @@ class Sponsor_ROI extends Base {
 			++$portfolios[ $key ]['totals']['camp_count'];
 
 			if ( ! empty( $row['attendance_measured'] ) ) {
-				$portfolios[ $key ]['totals']['attended'] += $row['attended'];
+				$portfolios[ $key ]['totals']['attended']           += $row['attended'];
+				$portfolios[ $key ]['totals']['measured_spend_usd'] += $row['spend_usd'] ?? 0.0;
 			} else {
 				++$portfolios[ $key ]['totals']['unmeasured_camps'];
 			}
 		}
 
 		foreach ( $portfolios as &$portfolio ) {
-			$spend      = $portfolio['totals']['spend_usd'];
-			$registered = $portfolio['totals']['registered'];
-			$attended   = $portfolio['totals']['attended'];
+			$spend          = $portfolio['totals']['spend_usd'];
+			$measured_spend = $portfolio['totals']['measured_spend_usd'];
+			$registered     = $portfolio['totals']['registered'];
+			$attended       = $portfolio['totals']['attended'];
 
 			$portfolio['ratios']['cost_per_registered'] = $registered > 0 ? $spend / $registered : null;
-			$portfolio['ratios']['cost_per_attended']   = $attended > 0 ? $spend / $attended : null;
+			$portfolio['ratios']['cost_per_attended']   = $attended > 0 ? $measured_spend / $attended : null;
 		}
 		unset( $portfolio );
 

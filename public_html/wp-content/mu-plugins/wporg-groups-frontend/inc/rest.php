@@ -40,6 +40,8 @@ use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -913,6 +915,27 @@ function maybe_save_capacity( int $event_id, WP_REST_Request $request ): void {
 	}
 
 	update_post_meta( $event_id, 'gatherpress_capacity', absint( $capacity ) );
+
+	// A series takes RSVPs one date at a time, so the limit applies to each
+	// date. Without a date in context GatherPress would count every date's
+	// attendees against it at once, so check each upcoming date on its own.
+	if ( class_exists( Occurrences::class ) && apply_filters( 'wporg_groups_frontend_is_recurring_event', false, $event_id ) ) {
+		$previous = Context::get();
+
+		foreach ( Occurrences::all( $event_id ) as $occurrence ) {
+			if ( 'cancelled' === $occurrence->status ) {
+				continue;
+			}
+
+			Context::set( $occurrence );
+			( new Rsvp( $event_id ) )->check_waiting_list();
+		}
+
+		Context::set( $previous );
+
+		return;
+	}
+
 	( new Rsvp( $event_id ) )->check_waiting_list();
 }
 

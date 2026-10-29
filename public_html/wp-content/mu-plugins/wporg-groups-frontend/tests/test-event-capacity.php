@@ -3,6 +3,9 @@
 namespace WordCamp\Groups\Tests;
 
 use GatherPress\Core\Rsvp\Rsvp;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WP_REST_Request;
 
 use function WordCamp\Groups\Frontend\REST\create_event;
@@ -135,6 +138,57 @@ class Test_Groups_Event_Capacity extends Groups_TestCase {
 		$rsvp = new Rsvp( $event_id );
 		$this->assertSame( 'attending', $rsvp->get( $users[1] )['status'] );
 		$this->assertSame( 'waiting_list', $rsvp->get( $users[2] )['status'] );
+	}
+
+	/**
+	 * On a series the limit is per date, so raising it lets in a date's
+	 * waiting list even when the other dates' attendees add up past it.
+	 */
+	public function test_raising_the_limit_promotes_each_date_of_a_series() {
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+
+		Recurring_Events_Database::maybe_install();
+
+		$event_id = $this->create(
+			array(
+				'date'       => $date,
+				'capacity'   => 1,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => 2,
+				),
+			)
+		);
+		list( $first, $second ) = Occurrences::all( $event_id );
+		list( $one, $two, $three ) = self::factory()->user->create_many( 3 );
+
+		$rsvp = function ( $occurrence, $callback ) use ( $event_id ) {
+			Context::set( $occurrence );
+			$result = $callback( new Rsvp( $event_id ) );
+			Context::set( null );
+
+			return $result;
+		};
+
+		$rsvp( $first, fn( $r ) => $r->save( $one, 'attending' ) );
+		$rsvp( $second, fn( $r ) => $r->save( $two, 'attending' ) );
+		$rsvp( $second, fn( $r ) => $r->save( $three, 'attending' ) );
+		$this->assertSame( 'waiting_list', $rsvp( $second, fn( $r ) => $r->get( $three )['status'] ) );
+
+		update_event(
+			$this->event_request( $this->base_event_params() + array(
+				'id'       => $event_id,
+				'date'     => $date,
+				'capacity' => 2,
+			) )
+		);
+
+		$this->assertSame( 'attending', $rsvp( $second, fn( $r ) => $r->get( $three )['status'] ) );
+		$this->assertSame( 'attending', $rsvp( $first, fn( $r ) => $r->get( $one )['status'] ) );
 	}
 
 	/**

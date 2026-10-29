@@ -9,6 +9,7 @@ use WP_REST_Request;
 
 use function WordCamp\Groups\Frontend\My_Events\get_comment_recurrence_ids;
 use function WordCamp\Groups\Frontend\REST\create_event;
+use function WordCamp\Groups\Frontend\REST\get_event_form_data;
 use function WordCamp\Groups\Frontend\REST\publish_draft;
 use function WordCamp\Groups\Frontend\REST\save_draft;
 use function WordCamp\Groups\Frontend\REST\update_event;
@@ -183,5 +184,57 @@ class Test_Groups_Organizer_RSVP extends Groups_TestCase {
 			array( (int) $rsvps[0]->comment_ID => (string) $first->recurrence_id ),
 			get_comment_recurrence_ids( array( (int) $rsvps[0]->comment_ID ) )
 		);
+	}
+
+	/**
+	 * The form offers the box until the event is published, so a draft
+	 * opened for editing in Settings -> Events still has it.
+	 */
+	public function test_form_data_says_whether_the_event_is_published() {
+		$draft     = (int) save_draft( $this->event_request( $this->base_event_params(), '/wporg-groups/v1/draft' ) )->get_data()['id'];
+		$published = (int) create_event( $this->event_request( $this->base_event_params() ) )->get_data()['id'];
+
+		$is_published = function ( int $event_id ): bool {
+			$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+			$request->set_param( 'event_id', $event_id );
+
+			return get_event_form_data( $request )->get_data()['is_published'];
+		};
+
+		$this->assertFalse( $is_published( 0 ) );
+		$this->assertFalse( $is_published( $draft ) );
+		$this->assertTrue( $is_published( $published ) );
+	}
+
+	/**
+	 * Publishing already emails the organizer, so their RSVP sends no
+	 * "You're going" email too. A member's own RSVP still does.
+	 */
+	public function test_organizer_rsvp_sends_no_confirmation() {
+		$callback = 'WordCamp\Groups\Frontend\RSVP_Confirmation\send_confirmation';
+		$subjects = array();
+		$capture  = function ( $short_circuit, $atts ) use ( &$subjects ) {
+			$subjects[] = $atts['subject'];
+
+			return true;
+		};
+
+		// Groups_TestCase unhooks the confirmation for every other test.
+		add_action( 'set_object_terms', $callback, 10, 6 );
+		add_filter( 'pre_wp_mail', $capture, 10, 2 );
+
+		$event_id = (int) create_event( $this->event_request( $this->base_event_params() + array( 'rsvp_organizer' => true ) ) )->get_data()['id'];
+
+		$this->assertSame( 'attending', ( new Rsvp( $event_id ) )->get( $this->editor_id )['status'] );
+		$this->assertSame( array(), preg_grep( '/^You\'re going/', $subjects ) );
+
+		$member = self::factory()->user->create();
+		wp_set_current_user( $member );
+		( new Rsvp( $event_id ) )->save( $member, 'attending' );
+
+		remove_filter( 'pre_wp_mail', $capture, 10 );
+		remove_action( 'set_object_terms', $callback, 10 );
+
+		$this->assertCount( 1, preg_grep( '/^You\'re going/', $subjects ) );
 	}
 }

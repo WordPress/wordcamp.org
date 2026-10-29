@@ -80,6 +80,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="Sponsor Vetting">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/sponsor-vetting/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Organizer Reminders">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-organizer-reminders/tests/

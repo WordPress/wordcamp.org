@@ -27,6 +27,8 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		language: form.language || '',
 		topics: form.topics || [],
 		hosts: ( form.hosts || [] ).map( ( host ) => host.id ),
+		// Acted on only when this request publishes the event.
+		rsvp_organizer: !! form.rsvp_organizer,
 		// Include recurrence while the schedule is editable, including for drafts.
 		// Published schedules are locked, so omit it from later updates.
 		...( recurrence && ! recurrence.locked ? { recurrence } : {} ),

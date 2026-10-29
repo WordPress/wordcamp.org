@@ -12,6 +12,7 @@ const form = {
 	language: 'es',
 	topics: [ 'WordPress' ],
 	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
+	rsvp_organizer: true,
 	rsvp_questions: [],
 };
 
@@ -54,6 +55,11 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends whether to RSVP the organizer', () => {
+		expect( build().rsvp_organizer ).toBe( true );
+		expect( build( { form: { ...form, rsvp_organizer: false } } ).rsvp_organizer ).toBe( false );
 	} );
 
 	test( 'sends the hosts as user ids, in order', () => {

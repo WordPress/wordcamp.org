@@ -13,6 +13,11 @@ import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 /**
+ * Internal dependencies.
+ */
+import { getFeaturedImageHelp } from './featured-image-help';
+
+/**
  * Featured image picker — opens the standard `wp.media` library frame
  * so the organizer can either upload a new image or pick an existing
  * one from the site's media library. The selected attachment id is
@@ -43,6 +48,8 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 	const handleRemove = () => {
 		onChange( 0, '' );
 	};
+
+	const helpId = `${ classPrefix }__featured-help`;
 
 	return h(
 		'div',
@@ -77,9 +84,14 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 				)
 				: h(
 					Button,
-					{ variant: 'secondary', onClick: openMediaFrame },
+					{ variant: 'secondary', onClick: openMediaFrame, 'aria-describedby': helpId },
 					__( 'Choose featured image', 'wordcamporg' )
-				)
+				),
+			h(
+				'p',
+				{ id: helpId, className: helpId },
+				getFeaturedImageHelp( window.wporgGroupsEventModal?.maxUploadSize || '' )
+			)
 		)
 	);
 }

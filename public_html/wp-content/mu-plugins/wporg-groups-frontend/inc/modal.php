@@ -106,6 +106,9 @@ function localize_block_script( string $content, array $block ): string {
 		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
 		'minimumEventDate' => wp_date( 'Y-m-d' ),
 		'createEventFragment' => CREATE_EVENT_FRAGMENT,
+		// Shown under the featured image picker (#2257). The media library
+		// only says a file is too large once it's been rejected.
+		'maxUploadSize'       => size_format( wp_max_upload_size() ),
 	);
 
 	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {

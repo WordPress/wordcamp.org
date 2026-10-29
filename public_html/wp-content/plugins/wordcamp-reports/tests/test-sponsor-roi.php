@@ -663,4 +663,49 @@ class Test_Sponsor_ROI extends WP_UnitTestCase {
 		$this->assertSame( 2, $totals['camp_count'] );
 		$this->assertSame( 1, $totals['unmeasured_camps'] );
 	}
+
+	/**
+	 * `compile_report_data` leaves unmeasured camps' spend out of cost per checked-in attendee.
+	 */
+	public function test_compile_report_data_cost_per_attended_uses_measured_spend_only() {
+		$rows = array(
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 1, 'spend_usd' => 1000.0, 'registered' => 500, 'attended' => 400, 'attendance_measured' => true,
+			) ),
+			// Its check-ins don't count, so neither may its spend.
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 2, 'spend_usd' => 3000.0, 'registered' => 300, 'attended' => 10, 'attendance_measured' => false,
+			) ),
+		);
+
+		$compiled = $this->report()->compile_report_data( $rows );
+
+		$portfolio = $compiled['42'];
+
+		$this->assertSame( 4000.0, $portfolio['totals']['spend_usd'] );
+		$this->assertSame( 1000.0, $portfolio['totals']['measured_spend_usd'] );
+
+		// 1000 / 400, not 4000 / 400.
+		$this->assertEqualsWithDelta( 2.5, $portfolio['ratios']['cost_per_attended'], 0.001 );
+
+		// Registered is counted at every camp, so it keeps the full spend: 4000 / 800.
+		$this->assertEqualsWithDelta( 5.0, $portfolio['ratios']['cost_per_registered'], 0.001 );
+	}
+
+	/**
+	 * `compile_report_data` null cost per checked-in attendee when no camp was measured.
+	 */
+	public function test_compile_report_data_null_cost_per_attended_when_nothing_measured() {
+		$rows = array(
+			$this->row( array(
+				'rollup_key' => '42', 'wordcamp_id' => 1, 'spend_usd' => 1000.0, 'registered' => 500, 'attended' => 5, 'attendance_measured' => false,
+			) ),
+		);
+
+		$compiled = $this->report()->compile_report_data( $rows );
+
+		$this->assertSame( 0.0, $compiled['42']['totals']['measured_spend_usd'] );
+		$this->assertNull( $compiled['42']['ratios']['cost_per_attended'] );
+		$this->assertEqualsWithDelta( 2.0, $compiled['42']['ratios']['cost_per_registered'], 0.001 );
+	}
 }

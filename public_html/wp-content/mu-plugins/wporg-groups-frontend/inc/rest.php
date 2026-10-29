@@ -40,6 +40,8 @@ use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -819,6 +821,14 @@ function event_args_schema(): array {
 			'required' => false,
 			'items'    => array( 'type' => 'integer' ),
 		),
+		// The attendee limit, 0 for none. No `default`, like the topics: an
+		// absent parameter leaves the limit alone.
+		'capacity'          => array(
+			'type'              => 'integer',
+			'required'          => false,
+			'minimum'           => 0,
+			'sanitize_callback' => 'absint',
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -887,6 +897,49 @@ function maybe_save_hosts( int $event_id, WP_REST_Request $request ): void {
 }
 
 /**
+ * Write the event's attendee limit, if the request carried one (#2254).
+ *
+ * GatherPress enforces it: an RSVP past the limit goes on the waiting list,
+ * and 0 means no limit. Its own waiting-list check runs on `save_post`,
+ * before this, against the old limit, so a raised limit promotes people off
+ * the waiting list here.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_capacity( int $event_id, WP_REST_Request $request ): void {
+	$capacity = $request->get_param( 'capacity' );
+
+	if ( null === $capacity ) {
+		return;
+	}
+
+	update_post_meta( $event_id, 'gatherpress_capacity', absint( $capacity ) );
+
+	// A series takes RSVPs one date at a time, so the limit applies to each
+	// date. Without a date in context GatherPress would count every date's
+	// attendees against it at once, so check each upcoming date on its own.
+	if ( class_exists( Occurrences::class ) && apply_filters( 'wporg_groups_frontend_is_recurring_event', false, $event_id ) ) {
+		$previous = Context::get();
+
+		foreach ( Occurrences::all( $event_id ) as $occurrence ) {
+			if ( 'cancelled' === $occurrence->status ) {
+				continue;
+			}
+
+			Context::set( $occurrence );
+			( new Rsvp( $event_id ) )->check_waiting_list();
+		}
+
+		Context::set( $previous );
+
+		return;
+	}
+
+	( new Rsvp( $event_id ) )->check_waiting_list();
+}
+
+/**
  * Read an existing event's values into the event form's fields.
  *
  * @param int $event_id The event post ID.
@@ -943,6 +996,10 @@ function get_existing_event_fields( int $event_id ): array {
 	$fields['topics'] = get_event_topics( $event_id );
 
 	$fields['hosts'] = get_event_hosts_form_value( $event_id );
+
+	// Carried into a new event started from this one too: a group's venue
+	// holds the same number of people next month.
+	$fields['capacity'] = (int) get_post_meta( $event_id, 'gatherpress_capacity', true );
 
 	$thumb_id = (int) get_post_thumbnail_id( $event_id );
 	if ( $thumb_id ) {
@@ -1232,6 +1289,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 				'timezone'       => storable_timezone( (string) $request->get_param( 'timezone' ) ),
 			)
 		);
+		sync_block_editor_datetime( $saved_id );
 	}
 
 	// Physical and online venues — same path as the publish flow.
@@ -1252,6 +1310,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
 	maybe_save_topics( $saved_id, $request );
 	maybe_save_hosts( $saved_id, $request );
+	maybe_save_capacity( $saved_id, $request );
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -1323,6 +1382,39 @@ function update_event( WP_REST_Request $request ) {
  */
 function clear_all_day( int $event_id ): void {
 	delete_post_meta( $event_id, 'gatherpress_is_all_day' );
+}
+
+/**
+ * Copy the schedule the form just saved into `gatherpress_datetime`.
+ *
+ * The block editor keeps an event's schedule in that meta, and GatherPress
+ * rebuilds the schedule from it on every save. Left stale, it would put the
+ * old date back the next time the event is saved anywhere else. An event
+ * without it is left alone, since GatherPress then reads the fields
+ * `Event::save_datetimes()` writes.
+ *
+ * @param int $event_id Event post ID.
+ */
+function sync_block_editor_datetime( int $event_id ): void {
+	if ( empty( get_post_meta( $event_id, 'gatherpress_datetime', true ) ) ) {
+		return;
+	}
+
+	$datetime = ( new Event( $event_id ) )->get_datetime();
+
+	update_post_meta(
+		$event_id,
+		'gatherpress_datetime',
+		wp_slash(
+			wp_json_encode(
+				array(
+					'dateTimeStart' => $datetime['datetime_start'],
+					'dateTimeEnd'   => $datetime['datetime_end'],
+					'timezone'      => $datetime['timezone'],
+				)
+			)
+		)
+	);
 }
 
 /**
@@ -1469,6 +1561,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 			'timezone'       => $timezone,
 		)
 	);
+	sync_block_editor_datetime( $saved_id );
 
 	// Physical and online venues.
 	$venue_id = resolve_venue_id( $fields );
@@ -1477,6 +1570,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	set_event_language( $saved_id, $fields['language'] );
 	maybe_save_topics( $saved_id, $request );
 	maybe_save_hosts( $saved_id, $request );
+	maybe_save_capacity( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

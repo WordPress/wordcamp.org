@@ -98,6 +98,28 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * Stores the event's current schedule in `gatherpress_datetime`, as the
+	 * block editor does for an event created or saved in wp-admin.
+	 */
+	private function add_block_editor_datetime( int $event_id ): void {
+		$datetime = ( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime();
+
+		update_post_meta(
+			$event_id,
+			'gatherpress_datetime',
+			wp_slash(
+				wp_json_encode(
+					array(
+						'dateTimeStart' => $datetime['datetime_start'],
+						'dateTimeEnd'   => $datetime['datetime_end'],
+						'timezone'      => $datetime['timezone'],
+					)
+				)
+			)
+		);
+	}
+
+	/**
 	 * An editor (Organizer) can create and publish an event in one request.
 	 */
 	public function test_create_event_as_editor() {
@@ -852,6 +874,96 @@ class Test_Groups_REST extends Groups_TestCase {
 			'18:00:00',
 			( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime()['datetime_start']
 		);
+	}
+
+	/**
+	 * GatherPress rebuilds an event's schedule from `gatherpress_datetime` on
+	 * every save, so a date changed in the form must still be there after a
+	 * later save made somewhere else, such as wp-admin.
+	 */
+	public function test_updated_schedule_survives_a_later_save() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+		$this->add_block_editor_datetime( $event_id );
+
+		$new_date = current_datetime()->modify( '+3 weeks' )->format( 'Y-m-d' );
+		$update   = $this->event_request(
+			array(
+				'id'         => $event_id,
+				'date'       => $new_date,
+				'time_start' => '09:00',
+				'time_end'   => '10:00',
+			) + $this->base_event_params()
+		);
+		$this->assertNotWPError( update_event( $update ) );
+
+		wp_update_post(
+			array(
+				'ID'           => $event_id,
+				'post_excerpt' => 'Edited somewhere else.',
+			)
+		);
+
+		$this->assertSame(
+			$new_date . ' 09:00:00',
+			( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
+	 * Same as above for a draft, which is saved through its own path.
+	 */
+	public function test_draft_schedule_survives_a_later_save() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$request->set_param( 'title', 'Draft with dates' );
+		$request->set_param( 'date', current_datetime()->modify( '+1 month' )->format( 'Y-m-d' ) );
+		$request->set_param( 'time_start', '19:00' );
+		$request->set_param( 'time_end', '21:00' );
+		$draft_id = (int) save_draft( $request )->get_data()['id'];
+		$this->add_block_editor_datetime( $draft_id );
+
+		$new_date = current_datetime()->modify( '+5 weeks' )->format( 'Y-m-d' );
+		$update   = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft/' . $draft_id );
+		$update->set_param( 'id', $draft_id );
+		$update->set_param( 'title', 'Draft with dates' );
+		$update->set_param( 'date', $new_date );
+		$update->set_param( 'time_start', '08:00' );
+		$update->set_param( 'time_end', '09:00' );
+		save_draft( $update );
+
+		wp_update_post(
+			array(
+				'ID'           => $draft_id,
+				'post_excerpt' => 'Edited somewhere else.',
+			)
+		);
+
+		$this->assertSame(
+			$new_date . ' 08:00:00',
+			( new \GatherPress\Core\Event\Event( $draft_id ) )->get_datetime()['datetime_start']
+		);
+	}
+
+	/**
+	 * An event saved only through the form keeps no `gatherpress_datetime`:
+	 * GatherPress falls back to the fields the form writes, so it needs none.
+	 */
+	public function test_form_does_not_add_block_editor_datetime() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $response );
+		$event_id = (int) $response->get_data()['id'];
+
+		$update = $this->event_request( $this->base_event_params() + array( 'id' => $event_id ) );
+		$this->assertNotWPError( update_event( $update ) );
+
+		$this->assertSame( '', get_post_meta( $event_id, 'gatherpress_datetime', true ) );
 	}
 
 	/**

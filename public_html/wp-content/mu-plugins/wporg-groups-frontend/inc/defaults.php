@@ -43,6 +43,7 @@ use WordCamp\Groups\Frontend\Event_Language;
  *     timezone:string
  *     language:string
  *     topics:string[]
+ *     capacity:int
  * }
  */
 function get_default_event_data(): array {
@@ -60,6 +61,8 @@ function get_default_event_data(): array {
 		// Unlike the language, not carried from the group's last event: topics
 		// describe what one event is about, not how the group runs.
 		'topics'            => array(),
+		// No attendee limit unless the organizer sets one (#2254).
+		'capacity'          => 0,
 	);
 
 	$most_recent = get_most_recent_event_id();

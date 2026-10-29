@@ -12,6 +12,7 @@ const form = {
 	language: 'es',
 	topics: [ 'WordPress' ],
 	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
+	capacity: '25',
 	rsvp_organizer: true,
 	rsvp_questions: [],
 };
@@ -55,6 +56,12 @@ describe( 'buildEventPayload', () => {
 			is_online: false,
 			featured_image_id: 7,
 		} );
+	} );
+
+	test( 'sends the attendee limit as a number, and an empty one as no limit', () => {
+		expect( build().capacity ).toBe( 25 );
+		expect( build( { form: { ...form, capacity: '' } } ).capacity ).toBe( 0 );
+		expect( build( { form: { ...form, capacity: '-3' } } ).capacity ).toBe( 0 );
 	} );
 
 	test( 'sends whether to RSVP the organizer', () => {

@@ -341,21 +341,36 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	 * own; without the switch handling every URL is a `?gatherpress_event=`
 	 * link, and the root's own state must be back as it was afterwards.
 	 *
+	 * The root is put in that production shape first: plain permalinks and no
+	 * event permastruct. The test install's root has both, which would hide a
+	 * missing permastruct.
+	 *
 	 * @covers \WordCamp\Groups\Events_Feed\collect_site_events
 	 */
 	public function test_event_urls_use_the_group_sites_permalinks() {
 		global $wp_rewrite;
 
-		$brisbane   = $this->group_sites['brisbane'];
-		$event_id   = $this->create_site_event( $brisbane, array( 'title' => 'Pretty Links' ) );
-		$root_state = array( $wp_rewrite->permalink_structure, isset( $wp_rewrite->extra_permastructs[ Event::POST_TYPE ] ) );
+		$brisbane = $this->group_sites['brisbane'];
+		$event_id = $this->create_site_event( $brisbane, array( 'title' => 'Pretty Links' ) );
 
-		$events = $this->by_source_id( $this->get_page() );
-		$url    = $events[ $this->source_id( $brisbane, $event_id ) ]['url'];
+		$original_structure    = $wp_rewrite->permalink_structure;
+		$original_permastructs = $wp_rewrite->extra_permastructs;
 
-		$this->assertSame( get_home_url( $brisbane, '/event/pretty-links/' ), $url );
-		$this->assertSame( $root_state, array( $wp_rewrite->permalink_structure, isset( $wp_rewrite->extra_permastructs[ Event::POST_TYPE ] ) ) );
-		$this->assertSame( self::$groups_root_site_id, get_current_blog_id() );
+		try {
+			$wp_rewrite->set_permalink_structure( '' );
+			$wp_rewrite->remove_permastruct( Event::POST_TYPE );
+
+			$events = $this->by_source_id( $this->get_page() );
+			$url    = $events[ $this->source_id( $brisbane, $event_id ) ]['url'];
+
+			$this->assertSame( get_home_url( $brisbane, '/event/pretty-links/' ), $url );
+			$this->assertSame( '', $wp_rewrite->permalink_structure, 'The root keeps its plain permalinks.' );
+			$this->assertArrayNotHasKey( Event::POST_TYPE, $wp_rewrite->extra_permastructs, 'The root gains no event permastruct.' );
+			$this->assertSame( self::$groups_root_site_id, get_current_blog_id() );
+		} finally {
+			$wp_rewrite->set_permalink_structure( $original_structure );
+			$wp_rewrite->extra_permastructs = $original_permastructs;
+		}
 	}
 
 	/**
@@ -468,6 +483,57 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 			$this->assertSame( $occurrence->datetime_start_gmt, $event['start_gmt'] );
 			$this->assertStringEndsWith( '/event/weekly-meetup/' . $occurrence->recurrence_id . '/', $event['url'] );
 		}
+	}
+
+	/**
+	 * Occurrences are read from their own table, so the series' password has
+	 * to be checked there too.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_event_rows
+	 */
+	public function test_password_protected_series_lists_no_occurrences() {
+		$brisbane = $this->group_sites['brisbane'];
+		$date     = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$event_id = $this->create_site_event(
+			$brisbane,
+			array(
+				'title'      => 'Secret Series',
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) ) ),
+					'end_type'  => 'count',
+					'count'     => 3,
+				),
+			)
+		);
+
+		$occurrences = $this->with_site(
+			$brisbane,
+			function () use ( $event_id ) {
+				wp_update_post(
+					array(
+						'ID'            => $event_id,
+						'post_password' => 'secret',
+					)
+				);
+
+				return Occurrences::all( $event_id, 'upcoming', 10 );
+			}
+		);
+
+		$this->assertNotEmpty( $occurrences, 'The series still has occurrences to leak.' );
+
+		$series = $this->source_id( $brisbane, $event_id );
+		$listed = array_filter(
+			array_keys( $this->by_source_id( $this->get_page() ) ),
+			static function ( string $source_id ) use ( $series ): bool {
+				return $series === $source_id || str_starts_with( $source_id, $series . '-' );
+			}
+		);
+
+		$this->assertSame( array(), $listed );
 	}
 
 	/**

@@ -182,6 +182,56 @@ class QR_Code {
 	}
 
 	/**
+	 * Generate a QR code as a grayscale PNG image.
+	 *
+	 * Built with zlib alone, so it doesn't depend on GD or Imagick being installed.
+	 *
+	 * @param string $text      The URL or text to encode.
+	 * @param int    $ecc_level Error correction level (default ECC_M).
+	 * @param int    $margin    Quiet zone margin in modules (default 4).
+	 * @param int    $scale     Pixels per module (default 10).
+	 *
+	 * @return string PNG binary data, or an empty string if the text doesn't fit in a QR code.
+	 */
+	public static function get_png( string $text, int $ecc_level = self::ECC_M, int $margin = 4, int $scale = 10 ): string {
+		$matrix = self::get_matrix( $text, $ecc_level );
+		if ( empty( $matrix ) ) {
+			return '';
+		}
+
+		$size       = count( $matrix );
+		$total_size = ( $size + ( $margin * 2 ) ) * $scale;
+		$raw        = '';
+
+		for ( $r = -$margin; $r < $size + $margin; $r++ ) {
+			$row = '';
+
+			for ( $c = -$margin; $c < $size + $margin; $c++ ) {
+				$dark = isset( $matrix[ $r ][ $c ] ) && $matrix[ $r ][ $c ];
+				$row .= str_repeat( $dark ? "\x00" : "\xFF", $scale );
+			}
+
+			// Each scanline starts with filter type 0 (none).
+			$raw .= str_repeat( "\x00" . $row, $scale );
+		}
+
+		// 8-bit grayscale, no interlacing.
+		$header = pack( 'NNCCCCC', $total_size, $total_size, 8, 0, 0, 0, 0 );
+
+		return "\x89PNG\r\n\x1a\n"
+			. self::get_png_chunk( 'IHDR', $header )
+			. self::get_png_chunk( 'IDAT', gzcompress( $raw, 9 ) )
+			. self::get_png_chunk( 'IEND', '' );
+	}
+
+	/**
+	 * Wrap data in a PNG chunk.
+	 */
+	private static function get_png_chunk( string $type, string $data ): string {
+		return pack( 'N', strlen( $data ) ) . $type . $data . pack( 'N', crc32( $type . $data ) );
+	}
+
+	/**
 	 * Generate 2D boolean matrix for the QR Code.
 	 *
 	 * @param string $text

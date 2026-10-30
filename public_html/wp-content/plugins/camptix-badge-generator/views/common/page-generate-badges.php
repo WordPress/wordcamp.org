@@ -7,13 +7,16 @@ defined( 'WPINC' ) || die();
  * @var string $html_customizer_url
  * @var string $indesign_page_url
  * @var string $notify_tool_url
+ * @var string $qr_code_type
+ * @var array  $tickets
+ * @var array  $admin_flags
  */
 
 ?>
 
 <p>
 	<?php esc_html_e(
-		'This tool will help you create personalized badges for attendees to wear during the event. There are two methods for this, depending on your preferences:',
+		'This tool will help you create personalized badges for attendees to wear during the event. There are three methods for this, depending on your preferences:',
 		'wordcamporg'
 	); ?>
 </p>
@@ -54,6 +57,76 @@ defined( 'WPINC' ) || die();
 		<a class="button button-primary" href="<?php echo esc_url( $indesign_page_url ); ?>">
 			<?php esc_html_e( 'Create Badges with InDesign', 'wordcamporg' ); ?>
 		</a>
+	</div>
+
+	<div id="canva-badges-overview" class="cbg-method-overview">
+		<h2>
+			<?php esc_html_e( 'Canva', 'wordcamporg' ); ?>
+		</h2>
+
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'Design the badge as a Canva template, then fill it in for every attendee at once.', 'wordcamporg' ); ?></li>
+			<li><?php esc_html_e( "Download a spreadsheet with each attendee's details, photo, and QR code.", 'wordcamporg' ); ?></li>
+			<li>
+				<?php printf(
+					wp_kses_post( __( 'Requires <a href="%s">Bulk Create</a>, which is part of Canva Pro and Canva for Nonprofits.', 'wordcamporg' ) ),
+					'https://www.canva.com/help/bulk-create/'
+				); ?>
+			</li>
+		</ul>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Canva\ACTION ); ?>" />
+			<?php wp_nonce_field( Canva\ACTION ); ?>
+
+			<p>
+				<label for="cbg-canva-qr-code-type"><?php esc_html_e( 'QR code destination', 'wordcamporg' ); ?></label>
+				<select id="cbg-canva-qr-code-type" name="cbg_qr_code_type">
+					<option value="none" <?php selected( $qr_code_type, 'none' ); ?>><?php esc_html_e( 'None', 'wordcamporg' ); ?></option>
+					<option value="gravatar" <?php selected( $qr_code_type, 'gravatar' ); ?>><?php esc_html_e( 'Gravatar profile', 'wordcamporg' ); ?></option>
+					<option value="wporg" <?php selected( $qr_code_type, 'wporg' ); ?>><?php esc_html_e( 'WordPress.org profile', 'wordcamporg' ); ?></option>
+				</select>
+			</p>
+
+			<?php if ( $tickets ) : ?>
+				<fieldset>
+					<legend><?php esc_html_e( 'Tickets', 'wordcamporg' ); ?></legend>
+
+					<?php foreach ( $tickets as $ticket_id => $ticket_title ) : ?>
+						<label>
+							<input type="checkbox" name="cbg_ticket_ids[]" value="<?php echo esc_attr( $ticket_id ); ?>" checked />
+							<?php echo esc_html( $ticket_title ); ?>
+						</label>
+						<br />
+					<?php endforeach; ?>
+				</fieldset>
+			<?php endif; ?>
+
+			<p>
+				<label for="cbg-canva-registered-after"><?php esc_html_e( 'Registered after (optional)', 'wordcamporg' ); ?></label>
+				<input type="datetime-local" id="cbg-canva-registered-after" name="cbg_registered_after" />
+				<br />
+				<span class="description"><?php esc_html_e( 'Use this to print a second batch for people who registered after the first one.', 'wordcamporg' ); ?></span>
+			</p>
+
+			<?php if ( $admin_flags ) : ?>
+				<p>
+					<label for="cbg-canva-admin-flag"><?php esc_html_e( 'Admin flag', 'wordcamporg' ); ?></label>
+					<select id="cbg-canva-admin-flag" name="cbg_admin_flag">
+						<option value=""><?php esc_html_e( 'All attendees', 'wordcamporg' ); ?></option>
+						<?php foreach ( $admin_flags as $flag => $label ) : ?>
+							<option value="<?php echo esc_attr( $flag ); ?>"><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</p>
+			<?php endif; ?>
+
+			<p class="description">
+				<?php esc_html_e( 'This can take a few minutes for large events, while the photos are downloaded.', 'wordcamporg' ); ?>
+			</p>
+
+			<?php submit_button( __( 'Download Spreadsheet for Canva', 'wordcamporg' ), 'primary', 'submit', false ); ?>
+		</form>
 	</div>
 </div>
 

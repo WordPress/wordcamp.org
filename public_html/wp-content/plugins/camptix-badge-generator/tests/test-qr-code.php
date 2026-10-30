@@ -88,4 +88,43 @@ class Test_QR_Code extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'script', $svg );
 		$this->assertMatchesRegularExpression( '/ d="[Mhvz0-9, -]+"/', $svg );
 	}
+
+	/**
+	 * The PNG's pixels match the matrix, with the quiet zone around it.
+	 *
+	 * @covers \CampTix\Badge_Generator\QR_Code::get_png
+	 */
+	public function test_png_matches_matrix() {
+		$text   = 'https://w.org/@bor0';
+		$matrix = QR_Code::get_matrix( $text );
+		$png    = QR_Code::get_png( $text, QR_Code::ECC_M, 4, 3 );
+		$size   = getimagesizefromstring( $png );
+
+		$this->assertSame( IMAGETYPE_PNG, $size[2] );
+		$this->assertSame( ( count( $matrix ) + 8 ) * 3, $size[0] );
+		$this->assertSame( $size[0], $size[1] );
+
+		// Skip the signature and IHDR chunk, then read the IDAT chunk.
+		$idat_length = unpack( 'N', substr( $png, 33, 4 ) )[1];
+		$pixels      = gzuncompress( substr( $png, 41, $idat_length ) );
+		$stride      = $size[0] + 1;
+
+		foreach ( array( -4, 0, 3, 10, count( $matrix ) - 1, count( $matrix ) + 3 ) as $r ) {
+			foreach ( array( -4, 0, 5, 12, count( $matrix ) - 1, count( $matrix ) + 3 ) as $c ) {
+				$y        = ( $r + 4 ) * 3 + 1;
+				$x        = ( $c + 4 ) * 3 + 1;
+				$expected = ! empty( $matrix[ $r ][ $c ] ) ? "\x00" : "\xFF";
+
+				$this->assertSame( "\x00", $pixels[ $y * $stride ], "Filter byte on row $y." );
+				$this->assertSame( $expected, $pixels[ $y * $stride + 1 + $x ], "Module $r, $c." );
+			}
+		}
+	}
+
+	/**
+	 * @covers \CampTix\Badge_Generator\QR_Code::get_png
+	 */
+	public function test_png_empty_when_text_too_long() {
+		$this->assertSame( '', QR_Code::get_png( str_repeat( 'a', 5000 ) ) );
+	}
 }

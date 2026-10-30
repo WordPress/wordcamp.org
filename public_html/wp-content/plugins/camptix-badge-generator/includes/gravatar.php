@@ -114,6 +114,24 @@ function parse_gravatar_profile_response( $status, $body ) {
 }
 
 /**
+ * Get the URL of an attendee's Gravatar image, for printing on a badge
+ *
+ * Attendees without a Gravatar get its default silhouette. Canva's Bulk Create prints the template's placeholder
+ * photo for an empty image cell, and drops an image column that's empty in every row, which also disconnects the
+ * template's photo frame.
+ *
+ * @param string $email
+ * @param int    $size  Image width and height in pixels.
+ *
+ * @return string An empty string when the email is empty.
+ */
+function get_gravatar_image_url( $email, $size = 500 ) {
+	$hash = get_gravatar_hash( $email );
+
+	return $hash ? sprintf( 'https://gravatar.com/avatar/%s?s=%d&d=mp&r=g', $hash, $size ) : '';
+}
+
+/**
  * Download many attendees' Gravatar images in parallel
  *
  * Each image is written to disk as soon as it arrives, so a large event's photos aren't all held in memory.
@@ -122,19 +140,15 @@ function parse_gravatar_profile_response( $status, $body ) {
  * @param string $folder The folder to save the images in.
  * @param int    $size   Image width and height in pixels.
  *
- * @return array Image paths, keyed by the same IDs. Attendees without a Gravatar are left out, as are downloads
- *               that still failed after a retry.
+ * @return array Image paths, keyed by the same IDs. Downloads that still failed after a retry are left out.
  */
 function download_gravatar_images( $emails, $folder, $size = 500 ) {
-	$urls = array();
-
-	foreach ( $emails as $id => $email ) {
-		$hash = get_gravatar_hash( $email );
-
-		if ( $hash ) {
-			$urls[ $id ] = sprintf( 'https://gravatar.com/avatar/%s?s=%d&d=404&r=g', $hash, $size );
-		}
-	}
+	$urls = array_filter( array_map(
+		function ( $email ) use ( $size ) {
+			return get_gravatar_image_url( $email, $size );
+		},
+		$emails
+	) );
 
 	$paths = array();
 

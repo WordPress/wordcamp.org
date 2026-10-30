@@ -1,6 +1,6 @@
 <?php
 
-use function CampTix\Badge_Generator\{ get_gravatar_hash, normalize_website, get_website_label, parse_gravatar_profile_response };
+use function CampTix\Badge_Generator\{ get_gravatar_hash, get_gravatar_image_url, normalize_website, get_website_label, parse_gravatar_profile_response };
 use const CampTix\Badge_Generator\GRAVATAR_PROFILE_CACHE_KEY;
 
 defined( 'WPINC' ) || die();
@@ -197,6 +197,17 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 	public function test_website_label() {
 		$this->assertSame( 'example.org', get_website_label( 'https://www.example.org/' ) );
 		$this->assertSame( 'example.org/a/b', get_website_label( 'http://example.org/a/b' ) );
+	}
+
+	/**
+	 * @covers \CampTix\Badge_Generator\get_gravatar_image_url
+	 */
+	public function test_gravatar_image_url_has_a_fallback() {
+		$url = get_gravatar_image_url( ' Jane@Example.org ', 500 );
+
+		// Canva prints its placeholder photo for an empty image cell, so attendees without a Gravatar need one too.
+		$this->assertSame( 'https://gravatar.com/avatar/' . hash( 'sha256', 'jane@example.org' ) . '?s=500&d=mp&r=g', $url );
+		$this->assertSame( '', get_gravatar_image_url( '' ) );
 	}
 
 	/**

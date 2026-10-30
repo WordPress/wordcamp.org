@@ -184,6 +184,9 @@ class Test_Canva_Badges extends WP_UnitTestCase {
 		$row = get_attendee_row( $attendee, '', '', 'none' );
 		$this->assertCount( count( get_header_row( 'none' ) ), $row );
 		$this->assertSame( '', $row[7], 'No photo.' );
+
+		// Canva drops a column that's empty in every row, so empty details are a space.
+		$this->assertSame( array( ' ', ' ', ' ' ), array_slice( $row, 3, 3 ), 'Hometown, website, and company.' );
 	}
 
 	/**

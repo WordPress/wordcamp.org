@@ -230,7 +230,7 @@ function get_header_row( $qr_code_type ) {
 function get_attendee_row( $attendee, $photo_path, $qr_path, $qr_code_type ) {
 	$ticket = get_post( $attendee->tix_ticket_id );
 
-	$row = array(
+	$text = array(
 		trim( (string) $attendee->tix_first_name ),
 		trim( (string) $attendee->tix_last_name ),
 		$attendee->wporg_username ? '@' . $attendee->wporg_username : '',
@@ -238,8 +238,21 @@ function get_attendee_row( $attendee, $photo_path, $qr_path, $qr_code_type ) {
 		$attendee->website_label,
 		$attendee->company,
 		$ticket ? $ticket->post_title : '',
-		$photo_path ? array( 'image' => $photo_path ) : '',
 	);
+
+	/*
+	 * Canva's Bulk Create drops a column that's empty in every row, which disconnects the template's text box, so
+	 * it prints its placeholder text. That's likely in a small batch, e.g. late registrations who skipped a
+	 * question. A space keeps the column, and prints as nothing.
+	 */
+	$row = array_map(
+		function ( $value ) {
+			return '' === trim( (string) $value ) ? ' ' : $value;
+		},
+		$text
+	);
+
+	$row[] = $photo_path ? array( 'image' => $photo_path ) : '';
 
 	if ( 'none' !== $qr_code_type ) {
 		$row[] = $qr_path ? array( 'image' => $qr_path ) : '';

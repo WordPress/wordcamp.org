@@ -70,9 +70,60 @@ html, body {
 	font-size: 2.4em;
 }
 
-/* Make room for the QR code within the half badge. */
+.attendee-details {
+	list-style: none;
+	margin: .3em 0 0 0;
+	padding: 0;
+	font-size: 1em;
+	line-height: 1.3;
+}
+
+.attendee-details li {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.attendee-wporg-username {
+	font-weight: bold;
+}
+
+.attendee-company {
+	margin-top: .3em;
+	font-size: .85em;
+	color: #555555;
+}
+
+/* Make room for the QR code within the half badge, by putting it beside the details. */
+.has-qr-code .badge {
+	padding-top: 4em;
+}
+
 .has-qr-code .attendee-avatar {
 	max-width: 35%;
+}
+
+.has-qr-code .attendee-name {
+	font-size: 2em;
+}
+
+.has-qr-code .attendee-meta {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: .75em;
+	margin-top: .5em;
+}
+
+.has-qr-code .attendee-details {
+	min-width: 0;
+	margin: 0;
+	text-align: left;
+}
+
+.has-qr-code .attendee-qrcode {
+	flex: none;
+	margin: 0;
 }
 
 .attendee-qrcode {

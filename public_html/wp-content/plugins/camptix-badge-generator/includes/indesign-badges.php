@@ -53,6 +53,8 @@ function build_assets( $options ) {
 		$zip_local_folder = pathinfo( $zip_filename, PATHINFO_FILENAME );
 		$attendees        = Badge_Generator\get_attendees( $options['ticket_ids'], $options['registered_after'], $options['admin_flag'] );
 
+		Badge_Generator\prefetch_badge_data( $attendees );
+
 		wp_mkdir_p( $gravatar_folder );
 		download_gravatars( $attendees, $gravatar_folder );
 
@@ -203,12 +205,7 @@ function generate_qr_codes( $attendees, $qr_folder, $qr_code_type = 'none' ) {
 	}
 
 	foreach ( $attendees as $attendee ) {
-		$target_url = '';
-		if ( 'gravatar' === $qr_code_type ) {
-			$target_url = $attendee->gravatar_profile_url;
-		} elseif ( 'wporg' === $qr_code_type ) {
-			$target_url = $attendee->wporg_profile_url;
-		}
+		$target_url = Badge_Generator\get_qr_code_target_url( $attendee, $qr_code_type );
 
 		if ( empty( $target_url ) ) {
 			continue;
@@ -333,7 +330,7 @@ function get_admin_flags() {
  * @return array
  */
 function get_header_row( $admin_flags, $questions, $qr_code_type = 'none' ) {
-	$header_row   = array( 'First Name', 'Last Name', 'Email Address', 'Ticket', 'Coupon', 'Twitter' );
+	$header_row   = array( 'First Name', 'Last Name', 'Email Address', 'Ticket', 'Coupon', 'Twitter', 'WordPress.org Username', 'Hometown', 'Website', 'Company' );
 	$header_row   = array_merge( $header_row, array_values( $admin_flags ) );
 	$header_row   = array_merge( $header_row, wp_list_pluck( $questions, 'post_title' ) );
 
@@ -391,6 +388,10 @@ function get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directo
 		'ticket-name'      => $attendee->ticket,
 		'coupon-name'      => $attendee->coupon,
 		'twitter-username' => format_twitter_username( get_twitter_username( $attendee ), $first_name, $empty_twitter ),
+		'wporg-username'   => $attendee->wporg_username,
+		'hometown'         => $attendee->hometown,
+		'website'          => $attendee->website_label,
+		'company'          => $attendee->company,
 	);
 
 	foreach ( $admin_flags as $key => $label ) {

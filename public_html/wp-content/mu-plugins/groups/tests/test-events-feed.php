@@ -5,6 +5,7 @@ namespace WordCamp\Groups\Tests;
 use GatherPress\Core\Event\Event;
 use WP_REST_Request;
 use WordCamp\Groups\Events_Feed;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 
@@ -835,6 +836,56 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
+	 * The occurrence and RSVP reads fail the page too. A failed occurrence read
+	 * would otherwise drop every date of a series, and the importer would
+	 * delete them all.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_event_rows
+	 * @covers \WordCamp\Groups\Events_Feed\get_attending_counts
+	 */
+	public function test_failed_occurrence_or_rsvp_read_marks_the_page_incomplete() {
+		global $wpdb;
+
+		$date = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+
+		$this->create_site_event(
+			$this->group_sites['brisbane'],
+			array(
+				'title'      => 'Weekly Meetup',
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) ) ),
+					'end_type'  => 'count',
+					'count'     => 2,
+				),
+			)
+		);
+
+		$this->assertTrue( $this->get_page()['complete'] );
+		wp_cache_flush_group( Events_Feed\CACHE_GROUP );
+
+		foreach ( array( 'occurrences.series_post_id AS post_id', 'comments.comment_post_ID AS event_id' ) as $needle ) {
+			$break_reads = static function ( $query ) use ( $needle ) {
+				return str_contains( $query, $needle ) ? 'SELECT * FROM table_that_does_not_exist' : $query;
+			};
+
+			$suppressed = $wpdb->suppress_errors( true );
+			add_filter( 'query', $break_reads );
+
+			try {
+				$page = $this->get_page();
+			} finally {
+				remove_filter( 'query', $break_reads );
+				$wpdb->suppress_errors( $suppressed );
+			}
+
+			$this->assertFalse( $page['complete'], $needle );
+		}
+	}
+
+	/**
 	 * @covers \WordCamp\Groups\Events_Feed\get_feed
 	 */
 	public function test_complete_pages_are_cached() {
@@ -866,6 +917,72 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 
 		$this->assertNull( Events_Feed\get_source_id( 51, 2245, '../../etc' ), 'A malformed recurrence ID is refused.' );
 		$this->assertNull( Events_Feed\get_source_id( PHP_INT_MAX, PHP_INT_MAX, '20261103T180000' ), 'An over-long ID is refused, not truncated.' );
+	}
+
+	/**
+	 * A non-Latin title makes a percent-encoded 200-character slug, and the
+	 * importer tells events apart by the first 255 characters of their URL.
+	 * Long URLs get a short form, so neither a series' occurrences nor two
+	 * events with the same long title are stored as one.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_event_url
+	 */
+	public function test_long_urls_stay_distinct_for_the_importer() {
+		$site  = $this->create_group_site( 'wordpress-hachioji' );
+		$title = '八王子ワードプレス勉強会 毎月の定例もくもく会とライトニングトーク';
+		$date  = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+
+		$this->group_sites[] = $site;
+
+		$series = $this->create_site_event(
+			$site,
+			array(
+				'title'      => $title,
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) ) ),
+					'end_type'  => 'count',
+					'count'     => 2,
+				),
+			)
+		);
+		// A title of its own, or WordPress shortens the slug to fit a suffix.
+		$first  = $this->create_site_event( $site, array( 'title' => 'Ежемесячная встреча сообщества WordPress в Новосибирске' ) );
+		$second = $this->create_site_event( $site, array( 'title' => 'Ежемесячная встреча сообщества WordPress в Новосибирске' ) );
+		$short  = $this->create_site_event( $site, array( 'title' => 'Short Title' ) );
+
+		list( $permalink, $occurrence ) = $this->with_site(
+			$site,
+			function () use ( $series ) {
+				return array( Context::series_url( $series ), Occurrences::all( $series, 'upcoming', 1 )[0]->recurrence_id );
+			}
+		);
+
+		$this->assertGreaterThan( Events_Feed\URL_MAX_LENGTH, strlen( $permalink ), 'The fixture makes a long permalink.' );
+
+		$by_id    = $this->by_source_id( $this->get_page() );
+		$prefix   = 'gp-' . base_convert( (string) $site, 10, 36 ) . '-';
+		$prefixes = array();
+
+		foreach ( $by_id as $source_id => $event ) {
+			if ( str_starts_with( $source_id, $prefix ) ) {
+				$this->assertLessThanOrEqual( Events_Feed\URL_MAX_LENGTH, strlen( $event['url'] ) );
+				$prefixes[] = substr( $event['url'], 0, Events_Feed\URL_MAX_LENGTH );
+			}
+		}
+
+		$this->assertCount( 5, $prefixes );
+		$this->assertSame( $prefixes, array_unique( $prefixes ) );
+
+		$this->assertSame(
+			get_home_url( $site, '/?post_type=gatherpress_event&p=' . $series . '&gpre_occurrence=' . $occurrence ),
+			$by_id[ $this->source_id( $site, $series ) . '-' . $occurrence ]['url']
+		);
+		$this->assertSame( get_home_url( $site, '/?post_type=gatherpress_event&p=' . $first ), $by_id[ $this->source_id( $site, $first ) ]['url'] );
+		$this->assertNotSame( $by_id[ $this->source_id( $site, $first ) ]['url'], $by_id[ $this->source_id( $site, $second ) ]['url'] );
+		$this->assertSame( get_home_url( $site, '/event/short-title/' ), $by_id[ $this->source_id( $site, $short ) ]['url'], 'Short permalinks are kept.' );
 	}
 
 	/**
@@ -901,18 +1018,24 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	 */
 	public function test_sunrise_lets_only_the_feed_route_through() {
 		$reachable = array(
-			'/group/wp-json/wporg-groups/v1/events',
-			'/group/wp-json/wporg-groups/v1/events/',
-			'/group/wp-json/wporg-groups/v1/events?after=12',
 			'/group/?rest_route=/wporg-groups/v1/events',
+			'/group/?rest_route=/wporg-groups/v1/events/',
 			'/group/?rest_route=/wporg-groups/v1/events&after=12',
 			'/group/index.php?rest_route=/wporg-groups/v1/events',
 			'/group/wp-login.php',
 		);
 
+		// The pretty spelling stays redirected: a `rest_route` query var
+		// overrides its path, and a plain-permalink root ignores the path and
+		// renders its front end.
 		$redirected = array(
 			'/group/',
 			'/group/wp-json/',
+			'/group/wp-json/wporg-groups/v1/events',
+			'/group/wp-json/wporg-groups/v1/events/',
+			'/group/wp-json/wporg-groups/v1/events?after=12',
+			'/group/wp-json/wporg-groups/v1/events?rest_route=/wp/v2/users',
+			'/group/wp-json/wporg-groups/v1/events?feed=rss2',
 			'/group/wp-json/wp/v2/users',
 			'/group/wp-json/wporg-groups/v1/events/../../wp/v2/users',
 			'/group/wp-json/wporg-groups/v1/event',

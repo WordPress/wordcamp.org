@@ -12,7 +12,10 @@
  * Served from the Groups network root, because GatherPress (and so the event
  * post type, its tables and its permalinks) only loads on this network:
  *
- *     https://events.wordpress.org/group/wp-json/wporg-groups/v1/events
+ *     https://events.wordpress.org/group/?rest_route=/wporg-groups/v1/events
+ *
+ * Only that plain spelling; `sunrise-groups.php` explains why the pretty
+ * `/group/wp-json/...` one still redirects.
  *
  * It's public and unauthenticated, so it's built to be cheap and to say
  * nothing a logged-out visitor of the group's own pages couldn't already see:
@@ -109,6 +112,12 @@ const CLIENT_MAX_AGE = 5 * MINUTE_IN_SECONDS;
  * `varchar(32)`.
  */
 const SOURCE_ID_MAX_LENGTH = 32;
+
+/**
+ * Longest `url` the importer can tell apart from another: `wporg_events` has
+ * a unique key on the first 255 characters of `url`.
+ */
+const URL_MAX_LENGTH = 255;
 
 /** Words kept in an event's plain-text description. */
 const DESCRIPTION_WORDS = 55;
@@ -727,9 +736,7 @@ function format_event( int $site_id, object $row, array $group, array $venues, a
 	}
 
 	$timezone = get_timezone( (string) $row->timezone );
-	$url      = '' === $recurrence_id
-		? (string) get_permalink( $post )
-		: Context::occurrence_url( $event_id, $recurrence_id );
+	$url      = get_event_url( $event_id, $recurrence_id );
 
 	return array(
 		'source_id'   => $source_id,
@@ -746,6 +753,41 @@ function format_event( int $site_id, object $row, array $group, array $venues, a
 		'attending'   => (int) ( $counts[ $event_id ][ $recurrence_id ]['attending'] ?? 0 ),
 		'group'       => $group,
 	);
+}
+
+/**
+ * The public URL of one event instance, short enough for the importer.
+ *
+ * Normally the permalink. But a slug in a non-Latin script is stored
+ * percent-encoded, so a title of about 30 Japanese or 55 Cyrillic characters
+ * makes a 200-character slug. Every occurrence of such a series then shares
+ * its first `URL_MAX_LENGTH` characters, and the importer would store them all
+ * as one event. A URL that long gets a short form instead, keyed by post ID,
+ * which WordPress redirects to the permalink.
+ *
+ * @param int    $event_id      Event post ID.
+ * @param string $recurrence_id Occurrence, or empty for a one-off event.
+ * @return string
+ */
+function get_event_url( int $event_id, string $recurrence_id ): string {
+	$url = '' === $recurrence_id
+		? (string) get_permalink( $event_id )
+		: Context::occurrence_url( $event_id, $recurrence_id );
+
+	if ( strlen( $url ) <= URL_MAX_LENGTH ) {
+		return $url;
+	}
+
+	$args = array(
+		'post_type' => Event::POST_TYPE,
+		'p'         => $event_id,
+	);
+
+	if ( '' !== $recurrence_id ) {
+		$args['gpre_occurrence'] = $recurrence_id;
+	}
+
+	return add_query_arg( $args, home_url( '/' ) );
 }
 
 /**

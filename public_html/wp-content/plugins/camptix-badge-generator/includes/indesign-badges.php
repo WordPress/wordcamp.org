@@ -76,6 +76,11 @@ function build_assets( $options ) {
 			if ( is_file( $csv_filename ) ) {
 				@unlink( $csv_filename );
 			}
+
+			// The zip is left for the developer to collect, but a failed run has nothing to leave behind.
+			if ( ! is_file( $zip_filename ) ) {
+				@rmdir( $assets_folder );
+			}
 		}
 	}
 }
@@ -289,7 +294,7 @@ function generate_csv( $csv_filename, $zip_local_folder, $attendees, $gravatar_f
 		throw new Exception( __( "Couldn't open CSV file.", 'wordcamporg' ) );
 	}
 
-	fputcsv( $csv_handle, Utilities\Export_CSV::esc_csv( get_header_row( $admin_flags, $questions, $qr_code_type ) ), ',', '"', '\\', "\n" );
+	fputcsv( $csv_handle, get_header_row( $admin_flags, $questions, $qr_code_type ), ',', '"', '\\', "\n" );
 
 	foreach ( $attendees as $attendee ) {
 		$row = get_attendee_csv_row( $attendee, $gravatar_folder, $destination_directory, $empty_twitter, $admin_flags, $questions, $qr_folder, $qr_code_type );
@@ -336,6 +341,12 @@ function get_header_row( $admin_flags, $questions, $qr_code_type = 'none' ) {
 	$header_row   = array( 'First Name', 'Last Name', 'Email Address', 'Ticket', 'Coupon', 'Twitter' );
 	$header_row   = array_merge( $header_row, array_values( $admin_flags ) );
 	$header_row   = array_merge( $header_row, wp_list_pluck( $questions, 'post_title' ) );
+
+	/*
+	 * Organizers name the flags and questions, so escape them in case a name starts like a spreadsheet formula. The
+	 * image columns are added after, because escaping would hide the `@` that tells InDesign they're images.
+	 */
+	$header_row = Utilities\Export_CSV::esc_csv( $header_row );
 
 	if ( 'none' !== $qr_code_type ) {
 		$header_row[] = '@QRCode';

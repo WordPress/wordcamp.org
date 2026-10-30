@@ -15,6 +15,7 @@ defined( 'WPINC' ) || die();
 const REQUIRED_CAPABILITY = 'manage_options';
 
 require_once __DIR__ . '/includes/class-qr-code.php';
+require_once __DIR__ . '/includes/gravatar.php';
 require_once __DIR__ . '/includes/common.php';
 require_once __DIR__ . '/includes/html-badges.php';
 

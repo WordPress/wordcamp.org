@@ -24,7 +24,7 @@ defined( 'WPINC' ) || die();
 	<?php endif; ?>
 </header>
 
-<figure>
+<figure class="attendee-identity">
 	<img
 		class="attendee-avatar"
 		src="<?php echo esc_url( $attendee->avatar_url ); ?>"

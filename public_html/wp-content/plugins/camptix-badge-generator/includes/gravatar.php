@@ -160,10 +160,13 @@ function download_gravatar_images( $emails, $size = 500 ) {
  * Requests go out in small batches with a pause between them, so Gravatar isn't flooded. That keeps to about 10
  * requests a second, the same rate as the original badge script.
  *
+ * Responses are yielded as each batch finishes, so callers can cache them right away. A request that's cut off
+ * part way through a large event then keeps what it fetched, and the next one picks up from there.
+ *
  * @param array $urls       URLs keyed by any unique ID.
  * @param int   $batch_size How many requests to have in flight at once.
  *
- * @return array Each response's `status` (0 when the request failed) and `body`, keyed by the same IDs.
+ * @return \Generator Each response's `status` (0 when the request failed) and `body`, keyed by the same IDs.
  */
 function remote_get_multiple( $urls, $batch_size = 5 ) {
 	$options = array(
@@ -182,8 +185,6 @@ function remote_get_multiple( $urls, $batch_size = 5 ) {
 		}
 	}
 
-	$results = array();
-
 	foreach ( array_chunk( $urls, $batch_size, true ) as $index => $batch ) {
 		if ( $index > 0 ) {
 			usleep( 500000 );
@@ -196,13 +197,12 @@ function remote_get_multiple( $urls, $batch_size = 5 ) {
 		}
 
 		foreach ( Requests::request_multiple( $requests, $options ) as $id => $response ) {
-			$is_response    = $response instanceof Response;
-			$results[ $id ] = array(
+			$is_response = $response instanceof Response;
+
+			yield $id => array(
 				'status' => $is_response ? (int) $response->status_code : 0,
 				'body'   => $is_response ? $response->body : '',
 			);
 		}
 	}
-
-	return $results;
 }

@@ -28,11 +28,28 @@ html, body {
 	outline: 1px solid #888888;
 }
 
+/* The avatar shrinks when a long name or many details need the room, so the text always fits on the badge. */
 .badge {
+	display: flex;
+	flex-direction: column;
 	padding: 5em 1em 1em 1em;
 	box-sizing: border-box;
 	height: 50%;
 	position: relative;
+}
+
+.attendee-identity {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-height: 0;
+	margin-top: .5em;
+	margin-bottom: 0;
+}
+
+.attendee-identity figcaption {
+	flex: none;
+	align-self: stretch;
 }
 
 .badge-back {
@@ -59,8 +76,13 @@ html, body {
 }
 
 .attendee-avatar {
+	flex: 0 1 auto;
+	min-height: 0;
 	max-width: 70%;
+	width: auto;
 	height: auto;
+	aspect-ratio: 1;
+	object-fit: cover;
 	margin: .5em 0 0 0;
 	border-radius: 50%;
 }

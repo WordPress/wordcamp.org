@@ -89,9 +89,10 @@ function download_spreadsheet() {
  */
 function get_export_options( $request ) {
 	$all_tickets = get_ticket_choices();
-	$ticket_ids  = array_intersect( array_map( 'absint', (array) ( $request['cbg_ticket_ids'] ?? array() ) ), array_keys( $all_tickets ) );
-	$admin_flag  = sanitize_text_field( (string) ( $request['cbg_admin_flag'] ?? '' ) );
-	$after       = sanitize_text_field( (string) ( $request['cbg_registered_after'] ?? '' ) );
+	$ticket_ids  = array_filter( (array) ( $request['cbg_ticket_ids'] ?? array() ), 'is_scalar' );
+	$ticket_ids  = array_intersect( array_map( 'absint', $ticket_ids ), array_keys( $all_tickets ) );
+	$admin_flag  = get_text_field( $request, 'cbg_admin_flag' );
+	$after       = get_text_field( $request, 'cbg_registered_after' );
 
 	try {
 		// The date field has no timezone, and organizers mean their own.
@@ -101,11 +102,28 @@ function get_export_options( $request ) {
 	}
 
 	return array(
-		'qr_code_type'     => HTML\sanitize_qr_code_type( sanitize_text_field( (string) ( $request['cbg_qr_code_type'] ?? 'none' ) ) ),
+		'qr_code_type'     => HTML\sanitize_qr_code_type( get_text_field( $request, 'cbg_qr_code_type', 'none' ) ),
 		'ticket_ids'       => count( $ticket_ids ) === count( $all_tickets ) ? 'all' : array_values( $ticket_ids ),
 		'registered_after' => $after,
 		'admin_flag'       => array_key_exists( $admin_flag, InDesign\get_admin_flags() ) ? $admin_flag : '',
 	);
+}
+
+/**
+ * Get a text field from the submitted form
+ *
+ * @param array  $request Unslashed form data.
+ * @param string $key
+ * @param string $default Used when the field is missing, or isn't a single value.
+ *
+ * @return string
+ */
+function get_text_field( $request, $key, $default = '' ) {
+	if ( ! isset( $request[ $key ] ) || ! is_scalar( $request[ $key ] ) ) {
+		return $default;
+	}
+
+	return sanitize_text_field( (string) $request[ $key ] );
 }
 
 /**

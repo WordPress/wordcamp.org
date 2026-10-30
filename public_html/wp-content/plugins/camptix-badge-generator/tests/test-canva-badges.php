@@ -244,6 +244,27 @@ class Test_Canva_Badges extends WP_UnitTestCase {
 		$this->assertSame( '', $options['registered_after'] );
 		$this->assertSame( '', $options['admin_flag'] );
 
+		// A hand-crafted request can send arrays where the form sends text. That mustn't raise warnings.
+		set_error_handler( function ( $errno, $errstr ) {
+			$this->fail( $errstr );
+		} );
+
+		try {
+			$options = get_export_options( array(
+				'cbg_qr_code_type'     => array( 'wporg' ),
+				'cbg_ticket_ids'       => array( array( $student ), (string) $general ),
+				'cbg_registered_after' => array( '2026-10-01T09:00' ),
+				'cbg_admin_flag'       => array( 'speaker' ),
+			) );
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertSame( 'none', $options['qr_code_type'] );
+		$this->assertSame( array( $general ), $options['ticket_ids'], 'Nested ticket IDs are dropped.' );
+		$this->assertSame( '', $options['registered_after'] );
+		$this->assertSame( '', $options['admin_flag'] );
+
 		remove_filter( 'camptix_options', array( $this, 'add_speaker_flag' ) );
 		$camptix->load_options();
 	}

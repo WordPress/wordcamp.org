@@ -146,6 +146,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Participation Notifier">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-participation-notifier/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Groups">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
@@ -179,6 +185,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-coming-soon-page</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-participation-notifier</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>

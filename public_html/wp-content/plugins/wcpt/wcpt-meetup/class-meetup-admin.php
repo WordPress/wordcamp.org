@@ -136,6 +136,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				// These fields are updated by Meetup API and will be overwritten even if manually changed.
 				'Meetup Co-organizer names',
 				'Meetup Location (From meetup.com)',
+				'Meetup Coordinates',
 				'Meetup members count',
 				'Meetup group created on',
 				'Number of past meetups',
@@ -356,6 +357,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return array|WP_Error
 		 */
 		public static function update_meetup_data( $post_id ) {
+			// Used to prevent a self loop when updating post status to canceled.
+			static $self_loop_prevent = false;
+			if ( $self_loop_prevent ) {
+				return;
+			}
 
 			$meetup_url = get_post_meta( $post_id, 'Meetup URL', true );
 			$meetup_path = wp_parse_url( $meetup_url, PHP_URL_PATH );
@@ -378,8 +384,37 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return new WP_Error( 'invalid-response', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
+			// If the group doesn't exist, mark it as canceled. Note: This is different from removed-from-chapter.
+			if ( false === $group_details ) {
+				// Only mark active groups as removed.
+				if ( ! in_array( get_post( $post_id )->post_status, [ 'wcpt-mtp-active', 'wcpt-mtp-dormant', 'wcpt-mtp-nds-nw-ow' ] ) ) {
+					return;
+				}
+
+				add_post_meta(
+					$post_id,
+					'_note',
+					array(
+						'timestamp' => time(),
+						'user_id'   => 0,
+						'message'   => 'Meetup no longer exists per Meetup.com API sync.',
+					)
+				);
+
+				$self_loop_prevent = true;
+
+				wp_update_post( array(
+					'ID'          => $post_id,
+					'post_status' => 'wcpt-mtp-canceled',
+				) );
+
+				$self_loop_prevent = false;
+
+				return;
+			}
+
 			$group_leads = $mtp_client->get_group_members(
-				$slug,
+				$group_details['urlname'],
 				array(
 					'role' => 'leads',
 				)
@@ -408,8 +443,30 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				);
 			}
 
+			// Update the meetup URL if it has changed, ignore case and trailing slash changes.
+			if ( $group_details['link'] && strtolower( trailingslashit( $group_details['link'] ) ) !== strtolower( trailingslashit( $meetup_url ) ) ) {
+				update_post_meta( $post_id, 'Meetup URL', $group_details['link'] );
+
+				add_post_meta(
+					$post_id,
+					'_note',
+					array(
+						'timestamp' => time(),
+						'user_id'   => 0,
+						'message'   => sprintf(
+							'Meetup URL updated from %s to %s via Meetup.com API sync.',
+							$meetup_url,
+							$group_details['link']
+						),
+					)
+				);
+			}
+
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
 			update_post_meta( $post_id, 'Meetup Location (From meetup.com)', $group_details['localized_location'] );
+			update_post_meta( $post_id, 'Meetup Coordinates', "{$group_details['lat']},{$group_details['lon']}" );
+			update_post_meta( $post_id, '_lat', $group_details['lat'] );
+			update_post_meta( $post_id, '_lon', $group_details['lon'] );
 			update_post_meta( $post_id, 'Meetup members count', $group_details['members'] );
 			update_post_meta( $post_id, 'Meetup group created on', $group_details['created'] );
 
@@ -651,6 +708,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Primary organizer WordPress.org username'     => 'text',
 				'Co-Organizers usernames (seperated by comma)' => 'text',
 				'Meetup Location (From meetup.com)'            => 'text',
+				'Meetup Coordinates'                           => 'text',
 				'Meetup members count'                         => 'text',
 				'Meetup group created on'                      => 'date',
 				'Number of past meetups'                       => 'text',

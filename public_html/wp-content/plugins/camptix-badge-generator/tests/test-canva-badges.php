@@ -167,6 +167,12 @@ class Test_Canva_Badges extends WP_UnitTestCase {
 
 		$attendee = get_post( $attendee_id );
 
+		// Templates built for camptix-to-canva rely on these names.
+		$this->assertSame( array( 'First Name', 'Last Name' ), array_slice( get_header_row( 'gravatar' ), 0, 2 ) );
+		$this->assertSame( array( 'Gravatar', 'QR Gravatar' ), array_slice( get_header_row( 'gravatar' ), -2 ) );
+		$this->assertSame( 'QR WordPress.org', array_slice( get_header_row( 'wporg' ), -1 )[0] );
+		$this->assertSame( 'Gravatar', array_slice( get_header_row( 'none' ), -1 )[0] );
+
 		$row = get_attendee_row( $attendee, '/photo', '/qr', 'gravatar' );
 		$this->assertCount( count( get_header_row( 'gravatar' ) ), $row );
 		$this->assertSame( array( 'Jane', 'Doe', '@janedoe' ), array_slice( $row, 0, 3 ) );

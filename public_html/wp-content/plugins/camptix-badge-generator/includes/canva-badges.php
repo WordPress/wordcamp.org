@@ -123,25 +123,19 @@ function build_spreadsheet( $attendees, $qr_code_type, $folder ) {
  * Get the spreadsheet's header row
  *
  * Canva names each Bulk Create data field after its column, so these are what organizers will see there.
+ * They aren't translated, so a Canva template keeps working across sites in any language. The first two columns
+ * and the Gravatar ones match https://github.com/nilovelez/camptix-to-canva, so templates built for that tool
+ * work as-is.
  *
  * @param string $qr_code_type
  *
  * @return array
  */
 function get_header_row( $qr_code_type ) {
-	$header = array(
-		__( 'First Name', 'wordcamporg' ),
-		__( 'Last Name', 'wordcamporg' ),
-		__( 'WordPress.org Username', 'wordcamporg' ),
-		__( 'Hometown', 'wordcamporg' ),
-		__( 'Website', 'wordcamporg' ),
-		__( 'Company', 'wordcamporg' ),
-		__( 'Ticket', 'wordcamporg' ),
-		__( 'Photo', 'wordcamporg' ),
-	);
+	$header = array( 'First Name', 'Last Name', 'WordPress.org Username', 'Hometown', 'Website', 'Company', 'Ticket', 'Gravatar' );
 
 	if ( 'none' !== $qr_code_type ) {
-		$header[] = __( 'QR Code', 'wordcamporg' );
+		$header[] = 'wporg' === $qr_code_type ? 'QR WordPress.org' : 'QR Gravatar';
 	}
 
 	return $header;

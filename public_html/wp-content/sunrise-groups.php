@@ -113,6 +113,18 @@ function set_network_and_site() {
  *   owned by the root site — the group messaging queue, for one — lives in
  *   this blog's `cron` option, and the spawn is non-blocking, so a redirect
  *   is never followed: the job simply never ran.
+ * - The `wporg-groups/v1/events` REST route is the network-wide events feed
+ *   WordPress.org's events importer reads (#1786). It's matched as one exact
+ *   route, in the plain spelling only (`/group/?rest_route=/wporg-groups/v1/events`),
+ *   which WordPress answers whatever the root's permalink setting. Not the
+ *   pretty `/group/wp-json/...` one: WordPress routes by query vars, and a
+ *   `rest_route` in the query string or body overrides the path, so allowing
+ *   that path would serve any route (`?rest_route=/wp/v2/users`), and on a
+ *   plain-permalink root it renders the root's front end. The plain spelling
+ *   can't be redirected that way: REST exits before any template loads, and
+ *   a POSTed `rest_route` that differs from the query string's makes
+ *   WordPress refuse the request. Every other REST route on the root still
+ *   redirects.
  *
  * The list is a local rather than a namespace constant on purpose: this file
  * is `require`d from inside `load_network_sunrise()`, so a file-scope `const`
@@ -139,6 +151,17 @@ function is_reachable_root_endpoint() {
 
 	if ( ! is_string( $path ) || '' === $path ) {
 		return false;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only compared, never used.
+	$rest_route = $_GET['rest_route'] ?? null;
+
+	if (
+		in_array( $path, array( '/group/', '/group/index.php' ), true ) &&
+		is_string( $rest_route ) &&
+		'/wporg-groups/v1/events' === rtrim( $rest_route, '/' )
+	) {
+		return true;
 	}
 
 	return in_array( basename( $path ), $reachable, true );

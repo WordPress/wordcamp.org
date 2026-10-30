@@ -116,13 +116,16 @@ function parse_gravatar_profile_response( $status, $body ) {
 /**
  * Download many attendees' Gravatar images in parallel
  *
- * @param array $emails Email addresses, keyed by any unique ID.
- * @param int   $size   Image width and height in pixels.
+ * Each image is written to disk as soon as it arrives, so a large event's photos aren't all held in memory.
  *
- * @return array Image binary data, keyed by the same IDs. Attendees without a Gravatar are left out, as are
- *               downloads that still failed after a retry.
+ * @param array  $emails Email addresses, keyed by any unique ID.
+ * @param string $folder The folder to save the images in.
+ * @param int    $size   Image width and height in pixels.
+ *
+ * @return array Image paths, keyed by the same IDs. Attendees without a Gravatar are left out, as are downloads
+ *               that still failed after a retry.
  */
-function download_gravatar_images( $emails, $size = 500 ) {
+function download_gravatar_images( $emails, $folder, $size = 500 ) {
 	$urls = array();
 
 	foreach ( $emails as $id => $email ) {
@@ -133,13 +136,18 @@ function download_gravatar_images( $emails, $size = 500 ) {
 		}
 	}
 
-	$images = array();
+	$paths = array();
 
 	// Retry once, because one timed-out request would otherwise leave someone's badge without a photo.
 	for ( $attempt = 1; $attempt <= 2 && $urls; $attempt++ ) {
 		foreach ( remote_get_multiple( $urls ) as $id => $response ) {
 			if ( 200 === $response['status'] && $response['body'] ) {
-				$images[ $id ] = $response['body'];
+				$path = "$folder/$id-photo";
+
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+				if ( file_put_contents( $path, $response['body'] ) ) {
+					$paths[ $id ] = $path;
+				}
 			}
 
 			if ( 200 === $response['status'] || 404 === $response['status'] ) {
@@ -148,7 +156,7 @@ function download_gravatar_images( $emails, $size = 500 ) {
 		}
 	}
 
-	return $images;
+	return $paths;
 }
 
 /**

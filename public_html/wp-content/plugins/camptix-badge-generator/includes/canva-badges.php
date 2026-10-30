@@ -163,7 +163,7 @@ function build_spreadsheet( $attendees, $qr_code_type, $folder ) {
 		$emails[ $attendee->ID ] = $attendee->tix_email;
 	}
 
-	$photos = Badge_Generator\download_gravatar_images( $emails );
+	$photos = Badge_Generator\download_gravatar_images( $emails, $folder );
 	$writer = new XLSX_Writer();
 	$header = get_header_row( $qr_code_type );
 
@@ -174,13 +174,8 @@ function build_spreadsheet( $attendees, $qr_code_type, $folder ) {
 	}
 
 	foreach ( $attendees as $attendee ) {
-		$photo_path = '';
+		$photo_path = $photos[ $attendee->ID ] ?? '';
 		$qr_path    = '';
-
-		if ( isset( $photos[ $attendee->ID ] ) ) {
-			$photo_path = "$folder/{$attendee->ID}-photo";
-			file_put_contents( $photo_path, $photos[ $attendee->ID ] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		}
 
 		$target_url = Badge_Generator\get_qr_code_target_url( $attendee, $qr_code_type );
 		$qr_png     = $target_url ? QR_Code::get_png( $target_url ) : '';

@@ -8,6 +8,8 @@ defined( 'WPINC' ) || die();
  * @var string $indesign_page_url
  * @var string $notify_tool_url
  * @var string $qr_code_type
+ * @var array  $tickets
+ * @var array  $admin_flags
  */
 
 ?>
@@ -85,6 +87,39 @@ defined( 'WPINC' ) || die();
 					<option value="wporg" <?php selected( $qr_code_type, 'wporg' ); ?>><?php esc_html_e( 'WordPress.org profile', 'wordcamporg' ); ?></option>
 				</select>
 			</p>
+
+			<?php if ( $tickets ) : ?>
+				<fieldset>
+					<legend><?php esc_html_e( 'Tickets', 'wordcamporg' ); ?></legend>
+
+					<?php foreach ( $tickets as $ticket_id => $ticket_title ) : ?>
+						<label>
+							<input type="checkbox" name="cbg_ticket_ids[]" value="<?php echo esc_attr( $ticket_id ); ?>" checked />
+							<?php echo esc_html( $ticket_title ); ?>
+						</label>
+						<br />
+					<?php endforeach; ?>
+				</fieldset>
+			<?php endif; ?>
+
+			<p>
+				<label for="cbg-canva-registered-after"><?php esc_html_e( 'Registered after (optional)', 'wordcamporg' ); ?></label>
+				<input type="datetime-local" id="cbg-canva-registered-after" name="cbg_registered_after" />
+				<br />
+				<span class="description"><?php esc_html_e( 'Use this to print a second batch for people who registered after the first one.', 'wordcamporg' ); ?></span>
+			</p>
+
+			<?php if ( $admin_flags ) : ?>
+				<p>
+					<label for="cbg-canva-admin-flag"><?php esc_html_e( 'Admin flag', 'wordcamporg' ); ?></label>
+					<select id="cbg-canva-admin-flag" name="cbg_admin_flag">
+						<option value=""><?php esc_html_e( 'All attendees', 'wordcamporg' ); ?></option>
+						<?php foreach ( $admin_flags as $flag => $label ) : ?>
+							<option value="<?php echo esc_attr( $flag ); ?>"><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</p>
+			<?php endif; ?>
 
 			<p class="description">
 				<?php esc_html_e( 'This can take a few minutes for large events, while the photos are downloaded.', 'wordcamporg' ); ?>

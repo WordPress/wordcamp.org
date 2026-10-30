@@ -39,6 +39,8 @@ function render_badges_page() {
 	$notify_tool_url     = admin_url( 'edit.php?post_type=tix_ticket&page=camptix_tools&tix_section=notify' );
 	$indesign_page_url   = admin_url( 'edit.php?post_type=tix_ticket&page=camptix_tools&tix_section=indesign_badges' );
 	$qr_code_type        = get_option( 'cbg_qr_code_type', 'none' );
+	$tickets             = Canva\get_ticket_choices();
+	$admin_flags         = InDesign\get_admin_flags();
 
 	require_once( dirname( __DIR__ ) . '/views/common/page-generate-badges.php' );
 }

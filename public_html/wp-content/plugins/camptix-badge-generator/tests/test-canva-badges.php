@@ -2,11 +2,12 @@
 
 use CampTix\Badge_Generator\QR_Code;
 use CampTix\Badge_Generator\XLSX_Writer;
-use function CampTix\Badge_Generator\Canva\{ get_header_row, get_attendee_row };
+use function CampTix\Badge_Generator\Canva\{ get_header_row, get_attendee_row, get_export_options };
 
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__ ) . '/includes/class-xlsx-writer.php';
+require_once dirname( __DIR__ ) . '/includes/indesign-badges.php';
 require_once dirname( __DIR__ ) . '/includes/canva-badges.php';
 
 /**
@@ -183,5 +184,67 @@ class Test_Canva_Badges extends WP_UnitTestCase {
 		$row = get_attendee_row( $attendee, '', '', 'none' );
 		$this->assertCount( count( get_header_row( 'none' ) ), $row );
 		$this->assertSame( '', $row[7], 'No photo.' );
+	}
+
+	/**
+	 * Give the site an admin flag, like organizers set up under Tickets > Setup.
+	 *
+	 * @param array $options
+	 *
+	 * @return array
+	 */
+	public function add_speaker_flag( $options ) {
+		$options['camptix-admin-flags-data-parsed'] = array( 'speaker' => 'Speaker' );
+
+		return $options;
+	}
+
+	/**
+	 * @covers \CampTix\Badge_Generator\Canva\get_export_options
+	 */
+	public function test_export_options() {
+		/** @global CampTix_Plugin $camptix */
+		global $camptix;
+
+		add_filter( 'camptix_options', array( $this, 'add_speaker_flag' ) );
+		$camptix->load_options();
+		update_option( 'timezone_string', 'Europe/Skopje' );
+
+		$general = self::factory()->post->create( array( 'post_type' => 'tix_ticket' ) );
+		$student = self::factory()->post->create( array( 'post_type' => 'tix_ticket' ) );
+
+		$defaults = get_export_options( array() );
+		$this->assertSame( 'none', $defaults['qr_code_type'] );
+		$this->assertSame( array(), $defaults['ticket_ids'], 'No ticket chosen.' );
+		$this->assertSame( '', $defaults['registered_after'] );
+		$this->assertSame( '', $defaults['admin_flag'] );
+
+		$options = get_export_options( array(
+			'cbg_qr_code_type'     => 'wporg',
+			'cbg_ticket_ids'       => array( (string) $general, (string) $student ),
+			'cbg_registered_after' => '2026-10-01T09:00',
+			'cbg_admin_flag'       => 'speaker',
+		) );
+
+		$this->assertSame( 'wporg', $options['qr_code_type'] );
+		$this->assertSame( 'all', $options['ticket_ids'], 'Every ticket chosen.' );
+		$this->assertSame( '2026-10-01T09:00:00+02:00', $options['registered_after'], "In the site's timezone." );
+		$this->assertSame( strtotime( '2026-10-01 07:00:00 UTC' ), strtotime( $options['registered_after'] ) );
+		$this->assertSame( 'speaker', $options['admin_flag'] );
+
+		$options = get_export_options( array(
+			'cbg_qr_code_type'     => 'evil',
+			'cbg_ticket_ids'       => array( (string) $student, '999999', 'abc' ),
+			'cbg_registered_after' => 'not a date',
+			'cbg_admin_flag'       => 'not-a-flag',
+		) );
+
+		$this->assertSame( 'none', $options['qr_code_type'] );
+		$this->assertSame( array( $student ), $options['ticket_ids'], 'Unknown tickets are dropped.' );
+		$this->assertSame( '', $options['registered_after'] );
+		$this->assertSame( '', $options['admin_flag'] );
+
+		remove_filter( 'camptix_options', array( $this, 'add_speaker_flag' ) );
+		$camptix->load_options();
 	}
 }

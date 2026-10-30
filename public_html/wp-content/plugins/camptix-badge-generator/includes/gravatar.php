@@ -157,12 +157,15 @@ function download_gravatar_images( $emails, $size = 500 ) {
  * WP doesn't offer a parallel version of wp_remote_get(), so this uses Requests directly. That skips the
  * `http_request_args` and `pre_http_request` filters, so it applies WP's proxy settings itself.
  *
+ * Requests go out in small batches with a pause between them, so Gravatar isn't flooded. That keeps to about 10
+ * requests a second, the same rate as the original badge script.
+ *
  * @param array $urls       URLs keyed by any unique ID.
  * @param int   $batch_size How many requests to have in flight at once.
  *
  * @return array Each response's `status` (0 when the request failed) and `body`, keyed by the same IDs.
  */
-function remote_get_multiple( $urls, $batch_size = 20 ) {
+function remote_get_multiple( $urls, $batch_size = 5 ) {
 	$options = array(
 		'timeout'   => 10,
 		'useragent' => 'WordCamp.org CampTix Badge Generator; ' . home_url( '/' ),
@@ -181,7 +184,11 @@ function remote_get_multiple( $urls, $batch_size = 20 ) {
 
 	$results = array();
 
-	foreach ( array_chunk( $urls, $batch_size, true ) as $batch ) {
+	foreach ( array_chunk( $urls, $batch_size, true ) as $index => $batch ) {
+		if ( $index > 0 ) {
+			usleep( 500000 );
+		}
+
 		$requests = array();
 
 		foreach ( $batch as $id => $url ) {

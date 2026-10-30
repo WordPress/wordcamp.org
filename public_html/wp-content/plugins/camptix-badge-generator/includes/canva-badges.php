@@ -1,9 +1,11 @@
 <?php
 
 namespace CampTix\Badge_Generator\Canva;
+use DateTimeImmutable;
 use Exception;
 use CampTix\Badge_Generator;
 use CampTix\Badge_Generator\HTML;
+use CampTix\Badge_Generator\InDesign;
 use CampTix\Badge_Generator\QR_Code;
 use CampTix\Badge_Generator\XLSX_Writer;
 use WordCamp\Logger;
@@ -24,8 +26,18 @@ function download_spreadsheet() {
 
 	check_admin_referer( ACTION );
 
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above.
-	$qr_code_type = HTML\sanitize_qr_code_type( sanitize_text_field( wp_unslash( $_POST['cbg_qr_code_type'] ?? 'none' ) ) );
+	$options = get_export_options( wp_unslash( $_POST ) );
+
+	if ( empty( $options['ticket_ids'] ) ) {
+		wp_die(
+			esc_html__( 'Choose at least one ticket.', 'wordcamporg' ),
+			'',
+			array(
+				'response'  => 400,
+				'back_link' => true,
+			)
+		);
+	}
 
 	set_time_limit( 0 );
 
@@ -35,7 +47,8 @@ function download_spreadsheet() {
 	try {
 		wp_mkdir_p( $folder );
 
-		$filename = build_spreadsheet( Badge_Generator\get_attendees( 'all' ), $qr_code_type, $folder );
+		$attendees = Badge_Generator\get_attendees( $options['ticket_ids'], $options['registered_after'], $options['admin_flag'] );
+		$filename  = build_spreadsheet( $attendees, $options['qr_code_type'], $folder );
 
 		header( 'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' );
 		header( 'Content-Length: ' . filesize( $filename ) );
@@ -56,10 +69,60 @@ function download_spreadsheet() {
 	}
 
 	if ( isset( $error ) ) {
-		wp_die( esc_html( $error ) );
+		wp_die( esc_html( $error ), '', array( 'back_link' => true ) );
 	}
 
 	exit;
+}
+
+/**
+ * Get the export options from the submitted form
+ *
+ * The filters let organizers print most badges early, and then a second batch of late registrations, or only the
+ * badges for speakers, sponsors, etc.
+ *
+ * @param array $request Unslashed form data.
+ *
+ * @return array `qr_code_type`; `ticket_ids` as the string `all` or an array of IDs, which is empty if none of
+ *               them are valid; `registered_after` as an ISO 8601 date in the site's timezone, or an empty
+ *               string; and `admin_flag`, which is an empty string for all attendees.
+ */
+function get_export_options( $request ) {
+	$all_tickets = get_ticket_choices();
+	$ticket_ids  = array_intersect( array_map( 'absint', (array) ( $request['cbg_ticket_ids'] ?? array() ) ), array_keys( $all_tickets ) );
+	$admin_flag  = sanitize_text_field( (string) ( $request['cbg_admin_flag'] ?? '' ) );
+	$after       = sanitize_text_field( (string) ( $request['cbg_registered_after'] ?? '' ) );
+
+	try {
+		// The date field has no timezone, and organizers mean their own.
+		$after = '' === $after ? '' : ( new DateTimeImmutable( $after, wp_timezone() ) )->format( 'c' );
+	} catch ( Exception $exception ) {
+		$after = '';
+	}
+
+	return array(
+		'qr_code_type'     => HTML\sanitize_qr_code_type( sanitize_text_field( (string) ( $request['cbg_qr_code_type'] ?? 'none' ) ) ),
+		'ticket_ids'       => count( $ticket_ids ) === count( $all_tickets ) ? 'all' : array_values( $ticket_ids ),
+		'registered_after' => $after,
+		'admin_flag'       => array_key_exists( $admin_flag, InDesign\get_admin_flags() ) ? $admin_flag : '',
+	);
+}
+
+/**
+ * Get the tickets that organizers can filter the export by
+ *
+ * @return array Ticket titles keyed by ID.
+ */
+function get_ticket_choices() {
+	$tickets = get_posts( array(
+		'post_type'   => 'tix_ticket',
+		'post_status' => 'any',
+		'numberposts' => -1,
+		'orderby'     => 'menu_order',
+		'order'       => 'ASC',
+	) );
+
+	return wp_list_pluck( $tickets, 'post_title', 'ID' );
 }
 
 /**

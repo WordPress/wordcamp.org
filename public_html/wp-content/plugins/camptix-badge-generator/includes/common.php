@@ -204,7 +204,11 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 			break;
 
 		case 'company':
-			$value = get_badge_field( $attendee, 'company', 'company' );
+			/*
+			 * Only from a question, so an employer is on the badge only when the attendee gave it for this event.
+			 * See https://make.wordpress.org/core/2026/04/11/elevating-individuals/.
+			 */
+			$value = get_badge_field( $attendee, 'company' );
 			break;
 
 		case 'website':
@@ -309,8 +313,9 @@ function get_badge_field_labels() {
 /**
  * Get a badge field for an attendee
  *
- * The attendee's public Gravatar profile wins, because that's what they've chosen to share publicly. The answer
- * to the question the organizer mapped to the field is the fallback.
+ * For the hometown, the attendee's public Gravatar profile wins, because that's what they've chosen to share
+ * publicly. The answer to the question the organizer mapped to the field is the fallback, and the only source for
+ * the other fields.
  *
  * @param \WP_Post $attendee
  * @param string   $field          `hometown`, `website`, or `company`.

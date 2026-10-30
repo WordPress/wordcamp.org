@@ -39,8 +39,8 @@ function use_gravatar_profiles() {
  *
  * @param string $email
  *
- * @return array The `location`, `company`, and `job_title` fields, which may be empty strings. An empty array
- *               when the attendee has no public profile.
+ * @return array The `location` field, which may be an empty string. An empty array when the attendee has no public
+ *               profile.
  */
 function get_gravatar_profile( $email ) {
 	$hash = get_gravatar_hash( $email );
@@ -104,13 +104,10 @@ function parse_gravatar_profile_response( $status, $body ) {
 		return null;
 	}
 
-	$profile = array();
-
-	foreach ( array( 'location', 'company', 'job_title' ) as $field ) {
-		$profile[ $field ] = isset( $data[ $field ] ) && is_string( $data[ $field ] ) ? trim( $data[ $field ] ) : '';
-	}
-
-	return $profile;
+	// Only what badges show. The company isn't taken from Gravatar, see get_badge_field().
+	return array(
+		'location' => isset( $data['location'] ) && is_string( $data['location'] ) ? trim( $data['location'] ) : '',
+	);
 }
 
 /**

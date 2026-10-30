@@ -93,16 +93,25 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 	 */
 	public function test_gravatar_profile_wins_over_question() {
 		$attendee = $this->make_attendee(
-			array(
-				'hometown' => 'Answered City', 'company' => 'Answered Co',
-			),
-			array(
-				'location' => 'Gravatar City', 'company' => 'Gravatar Co', 'job_title' => '',
-			)
+			array( 'hometown' => 'Answered City' ),
+			array( 'location' => 'Gravatar City' )
 		);
 
 		$this->assertSame( 'Gravatar City', $attendee->hometown );
-		$this->assertSame( 'Gravatar Co', $attendee->company );
+	}
+
+	/**
+	 * An employer is on the badge only when the attendee gave it for this event.
+	 *
+	 * @covers \CampTix\Badge_Generator\get_badge_field
+	 */
+	public function test_company_never_comes_from_gravatar() {
+		$profile = array(
+			'location' => 'Gravatar City', 'company' => 'Gravatar Co',
+		);
+
+		$this->assertSame( '', $this->make_attendee( array(), $profile )->company, 'Skipped the question.' );
+		$this->assertSame( 'Answered Co', $this->make_attendee( array( 'company' => 'Answered Co' ), $profile )->company );
 	}
 
 	/**
@@ -110,16 +119,11 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 	 */
 	public function test_question_fills_gaps_in_gravatar_profile() {
 		$attendee = $this->make_attendee(
-			array(
-				'hometown' => ' Answered City ', 'company' => 'Answered Co',
-			),
-			array(
-				'location' => '', 'company' => 'Gravatar Co', 'job_title' => '',
-			)
+			array( 'hometown' => ' Answered City ' ),
+			array( 'location' => '' )
 		);
 
 		$this->assertSame( 'Answered City', $attendee->hometown );
-		$this->assertSame( 'Gravatar Co', $attendee->company );
 	}
 
 	/**
@@ -128,15 +132,9 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 	public function test_gravatar_profiles_can_be_turned_off() {
 		update_option( 'cbg_use_gravatar_profiles', \CampTix\Badge_Generator\HTML\sanitize_checkbox( false ) );
 
-		$attendee = $this->make_attendee(
-			array( 'company' => 'Answered Co' ),
-			array(
-				'location' => 'Gravatar City', 'company' => 'Gravatar Co', 'job_title' => '',
-			)
-		);
+		$attendee = $this->make_attendee( array(), array( 'location' => 'Gravatar City' ) );
 
 		$this->assertSame( '', $attendee->hometown );
-		$this->assertSame( 'Answered Co', $attendee->company );
 	}
 
 	/**
@@ -216,16 +214,14 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 	public function test_parse_gravatar_profile_response() {
 		$body = wp_json_encode( array(
 			'location'     => ' Skopje ',
-			'company'      => 'Automattic',
-			'job_title'    => array( 'not a string' ),
+			'company'      => 'Not used on badges',
 			'display_name' => 'Not needed',
 		) );
 
+		$this->assertSame( array( 'location' => 'Skopje' ), parse_gravatar_profile_response( 200, $body ) );
 		$this->assertSame(
-			array(
-				'location' => 'Skopje', 'company' => 'Automattic', 'job_title' => '',
-			),
-			parse_gravatar_profile_response( 200, $body )
+			array( 'location' => '' ),
+			parse_gravatar_profile_response( 200, wp_json_encode( array( 'location' => array( 'not a string' ) ) ) )
 		);
 
 		$this->assertSame( array(), parse_gravatar_profile_response( 404, '' ), 'No profile.' );

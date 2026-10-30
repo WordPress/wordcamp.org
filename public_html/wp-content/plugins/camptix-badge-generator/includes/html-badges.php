@@ -114,7 +114,7 @@ function register_customizer_components( $wp_customize ) {
 			'type'        => 'checkbox',
 			'priority'    => 2,
 			'label'       => __( 'Use Gravatar profiles', 'wordcamporg' ),
-			'description' => __( "Show the hometown and company from each attendee's public Gravatar profile, when they've filled them in.", 'wordcamporg' ),
+			'description' => __( "Show the hometown from each attendee's public Gravatar profile, when they've filled it in.", 'wordcamporg' ),
 		)
 	);
 
@@ -142,9 +142,9 @@ function register_customizer_components( $wp_customize ) {
 				'priority'    => 2,
 				// translators: %s: A badge field, like "Hometown".
 				'label'       => sprintf( __( '%s question', 'wordcamporg' ), $label ),
-				'description' => 'website' === $field
-					? __( 'The ticket question that asks attendees for this.', 'wordcamporg' )
-					: __( "The ticket question that asks attendees for this. It's used when their Gravatar profile doesn't have it.", 'wordcamporg' ),
+				'description' => 'hometown' === $field
+					? __( "The ticket question that asks attendees for this. It's used when their Gravatar profile doesn't have it.", 'wordcamporg' )
+					: __( 'The ticket question that asks attendees for this.', 'wordcamporg' ),
 				'choices'     => $question_choices,
 			)
 		);

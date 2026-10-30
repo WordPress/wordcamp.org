@@ -25,10 +25,12 @@ function get_gravatar_hash( $email ) {
 /**
  * Check if badges should pull details from attendees' public Gravatar profiles
  *
+ * Off until organizers turn it on, because the first preview of a large event waits for every attendee's profile.
+ *
  * @return bool
  */
 function use_gravatar_profiles() {
-	return (bool) get_option( 'cbg_use_gravatar_profiles', true );
+	return (bool) get_option( 'cbg_use_gravatar_profiles', false );
 }
 
 /**

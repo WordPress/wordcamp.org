@@ -56,6 +56,7 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 		}
 
 		update_option( 'cbg_field_questions', $this->questions );
+		update_option( 'cbg_use_gravatar_profiles', \CampTix\Badge_Generator\HTML\sanitize_checkbox( true ) );
 	}
 
 	/**
@@ -122,6 +123,17 @@ class Test_Badge_Fields extends WP_UnitTestCase {
 			array( 'hometown' => ' Answered City ' ),
 			array( 'location' => '' )
 		);
+
+		$this->assertSame( 'Answered City', $attendee->hometown );
+	}
+
+	/**
+	 * @covers \CampTix\Badge_Generator\get_badge_field
+	 */
+	public function test_gravatar_profiles_are_off_by_default() {
+		delete_option( 'cbg_use_gravatar_profiles' );
+
+		$attendee = $this->make_attendee( array( 'hometown' => 'Answered City' ), array( 'location' => 'Gravatar City' ) );
 
 		$this->assertSame( 'Answered City', $attendee->hometown );
 	}

@@ -99,7 +99,7 @@ function register_customizer_components( $wp_customize ) {
 	$wp_customize->add_setting(
 		'cbg_use_gravatar_profiles',
 		array(
-			'default'           => true,
+			'default'           => false,
 			'type'              => 'option',
 			'capability'        => Badge_Generator\REQUIRED_CAPABILITY,
 			'transport'         => 'refresh',

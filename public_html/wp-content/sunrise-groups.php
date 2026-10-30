@@ -113,6 +113,12 @@ function set_network_and_site() {
  *   owned by the root site — the group messaging queue, for one — lives in
  *   this blog's `cron` option, and the spawn is non-blocking, so a redirect
  *   is never followed: the job simply never ran.
+ * - The `wporg-groups/v1/events` REST route is the network-wide events feed
+ *   WordPress.org's events importer reads (#1786). It's matched as one exact
+ *   route, in both the pretty (`/group/wp-json/wporg-groups/v1/events`) and
+ *   plain (`/group/?rest_route=/wporg-groups/v1/events`) spellings, since the
+ *   root's permalink setting decides which one WordPress answers. Every other
+ *   REST route on the root still redirects.
  *
  * The list is a local rather than a namespace constant on purpose: this file
  * is `require`d from inside `load_network_sunrise()`, so a file-scope `const`
@@ -139,6 +145,21 @@ function is_reachable_root_endpoint() {
 
 	if ( ! is_string( $path ) || '' === $path ) {
 		return false;
+	}
+
+	if ( '/group/wp-json/wporg-groups/v1/events' === rtrim( $path, '/' ) ) {
+		return true;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only compared, never used.
+	$rest_route = $_GET['rest_route'] ?? null;
+
+	if (
+		in_array( $path, array( '/group/', '/group/index.php' ), true ) &&
+		is_string( $rest_route ) &&
+		'/wporg-groups/v1/events' === rtrim( $rest_route, '/' )
+	) {
+		return true;
 	}
 
 	return in_array( basename( $path ), $reachable, true );

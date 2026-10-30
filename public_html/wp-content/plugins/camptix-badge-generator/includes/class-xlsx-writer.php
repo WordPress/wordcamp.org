@@ -231,15 +231,30 @@ class XLSX_Writer {
 	 * @return array|null `null` when the file isn't a supported image.
 	 */
 	private function get_image( string $path, int $row, int $column ): ?array {
-		$extensions = array(
-			IMAGETYPE_PNG  => 'png',
-			IMAGETYPE_JPEG => 'jpeg',
-			IMAGETYPE_GIF  => 'gif',
+		$signatures = array(
+			'png'  => "\x89PNG\r\n\x1a\n",
+			'jpeg' => "\xFF\xD8\xFF",
+			'gif'  => 'GIF8',
 		);
 
-		$size = is_readable( $path ) ? getimagesize( $path ) : false;
+		// Check the signature first, because getimagesize() raises a notice on files that aren't images.
+		$header    = is_readable( $path ) ? (string) file_get_contents( $path, false, null, 0, 8 ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$extension = '';
 
-		if ( ! $size || ! isset( $extensions[ $size[2] ] ) || ! $size[0] || ! $size[1] ) {
+		foreach ( $signatures as $type => $signature ) {
+			if ( str_starts_with( $header, $signature ) ) {
+				$extension = $type;
+				break;
+			}
+		}
+
+		if ( ! $extension ) {
+			return null;
+		}
+
+		$size = getimagesize( $path );
+
+		if ( ! $size || ! $size[0] || ! $size[1] ) {
 			return null;
 		}
 
@@ -247,7 +262,7 @@ class XLSX_Writer {
 
 		return array(
 			'path'      => $path,
-			'extension' => $extensions[ $size[2] ],
+			'extension' => $extension,
 			'row'       => $row,
 			'column'    => $column,
 			'width'     => (int) round( $size[0] * $scale ),

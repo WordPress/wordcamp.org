@@ -87,7 +87,7 @@ const GROUP_URLNAME_OPTION = 'wporg_meetup_group_urlname';
 const FOUNDED_OPTION       = 'wporg_meetup_founded_date';
 
 /**
- * The site role each Meetup leadership role maps to.
+ * The site role each Meetup organizer role maps to.
  *
  * Meetup's organizers and co-organizers run the group, the full "Organizer"
  * tier here (`editor`); assistant and event organizers run events, the "Event
@@ -95,7 +95,7 @@ const FOUNDED_OPTION       = 'wporg_meetup_founded_date';
  * Nobody is ever made an `administrator` by an import -- that stays with the
  * lead organizer the site was created for.
  */
-const LEADER_ROLES = array(
+const MEETUP_ORGANIZER_ROLES = array(
 	'ORGANIZER'       => 'editor',
 	'COORGANIZER'     => 'editor',
 	'ASST_ORGANIZER'  => 'author',
@@ -166,7 +166,7 @@ const IMPORTED_USERS_OPTION = 'wporg_meetup_imported_user_ids';
  * Their role is the group's to change from then on: if the group demotes
  * one, a later import mustn't promote them back.
  */
-const IMPORTED_LEADERS_OPTION = 'wporg_meetup_imported_leader_ids';
+const IMPORTED_ORGANIZERS_OPTION = 'wporg_meetup_imported_organizer_ids';
 
 /**
  * How many times a job may fail at the same point before it's given up on.
@@ -183,7 +183,9 @@ const MAX_ATTEMPTS = 3;
  * then inserted, so two cron runs working the same job at once could both
  * miss an event and both create it. The expiry frees the lock if a batch dies
  * without releasing it -- which, with the shutdown release in
- * `process_batch()`, only happens if the process is killed outright.
+ * `process_batch()`, only happens if the process is killed outright. A batch
+ * renews it before each event (see `extend_lock()`), so a slow batch isn't
+ * mistaken for a dead one.
  */
 const LOCK_OPTION  = 'wporg_meetup_import_lock';
 const LOCK_TIMEOUT = 5 * MINUTE_IN_SECONDS;
@@ -198,13 +200,16 @@ const LOCK_TIMEOUT = 5 * MINUTE_IN_SECONDS;
 const ONLINE_VENUE_ID = 26906060;
 
 /**
- * The import job, and the cron event that works through it.
+ * The import jobs, and the cron event that works through them.
  *
  * Every import runs as a job, whatever the group's size: Preview queues a job
  * that a cron run fills in from Meetup, and Import has later cron runs write
- * it a batch at a time. One job exists at a time, network-wide.
+ * it a batch at a time. Each group site has at most one job, in its own
+ * network option (the prefix plus the site ID), so an import into one site
+ * never waits on a preview for another. One cron event serves every job (see
+ * `process_batch()`).
  */
-const JOB_OPTION        = 'wporg_meetup_import_job';
+const JOB_OPTION_PREFIX = 'wporg_meetup_import_job_';
 const CRON_HOOK         = 'wporg_meetup_import_batch';
 const START_ACTION      = 'wporg_meetup_import_start';
 const CONFIRM_ACTION    = 'wporg_meetup_import_confirm';
@@ -212,11 +217,32 @@ const CANCEL_ACTION     = 'wporg_meetup_import_cancel';
 const EVENTS_PER_BATCH  = 10;
 const MEMBERS_PER_BATCH = 200;
 
+/**
+ * How long a preview waits for someone to click Import, and how long a
+ * finished job stays on the screen.
+ *
+ * A preview holds the group's Meetup data, including member emails when people
+ * are matched, so one that nobody imports is expired rather than kept.
+ */
+const PREVIEW_TTL  = DAY_IN_SECONDS;
+const FINISHED_TTL = 30 * DAY_IN_SECONDS;
+
+/**
+ * Hourly cron event that expires old jobs and re-queues stalled ones.
+ *
+ * A run that's killed outright (a timeout, running out of memory) never
+ * queues the next one, and a queued run can be lost when two requests write
+ * the site's `cron` option at once. Either way the job would wait for someone
+ * to open the import screen; the sweep queues a run for it instead.
+ */
+const SWEEP_HOOK = 'wporg_meetup_import_sweep';
+
 add_action( 'network_admin_menu', __NAMESPACE__ . '\register_admin_page' );
 add_action( 'admin_post_' . START_ACTION, __NAMESPACE__ . '\handle_start' );
 add_action( 'admin_post_' . CONFIRM_ACTION, __NAMESPACE__ . '\handle_confirm' );
 add_action( 'admin_post_' . CANCEL_ACTION, __NAMESPACE__ . '\handle_cancel' );
 add_action( CRON_HOOK, __NAMESPACE__ . '\process_batch' );
+add_action( SWEEP_HOOK, __NAMESPACE__ . '\sweep_jobs' );
 
 /**
  * Add the "Import from Meetup" screen under Network Admin > Groups.
@@ -233,22 +259,66 @@ function register_admin_page() {
 }
 
 /**
- * The current import job, or an empty array for none.
+ * The network option holding a site's import job.
+ *
+ * @param int $site_id Group site.
+ */
+function job_option( int $site_id ): string {
+	return JOB_OPTION_PREFIX . $site_id;
+}
+
+/**
+ * A site's import job, or an empty array for none.
  *
  * A job moves through these statuses:
  *
- * - `fetching`: queued by Preview; the next cron run fetches the group from
- *   Meetup and works out what an import would do.
- * - `ready`: the preview is in the job, waiting for someone to click Import.
+ * - `fetching`: queued by Preview; a cron run fetches the group from Meetup
+ *   and works out what an import would do.
+ * - `ready`: the preview is in the job, waiting up to `PREVIEW_TTL` for
+ *   someone to click Import.
  * - `importing`: cron runs are writing it, one batch per run, in the order
  *   group details, organizers, members, events.
- * - `done` or `failed`: finished; kept so the screen can show how it went,
- *   until the next Preview replaces it.
+ * - `done`, `failed`, or `expired` (a preview nobody imported): finished;
+ *   kept for `FINISHED_TTL` so the screen can show how it went, unless the
+ *   site's next Preview replaces it first.
+ *
+ * @param int $site_id Group site.
  */
-function get_job(): array {
-	$job = get_site_option( JOB_OPTION, array() );
+function get_job( int $site_id ): array {
+	$job = get_site_option( job_option( $site_id ), array() );
 
 	return is_array( $job ) ? $job : array();
+}
+
+/**
+ * Every site's import job.
+ *
+ * Read from the database rather than the options cache, which `save_job()`
+ * bypasses, so a cron run picks its job from what's stored now.
+ *
+ * @return array[]
+ */
+function get_jobs(): array {
+	global $wpdb;
+
+	$values = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- see above.
+		$wpdb->prepare(
+			"SELECT meta_value FROM $wpdb->sitemeta WHERE site_id = %d AND meta_key LIKE %s ORDER BY meta_id",
+			get_current_network_id(),
+			$wpdb->esc_like( JOB_OPTION_PREFIX ) . '%'
+		)
+	);
+
+	return array_values( array_filter( array_map( 'maybe_unserialize', $values ), 'is_array' ) );
+}
+
+/**
+ * Whether a preview has waited longer than `PREVIEW_TTL` for someone to click Import.
+ *
+ * @param array $job Import job.
+ */
+function is_preview_expired( array $job ): bool {
+	return 'ready' === ( $job['status'] ?? '' ) && ( $job['updated'] ?? 0 ) < time() - PREVIEW_TTL;
 }
 
 /**
@@ -257,7 +327,21 @@ function get_job(): array {
  * @param array $job Import job.
  */
 function is_job_active( array $job ): bool {
-	return in_array( $job['status'] ?? '', array( 'fetching', 'ready', 'importing' ), true );
+	return in_array( $job['status'] ?? '', array( 'fetching', 'ready', 'importing' ), true ) && ! is_preview_expired( $job );
+}
+
+/**
+ * A `LIKE` pattern that matches this job's stored row, and no other.
+ *
+ * The row holds the job's ID serialized as `s:2:"id";s:36:"<uuid>"`, so a
+ * cancelled job (row deleted) or a replaced one (different ID) doesn't match.
+ *
+ * @param array $job Import job.
+ */
+function job_row_pattern( array $job ): string {
+	global $wpdb;
+
+	return '%' . $wpdb->esc_like( serialize( 'id' ) . serialize( (string) $job['id'] ) ) . '%'; // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- matching the stored serialized form.
 }
 
 /**
@@ -274,28 +358,72 @@ function save_job( array $job ): bool {
 	global $wpdb;
 
 	$job['updated'] = time();
+	$option         = job_option( (int) $job['site_id'] );
 
-	/*
-	 * One conditional UPDATE, rather than reading the stored job and then
-	 * writing it: a cancel or a new preview landing between a read and a
-	 * write would otherwise be overwritten. The row only matches while it
-	 * still holds this job's ID -- serialized as `s:2:"id";s:36:"<uuid>"` --
-	 * so a cancelled job (row deleted) or a replaced one (different ID) is
-	 * left alone.
-	 */
+	// One conditional UPDATE, rather than reading the stored job and then
+	// writing it: a cancel or a new preview landing between a read and a
+	// write would otherwise be overwritten.
 	$updated = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- must bypass the option cache to be atomic.
 		$wpdb->prepare(
 			"UPDATE $wpdb->sitemeta SET meta_value = %s WHERE site_id = %d AND meta_key = %s AND meta_value LIKE %s",
 			maybe_serialize( $job ),
 			get_current_network_id(),
-			JOB_OPTION,
-			'%' . $wpdb->esc_like( serialize( 'id' ) . serialize( (string) $job['id'] ) ) . '%' // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- matching the stored serialized form.
+			$option,
+			job_row_pattern( $job )
 		)
 	);
 
-	wp_cache_delete( get_current_network_id() . ':' . JOB_OPTION, 'site-options' );
+	wp_cache_delete( get_current_network_id() . ':' . $option, 'site-options' );
 
 	return 1 === $updated;
+}
+
+/**
+ * Delete a job, unless it has been replaced in the meantime.
+ *
+ * @param array $job Import job.
+ */
+function delete_job( array $job ): void {
+	global $wpdb;
+
+	$option = job_option( (int) $job['site_id'] );
+
+	$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- as in `save_job()`.
+		$wpdb->prepare(
+			"DELETE FROM $wpdb->sitemeta WHERE site_id = %d AND meta_key = %s AND meta_value LIKE %s",
+			get_current_network_id(),
+			$option,
+			job_row_pattern( $job )
+		)
+	);
+
+	wp_cache_delete( get_current_network_id() . ':' . $option, 'site-options' );
+}
+
+/**
+ * The job the next cron run works on, or an empty array if none has work.
+ *
+ * A preview being fetched goes first, since someone is waiting on the screen
+ * for it. Imports take turns: the one whose last batch ran longest ago goes
+ * next, so each site's import moves forward at the same pace.
+ *
+ * @param array[] $jobs From `get_jobs()`.
+ */
+function pick_job( array $jobs ): array {
+	$first = static function ( string $status, string $order_by ) use ( $jobs ): array {
+		$matching = wp_list_filter( $jobs, array( 'status' => $status ) );
+
+		usort(
+			$matching,
+			static function ( $a, $b ) use ( $order_by ) {
+				return ( $a[ $order_by ] ?? 0 ) <=> ( $b[ $order_by ] ?? 0 );
+			}
+		);
+
+		return $matching[0] ?? array();
+	};
+
+	return $first( 'fetching', 'created' ) ?: $first( 'importing', 'last_run' );
 }
 
 /**
@@ -337,8 +465,8 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 		return $is_valid;
 	}
 
-	if ( is_job_active( get_job() ) ) {
-		return new WP_Error( 'import_running', __( 'Another Meetup import is in progress. Let it finish, or cancel it, first.', 'wordcamporg' ) );
+	if ( is_job_active( get_job( $site_id ) ) ) {
+		return new WP_Error( 'import_running', __( 'A Meetup import into that site is already in progress. Let it finish, or cancel it, first.', 'wordcamporg' ) );
 	}
 
 	$job = array(
@@ -353,8 +481,9 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 		'updated'      => time(),
 	);
 
-	update_site_option( JOB_OPTION, $job );
+	update_site_option( job_option( $site_id ), $job );
 	schedule_next_batch();
+	schedule_sweep();
 
 	Logger\log( 'job_queued', array_intersect_key( $job, array_flip( array( 'id', 'urlname', 'site_id', 'include_past', 'match_people' ) ) ) );
 
@@ -366,14 +495,15 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
  *
  * Callers MUST verify the `manage_sites` capability before calling this.
  *
- * @param string $job_id The job the person confirming was looking at, so a
- *                       stale screen can't confirm a different job.
+ * @param int    $site_id Group site the job imports into.
+ * @param string $job_id  The job the person confirming was looking at, so a
+ *                        stale screen can't confirm a different job.
  * @return array|WP_Error The confirmed job.
  */
-function confirm_job( string $job_id ) {
-	$job = get_job();
+function confirm_job( int $site_id, string $job_id ) {
+	$job = get_job( $site_id );
 
-	if ( 'ready' !== ( $job['status'] ?? '' ) || $job_id !== $job['id'] ) {
+	if ( 'ready' !== ( $job['status'] ?? '' ) || is_preview_expired( $job ) || $job_id !== $job['id'] ) {
 		return new WP_Error( 'job_not_ready', __( 'That preview is no longer current. Please preview again.', 'wordcamporg' ) );
 	}
 
@@ -383,10 +513,10 @@ function confirm_job( string $job_id ) {
 		'offset' => 0,
 	);
 	$job['results'] = array(
-		'group_results' => array(),
-		'leader_counts' => array(),
-		'member_counts' => array(),
-		'events'        => array(),
+		'group_results'    => array(),
+		'organizer_counts' => array(),
+		'member_counts'    => array(),
+		'events'           => array(),
 	);
 
 	save_job( $job );
@@ -396,16 +526,18 @@ function confirm_job( string $job_id ) {
 }
 
 /**
- * Cancel the current job, whatever state it's in.
+ * Cancel a site's job, whatever state it's in.
  *
  * What it already wrote stays: everything an import writes is safe to keep,
- * and a later import of the same group picks up from it.
+ * and a later import of the same group picks up from it. The cron event stays
+ * queued for any other site's job; with none, the next run finds nothing to do.
+ *
+ * @param int $site_id Group site.
  */
-function cancel_job(): void {
-	$job = get_job();
+function cancel_job( int $site_id ): void {
+	$job = get_job( $site_id );
 
-	delete_site_option( JOB_OPTION );
-	wp_clear_scheduled_hook( CRON_HOOK );
+	delete_site_option( job_option( $site_id ) );
 
 	if ( $job ) {
 		Logger\log( 'job_cancelled', array( 'id' => $job['id'] ) );
@@ -413,18 +545,74 @@ function cancel_job(): void {
 }
 
 /**
- * Work on the current job for one cron run.
+ * Mark a preview nobody imported as expired, dropping the Meetup data it held.
  *
- * The import lock keeps two runs off the same job: a run that can't take it
- * leaves the work to whoever holds it, and makes sure a run is queued for
+ * @param array $job Import job, `ready`.
+ */
+function expire_job( array $job ): void {
+	$job['status'] = 'expired';
+
+	unset( $job['data'] );
+
+	save_job( $job );
+
+	Logger\log( 'job_expired', array( 'id' => $job['id'] ) );
+}
+
+/**
+ * Queue the hourly sweep, unless it's queued already.
+ */
+function schedule_sweep(): void {
+	if ( ! wp_next_scheduled( SWEEP_HOOK ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', SWEEP_HOOK );
+	}
+}
+
+/**
+ * Expire old jobs, and make sure a run is queued while any job has work left.
+ *
+ * Runs hourly while any job exists, and whenever the import screen loads. The
+ * sweep stops itself once there are no jobs left.
+ */
+function sweep_jobs(): void {
+	foreach ( get_jobs() as $job ) {
+		if ( is_preview_expired( $job ) ) {
+			expire_job( $job );
+		} elseif ( ! is_job_active( $job ) && ( $job['updated'] ?? 0 ) < time() - FINISHED_TTL ) {
+			delete_job( $job );
+		}
+	}
+
+	$jobs = get_jobs();
+
+	if ( pick_job( $jobs ) ) {
+		schedule_next_batch();
+	}
+
+	if ( $jobs ) {
+		schedule_sweep();
+	} else {
+		wp_clear_scheduled_hook( SWEEP_HOOK );
+	}
+}
+
+/**
+ * Write one batch of one job, for one cron run.
+ *
+ * Every site's job is served by this one cron event: each run picks a job
+ * (see `pick_job()`), works one batch of it, and queues the next run while any
+ * job has work left.
+ *
+ * The import lock keeps two runs from working at once: a run that can't take
+ * it leaves the work to whoever holds it, and makes sure a run is queued for
  * after. The lock is released when the run ends, even on a timeout (see
- * `release_lock()`), and the batch it was on is simply redone by the next
+ * `release_lock()`), and the batch it was on is simply redone by a later
  * run -- everything a batch writes is safe to write twice.
  */
 function process_batch(): void {
-	// `ready` is waiting on a person, not on cron: nothing to do, and nothing
-	// to count against it.
-	if ( ! in_array( get_job()['status'] ?? '', array( 'fetching', 'importing' ), true ) ) {
+	// `ready` is waiting on a person, not on cron, and finished jobs are done:
+	// with no other job, there's nothing to do and nothing to count against them.
+	if ( ! pick_job( get_jobs() ) ) {
 		return;
 	}
 
@@ -436,39 +624,42 @@ function process_batch(): void {
 	register_shutdown_function( __NAMESPACE__ . '\release_lock' );
 
 	try {
-		$job = get_job();
+		// Picked again now that this run holds the lock, in case another run
+		// moved things on in the meantime.
+		$job = pick_job( get_jobs() );
 
-		// Counted, and saved, before the batch runs, so a batch that kills the
-		// process is still charged for it. Reset whenever a batch makes progress.
-		$job['attempts'] = ( $job['attempts'] ?? 0 ) + 1;
+		if ( $job ) {
+			// Counted, and saved, before the batch runs, so a batch that kills the
+			// process is still charged for it. Reset whenever a batch makes progress.
+			$job['attempts'] = ( $job['attempts'] ?? 0 ) + 1;
+			$job['last_run'] = microtime( true );
 
-		if ( $job['attempts'] > MAX_ATTEMPTS ) {
-			fail_job(
-				$job,
-				new WP_Error(
-					'job_stuck',
-					sprintf(
-						/* translators: 1: Number of attempts, 2: What the import was doing. */
-						__( 'Gave up after %1$d failed attempts while %2$s. Anything already written stays; preview again to retry.', 'wordcamporg' ),
-						MAX_ATTEMPTS,
-						'fetching' === $job['status'] ? __( 'fetching from Meetup', 'wordcamporg' ) : sprintf(
-							/* translators: %s: Import step, e.g. "events". */
-							__( 'importing %s', 'wordcamporg' ),
-							$job['cursor']['step'] ?? ''
+			if ( $job['attempts'] > MAX_ATTEMPTS ) {
+				fail_job(
+					$job,
+					new WP_Error(
+						'job_stuck',
+						sprintf(
+							/* translators: 1: Number of attempts, 2: What the import was doing. */
+							__( 'Gave up after %1$d failed attempts while %2$s. Anything already written stays; preview again to retry.', 'wordcamporg' ),
+							MAX_ATTEMPTS,
+							'fetching' === $job['status'] ? __( 'fetching from Meetup', 'wordcamporg' ) : sprintf(
+								/* translators: %s: Import step, e.g. "events". */
+								__( 'importing %s', 'wordcamporg' ),
+								$job['cursor']['step'] ?? ''
+							)
 						)
 					)
-				)
-			);
+				);
+			} else {
+				save_job( $job );
 
-			return;
-		}
-
-		save_job( $job );
-
-		if ( 'fetching' === ( $job['status'] ?? '' ) ) {
-			run_fetch( $job );
-		} elseif ( 'importing' === ( $job['status'] ?? '' ) ) {
-			run_import_batch( $job );
+				if ( 'fetching' === $job['status'] ) {
+					run_fetch( $job );
+				} else {
+					run_import_batch( $job );
+				}
+			}
 		}
 	} catch ( \Throwable $error ) {
 		Logger\log(
@@ -487,8 +678,7 @@ function process_batch(): void {
 		release_lock();
 	}
 
-	// `ready` waits for a person, and `done`/`failed` are finished.
-	if ( in_array( get_job()['status'] ?? '', array( 'fetching', 'importing' ), true ) ) {
+	if ( pick_job( get_jobs() ) ) {
 		schedule_next_batch();
 	}
 }
@@ -510,10 +700,10 @@ function run_fetch( array $job ): void {
 	}
 
 	$raw = array(
-		'group'   => fetch_group( $job['urlname'] ),
-		'events'  => fetch_group_events( $job['urlname'], $job['include_past'] ),
-		'members' => $job['match_people'] ? fetch_group_members( $job['urlname'] ) : array(),
-		'leaders' => $job['match_people'] ? fetch_group_leaders( $job['urlname'] ) : array(),
+		'group'      => fetch_group( $job['urlname'] ),
+		'events'     => fetch_group_events( $job['urlname'], $job['include_past'] ),
+		'members'    => $job['match_people'] ? fetch_group_members( $job['urlname'] ) : array(),
+		'organizers' => $job['match_people'] ? fetch_group_organizers( $job['urlname'] ) : array(),
 	);
 
 	foreach ( $raw as $fetched ) {
@@ -524,17 +714,17 @@ function run_fetch( array $job ): void {
 	}
 
 	$job['data'] = array(
-		'group'   => normalize_group( $raw['group'] ),
-		'events'  => array_map( __NAMESPACE__ . '\normalize_event', $raw['events'] ),
-		'members' => array_map( __NAMESPACE__ . '\normalize_member', $raw['members'] ),
-		'leaders' => array_map( __NAMESPACE__ . '\normalize_leader', $raw['leaders'] ),
+		'group'      => normalize_group( $raw['group'] ),
+		'events'     => array_map( __NAMESPACE__ . '\normalize_event', $raw['events'] ),
+		'members'    => array_map( __NAMESPACE__ . '\normalize_member', $raw['members'] ),
+		'organizers' => array_map( __NAMESPACE__ . '\normalize_organizer', $raw['organizers'] ),
 	);
 
 	$job['plan'] = array(
-		'group_results' => plan_group( $job['site_id'], $job['data']['group'] ),
-		'events'        => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
-		'leader_counts' => $job['match_people'] ? plan_leaders( $job['site_id'], $job['data']['leaders'] ) : null,
-		'member_counts' => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'] ) : null,
+		'group_results'    => plan_group( $job['site_id'], $job['data']['group'] ),
+		'events'           => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
+		'organizer_counts' => $job['match_people'] ? plan_organizers( $job['site_id'], $job['data']['organizers'] ) : null,
+		'member_counts'    => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'] ) : null,
 	);
 
 	$job['status']   = 'ready';
@@ -569,12 +759,12 @@ function run_import_batch( array $job ): void {
 
 		$job['results']['group_results'] = $results;
 		$job['cursor']                   = array(
-			'step'   => $job['match_people'] ? 'leaders' : 'events',
+			'step'   => $job['match_people'] ? 'organizers' : 'events',
 			'offset' => 0,
 		);
-	} elseif ( 'leaders' === $step ) {
-		$job['results']['leader_counts'] = import_leaders( $site_id, $data['leaders'] );
-		$job['cursor']                   = array(
+	} elseif ( 'organizers' === $step ) {
+		$job['results']['organizer_counts'] = import_organizers( $site_id, $data['organizers'] );
+		$job['cursor']                      = array(
 			'step'   => 'members',
 			'offset' => 0,
 		);
@@ -697,12 +887,24 @@ function summarize_event_row( array $row ): array {
 }
 
 /**
+ * The import screen, or one site's import on it.
+ *
+ * @param int $site_id Group site, or 0 for the list of every import.
+ */
+function screen_url( int $site_id = 0 ): string {
+	$url = network_admin_url( 'admin.php?page=' . PAGE_SLUG );
+
+	return $site_id ? add_query_arg( 'site_id', $site_id, $url ) : $url;
+}
+
+/**
  * Send the browser back to the import screen, with a notice to show.
  *
- * @param string $notice Notice key, see `render_notice()`.
+ * @param string $notice  Notice key, see `render_notice()`.
+ * @param int    $site_id Group site whose import to show, or 0 for the list.
  */
-function redirect_with_notice( string $notice ): void {
-	wp_safe_redirect( add_query_arg( 'notice', $notice, network_admin_url( 'admin.php?page=' . PAGE_SLUG ) ) );
+function redirect_with_notice( string $notice, int $site_id = 0 ): void {
+	wp_safe_redirect( add_query_arg( 'notice', $notice, screen_url( $site_id ) ) );
 	exit;
 }
 
@@ -716,14 +918,15 @@ function handle_start(): void {
 
 	check_admin_referer( START_ACTION );
 
-	$job = start_job(
+	$site_id = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
+	$job     = start_job(
 		parse_group_urlname( isset( $_POST['meetup_group'] ) ? sanitize_text_field( wp_unslash( $_POST['meetup_group'] ) ) : '' ),
-		isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0,
+		$site_id,
 		! empty( $_POST['include_past'] ),
 		! empty( $_POST['match_people'] )
 	);
 
-	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'queued' );
+	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'queued', is_wp_error( $job ) ? 0 : $site_id );
 }
 
 /**
@@ -736,9 +939,10 @@ function handle_confirm(): void {
 
 	check_admin_referer( CONFIRM_ACTION );
 
-	$job = confirm_job( isset( $_POST['job_id'] ) ? sanitize_text_field( wp_unslash( $_POST['job_id'] ) ) : '' );
+	$site_id = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
+	$job     = confirm_job( $site_id, isset( $_POST['job_id'] ) ? sanitize_text_field( wp_unslash( $_POST['job_id'] ) ) : '' );
 
-	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'confirmed' );
+	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'confirmed', $site_id );
 }
 
 /**
@@ -751,7 +955,9 @@ function handle_cancel(): void {
 
 	check_admin_referer( CANCEL_ACTION );
 
-	cancel_job();
+	$site_id = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
+
+	cancel_job( $site_id );
 
 	redirect_with_notice( 'cancelled' );
 }
@@ -767,7 +973,7 @@ function render_notice(): void {
 		'queued'             => array( 'success', __( 'Fetching the group from Meetup. Reload this page in a moment to see the preview.', 'wordcamporg' ) ),
 		'confirmed'          => array( 'success', __( 'Import started. It runs in the background; reload this page to follow it.', 'wordcamporg' ) ),
 		'cancelled'          => array( 'success', __( 'Import cancelled. Anything it already wrote stays, and a later import of the group picks up from there.', 'wordcamporg' ) ),
-		'import_running'     => array( 'error', __( 'Another Meetup import is in progress. Let it finish, or cancel it, first.', 'wordcamporg' ) ),
+		'import_running'     => array( 'error', __( 'A Meetup import into that site is already in progress. Let it finish, or cancel it, first.', 'wordcamporg' ) ),
 		'job_not_ready'      => array( 'error', __( 'That preview is no longer current. Please preview again.', 'wordcamporg' ) ),
 		'invalid_group'      => array( 'error', __( 'Please enter a Meetup group URL or name.', 'wordcamporg' ) ),
 		'invalid_group_site' => array( 'error', __( 'Please choose an active group site to import into.', 'wordcamporg' ) ),
@@ -783,21 +989,20 @@ function render_notice(): void {
 }
 
 /**
- * Render the import screen: the form, or the current job.
+ * Render the import screen: the form and every site's import, or one site's import.
  */
 function render_admin_page() {
 	if ( ! current_user_can( 'manage_sites' ) ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to import events on this network.', 'wordcamporg' ) );
 	}
 
-	$job    = get_job();
-	$status = $job['status'] ?? '';
-
 	// Self-heal, as the network export does: if the cron event was lost, or a
 	// run died before queueing the next, visiting this page queues it again.
-	if ( in_array( $status, array( 'fetching', 'importing' ), true ) ) {
-		schedule_next_batch();
-	}
+	sweep_jobs();
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
+	$site_id = isset( $_GET['site_id'] ) ? absint( wp_unslash( $_GET['site_id'] ) ) : 0;
+	$job     = $site_id ? get_job( $site_id ) : array();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import from Meetup', 'wordcamporg' ); ?></h1>
@@ -817,18 +1022,73 @@ function render_admin_page() {
 		<?php render_notice(); ?>
 
 		<p>
-			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. Imports run in the background, a batch at a time. Running one again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. Imports run in the background, a batch at a time, taking turns when several sites are importing. A preview that isn\'t imported within a day expires. Running an import again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
 		</p>
 
-		<?php if ( is_job_active( $job ) ) : ?>
-			<?php render_job( $job ); ?>
-		<?php else : ?>
-			<?php render_start_form( $job ); ?>
+		<?php if ( $site_id ) : ?>
+			<p><a href="<?php echo esc_url( screen_url() ); ?>"><?php esc_html_e( 'All imports', 'wordcamporg' ); ?></a></p>
+
+			<?php if ( ! is_job_active( $job ) ) : ?>
+				<?php render_start_form( $job ); ?>
+			<?php endif; ?>
+
 			<?php if ( $job ) : ?>
 				<?php render_job( $job ); ?>
 			<?php endif; ?>
+		<?php else : ?>
+			<?php render_start_form( array() ); ?>
+			<?php render_job_list( get_jobs() ); ?>
 		<?php endif; ?>
 	</div>
+	<?php
+}
+
+/**
+ * The table of every site's import, newest first, each linking to its details.
+ *
+ * @param array[] $jobs From `get_jobs()`.
+ */
+function render_job_list( array $jobs ): void {
+	if ( ! $jobs ) {
+		return;
+	}
+
+	usort(
+		$jobs,
+		static function ( $a, $b ) {
+			return ( $b['created'] ?? 0 ) <=> ( $a['created'] ?? 0 );
+		}
+	);
+	?>
+	<h2><?php esc_html_e( 'Imports', 'wordcamporg' ); ?></h2>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th scope="col"><?php esc_html_e( 'Group site', 'wordcamporg' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Meetup group', 'wordcamporg' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Started by', 'wordcamporg' ); ?></th>
+				<th scope="col"><?php esc_html_e( 'Status', 'wordcamporg' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $jobs as $job ) : ?>
+				<?php $user = get_userdata( (int) ( $job['user_id'] ?? 0 ) ); ?>
+				<tr>
+					<td>
+						<a href="<?php echo esc_url( screen_url( (int) $job['site_id'] ) ); ?>">
+							<?php
+							/* translators: %d: Site ID. */
+							echo esc_html( get_blog_option( $job['site_id'], 'blogname' ) ?: sprintf( __( 'Site %d', 'wordcamporg' ), $job['site_id'] ) );
+							?>
+						</a>
+					</td>
+					<td><?php echo esc_html( $job['urlname'] ); ?></td>
+					<td><?php echo esc_html( $user ? $user->display_name : '' ); ?></td>
+					<td><?php echo esc_html( describe_job_status( $job ) ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
 	<?php
 }
 
@@ -916,6 +1176,7 @@ function render_job( array $job ): void {
 	<?php if ( 'ready' === $status ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:8px;">
 			<input type="hidden" name="action" value="<?php echo esc_attr( CONFIRM_ACTION ); ?>" />
+			<input type="hidden" name="site_id" value="<?php echo esc_attr( $job['site_id'] ); ?>" />
 			<input type="hidden" name="job_id" value="<?php echo esc_attr( $job['id'] ); ?>" />
 			<?php wp_nonce_field( CONFIRM_ACTION ); ?>
 			<?php submit_button( __( 'Import', 'wordcamporg' ), 'primary', 'submit', false ); ?>
@@ -925,12 +1186,13 @@ function render_job( array $job ): void {
 	<?php if ( is_job_active( $job ) ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
 			<input type="hidden" name="action" value="<?php echo esc_attr( CANCEL_ACTION ); ?>" />
+			<input type="hidden" name="site_id" value="<?php echo esc_attr( $job['site_id'] ); ?>" />
 			<?php wp_nonce_field( CANCEL_ACTION ); ?>
 			<?php submit_button( __( 'Cancel', 'wordcamporg' ), 'secondary', 'submit', false ); ?>
 		</form>
 	<?php endif; ?>
 
-	<?php if ( 'fetching' === $status ) : ?>
+	<?php if ( 'fetching' === $status || 'expired' === $status ) : ?>
 		<?php return; ?>
 	<?php endif; ?>
 
@@ -943,10 +1205,10 @@ function render_job( array $job ): void {
 		</ul>
 	<?php endif; ?>
 
-	<?php if ( ! empty( $job['match_people'] ) && ( $is_preview || ! empty( $section['member_counts'] ) || ! empty( $section['leader_counts'] ) ) ) : ?>
+	<?php if ( ! empty( $job['match_people'] ) && ( $is_preview || ! empty( $section['member_counts'] ) || ! empty( $section['organizer_counts'] ) ) ) : ?>
 		<h3><?php esc_html_e( 'People', 'wordcamporg' ); ?></h3>
 		<ul class="ul-disc">
-			<li><?php echo esc_html( describe_leader_counts( (array) ( $section['leader_counts'] ?? array() ), $is_preview ) ); ?></li>
+			<li><?php echo esc_html( describe_organizer_counts( (array) ( $section['organizer_counts'] ?? array() ), $is_preview ) ); ?></li>
 			<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview ) ); ?></li>
 			<li>
 				<?php
@@ -1003,17 +1265,20 @@ function describe_job_status( array $job ): string {
 			return __( 'Fetching the group from Meetup. Reload this page in a moment to see the preview.', 'wordcamporg' );
 
 		case 'ready':
-			return __( 'Preview ready. Nothing has been written yet. Check it below, then click Import.', 'wordcamporg' );
+			return __( 'Preview ready. Nothing has been written yet. Check it, then click Import within a day.', 'wordcamporg' );
+
+		case 'expired':
+			return __( 'Preview expired: nobody clicked Import within a day. Nothing was written; preview again to import.', 'wordcamporg' );
 
 		case 'importing':
 			$step  = $job['cursor']['step'];
 			$total = 'members' === $step ? count( $job['data']['members'] ?? array() ) : count( $job['data']['events'] ?? array() );
 			$done  = min( $job['cursor']['offset'], $total );
 			$label = array(
-				'group'   => __( 'group details', 'wordcamporg' ),
-				'leaders' => __( 'organizers', 'wordcamporg' ),
-				'members' => __( 'members', 'wordcamporg' ),
-				'events'  => __( 'events', 'wordcamporg' ),
+				'group'      => __( 'group details', 'wordcamporg' ),
+				'organizers' => __( 'organizers', 'wordcamporg' ),
+				'members'    => __( 'members', 'wordcamporg' ),
+				'events'     => __( 'events', 'wordcamporg' ),
 			);
 
 			return in_array( $step, array( 'members', 'events' ), true )
@@ -1140,10 +1405,10 @@ function describe_group_results( array $results, bool $is_preview ): array {
 /**
  * One-line summary of what happened, or would happen, to the group's Meetup organizers.
  *
- * @param array $counts     From `plan_leaders()` or `import_leaders()`.
+ * @param array $counts     From `plan_organizers()` or `import_organizers()`.
  * @param bool  $is_preview Whether this is a preview.
  */
-function describe_leader_counts( array $counts, bool $is_preview ): string {
+function describe_organizer_counts( array $counts, bool $is_preview ): string {
 	$counts = array_merge( array_fill_keys( array( 'added', 'promoted', 'kept', 'left', 'unmatched', 'no_email' ), 0 ), $counts );
 
 	return sprintf(
@@ -1448,16 +1713,16 @@ function fetch_group( string $urlname ) {
  * @param string $urlname Meetup group urlname.
  * @return array|WP_Error Raw edges: `{ metadata: { role }, node: { id, email } }`.
  */
-function fetch_group_leaders( string $urlname ) {
+function fetch_group_organizers( string $urlname ) {
 	/**
-	 * Short-circuit the Meetup leaders request, e.g. with fixture data.
+	 * Short-circuit the Meetup organizers request, e.g. with fixture data.
 	 *
-	 * @param array|WP_Error|null $leaders Raw edges, or null to fetch from Meetup.
-	 * @param string              $urlname Meetup group urlname.
+	 * @param array|WP_Error|null $organizers Raw edges, or null to fetch from Meetup.
+	 * @param string              $urlname    Meetup group urlname.
 	 */
-	$leaders = apply_filters( 'wcorg_meetup_import_pre_fetch_leaders', null, $urlname );
+	$organizers = apply_filters( 'wcorg_meetup_import_pre_fetch_organizers', null, $urlname );
 
-	if ( null === $leaders ) {
+	if ( null === $organizers ) {
 		$client = get_meetup_client();
 
 		if ( is_wp_error( $client ) ) {
@@ -1484,8 +1749,8 @@ function fetch_group_leaders( string $urlname ) {
 			return $result;
 		}
 
-		$self_id = (string) ( $result['self']['id'] ?? '' );
-		$leaders = array_values(
+		$self_id    = (string) ( $result['self']['id'] ?? '' );
+		$organizers = array_values(
 			array_filter(
 				$result['groupByUrlname']['memberships']['edges'] ?? array(),
 				static function ( $edge ) use ( $self_id ) {
@@ -1495,7 +1760,7 @@ function fetch_group_leaders( string $urlname ) {
 		);
 	}
 
-	return is_array( $leaders ) || is_wp_error( $leaders ) ? $leaders : array();
+	return is_array( $organizers ) || is_wp_error( $organizers ) ? $organizers : array();
 }
 
 /**
@@ -1574,16 +1839,16 @@ function normalize_group( array $raw ): array {
 }
 
 /**
- * Keep what leader matching needs: the Meetup ID, the email, and the site role.
+ * Keep what organizer matching needs: the Meetup ID, the email, and the site role.
  *
- * @param array $raw Edge from `fetch_group_leaders()`.
+ * @param array $raw Edge from `fetch_group_organizers()`.
  * @return array `role` is null for a Meetup role with no organizer equivalent.
  */
-function normalize_leader( array $raw ): array {
+function normalize_organizer( array $raw ): array {
 	return array(
 		'meetup_id' => (string) ( $raw['node']['id'] ?? '' ),
 		'email'     => strtolower( (string) sanitize_email( (string) ( $raw['node']['email'] ?? '' ) ) ),
-		'role'      => LEADER_ROLES[ strtoupper( (string) ( $raw['metadata']['role'] ?? '' ) ) ] ?? null,
+		'role'      => MEETUP_ORGANIZER_ROLES[ strtoupper( (string) ( $raw['metadata']['role'] ?? '' ) ) ] ?? null,
 	);
 }
 
@@ -2018,6 +2283,14 @@ function import_events( int $site_id, array $events, bool $match_people = false 
 
 			return array_map(
 				static function ( $event ) use ( $match_people ) {
+					// An event can mean a photo download and several pages of
+					// RSVPs, so a batch can run long. A cron run renews its lock
+					// before each one, and stops if another run has taken the
+					// lock over, rather than both writing the same events.
+					if ( '' !== held_lock() && ! extend_lock() ) {
+						throw new \RuntimeException( 'Lost the Meetup import lock to another run.' );
+					}
+
 					return import_event( $event, $match_people );
 				},
 				$events
@@ -2486,23 +2759,23 @@ function role_rank( int $user_id, int $site_id ): int {
 /**
  * Sort a group's Meetup organizers by what an import does with each one.
  *
- * @param int   $site_id Target group site.
- * @param array $leaders Normalized leaders, from `normalize_leader()`.
- * @return array[] One `{ leader, outcome, user_id }` per leader with an organizer role.
+ * @param int   $site_id    Target group site.
+ * @param array $organizers Normalized organizers, from `normalize_organizer()`.
+ * @return array[] One `{ organizer, outcome, user_id }` per organizer with a mapped role.
  */
-function classify_leaders( int $site_id, array $leaders ): array {
+function classify_organizers( int $site_id, array $organizers ): array {
 	$classified = array();
-	$handled    = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array() ) );
+	$handled    = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_ORGANIZERS_OPTION, array() ) );
 
-	foreach ( $leaders as $leader ) {
-		if ( ! $leader['role'] ) {
+	foreach ( $organizers as $organizer ) {
+		if ( ! $organizer['role'] ) {
 			continue;
 		}
 
-		$user    = '' !== $leader['email'] ? get_user_by( 'email', $leader['email'] ) : false;
+		$user    = '' !== $organizer['email'] ? get_user_by( 'email', $organizer['email'] ) : false;
 		$user_id = $user ? (int) $user->ID : 0;
 
-		if ( '' === $leader['email'] ) {
+		if ( '' === $organizer['email'] ) {
 			$outcome = 'no_email';
 		} elseif ( ! $user_id ) {
 			$outcome = 'unmatched';
@@ -2513,13 +2786,13 @@ function classify_leaders( int $site_id, array $leaders ): array {
 			$outcome = 'kept';
 		} elseif ( ! is_user_member_of_blog( $user_id, $site_id ) ) {
 			$outcome = 'added';
-		} elseif ( role_rank( $user_id, $site_id ) < ROLE_RANK[ $leader['role'] ] ) {
+		} elseif ( role_rank( $user_id, $site_id ) < ROLE_RANK[ $organizer['role'] ] ) {
 			$outcome = 'promoted';
 		} else {
 			$outcome = 'kept';
 		}
 
-		$classified[] = compact( 'leader', 'outcome', 'user_id' );
+		$classified[] = compact( 'organizer', 'outcome', 'user_id' );
 	}
 
 	return $classified;
@@ -2528,12 +2801,12 @@ function classify_leaders( int $site_id, array $leaders ): array {
 /**
  * Count what an import would do with a group's organizers, without writing anything.
  *
- * @param int   $site_id Target group site.
- * @param array $leaders Normalized leaders.
+ * @param int   $site_id    Target group site.
+ * @param array $organizers Normalized organizers.
  * @return int[] Counts keyed by outcome.
  */
-function plan_leaders( int $site_id, array $leaders ): array {
-	return array_count_values( wp_list_pluck( classify_leaders( $site_id, $leaders ), 'outcome' ) );
+function plan_organizers( int $site_id, array $organizers ): array {
+	return array_count_values( wp_list_pluck( classify_organizers( $site_id, $organizers ), 'outcome' ) );
 }
 
 /**
@@ -2541,31 +2814,31 @@ function plan_leaders( int $site_id, array $leaders ): array {
  *
  * Matched by email to existing WordPress.org accounts only. Only ever
  * promotes: someone already in that role or higher keeps theirs, and nobody
- * is made an administrator (see `LEADER_ROLES`). And only once: an organizer
- * an earlier import handled is left alone, so a group that demotes one
- * doesn't see them promoted back.
+ * is made an administrator (see `MEETUP_ORGANIZER_ROLES`). And only once:
+ * an organizer an earlier import handled is left alone, so a group that
+ * demotes one doesn't see them promoted back.
  *
  * Callers MUST verify the `manage_sites` capability before calling this, as
  * with `import_events()`.
  *
- * @param int   $site_id Target group site.
- * @param array $leaders Normalized leaders.
+ * @param int   $site_id    Target group site.
+ * @param array $organizers Normalized organizers.
  * @return int[] Counts keyed by outcome.
  */
-function import_leaders( int $site_id, array $leaders ): array {
-	$classified = classify_leaders( $site_id, $leaders );
+function import_organizers( int $site_id, array $organizers ): array {
+	$classified = classify_organizers( $site_id, $organizers );
 
 	foreach ( $classified as $index => $entry ) {
 		if ( 'added' === $entry['outcome'] ) {
-			if ( ! ensure_member( $site_id, $entry['user_id'], $entry['leader']['role'] ) ) {
+			if ( ! ensure_member( $site_id, $entry['user_id'], $entry['organizer']['role'] ) ) {
 				$classified[ $index ]['outcome'] = 'failed';
 			}
 		} elseif ( 'promoted' === $entry['outcome'] ) {
-			( new WP_User( $entry['user_id'], '', $site_id ) )->set_role( $entry['leader']['role'] );
+			( new WP_User( $entry['user_id'], '', $site_id ) )->set_role( $entry['organizer']['role'] );
 		}
 	}
 
-	$handled = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array() ) );
+	$handled = array_map( 'intval', (array) get_blog_option( $site_id, IMPORTED_ORGANIZERS_OPTION, array() ) );
 
 	foreach ( $classified as $entry ) {
 		if ( in_array( $entry['outcome'], array( 'added', 'promoted', 'kept' ), true ) ) {
@@ -2573,11 +2846,11 @@ function import_leaders( int $site_id, array $leaders ): array {
 		}
 	}
 
-	update_blog_option( $site_id, IMPORTED_LEADERS_OPTION, array_values( array_unique( $handled ) ) );
+	update_blog_option( $site_id, IMPORTED_ORGANIZERS_OPTION, array_values( array_unique( $handled ) ) );
 
 	$counts = array_count_values( wp_list_pluck( $classified, 'outcome' ) );
 
-	Logger\log( 'leaders_imported', compact( 'site_id', 'counts' ) );
+	Logger\log( 'organizers_imported', compact( 'site_id', 'counts' ) );
 
 	return $counts;
 }
@@ -3005,6 +3278,41 @@ function acquire_lock(): bool {
 
 	held_lock( $expires );
 	return true;
+}
+
+/**
+ * Push the expiry of the lock this request holds back to a full `LOCK_TIMEOUT`.
+ *
+ * A compare-and-swap on the held value, as in `acquire_lock()`: if the lock
+ * expired and another run took it over, this one doesn't get it back.
+ *
+ * @return bool Whether this request still holds the lock.
+ */
+function extend_lock(): bool {
+	global $wpdb;
+
+	if ( '' === held_lock() ) {
+		return false;
+	}
+
+	$table   = lock_table();
+	$expires = ( time() + LOCK_TIMEOUT ) . ':' . wp_generate_password( 12, false );
+
+	// phpcs:disable WordPress.DB.DirectDatabaseQuery -- the lock has to bypass the options cache to be atomic.
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- `$table` is built from the blog prefix, not input.
+	$extended = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE `$table` SET `option_value` = %s WHERE `option_name` = %s AND `option_value` = %s",
+			$expires,
+			LOCK_OPTION,
+			held_lock()
+		)
+	);
+	// phpcs:enable
+
+	held_lock( 1 === $extended ? $expires : '' );
+
+	return 1 === $extended;
 }
 
 /**

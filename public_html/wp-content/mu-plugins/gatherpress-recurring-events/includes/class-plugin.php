@@ -377,23 +377,39 @@ final class Plugin {
 
 	/** Serves the series-level iCalendar download with its RRULE. */
 	public function series_ical(): void {
-		$endpoint = (string) get_query_var( 'gatherpress_calendar' );
-		$post_id  = get_queried_object_id();
+		$body = self::series_ical_body();
 
-		if ( get_query_var( 'gpre_occurrence' ) || ! in_array( $endpoint, array( 'ical', 'outlook' ), true ) || ! Rule::is_recurring( $post_id ) ) {
+		if ( '' === $body ) {
 			return;
 		}
 
-		Context::set( null );
-		$event = ( new Calendar( $post_id ) )->get_ical_event_string();
-		$rrule = (string) get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true );
-		$event = str_replace( 'END:VEVENT', 'RRULE:' . $rrule . "\r\nEND:VEVENT", $event );
-		$body  = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n";
+		$post_id = get_queried_object_id();
 
 		nocache_headers();
 		header( 'Content-Type: text/calendar; charset=' . get_option( 'blog_charset' ) );
 		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( get_post_field( 'post_name', $post_id ) . '.ics' ) . '"' );
 		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- RFC 5545 payload from GatherPress.
 		exit;
+	}
+
+	/**
+	 * Builds the series-level iCalendar body for the current request.
+	 *
+	 * @return string Calendar body, or an empty string when this request isn't one to serve.
+	 */
+	public static function series_ical_body(): string {
+		$endpoint = (string) get_query_var( 'gatherpress_calendar' );
+		$post_id  = get_queried_object_id();
+
+		if ( get_query_var( 'gpre_occurrence' ) || ! in_array( $endpoint, array( 'ical', 'outlook' ), true ) || ! Rule::is_recurring( $post_id ) || post_password_required( $post_id ) ) {
+			return '';
+		}
+
+		Context::set( null );
+		$event = ( new Calendar( $post_id ) )->get_ical_event_string();
+		$rrule = (string) get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true );
+		$event = str_replace( 'END:VEVENT', 'RRULE:' . $rrule . "\r\nEND:VEVENT", $event );
+
+		return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n";
 	}
 }

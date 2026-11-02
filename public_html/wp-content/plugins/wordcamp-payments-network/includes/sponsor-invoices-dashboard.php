@@ -511,6 +511,9 @@ function update_index_row( $invoice_id, $invoice ) {
 		return;
 	}
 
+	// Camp sites write to the index too, and may do so before anyone opens the network admin after a deploy.
+	upgrade_database();
+
 	// todo use post_edit_is_actionable instead?
 
 	$index_row = array(

@@ -15,6 +15,7 @@ use function WordCamp\Sponsor_Vetting\check_invoice_approval;
 use function WordCamp\Sponsor_Vetting\confirm_website;
 use function WordCamp\Sponsor_Vetting\find_sponsorship;
 use function WordCamp\Sponsor_Vetting\get_invoice_statuses;
+use function WordCamp\Sponsor_Vetting\website_changed;
 
 defined( 'WPINC' ) || die();
 
@@ -81,8 +82,9 @@ class Test_Invoices extends Database_TestCase {
 
 	/**
 	 * An invoice can be approved only once its sponsorship is, and again only after a vetter confirms a website
-	 * the camp changed afterwards. Changing it back needs no confirmation, and a confirmation only accepts the
-	 * website the vetter was shown.
+	 * the camp changed afterwards, including while the sponsorship sat in the trash. Changing it back needs no
+	 * confirmation, and a confirmation only accepts the website the vetter was shown. A sponsor the camp deletes
+	 * isn't taken for a changed website, but its invoice can't be approved either.
 	 */
 	public function test_invoice_approval_follows_the_sponsorship_and_its_website(): void {
 		list( $sponsor_id, $invoice_id ) = $this->submit_invoice( self::$year_dot_2018_site_id, 'https://acme.example/' );
@@ -108,6 +110,16 @@ class Test_Invoices extends Database_TestCase {
 		$this->set_website( $sponsor_id, 'acme.example' );
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
 
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		wp_trash_post( $sponsorship_id );
+		restore_current_blog();
+		$this->set_website( $sponsor_id, 'https://elsewhere.example' );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		wp_untrash_post( $sponsorship_id );
+		restore_current_blog();
+
+		$this->assertSame( 'sv_invoice_website_changed', $this->check( $invoice_id ) );
+
 		$this->set_website( $sponsor_id, 'https://other.example' );
 		$this->set_website( $sponsor_id, 'https://third.example' );
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
@@ -120,6 +132,16 @@ class Test_Invoices extends Database_TestCase {
 		$this->assertTrue( $confirmed );
 		$this->assertSame( 'third.example', $approved_domain );
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
+
+		switch_to_blog( self::$year_dot_2018_site_id );
+		wp_delete_post( $sponsor_id, true );
+		restore_current_blog();
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$changed = website_changed( $sponsorship_id );
+		restore_current_blog();
+
+		$this->assertFalse( $changed );
+		$this->assertSame( 'sv_invoice_sponsor_gone', $this->check( $invoice_id ) );
 	}
 
 	/**
@@ -163,7 +185,7 @@ class Test_Invoices extends Database_TestCase {
 		);
 
 		$this->assertSame(
-			array( 'Approved', 'Pending, company Needs Vetting', 'Not requested' ),
+			array( 'Approved', 'Pending (In review)', 'Not requested' ),
 			array_map( 'wp_strip_all_tags', array_values( $statuses ) )
 		);
 	}

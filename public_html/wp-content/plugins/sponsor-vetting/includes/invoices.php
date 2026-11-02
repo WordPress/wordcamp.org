@@ -2,8 +2,8 @@
 /**
  * The sponsor invoices dashboard: the vetting it shows, and whether an invoice may be approved.
  *
- * An approval is for the website that was vetted, so a camp changing its sponsor's website afterwards flags the
- * approval until a vetter confirms the new one.
+ * An approval is for the website that was vetted, so a camp changing its sponsor's website afterwards holds up the
+ * invoice until a vetter confirms the new one.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -15,30 +15,44 @@ namespace WordCamp\Sponsor_Vetting;
 defined( 'WPINC' ) || die();
 
 /**
- * Gets a camp sponsor's website, as a normalized domain.
+ * Gets the website a sponsorship's camp sponsor has now, as a normalized domain. Runs on Central.
  *
- * @param int $blog_id    The camp site.
- * @param int $sponsor_id The camp's `wcb_sponsor` post.
- * @return string
+ * @param int $sponsorship_id The sponsorship.
+ * @return string|null The domain, or null if the camp sponsor is gone or trashed.
  */
-function get_sponsor_domain( int $blog_id, int $sponsor_id ): string {
-	switch_to_blog( $blog_id );
-	$website = (string) get_post_meta( $sponsor_id, '_wcpt_sponsor_website', true );
-	restore_current_blog();
+function get_current_domain( int $sponsorship_id ): ?string {
+	$sponsor = get_camp_sponsor( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ), (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
 
-	return normalize_domain( $website );
+	return $sponsor ? normalize_domain( $sponsor['website'] ) : null;
 }
 
 /**
- * Records the website a sponsorship is approved for, and clears any change flagged before. Runs on Central.
+ * Records the website a sponsorship is approved for. Runs on Central.
+ *
+ * @param int         $sponsorship_id The sponsorship.
+ * @param string|null $domain         The domain, if already read; otherwise the camp sponsor's current one.
+ */
+function snapshot_approved_domain( int $sponsorship_id, ?string $domain = null ): void {
+	update_post_meta( $sponsorship_id, '_sv_approved_domain', $domain ?? (string) get_current_domain( $sponsorship_id ) );
+}
+
+/**
+ * Whether a sponsorship's camp sponsor has a different website from the one approved. Runs on Central.
+ *
+ * Compared when read, so every way a website can change is caught. Approvals from before snapshots were taken
+ * have nothing to compare with, and a sponsor the camp deleted has no website left to vet.
  *
  * @param int $sponsorship_id The sponsorship.
+ * @return bool
  */
-function snapshot_approved_domain( int $sponsorship_id ): void {
-	$domain = get_sponsor_domain( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ), (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
+function website_changed( int $sponsorship_id ): bool {
+	if ( ! metadata_exists( 'post', $sponsorship_id, '_sv_approved_domain' ) ) {
+		return false;
+	}
 
-	update_post_meta( $sponsorship_id, '_sv_approved_domain', $domain );
-	delete_post_meta( $sponsorship_id, '_sv_website_changed' );
+	$current = get_current_domain( $sponsorship_id );
+
+	return null !== $current && (string) get_post_meta( $sponsorship_id, '_sv_approved_domain', true ) !== $current;
 }
 
 /**
@@ -58,84 +72,24 @@ function confirm_website( int $sponsorship_id, string $shown ): true|\WP_Error {
 		return new \WP_Error( 'sv_website_not_changed', __( 'There’s no website change to confirm.', 'wordcamporg' ) );
 	}
 
-	$current = get_sponsor_domain( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ), (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
+	$current = (string) get_current_domain( $sponsorship_id );
 
 	if ( normalize_domain( $shown ) !== $current ) {
 		/* translators: %s: Website domain. */
 		return new \WP_Error( 'sv_website_changed_again', sprintf( __( 'The camp changed the website again, to %s. Check it, then confirm again.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
 	}
 
-	snapshot_approved_domain( $sponsorship_id );
-	/* translators: %s: Website domain. */
-	add_note( $sponsorship_id, sprintf( __( 'Confirmed the new website, %s.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
+	$approved = (string) get_post_meta( $sponsorship_id, '_sv_approved_domain', true );
+
+	snapshot_approved_domain( $sponsorship_id, $current );
+	add_note(
+		$sponsorship_id,
+		/* translators: 1: New website domain, 2: The website domain approved before. */
+		sprintf( __( 'Confirmed the new website, %1$s, in place of %2$s.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ), $approved ?: __( 'none', 'wordcamporg' ) )
+	);
 
 	return true;
 }
-
-/**
- * Whether a sponsorship's camp sponsor has a different website from the one approved. Runs on Central.
- *
- * @param int $sponsorship_id The sponsorship.
- * @return bool
- */
-function website_changed( int $sponsorship_id ): bool {
-	return metadata_exists( 'post', $sponsorship_id, '_sv_website_changed' );
-}
-
-/**
- * Flags an approved sponsorship when its camp sponsor's website changes, and clears it when it changes back.
- *
- * Hooked to the meta writes rather than the sponsor's save, so the editor, Multi-Event propagation and any other
- * writer are all caught. Approvals from before snapshots were taken have nothing to compare with, so they're left
- * alone.
- *
- * @param int|int[] $meta_id    The meta ID, or IDs when deleted.
- * @param int       $sponsor_id The post.
- * @param string    $meta_key   The meta key.
- */
-function flag_changed_website( int|array $meta_id, int $sponsor_id, string $meta_key ): void {
-	if ( '_wcpt_sponsor_website' !== $meta_key || 'wcb_sponsor' !== get_post_type( $sponsor_id ) ) {
-		return;
-	}
-
-	$blog_id        = get_current_blog_id();
-	$sponsorship_id = (int) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
-	$domain         = normalize_domain( (string) get_post_meta( $sponsor_id, '_wcpt_sponsor_website', true ) );
-
-	if ( ! $sponsorship_id || ! get_site( WORDCAMP_ROOT_BLOG_ID ) ) {
-		return;
-	}
-
-	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
-
-	if (
-		get_sponsorship_key( $blog_id, $sponsor_id ) === get_post_meta( $sponsorship_id, '_sv_key', true )
-		&& 'svs-approved' === get_post_status( $sponsorship_id )
-		&& metadata_exists( 'post', $sponsorship_id, '_sv_approved_domain' )
-	) {
-		$approved = (string) get_post_meta( $sponsorship_id, '_sv_approved_domain', true );
-
-		if ( $domain === $approved ) {
-			if ( website_changed( $sponsorship_id ) ) {
-				delete_post_meta( $sponsorship_id, '_sv_website_changed' );
-				/* translators: %s: Website domain. */
-				add_note( $sponsorship_id, sprintf( __( 'The camp changed the sponsor’s website back to %s, the one approved.', 'wordcamporg' ), $approved ) );
-			}
-		} elseif ( get_post_meta( $sponsorship_id, '_sv_website_changed', true ) !== $domain || ! website_changed( $sponsorship_id ) ) {
-			update_post_meta( $sponsorship_id, '_sv_website_changed', $domain );
-			add_note(
-				$sponsorship_id,
-				/* translators: 1: Approved website domain, 2: New website domain. */
-				sprintf( __( 'The camp changed the sponsor’s website from %1$s to %2$s after approval.', 'wordcamporg' ), $approved ?: __( 'none', 'wordcamporg' ), $domain ?: __( 'none', 'wordcamporg' ) )
-			);
-		}
-	}
-
-	restore_current_blog();
-}
-add_action( 'added_post_meta', __NAMESPACE__ . '\flag_changed_website', 10, 3 );
-add_action( 'updated_post_meta', __NAMESPACE__ . '\flag_changed_website', 10, 3 );
-add_action( 'deleted_post_meta', __NAMESPACE__ . '\flag_changed_website', 10, 3 );
 
 /**
  * Words a sponsorship's vetting for the people approving invoices. Runs on Central.
@@ -153,12 +107,10 @@ function get_invoice_vetting_label( \WP_Post $sponsorship ): string {
 	}
 
 	if ( 'svs-pending' === $sponsorship->post_status ) {
-		$company_status = $sponsorship->post_parent ? ( get_company_statuses()[ get_post_status( $sponsorship->post_parent ) ] ?? '' ) : '';
-
-		return '' === $company_status
-			? __( 'Pending, no company linked yet', 'wordcamporg' )
-			/* translators: %s: Company status. */
-			: sprintf( __( 'Pending, company %s', 'wordcamporg' ), $company_status );
+		return $sponsorship->post_parent
+			/* translators: %s: The company's vetting, like "In review". */
+			? sprintf( __( 'Pending (%s)', 'wordcamporg' ), get_company_label( (int) $sponsorship->post_parent ) )
+			: __( 'Pending (no company linked yet)', 'wordcamporg' );
 	}
 
 	return get_sponsorship_statuses()[ $sponsorship->post_status ] ?? $sponsorship->post_status;
@@ -253,6 +205,8 @@ function check_invoice_approval( true|\WP_Error $allowed, int $invoice_id ): tru
 	} elseif ( 'svs-approved' !== $sponsorship->post_status ) {
 		/* translators: %s: The sponsorship's vetting, like "Pending, company In Progress". */
 		$allowed = new \WP_Error( 'sv_invoice_not_approved', sprintf( __( 'The sponsor isn’t approved yet: %s.', 'wordcamporg' ), get_invoice_vetting_label( $sponsorship ) ) );
+	} elseif ( null === get_current_domain( $sponsorship->ID ) ) {
+		$allowed = new \WP_Error( 'sv_invoice_sponsor_gone', __( 'The invoice’s sponsor was trashed or deleted on the camp’s site, so its website can’t be checked.', 'wordcamporg' ) );
 	} elseif ( website_changed( $sponsorship->ID ) ) {
 		$allowed = new \WP_Error( 'sv_invoice_website_changed', __( 'The sponsor’s website changed after it was approved. A vetter needs to confirm the new website on Central first.', 'wordcamporg' ) );
 	}

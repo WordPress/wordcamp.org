@@ -217,11 +217,11 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 					/* translators: 1: Approved website domain, 2: New website domain. */
 					esc_html__( 'The camp changed the sponsor’s website from %1$s to %2$s after approval. Invoices can’t be approved until you confirm the new website.', 'wordcamporg' ),
 					'<code>' . esc_html( (string) get_post_meta( $post->ID, '_sv_approved_domain', true ) ?: __( 'none', 'wordcamporg' ) ) . '</code>',
-					'<code>' . esc_html( (string) get_post_meta( $post->ID, '_sv_website_changed', true ) ?: __( 'none', 'wordcamporg' ) ) . '</code>'
+					'<code>' . esc_html( (string) get_current_domain( $post->ID ) ?: __( 'none', 'wordcamporg' ) ) . '</code>'
 				);
 				?>
 			</p>
-			<input type="hidden" name="sv_confirm_domain" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_sv_website_changed', true ) ); ?>">
+			<input type="hidden" name="sv_confirm_domain" value="<?php echo esc_attr( (string) get_current_domain( $post->ID ) ); ?>">
 			<p><button type="submit" name="sv_action" value="confirm_website" class="button"><?php esc_html_e( 'Confirm new website', 'wordcamporg' ); ?></button></p>
 			<p class="description"><?php esc_html_e( 'If it’s a different company now, cancel the sponsorship instead.', 'wordcamporg' ); ?></p>
 		</div>

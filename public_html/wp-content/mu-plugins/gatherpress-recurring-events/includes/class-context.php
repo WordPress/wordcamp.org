@@ -46,6 +46,16 @@ final class Context {
 		$post_id       = get_queried_object_id();
 		$recurrence_id = (string) get_query_var( 'gpre_occurrence' );
 
+		/*
+		 * Until the visitor enters the password, the page is only the password
+		 * form, so no date gets resolved. An occurrence here printed the next
+		 * date into the page, and a 404 for a date the series doesn't have
+		 * gave its schedule away one guess at a time.
+		 */
+		if ( post_password_required( $post_id ) ) {
+			return;
+		}
+
 		if ( $recurrence_id ) {
 			$occurrence = Occurrences::get( $post_id, $recurrence_id );
 			if ( ! $occurrence ) {
@@ -150,7 +160,8 @@ final class Context {
 	 * @return string Filtered permalink.
 	 */
 	public static function post_link( string $permalink, $post ): string {
-		if ( ! self::$occurrence || (int) self::$occurrence->series_post_id !== (int) $post->ID ) {
+		// A protected series links to its series URL, which names no date.
+		if ( ! self::$occurrence || (int) self::$occurrence->series_post_id !== (int) $post->ID || post_password_required( $post ) ) {
 			return $permalink;
 		}
 
@@ -289,7 +300,7 @@ final class Context {
 	 * @return string Filtered block.
 	 */
 	public static function render_rsvp_block( string $content ): string {
-		if ( ! self::$occurrence ) {
+		if ( ! self::$occurrence || post_password_required( (int) self::$occurrence->series_post_id ) ) {
 			return $content;
 		}
 

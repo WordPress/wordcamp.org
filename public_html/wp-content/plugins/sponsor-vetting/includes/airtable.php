@@ -601,9 +601,17 @@ if ( ! defined( 'WP_CLI' ) || ! \WP_CLI ) {
 			);
 		}
 
-		\WP_CLI\Utils\format_items( $assoc_args['format'] ?? 'table', $report, array( 'company', 'domain', 'result', 'status', 'sponsorships' ) );
+		$format = $assoc_args['format'] ?? 'table';
+		\WP_CLI\Utils\format_items( $format, $report, array( 'company', 'domain', 'result', 'status', 'sponsorships' ) );
 
-		$counts = array_count_values( array_column( $report, 'result' ) );
-		\WP_CLI::success( sprintf( '%s%d new, %d existing, %d errors.', $dry_run ? '[dry-run] ' : '', $counts['new'] ?? 0, $counts['existing'] ?? 0, $counts['error'] ?? 0 ) );
+		$counts  = array_count_values( array_column( $report, 'result' ) );
+		$summary = sprintf( '%s%d new, %d existing, %d errors.', $dry_run ? '[dry-run] ' : '', $counts['new'] ?? 0, $counts['existing'] ?? 0, $counts['error'] ?? 0 );
+
+		// A CSV or JSON report is redirected to a file, so the summary goes to STDERR, where it can't corrupt it.
+		if ( 'table' === $format ) {
+			\WP_CLI::success( $summary );
+		} elseif ( ! \WP_CLI::get_config( 'quiet' ) ) {
+			fwrite( STDERR, 'Success: ' . $summary . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Writing to the process's own STDERR.
+		}
 	}
 );

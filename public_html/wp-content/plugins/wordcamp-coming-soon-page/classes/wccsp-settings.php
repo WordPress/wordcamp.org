@@ -83,7 +83,7 @@ class WCCSP_Settings {
 	}
 
 	/**
-	 * Re-sync posts when the page is enabled or disabled, so synced copies match the new state.
+	 * Re-sync posts and site details when the page is enabled or disabled, so synced copies match the new state.
 	 *
 	 * @param mixed $old_value Previous settings.
 	 * @param mixed $new_value New settings.
@@ -96,7 +96,12 @@ class WCCSP_Settings {
 			return;
 		}
 
-		\Automattic\Jetpack\Sync\Actions::do_full_sync( array( 'posts' => true ) );
+		\Automattic\Jetpack\Sync\Actions::do_full_sync(
+			array(
+				'posts'     => true,
+				'functions' => true,
+			)
+		);
 	}
 
 	/**

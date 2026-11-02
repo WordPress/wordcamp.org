@@ -125,6 +125,10 @@ const ROLE_RANK = array(
  * event with room also trips a bug in GatherPress 0.35's waiting-list
  * promotion (`Rsvp::check_waiting_list()` walks past the end of the list).
  *
+ * On a past event the waiting list is left out instead: those people never
+ * got a place, and on a date with no check-ins an attending RSVP is what
+ * counts as attended (`Frontend\My_Events\filter_to_attended()`).
+ *
  * Meetup statuses with no equivalent (maybe, no-show, excused, haven't
  * answered) are left out rather than guessed at.
  */
@@ -706,6 +710,7 @@ function run_fetch( array $job ): void {
 		'events'     => fetch_group_events( $job['urlname'], $job['include_past'] ),
 		'members'    => $job['match_people'] ? fetch_group_members( $job['urlname'] ) : array(),
 		'organizers' => $job['match_people'] ? fetch_group_organizers( $job['urlname'] ) : array(),
+		'connection' => $job['match_people'] ? fetch_connection_member_id() : '',
 	);
 
 	foreach ( $raw as $fetched ) {
@@ -714,6 +719,8 @@ function run_fetch( array $job ): void {
 			return;
 		}
 	}
+
+	$raw = without_connection_account( $raw, $raw['connection'] );
 
 	$job['data'] = array(
 		'group'      => normalize_group( $raw['group'] ),
@@ -1435,8 +1442,8 @@ function describe_organizer_counts( array $counts, bool $is_preview ): string {
  */
 function describe_rsvp_counts( array $counts ): string {
 	return sprintf(
-		/* translators: 1: RSVPs saved, 2: Of which checked in, 3: No matching account, 4: Status with no equivalent, e.g. "maybe", 5: Could not be fetched or saved. */
-		__( 'RSVPs: %1$d kept (%2$d checked in as attended), %3$d had no matching WordPress.org account, %4$d had a status with no equivalent here, %5$d failed.', 'wordcamporg' ),
+		/* translators: 1: RSVPs saved, 2: Of which checked in, 3: No matching account, 4: Status with no equivalent, e.g. "maybe", or waitlisted for a past event, 5: Could not be fetched or saved. */
+		__( 'RSVPs: %1$d kept (%2$d checked in as attended), %3$d had no matching WordPress.org account, %4$d were left out (a status with no equivalent here, or waitlisted for a past event), %5$d failed.', 'wordcamporg' ),
 		$counts['saved'],
 		$counts['checked_in'],
 		$counts['unmatched'],
@@ -1707,10 +1714,8 @@ function fetch_group( string $urlname ) {
 /**
  * Fetch a group's organizers from the Meetup API, with their roles.
  *
- * The Meetup account the connection belongs to is left out. On a Pro network
- * that account is listed as an organizer of every group, and matching it by
- * email would hand whoever owns that address an Organizer role on every
- * imported site.
+ * Includes the account the connection belongs to, which `run_fetch()` leaves
+ * out (see `without_connection_account()`).
  *
  * @param string $urlname Meetup group urlname.
  * @return array|WP_Error Raw edges: `{ metadata: { role }, node: { id, email } }`.
@@ -1733,7 +1738,6 @@ function fetch_group_organizers( string $urlname ) {
 
 		$result = $client->send_paginated_request(
 			'query ( $urlname: String!, $cursor: String ) {
-				self { id }
 				groupByUrlname( urlname: $urlname ) {
 					memberships ( first: 100, after: $cursor, filter: { status: LEADER } ) {
 						' . $client->pagination . '
@@ -1751,18 +1755,102 @@ function fetch_group_organizers( string $urlname ) {
 			return $result;
 		}
 
-		$self_id    = (string) ( $result['self']['id'] ?? '' );
-		$organizers = array_values(
-			array_filter(
-				$result['groupByUrlname']['memberships']['edges'] ?? array(),
-				static function ( $edge ) use ( $self_id ) {
-					return '' === $self_id || (string) ( $edge['node']['id'] ?? '' ) !== $self_id;
-				}
-			)
-		);
+		$organizers = $result['groupByUrlname']['memberships']['edges'] ?? array();
 	}
 
 	return is_array( $organizers ) || is_wp_error( $organizers ) ? $organizers : array();
+}
+
+/**
+ * Fetch the Meetup member ID of the account the connection belongs to.
+ *
+ * @return string|WP_Error Member ID, or '' if Meetup didn't say.
+ */
+function fetch_connection_member_id() {
+	/**
+	 * Short-circuit the Meetup request for the connection's own account, e.g. with fixture data.
+	 *
+	 * @param string|WP_Error|null $member_id Meetup member ID, or null to ask Meetup.
+	 */
+	$member_id = apply_filters( 'wcorg_meetup_import_pre_fetch_connection_member', null );
+
+	if ( null === $member_id ) {
+		$client = get_meetup_client();
+
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$result = $client->send_paginated_request( 'query { self { id } }' );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$member_id = $result['self']['id'] ?? '';
+	}
+
+	return is_wp_error( $member_id ) ? $member_id : (string) $member_id;
+}
+
+/**
+ * Leave the account the Meetup connection belongs to out of everyone an
+ * import matches by email: members, organizers, and event hosts.
+ *
+ * On a Pro network that account is an organizer, and so a member, of every
+ * group, and it can host events. Matching it by email would put whoever owns
+ * that address in every imported group, as an Organizer at that.
+ *
+ * @param array  $raw       Fetched `members`, `organizers` and `events`, as Meetup returns them.
+ * @param string $member_id The account's Meetup member ID, or '' if unknown.
+ * @return array The same, without that account.
+ */
+function without_connection_account( array $raw, string $member_id ): array {
+	if ( '' === $member_id ) {
+		return $raw;
+	}
+
+	$is_other = static function ( $id ) use ( $member_id ): bool {
+		return (string) $id !== $member_id;
+	};
+
+	$raw['members'] = array_values(
+		array_filter(
+			$raw['members'],
+			static function ( $member ) use ( $is_other ) {
+				return $is_other( $member['id'] ?? '' );
+			}
+		)
+	);
+
+	$raw['organizers'] = array_values(
+		array_filter(
+			$raw['organizers'],
+			static function ( $edge ) use ( $is_other ) {
+				return $is_other( $edge['node']['id'] ?? '' );
+			}
+		)
+	);
+
+	$raw['events'] = array_map(
+		static function ( $event ) use ( $is_other ) {
+			if ( isset( $event['eventHosts'] ) ) {
+				$event['eventHosts'] = array_values(
+					array_filter(
+						(array) $event['eventHosts'],
+						static function ( $host ) use ( $is_other ) {
+							return $is_other( $host['member']['id'] ?? '' );
+						}
+					)
+				);
+			}
+
+			return $event;
+		},
+		$raw['events']
+	);
+
+	return $raw;
 }
 
 /**
@@ -1861,12 +1949,14 @@ function normalize_organizer( array $raw ): array {
  * @return array `status` is null for a Meetup status with no equivalent.
  */
 function normalize_rsvp( array $raw ): array {
-	$mapped = RSVP_STATUSES[ strtoupper( (string) ( $raw['status'] ?? '' ) ) ] ?? array( null, false );
+	$meetup_status = strtoupper( (string) ( $raw['status'] ?? '' ) );
+	$mapped        = RSVP_STATUSES[ $meetup_status ] ?? array( null, false );
 
 	return array(
 		'email'      => strtolower( (string) sanitize_email( (string) ( $raw['member']['email'] ?? '' ) ) ),
 		'status'     => $mapped[0],
 		'checked_in' => $mapped[1],
+		'waitlisted' => 'WAITLIST' === $meetup_status,
 		'guests'     => max( 0, (int) ( $raw['guestsCount'] ?? 0 ) ),
 	);
 }
@@ -2447,7 +2537,7 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	if ( $match_people ) {
 		import_hosts( $post_id, $event['hosts'] );
-		$rsvps = import_rsvps( $post_id, $event['meetup_id'] );
+		$rsvps = import_rsvps( $post_id, $event['meetup_id'], $event['is_past'] );
 	}
 
 	if ( $publish ) {
@@ -2930,9 +3020,11 @@ function import_hosts( int $post_id, array $emails ): void {
  *
  * @param int    $post_id         Event post ID.
  * @param string $meetup_event_id Meetup event ID.
+ * @param bool   $is_past         Whether the event has already happened, so
+ *                                its waiting list is left out (see `RSVP_STATUSES`).
  * @return int[] Counts: `saved`, `checked_in`, `unmatched`, `skipped`, `failed`.
  */
-function import_rsvps( int $post_id, string $meetup_event_id ): array {
+function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = false ): array {
 	$counts = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
 	$raw    = fetch_event_rsvps( $meetup_event_id );
 	$rsvp   = new Rsvp( $post_id );
@@ -2943,7 +3035,7 @@ function import_rsvps( int $post_id, string $meetup_event_id ): array {
 	}
 
 	foreach ( array_map( __NAMESPACE__ . '\normalize_rsvp', $raw ) as $entry ) {
-		if ( ! $entry['status'] ) {
+		if ( ! $entry['status'] || ( $is_past && $entry['waitlisted'] ) ) {
 			++$counts['skipped'];
 			continue;
 		}

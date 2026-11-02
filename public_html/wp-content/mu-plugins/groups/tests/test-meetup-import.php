@@ -69,6 +69,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			5
 		);
 		add_filter( 'wcorg_meetup_import_pre_fetch_organizers', '__return_empty_array', 5 );
+		add_filter( 'wcorg_meetup_import_pre_fetch_connection_member', '__return_empty_string', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array', 5 );
 	}
 
@@ -1709,10 +1710,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertSame(
 			array(
-				'saved'      => 4,
+				'saved'      => 3,
 				'checked_in' => 1,
 				'unmatched'  => 2,
-				'skipped'    => 1,
+				'skipped'    => 2,
 				'failed'     => 0,
 			),
 			$results[0]['rsvps']
@@ -1730,8 +1731,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 				$this->assertSame( 'attending', $status( $users['yes'] ) );
 				$this->assertSame( 'not_attending', $status( $users['no'] ) );
-				// Meetup's waiting list comes over as attending; this event has room.
-				$this->assertSame( 'attending', $status( $users['waitlist'] ) );
+				// Never got a place, so on a past event they're left out.
+				$this->assertNull( $status( $users['waitlist'] ) );
 				$this->assertSame( 'attending', $status( $users['attended'] ) );
 				$this->assertNull( $status( $users['maybe'] ) );
 
@@ -1744,6 +1745,95 @@ class Test_Meetup_Import extends Groups_TestCase {
 		// RSVPing doesn't join anyone to the group.
 		$this->assertFalse( is_user_member_of_blog( $users['yes'], $this->site_id ) );
 		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * On an upcoming event, Meetup's waiting list comes over as attending, for
+	 * GatherPress to place.
+	 */
+	public function test_upcoming_event_keeps_waitlist() {
+		list( $raw, $users ) = $this->setup_rsvps();
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( $raw ) {
+				return $raw;
+			}
+		);
+
+		$results = Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ), true );
+
+		$this->assertSame( 4, $results[0]['rsvps']['saved'] );
+		$this->assertSame( 1, $results[0]['rsvps']['skipped'] );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame(
+			'attending',
+			$this->on_site( fn() => ( new \GatherPress\Core\Rsvp\Rsvp( $post->ID ) )->get( $users['waitlist'] )['status'] ?? null )
+		);
+	}
+
+	/**
+	 * The account the Meetup connection belongs to is in every group on a Pro
+	 * network. It isn't matched as a member, an organizer, or a host.
+	 */
+	public function test_connection_account_is_left_out() {
+		$account = self::factory()->user->create( array( 'user_email' => 'meetups@example.org' ) );
+		$member  = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
+		$node    = array(
+			'id'    => 'pro',
+			'email' => 'meetups@example.org',
+		);
+
+		$this->fake_events( array( $this->raw_event( array( 'eventHosts' => array( array( 'member' => $node ) ) ) ) ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_connection_member',
+			static function () {
+				return 'pro';
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_organizers',
+			static function () use ( $node ) {
+				return array(
+					array(
+						'metadata' => array( 'role' => 'ORGANIZER' ),
+						'node'     => $node,
+					),
+				);
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( $node ) {
+				return array(
+					$node,
+					array(
+						'id'    => 'm1',
+						'email' => 'member@example.org',
+					),
+				);
+			}
+		);
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch();
+
+		$plan = Meetup_Import\get_job( $this->site_id )['plan'];
+
+		$this->assertSame( array(), $plan['organizer_counts'] );
+		$this->assertSame( 1, $plan['member_counts']['join'] );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertTrue( is_user_member_of_blog( $member, $this->site_id ) );
+		$this->assertFalse( is_user_member_of_blog( $account, $this->site_id ) );
+		$this->assertNotSame( $account, (int) $post->post_author );
+		$this->assertEmpty( $this->on_site( fn() => get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) ) );
 	}
 
 	/**

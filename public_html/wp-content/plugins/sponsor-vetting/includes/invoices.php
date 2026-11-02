@@ -42,6 +42,37 @@ function snapshot_approved_domain( int $sponsorship_id ): void {
 }
 
 /**
+ * Accepts the website a camp changed its approved sponsor to. Runs on Central.
+ *
+ * Only the website the vetter was shown is accepted: if the camp changed it again since, the vetter has to look
+ * at the new one first.
+ *
+ * Callers check capabilities first.
+ *
+ * @param int    $sponsorship_id The sponsorship.
+ * @param string $shown          The website the vetter confirmed, as shown to them.
+ * @return true|\WP_Error
+ */
+function confirm_website( int $sponsorship_id, string $shown ): true|\WP_Error {
+	if ( 'svs-approved' !== get_post_status( $sponsorship_id ) || ! website_changed( $sponsorship_id ) ) {
+		return new \WP_Error( 'sv_website_not_changed', __( 'There’s no website change to confirm.', 'wordcamporg' ) );
+	}
+
+	$current = get_sponsor_domain( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ), (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
+
+	if ( normalize_domain( $shown ) !== $current ) {
+		/* translators: %s: Website domain. */
+		return new \WP_Error( 'sv_website_changed_again', sprintf( __( 'The camp changed the website again, to %s. Check it, then confirm again.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
+	}
+
+	snapshot_approved_domain( $sponsorship_id );
+	/* translators: %s: Website domain. */
+	add_note( $sponsorship_id, sprintf( __( 'Confirmed the new website, %s.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
+
+	return true;
+}
+
+/**
  * Whether a sponsorship's camp sponsor has a different website from the one approved. Runs on Central.
  *
  * @param int $sponsorship_id The sponsorship.

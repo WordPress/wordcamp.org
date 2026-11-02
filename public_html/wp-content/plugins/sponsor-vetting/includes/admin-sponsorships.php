@@ -221,6 +221,7 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 				);
 				?>
 			</p>
+			<input type="hidden" name="sv_confirm_domain" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_sv_website_changed', true ) ); ?>">
 			<p><button type="submit" name="sv_action" value="confirm_website" class="button"><?php esc_html_e( 'Confirm new website', 'wordcamporg' ); ?></button></p>
 			<p class="description"><?php esc_html_e( 'If it’s a different company now, cancel the sponsorship instead.', 'wordcamporg' ); ?></p>
 		</div>
@@ -386,11 +387,15 @@ function save_sponsorship( int $post_id ): void {
 
 	save_note( $post_id );
 
-	if ( 'confirm_website' === $action && 'svs-approved' === get_post_status( $post_id ) && website_changed( $post_id ) ) {
-		snapshot_approved_domain( $post_id );
-		/* translators: %s: Website domain. */
-		add_note( $post_id, sprintf( __( 'Confirmed the new website, %s.', 'wordcamporg' ), (string) get_post_meta( $post_id, '_sv_approved_domain', true ) ) );
-		add_notice( 'success', __( 'The new website was confirmed.', 'wordcamporg' ) );
+	if ( 'confirm_website' === $action ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by is_valid_save().
+		$confirmed = confirm_website( $post_id, sanitize_text_field( wp_unslash( (string) ( $_POST['sv_confirm_domain'] ?? '' ) ) ) );
+
+		if ( is_wp_error( $confirmed ) ) {
+			add_notice( 'error', $confirmed->get_error_message() );
+		} else {
+			add_notice( 'success', __( 'The new website was confirmed.', 'wordcamporg' ) );
+		}
 	}
 
 	if ( in_array( $action, array( 'approve', 'approve_good_faith' ), true ) ) {

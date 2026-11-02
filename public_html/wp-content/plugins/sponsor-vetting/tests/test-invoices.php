@@ -12,9 +12,9 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\approve_sponsorship;
 use function WordCamp\Sponsor_Vetting\check_invoice_approval;
+use function WordCamp\Sponsor_Vetting\confirm_website;
 use function WordCamp\Sponsor_Vetting\find_sponsorship;
 use function WordCamp\Sponsor_Vetting\get_invoice_statuses;
-use function WordCamp\Sponsor_Vetting\snapshot_approved_domain;
 
 defined( 'WPINC' ) || die();
 
@@ -81,7 +81,8 @@ class Test_Invoices extends Database_TestCase {
 
 	/**
 	 * An invoice can be approved only once its sponsorship is, and again only after a vetter confirms a website
-	 * the camp changed afterwards. Changing it back needs no confirmation.
+	 * the camp changed afterwards. Changing it back needs no confirmation, and a confirmation only accepts the
+	 * website the vetter was shown.
 	 */
 	public function test_invoice_approval_follows_the_sponsorship_and_its_website(): void {
 		list( $sponsor_id, $invoice_id ) = $this->submit_invoice( self::$year_dot_2018_site_id, 'https://acme.example/' );
@@ -108,12 +109,16 @@ class Test_Invoices extends Database_TestCase {
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
 
 		$this->set_website( $sponsor_id, 'https://other.example' );
+		$this->set_website( $sponsor_id, 'https://third.example' );
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
-		snapshot_approved_domain( $sponsorship_id );
+		$stale           = confirm_website( $sponsorship_id, 'other.example' );
+		$confirmed       = confirm_website( $sponsorship_id, 'third.example' );
 		$approved_domain = get_post_meta( $sponsorship_id, '_sv_approved_domain', true );
 		restore_current_blog();
 
-		$this->assertSame( 'other.example', $approved_domain );
+		$this->assertWPError( $stale );
+		$this->assertTrue( $confirmed );
+		$this->assertSame( 'third.example', $approved_domain );
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
 	}
 

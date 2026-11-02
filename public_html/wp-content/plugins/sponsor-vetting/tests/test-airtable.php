@@ -14,6 +14,7 @@ use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_camps_by_name;
 use function WordCamp\Sponsor_Vetting\get_conversations;
 use function WordCamp\Sponsor_Vetting\get_log;
+use function WordCamp\Sponsor_Vetting\get_sponsorship_statuses;
 use function WordCamp\Sponsor_Vetting\group_airtable_rows;
 use function WordCamp\Sponsor_Vetting\import_airtable_company;
 use function WordCamp\Sponsor_Vetting\parse_csv;
@@ -29,19 +30,22 @@ defined( 'WPINC' ) || die();
  */
 class Test_Airtable extends Database_TestCase {
 	/**
-	 * A company vetted more than a year ago keeps its status, dates and approval; a dry run writes nothing, and a
-	 * second run leaves the company alone but links an event that matches a camp since.
+	 * A company vetted before the re-vetting period keeps its status, dates and approval; a dry run writes nothing
+	 * and predicts the run, and a second run leaves the company alone but links an event that matches a camp since.
+	 * Only mapped Help Scout links become conversations, and an event in two rows goes by the newer one.
 	 */
 	public function test_import_keeps_old_approvals_and_links_events_on_rerun(): void {
 		foreach ( array( self::$year_dot_2018_site_id, self::$year_dot_2019_site_id ) as $site_id ) {
 			switch_to_blog( $site_id );
-			self::factory()->post->create(
-				array(
-					'post_type'  => 'wcb_sponsor',
-					'post_title' => 'Acme',
-					'meta_input' => array( '_wcpt_sponsor_website' => 'https://acme.example/' ),
-				)
-			);
+			foreach ( array( 'acme', 'initech', 'hooli' ) as $name ) {
+				self::factory()->post->create(
+					array(
+						'post_type'  => 'wcb_sponsor',
+						'post_title' => $name,
+						'meta_input' => array( '_wcpt_sponsor_website' => "https://$name.example/" ),
+					)
+				);
+			}
 			restore_current_blog();
 		}
 
@@ -60,7 +64,10 @@ class Test_Airtable extends Database_TestCase {
 			$file,
 			"\xEF\xBB\xBFSponsor Name,Company Link,Sponsor Email address,Current Event Name,GPL,Status,Approval Status,Approval Date,Private Notes,Email conversation link,Last modified\n"
 			. "Acme,https://www.acme.example/,pat@acme.example,\"wordcamp seattle 2018, WordCamp Seattle 2019\",All good.,Compliant,Yes,\"March 3, 2025\",\"Asked twice.\nFixed.\",,3/4/2025 9:00am\n"
-			. "Globex,globex.example,,,,Compliance Requested,,,,\"https://freescout.wordpress.net/conversation/123 https://secure.helpscout.net/conversation/3127341156/901940#thread-1\",3/4/2025 9:00am\n"
+			. "Globex,globex.example,,,,Compliance Requested,,,,\"https://freescout.wordpress.net/conversation/123 https://secure.helpscout.net/conversation/3127341156/901940#thread-1 https://secure.helpscout.net/conversation/1/2\",3/4/2025 9:00am\n"
+			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,,,,,3/5/2025 9:00am\n"
+			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/1/2025 9:00am\n"
+			. "Hooli,hooli.example,,WordCamp Seattle 2018,,Needs Vetting,Yes,,,,3/4/2025 9:00am\n"
 			. "No Link Co,,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/4/2025 9:00am\n"
 		);
 		$rows = parse_csv( $file );
@@ -102,6 +109,27 @@ class Test_Airtable extends Database_TestCase {
 		$globex = import_airtable_company( 'globex.example', $grouped['companies']['globex.example'], get_camps_by_name(), false );
 
 		$this->assertSame( array( 123, 110535 ), array_column( get_conversations( $globex['company_id'], 'compliance' ), 'id' ) );
+
+		$hooli_dry_run = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), true );
+		$hooli         = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), false );
+		$initech       = import_airtable_company( 'initech.example', $grouped['companies']['initech.example'], get_camps_by_name(), false );
+
+		$this->assertSame( array( 'WordCamp Seattle 2018' => 'left pending: approved in Airtable, but the company isn’t Compliant' ), $hooli_dry_run['sponsorships'] );
+		$this->assertSame( $hooli_dry_run['sponsorships'], $hooli['sponsorships'] );
+		$this->assertSame( array( 'WordCamp Seattle 2018' => 'pending' ), $initech['sponsorships'] );
+		$this->assertSame(
+			array( 'svs-pending' ),
+			wp_list_pluck(
+				get_posts(
+					array(
+						'post_type'   => SPONSORSHIP_POST_TYPE,
+						'post_status' => array_keys( get_sponsorship_statuses() ),
+						'post_parent' => $initech['company_id'],
+					)
+				),
+				'post_status'
+			)
+		);
 
 		$sponsorships = get_posts(
 			array(

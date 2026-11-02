@@ -17,6 +17,8 @@ class WCCSP_Settings {
 		add_action( 'admin_menu',                   array( $this, 'register_settings_pages' ) );
 		add_action( 'init',                         array( $this, 'init' ) );
 		add_action( 'update_option_wccsp_settings', array( $this, 'clear_static_page_cache' ) );
+		add_action( 'update_option_wccsp_settings', array( $this, 'resync_posts_on_toggle' ), 10, 2 );
+		add_filter( 'jetpack_sync_prevent_sending_post_data', array( $this, 'prevent_post_sync' ) );
 	}
 
 	/**
@@ -67,6 +69,34 @@ class WCCSP_Settings {
 			self::REQUIRED_CAPABILITY,
 			$menu_slug
 		);
+	}
+
+	/**
+	 * Keep post data out of Jetpack sync while the page is enabled.
+	 *
+	 * @param bool $prevent Whether Jetpack should withhold the post data.
+	 *
+	 * @return bool
+	 */
+	public function prevent_post_sync( $prevent ) {
+		return $prevent || 'on' === $this->get_settings()['enabled'];
+	}
+
+	/**
+	 * Re-sync posts when the page is enabled or disabled, so synced copies match the new state.
+	 *
+	 * @param mixed $old_value Previous settings.
+	 * @param mixed $new_value New settings.
+	 */
+	public function resync_posts_on_toggle( $old_value, $new_value ) {
+		$was_enabled = is_array( $old_value ) && 'on' === ( $old_value['enabled'] ?? '' );
+		$is_enabled  = is_array( $new_value ) && 'on' === ( $new_value['enabled'] ?? '' );
+
+		if ( $was_enabled === $is_enabled || ! class_exists( '\Automattic\Jetpack\Sync\Actions' ) ) {
+			return;
+		}
+
+		\Automattic\Jetpack\Sync\Actions::do_full_sync( array( 'posts' => true ) );
 	}
 
 	/**

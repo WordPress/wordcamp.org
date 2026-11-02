@@ -176,7 +176,7 @@ final class Context {
 			return $content;
 		}
 
-		if ( get_queried_object_id() !== (int) self::$occurrence->series_post_id ) {
+		if ( get_queried_object_id() !== (int) self::$occurrence->series_post_id || post_password_required( (int) self::$occurrence->series_post_id ) ) {
 			return $content;
 		}
 

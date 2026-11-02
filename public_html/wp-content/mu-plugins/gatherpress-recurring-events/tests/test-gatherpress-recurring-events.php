@@ -648,6 +648,42 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		);
 	}
 
+	/** The series calendar download follows the post password. */
+	public function test_series_ical_follows_the_post_password(): void {
+		global $wp_query;
+
+		$post_id = $this->create_published_recurring_event();
+		update_post_meta( $post_id, Rule::META_PREFIX . 'rrule', 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO' );
+
+		$wp_query->queried_object    = get_post( $post_id );
+		$wp_query->queried_object_id = $post_id;
+		set_query_var( 'gatherpress_calendar', 'ical' );
+		$cookie = 'wp-postpass_' . COOKIEHASH;
+
+		try {
+			$this->assertStringContainsString( 'RRULE:FREQ=WEEKLY', Plugin::series_ical_body(), 'Precondition: an open series is served.' );
+
+			wp_update_post(
+				array(
+					'ID'            => $post_id,
+					'post_password' => 'secret',
+				)
+			);
+			$wp_query->queried_object = get_post( $post_id );
+			$this->assertSame( '', Plugin::series_ical_body() );
+
+			require_once ABSPATH . WPINC . '/class-phpass.php';
+			$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );
+			$this->assertStringContainsString( 'RRULE:FREQ=WEEKLY', Plugin::series_ical_body(), 'A visitor with the password lost the download.' );
+		} finally {
+			unset( $_COOKIE[ $cookie ] );
+			set_query_var( 'gatherpress_calendar', '' );
+			Context::set( null );
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();
@@ -1651,6 +1687,15 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 			Context::set( Occurrences::select_for_series( $other_series ) );
 			$this->assertSame( 'Body', Context::prepend_selector( 'Body' ) );
+
+			wp_update_post(
+				array(
+					'ID'            => $page_series,
+					'post_password' => 'secret',
+				)
+			);
+			Context::set( Occurrences::select_for_series( $page_series ) );
+			$this->assertSame( 'Body', Context::prepend_selector( 'Body' ), 'A protected series showed its dates.' );
 		} finally {
 			Context::set( null );
 			// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the queries this test replaced.

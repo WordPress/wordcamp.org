@@ -189,6 +189,7 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 	</p>
 
 	<?php if ( 'svs-pending' === $post->post_status ) : ?>
+		<input type="hidden" name="sv_shown_domain" value="<?php echo esc_attr( (string) get_current_domain( $post->ID ) ); ?>">
 		<?php if ( $state && $state['approvable'] ) : ?>
 			<p><button type="submit" name="sv_action" value="approve" class="button button-primary"><?php esc_html_e( 'Approve', 'wordcamporg' ); ?></button></p>
 		<?php elseif ( $state && 'sv-compliance-req' === $state['status'] ) : ?>
@@ -399,7 +400,8 @@ function save_sponsorship( int $post_id ): void {
 	}
 
 	if ( in_array( $action, array( 'approve', 'approve_good_faith' ), true ) ) {
-		$approved = approve_sponsorship( $post_id, 'approve_good_faith' === $action );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by is_valid_save().
+		$approved = approve_sponsorship( $post_id, 'approve_good_faith' === $action, sanitize_text_field( wp_unslash( (string) ( $_POST['sv_shown_domain'] ?? '' ) ) ) );
 
 		if ( is_wp_error( $approved ) ) {
 			add_notice( 'error', $approved->get_error_message() );

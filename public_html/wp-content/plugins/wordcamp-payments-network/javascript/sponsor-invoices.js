@@ -35,7 +35,7 @@
 			try {
 				approvalButton.addClass( 'hidden' );
 				statusMessage.html( 'Submitting to QuickBooks...' ); // todo show spinner instead
-				statusMessage.removeClass( 'hidden' );
+				statusMessage.removeClass( 'hidden notice notice-success notice-error inline' );
 
 				$.post(
 					ajaxurl,
@@ -57,7 +57,8 @@
 								statusMessage.addClass( 'notice notice-error inline' );
 								statusMessage.html( _.escape( 'ERROR: ' + response.data.error ) );
 
-								// todo bring button back so they can try again?
+								// A refusal, like vetting that isn't done yet, can clear up without a reload.
+								approvalButton.removeClass( 'hidden' );
 							}
 						} catch ( exception ) {
 							app.log( exception );

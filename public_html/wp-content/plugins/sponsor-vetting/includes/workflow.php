@@ -199,17 +199,26 @@ function restoring_approval( ?int $sponsorship_id = null ): int {
  *
  * Callers check capabilities first.
  *
- * @param int  $sponsorship_id The sponsorship.
- * @param bool $good_faith     Whether to approve it in good faith: the sponsor has been asked for changes,
- *                             committed to them, and the event can't wait. Never carries over to other
- *                             sponsorships.
+ * @param int         $sponsorship_id The sponsorship.
+ * @param bool        $good_faith     Whether to approve it in good faith: the sponsor has been asked for changes,
+ *                                    committed to them, and the event can't wait. Never carries over to other
+ *                                    sponsorships.
+ * @param string|null $shown_domain   The camp sponsor's website the vetter was shown, if a vetter is approving.
+ *                                    The approval is for that website, so a different one now is refused.
  * @return true|\WP_Error
  */
-function approve_sponsorship( int $sponsorship_id, bool $good_faith = false ): true|\WP_Error {
+function approve_sponsorship( int $sponsorship_id, bool $good_faith = false, ?string $shown_domain = null ): true|\WP_Error {
 	$sponsorship = get_post( $sponsorship_id );
 
 	if ( ! $sponsorship || SPONSORSHIP_POST_TYPE !== $sponsorship->post_type || 'svs-pending' !== $sponsorship->post_status ) {
 		return new \WP_Error( 'sv_not_pending', __( 'Only a pending sponsorship can be approved.', 'wordcamporg' ) );
+	}
+
+	$current = (string) get_current_domain( $sponsorship_id );
+
+	if ( null !== $shown_domain && normalize_domain( $shown_domain ) !== $current ) {
+		/* translators: %s: Website domain. */
+		return new \WP_Error( 'sv_website_changed_since_shown', sprintf( __( 'The camp changed the sponsor’s website to %s while you had this page open. Check it, then approve again.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
 	}
 
 	if ( $good_faith && 'sv-compliance-req' !== get_post_status( $sponsorship->post_parent ) ) {

@@ -509,9 +509,6 @@ function update_index_row( $invoice_id, $invoice ) {
 		return;
 	}
 
-	// Camp sites write to the index too, and may do so before anyone opens the network admin after a deploy.
-	upgrade_database();
-
 	// todo use post_edit_is_actionable instead?
 
 	$index_row = array(
@@ -531,6 +528,15 @@ function update_index_row( $invoice_id, $invoice ) {
 	);
 
 	$formats = array( '%d', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%f', '%s' );
+
+	/*
+	 * The column arrives when the network admin runs upgrade_database(), which backfills it. Until then a camp's save
+	 * leaves it out, so the migration never runs in an organizer's request.
+	 */
+	if ( version_compare( get_site_option( 'wcbdsi_database_version', 0 ), 6, '<' ) ) {
+		unset( $index_row['sponsor_id'], $formats[5] );
+		$formats = array_values( $formats );
+	}
 
 	$wpdb->replace( get_index_table_name(), $index_row, $formats );
 }

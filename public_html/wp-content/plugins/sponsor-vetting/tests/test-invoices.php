@@ -83,8 +83,8 @@ class Test_Invoices extends Database_TestCase {
 	/**
 	 * An invoice can be approved only once its sponsorship is, and again only after a vetter confirms a website
 	 * the camp changed afterwards, including while the sponsorship sat in the trash. Changing it back needs no
-	 * confirmation, and a confirmation only accepts the website the vetter was shown. A sponsor the camp deletes
-	 * isn't taken for a changed website, but its invoice can't be approved either.
+	 * confirmation, and an approval or a confirmation only accepts the website the vetter was shown. A sponsor the
+	 * camp deletes isn't taken for a changed website, but its invoice can't be approved either.
 	 */
 	public function test_invoice_approval_follows_the_sponsorship_and_its_website(): void {
 		list( $sponsor_id, $invoice_id ) = $this->submit_invoice( self::$year_dot_2018_site_id, 'https://acme.example/' );
@@ -99,9 +99,11 @@ class Test_Invoices extends Database_TestCase {
 				'post_status' => 'sv-compliant',
 			)
 		);
-		$this->assertTrue( approve_sponsorship( $sponsorship_id ) );
+		$stale_approval = approve_sponsorship( $sponsorship_id, false, 'other.example' );
+		$this->assertTrue( approve_sponsorship( $sponsorship_id, false, 'https://www.acme.example/' ) );
 		restore_current_blog();
 
+		$this->assertSame( 'sv_website_changed_since_shown', $stale_approval->get_error_code() );
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
 
 		$this->set_website( $sponsor_id, 'https://www.other.example' );

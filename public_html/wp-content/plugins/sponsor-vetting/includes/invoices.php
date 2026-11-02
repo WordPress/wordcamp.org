@@ -179,14 +179,17 @@ add_filter( 'wcbdsi_vetting_statuses', __NAMESPACE__ . '\get_invoice_statuses', 
  *
  * Runs on the invoice's site.
  *
- * @param true|\WP_Error $allowed    True, or why the invoice can't be approved yet.
- * @param int            $invoice_id The invoice.
+ * @param mixed $allowed    True, or why the invoice can't be approved yet. Only a \WP_Error refuses, so another
+ *                          callback's other values don't.
+ * @param int   $invoice_id The invoice.
  * @return true|\WP_Error
  */
-function check_invoice_approval( true|\WP_Error $allowed, int $invoice_id ): true|\WP_Error {
+function check_invoice_approval( mixed $allowed, int $invoice_id ): true|\WP_Error {
 	if ( is_wp_error( $allowed ) ) {
 		return $allowed;
 	}
+
+	$allowed = true;
 
 	$blog_id    = get_current_blog_id();
 	$sponsor_id = (int) get_post_meta( $invoice_id, '_wcbsi_sponsor_id', true );
@@ -203,7 +206,7 @@ function check_invoice_approval( true|\WP_Error $allowed, int $invoice_id ): tru
 	if ( ! $sponsorship ) {
 		$allowed = new \WP_Error( 'sv_invoice_not_requested', __( 'The sponsor hasn’t been sent for vetting. Request vetting from the sponsor on the camp’s site.', 'wordcamporg' ) );
 	} elseif ( 'svs-approved' !== $sponsorship->post_status ) {
-		/* translators: %s: The sponsorship's vetting, like "Pending, company In Progress". */
+		/* translators: %s: The sponsorship's vetting, like "Pending (In review)". */
 		$allowed = new \WP_Error( 'sv_invoice_not_approved', sprintf( __( 'The sponsor isn’t approved yet: %s.', 'wordcamporg' ), get_invoice_vetting_label( $sponsorship ) ) );
 	} elseif ( null === get_current_domain( $sponsorship->ID ) ) {
 		$allowed = new \WP_Error( 'sv_invoice_sponsor_gone', __( 'The invoice’s sponsor was trashed or deleted on the camp’s site, so its website can’t be checked.', 'wordcamporg' ) );

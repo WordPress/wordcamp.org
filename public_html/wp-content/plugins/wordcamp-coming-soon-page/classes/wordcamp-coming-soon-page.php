@@ -23,6 +23,7 @@ class WordCamp_Coming_Soon_Page {
 		// generators decide whether to run before `init` priority 11.
 		add_filter( 'wp_sitemaps_enabled',        array( $this, 'disable_core_sitemaps' ) );
 		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_sitemaps' ) );
+		add_filter( 'jetpack_active_modules',     array( $this, 'disable_jetpack_json_api' ) );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
@@ -275,6 +276,23 @@ class WordCamp_Coming_Soon_Page {
 		}
 
 		return array_values( array_diff( (array) $modules, array( 'sitemaps' ) ) );
+	}
+
+	/**
+	 * Turn off the Jetpack JSON API module while the Coming Soon page is active.
+	 *
+	 * @param array $modules Slugs of the active Jetpack modules.
+	 *
+	 * @return array
+	 */
+	public function disable_jetpack_json_api( $modules ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' !== $settings['enabled'] ) {
+			return $modules;
+		}
+
+		return array_values( array_diff( (array) $modules, array( 'json-api' ) ) );
 	}
 
 	/**

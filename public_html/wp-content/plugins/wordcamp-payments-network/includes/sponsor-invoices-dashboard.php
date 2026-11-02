@@ -190,6 +190,7 @@ function upgrade_database() {
 			qbo_invoice_id int( 11 )        unsigned NOT NULL default '0',
 			invoice_title  varchar( 75 )             NOT NULL default '',
 			status         varchar( 30 )             NOT NULL default '',
+			vetting_status varchar( 30 )             NOT NULL default '',
 			sponsor_id     int( 11 )        unsigned NOT NULL default '0',
 			wordcamp_name  varchar( 75 )             NOT NULL default '',
 			sponsor_name   varchar( 75 )             NOT NULL default '',
@@ -215,19 +216,16 @@ function upgrade_database() {
 }
 
 /**
- * Moves the index from the hand-set vetting status to the invoice's sponsor, which Sponsor Vetting looks up.
+ * Backfills the invoice's sponsor, which Sponsor Vetting looks up, into the index.
  *
- * The column is dropped by hand, because `dbDelta()` adds columns but never drops them. Only submitted invoices show
- * vetting, so only they're backfilled; the rest get their sponsor the next time they're saved.
+ * Only submitted invoices show vetting, so only they're backfilled; the rest get their sponsor the next time they're
+ * saved. The old `vetting_status` column is left in place, unused, so the previous code still writes to the index if
+ * this is rolled back.
  *
  * @param string $table_name The index table.
  */
 function upgrade_to_sponsor_ids( $table_name ) {
 	global $wpdb;
-
-	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table_name, 'vetting_status' ) ) ) {
-		$wpdb->query( $wpdb->prepare( 'ALTER TABLE %i DROP COLUMN vetting_status', $table_name ) );
-	}
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		'SELECT blog_id, invoice_id FROM %i WHERE status = %s AND sponsor_id = 0',

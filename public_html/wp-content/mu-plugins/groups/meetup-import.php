@@ -48,7 +48,9 @@ use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Venue\Venue;
 use WordCamp\Groups\Frontend\Check_In;
+use WordCamp\Groups\Frontend\Defaults;
 use WordCamp\Groups\Frontend\Event_Hosts;
+use WordCamp\Groups\Frontend\Event_Language;
 use WordCamp\Groups\Frontend\Group_Location;
 use WordCamp\Logger;
 use WordPressdotorg\MU_Plugins\Utilities\Meetup_Client;
@@ -724,7 +726,7 @@ function run_fetch( array $job ): void {
 		'group_results'    => plan_group( $job['site_id'], $job['data']['group'] ),
 		'events'           => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
 		'organizer_counts' => $job['match_people'] ? plan_organizers( $job['site_id'], $job['data']['organizers'] ) : null,
-		'member_counts'    => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'] ) : null,
+		'member_counts'    => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
 	);
 
 	$job['status']   = 'ready';
@@ -2398,6 +2400,12 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	$post_id = (int) $post_id;
 
+	// Meetup has no event language. A new event gets the one the form would
+	// prefill; a refreshed draft keeps its own.
+	if ( ! $existing ) {
+		Event_Language\set_event_language( $post_id, default_event_language() );
+	}
+
 	update_post_meta( $post_id, EVENT_URL_META, esc_url_raw( $event['meetup_url'] ) );
 
 	( new Event( $post_id ) )->save_datetimes(
@@ -2516,6 +2524,29 @@ function event_author( array $event, bool $match_people ): int {
 	);
 
 	return $admins ? (int) $admins[0] : 0;
+}
+
+/**
+ * The language a new event on the current site starts with.
+ *
+ * What the event form prefills for a new event (`Defaults\get_default_event_data()`):
+ * the language of the group's last published event, else the site's own.
+ * The site's comes from its `WPLANG` rather than `Event_Language\get_default()`,
+ * because `get_locale()` is fixed for the request: in a cron run switched to
+ * the group's site, it would give the root site's language.
+ *
+ * @return string Language subtag, or '' for none.
+ */
+function default_event_language(): string {
+	$previous = Event_Language\get_event_language( Defaults\get_most_recent_event_id() );
+
+	if ( '' !== $previous ) {
+		return $previous;
+	}
+
+	$locale = (string) get_option( 'WPLANG' );
+
+	return Event_Language\sanitize_code( strtok( '' !== $locale ? $locale : 'en_US', '_-' ) );
 }
 
 /**
@@ -2982,13 +3013,15 @@ function sum_rsvp_counts( array $results ): array {
  * In order: a member an earlier import already considered is left alone (so
  * someone who has since left the group isn't added back); one without a
  * shared email, or whose email matches no WordPress.org account, is only
- * counted; one who is already in the group stays as they are; the rest join.
+ * counted; one who is already in the group (or will be, see `plan_members()`)
+ * stays as they are; the rest join.
  *
  * @param int   $site_id Target group site.
  * @param array $members Normalized members, from `normalize_member()`.
+ * @param int[] $joining Users the import adds before it gets to the members.
  * @return array[] One `{ member, outcome, user_id }` per member.
  */
-function classify_members( int $site_id, array $members ): array {
+function classify_members( int $site_id, array $members, array $joining = array() ): array {
 	$seen       = array_flip( (array) get_blog_option( $site_id, MEMBERS_OPTION, array() ) );
 	$classified = array();
 
@@ -3002,7 +3035,7 @@ function classify_members( int $site_id, array $members ): array {
 			$outcome = 'no_email';
 		} elseif ( ! $user_id ) {
 			$outcome = 'unmatched';
-		} elseif ( is_user_member_of_blog( $user_id, $site_id ) ) {
+		} elseif ( is_user_member_of_blog( $user_id, $site_id ) || in_array( $user_id, $joining, true ) ) {
 			$outcome = 'already_member';
 		} else {
 			$outcome = 'join';
@@ -3017,12 +3050,19 @@ function classify_members( int $site_id, array $members ): array {
 /**
  * Count what an import would do with a group's members, without writing anything.
  *
- * @param int   $site_id Target group site.
- * @param array $members Normalized members.
+ * Meetup lists organizers as members too, and organizers are imported first:
+ * one the import adds is already in the group by the time members are
+ * imported, so they're counted here as the import will count them.
+ *
+ * @param int   $site_id    Target group site.
+ * @param array $members    Normalized members.
+ * @param array $organizers Normalized organizers, from `normalize_organizer()`.
  * @return int[] Counts keyed by outcome.
  */
-function plan_members( int $site_id, array $members ): array {
-	return count_member_outcomes( classify_members( $site_id, $members ) );
+function plan_members( int $site_id, array $members, array $organizers = array() ): array {
+	$joining = wp_list_pluck( wp_list_filter( classify_organizers( $site_id, $organizers ), array( 'outcome' => 'added' ) ), 'user_id' );
+
+	return count_member_outcomes( classify_members( $site_id, $members, array_values( $joining ) ) );
 }
 
 /**

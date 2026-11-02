@@ -426,6 +426,56 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * An imported event is filed under the group site's language, as a new
+	 * event from the form would be, not the language of the site cron runs on.
+	 */
+	public function test_import_sets_site_language() {
+		global $wpdb;
+
+		// `update_option()` drops a locale whose language pack isn't installed.
+		$wpdb->replace(
+			$wpdb->get_blog_prefix( $this->site_id ) . 'options',
+			array(
+				'option_name'  => 'WPLANG',
+				'option_value' => 'es_ES',
+				'autoload'     => 'on',
+			)
+		);
+		$this->on_site( 'wp_cache_flush' );
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'es', $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
+	}
+
+	/**
+	 * As in the form, the language of the group's last published event wins
+	 * over the site's.
+	 */
+	public function test_import_follows_last_event_language() {
+		$this->on_site(
+			function () {
+				$previous = self::factory()->post->create(
+					array(
+						'post_type'   => Event::POST_TYPE,
+						'post_status' => 'publish',
+					)
+				);
+
+				\WordCamp\Groups\Frontend\Event_Language\set_event_language( $previous, 'fr' );
+			}
+		);
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'fr', $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
+	}
+
+	/**
 	 * Running the same import twice creates nothing new.
 	 */
 	public function test_rerun_is_idempotent() {
@@ -2066,6 +2116,47 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Meetup lists organizers as members too. One the import adds as an
+	 * organizer is already in the group by the time members are imported, and
+	 * the preview counts them the way the import will.
+	 */
+	public function test_preview_counts_joining_organizer_once() {
+		list( $raw_organizers ) = $this->setup_organizers();
+
+		$this->fake_events( array() );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_organizers',
+			static function () use ( $raw_organizers ) {
+				return $raw_organizers;
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () {
+				return array(
+					array(
+						'id'    => 'l1',
+						'email' => 'organizer@example.org',
+					),
+				);
+			}
+		);
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch();
+
+		$plan = Meetup_Import\get_job( $this->site_id )['plan'];
+
+		$this->assertSame( 0, $plan['member_counts']['join'] );
+		$this->assertSame( 1, $plan['member_counts']['already_member'] );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( $plan['member_counts'], Meetup_Import\get_job( $this->site_id )['results']['member_counts'] );
+	}
+
+	/**
 	 * A site has one import in progress at a time, and other sites don't wait on it.
 	 */
 	public function test_start_refuses_only_for_the_same_site() {
@@ -2163,6 +2254,36 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertArrayNotHasKey( 'data', $expired );
 		$this->assertSame( 0, $this->count_posts( Event::POST_TYPE ) );
 		$this->assertNotWPError( Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false ) );
+	}
+
+	/**
+	 * An import that fails partway drops the Meetup data it held, member
+	 * emails included, rather than keeping it for as long as the job is shown.
+	 */
+	public function test_failed_import_drops_fetched_data() {
+		list( $raw_members ) = $this->setup_members();
+
+		$this->fake_events( array( $this->raw_event() ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( $raw_members ) {
+				return $raw_members;
+			}
+		);
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch();
+		$this->assertNotEmpty( Meetup_Import\get_job( $this->site_id )['data']['members'] );
+
+		// The site is archived between the preview and the import.
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		update_blog_status( $this->site_id, 'archived', '1' );
+		$this->run_batches();
+
+		$failed = Meetup_Import\get_job( $this->site_id );
+
+		$this->assertSame( 'failed', $failed['status'] );
+		$this->assertArrayNotHasKey( 'data', $failed );
 	}
 
 	/**

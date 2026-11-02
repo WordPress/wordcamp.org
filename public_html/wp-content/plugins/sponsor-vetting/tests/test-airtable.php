@@ -17,9 +17,13 @@ use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_sponsorship_statuses;
 use function WordCamp\Sponsor_Vetting\group_airtable_rows;
 use function WordCamp\Sponsor_Vetting\import_airtable_company;
+use function WordCamp\Sponsor_Vetting\link_sponsorship;
 use function WordCamp\Sponsor_Vetting\needs_approval_email;
 use function WordCamp\Sponsor_Vetting\parse_csv;
 use function WordCamp\Sponsor_Vetting\register_types;
+use function WordCamp\Sponsor_Vetting\request_vetting;
+use function WordCamp\Sponsor_Vetting\set_company_domains;
+use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
@@ -34,7 +38,8 @@ class Test_Airtable extends Database_TestCase {
 	 * A company vetted before the re-vetting period keeps its status, dates and approval; a dry run writes nothing
 	 * and predicts the run, and a second run leaves the company alone but links an event that matches a camp since.
 	 * Only mapped Help Scout links become conversations, and an event in two rows goes by the newer one. A lapsed
-	 * company with a new pending sponsorship is queued, and both runs report it; a Good Faith deadline runs from the
+	 * company with a pending sponsorship is queued, whether the import linked it or it was linked already, and both
+	 * runs report it; a Good Faith deadline runs from the
 	 * first approval, and a newer Canceled row doesn't set the company's status. Carried-over approvals offer no
 	 * approval email.
 	 */
@@ -52,6 +57,16 @@ class Test_Airtable extends Database_TestCase {
 			}
 			restore_current_blog();
 		}
+
+		switch_to_blog( self::$year_dot_2018_site_id );
+		$soylent_sponsor = self::factory()->post->create(
+			array(
+				'post_type'  => 'wcb_sponsor',
+				'post_title' => 'Soylent',
+				'meta_input' => array( '_wcpt_sponsor_website' => 'https://soylent.example/' ),
+			)
+		);
+		restore_current_blog();
 
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 		register_types();
@@ -72,6 +87,7 @@ class Test_Airtable extends Database_TestCase {
 			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,,,,,3/5/2025 9:00am\n"
 			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/1/2025 9:00am\n"
 			. "Hooli,hooli.example,,WordCamp Seattle 2018,,Needs Vetting,Yes,,,,3/4/2025 9:00am\n"
+			. "Soylent,soylent.example,,WordCamp Seattle 2018,,Compliant,,,,,3/4/2025 9:00am\n"
 			. "Umbrella,umbrella.example,,,,Canceled,,,,,7/1/2025 9:00am\n"
 			. "Umbrella,umbrella.example,,WordCamp Seattle 2018,,Compliance Requested,Yes,\"June 1, 2025\",,,6/1/2025 9:00am,Yes\n"
 			. "Umbrella,umbrella.example,,WordCamp Seattle 2019,,Compliance Requested,Yes,\"May 1, 2025\",,,5/1/2025 9:00am,Yes\n"
@@ -126,6 +142,21 @@ class Test_Airtable extends Database_TestCase {
 		$this->assertSame( $hooli_dry_run['sponsorships'], $hooli['sponsorships'] );
 		$this->assertSame( array( 'WordCamp Seattle 2018' => 'pending' ), $initech['sponsorships'] );
 		$this->assertSame( array( 'sv-needs-vetting', 'sv-needs-vetting' ), array( $initech_dry_run['status'], $initech['status'] ) );
+
+		// A company intake made before the import, already holding a pending sponsorship, and vetted long ago.
+		$soylent_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		set_company_domains( $soylent_id, array( 'soylent.example' ) );
+		link_sponsorship( request_vetting( self::$year_dot_2018_site_id, $soylent_sponsor ), $soylent_id );
+		update_post_meta( $soylent_id, '_sv_last_vetted', strtotime( '-1 year' ) );
+
+		$soylent = import_airtable_company( 'soylent.example', $grouped['companies']['soylent.example'], get_camps_by_name(), false );
+
+		$this->assertSame( array( 'existing', 'sv-needs-vetting' ), array( $soylent['result'], $soylent['status'] ) );
 
 		$umbrella = import_airtable_company( 'umbrella.example', $grouped['companies']['umbrella.example'], get_camps_by_name(), false );
 

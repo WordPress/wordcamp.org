@@ -156,8 +156,8 @@ function get_airtable_dates( string $cell ): array {
  * A company imported before keeps everything about it, but its rows' events still get sponsorships, so a re-run
  * links the events fixed since. A Compliant company's approvals carry over however long ago it was vetted (see
  * importing_company()). An event in more than one row goes by the most recently modified one. The company's status
- * comes from its newest row that isn't Canceled, which is about one event. A sponsorship the import creates or links
- * puts the company back in the queue when its vetting has lapsed, as intake would; the reported status says so.
+ * comes from its newest row that isn't Canceled, which is about one event. A pending sponsorship of the company puts
+ * it back in the queue when its vetting has lapsed, as intake would; the reported status says so.
  *
  * @param string  $domain  The company's domain.
  * @param array[] $rows    Its rows, most recently modified first.
@@ -274,7 +274,7 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 
 			$result['sponsorships'][ $event ] = $imported['outcome'];
 
-			if ( $imported['is_linked'] && 'pending' === $imported['status'] && ( $dry_run || $imported['sponsorship_id'] ) ) {
+			if ( 'pending' === $imported['status'] && ( $dry_run || $imported['sponsorship_id'] ) ) {
 				$linked[] = $imported['sponsorship_id'];
 			}
 
@@ -334,7 +334,6 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
  * @return array {
  *     @type string $outcome        What happened, or would.
  *     @type string $status         `pending`, `approved`, `good_faith`, `canceled`, or `` when it isn't the company's.
- *     @type bool   $is_linked      Whether the import creates the sponsorship or links it to the company, or would.
  *     @type int    $sponsorship_id The sponsorship, once linked to the company, or 0.
  * }
  */
@@ -342,7 +341,6 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 	$result  = array(
 		'outcome'        => '',
 		'status'         => '',
-		'is_linked'      => false,
 		'sponsorship_id' => 0,
 	);
 	$blog_id = $camps[ normalize_event_name( $event ) ] ?? 0;
@@ -377,8 +375,6 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 	$good_faith   = 'yes' === strtolower( (string) ( $row['good faith'] ?? '' ) ) && 'sv-compliance-req' === $status;
 	$was_approved = ! $is_canceled && 'yes' === strtolower( (string) ( $row['approval status'] ?? '' ) );
 	$is_approved  = $was_approved && ( 'sv-compliant' === $status || $good_faith );
-
-	$result['is_linked'] = ! $parent;
 
 	if ( $is_canceled ) {
 		$result['outcome'] = 'canceled';

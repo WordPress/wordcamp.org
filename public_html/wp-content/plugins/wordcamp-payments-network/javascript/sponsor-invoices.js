@@ -57,8 +57,10 @@
 								statusMessage.addClass( 'notice notice-error inline' );
 								statusMessage.html( _.escape( 'ERROR: ' + response.data.error ) );
 
-								// A refusal, like vetting that isn't done yet, can clear up without a reload.
-								approvalButton.removeClass( 'hidden' );
+								// Only a refusal before QuickBooks is safe to retry: a QuickBooks error may have created the invoice.
+								if ( response.data.retryable ) {
+									approvalButton.removeClass( 'hidden' );
+								}
 							}
 						} catch ( exception ) {
 							app.log( exception );

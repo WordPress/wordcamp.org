@@ -208,11 +208,12 @@ function upgrade_database() {
 
 	dbDelta( $schema );
 
+	// Once the column exists, camp saves write it, so none undoes a row the backfill below has filled.
+	update_site_option( 'wcbdsi_database_version', LATEST_DATABASE_VERSION );
+
 	if ( version_compare( $current_database_version, 6, '<' ) ) {
 		upgrade_to_sponsor_ids( $table_name );
 	}
-
-	update_site_option( 'wcbdsi_database_version', LATEST_DATABASE_VERSION );
 }
 
 /**
@@ -295,7 +296,11 @@ function handle_approve_invoice_request() {
 
 	if ( is_wp_error( $allowed ) ) {
 		restore_current_blog();
-		wp_send_json_error( array( 'error' => $allowed->get_error_message() ) );
+		// Nothing was sent to QuickBooks, so the invoice can be approved again once this is resolved.
+		wp_send_json_error( array(
+			'error'     => $allowed->get_error_message(),
+			'retryable' => true,
+		) );
 	}
 
 	$quickbooks_result = WordCamp_QBO::create_invoice( $invoice_id );

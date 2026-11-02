@@ -240,6 +240,9 @@ function approve_sponsorship( int $sponsorship_id, bool $good_faith = false, ?st
 		return new \WP_Error( 'sv_not_approvable', __( 'The company must be Compliant, and vetted within the re-vetting period, before its sponsorships can be approved.', 'wordcamporg' ) );
 	}
 
+	// The website just checked, not one read again since.
+	snapshot_approved_domain( $sponsorship_id, $current );
+
 	if ( $good_faith ) {
 		update_post_meta(
 			$sponsorship_id,

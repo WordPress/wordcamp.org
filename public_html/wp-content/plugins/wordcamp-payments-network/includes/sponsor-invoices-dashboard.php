@@ -174,7 +174,7 @@ function upgrade_database() {
 
 	$current_database_version = get_site_option( 'wcbdsi_database_version', 0 );
 
-	if ( version_compare( $current_database_version, LATEST_DATABASE_VERSION, '>=' ) && get_site_option( 'wcbdsi_sponsor_ids_backfilled' ) ) {
+	if ( version_compare( $current_database_version, LATEST_DATABASE_VERSION, '>=' ) ) {
 		return;
 	}
 
@@ -211,10 +211,8 @@ function upgrade_database() {
 	// Once the column exists, camp saves write it, so none undoes a row the backfill below has filled.
 	update_site_option( 'wcbdsi_database_version', LATEST_DATABASE_VERSION );
 
-	// Tracked apart from the version, so a backfill that dies partway runs again on the next load.
-	if ( ! get_site_option( 'wcbdsi_sponsor_ids_backfilled' ) ) {
+	if ( version_compare( $current_database_version, 6, '<' ) ) {
 		upgrade_to_sponsor_ids( $table_name );
-		update_site_option( 'wcbdsi_sponsor_ids_backfilled', 1 );
 	}
 }
 
@@ -223,7 +221,8 @@ function upgrade_database() {
  *
  * Only submitted invoices show vetting, so only they're backfilled; the rest get their sponsor the next time they're
  * saved. The old `vetting_status` column is left in place, unused, so the previous code still writes to the index if
- * this is rolled back. Safe to run again: it only fills rows that have no sponsor yet.
+ * this is rolled back. A row it misses still shows the right vetting: Sponsor Vetting reads the sponsor from the
+ * invoice when the index has none.
  *
  * @param string $table_name The index table.
  */

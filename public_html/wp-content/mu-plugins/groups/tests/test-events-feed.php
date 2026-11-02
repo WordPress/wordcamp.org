@@ -163,6 +163,32 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
+	 * Create a weekly series of three dates, starting in two weeks.
+	 *
+	 * @param int    $site_id Group site.
+	 * @param string $title   Title.
+	 * @return int Series post ID.
+	 */
+	protected function create_weekly_series( int $site_id, string $title ): int {
+		$date = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+
+		return $this->create_site_event(
+			$site_id,
+			array(
+				'title'      => $title,
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) ) ),
+					'end_type'  => 'count',
+					'count'     => 3,
+				),
+			)
+		);
+	}
+
+	/**
 	 * Give an event's venue post the meta GatherPress's geocoder would write.
 	 *
 	 * @param int   $site_id  Group site.
@@ -194,18 +220,19 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	 * @param string $status        RSVP status term slug.
 	 * @param string $recurrence_id Occurrence, or empty.
 	 * @param array  $user          User overrides.
+	 * @param int    $approved      `comment_approved`.
 	 */
-	protected function rsvp( int $site_id, int $event_id, string $status, string $recurrence_id = '', array $user = array() ): void {
+	protected function rsvp( int $site_id, int $event_id, string $status, string $recurrence_id = '', array $user = array(), int $approved = 1 ): void {
 		$user_id = self::factory()->user->create( $user );
 
 		$this->with_site(
 			$site_id,
-			function () use ( $event_id, $status, $recurrence_id, $user_id ) {
+			function () use ( $event_id, $status, $recurrence_id, $user_id, $approved ) {
 				$comment_id = wp_insert_comment(
 					array(
 						'comment_post_ID'  => $event_id,
 						'comment_type'     => 'gatherpress_rsvp',
-						'comment_approved' => 1,
+						'comment_approved' => $approved,
 						'user_id'          => $user_id,
 					)
 				);
@@ -310,6 +337,7 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 		$this->rsvp( $brisbane, $event_id, 'attending' );
 		$this->rsvp( $brisbane, $event_id, 'attending' );
 		$this->rsvp( $brisbane, $event_id, 'not_attending' );
+		$this->rsvp( $brisbane, $event_id, 'attending', '', array(), 0 );
 
 		$events = $this->by_source_id( $this->get_page() );
 		$event  = $events[ $this->source_id( $brisbane, $event_id ) ] ?? null;
@@ -317,7 +345,7 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 		$this->assertNotNull( $event );
 		$this->assertSame( 'scheduled', $event['status'] );
 		$this->assertSame( 'Hooks & Filters', $event['title'], 'Titles are plain text, not HTML.' );
-		$this->assertSame( 2, $event['attending'], 'Only attending RSVPs are counted.' );
+		$this->assertSame( 2, $event['attending'], 'Only approved attending RSVPs are counted.' );
 		$this->assertFalse( $event['online'] );
 		$this->assertSame(
 			array(
@@ -331,6 +359,8 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 			$event['venue']
 		);
 		$this->assertSame( 'Brisbane & Friends', $event['group']['name'] );
+		$this->assertNull( $event['group']['meetup_urlname'] );
+		$this->assertNull( $event['meetup_id'] );
 		$this->assertSame( get_home_url( $brisbane, '/' ), $event['group']['url'] );
 		$this->assertStringContainsString( '/group/brisbane/', $event['group']['url'] );
 		$this->assertMatchesRegularExpression( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $event['start_gmt'] );
@@ -736,6 +766,196 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'wp:paragraph', $description );
 		$this->assertStringNotContainsString( '[gallery', $description );
 		$this->assertLessThanOrEqual( Events_Feed\DESCRIPTION_WORDS, str_word_count( rtrim( $description, '…' ) ) );
+	}
+
+	/**
+	 * An event built in wp-admin carries GatherPress's template blocks, nested
+	 * in containers the description keeps. Their saved markup is interface
+	 * text, which used to become the whole description.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_description
+	 */
+	public function test_description_leaves_out_gatherpress_blocks() {
+		$brisbane = $this->group_sites['brisbane'];
+		$event_id = $this->create_site_event( $brisbane );
+
+		$this->with_site(
+			$brisbane,
+			function () use ( $event_id ) {
+				wp_update_post(
+					array(
+						'ID'           => $event_id,
+						'post_excerpt' => '',
+						'post_content' => '<!-- wp:gatherpress/add-to-calendar --><div class="wp-block-gatherpress-add-to-calendar"><p>Add to calendar</p><a href="#">Google Calendar</a></div><!-- /wp:gatherpress/add-to-calendar -->'
+							. '<!-- wp:paragraph --><p>Real description.</p><!-- /wp:paragraph -->'
+							. '<!-- wp:group --><div class="wp-block-group"><!-- wp:gatherpress/rsvp --><div class="wp-block-gatherpress-rsvp"><!-- wp:paragraph --><p>Login Required</p><!-- /wp:paragraph --></div><!-- /wp:gatherpress/rsvp --></div><!-- /wp:group -->',
+					)
+				);
+			}
+		);
+
+		$event = $this->by_source_id( $this->get_page() )[ $this->source_id( $brisbane, $event_id ) ];
+
+		$this->assertSame( 'Real description.', $event['description'] );
+	}
+
+	/**
+	 * A series' occurrence rows outlive it being trashed, drafted or made
+	 * private; only deleting it for good removes them. So the occurrence read
+	 * has to check the series itself.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_event_rows
+	 */
+	public function test_unpublished_series_lists_no_occurrences() {
+		$brisbane = $this->group_sites['brisbane'];
+
+		foreach ( array( 'trash', 'draft', 'private' ) as $status ) {
+			$event_id = $this->create_weekly_series( $brisbane, "Gone Series $status" );
+
+			$left = $this->with_site(
+				$brisbane,
+				function () use ( $event_id, $status ) {
+					global $wpdb;
+
+					if ( 'trash' === $status ) {
+						wp_trash_post( $event_id );
+					} else {
+						wp_update_post(
+							array(
+								'ID'          => $event_id,
+								'post_status' => $status,
+							)
+						);
+					}
+
+					return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Recurring_Events_Database::occurrences_table(), $event_id ) );
+				}
+			);
+
+			$this->assertSame( 3, $left, "The $status series still has occurrences to leak." );
+
+			wp_cache_flush_group( Events_Feed\CACHE_GROUP );
+
+			$series = $this->source_id( $brisbane, $event_id );
+			$listed = array_filter(
+				array_keys( $this->by_source_id( $this->get_page() ) ),
+				static function ( string $source_id ) use ( $series ): bool {
+					return $series === $source_id || str_starts_with( $source_id, $series . '-' );
+				}
+			);
+
+			$this->assertSame( array(), array_values( $listed ), $status );
+		}
+	}
+
+	/**
+	 * Occurrence tables are upgraded on the site's own next request, so a quiet
+	 * site can lag a schema change. Its occurrences are still there, and
+	 * dropping them would make the importer delete every one.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\collect_site_events
+	 */
+	public function test_site_on_an_older_occurrence_schema_still_lists_its_occurrences() {
+		$brisbane = $this->group_sites['brisbane'];
+		$event_id = $this->create_weekly_series( $brisbane, 'Older Schema Series' );
+
+		$this->with_site(
+			$brisbane,
+			function () {
+				update_option( Recurring_Events_Database::OPTION_NAME, '0', false );
+			}
+		);
+
+		$page   = $this->get_page();
+		$series = $this->source_id( $brisbane, $event_id );
+		$listed = array_filter(
+			array_keys( $this->by_source_id( $page ) ),
+			static function ( string $source_id ) use ( $series ): bool {
+				return str_starts_with( $source_id, $series . '-' );
+			}
+		);
+
+		$this->assertTrue( $page['complete'] );
+		$this->assertCount( 3, $listed );
+		$this->assertArrayNotHasKey( $series, $this->by_source_id( $page ), 'The series is still listed only through its occurrences.' );
+	}
+
+	/**
+	 * A venue that isn't published says nothing, like a password-protected one.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_event_venues
+	 */
+	public function test_unpublished_venue_is_left_out() {
+		$brisbane = $this->group_sites['brisbane'];
+
+		foreach ( array( 'draft', 'private' ) as $status ) {
+			$event_id = $this->create_site_event(
+				$brisbane,
+				array(
+					'title'             => "Venue $status",
+					'new_venue_name'    => "Hall $status",
+					'new_venue_address' => '5 River St, Brisbane',
+				)
+			);
+
+			$venue_id = $this->geocode_event_venue(
+				$brisbane,
+				$event_id,
+				array(
+					'latitude'  => '-27.45',
+					'longitude' => '153.05',
+				)
+			);
+
+			$this->with_site(
+				$brisbane,
+				function () use ( $venue_id, $status ) {
+					wp_update_post(
+						array(
+							'ID'          => $venue_id,
+							'post_status' => $status,
+						)
+					);
+				}
+			);
+
+			wp_cache_flush_group( Events_Feed\CACHE_GROUP );
+
+			$page  = $this->get_page();
+			$event = $this->by_source_id( $page )[ $this->source_id( $brisbane, $event_id ) ];
+
+			$this->assertNull( $event['venue'], $status );
+			$this->assertStringNotContainsString( "Hall $status", wp_json_encode( $page ), $status );
+		}
+	}
+
+	/**
+	 * What the Meetup.com import recorded, so the importer can hide the
+	 * Meetup.com copy of an event exactly.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\format_event
+	 */
+	public function test_meetup_import_links_are_listed() {
+		$brisbane = $this->group_sites['brisbane'];
+		$hobart   = $this->group_sites['hobart'];
+		$imported = $this->create_site_event( $brisbane, array( 'title' => 'Imported' ) );
+		$own      = $this->create_site_event( $brisbane, array( 'title' => 'Own' ) );
+		$other    = $this->create_site_event( $hobart, array( 'title' => 'Other' ) );
+
+		$this->with_site(
+			$brisbane,
+			function () use ( $imported ) {
+				update_post_meta( $imported, Events_Feed\MEETUP_EVENT_ID_META, '301234567' );
+				update_option( Events_Feed\MEETUP_GROUP_URLNAME_OPTION, 'brisbane-wp' );
+			}
+		);
+
+		$events = $this->by_source_id( $this->get_page() );
+
+		$this->assertSame( '301234567', $events[ $this->source_id( $brisbane, $imported ) ]['meetup_id'] );
+		$this->assertNull( $events[ $this->source_id( $brisbane, $own ) ]['meetup_id'] );
+		$this->assertSame( 'brisbane-wp', $events[ $this->source_id( $brisbane, $own ) ]['group']['meetup_urlname'] );
+		$this->assertNull( $events[ $this->source_id( $hobart, $other ) ]['group']['meetup_urlname'] );
 	}
 
 	/**

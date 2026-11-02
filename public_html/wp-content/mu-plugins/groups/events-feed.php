@@ -26,6 +26,11 @@
  * - Online events are flagged, but the meeting link is never included.
  * - RSVPs only as an aggregate attending count; never names or accounts.
  * - Venue phone numbers and websites are left out; nothing here needs them.
+ * - The description is the event's own prose, never the text of GatherPress's
+ *   blocks (RSVP, calendar links) that an event built in wp-admin carries.
+ * - The Meetup.com event and group an event or site was imported from, which
+ *   are public on Meetup.com, so the importer can hide the Meetup.com copy of
+ *   the same event exactly.
  *
  * Paging is by site ID (`?after=<id>`) rather than by page number, at a fixed
  * number of sites per page. The importer marks an event deleted when a full
@@ -61,6 +66,7 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 
+use function WordCamp\Groups\Frontend\Defaults\filter_to_description_blocks;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
 
 defined( 'WPINC' ) || die();
@@ -121,6 +127,14 @@ const URL_MAX_LENGTH = 255;
 
 /** Words kept in an event's plain-text description. */
 const DESCRIPTION_WORDS = 55;
+
+/**
+ * Where the Meetup.com import (`meetup-import.php`) records the Meetup.com
+ * event an event came from, and the Meetup.com group a site came from. Kept in
+ * step with its `EVENT_ID_META` and `GROUP_URLNAME_OPTION`.
+ */
+const MEETUP_EVENT_ID_META        = '_wporg_meetup_event_id';
+const MEETUP_GROUP_URLNAME_OPTION = 'wporg_meetup_group_urlname';
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_route' );
 wp_cache_add_global_groups( array( CACHE_GROUP ) );
@@ -294,6 +308,12 @@ function collect_site_events( int $site_id, int $now ) {
 		return new WP_Error( 'events_feed_gatherpress_missing', 'GatherPress is not loaded.' );
 	}
 
+	// Without it a series' occurrences can't be read, and reporting none would
+	// make the importer delete every one of them.
+	if ( ! class_exists( Recurring_Events_Database::class ) ) {
+		return new WP_Error( 'events_feed_recurring_events_missing', 'Recurring events are not loaded.' );
+	}
+
 	$window_start = gmdate( 'Y-m-d H:i:s', $now - WINDOW_BEHIND );
 	$window_end   = gmdate( 'Y-m-d H:i:s', $now + WINDOW_AHEAD );
 
@@ -320,8 +340,15 @@ function collect_site_events( int $site_id, int $now ) {
 		$wp_rewrite->init();
 		add_event_permastruct();
 
-		$has_occurrences = class_exists( Recurring_Events_Database::class )
-			&& Recurring_Events_Database::SCHEMA_VERSION === get_option( Recurring_Events_Database::OPTION_NAME );
+		/*
+		 * Whether the site's occurrence tables were ever installed, at any
+		 * schema version. They're upgraded lazily, on the site's own next
+		 * request, so after a schema change a quiet site still has an older
+		 * version and all of its occurrences. Reading it as having none would
+		 * make the importer delete them. If the older tables can't answer the
+		 * query, the read fails and the page is incomplete instead.
+		 */
+		$has_occurrences = '' !== (string) get_option( Recurring_Events_Database::OPTION_NAME, '' );
 
 		$rows = get_event_rows( $window_start, $window_end, $has_occurrences );
 
@@ -335,8 +362,8 @@ function collect_site_events( int $site_id, int $now ) {
 
 		$event_ids = array_values( array_unique( array_map( 'intval', wp_list_pluck( $rows, 'post_id' ) ) ) );
 
-		// Only the post fields used below, primed in one query.
-		_prime_post_caches( $event_ids, false, false );
+		// The posts and their meta, one query each.
+		_prime_post_caches( $event_ids, false, true );
 
 		$counts = get_attending_counts( $event_ids, $has_occurrences );
 
@@ -351,9 +378,10 @@ function collect_site_events( int $site_id, int $now ) {
 		}
 
 		$group = array(
-			'name'     => decode( get_bloginfo( 'name' ) ),
-			'url'      => home_url( '/' ),
-			'location' => get_group_location( $site_id ),
+			'name'           => decode( get_bloginfo( 'name' ) ),
+			'url'            => home_url( '/' ),
+			'location'       => get_group_location( $site_id ),
+			'meetup_urlname' => non_empty_string( get_option( MEETUP_GROUP_URLNAME_OPTION ) ),
 		);
 
 		$events = array();
@@ -752,7 +780,26 @@ function format_event( int $site_id, object $row, array $group, array $venues, a
 		'venue'       => $venues[ $event_id ]['venue'] ?? null,
 		'attending'   => (int) ( $counts[ $event_id ][ $recurrence_id ]['attending'] ?? 0 ),
 		'group'       => $group,
+		// The import only creates one-off events; a series' occurrences can't
+		// each be the same Meetup.com event.
+		'meetup_id'   => '' === $recurrence_id ? non_empty_string( get_post_meta( $event_id, MEETUP_EVENT_ID_META, true ) ) : null,
 	);
+}
+
+/**
+ * A stored value as a trimmed string, or null when it's empty or not text.
+ *
+ * @param mixed $value Stored value.
+ * @return string|null
+ */
+function non_empty_string( $value ): ?string {
+	if ( ! is_string( $value ) && ! is_int( $value ) ) {
+		return null;
+	}
+
+	$value = trim( (string) $value );
+
+	return '' === $value ? null : $value;
 }
 
 /**
@@ -838,6 +885,11 @@ function get_timezone( string $timezone ): DateTimeZone {
 /**
  * A short plain-text description of an event.
  *
+ * Only the blocks the event form edits as the description
+ * (`Defaults\filter_to_description_blocks()`). An event created or edited in
+ * wp-admin also carries GatherPress's own blocks, and their saved markup is
+ * interface text: "Add to calendar Google Calendar iCal … Login Required".
+ *
  * Built from the stored content without rendering any blocks: rendering would
  * run every block's render callback for an anonymous request, and the feed
  * only needs the words.
@@ -846,7 +898,16 @@ function get_timezone( string $timezone ): DateTimeZone {
  * @return string
  */
 function get_description( \WP_Post $post ): string {
-	$text = '' !== trim( $post->post_excerpt ) ? $post->post_excerpt : $post->post_content;
+	$text = $post->post_excerpt;
+
+	if ( '' === trim( $text ) ) {
+		// The front end always loads on this network; without it, say nothing
+		// rather than risk the interface text.
+		$text = function_exists( 'WordCamp\Groups\Frontend\Defaults\filter_to_description_blocks' )
+			? serialize_blocks( filter_to_description_blocks( parse_blocks( $post->post_content ) ) )
+			: '';
+	}
+
 	$text = preg_replace( '/<!--.*?-->/s', '', $text );
 	$text = wp_strip_all_tags( strip_shortcodes( (string) $text ), true );
 

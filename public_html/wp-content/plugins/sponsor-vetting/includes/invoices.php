@@ -119,6 +119,9 @@ function get_invoice_vetting_label( \WP_Post $sponsorship ): string {
 /**
  * Gets the vetting of the invoices on a page of the dashboard, from one query on Central.
  *
+ * A row can be missing its sponsor: dashboard code from before the column, during a rollback or before the migration
+ * ran, writes rows without it. Those are read from the invoice instead, so no migration state has to be right.
+ *
  * @param string[] $statuses HTML keyed by "{blog_id}:{invoice_id}".
  * @param object[] $rows     The dashboard's index rows, with `blog_id`, `invoice_id` and `sponsor_id`.
  * @return string[]
@@ -126,8 +129,16 @@ function get_invoice_vetting_label( \WP_Post $sponsorship ): string {
 function get_invoice_statuses( array $statuses, array $rows ): array {
 	$keys = array();
 	foreach ( $rows as $row ) {
-		if ( (int) $row->sponsor_id ) {
-			$keys[ $row->blog_id . ':' . $row->invoice_id ] = get_sponsorship_key( (int) $row->blog_id, (int) $row->sponsor_id );
+		$sponsor_id = (int) $row->sponsor_id;
+
+		if ( ! $sponsor_id ) {
+			switch_to_blog( (int) $row->blog_id );
+			$sponsor_id = (int) get_post_meta( (int) $row->invoice_id, '_wcbsi_sponsor_id', true );
+			restore_current_blog();
+		}
+
+		if ( $sponsor_id ) {
+			$keys[ $row->blog_id . ':' . $row->invoice_id ] = get_sponsorship_key( (int) $row->blog_id, $sponsor_id );
 		}
 	}
 

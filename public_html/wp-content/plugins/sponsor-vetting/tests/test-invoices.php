@@ -152,7 +152,7 @@ class Test_Invoices extends Database_TestCase {
 	 */
 	public function test_dashboard_statuses_per_invoice(): void {
 		list( $sponsor_2018, $invoice_2018 ) = $this->submit_invoice( self::$year_dot_2018_site_id, 'https://acme.example/' );
-		list( $sponsor_2019, $invoice_2019 ) = $this->submit_invoice( self::$year_dot_2019_site_id, 'https://globex.example/' );
+		list( , $invoice_2019 )              = $this->submit_invoice( self::$year_dot_2019_site_id, 'https://globex.example/' );
 
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 		$sponsorship_id = find_sponsorship( self::$year_dot_2018_site_id, $sponsor_2018 );
@@ -173,10 +173,11 @@ class Test_Invoices extends Database_TestCase {
 					'invoice_id' => (string) $invoice_2018,
 					'sponsor_id' => (string) $sponsor_2018,
 				),
+				// Written by dashboard code that doesn't index the sponsor.
 				(object) array(
 					'blog_id'    => (string) self::$year_dot_2019_site_id,
 					'invoice_id' => (string) $invoice_2019,
-					'sponsor_id' => (string) $sponsor_2019,
+					'sponsor_id' => '0',
 				),
 				(object) array(
 					'blog_id'    => (string) self::$year_dot_2019_site_id,

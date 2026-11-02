@@ -241,7 +241,8 @@ class Test_Workflow extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An approved sponsorship can't move to another company: its approval was for the first company's vetting.
+	 * An approved sponsorship can't move to another company, through the helper or a direct save: its approval was
+	 * for the first company's vetting.
 	 */
 	public function test_an_approved_sponsorship_keeps_its_company(): void {
 		$company_id     = $this->create_company( 'sv-compliant', (int) strtotime( '-1 month' ) );
@@ -250,6 +251,14 @@ class Test_Workflow extends WP_UnitTestCase {
 
 		$this->assertTrue( approve_sponsorship( $sponsorship_id ) );
 		$this->assertWPError( link_sponsorship( $sponsorship_id, $other_id ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_parent' => $other_id,
+			)
+		);
+
 		$this->assertSame( $company_id, (int) get_post_field( 'post_parent', $sponsorship_id ) );
 	}
 

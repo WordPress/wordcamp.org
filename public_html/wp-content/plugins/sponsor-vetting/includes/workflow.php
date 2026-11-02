@@ -80,7 +80,7 @@ function is_allowed_transition( string $post_type, string $from, string $to ): b
  * Keeps a record's status when a save would move it somewhere the workflow doesn't go.
  *
  * New records start in their first status, whatever core's screens ask for (`draft`, `publish`). Approving a
- * sponsorship also needs may_approve().
+ * sponsorship also needs may_approve(), and an approved one keeps its company.
  *
  * @param array $data    Post data about to be saved.
  * @param array $postarr The data passed to wp_insert_post().
@@ -107,6 +107,11 @@ function enforce_status_transition( array $data, array $postarr ): array {
 		}
 
 		return $data;
+	}
+
+	// The approval was for its company's vetting. Unlinking stays possible, for when the company is deleted.
+	if ( 'svs-approved' === $post->post_status && (int) $data['post_parent'] && (int) $data['post_parent'] !== (int) $post->post_parent ) {
+		$data['post_parent'] = $post->post_parent;
 	}
 
 	// A screen loaded before someone else changed the status would otherwise change it back.

@@ -11,6 +11,8 @@ declare( strict_types = 1 );
 
 namespace WordCamp\Sponsor_Vetting;
 
+use function WordCamp\Sunrise\get_domain_network_id;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -175,10 +177,13 @@ function get_blog_id_from_event_url( string $url ): int {
 		return 0;
 	}
 
+	$host = strtolower( $host );
 	$path = trailingslashit( (string) wp_parse_url( $url, PHP_URL_PATH ) );
-	$site = get_site_by_path( strtolower( $host ), $path );
 
-	return $site && ! in_array( (int) $site->blog_id, array( 0, WORDCAMP_ROOT_BLOG_ID ), true ) ? (int) $site->blog_id : 0;
+	// Not `get_site_by_path()`, which walks up the path and would resolve a mistyped URL to another camp.
+	$blog_id = (int) domain_exists( $host, $path, get_domain_network_id( $host, $path ) );
+
+	return WORDCAMP_ROOT_BLOG_ID === $blog_id ? 0 : $blog_id;
 }
 
 /**
@@ -196,13 +201,14 @@ function find_camp_sponsor_by_domain( int $blog_id, string $domain ): int {
 		array(
 			'post_type'      => 'wcb_sponsor',
 			'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future' ),
-			'posts_per_page' => 100,
+			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
 			'orderby'        => 'ID',
 			'order'          => 'ASC',
 		)
 	);
+	update_meta_cache( 'post', $sponsor_ids );
 
 	$match = 0;
 	foreach ( $sponsor_ids as $sponsor_id ) {

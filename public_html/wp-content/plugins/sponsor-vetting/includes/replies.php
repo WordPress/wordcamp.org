@@ -37,7 +37,7 @@ function check_replies(): void {
 		array(
 			'post_type'      => COMPANY_POST_TYPE,
 			'post_status'    => 'sv-compliance-req',
-			'posts_per_page' => 100,
+			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
 		)

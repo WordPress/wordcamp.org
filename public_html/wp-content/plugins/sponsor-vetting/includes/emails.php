@@ -61,8 +61,13 @@ function build_compliance_email( int $company_id, int $sponsorship_id ): array|\
 		return new \WP_Error( 'sv_no_contact', __( 'Add the sponsor contact’s email address first.', 'wordcamporg' ) );
 	}
 
-	if ( COMPANY_POST_TYPE !== get_post_type( $company_id ) || (int) get_post_field( 'post_parent', $sponsorship_id ) !== $company_id ) {
-		return new \WP_Error( 'sv_no_sponsorship', __( 'Pick one of the company’s sponsorships.', 'wordcamporg' ) );
+	if (
+		COMPANY_POST_TYPE !== get_post_type( $company_id )
+		|| SPONSORSHIP_POST_TYPE !== get_post_type( $sponsorship_id )
+		|| 'svs-pending' !== get_post_status( $sponsorship_id )
+		|| (int) get_post_field( 'post_parent', $sponsorship_id ) !== $company_id
+	) {
+		return new \WP_Error( 'sv_no_sponsorship', __( 'Pick one of the company’s pending sponsorships.', 'wordcamporg' ) );
 	}
 
 	$findings = array(

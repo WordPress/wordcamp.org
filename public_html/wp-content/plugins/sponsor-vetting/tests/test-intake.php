@@ -233,7 +233,8 @@ class Test_Intake extends Database_TestCase {
 
 	/**
 	 * A spreadsheet's rows request vetting for the camp's sponsors, adding ones the camp doesn't have as drafts;
-	 * importing it again matches the sponsors it added instead of adding them twice.
+	 * importing it again matches the sponsors it added instead of adding them twice. A URL below a camp's address
+	 * isn't that camp.
 	 */
 	public function test_csv_import_links_existing_and_creates_draft_sponsors(): void {
 		$existing_id = $this->create_camp_sponsor( 'https://acme.example' );
@@ -244,6 +245,7 @@ class Test_Intake extends Database_TestCase {
 			"\xEF\xBB\xBFEvent_URL,Company_Name,Website,First_Name,Last_Name,Email\n"
 			. "https://2018.seattle.wordcamp.test/,Acme Inc.,acme.example,Pat,Lee,pat@acme.example\n"
 			. "https://2018.seattle.wordcamp.test/,Newco,https://www.newco.example/,Sam,Roe,sam@newco.example\n"
+			. "https://2018.seattle.wordcamp.test/2019/,Initech,initech.example,Kim,Day,kim@initech.example\n"
 		);
 
 		$rows = parse_csv( $file, array( 'event_url', 'company_name', 'website' ) );
@@ -256,8 +258,8 @@ class Test_Intake extends Database_TestCase {
 		$second = array_map( static fn( array $row ): array => import_row( $row, false ), $rows );
 		restore_current_blog();
 
-		$this->assertSame( array( 'existing', 'new' ), array_column( $first, 'result' ) );
-		$this->assertSame( array( 'existing', 'existing' ), array_column( $second, 'result' ) );
+		$this->assertSame( array( 'existing', 'new', 'error' ), array_column( $first, 'result' ) );
+		$this->assertSame( array( 'existing', 'existing', 'error' ), array_column( $second, 'result' ) );
 		$this->assertSame( $existing_id, $first[0]['sponsor_id'] );
 		$this->assertSame( array_column( $first, 'sponsorship_id' ), array_column( $second, 'sponsorship_id' ) );
 

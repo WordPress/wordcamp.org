@@ -158,7 +158,7 @@ function get_company_sponsorships( int $company_id ): array {
 			'post_type'      => SPONSORSHIP_POST_TYPE,
 			'post_status'    => array_keys( get_sponsorship_statuses() ),
 			'post_parent'    => $company_id,
-			'posts_per_page' => 100,
+			'posts_per_page' => -1,
 			'no_found_rows'  => true,
 		)
 	);

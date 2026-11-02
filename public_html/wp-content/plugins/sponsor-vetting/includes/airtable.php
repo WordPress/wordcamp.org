@@ -248,12 +248,24 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 		}
 	}
 
-	$company_id     = $result['company_id'];
-	$linked         = array();
-	$good_faith     = array();
-	$events         = array();
-	$is_writing_now = $company_id && ! $dry_run;
-	$had_due        = $company_id && get_post_meta( $company_id, '_sv_good_faith_due', true );
+	$company_id          = $result['company_id'];
+	$linked              = array();
+	$good_faith          = array();
+	$approved_good_faith = false;
+	$events              = array();
+	$is_writing_now      = $company_id && ! $dry_run;
+	$had_due             = $company_id && get_post_meta( $company_id, '_sv_good_faith_due', true );
+
+	// Read from every Good Faith row, whether or not its events match a camp.
+	foreach ( $rows as $event_row ) {
+		if (
+			'yes' === strtolower( (string) ( $event_row['good faith'] ?? '' ) )
+			&& 'yes' === strtolower( (string) ( $event_row['approval status'] ?? '' ) )
+			&& 'canceled' !== strtolower( (string) ( $event_row['status'] ?? '' ) )
+		) {
+			$good_faith = array_merge( $good_faith, get_airtable_dates( (string) ( $event_row['approval date'] ?? '' ) ) );
+		}
+	}
 
 	if ( $is_writing_now ) {
 		importing_company( $company_id );
@@ -278,9 +290,7 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 				$linked[] = $imported['sponsorship_id'];
 			}
 
-			if ( 'good_faith' === $imported['status'] && $approved_at ) {
-				$good_faith[] = $approved_at;
-			}
+			$approved_good_faith = $approved_good_faith || 'good_faith' === $imported['status'];
 		}
 
 		if ( ! $existing && $is_writing_now ) {
@@ -303,8 +313,11 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 
 	importing_company( 0 );
 
-	// The deadline runs from the first Good Faith approval in Airtable, not from the import.
-	if ( $good_faith && ! $had_due ) {
+	/*
+	 * The deadline runs from the first Good Faith approval in Airtable, not from the import. A company imported before
+	 * keeps its dates, unless this run approved one of its sponsorships in good faith, which set a deadline of today.
+	 */
+	if ( $good_faith && ! $had_due && ( ! $existing || $approved_good_faith ) && 'sv-compliance-req' === get_post_status( $company_id ) ) {
 		update_post_meta( $company_id, '_sv_good_faith_due', gmdate( 'Y-m-d', min( $good_faith ) + GOOD_FAITH_DAYS * DAY_IN_SECONDS ) );
 	}
 

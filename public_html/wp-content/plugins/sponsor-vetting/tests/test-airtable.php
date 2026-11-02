@@ -35,13 +35,12 @@ defined( 'WPINC' ) || die();
  */
 class Test_Airtable extends Database_TestCase {
 	/**
-	 * A company vetted before the re-vetting period keeps its status, dates and approval; a dry run writes nothing
-	 * and predicts the run, and a second run leaves the company alone but links an event that matches a camp since.
-	 * Only mapped Help Scout links become conversations, and an event in two rows goes by the newer one. A lapsed
-	 * company with a pending sponsorship is queued, whether the import linked it or it was linked already, and both
-	 * runs report it; a Good Faith deadline runs from the
-	 * first approval, and a newer Canceled row doesn't set the company's status. Carried-over approvals offer no
-	 * approval email.
+	 * A company vetted before the re-vetting period keeps its status, dates and approval; a dry run writes nothing and
+	 * predicts the run, and a second run leaves the company alone but links an event that matches a camp since. Only
+	 * mapped Help Scout links become conversations, and an event in two rows goes by the newer one. A lapsed company
+	 * with a pending sponsorship is queued, whether the import linked it or it was linked already, and both runs report
+	 * it; a Good Faith deadline runs from the first approval, even one whose event matches no camp, and a newer
+	 * Canceled row doesn't set the company's status. Carried-over approvals offer no approval email.
 	 */
 	public function test_import_keeps_old_approvals_and_links_events_on_rerun(): void {
 		foreach ( array( self::$year_dot_2018_site_id, self::$year_dot_2019_site_id ) as $site_id ) {
@@ -90,7 +89,7 @@ class Test_Airtable extends Database_TestCase {
 			. "Soylent,soylent.example,,WordCamp Seattle 2018,,Compliant,,,,,3/4/2025 9:00am\n"
 			. "Umbrella,umbrella.example,,,,Canceled,,,,,7/1/2025 9:00am\n"
 			. "Umbrella,umbrella.example,,WordCamp Seattle 2018,,Compliance Requested,Yes,\"June 1, 2025\",,,6/1/2025 9:00am,Yes\n"
-			. "Umbrella,umbrella.example,,WordCamp Seattle 2019,,Compliance Requested,Yes,\"May 1, 2025\",,,5/1/2025 9:00am,Yes\n"
+			. "Umbrella,umbrella.example,,WordCamp Nowhere 2025,,Compliance Requested,Yes,\"May 1, 2025\",,,5/1/2025 9:00am,Yes\n"
 			. "No Link Co,,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/4/2025 9:00am\n"
 		);
 		$rows = parse_csv( $file );

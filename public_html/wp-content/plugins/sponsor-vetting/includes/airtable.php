@@ -274,7 +274,7 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 
 			$result['sponsorships'][ $event ] = $imported['outcome'];
 
-			if ( $imported['is_linked'] && 'pending' === $imported['status'] ) {
+			if ( $imported['is_linked'] && 'pending' === $imported['status'] && ( $dry_run || $imported['sponsorship_id'] ) ) {
 				$linked[] = $imported['sponsorship_id'];
 			}
 

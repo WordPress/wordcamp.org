@@ -155,7 +155,9 @@ function get_airtable_dates( string $cell ): array {
  *
  * A company imported before keeps everything about it, but its rows' events still get sponsorships, so a re-run
  * links the events fixed since. A Compliant company's approvals carry over however long ago it was vetted (see
- * importing_company()). An event in more than one row goes by the most recently modified one.
+ * importing_company()). An event in more than one row goes by the most recently modified one. The company's status
+ * comes from its newest row that isn't Canceled, which is about one event. A sponsorship the import creates or links
+ * puts the company back in the queue when its vetting has lapsed, as intake would; the reported status says so.
  *
  * @param string  $domain  The company's domain.
  * @param array[] $rows    Its rows, most recently modified first.
@@ -165,12 +167,13 @@ function get_airtable_dates( string $cell ): array {
  *     @type string   $result       `new`, `existing`, or `error`.
  *     @type string   $message      What went wrong, for an error.
  *     @type int      $company_id   The company, unless this is a dry run for a new one.
- *     @type string   $status       The company's status.
+ *     @type string   $status       The company's status once imported.
  *     @type string[] $sponsorships What happened to each event, keyed by its name.
  * }
  */
 function import_airtable_company( string $domain, array $rows, array $camps, bool $dry_run ): array {
-	$row      = $rows[0];
+	$standing = array_filter( $rows, static fn( array $row ): bool => 'canceled' !== strtolower( (string) ( $row['status'] ?? '' ) ) );
+	$row      = $standing ? reset( $standing ) : $rows[0];
 	$existing = find_companies_by_domain( $domain );
 	$result   = array(
 		'result'       => $existing ? 'existing' : 'new',
@@ -185,6 +188,14 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 		$result['message'] = sprintf( 'Unknown status "%s".', $row['status'] );
 		return $result;
 	}
+
+	$vetted = array();
+	foreach ( $rows as $event_row ) {
+		$vetted = array_merge( $vetted, get_airtable_dates( (string) ( $event_row['approval date'] ?? '' ) ), get_airtable_dates( (string) ( $event_row['previously approved dates (if any)'] ?? '' ) ) );
+	}
+
+	$last_vetted = $vetted ? max( $vetted ) : 0;
+	$until       = get_airtable_dates( (string) ( $row["'not eligible' until"] ?? '' ) );
 
 	if ( ! $existing && ! $dry_run ) {
 		$emails     = preg_split( '/[\s,;]+/', (string) ( $row['sponsor email address'] ?? '' ) );
@@ -218,18 +229,12 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 		);
 
 		// The new status stamps today as the vetting date; Airtable's dates replace it.
-		$vetted = array();
-		foreach ( $rows as $event_row ) {
-			$vetted = array_merge( $vetted, get_airtable_dates( (string) ( $event_row['approval date'] ?? '' ) ), get_airtable_dates( (string) ( $event_row['previously approved dates (if any)'] ?? '' ) ) );
-		}
-
-		if ( $vetted ) {
-			update_post_meta( $company_id, '_sv_last_vetted', max( $vetted ) );
+		if ( $last_vetted ) {
+			update_post_meta( $company_id, '_sv_last_vetted', $last_vetted );
 		} else {
 			delete_post_meta( $company_id, '_sv_last_vetted' );
 		}
 
-		$until = get_airtable_dates( (string) ( $row["'not eligible' until"] ?? '' ) );
 		if ( $until ) {
 			update_post_meta( $company_id, '_sv_not_eligible_until', gmdate( 'Y-m-d', $until[0] ) );
 		}
@@ -244,9 +249,11 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 	}
 
 	$company_id     = $result['company_id'];
-	$sponsorships   = array();
+	$linked         = array();
+	$good_faith     = array();
 	$events         = array();
 	$is_writing_now = $company_id && ! $dry_run;
+	$had_due        = $company_id && get_post_meta( $company_id, '_sv_good_faith_due', true );
 
 	if ( $is_writing_now ) {
 		importing_company( $company_id );
@@ -254,6 +261,7 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 
 	foreach ( $rows as $event_row ) {
 		$approved_at = get_airtable_dates( (string) ( $event_row['approval date'] ?? '' ) );
+		$approved_at = $approved_at ? max( $approved_at ) : 0;
 
 		foreach ( get_airtable_events( (string) ( $event_row['current event name'] ?? '' ), $camps ) as $event ) {
 			if ( isset( $events[ normalize_event_name( $event ) ] ) ) {
@@ -262,10 +270,17 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 
 			$events[ normalize_event_name( $event ) ] = true;
 
-			$imported = import_airtable_sponsorship( $event_row, $event, $domain, $camps, $company_id, $result['status'], $approved_at[0] ?? 0, $dry_run );
+			$imported = import_airtable_sponsorship( $event_row, $event, $domain, $camps, $company_id, $result['status'], $approved_at, $dry_run );
 
 			$result['sponsorships'][ $event ] = $imported['outcome'];
-			$sponsorships[]                   = $imported['sponsorship_id'];
+
+			if ( $imported['is_linked'] && 'pending' === $imported['status'] ) {
+				$linked[] = $imported['sponsorship_id'];
+			}
+
+			if ( 'good_faith' === $imported['status'] && $approved_at ) {
+				$good_faith[] = $approved_at;
+			}
 		}
 
 		if ( ! $existing && $is_writing_now ) {
@@ -273,16 +288,31 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
 		}
 	}
 
-	if ( $is_writing_now ) {
-		importing_company( 0 );
+	if ( ! $is_writing_now ) {
+		$is_lapsed = $existing
+			? get_vetting_state( $company_id )['needs_requeue']
+			: ( 'sv-compliant' === $result['status'] && $last_vetted < strtotime( sprintf( '-%d months', REVETTING_MONTHS ) ) )
+				|| ( 'sv-not-eligible' === $result['status'] && $until && $until[0] <= time() );
 
-		// A new company's pending sponsorships queue it if its vetting has lapsed, as intake would.
-		if ( ! $existing ) {
-			foreach ( array_filter( $sponsorships ) as $sponsorship_id ) {
-				queue_company( $sponsorship_id );
-			}
+		if ( $linked && $is_lapsed ) {
+			$result['status'] = 'sv-needs-vetting';
 		}
+
+		return $result;
 	}
+
+	importing_company( 0 );
+
+	// The deadline runs from the first Good Faith approval in Airtable, not from the import.
+	if ( $good_faith && ! $had_due ) {
+		update_post_meta( $company_id, '_sv_good_faith_due', gmdate( 'Y-m-d', min( $good_faith ) + GOOD_FAITH_DAYS * DAY_IN_SECONDS ) );
+	}
+
+	foreach ( $linked as $sponsorship_id ) {
+		queue_company( $sponsorship_id );
+	}
+
+	$result['status'] = (string) get_post_status( $company_id );
 
 	return $result;
 }
@@ -303,12 +333,16 @@ function import_airtable_company( string $domain, array $rows, array $camps, boo
  * @param bool   $dry_run     Whether to only work out what would happen.
  * @return array {
  *     @type string $outcome        What happened, or would.
- *     @type int    $sponsorship_id The sponsorship, if it's the company's, or 0.
+ *     @type string $status         `pending`, `approved`, `good_faith`, `canceled`, or `` when it isn't the company's.
+ *     @type bool   $is_linked      Whether the import creates the sponsorship or links it to the company, or would.
+ *     @type int    $sponsorship_id The sponsorship, once linked to the company, or 0.
  * }
  */
 function import_airtable_sponsorship( array $row, string $event, string $domain, array $camps, int $company_id, string $status, int $approved_at, bool $dry_run ): array {
 	$result  = array(
 		'outcome'        => '',
+		'status'         => '',
+		'is_linked'      => false,
 		'sponsorship_id' => 0,
 	);
 	$blog_id = $camps[ normalize_event_name( $event ) ] ?? 0;
@@ -344,14 +378,20 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 	$was_approved = ! $is_canceled && 'yes' === strtolower( (string) ( $row['approval status'] ?? '' ) );
 	$is_approved  = $was_approved && ( 'sv-compliant' === $status || $good_faith );
 
+	$result['is_linked'] = ! $parent;
+
 	if ( $is_canceled ) {
 		$result['outcome'] = 'canceled';
+		$result['status']  = 'canceled';
 	} elseif ( $is_approved ) {
 		$result['outcome'] = 'approved';
+		$result['status']  = $good_faith ? 'good_faith' : 'approved';
 	} elseif ( $was_approved ) {
 		$result['outcome'] = 'left pending: approved in Airtable, but the company isn’t Compliant';
+		$result['status']  = 'pending';
 	} else {
 		$result['outcome'] = 'pending';
+		$result['status']  = 'pending';
 	}
 
 	if ( $dry_run ) {
@@ -384,21 +424,19 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 			)
 		);
 	} elseif ( $is_approved ) {
-		$had_due  = (bool) get_post_meta( $company_id, '_sv_good_faith_due', true );
 		$approved = approve_sponsorship( $sponsorship_id, $good_faith );
 
 		if ( is_wp_error( $approved ) ) {
 			$result['outcome'] = $approved->get_error_message();
+			$result['status']  = 'pending';
 			return $result;
 		}
 
+		// Airtable told the event when it was approved.
+		update_post_meta( $sponsorship_id, '_sv_approval_notified', 'airtable' );
+
 		if ( $approved_at ) {
 			update_post_meta( $sponsorship_id, '_sv_approved_at', $approved_at );
-
-			// The deadline runs from when Airtable approved it, not from the import.
-			if ( $good_faith && ! $had_due ) {
-				update_post_meta( $company_id, '_sv_good_faith_due', gmdate( 'Y-m-d', $approved_at + GOOD_FAITH_DAYS * DAY_IN_SECONDS ) );
-			}
 		}
 	}
 

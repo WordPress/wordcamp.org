@@ -17,6 +17,7 @@ use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_sponsorship_statuses;
 use function WordCamp\Sponsor_Vetting\group_airtable_rows;
 use function WordCamp\Sponsor_Vetting\import_airtable_company;
+use function WordCamp\Sponsor_Vetting\needs_approval_email;
 use function WordCamp\Sponsor_Vetting\parse_csv;
 use function WordCamp\Sponsor_Vetting\register_types;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
@@ -32,12 +33,15 @@ class Test_Airtable extends Database_TestCase {
 	/**
 	 * A company vetted before the re-vetting period keeps its status, dates and approval; a dry run writes nothing
 	 * and predicts the run, and a second run leaves the company alone but links an event that matches a camp since.
-	 * Only mapped Help Scout links become conversations, and an event in two rows goes by the newer one.
+	 * Only mapped Help Scout links become conversations, and an event in two rows goes by the newer one. A lapsed
+	 * company with a new pending sponsorship is queued, and both runs report it; a Good Faith deadline runs from the
+	 * first approval, and a newer Canceled row doesn't set the company's status. Carried-over approvals offer no
+	 * approval email.
 	 */
 	public function test_import_keeps_old_approvals_and_links_events_on_rerun(): void {
 		foreach ( array( self::$year_dot_2018_site_id, self::$year_dot_2019_site_id ) as $site_id ) {
 			switch_to_blog( $site_id );
-			foreach ( array( 'acme', 'initech', 'hooli' ) as $name ) {
+			foreach ( array( 'acme', 'initech', 'hooli', 'umbrella' ) as $name ) {
 				self::factory()->post->create(
 					array(
 						'post_type'  => 'wcb_sponsor',
@@ -62,12 +66,15 @@ class Test_Airtable extends Database_TestCase {
 		$file = wp_tempnam( 'airtable.csv' );
 		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A test fixture.
 			$file,
-			"\xEF\xBB\xBFSponsor Name,Company Link,Sponsor Email address,Current Event Name,GPL,Status,Approval Status,Approval Date,Private Notes,Email conversation link,Last modified\n"
+			"\xEF\xBB\xBFSponsor Name,Company Link,Sponsor Email address,Current Event Name,GPL,Status,Approval Status,Approval Date,Private Notes,Email conversation link,Last modified,Good Faith\n"
 			. "Acme,https://www.acme.example/,pat@acme.example,\"wordcamp seattle 2018, WordCamp Seattle 2019\",All good.,Compliant,Yes,\"March 3, 2025\",\"Asked twice.\nFixed.\",,3/4/2025 9:00am\n"
 			. "Globex,globex.example,,,,Compliance Requested,,,,\"https://freescout.wordpress.net/conversation/123 https://secure.helpscout.net/conversation/3127341156/901940#thread-1 https://secure.helpscout.net/conversation/1/2\",3/4/2025 9:00am\n"
 			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,,,,,3/5/2025 9:00am\n"
 			. "Initech,initech.example,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/1/2025 9:00am\n"
 			. "Hooli,hooli.example,,WordCamp Seattle 2018,,Needs Vetting,Yes,,,,3/4/2025 9:00am\n"
+			. "Umbrella,umbrella.example,,,,Canceled,,,,,7/1/2025 9:00am\n"
+			. "Umbrella,umbrella.example,,WordCamp Seattle 2018,,Compliance Requested,Yes,\"June 1, 2025\",,,6/1/2025 9:00am,Yes\n"
+			. "Umbrella,umbrella.example,,WordCamp Seattle 2019,,Compliance Requested,Yes,\"May 1, 2025\",,,5/1/2025 9:00am,Yes\n"
 			. "No Link Co,,,WordCamp Seattle 2018,,Compliant,Yes,,,,3/4/2025 9:00am\n"
 		);
 		$rows = parse_csv( $file );
@@ -110,13 +117,20 @@ class Test_Airtable extends Database_TestCase {
 
 		$this->assertSame( array( 123, 110535 ), array_column( get_conversations( $globex['company_id'], 'compliance' ), 'id' ) );
 
-		$hooli_dry_run = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), true );
-		$hooli         = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), false );
-		$initech       = import_airtable_company( 'initech.example', $grouped['companies']['initech.example'], get_camps_by_name(), false );
+		$initech_dry_run = import_airtable_company( 'initech.example', $grouped['companies']['initech.example'], get_camps_by_name(), true );
+		$hooli_dry_run   = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), true );
+		$hooli           = import_airtable_company( 'hooli.example', $grouped['companies']['hooli.example'], get_camps_by_name(), false );
+		$initech         = import_airtable_company( 'initech.example', $grouped['companies']['initech.example'], get_camps_by_name(), false );
 
 		$this->assertSame( array( 'WordCamp Seattle 2018' => 'left pending: approved in Airtable, but the company isn’t Compliant' ), $hooli_dry_run['sponsorships'] );
 		$this->assertSame( $hooli_dry_run['sponsorships'], $hooli['sponsorships'] );
 		$this->assertSame( array( 'WordCamp Seattle 2018' => 'pending' ), $initech['sponsorships'] );
+		$this->assertSame( array( 'sv-needs-vetting', 'sv-needs-vetting' ), array( $initech_dry_run['status'], $initech['status'] ) );
+
+		$umbrella = import_airtable_company( 'umbrella.example', $grouped['companies']['umbrella.example'], get_camps_by_name(), false );
+
+		$this->assertSame( 'sv-compliance-req', $umbrella['status'] );
+		$this->assertSame( '2025-05-16', get_post_meta( $umbrella['company_id'], '_sv_good_faith_due', true ) );
 		$this->assertSame(
 			array( 'svs-pending' ),
 			wp_list_pluck(
@@ -144,6 +158,7 @@ class Test_Airtable extends Database_TestCase {
 		$this->assertSame( 'All good.', get_post_meta( $first['company_id'], '_sv_gpl_findings', true ) );
 		$this->assertSame( strtotime( '2025-03-03 UTC' ), (int) get_post_meta( $first['company_id'], '_sv_last_vetted', true ) );
 		$this->assertCount( 2, $sponsorships );
+		$this->assertFalse( needs_approval_email( $sponsorships[0]->ID ) );
 		$this->assertSame( array( strtotime( '2025-03-03 UTC' ), strtotime( '2025-03-03 UTC' ) ), array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_approved_at', true ), $sponsorships ) );
 		$this->assertSame( array( "Imported from Airtable.\nCurrent event name: wordcamp seattle 2018, WordCamp Seattle 2019\nApproval date: March 3, 2025\nPrivate notes: Asked twice.\nFixed." ), array_values( array_filter( $notes, static fn( ?string $note ): bool => str_starts_with( (string) $note, 'Imported' ) ) ) );
 

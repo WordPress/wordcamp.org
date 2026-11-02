@@ -10,11 +10,10 @@ use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const LATEST_DATABASE_VERSION = 5;
+const LATEST_DATABASE_VERSION = 6;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
-	add_action( 'wp_ajax_wcbdsi_vetting_status', __NAMESPACE__ . '\handle_vetting_request'       );
 } elseif ( is_network_admin() ) {
 	add_action( 'network_admin_menu', __NAMESPACE__ . '\register_submenu_page' );
 	add_action( 'init',               __NAMESPACE__ . '\upgrade_database'      );
@@ -191,7 +190,7 @@ function upgrade_database() {
 			qbo_invoice_id int( 11 )        unsigned NOT NULL default '0',
 			invoice_title  varchar( 75 )             NOT NULL default '',
 			status         varchar( 30 )             NOT NULL default '',
-			vetting_status varchar( 30 )             NOT NULL default '',
+			sponsor_id     int( 11 )        unsigned NOT NULL default '0',
 			wordcamp_name  varchar( 75 )             NOT NULL default '',
 			sponsor_name   varchar( 75 )             NOT NULL default '',
 			description    varchar( 75 )             NOT NULL default '',
@@ -208,7 +207,50 @@ function upgrade_database() {
 
 	dbDelta( $schema );
 
+	if ( version_compare( $current_database_version, 6, '<' ) ) {
+		upgrade_to_sponsor_ids( $table_name );
+	}
+
 	update_site_option( 'wcbdsi_database_version', LATEST_DATABASE_VERSION );
+}
+
+/**
+ * Moves the index from the hand-set vetting status to the invoice's sponsor, which Sponsor Vetting looks up.
+ *
+ * The column is dropped by hand, because `dbDelta()` adds columns but never drops them. Only submitted invoices show
+ * vetting, so only they're backfilled; the rest get their sponsor the next time they're saved.
+ *
+ * @param string $table_name The index table.
+ */
+function upgrade_to_sponsor_ids( $table_name ) {
+	global $wpdb;
+
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table_name, 'vetting_status' ) ) ) {
+		$wpdb->query( $wpdb->prepare( 'ALTER TABLE %i DROP COLUMN vetting_status', $table_name ) );
+	}
+
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		'SELECT blog_id, invoice_id FROM %i WHERE status = %s AND sponsor_id = 0',
+		$table_name,
+		'wcbsi_submitted'
+	) );
+
+	foreach ( $rows as $row ) {
+		switch_to_blog( $row->blog_id );
+		$sponsor_id = absint( get_post_meta( $row->invoice_id, '_wcbsi_sponsor_id', true ) );
+		restore_current_blog();
+
+		$wpdb->update(
+			$table_name,
+			array( 'sponsor_id' => $sponsor_id ),
+			array(
+				'blog_id'    => $row->blog_id,
+				'invoice_id' => $row->invoice_id,
+			),
+			array( '%d' ),
+			array( '%d', '%d' )
+		);
+	}
 }
 
 /**
@@ -245,6 +287,19 @@ function handle_approve_invoice_request() {
 
 	switch_to_blog( $site_id );
 
+	/**
+	 * Filters whether an invoice may be approved and sent to the sponsor. Runs on the invoice's site.
+	 *
+	 * @param true|\WP_Error $allowed    True, or why the invoice can't be approved yet.
+	 * @param int            $invoice_id The invoice.
+	 */
+	$allowed = apply_filters( 'wcbdsi_pre_approve_invoice', true, $invoice_id );
+
+	if ( is_wp_error( $allowed ) ) {
+		restore_current_blog();
+		wp_send_json_error( array( 'error' => $allowed->get_error_message() ) );
+	}
+
 	$quickbooks_result = WordCamp_QBO::create_invoice( $invoice_id );
 	Logger\log( 'create_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
 
@@ -265,38 +320,6 @@ function handle_approve_invoice_request() {
 	} else {
 		wp_send_json_error( $result );
 	}
-}
-
-/**
- * Handle an AJAX request to update the vetting status of an invoice.
- *
- * @return void
- */
-function handle_vetting_request() {
-	$required_parameters = array( 'nonce', 'site_id', 'invoice_id', 'vetting_status' );
-
-	foreach ( $required_parameters as $parameter ) {
-		if ( empty( $_REQUEST[ $parameter ] ) ) {
-			wp_send_json_error( array( 'error' => 'Required parameters not set.' ) );
-		}
-	}
-
-	$site_id          = absint( $_REQUEST['site_id'] );
-	$invoice_id       = absint( $_REQUEST['invoice_id'] );
-	$vetting_status   = sanitize_text_field( $_REQUEST['vetting_status'] );
-
-	if ( ! wp_verify_nonce( $_REQUEST['nonce'], "wcbdsi-vetting-status-$site_id-$invoice_id" ) || ! current_user_can( 'manage_network' ) ) {
-		wp_send_json_error( array( 'error' => 'Permission denied.' ) );
-	}
-
-	switch_to_blog( $site_id );
-
-	update_post_meta( $invoice_id, '_wcbsi_vetting_status', wp_slash( $vetting_status ) );
-	update_index_row( $invoice_id, get_post( $invoice_id ) );
-
-	restore_current_blog();
-
-	wp_send_json_success();
 }
 
 /**
@@ -496,7 +519,7 @@ function update_index_row( $invoice_id, $invoice ) {
 		'qbo_invoice_id' => get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id', true ),
 		'invoice_title'  => substr( $invoice->post_title, 0, 75 ),
 		'status'         => $invoice->post_status,
-		'vetting_status' => get_post_meta( $invoice_id, '_wcbsi_vetting_status', true ),
+		'sponsor_id'     => absint( get_post_meta( $invoice_id, '_wcbsi_sponsor_id', true ) ),
 		'wordcamp_name'  => get_wordcamp_name(),
 		'sponsor_name'   => substr( get_sponsor_name( $invoice_id ), 0, 75 ),
 		'description'    => get_post_meta( $invoice_id, '_wcbsi_description', true ),
@@ -506,7 +529,7 @@ function update_index_row( $invoice_id, $invoice ) {
 		'last_modified'  => strtotime( $invoice->post_modified_gmt ) > 0 ? $invoice->post_modified_gmt : current_time( 'mysql' ),
 	);
 
-	$formats = array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s' );
+	$formats = array( '%d', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%f', '%s' );
 
 	$wpdb->replace( get_index_table_name(), $index_row, $formats );
 }

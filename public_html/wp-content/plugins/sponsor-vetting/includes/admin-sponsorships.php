@@ -209,6 +209,23 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 		<?php endif; ?>
 	<?php endif; ?>
 
+	<?php if ( 'svs-approved' === $post->post_status && website_changed( $post->ID ) ) : ?>
+		<div class="notice notice-warning inline">
+			<p>
+				<?php
+				printf(
+					/* translators: 1: Approved website domain, 2: New website domain. */
+					esc_html__( 'The camp changed the sponsor’s website from %1$s to %2$s after approval. Invoices can’t be approved until you confirm the new website.', 'wordcamporg' ),
+					'<code>' . esc_html( (string) get_post_meta( $post->ID, '_sv_approved_domain', true ) ?: __( 'none', 'wordcamporg' ) ) . '</code>',
+					'<code>' . esc_html( (string) get_post_meta( $post->ID, '_sv_website_changed', true ) ?: __( 'none', 'wordcamporg' ) ) . '</code>'
+				);
+				?>
+			</p>
+			<p><button type="submit" name="sv_action" value="confirm_website" class="button"><?php esc_html_e( 'Confirm new website', 'wordcamporg' ); ?></button></p>
+			<p class="description"><?php esc_html_e( 'If it’s a different company now, cancel the sponsorship instead.', 'wordcamporg' ); ?></p>
+		</div>
+	<?php endif; ?>
+
 	<?php if ( 'svs-approved' === $post->post_status ) : ?>
 		<?php render_conversations( get_conversations( $post->ID, 'approval' ) ); ?>
 		<?php if ( needs_approval_email( $post->ID ) ) : ?>
@@ -368,6 +385,13 @@ function save_sponsorship( int $post_id ): void {
 	}
 
 	save_note( $post_id );
+
+	if ( 'confirm_website' === $action && 'svs-approved' === get_post_status( $post_id ) && website_changed( $post_id ) ) {
+		snapshot_approved_domain( $post_id );
+		/* translators: %s: Website domain. */
+		add_note( $post_id, sprintf( __( 'Confirmed the new website, %s.', 'wordcamporg' ), (string) get_post_meta( $post_id, '_sv_approved_domain', true ) ) );
+		add_notice( 'success', __( 'The new website was confirmed.', 'wordcamporg' ) );
+	}
 
 	if ( in_array( $action, array( 'approve', 'approve_good_faith' ), true ) ) {
 		$approved = approve_sponsorship( $post_id, 'approve_good_faith' === $action );

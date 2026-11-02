@@ -342,6 +342,7 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-approved' === $new_status ) {
 		update_post_meta( $post->ID, '_sv_approved_at', time() );
 		update_post_meta( $post->ID, '_sv_approved_by', get_current_user_id() );
+		snapshot_approved_domain( $post->ID );
 	}
 }
 add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );

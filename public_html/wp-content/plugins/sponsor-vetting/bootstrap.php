@@ -58,6 +58,7 @@ require_once __DIR__ . '/includes/replies.php';
 require_once __DIR__ . '/includes/import.php';
 require_once __DIR__ . '/includes/privacy.php';
 require_once __DIR__ . '/includes/organizer.php';
+require_once __DIR__ . '/includes/invoices.php';
 
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';

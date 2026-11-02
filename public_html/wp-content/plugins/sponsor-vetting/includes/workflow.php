@@ -109,8 +109,14 @@ function enforce_status_transition( array $data, array $postarr ): array {
 		return $data;
 	}
 
-	// The approval was for its company's vetting. Unlinking stays possible, for when the company is deleted.
-	if ( 'svs-approved' === $post->post_status && (int) $data['post_parent'] && (int) $data['post_parent'] !== (int) $post->post_parent ) {
+	/*
+	 * The approval was for its company's vetting, and restoring one from the trash skips may_approve(), so a trashed
+	 * approval keeps its company too. Unlinking stays possible, for when the company is deleted.
+	 */
+	$was_approved = 'svs-approved' === $post->post_status
+		|| ( 'trash' === $post->post_status && 'svs-approved' === get_post_meta( $post->ID, '_wp_trash_meta_status', true ) );
+
+	if ( $was_approved && (int) $data['post_parent'] && (int) $data['post_parent'] !== (int) $post->post_parent ) {
 		$data['post_parent'] = $post->post_parent;
 	}
 

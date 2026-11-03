@@ -740,4 +740,3 @@ class Test_Sunrise extends Database_TestCase {
 		$this->assertFalse( get_renamed_group_url( 'events.wordpress.test', '/rome/2023/training/' ) );
 	}
 }
-

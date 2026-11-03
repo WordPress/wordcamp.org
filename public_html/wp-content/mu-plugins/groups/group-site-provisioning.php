@@ -236,6 +236,14 @@ function create_group_site( string $title, string $slug, string $organizer_login
 		update_option( 'timezone_string', $timezone_string );
 	}
 
+	// GatherPress defaults venue maps to CARTO tiles, which now only serve an
+	// "API key required" placeholder. Google Maps needs no key for the
+	// interactive map (it falls back to the free embed), so start every group
+	// there; an organizer can still switch it in the venue settings.
+	$gatherpress_settings                 = (array) get_option( 'gatherpress_settings', array() );
+	$gatherpress_settings['map_platform'] = 'google';
+	update_option( 'gatherpress_settings', $gatherpress_settings );
+
 	// `wp_initialize_site()` seeds every new site with generic WP boilerplate
 	// ("Hello world!", "Sample Page") via `wp_install_defaults()`. A group
 	// site should start from the group template, not stock WP content.

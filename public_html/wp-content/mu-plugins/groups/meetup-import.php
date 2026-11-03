@@ -937,7 +937,7 @@ function describe_step( array $job, bool $ran ): array {
 	return array(
 		'status'      => $job['status'] ?? '',
 		'running'     => is_job_running( $job ),
-		'message'     => $ran || ! $job ? describe_job_status( $job ) : __( 'Waiting for another import to finish its batch.', 'wordcamporg' ),
+		'message'     => $ran || ! $job ? describe_job_status( $job ) : __( 'Waiting for another import to finish.', 'wordcamporg' ),
 		'step'        => $job['cursor']['step'] ?? '',
 		'done'        => $done,
 		'total'       => $total,
@@ -1343,7 +1343,8 @@ function render_job( array $job ): void {
  * The script sends one request at a time to `handle_step()`, and the next as
  * soon as it answers; when the lock is busy it waits `retry_after` seconds,
  * and when the request fails it backs off and tries again, which redoes the
- * batch. Once the job stops running (ready, done, failed, or gone) it reloads
+ * batch. A refused request (signed out, not allowed) stops it with a prompt
+ * to reload. Once the job stops running (ready, done, failed, or gone) it reloads
  * the page, which shows the preview or the result. A reload, or opening the
  * page again later, starts it over from the job's saved cursor.
  *
@@ -1429,7 +1430,9 @@ function render_step_loop( array $job ): void {
 			// A dropped connection, or an error page instead of JSON: retried below.
 		}
 
-		if ( response && 403 === response.status ) {
+		// Refused rather than failed, so asking again won't help: signed out
+		// (admin-ajax answers 400), or not allowed or an expired nonce (403).
+		if ( response && response.status >= 400 && response.status < 500 ) {
 			stop( loop.dataset.stoppedMessage );
 			return;
 		}
@@ -2657,9 +2660,9 @@ function import_event( array $event, bool $match_people = false ): array {
 		'post_content' => $event['description'],
 	);
 
-	// Cron runs as nobody, so the author has to be set, or no Event Organizer
-	// could edit the event. Existing events keep theirs, unless an earlier
-	// import left it unset.
+	// Set explicitly, or the event would belong to the network admin running
+	// the import, who isn't in the group, and no Event Organizer could edit
+	// it. Existing events keep theirs, unless an earlier import left it unset.
 	if ( ! $existing || ! (int) $existing->post_author ) {
 		$post_args['post_author'] = event_author( $event, $match_people );
 	}
@@ -2853,8 +2856,9 @@ function event_author( array $event, bool $match_people ): int {
  * What the event form prefills for a new event (`Defaults\get_default_event_data()`):
  * the language of the group's last published event, else the site's own.
  * The site's comes from its `WPLANG` rather than `Event_Language\get_default()`,
- * because `get_locale()` is fixed for the request: in a cron run switched to
- * the group's site, it would give the root site's language.
+ * because `get_locale()` is fixed for the request: in an import request, which
+ * runs on the network's root site and switches to the group's, it would give
+ * the root site's language.
  *
  * @return string Language subtag, or '' for none.
  */

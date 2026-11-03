@@ -2723,6 +2723,12 @@ class Test_Meetup_Import extends Groups_TestCase {
 		// stop the request; a redirect means it got past it.
 		$_REQUEST['_wpnonce'] = wp_create_nonce( $action );
 
+		// Outside an AJAX request, the step handler's `wp_send_json()` exits
+		// outright, so getting past the check would end the test run unnoticed.
+		if ( 'handle_step' === $handler ) {
+			$this->as_ajax_request();
+		}
+
 		try {
 			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\\' . $handler );
 			$this->fail( "The handler redirected to $location instead of refusing." );
@@ -2757,6 +2763,12 @@ class Test_Meetup_Import extends Groups_TestCase {
 			$this->fail( "The handler redirected to $location without a valid nonce." );
 		} catch ( WPDieException $e ) {
 			$this->assertStringNotContainsString( 'not allowed', $e->getMessage() );
+
+			// The step handler answers through `wp_die()` either way, so only
+			// the nonce failure's own `-1` shows the check stopped it.
+			if ( 'handle_step' === $handler ) {
+				$this->assertSame( '-1', $e->getMessage() );
+			}
 		} finally {
 			unset( $GLOBALS['super_admins'], $_REQUEST['_wpnonce'] );
 		}

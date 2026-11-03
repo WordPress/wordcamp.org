@@ -25,10 +25,11 @@
  * published (or trashed) is theirs and is never touched again. Members are
  * considered once per group, so someone who leaves isn't added back.
  *
- * Imports run in the background, through cron, whatever the group's size:
- * Preview queues a job that one cron run fills in from Meetup, and Import has
- * later runs write it a batch at a time (see `process_batch()`). That's also
- * what makes re-running safe matter: a batch that dies is simply redone.
+ * Imports run from the import screen, whatever the group's size: while it's
+ * open, the screen sends one request per batch, the first filling the preview
+ * in from Meetup and, after Import, the rest writing it (see `run_step()`).
+ * Closing the screen pauses the import; opening it again carries on. That's
+ * also what makes re-running safe matter: a batch that dies is simply redone.
  *
  * Only loaded on the Groups network, via
  * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
@@ -186,12 +187,13 @@ const MAX_ATTEMPTS = 3;
  * Option row that marks an import batch as running, and how long it may hold it.
  *
  * One batch at a time, across the whole network: events are looked up and
- * then inserted, so two cron runs working the same job at once could both
- * miss an event and both create it. The expiry frees the lock if a batch dies
- * without releasing it -- which, with the shutdown release in
- * `process_batch()`, only happens if the process is killed outright. A batch
- * renews it before each event (see `extend_lock()`), so a slow batch isn't
- * mistaken for a dead one.
+ * then inserted, so two requests working the same job at once (two open tabs,
+ * or a retry while the first request still runs) could both miss an event and
+ * both create it. It also keeps imports to one batch's load at a time, however
+ * many screens are open. The expiry frees the lock if a batch dies without
+ * releasing it -- which, with the shutdown release in `process_batch()`, only
+ * happens if the process is killed outright. A batch renews it before each
+ * event (see `extend_lock()`), so a slow batch isn't mistaken for a dead one.
  */
 const LOCK_OPTION  = 'wporg_meetup_import_lock';
 const LOCK_TIMEOUT = 5 * MINUTE_IN_SECONDS;
@@ -206,49 +208,43 @@ const LOCK_TIMEOUT = 5 * MINUTE_IN_SECONDS;
 const ONLINE_VENUE_ID = 26906060;
 
 /**
- * The import jobs, and the cron event that works through them.
+ * The import jobs, and the requests that work through them.
  *
  * Every import runs as a job, whatever the group's size: Preview queues a job
- * that a cron run fills in from Meetup, and Import has later cron runs write
- * it a batch at a time. Each group site has at most one job, in its own
- * network option (the prefix plus the site ID), so an import into one site
- * never waits on a preview for another. One cron event serves every job (see
- * `process_batch()`).
+ * that the screen's first request fills in from Meetup, and Import has later
+ * requests write it a batch at a time. Each group site has at most one job, in
+ * its own network option (the prefix plus the site ID). The screen sends the
+ * next request when the last one answers (see `run_step()`).
  */
 const JOB_OPTION_PREFIX = 'wporg_meetup_import_job_';
-const CRON_HOOK         = 'wporg_meetup_import_batch';
 const START_ACTION      = 'wporg_meetup_import_start';
 const CONFIRM_ACTION    = 'wporg_meetup_import_confirm';
 const CANCEL_ACTION     = 'wporg_meetup_import_cancel';
+const STEP_ACTION       = 'wporg_meetup_import_step';
 const EVENTS_PER_BATCH  = 10;
 const MEMBERS_PER_BATCH = 200;
 
 /**
- * How long a preview waits for someone to click Import, and how long a
- * finished job stays on the screen.
- *
- * A preview holds the group's Meetup data, including member emails when people
- * are matched, so one that nobody imports is expired rather than kept.
+ * How long the screen waits before asking again when another batch holds the lock.
  */
-const PREVIEW_TTL  = DAY_IN_SECONDS;
-const FINISHED_TTL = 30 * DAY_IN_SECONDS;
+const BUSY_RETRY_SECONDS = 5;
 
 /**
- * Hourly cron event that expires old jobs and re-queues stalled ones.
+ * How long a job may go untouched before it expires, and how long a finished
+ * job stays on the screen.
  *
- * A run that's killed outright (a timeout, running out of memory) never
- * queues the next one, and a queued run can be lost when two requests write
- * the site's `cron` option at once. Either way the job would wait for someone
- * to open the import screen; the sweep queues a run for it instead.
+ * A job holds the group's Meetup data, including member emails when people
+ * are matched, so a preview nobody imports, or an import whose screen nobody
+ * opens again, is expired rather than kept.
  */
-const SWEEP_HOOK = 'wporg_meetup_import_sweep';
+const IDLE_TTL     = DAY_IN_SECONDS;
+const FINISHED_TTL = 30 * DAY_IN_SECONDS;
 
 add_action( 'network_admin_menu', __NAMESPACE__ . '\register_admin_page' );
 add_action( 'admin_post_' . START_ACTION, __NAMESPACE__ . '\handle_start' );
 add_action( 'admin_post_' . CONFIRM_ACTION, __NAMESPACE__ . '\handle_confirm' );
 add_action( 'admin_post_' . CANCEL_ACTION, __NAMESPACE__ . '\handle_cancel' );
-add_action( CRON_HOOK, __NAMESPACE__ . '\process_batch' );
-add_action( SWEEP_HOOK, __NAMESPACE__ . '\sweep_jobs' );
+add_action( 'wp_ajax_' . STEP_ACTION, __NAMESPACE__ . '\handle_step' );
 
 /**
  * Add the "Import from Meetup" screen under Network Admin > Groups.
@@ -278,15 +274,14 @@ function job_option( int $site_id ): string {
  *
  * A job moves through these statuses:
  *
- * - `fetching`: queued by Preview; a cron run fetches the group from Meetup
- *   and works out what an import would do.
- * - `ready`: the preview is in the job, waiting up to `PREVIEW_TTL` for
- *   someone to click Import.
- * - `importing`: cron runs are writing it, one batch per run, in the order
- *   group details, organizers, members, events.
- * - `done`, `failed`, or `expired` (a preview nobody imported): finished;
- *   kept for `FINISHED_TTL` so the screen can show how it went, unless the
- *   site's next Preview replaces it first.
+ * - `fetching`: queued by Preview; the screen's next request fetches the
+ *   group from Meetup and works out what an import would do.
+ * - `ready`: the preview is in the job, waiting for someone to click Import.
+ * - `importing`: the screen's requests are writing it, one batch each, in the
+ *   order group details, organizers, members, events.
+ * - `done`, `failed`, or `expired` (untouched for `IDLE_TTL`): finished; kept
+ *   for `FINISHED_TTL` so the screen can show how it went, unless the site's
+ *   next Preview replaces it first.
  *
  * @param int $site_id Group site.
  */
@@ -297,17 +292,38 @@ function get_job( int $site_id ): array {
 }
 
 /**
- * Every site's import job.
+ * A site's import job, read from the database rather than the options cache.
  *
- * Read from the database rather than the options cache, which `save_job()`
- * bypasses, so a cron run picks its job from what's stored now.
+ * `save_job()` writes past the cache, and another request may have saved the
+ * job since this one first read it, so a batch works from what's stored now.
+ *
+ * @param int $site_id Group site.
+ */
+function get_stored_job( int $site_id ): array {
+	global $wpdb;
+
+	$job = maybe_unserialize(
+		$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- see above.
+			$wpdb->prepare(
+				"SELECT meta_value FROM $wpdb->sitemeta WHERE site_id = %d AND meta_key = %s",
+				get_current_network_id(),
+				job_option( $site_id )
+			)
+		)
+	);
+
+	return is_array( $job ) ? $job : array();
+}
+
+/**
+ * Every site's import job, read from the database as `get_stored_job()` does.
  *
  * @return array[]
  */
 function get_jobs(): array {
 	global $wpdb;
 
-	$values = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- see above.
+	$values = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- see `get_stored_job()`.
 		$wpdb->prepare(
 			"SELECT meta_value FROM $wpdb->sitemeta WHERE site_id = %d AND meta_key LIKE %s ORDER BY meta_id",
 			get_current_network_id(),
@@ -319,12 +335,15 @@ function get_jobs(): array {
 }
 
 /**
- * Whether a preview has waited longer than `PREVIEW_TTL` for someone to click Import.
+ * Whether an unfinished job has gone untouched for longer than `IDLE_TTL`.
+ *
+ * A preview nobody imported, or an import whose screen nobody opened again.
  *
  * @param array $job Import job.
  */
-function is_preview_expired( array $job ): bool {
-	return 'ready' === ( $job['status'] ?? '' ) && ( $job['updated'] ?? 0 ) < time() - PREVIEW_TTL;
+function is_job_expired( array $job ): bool {
+	return in_array( $job['status'] ?? '', array( 'fetching', 'ready', 'importing' ), true )
+		&& ( $job['updated'] ?? 0 ) < time() - IDLE_TTL;
 }
 
 /**
@@ -333,7 +352,16 @@ function is_preview_expired( array $job ): bool {
  * @param array $job Import job.
  */
 function is_job_active( array $job ): bool {
-	return in_array( $job['status'] ?? '', array( 'fetching', 'ready', 'importing' ), true ) && ! is_preview_expired( $job );
+	return in_array( $job['status'] ?? '', array( 'fetching', 'ready', 'importing' ), true ) && ! is_job_expired( $job );
+}
+
+/**
+ * Whether a job has a batch for the screen to run next.
+ *
+ * @param array $job Import job.
+ */
+function is_job_running( array $job ): bool {
+	return in_array( $job['status'] ?? '', array( 'fetching', 'importing' ), true ) && ! is_job_expired( $job );
 }
 
 /**
@@ -407,49 +435,7 @@ function delete_job( array $job ): void {
 }
 
 /**
- * The job the next cron run works on, or an empty array if none has work.
- *
- * A preview being fetched goes first, since someone is waiting on the screen
- * for it. Imports take turns: the one whose last batch ran longest ago goes
- * next, so each site's import moves forward at the same pace.
- *
- * @param array[] $jobs From `get_jobs()`.
- */
-function pick_job( array $jobs ): array {
-	$first = static function ( string $status, string $order_by ) use ( $jobs ): array {
-		$matching = wp_list_filter( $jobs, array( 'status' => $status ) );
-
-		usort(
-			$matching,
-			static function ( $a, $b ) use ( $order_by ) {
-				return ( $a[ $order_by ] ?? 0 ) <=> ( $b[ $order_by ] ?? 0 );
-			}
-		);
-
-		return $matching[0] ?? array();
-	};
-
-	return $first( 'fetching', 'created' ) ?: $first( 'importing', 'last_run' );
-}
-
-/**
- * Queue the next cron run, unless one is already queued.
- */
-function schedule_next_batch(): void {
-	if ( wp_next_scheduled( CRON_HOOK ) ) {
-		return;
-	}
-
-	if ( false === wp_schedule_single_event( time(), CRON_HOOK ) ) {
-		trigger_error(
-			'Failed to schedule the next Meetup import batch -- `wp_schedule_single_event()` returned false. The import will not finish on its own.',
-			E_USER_WARNING
-		);
-	}
-}
-
-/**
- * Queue a new import job, to be fetched from Meetup by cron.
+ * Queue a new import job, for the screen to fetch from Meetup.
  *
  * Callers MUST verify the `manage_sites` capability before calling this, as
  * with `import_events()`.
@@ -488,8 +474,6 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 	);
 
 	update_site_option( job_option( $site_id ), $job );
-	schedule_next_batch();
-	schedule_sweep();
 
 	Logger\log( 'job_queued', array_intersect_key( $job, array_flip( array( 'id', 'urlname', 'site_id', 'include_past', 'match_people' ) ) ) );
 
@@ -509,7 +493,7 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 function confirm_job( int $site_id, string $job_id ) {
 	$job = get_job( $site_id );
 
-	if ( 'ready' !== ( $job['status'] ?? '' ) || is_preview_expired( $job ) || $job_id !== $job['id'] ) {
+	if ( 'ready' !== ( $job['status'] ?? '' ) || is_job_expired( $job ) || $job_id !== $job['id'] ) {
 		return new WP_Error( 'job_not_ready', __( 'That preview is no longer current. Please preview again.', 'wordcamporg' ) );
 	}
 
@@ -526,7 +510,6 @@ function confirm_job( int $site_id, string $job_id ) {
 	);
 
 	save_job( $job );
-	schedule_next_batch();
 
 	return $job;
 }
@@ -535,8 +518,8 @@ function confirm_job( int $site_id, string $job_id ) {
  * Cancel a site's job, whatever state it's in.
  *
  * What it already wrote stays: everything an import writes is safe to keep,
- * and a later import of the same group picks up from it. The cron event stays
- * queued for any other site's job; with none, the next run finds nothing to do.
+ * and a later import of the same group picks up from it. A screen still open
+ * on the job finds it gone on its next request, and stops.
  *
  * @param int $site_id Group site.
  */
@@ -551,9 +534,13 @@ function cancel_job( int $site_id ): void {
 }
 
 /**
- * Mark a preview nobody imported as expired, dropping the Meetup data it held.
+ * Mark a job that went untouched for `IDLE_TTL` as expired, dropping the
+ * Meetup data it held.
  *
- * @param array $job Import job, `ready`.
+ * An import that expires partway keeps its cursor, so the screen can say it
+ * stopped partway; what it already wrote stays, as with a cancel.
+ *
+ * @param array $job Import job, `fetching`, `ready`, or `importing`.
  */
 function expire_job( array $job ): void {
 	$job['status'] = 'expired';
@@ -566,79 +553,71 @@ function expire_job( array $job ): void {
 }
 
 /**
- * Queue the hourly sweep, unless it's queued already.
- */
-function schedule_sweep(): void {
-	if ( ! wp_next_scheduled( SWEEP_HOOK ) ) {
-		wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', SWEEP_HOOK );
-	}
-}
-
-/**
- * Expire old jobs, and make sure a run is queued while any job has work left.
+ * Expire jobs left untouched, and delete finished ones after `FINISHED_TTL`.
  *
- * Runs hourly while any job exists, and whenever the import screen loads. The
- * sweep stops itself once there are no jobs left.
+ * Runs whenever the import screen loads, and before every batch.
  */
 function sweep_jobs(): void {
 	foreach ( get_jobs() as $job ) {
-		if ( is_preview_expired( $job ) ) {
+		if ( is_job_expired( $job ) ) {
 			expire_job( $job );
 		} elseif ( ! is_job_active( $job ) && ( $job['updated'] ?? 0 ) < time() - FINISHED_TTL ) {
 			delete_job( $job );
 		}
 	}
-
-	$jobs = get_jobs();
-
-	if ( pick_job( $jobs ) ) {
-		schedule_next_batch();
-	}
-
-	if ( $jobs ) {
-		schedule_sweep();
-	} else {
-		wp_clear_scheduled_hook( SWEEP_HOOK );
-	}
 }
 
 /**
- * Write one batch of one job, for one cron run.
+ * Run the next batch of a site's job, for one request from the import screen.
  *
- * Every site's job is served by this one cron event: each run picks a job
- * (see `pick_job()`), works one batch of it, and queues the next run while any
- * job has work left.
+ * Expires old jobs first, then runs at most one batch, and reports where the
+ * job got to (see `describe_step()`).
  *
- * The import lock keeps two runs from working at once: a run that can't take
- * it leaves the work to whoever holds it, and makes sure a run is queued for
- * after. The lock is released when the run ends, even on a timeout (see
- * `release_lock()`), and the batch it was on is simply redone by a later
- * run -- everything a batch writes is safe to write twice.
+ * @param int $site_id Group site.
+ * @return array What the screen needs to show, and whether to ask again.
  */
-function process_batch(): void {
-	// `ready` is waiting on a person, not on cron, and finished jobs are done:
-	// with no other job, there's nothing to do and nothing to count against them.
-	if ( ! pick_job( get_jobs() ) ) {
-		return;
+function run_step( int $site_id ): array {
+	sweep_jobs();
+
+	$ran = process_batch( $site_id );
+
+	return describe_step( get_stored_job( $site_id ), $ran );
+}
+
+/**
+ * Write one batch of a site's job.
+ *
+ * The import lock keeps two requests from working at once: one that can't take
+ * it leaves the job alone, and the screen asks again shortly. The lock is
+ * released when the request ends, even on a timeout (see `release_lock()`),
+ * and the batch it was on is simply redone by the next request -- everything a
+ * batch writes is safe to write twice.
+ *
+ * @param int $site_id Group site.
+ * @return bool False if another batch held the lock, so nothing ran.
+ */
+function process_batch( int $site_id ): bool {
+	// `ready` is waiting on a person, and finished jobs are done: there's
+	// nothing to do, and nothing to count against them.
+	if ( ! is_job_running( get_stored_job( $site_id ) ) ) {
+		return true;
 	}
 
 	if ( ! acquire_lock() ) {
-		schedule_next_batch();
-		return;
+		return false;
 	}
 
 	register_shutdown_function( __NAMESPACE__ . '\release_lock' );
 
 	try {
-		// Picked again now that this run holds the lock, in case another run
-		// moved things on in the meantime.
-		$job = pick_job( get_jobs() );
+		// Read again now that this request holds the lock, in case another
+		// request moved the job on, or cancelled it, in the meantime.
+		$job = get_stored_job( $site_id );
 
-		if ( $job ) {
+		if ( is_job_running( $job ) ) {
 			// Counted, and saved, before the batch runs, so a batch that kills the
 			// process is still charged for it. Reset whenever a batch makes progress.
 			$job['attempts'] = ( $job['attempts'] ?? 0 ) + 1;
-			$job['last_run'] = microtime( true );
 
 			if ( $job['attempts'] > MAX_ATTEMPTS ) {
 				fail_job(
@@ -684,9 +663,7 @@ function process_batch(): void {
 		release_lock();
 	}
 
-	if ( pick_job( get_jobs() ) ) {
-		schedule_next_batch();
-	}
+	return true;
 }
 
 /**
@@ -896,6 +873,69 @@ function summarize_event_row( array $row ): array {
 }
 
 /**
+ * How many of an import's batches are done, out of how many.
+ *
+ * Counted in batches rather than people and events, since that's what each
+ * request moves on by. Every step runs at least one batch, even with nothing
+ * in it.
+ *
+ * @param array $job Import job.
+ * @return int[] `[ done, total ]`, or `[ 0, 0 ]` for a job that isn't importing.
+ */
+function batch_progress( array $job ): array {
+	if ( 'importing' !== ( $job['status'] ?? '' ) ) {
+		return array( 0, 0 );
+	}
+
+	$people  = ! empty( $job['match_people'] );
+	$members = $people ? max( 1, (int) ceil( count( $job['data']['members'] ?? array() ) / MEMBERS_PER_BATCH ) ) : 0;
+	$events  = max( 1, (int) ceil( count( $job['data']['events'] ?? array() ) / EVENTS_PER_BATCH ) );
+	$step    = $job['cursor']['step'];
+	$before  = array(
+		'group'      => 0,
+		'organizers' => 1,
+		'members'    => 2,
+		'events'     => $people ? 2 + $members : 1,
+	);
+	$per     = array(
+		'members' => MEMBERS_PER_BATCH,
+		'events'  => EVENTS_PER_BATCH,
+	);
+	$done    = $before[ $step ] + ( isset( $per[ $step ] ) ? intdiv( (int) $job['cursor']['offset'], $per[ $step ] ) : 0 );
+
+	return array( $done, $before['events'] + $events );
+}
+
+/**
+ * What the import screen gets back from one request.
+ *
+ * @param array $job Import job, as stored after the request's batch.
+ * @param bool  $ran Whether a batch ran, rather than waiting on the lock.
+ * @return array {
+ *     @type string $status      The job's status, or '' if it's gone.
+ *     @type bool   $running     Whether to send another request.
+ *     @type string $message     The status line to show.
+ *     @type string $step        The import step the job is on, if importing.
+ *     @type int    $done        Batches done, for the progress bar.
+ *     @type int    $total       Batches in all; 0 while it isn't known yet.
+ *     @type int    $retry_after Seconds to wait before the next request.
+ * }
+ */
+function describe_step( array $job, bool $ran ): array {
+	list( $done, $total ) = batch_progress( $job );
+
+	return array(
+		'status'      => $job['status'] ?? '',
+		'running'     => is_job_running( $job ),
+		'message'     => $ran || ! $job ? describe_job_status( $job ) : __( 'Waiting for another import to finish its batch.', 'wordcamporg' ),
+		'step'        => $job['cursor']['step'] ?? '',
+		'done'        => $done,
+		'total'       => $total,
+		'retry_after' => $ran ? 0 : BUSY_RETRY_SECONDS,
+	);
+}
+
+/**
  * The import screen, or one site's import on it.
  *
  * @param int $site_id Group site, or 0 for the list of every import.
@@ -972,6 +1012,28 @@ function handle_cancel(): void {
 }
 
 /**
+ * Handle one request from the import screen: run the next batch, and say how it went.
+ *
+ * The screen sends the next request when this one answers, so the response
+ * only goes out once the batch has finished and its cursor is saved.
+ */
+function handle_step(): void {
+	if ( ! current_user_can( 'manage_sites' ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to import events on this network.', 'wordcamporg' ), 403 );
+	}
+
+	check_ajax_referer( STEP_ACTION );
+
+	$site_id = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
+
+	// A batch that has started finishes, and saves where it got to, even if
+	// the screen is closed or loses its connection meanwhile.
+	ignore_user_abort( true );
+
+	wp_send_json_success( run_step( $site_id ) );
+}
+
+/**
  * Show the notice a handler redirected with, if any.
  */
 function render_notice(): void {
@@ -979,8 +1041,8 @@ function render_notice(): void {
 	$notice = isset( $_GET['notice'] ) ? sanitize_key( wp_unslash( $_GET['notice'] ) ) : '';
 
 	$notices = array(
-		'queued'             => array( 'success', __( 'Fetching the group from Meetup. Reload this page in a moment to see the preview.', 'wordcamporg' ) ),
-		'confirmed'          => array( 'success', __( 'Import started. It runs in the background; reload this page to follow it.', 'wordcamporg' ) ),
+		'queued'             => array( 'success', __( 'Preview started.', 'wordcamporg' ) ),
+		'confirmed'          => array( 'success', __( 'Import started.', 'wordcamporg' ) ),
 		'cancelled'          => array( 'success', __( 'Import cancelled. Anything it already wrote stays, and a later import of the group picks up from there.', 'wordcamporg' ) ),
 		'import_running'     => array( 'error', __( 'A Meetup import into that site is already in progress. Let it finish, or cancel it, first.', 'wordcamporg' ) ),
 		'job_not_ready'      => array( 'error', __( 'That preview is no longer current. Please preview again.', 'wordcamporg' ) ),
@@ -1005,8 +1067,6 @@ function render_admin_page() {
 		wp_die( esc_html__( 'Sorry, you are not allowed to import events on this network.', 'wordcamporg' ) );
 	}
 
-	// Self-heal, as the network export does: if the cron event was lost, or a
-	// run died before queueing the next, visiting this page queues it again.
 	sweep_jobs();
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
@@ -1031,7 +1091,7 @@ function render_admin_page() {
 		<?php render_notice(); ?>
 
 		<p>
-			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. Imports run in the background, a batch at a time, taking turns when several sites are importing. A preview that isn\'t imported within a day expires. Running an import again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. An import runs from its page, a batch at a time, so keep that page open until it finishes: closing it pauses the import, and opening it again carries on. A preview nobody imports, or an import left paused, expires after a day. Running an import again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
 		</p>
 
 		<?php if ( $site_id ) : ?>
@@ -1180,7 +1240,11 @@ function render_job( array $job ): void {
 		?>
 	</h2>
 
-	<p><strong><?php echo esc_html( describe_job_status( $job ) ); ?></strong></p>
+	<p><strong id="wporg-meetup-import-status"><?php echo esc_html( describe_job_status( $job ) ); ?></strong></p>
+
+	<?php if ( is_job_running( $job ) ) : ?>
+		<?php render_step_loop( $job ); ?>
+	<?php endif; ?>
 
 	<?php if ( 'ready' === $status ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:8px;">
@@ -1264,20 +1328,153 @@ function render_job( array $job ): void {
 }
 
 /**
+ * The progress bar for a running job, and the script that runs its batches.
+ *
+ * The script sends one request at a time to `handle_step()`, and the next as
+ * soon as it answers; when the lock is busy it waits `retry_after` seconds,
+ * and when the request fails it backs off and tries again, which redoes the
+ * batch. Once the job stops running (ready, done, failed, or gone) it reloads
+ * the page, which shows the preview or the result. A reload, or opening the
+ * page again later, starts it over from the job's saved cursor.
+ *
+ * @param array $job Import job, `fetching` or `importing`.
+ */
+function render_step_loop( array $job ): void {
+	list( $done, $total ) = batch_progress( $job );
+	?>
+	<div
+		id="wporg-meetup-import-loop"
+		data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+		data-action="<?php echo esc_attr( STEP_ACTION ); ?>"
+		data-nonce="<?php echo esc_attr( wp_create_nonce( STEP_ACTION ) ); ?>"
+		data-site-id="<?php echo esc_attr( $job['site_id'] ); ?>"
+		data-step="<?php echo esc_attr( $job['cursor']['step'] ?? '' ); ?>"
+		data-retry-message="<?php esc_attr_e( 'Could not reach the server. Trying again shortly.', 'wordcamporg' ); ?>"
+		data-stopped-message="<?php esc_attr_e( 'This page can no longer run the import, perhaps because you were signed out. Reload it to carry on.', 'wordcamporg' ); ?>"
+	>
+		<?php if ( $total ) : ?>
+			<progress style="width:100%;max-width:400px;" aria-labelledby="wporg-meetup-import-status" max="<?php echo esc_attr( $total ); ?>" value="<?php echo esc_attr( $done ); ?>"></progress>
+		<?php else : ?>
+			<progress style="width:100%;max-width:400px;" aria-labelledby="wporg-meetup-import-status"></progress>
+		<?php endif; ?>
+		<p class="description"><?php esc_html_e( 'Keep this page open: the import only runs while it is. If you close it, the import pauses; open this page again within a day to carry on.', 'wordcamporg' ); ?></p>
+		<p class="screen-reader-text" role="status" id="wporg-meetup-import-announce"></p>
+	</div>
+	<?php
+	wp_print_inline_script_tag(
+		<<<'JS'
+( () => {
+	const loop = document.getElementById( 'wporg-meetup-import-loop' );
+	const status = document.getElementById( 'wporg-meetup-import-status' );
+	const announce = document.getElementById( 'wporg-meetup-import-announce' );
+	const bar = loop.querySelector( 'progress' );
+	let step = loop.dataset.step;
+	let failures = 0;
+	let running = true;
+
+	// Leaving mid-batch is safe, but the import pauses until the page is open again.
+	window.addEventListener( 'beforeunload', ( event ) => {
+		if ( running ) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
+	} );
+
+	const stop = ( message ) => {
+		running = false;
+		status.textContent = message;
+		announce.textContent = message;
+	};
+
+	// The server renders the preview or the result, without the notice the page opened with.
+	const reload = () => {
+		running = false;
+		const url = new URL( window.location.href );
+		url.searchParams.delete( 'notice' );
+		window.location.replace( url );
+	};
+
+	const retry = () => {
+		failures++;
+		status.textContent = loop.dataset.retryMessage;
+		setTimeout( next, Math.min( 60, 5 * 2 ** ( failures - 1 ) ) * 1000 );
+	};
+
+	async function next() {
+		let response;
+		let body;
+
+		try {
+			response = await fetch( loop.dataset.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				body: new URLSearchParams( {
+					action: loop.dataset.action,
+					_ajax_nonce: loop.dataset.nonce,
+					site_id: loop.dataset.siteId,
+				} ),
+			} );
+			body = await response.json();
+		} catch ( error ) {
+			// A dropped connection, or an error page instead of JSON: retried below.
+		}
+
+		if ( response && 403 === response.status ) {
+			stop( loop.dataset.stoppedMessage );
+			return;
+		}
+
+		if ( ! body || ! body.success ) {
+			retry();
+			return;
+		}
+
+		const data = body.data;
+		failures = 0;
+
+		if ( ! data.running ) {
+			reload();
+			return;
+		}
+
+		status.textContent = data.message;
+
+		if ( data.total ) {
+			bar.max = data.total;
+			bar.value = data.done;
+		}
+
+		if ( data.step !== step ) {
+			step = data.step;
+			announce.textContent = data.message;
+		}
+
+		setTimeout( next, data.retry_after * 1000 );
+	}
+
+	next();
+} )();
+JS
+	);
+}
+
+/**
  * One line on where a job is.
  *
  * @param array $job Import job.
  */
 function describe_job_status( array $job ): string {
-	switch ( $job['status'] ) {
+	switch ( $job['status'] ?? '' ) {
 		case 'fetching':
-			return __( 'Fetching the group from Meetup. Reload this page in a moment to see the preview.', 'wordcamporg' );
+			return __( 'Fetching the group from Meetup. The preview shows here when it\'s ready.', 'wordcamporg' );
 
 		case 'ready':
 			return __( 'Preview ready. Nothing has been written yet. Check it, then click Import within a day.', 'wordcamporg' );
 
 		case 'expired':
-			return __( 'Preview expired: nobody clicked Import within a day. Nothing was written; preview again to import.', 'wordcamporg' );
+			return isset( $job['cursor'] )
+				? __( 'Import stopped partway: its page wasn\'t open for a day. What it wrote stays; preview again to finish the rest.', 'wordcamporg' )
+				: __( 'Preview expired: nobody clicked Import within a day. Nothing was written; preview again to import.', 'wordcamporg' );
 
 		case 'importing':
 			$step  = $job['cursor']['step'];
@@ -1293,14 +1490,14 @@ function describe_job_status( array $job ): string {
 			return in_array( $step, array( 'members', 'events' ), true )
 				? sprintf(
 					/* translators: 1: What's being imported, 2: How many are done, 3: How many in total. */
-					__( 'Importing %1$s: %2$d of %3$d done. Reload this page to follow along.', 'wordcamporg' ),
+					__( 'Importing %1$s: %2$d of %3$d done.', 'wordcamporg' ),
 					$label[ $step ],
 					$done,
 					$total
 				)
 				: sprintf(
 					/* translators: %s: What's being imported. */
-					__( 'Importing %s. Reload this page to follow along.', 'wordcamporg' ),
+					__( 'Importing %s.', 'wordcamporg' ),
 					$label[ $step ]
 				);
 
@@ -2376,9 +2573,9 @@ function import_events( int $site_id, array $events, bool $match_people = false 
 			return array_map(
 				static function ( $event ) use ( $match_people ) {
 					// An event can mean a photo download and several pages of
-					// RSVPs, so a batch can run long. A cron run renews its lock
-					// before each one, and stops if another run has taken the
-					// lock over, rather than both writing the same events.
+					// RSVPs, so a batch can run long. A batch renews its lock
+					// before each one, and stops if another request has taken
+					// the lock over, rather than both writing the same events.
 					if ( '' !== held_lock() && ! extend_lock() ) {
 						throw new \RuntimeException( 'Lost the Meetup import lock to another run.' );
 					}

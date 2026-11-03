@@ -93,6 +93,20 @@ const IMPORTED_MODIFIED_META = '_wporg_meetup_imported_modified';
 const REFRESHING_META = '_wporg_meetup_refreshing';
 
 /**
+ * Post meta on a recurring event: one row per Meetup event folded into it.
+ *
+ * Meetup has no series of its own to point at (its `series` field comes back
+ * empty), so a rerun finds the recurring event, and knows to leave its dates
+ * alone, by any of the Meetup events it was made from.
+ */
+const SERIES_MEMBER_META = '_wporg_meetup_series_event_id';
+
+/**
+ * The fewest upcoming dates that make a series.
+ */
+const SERIES_MIN_DATES = 3;
+
+/**
  * Site options recording which Meetup group a site was imported from, and
  * when that group was founded, for the group's history.
  */
@@ -711,7 +725,7 @@ function run_fetch( array $job ): void {
 
 	$job['data'] = array(
 		'group'      => normalize_group( $raw['group'] ),
-		'events'     => array_map( __NAMESPACE__ . '\normalize_event', $raw['events'] ),
+		'events'     => fold_series( $job['site_id'], array_map( __NAMESPACE__ . '\normalize_event', $raw['events'] ) ),
 		'members'    => array_map( __NAMESPACE__ . '\normalize_member', $raw['members'] ),
 		'organizers' => array_map( __NAMESPACE__ . '\normalize_organizer', $raw['organizers'] ),
 	);
@@ -1522,7 +1536,7 @@ function describe_job_status( array $job ): string {
 				__( 'Import finished: %1$d events created, %2$d updated, %3$d skipped, %4$d failed.', 'wordcamporg' ),
 				$counts['created'] ?? 0,
 				$counts['updated'] ?? 0,
-				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ),
+				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ) + ( $counts['in_series'] ?? 0 ),
 				$counts['failed'] ?? 0
 			);
 
@@ -1546,15 +1560,16 @@ function describe_job_status( array $job ): string {
  */
 function describe_status( string $status, bool $is_past = false, string $message = '' ): string {
 	$labels = array(
-		'create'  => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
-		'update'  => __( 'Draft will be refreshed', 'wordcamporg' ),
-		'skip'    => __( 'Skipped: already published or trashed', 'wordcamporg' ),
-		'keep'    => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
-		'kept'    => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
-		'created' => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
-		'updated' => __( 'Draft refreshed', 'wordcamporg' ),
-		'skipped' => __( 'Skipped: already published or trashed', 'wordcamporg' ),
-		'failed'  => __( 'Failed', 'wordcamporg' ),
+		'create'    => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
+		'update'    => __( 'Draft will be refreshed', 'wordcamporg' ),
+		'in_series' => __( 'Skipped: one of the dates of a recurring event', 'wordcamporg' ),
+		'skip'      => __( 'Skipped: already published or trashed', 'wordcamporg' ),
+		'keep'      => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
+		'kept'      => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
+		'created'   => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
+		'updated'   => __( 'Draft refreshed', 'wordcamporg' ),
+		'skipped'   => __( 'Skipped: already published or trashed', 'wordcamporg' ),
+		'failed'    => __( 'Failed', 'wordcamporg' ),
 	);
 
 	$label = $labels[ $status ] ?? $status;
@@ -2534,7 +2549,15 @@ function plan_events( int $site_id, array $events ): array {
 			$plan = array();
 
 			foreach ( $events as $event ) {
-				$existing = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $event['meetup_id'] );
+				$existing = find_existing_event( $event );
+
+				if ( ! $existing && empty( $event['recurrence'] ) && find_series_post( $event ) ) {
+					$plan[] = array(
+						'event'  => $event,
+						'status' => 'in_series',
+					);
+					continue;
+				}
 
 				// A past event an interrupted run left half-done is, as far as
 				// anyone is concerned, still to be created.
@@ -2548,7 +2571,8 @@ function plan_events( int $site_id, array $events ): array {
 					$status = 'skip';
 				}
 
-				$plan[] = compact( 'event', 'status' );
+				$message = empty( $event['recurrence'] ) ? '' : describe_recurrence( $event );
+				$plan[]  = compact( 'event', 'status', 'message' );
 			}
 
 			return $plan;
@@ -2633,7 +2657,20 @@ function import_events( int $site_id, array $events, bool $match_people = false 
  * @return array
  */
 function import_event( array $event, bool $match_people = false ): array {
-	$existing = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $event['meetup_id'] );
+	$existing = find_existing_event( $event );
+
+	// A date that's already part of a recurring event this import made.
+	if ( ! $existing && empty( $event['recurrence'] ) ) {
+		$series = find_series_post( $event );
+
+		if ( $series ) {
+			return array(
+				'event'   => $event,
+				'status'  => 'in_series',
+				'post_id' => $series->ID,
+			);
+		}
+	}
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
 		return array(
@@ -2689,6 +2726,12 @@ function import_event( array $event, bool $match_people = false ): array {
 			EVENT_URL_META => esc_url_raw( $event['meetup_url'] ),
 		);
 
+		// Marked as a series from the start, so a rerun after a crash never
+		// takes it for a one-off; `save_recurrence()` adds the other dates.
+		if ( ! empty( $event['recurrence'] ) ) {
+			$post_args['meta_input'][ SERIES_MEMBER_META ] = $event['meetup_id'];
+		}
+
 		if ( $publish ) {
 			// First publish emails every member of the group. This marks that
 			// notification as already handled, so there's nothing to send.
@@ -2727,6 +2770,10 @@ function import_event( array $event, bool $match_people = false ): array {
 		)
 	);
 
+	if ( ! empty( $event['recurrence'] ) ) {
+		save_recurrence( $post_id, $event );
+	}
+
 	// Meetup doesn't hand out the meeting link, so the organizer adds it while
 	// reviewing -- and a refresh keeps one they've added.
 	sync_event_venue(
@@ -2755,9 +2802,12 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	// Meetup's own counts, kept for history and reporting. There are no
-	// individual RSVP records behind them.
-	update_post_meta( $post_id, RSVP_YES_META, $event['rsvp_yes'] );
-	update_post_meta( $post_id, ATTENDED_META, $event['attended'] );
+	// individual RSVP records behind them. A recurring event's would only be
+	// its first date's, so it has none.
+	if ( empty( $event['recurrence'] ) ) {
+		update_post_meta( $post_id, RSVP_YES_META, $event['rsvp_yes'] );
+		update_post_meta( $post_id, ATTENDED_META, $event['attended'] );
+	}
 
 	// People last, while the event is still a draft: RSVP confirmations only
 	// go out for published events (see `import_rsvps()`).
@@ -2765,6 +2815,11 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	if ( $match_people ) {
 		import_hosts( $post_id, $event['hosts'] );
+	}
+
+	// RSVPs to a recurring event belong to one of its dates, and those only
+	// exist once it's published, so a series' upcoming RSVPs stay on Meetup.
+	if ( $match_people && empty( $event['recurrence'] ) ) {
 		$rsvps = import_rsvps( $post_id, $event['meetup_id'], $event['is_past'] );
 
 		if ( is_wp_error( $rsvps ) ) {
@@ -2827,8 +2882,324 @@ function import_event( array $event, bool $match_people = false ): array {
 		'event'   => $event,
 		'status'  => $existing ? 'updated' : 'created',
 		'post_id' => $post_id,
-		'message' => $photo_error,
+		'message' => implode( '; ', array_filter( array( empty( $event['recurrence'] ) ? '' : describe_recurrence( $event ), $photo_error ) ) ),
 		'rsvps'   => $rsvps,
+	);
+}
+
+/**
+ * The imported event an event row maps to: by its Meetup ID, or for a
+ * recurring event, by any of the Meetup events it was made from.
+ *
+ * @param array $event Normalized event, on the current site.
+ */
+function find_existing_event( array $event ): ?\WP_Post {
+	$existing = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $event['meetup_id'] );
+
+	if ( ! $existing && ! empty( $event['recurrence'] ) ) {
+		$existing = find_series_post( $event );
+	}
+
+	return $existing;
+}
+
+/**
+ * The recurring event that already covers any of an event row's Meetup events.
+ *
+ * @param array $event Normalized event, on the current site.
+ */
+function find_series_post( array $event ): ?\WP_Post {
+	foreach ( $event['series_ids'] ?? array( $event['meetup_id'] ) as $meetup_id ) {
+		$post = find_imported_post( Event::POST_TYPE, SERIES_MEMBER_META, (string) $meetup_id );
+
+		if ( $post ) {
+			return $post;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Fold the upcoming dates of each recurring meetup into one recurring event.
+ *
+ * Meetup doesn't say which events form a series, so it's worked out from the
+ * dates: upcoming events with the same title, start time, length, and venue,
+ * at least `SERIES_MIN_DATES` of them, whose dates are exactly what one
+ * recurrence rule would give (`infer_recurrence()`). They become one event
+ * row, the first date's, carrying the rule and every Meetup ID it stands for.
+ *
+ * Anything that doesn't fit stays a one-off: past events (they're history,
+ * each with its own RSVPs and photo), a second event on the same date, a
+ * series with a gap or a moved date, and any date already imported as a
+ * one-off, so a rerun never leaves both.
+ *
+ * @param int   $site_id Target group site.
+ * @param array $events  Normalized events.
+ * @return array Events, with each series' dates replaced by one row.
+ */
+function fold_series( int $site_id, array $events ): array {
+	if ( ! class_exists( \WordPressdotorg\GatherPress_Recurring_Events\Rule::class ) ) {
+		return $events;
+	}
+
+	$groups = array();
+
+	foreach ( $events as $index => $event ) {
+		if ( $event['is_past'] ) {
+			continue;
+		}
+
+		$start = new DateTimeImmutable( $event['start'], new DateTimeZone( $event['timezone'] ) );
+		$end   = new DateTimeImmutable( $event['end'], new DateTimeZone( $event['timezone'] ) );
+		$key   = implode(
+			'|',
+			array(
+				$event['title'],
+				$event['timezone'],
+				$start->format( 'H:i' ),
+				$end->getTimestamp() - $start->getTimestamp(),
+				$event['is_online'] ? 'online' : '',
+				$event['venue']['meetup_id'] ?? '',
+			)
+		);
+
+		$groups[ $key ][ $index ] = $start;
+	}
+
+	$folded = array();
+	$drop   = array();
+
+	foreach ( $groups as $starts ) {
+		asort( $starts );
+
+		// One event per date: a second one on the same day stays a one-off.
+		$dated = array();
+		foreach ( $starts as $index => $start ) {
+			$dated[ $start->format( 'Y-m-d' ) ] ??= $index;
+		}
+
+		if ( count( $dated ) < SERIES_MIN_DATES ) {
+			continue;
+		}
+
+		$indexes = array_values( $dated );
+		$rule    = infer_recurrence( array_map( static fn( $index ) => $starts[ $index ], $indexes ) );
+
+		if ( ! $rule ) {
+			continue;
+		}
+
+		$ids = array_map( static fn( $index ) => $events[ $index ]['meetup_id'], $indexes );
+
+		$already_one_off = with_site(
+			$site_id,
+			static function () use ( $ids ) {
+				foreach ( $ids as $meetup_id ) {
+					$post = find_imported_post( Event::POST_TYPE, EVENT_ID_META, $meetup_id );
+
+					if ( $post && ! get_post_meta( $post->ID, SERIES_MEMBER_META, false ) ) {
+						return true;
+					}
+				}
+
+				return false;
+			}
+		);
+
+		if ( $already_one_off ) {
+			continue;
+		}
+
+		$first = $indexes[0];
+
+		$folded[ $first ] = array_merge(
+			$events[ $first ],
+			array(
+				'recurrence' => $rule,
+				'series_ids' => $ids,
+			)
+		);
+
+		foreach ( array_slice( $indexes, 1 ) as $index ) {
+			$drop[ $index ] = true;
+		}
+	}
+
+	$result = array();
+
+	foreach ( $events as $index => $event ) {
+		if ( isset( $drop[ $index ] ) ) {
+			continue;
+		}
+
+		$result[] = $folded[ $index ] ?? $event;
+	}
+
+	return $result;
+}
+
+/**
+ * The recurrence rule that gives exactly these dates, if there is one.
+ *
+ * Tries the Nth (or last) weekday of every N months, the same day of every
+ * N months, and every N weeks on the first date's weekday, and keeps the first
+ * whose expansion, by the recurring-events plugin itself, from the first date
+ * through the last is the same list of dates and times.
+ *
+ * @param DateTimeImmutable[] $starts Sorted local start times, one per date.
+ * @return array|null A rule as the recurring-events plugin stores it, ending never.
+ */
+function infer_recurrence( array $starts ): ?array {
+	$starts = array_values( $starts );
+	$first  = $starts[0];
+	$last   = end( $starts );
+	$second = $starts[1];
+
+	$weekday = strtoupper( substr( $first->format( 'D' ), 0, 2 ) );
+	$days    = (int) $first->diff( $second )->format( '%a' );
+	$months  = ( (int) $second->format( 'Y' ) - (int) $first->format( 'Y' ) ) * 12 + (int) $second->format( 'n' ) - (int) $first->format( 'n' );
+	$base    = array(
+		'frequency'       => '',
+		'interval'        => 1,
+		'weekdays'        => array(),
+		'monthly_mode'    => 'day',
+		'monthly_day'     => (int) $first->format( 'j' ),
+		'monthly_order'   => 'first',
+		'monthly_weekday' => $weekday,
+		'end_type'        => 'never',
+		'until'           => '',
+		'count'           => 12,
+	);
+
+	$candidates = array();
+
+	if ( $months > 0 ) {
+		$orders = array(
+			1 => 'first',
+			2 => 'second',
+			3 => 'third',
+			4 => 'fourth',
+		);
+		$nth    = (int) ceil( (int) $first->format( 'j' ) / 7 );
+
+		if ( isset( $orders[ $nth ] ) ) {
+			$candidates[] = array(
+				'frequency'     => 'monthly',
+				'interval'      => $months,
+				'monthly_mode'  => 'weekday',
+				'monthly_order' => $orders[ $nth ],
+			);
+		}
+
+		if ( $first->modify( '+7 days' )->format( 'n' ) !== $first->format( 'n' ) ) {
+			$candidates[] = array(
+				'frequency'     => 'monthly',
+				'interval'      => $months,
+				'monthly_mode'  => 'weekday',
+				'monthly_order' => 'last',
+			);
+		}
+
+		$candidates[] = array(
+			'frequency'    => 'monthly',
+			'interval'     => $months,
+			'monthly_mode' => 'day',
+		);
+	}
+
+	// Last, so a few monthly dates that happen to fall four weeks apart read
+	// as the monthly meetup they almost certainly are.
+	if ( $days > 0 && 0 === $days % 7 ) {
+		$candidates[] = array(
+			'frequency' => 'weekly',
+			'interval'  => intdiv( $days, 7 ),
+			'weekdays'  => array( $weekday ),
+		);
+	}
+
+	$want = array_map( static fn( DateTimeImmutable $start ) => $start->format( 'Y-m-d H:i' ), $starts );
+
+	foreach ( $candidates as $candidate ) {
+		$rule = array_merge( $base, $candidate );
+		$got  = array_map(
+			static fn( DateTimeImmutable $start ) => $start->format( 'Y-m-d H:i' ),
+			\WordPressdotorg\GatherPress_Recurring_Events\Rule::expand( $first, $rule, $last, 1 )
+		);
+
+		if ( $got === $want ) {
+			return $rule;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Save a recurring event's rule, and which Meetup events it stands for.
+ *
+ * The meta the event form saves (`persist_recurring_event_rule()`). Nothing is
+ * projected: the event is a draft, and publishing it projects its dates.
+ *
+ * @param int   $post_id Event, on the current site.
+ * @param array $event   Normalized event, with `recurrence` and `series_ids`.
+ */
+function save_recurrence( int $post_id, array $event ): void {
+	$prefix = \WordPressdotorg\GatherPress_Recurring_Events\Rule::META_PREFIX;
+
+	foreach ( $event['recurrence'] as $field => $value ) {
+		update_post_meta( $post_id, $prefix . $field, $value );
+	}
+
+	$known = array_map( 'strval', get_post_meta( $post_id, SERIES_MEMBER_META, false ) );
+
+	foreach ( array_diff( $event['series_ids'], $known ) as $meetup_id ) {
+		add_post_meta( $post_id, SERIES_MEMBER_META, (string) $meetup_id );
+	}
+}
+
+/**
+ * Say how a recurring event repeats, and how many Meetup events it replaces.
+ *
+ * @param array $event Normalized event, with `recurrence` and `series_ids`.
+ */
+function describe_recurrence( array $event ): string {
+	$rule  = $event['recurrence'];
+	$start = new DateTimeImmutable( $event['start'], new DateTimeZone( $event['timezone'] ) );
+	$day   = wp_date( 'l', $start->getTimestamp(), $start->getTimezone() );
+
+	if ( 'weekly' === $rule['frequency'] ) {
+		$repeats = 1 === $rule['interval']
+			/* translators: %s: Weekday name. */
+			? sprintf( __( 'every %s', 'wordcamporg' ), $day )
+			/* translators: 1: Number of weeks, 2: Weekday name. */
+			: sprintf( __( 'every %1$d weeks on %2$s', 'wordcamporg' ), $rule['interval'], $day );
+	} elseif ( 'weekday' === $rule['monthly_mode'] ) {
+		$orders  = array(
+			'first'  => __( 'first', 'wordcamporg' ),
+			'second' => __( 'second', 'wordcamporg' ),
+			'third'  => __( 'third', 'wordcamporg' ),
+			'fourth' => __( 'fourth', 'wordcamporg' ),
+			'last'   => __( 'last', 'wordcamporg' ),
+		);
+		$repeats = 1 === $rule['interval']
+			/* translators: 1: Ordinal, e.g. "second", 2: Weekday name. */
+			? sprintf( __( 'monthly on the %1$s %2$s', 'wordcamporg' ), $orders[ $rule['monthly_order'] ], $day )
+			/* translators: 1: Number of months, 2: Ordinal, e.g. "second", 3: Weekday name. */
+			: sprintf( __( 'every %1$d months on the %2$s %3$s', 'wordcamporg' ), $rule['interval'], $orders[ $rule['monthly_order'] ], $day );
+	} else {
+		$repeats = 1 === $rule['interval']
+			/* translators: %d: Day of the month. */
+			? sprintf( __( 'monthly on day %d', 'wordcamporg' ), $rule['monthly_day'] )
+			/* translators: 1: Number of months, 2: Day of the month. */
+			: sprintf( __( 'every %1$d months on day %2$d', 'wordcamporg' ), $rule['interval'], $rule['monthly_day'] );
+	}
+
+	return sprintf(
+		/* translators: 1: How it repeats, e.g. "monthly on the second Wednesday", 2: Number of Meetup events. */
+		_n( 'recurring %1$s, in place of %2$d Meetup event', 'recurring %1$s, in place of %2$d Meetup events', count( $event['series_ids'] ), 'wordcamporg' ),
+		$repeats,
+		count( $event['series_ids'] )
 	);
 }
 

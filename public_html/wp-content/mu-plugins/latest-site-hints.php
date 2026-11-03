@@ -24,7 +24,7 @@ add_filter( 'pings_open', __NAMESPACE__ . '\close_discussion_on_past_sites' );
  * add some hints for guiding them visit the latest site.
  */
 function maybe_add_latest_site_hints() {
-	if ( ! is_past_site() ) {
+	if ( ! get_newer_site_url() ) {
 		return;
 	}
 
@@ -42,35 +42,36 @@ function maybe_add_latest_site_hints() {
 }
 
 /**
- * Check if the current site is a past WordCamp, i.e. there is a newer site for the same city.
+ * Get the home URL of a newer site for the current site's city, if there is one.
  *
- * The result is cached for the rest of the request, because `comments_open` and `pings_open` run for
- * every post on a page.
+ * A site with a newer one is a past WordCamp. The result is cached for the rest of the request, because
+ * `comments_open` and `pings_open` run for every post on a page.
  *
- * @return bool
+ * @return string|false
  */
-function is_past_site() {
-	$blog_id = get_current_blog_id();
-	$cached  = wp_cache_get( $blog_id, 'latest-site-hints', false, $found );
+function get_newer_site_url() {
+	$blog_id   = get_current_blog_id();
+	$newer_url = wp_cache_get( $blog_id, 'latest-site-hints', false, $found );
 
 	if ( $found ) {
-		return $cached;
+		return $newer_url;
 	}
 
-	$is_past_site = false;
+	$newer_url = false;
 
 	// Allow the hints to be skipped if necessary.
 	if ( ! wcorg_skip_feature( 'latest-site-hint', $blog_id ) ) {
-		$site          = get_site( $blog_id );
-		$latest_domain = get_latest_home_url( $site->domain, $site->path );
+		$site       = get_site( $blog_id );
+		$latest_url = get_latest_home_url( $site->domain, $site->path );
 
-		// Check latest domain against current, in case there is newer site for the WordCamp.
-		$is_past_site = $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain;
+		if ( $latest_url && trailingslashit( get_site_url() ) !== $latest_url ) {
+			$newer_url = $latest_url;
+		}
 	}
 
-	wp_cache_set( $blog_id, $is_past_site, 'latest-site-hints' );
+	wp_cache_set( $blog_id, $newer_url, 'latest-site-hints' );
 
-	return $is_past_site;
+	return $newer_url;
 }
 
 /**
@@ -81,7 +82,7 @@ function is_past_site() {
  * @return bool
  */
 function close_discussion_on_past_sites( $open ) {
-	return $open && ! is_past_site();
+	return $open && ! get_newer_site_url();
 }
 
 /**
@@ -91,17 +92,15 @@ function close_discussion_on_past_sites( $open ) {
  * instead of `seattle.wordcamp.org/2019`, even if `/2019` has a higher historic rank.
  */
 function canonical_link_past_home_pages_to_current_year() {
-	global $current_blog;
-
 	// We don't want to penalize historical content, we just want to boost the new site.
 	if ( ! is_front_page() ) {
 		return;
 	}
 
-	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
+	$latest_domain = get_newer_site_url();
 
 	// Nothing to do. `wporg-seo` will still print the standard canonical link.
-	if ( ! $latest_domain || trailingslashit( get_site_url() ) === $latest_domain ) {
+	if ( ! $latest_domain ) {
 		return;
 	}
 
@@ -211,10 +210,10 @@ function show_notification_about_latest_site( $is_overlay = false ) {
 		return;
 	}
 
-	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
+	$latest_domain = get_newer_site_url();
 
 	// Check if there is newer site for the WordCamp.
-	if ( ! $latest_domain || $latest_domain === $current_blog->domain ) {
+	if ( ! $latest_domain ) {
 		return;
 	}
 

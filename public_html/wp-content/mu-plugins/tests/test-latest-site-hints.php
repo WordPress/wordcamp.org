@@ -15,13 +15,6 @@ defined( 'WPINC' ) || die();
  */
 class Test_WordCamp_SEO extends Database_TestCase {
 	/**
-	 * The `$current_blog` global saved by `switch_to_site()`.
-	 *
-	 * @var WP_Site
-	 */
-	protected $original_blog;
-
-	/**
 	 * Create sites we'll need for the tests.
 	 *
 	 * @param WP_UnitTest_Factory $factory
@@ -56,11 +49,10 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 */
 	public function test_comments_closed_on_past_site() {
 		// 2018 seattle has a newer 2019 site.
-		$this->switch_to_site( self::$year_dot_2018_site_id );
+		switch_to_blog( self::$year_dot_2018_site_id );
 		$post_id = $this->create_open_post();
 
-		// Comments and pings are closed without `maybe_add_latest_site_hints()` running, because
-		// `wp-comments-post.php` and `xmlrpc.php` never fire the `wp` action it's hooked to.
+		// Closed without `maybe_add_latest_site_hints()` running, as for `wp-comments-post.php` and `xmlrpc.php`.
 		$this->assertFalse( comments_open( $post_id ), 'Comments should be closed on past sites.' );
 		$this->assertFalse( pings_open( $post_id ), 'Pings should be closed on past sites.' );
 
@@ -76,7 +68,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		remove_action( 'wp_head', 'WordCamp\Latest_Site_Hints\add_notification_styles' );
 		remove_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' );
 		remove_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' );
-		$this->restore_site();
+		restore_current_blog();
 	}
 
 	/**
@@ -85,7 +77,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 * Verify that a comment sent straight to `wp-comments-post.php` is rejected on past WordCamp sites.
 	 */
 	public function test_comment_submission_rejected_on_past_site() {
-		$this->switch_to_site( self::$year_dot_2018_site_id );
+		switch_to_blog( self::$year_dot_2018_site_id );
 		$post_id = $this->create_open_post();
 
 		$result = wp_handle_comment_submission( array(
@@ -98,7 +90,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$this->assertWPError( $result );
 		$this->assertSame( 'comment_closed', $result->get_error_code() );
 
-		$this->restore_site();
+		restore_current_blog();
 	}
 
 	/**
@@ -109,67 +101,33 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 */
 	public function test_comments_open_on_latest_site() {
 		// 2019 seattle is the newest.
-		$this->switch_to_site( self::$year_dot_2019_site_id );
+		switch_to_blog( self::$year_dot_2019_site_id );
 		$post_id = $this->create_open_post();
 
 		maybe_add_latest_site_hints();
 
-		/*
-		 * Only comments are checked, because pings can be closed on every site by other code. They share
-		 * `close_discussion_on_past_sites()` with comments, so this still covers the past-site check for them.
-		 */
+		// Pings aren't checked: other code may close them everywhere, and they share this callback with comments.
 		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should not be hooked to wp_body_open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should not be hooked to wp_footer on the latest site.' );
 
-		$this->restore_site();
+		restore_current_blog();
 	}
 
 	/**
 	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
 	 *
 	 * Verify that the `latest-site-hint` skip flag keeps comments open on a past site.
-	 *
-	 * Pings aren't checked, for the same reason as in `test_comments_open_on_latest_site()`.
 	 */
 	public function test_comments_open_on_past_site_with_skip_flag() {
 		add_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );
 
-		$this->switch_to_site( self::$year_dot_2018_site_id );
+		switch_to_blog( self::$year_dot_2018_site_id );
 		$post_id = $this->create_open_post();
 
 		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open when the feature is skipped.' );
 
-		$this->restore_site();
-		delete_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );
-	}
-
-	/**
-	 * Switch to a site the way a request for it would, and clear its cached past-site status.
-	 *
-	 * @param int $site_id
-	 */
-	protected function switch_to_site( $site_id ) {
-		global $current_blog;
-
-		$this->original_blog = $current_blog;
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
-		$current_blog = get_site( $site_id );
-		switch_to_blog( $site_id );
-		wp_cache_delete( $site_id, 'latest-site-hints' );
-	}
-
-	/**
-	 * Restore the site that was current before `switch_to_site()`.
-	 */
-	protected function restore_site() {
-		global $current_blog;
-
-		wp_cache_delete( get_current_blog_id(), 'latest-site-hints' );
 		restore_current_blog();
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
-		$current_blog = $this->original_blog;
 	}
 
 	/**

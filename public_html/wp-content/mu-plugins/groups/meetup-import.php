@@ -6,7 +6,7 @@
  * venues, and optionally members from the Meetup Pro API into a chosen group
  * site.
  *
- * - Upcoming events land as drafts, for the organizer to review and publish.
+ * - Upcoming events land published, ready for the group to RSVP to.
  * - Past events (opt-in) land published, as the group's history, with
  *   Meetup's RSVP and attendance counts kept as meta. Individual RSVPs aren't
  *   imported.
@@ -14,15 +14,15 @@
  *   by email. A match joins the group as a Member with event emails off; no
  *   account is created for anyone else.
  *
- * Nothing here sends an email: upcoming events stay drafts, past events are
- * published with the new-event notification marked as already handled, and
+ * Nothing here sends an email: events are published with the new-event
+ * notification marked as already handled, and
  * matched members are opted out of this group's event updates until they
  * choose otherwise.
  *
  * Re-running the import is safe. Events and venues are keyed on their Meetup
- * IDs: an event still in draft is refreshed from Meetup, so date or venue
- * changes made there before cutover come across, while one the organizer has
- * published (or trashed) is theirs and is never touched again. Members are
+ * IDs: an event still in draft (one an earlier import left as a draft) is
+ * refreshed from Meetup, while a published (or trashed) one is the
+ * organizer's and is never touched again. Members are
  * considered once per group, so someone who leaves isn't added back.
  *
  * Imports run from the import screen, whatever the group's size: while it's
@@ -1101,7 +1101,7 @@ function render_admin_page() {
 		<?php render_notice(); ?>
 
 		<p>
-			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues as drafts. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. An import runs from its page, a batch at a time, so keep that page open until it finishes: closing it pauses the import, and opening it again carries on. A preview nobody imports, or an import left paused, expires after a day. Running an import again refreshes events that are still drafts and leaves published ones alone.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Copies a Meetup group into a group site: its location, About text, and photo where the site has none yet, and its upcoming events and venues, published. Optionally also its past events, and the people in it who have WordPress.org accounts. No emails are sent. An import runs from its page, a batch at a time, so keep that page open until it finishes: closing it pauses the import, and opening it again carries on. A preview nobody imports, or an import left paused, expires after a day. Running an import again adds new events and leaves the ones already on the site alone.', 'wordcamporg' ); ?>
 		</p>
 
 		<?php if ( $site_id ) : ?>
@@ -1545,15 +1545,18 @@ function describe_job_status( array $job ): string {
  * @param string $message Failure detail, if any.
  */
 function describe_status( string $status, bool $is_past = false, string $message = '' ): string {
+	$upcoming_create  = publishes_upcoming() ? __( 'Will be published', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' );
+	$upcoming_created = publishes_upcoming() ? __( 'Published', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' );
+
 	$labels = array(
-		'create'      => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
+		'create'      => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : $upcoming_create,
 		'update'      => __( 'Draft will be refreshed', 'wordcamporg' ),
 		'skip'        => __( 'Skipped: already published or trashed', 'wordcamporg' ),
 		'photo'       => __( 'Already published: Meetup\'s photo will be added', 'wordcamporg' ),
 		'photo_added' => __( 'Already published: Meetup\'s photo added', 'wordcamporg' ),
 		'keep'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'kept'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
-		'created'     => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
+		'created'     => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : $upcoming_created,
 		'updated'     => __( 'Draft refreshed', 'wordcamporg' ),
 		'skipped'     => __( 'Skipped: already published or trashed', 'wordcamporg' ),
 		'failed'      => __( 'Failed', 'wordcamporg' ),
@@ -2629,8 +2632,8 @@ function import_events( int $site_id, array $events, bool $match_people = false 
  * Writes the same pieces the frontend's draft save does
  * (`Frontend\REST\save_draft()`), so an imported draft is indistinguishable
  * from one an organizer started by hand. No `wporg_groups_frontend_event_draft_saved`
- * action fires, upcoming events stay drafts, and past events are published
- * with their notification already marked handled, so no emails go out.
+ * action fires, and events are published with their notification already
+ * marked handled, so no emails go out.
  *
  * @param array $event        Normalized event.
  * @param bool  $match_people Whether to credit hosts and carry RSVPs over.
@@ -2659,14 +2662,13 @@ function import_event( array $event, bool $match_people = false ): array {
 		);
 	}
 
-	// A past event is history, not something to review, so it ends up
-	// published. It's created as a draft marked to publish, and only published
-	// once every other piece is in place, so an import that dies partway
-	// leaves a marked draft that the next run finishes -- not a published
-	// event missing its date or venue. An event that was imported as an
-	// upcoming draft and has happened since carries no mark, and stays the
-	// organizer's to publish.
-	$publish = $existing ? (bool) get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) : $event['is_past'];
+	// Every new event ends up published: past ones as the group's history,
+	// upcoming ones ready for members to RSVP to. It's created as a draft
+	// marked to publish, and only published once every other piece is in
+	// place, so an import that dies partway leaves a marked draft that the
+	// next run finishes -- not a published event missing its date or venue.
+	// A draft an earlier import left unmarked stays the organizer's to publish.
+	$publish = $existing ? (bool) get_post_meta( $existing->ID, PENDING_PUBLISH_META, true ) : ( $event['is_past'] || publishes_upcoming() );
 
 	$post_args = array(
 		'post_type'    => Event::POST_TYPE,
@@ -2798,22 +2800,26 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $publish ) {
-		// Dated when it happened, not when it was imported, so feeds and
-		// archives don't present years of history as new.
-		$happened_gmt = ( new DateTimeImmutable( $event['start'], new DateTimeZone( $event['timezone'] ) ) )
-			->setTimezone( new DateTimeZone( 'UTC' ) )
-			->format( 'Y-m-d H:i:s' );
-
-		$published = wp_update_post(
-			array(
-				'ID'            => $post_id,
-				'post_status'   => 'publish',
-				'post_date'     => get_date_from_gmt( $happened_gmt ),
-				'post_date_gmt' => $happened_gmt,
-				'edit_date'     => true,
-			),
-			true
+		$publish_args = array(
+			'ID'          => $post_id,
+			'post_status' => 'publish',
 		);
+
+		// A past event is dated when it happened, not when it was imported, so
+		// feeds and archives don't present years of history as new. An upcoming
+		// one keeps today's date: dated in the future, it would be scheduled
+		// rather than published.
+		if ( $event['is_past'] ) {
+			$happened_gmt = ( new DateTimeImmutable( $event['start'], new DateTimeZone( $event['timezone'] ) ) )
+				->setTimezone( new DateTimeZone( 'UTC' ) )
+				->format( 'Y-m-d H:i:s' );
+
+			$publish_args['post_date']     = get_date_from_gmt( $happened_gmt );
+			$publish_args['post_date_gmt'] = $happened_gmt;
+			$publish_args['edit_date']     = true;
+		}
+
+		$published = wp_update_post( $publish_args, true );
 
 		if ( is_wp_error( $published ) ) {
 			return array(
@@ -2915,6 +2921,24 @@ function is_edited_since_import( \WP_Post $post ): bool {
 	$imported = (string) get_post_meta( $post->ID, IMPORTED_MODIFIED_META, true );
 
 	return '' !== $imported && $imported !== $post->post_modified_gmt;
+}
+
+/**
+ * Whether an import publishes the upcoming events it creates.
+ *
+ * Organizers asked for imported meetups to be live straight away, ready to
+ * RSVP to, rather than drafts to publish one by one. Like past events, they're
+ * published with the new-event notification marked as handled, so nobody is
+ * emailed about meetups that already exist on Meetup.
+ */
+function publishes_upcoming(): bool {
+	/**
+	 * Filters whether the Meetup import publishes upcoming events, or leaves
+	 * them as drafts for the organizer to review.
+	 *
+	 * @param bool $publish Whether to publish them. Default true.
+	 */
+	return (bool) apply_filters( 'wcorg_meetup_import_publish_upcoming', true );
 }
 
 /**

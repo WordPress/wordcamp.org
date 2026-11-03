@@ -1618,6 +1618,14 @@ function describe_group_results( array $results, bool $is_preview ): array {
 		}
 	}
 
+	if ( 'failed' === ( $results['icon'] ?? '' ) && ! empty( $results['icon_error'] ) ) {
+		$lines[ count( $lines ) - 1 ] = sprintf(
+			/* translators: %s: Error message. */
+			__( 'Site icon: the group photo could not be imported (%s).', 'wordcamporg' ),
+			$results['icon_error']
+		);
+	}
+
 	return $lines;
 }
 
@@ -2730,10 +2738,18 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	// Only fill an empty slot: a refreshed draft keeps whatever image the
 	// organizer has picked since.
+	$photo_error = '';
+
 	if ( $event['photo'] && ! has_post_thumbnail( $post_id ) ) {
 		$attachment_id = find_or_sideload_photo( $event['photo'], $post_id );
 
-		if ( $attachment_id ) {
+		if ( is_wp_error( $attachment_id ) ) {
+			$photo_error = sprintf(
+				/* translators: %s: Error message. */
+				__( 'its photo could not be imported (%s)', 'wordcamporg' ),
+				$attachment_id->get_error_message()
+			);
+		} else {
 			set_post_thumbnail( $post_id, $attachment_id );
 		}
 	}
@@ -2811,6 +2827,7 @@ function import_event( array $event, bool $match_people = false ): array {
 		'event'   => $event,
 		'status'  => $existing ? 'updated' : 'created',
 		'post_id' => $post_id,
+		'message' => $photo_error,
 		'rsvps'   => $rsvps,
 	);
 }
@@ -3014,11 +3031,14 @@ function apply_group_details( array $group, bool $write ): array {
 	} else {
 		$attachment_id = find_or_sideload_photo( $group['photo'], 0 );
 
-		if ( $attachment_id ) {
+		if ( is_wp_error( $attachment_id ) ) {
+			$results['icon']       = 'failed';
+			$results['icon_error'] = $attachment_id->get_error_message();
+		} else {
 			update_option( 'site_icon', $attachment_id );
-		}
 
-		$results['icon'] = $attachment_id ? 'set' : 'failed';
+			$results['icon'] = 'set';
+		}
 	}
 
 	// Where the site came from, for the group's history.
@@ -3466,13 +3486,14 @@ function count_member_outcomes( array $classified ): array {
  * A recurring meetup usually reuses one cover photo across its events, so
  * keying on Meetup's photo ID downloads it once per group site rather than
  * once per event. A failed download leaves the event without an image; it
- * doesn't fail the event.
+ * doesn't fail the event, but the reason is returned so the import screen
+ * can show it.
  *
  * @param array $photo   Normalized photo, from `normalize_photo()`.
  * @param int   $post_id Event the photo is first attached to.
- * @return int Attachment ID, or 0.
+ * @return int|WP_Error Attachment ID, or why it couldn't be saved.
  */
-function find_or_sideload_photo( array $photo, int $post_id ): int {
+function find_or_sideload_photo( array $photo, int $post_id ) {
 	$existing = find_imported_post( 'attachment', PHOTO_ID_META, $photo['meetup_id'] );
 
 	if ( $existing ) {
@@ -3497,15 +3518,19 @@ function find_or_sideload_photo( array $photo, int $post_id ): int {
 	}
 
 	if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+		$error = is_wp_error( $attachment_id )
+			? $attachment_id
+			: new WP_Error( 'photo_failed', __( 'WordPress did not save the photo.', 'wordcamporg' ) );
+
 		Logger\log(
 			'photo_failed',
 			array(
 				'url'   => $photo['url'],
-				'error' => is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : '',
+				'error' => $error->get_error_message(),
 			)
 		);
 
-		return 0;
+		return $error;
 	}
 
 	update_post_meta( (int) $attachment_id, PHOTO_ID_META, $photo['meetup_id'] );

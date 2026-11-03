@@ -217,6 +217,33 @@ function get_renamed_site_url( string $domain, string $path ) {
 	return 'https://' . $site->domain . get_url_port() . $site->path;
 }
 
+/**
+ * Get the current URL for any page of a group site that has since been renamed.
+ *
+ * `get_renamed_site_url()` only matches a site's old home URL exactly, so a
+ * link deeper into a renamed group (an event, the About page) would find
+ * nothing. This looks the group up by its old `/group/{slug}/` path, and
+ * keeps the rest of the path under the new one.
+ *
+ * @param string $domain Request domain.
+ * @param string $path   Request path, without the query string.
+ *
+ * @return string|false The URL on the renamed group, or false if no group used that slug.
+ */
+function get_renamed_group_url( string $domain, string $path ) {
+	if ( 1 !== preg_match( '#^(/group/[\w-]+)(?:/(.*))?$#', $path, $matches ) ) {
+		return false;
+	}
+
+	$home = get_renamed_site_url( $domain, $matches[1] );
+
+	if ( ! $home ) {
+		return false;
+	}
+
+	return $home . ( $matches[2] ?? '' );
+}
+
 
 /**
  * Get the canonical URL for a flagship city whose next site is created before the current edition is over.

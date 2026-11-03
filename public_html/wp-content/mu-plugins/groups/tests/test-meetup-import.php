@@ -1203,6 +1203,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$post = $this->find_event( '315889305' );
 
 		$this->assertSame( 'created', $results[0]['status'] );
+		$this->assertStringContainsString( 'Nope', $results[0]['message'] );
+		$this->assertStringContainsString( 'Nope', Meetup_Import\describe_status( $results[0]['status'], false, $results[0]['message'] ) );
 		$this->assertSame(
 			0,
 			$this->on_site(
@@ -1516,6 +1518,51 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( 'missing', $results['location'] );
 		$this->assertSame( 'missing', $results['about'] );
 		$this->assertSame( 'missing', $results['icon'] );
+	}
+
+	/**
+	 * A group photo that can't be saved leaves the icon unset, and says why.
+	 */
+	public function test_import_group_reports_why_icon_failed() {
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function () {
+				return new \WP_Error( 'upload_error', 'Unable to create directory' );
+			}
+		);
+
+		$results = Meetup_Import\import_group( $this->site_id, Meetup_Import\normalize_group( $this->raw_group() ) );
+
+		$this->assertSame( 'failed', $results['icon'] );
+		$this->assertSame( 'Unable to create directory', $results['icon_error'] );
+		$this->assertSame(
+			0,
+			$this->on_site(
+				static function () {
+					return (int) get_option( 'site_icon' );
+				}
+			)
+		);
+		$this->assertContains(
+			'Site icon: the group photo could not be imported (Unable to create directory).',
+			Meetup_Import\describe_group_results( $results, false )
+		);
+	}
+
+	/**
+	 * A sideload that returns nothing, rather than an error, still reports a failure.
+	 */
+	public function test_photo_sideload_without_error_still_fails() {
+		add_filter( 'wcorg_meetup_import_pre_sideload_photo', '__return_zero' );
+
+		$result = $this->on_site(
+			function () {
+				return Meetup_Import\find_or_sideload_photo( Meetup_Import\normalize_photo( $this->raw_photo() ), 0 );
+			}
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'photo_failed', $result->get_error_code() );
 	}
 
 	/**

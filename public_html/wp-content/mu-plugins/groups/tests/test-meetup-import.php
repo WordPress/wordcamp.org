@@ -1550,6 +1550,62 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Switched to a group site on an ms-files network, photos go to its
+	 * `WP_CONTENT_DIR/blogs.dir` folder, not one under `ABSPATH`.
+	 */
+	public function test_switched_upload_dir_uses_blogs_dir() {
+		add_filter( 'pre_site_option_ms_files_rewriting', '__return_true' );
+
+		$uploads = $this->on_site(
+			static function () {
+				$siteurl = get_option( 'siteurl' );
+				$fixed   = Meetup_Import\switched_upload_dir(
+					array(
+						'path'    => ABSPATH . 'wp-content/blogs.dir/1/files/2026/11',
+						'url'     => 'https://example.org/wp-content/blogs.dir/1/files/2026/11',
+						'subdir'  => '/2026/11',
+						'basedir' => ABSPATH . 'wp-content/blogs.dir/1/files',
+						'baseurl' => 'https://example.org/wp-content/blogs.dir/1/files',
+						'error'   => false,
+					)
+				);
+
+				return compact( 'fixed', 'siteurl' );
+			}
+		);
+
+		$basedir = WP_CONTENT_DIR . '/blogs.dir/' . $this->site_id . '/files';
+
+		$this->assertSame( $basedir, $uploads['fixed']['basedir'] );
+		$this->assertSame( $basedir . '/2026/11', $uploads['fixed']['path'] );
+		$this->assertSame( trailingslashit( $uploads['siteurl'] ) . 'files/2026/11', $uploads['fixed']['url'] );
+	}
+
+	/**
+	 * Without ms-files rewriting, core's own paths are kept.
+	 */
+	public function test_switched_upload_dir_needs_ms_files() {
+		$uploads = array(
+			'path'    => '/x/2026/11',
+			'url'     => 'https://example.org/x/2026/11',
+			'subdir'  => '/2026/11',
+			'basedir' => '/x',
+			'baseurl' => 'https://example.org/x',
+			'error'   => false,
+		);
+
+		add_filter( 'pre_site_option_ms_files_rewriting', '__return_zero' );
+		$this->assertSame(
+			$uploads,
+			$this->on_site(
+				static function () use ( $uploads ) {
+					return Meetup_Import\switched_upload_dir( $uploads );
+				}
+			)
+		);
+	}
+
+	/**
 	 * A sideload that returns nothing, rather than an error, still reports a failure.
 	 */
 	public function test_photo_sideload_without_error_still_fails() {

@@ -786,6 +786,85 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * A published past event imported without its photo gets it on a rerun,
+	 * and nothing else about it changes.
+	 */
+	public function test_rerun_adds_missing_photo_to_published_event() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ) );
+
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function () {
+				return new \WP_Error( 'upload_error', 'Unable to create directory' );
+			}
+		);
+		Meetup_Import\import_events( $this->site_id, $events );
+		remove_all_filters( 'wcorg_meetup_import_pre_sideload_photo' );
+
+		$post = $this->find_event( '300000001' );
+		$this->assertSame( 'publish', $post->post_status );
+
+		$plan = Meetup_Import\plan_events( $this->site_id, $events );
+		$this->assertSame( 'photo', $plan[0]['status'] );
+
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$after = $this->find_event( '300000001' );
+
+		$this->assertSame( 'photo_added', $results[0]['status'] );
+		$this->assertSame( 1, $downloads );
+		$this->assertSame( $post->post_modified_gmt, $after->post_modified_gmt );
+		$this->assertNotSame(
+			0,
+			$this->on_site(
+				static function () use ( $after ) {
+					return (int) get_post_thumbnail_id( $after->ID );
+				}
+			)
+		);
+
+		// Once it has one, the event is left alone again.
+		$this->assertSame( 'skip', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events )[0]['status'] );
+		$this->assertSame( 1, $downloads );
+	}
+
+	/**
+	 * A published event an organizer has edited keeps the photo slot they left.
+	 */
+	public function test_rerun_leaves_edited_published_event_without_photo() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event( array( 'featuredEventPhoto' => $this->raw_photo() ) ) ) );
+
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function () {
+				return new \WP_Error( 'upload_error', 'Unable to create directory' );
+			}
+		);
+		Meetup_Import\import_events( $this->site_id, $events );
+		remove_all_filters( 'wcorg_meetup_import_pre_sideload_photo' );
+
+		$post = $this->find_event( '300000001' );
+		$this->on_site(
+			static function () use ( $post ) {
+				// Back-dated, so the edit lands on a different modified time.
+				global $wpdb;
+				$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => '2001-01-01 00:00:00' ), array( 'ID' => $post->ID ) );
+				clean_post_cache( $post->ID );
+			}
+		);
+
+		$downloads = 0;
+		$this->fake_photo_downloads( $downloads );
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame( 'skipped', $results[0]['status'] );
+		$this->assertSame( 0, $downloads );
+	}
+
+	/**
 	 * Once published, an imported event takes RSVPs through the same route as any other.
 	 */
 	public function test_published_imported_event_accepts_rsvp() {

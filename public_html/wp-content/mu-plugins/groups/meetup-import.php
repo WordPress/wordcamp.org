@@ -1535,7 +1535,7 @@ function describe_job_status( array $job ): string {
 				/* translators: 1: Created count, 2: Updated count, 3: Skipped count, 4: Failed count. */
 				__( 'Import finished: %1$d events created, %2$d updated, %3$d skipped, %4$d failed.', 'wordcamporg' ),
 				$counts['created'] ?? 0,
-				$counts['updated'] ?? 0,
+				( $counts['updated'] ?? 0 ) + ( $counts['photo_added'] ?? 0 ),
 				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ) + ( $counts['in_series'] ?? 0 ),
 				$counts['failed'] ?? 0
 			);
@@ -1560,16 +1560,18 @@ function describe_job_status( array $job ): string {
  */
 function describe_status( string $status, bool $is_past = false, string $message = '' ): string {
 	$labels = array(
-		'create'    => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
-		'update'    => __( 'Draft will be refreshed', 'wordcamporg' ),
-		'in_series' => __( 'Skipped: one of the dates of a recurring event', 'wordcamporg' ),
-		'skip'      => __( 'Skipped: already published or trashed', 'wordcamporg' ),
-		'keep'      => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
-		'kept'      => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
-		'created'   => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
-		'updated'   => __( 'Draft refreshed', 'wordcamporg' ),
-		'skipped'   => __( 'Skipped: already published or trashed', 'wordcamporg' ),
-		'failed'    => __( 'Failed', 'wordcamporg' ),
+		'create'      => $is_past ? __( 'Will be published as a past event', 'wordcamporg' ) : __( 'Will be created as a draft', 'wordcamporg' ),
+		'update'      => __( 'Draft will be refreshed', 'wordcamporg' ),
+		'in_series'   => __( 'Skipped: one of the dates of a recurring event', 'wordcamporg' ),
+		'skip'        => __( 'Skipped: already published or trashed', 'wordcamporg' ),
+		'photo'       => __( 'Already published: Meetup\'s photo will be added', 'wordcamporg' ),
+		'photo_added' => __( 'Already published: Meetup\'s photo added', 'wordcamporg' ),
+		'keep'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
+		'kept'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
+		'created'     => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : __( 'Created as a draft', 'wordcamporg' ),
+		'updated'     => __( 'Draft refreshed', 'wordcamporg' ),
+		'skipped'     => __( 'Skipped: already published or trashed', 'wordcamporg' ),
+		'failed'      => __( 'Failed', 'wordcamporg' ),
 	);
 
 	$label = $labels[ $status ] ?? $status;
@@ -2567,6 +2569,8 @@ function plan_events( int $site_id, array $events ): array {
 					$status = 'keep';
 				} elseif ( 'draft' === $existing->post_status ) {
 					$status = 'update';
+				} elseif ( needs_photo( $existing, $event ) ) {
+					$status = 'photo';
 				} else {
 					$status = 'skip';
 				}
@@ -2673,6 +2677,10 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
+		if ( needs_photo( $existing, $event ) ) {
+			return add_missing_photo( $existing, $event );
+		}
+
 		return array(
 			'event'   => $event,
 			'status'  => 'skipped',
@@ -3278,6 +3286,58 @@ function is_edited_since_import( \WP_Post $post ): bool {
 	$imported = (string) get_post_meta( $post->ID, IMPORTED_MODIFIED_META, true );
 
 	return '' !== $imported && $imported !== $post->post_modified_gmt;
+}
+
+/**
+ * Whether a published event should still get its Meetup photo.
+ *
+ * Published events are otherwise left alone, so one that was imported
+ * without its photo (the download failed, say) would never get it. Only
+ * an empty slot is filled, and only on an event nobody has edited since
+ * the import, so a photo an organizer removed stays removed.
+ *
+ * @param \WP_Post $post  Existing imported event, on the current site.
+ * @param array    $event Normalized event.
+ */
+function needs_photo( \WP_Post $post, array $event ): bool {
+	return 'publish' === $post->post_status
+		&& ! empty( $event['photo'] )
+		&& ! has_post_thumbnail( $post )
+		&& ! is_edited_since_import( $post );
+}
+
+/**
+ * Give a published event the Meetup photo it was imported without.
+ *
+ * @param \WP_Post $post  Existing imported event, on the current site.
+ * @param array    $event Normalized event.
+ * @return array An `import_events()` row: `photo_added`, or `skipped` with why the photo failed.
+ */
+function add_missing_photo( \WP_Post $post, array $event ): array {
+	$attachment_id = find_or_sideload_photo( $event['photo'], $post->ID );
+
+	if ( is_wp_error( $attachment_id ) ) {
+		return array(
+			'event'   => $event,
+			'status'  => 'skipped',
+			'post_id' => $post->ID,
+			'message' => sprintf(
+				/* translators: %s: Error message. */
+				__( 'its photo could not be imported (%s)', 'wordcamporg' ),
+				$attachment_id->get_error_message()
+			),
+		);
+	}
+
+	// Post meta only, so the event's modified date, and with it
+	// `is_edited_since_import()`, is unchanged.
+	set_post_thumbnail( $post->ID, $attachment_id );
+
+	return array(
+		'event'   => $event,
+		'status'  => 'photo_added',
+		'post_id' => $post->ID,
+	);
 }
 
 /**

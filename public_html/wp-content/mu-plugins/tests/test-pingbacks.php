@@ -1,7 +1,8 @@
 <?php
 
 namespace WordCamp\Pingbacks\Tests;
-use WP_UnitTestCase;
+use WP_UnitTest_Factory;
+use WordCamp\Tests\Database_TestCase;
 use wp_xmlrpc_server;
 
 defined( 'WPINC' ) || die();
@@ -10,11 +11,23 @@ defined( 'WPINC' ) || die();
  * @group mu-plugins
  * @group pingbacks
  */
-class Test_Pingbacks extends WP_UnitTestCase {
+class Test_Pingbacks extends Database_TestCase {
+	/**
+	 * Only the root sites are needed, for the other `comments_open` / `pings_open` callbacks that look up the
+	 * current site's WordCamp post on Central.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = false;
+
 	/**
 	 * Load the XML-RPC server, which Core only loads for `xmlrpc.php` requests.
+	 *
+	 * @param WP_UnitTest_Factory $factory
 	 */
-	public static function wpSetUpBeforeClass() {
+	public static function wpSetUpBeforeClass( $factory ) {
+		parent::wpSetUpBeforeClass( $factory );
+
 		require_once ABSPATH . WPINC . '/class-IXR.php';
 		require_once ABSPATH . WPINC . '/class-wp-xmlrpc-server.php';
 	}

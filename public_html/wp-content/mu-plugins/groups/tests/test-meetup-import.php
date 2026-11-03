@@ -1922,6 +1922,39 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * A past event whose RSVPs couldn't be fetched isn't published without
+	 * them: it stays a marked draft, and the next run brings them across.
+	 */
+	public function test_failed_rsvp_fetch_keeps_past_event_pending() {
+		list( $raw ) = $this->setup_rsvps();
+		$events      = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		$fail        = static function () {
+			return new \WP_Error( 'http_request_failed', 'Nope' );
+		};
+
+		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', $fail, 20 );
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+		remove_filter( 'wcorg_meetup_import_pre_fetch_rsvps', $fail, 20 );
+
+		$this->assertSame( 'failed', $results[0]['status'] );
+		$this->assertSame( 'draft', $this->find_event( '300000001' )->post_status );
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( $raw ) {
+				return $raw;
+			},
+			20
+		);
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame( 'updated', $results[0]['status'] );
+		$this->assertSame( 3, $results[0]['rsvps']['saved'] );
+		$this->assertSame( 'publish', $this->find_event( '300000001' )->post_status );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
 	 * Meetup statuses map to GatherPress ones; the rest are left out.
 	 *
 	 * @dataProvider data_normalize_rsvp
@@ -2924,6 +2957,47 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertSame( 'kept', $results[0]['status'] );
 		$this->assertSame( 'Organizer title', $this->find_event( '315889305' )->post_title );
+	}
+
+	/**
+	 * A refresh that dies partway isn't mistaken for an organizer's edit: the next run finishes it.
+	 */
+	public function test_interrupted_refresh_is_redone() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$post = $this->find_event( '315889305' );
+
+		// Imported an hour ago, so refreshing it changes `post_modified_gmt`.
+		$this->on_site(
+			static function () use ( $post ) {
+				global $wpdb;
+
+				$earlier = gmdate( 'Y-m-d H:i:s', time() - HOUR_IN_SECONDS );
+				$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => $earlier ), array( 'ID' => $post->ID ) );
+				update_post_meta( $post->ID, Meetup_Import\IMPORTED_MODIFIED_META, $earlier );
+				clean_post_cache( $post->ID );
+			}
+		);
+
+		// The refresh dies after updating the post, while fetching RSVPs.
+		$crash = static function () {
+			throw new \RuntimeException( 'Killed' );
+		};
+
+		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', $crash, 20 );
+
+		try {
+			Meetup_Import\import_events( $this->site_id, $events, true );
+			$this->fail( 'The refresh should have died.' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'Killed', $e->getMessage() );
+		} finally {
+			remove_filter( 'wcorg_meetup_import_pre_fetch_rsvps', $crash, 20 );
+		}
+
+		$this->assertSame( 'update', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
+		$this->assertSame( 'updated', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
 	}
 
 	/**

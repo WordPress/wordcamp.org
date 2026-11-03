@@ -83,6 +83,16 @@ const PHOTO_ID_META  = '_wporg_meetup_photo_id';
 const IMPORTED_MODIFIED_META = '_wporg_meetup_imported_modified';
 
 /**
+ * Marks a draft an import has started refreshing but not finished.
+ *
+ * Refreshing a draft changes its `post_modified_gmt` before the import gets to
+ * record it in `IMPORTED_MODIFIED_META`, so a run that dies in between would
+ * otherwise leave the import's own change looking like an organizer's edit,
+ * and every later run would leave the half-refreshed draft alone.
+ */
+const REFRESHING_META = '_wporg_meetup_refreshing';
+
+/**
  * Site options recording which Meetup group a site was imported from, and
  * when that group was founded, for the group's history.
  */
@@ -2655,6 +2665,8 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $existing ) {
+		update_post_meta( $existing->ID, REFRESHING_META, 1 );
+
 		$post_args['ID'] = $existing->ID;
 		$post_id         = wp_update_post( wp_slash( $post_args ), true );
 	} else {
@@ -2735,6 +2747,27 @@ function import_event( array $event, bool $match_people = false ): array {
 	if ( $match_people ) {
 		import_hosts( $post_id, $event['hosts'] );
 		$rsvps = import_rsvps( $post_id, $event['meetup_id'], $event['is_past'] );
+
+		if ( is_wp_error( $rsvps ) ) {
+			// Once published, a past event is never touched again, so its
+			// RSVPs could never come across later. It stays a marked draft,
+			// for the next run to try again.
+			if ( $publish ) {
+				return array(
+					'event'   => $event,
+					'status'  => 'failed',
+					'post_id' => $post_id,
+					'message' => sprintf(
+						/* translators: %s: Error message. */
+						__( 'Its RSVPs could not be fetched from Meetup (%s). Import again to finish it.', 'wordcamporg' ),
+						$rsvps->get_error_message()
+					),
+				);
+			}
+
+			// A draft has its RSVPs fetched again whenever it's refreshed.
+			$rsvps = array( 'failed' => 1 );
+		}
 	}
 
 	if ( $publish ) {
@@ -2769,6 +2802,7 @@ function import_event( array $event, bool $match_people = false ): array {
 
 	clean_post_cache( $post_id );
 	update_post_meta( $post_id, IMPORTED_MODIFIED_META, get_post_field( 'post_modified_gmt', $post_id ) );
+	delete_post_meta( $post_id, REFRESHING_META );
 
 	return array(
 		'event'   => $event,
@@ -2839,11 +2873,16 @@ function default_event_language(): string {
 /**
  * Whether an imported event has been edited on the site since it was imported.
  *
- * Events imported before this was recorded count as untouched.
+ * Events imported before this was recorded count as untouched, and so does a
+ * refresh that didn't finish (see `REFRESHING_META`).
  *
  * @param \WP_Post $post Imported event.
  */
 function is_edited_since_import( \WP_Post $post ): bool {
+	if ( get_post_meta( $post->ID, REFRESHING_META, true ) ) {
+		return false;
+	}
+
 	$imported = (string) get_post_meta( $post->ID, IMPORTED_MODIFIED_META, true );
 
 	return '' !== $imported && $imported !== $post->post_modified_gmt;
@@ -3219,16 +3258,16 @@ function import_hosts( int $post_id, array $emails ): void {
  * @param string $meetup_event_id Meetup event ID.
  * @param bool   $is_past         Whether the event has already happened, so
  *                                its waiting list is left out (see `RSVP_STATUSES`).
- * @return int[] Counts: `saved`, `checked_in`, `unmatched`, `skipped`, `failed`.
+ * @return int[]|WP_Error Counts: `saved`, `checked_in`, `unmatched`, `skipped`,
+ *                        `failed`; or the error if Meetup's RSVPs couldn't be fetched.
  */
-function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = false ): array {
+function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = false ) {
 	$counts = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
 	$raw    = fetch_event_rsvps( $meetup_event_id );
 	$rsvp   = new Rsvp( $post_id );
 
 	if ( is_wp_error( $raw ) ) {
-		++$counts['failed'];
-		return $counts;
+		return $raw;
 	}
 
 	foreach ( array_map( __NAMESPACE__ . '\normalize_rsvp', $raw ) as $entry ) {

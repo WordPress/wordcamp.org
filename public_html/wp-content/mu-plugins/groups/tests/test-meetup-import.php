@@ -399,17 +399,29 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Happy path: events land as drafts with datetimes, venue, and source meta.
+	 * Happy path: events land published, dated today, with datetimes, venue,
+	 * and source meta, and without notifying anyone.
 	 */
-	public function test_import_creates_draft_events() {
-		$events  = array( Meetup_Import\normalize_event( $this->raw_event() ) );
-		$results = Meetup_Import\import_events( $this->site_id, $events );
+	public function test_import_publishes_events() {
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+
+		$this->watch_publish_notifications();
+
+		try {
+			$results = Meetup_Import\import_events( $this->site_id, $events );
+		} finally {
+			$queued = $this->stop_watching_publish_notifications();
+		}
+
+		$this->assertSame( array(), $queued );
 
 		$this->assertSame( 'created', $results[0]['status'] );
 
 		$post = $this->find_event( '315889305' );
 		$this->assertNotNull( $post );
-		$this->assertSame( 'draft', $post->post_status );
+		$this->assertSame( 'publish', $post->post_status );
+		$this->assertLessThanOrEqual( time(), strtotime( $post->post_date_gmt . ' UTC' ) );
+		$this->assertSame( array(), $this->sent_mail );
 		// Core's kses title filter stores `&` as `&amp;`, as it does for titles typed in the frontend.
 		$this->assertSame( 'Greenfield WordPress Meetup - General Q&A', html_entity_decode( $post->post_title ) );
 
@@ -489,6 +501,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * Running the same import twice creates nothing new.
 	 */
 	public function test_rerun_is_idempotent() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$events = array(
 			Meetup_Import\normalize_event( $this->raw_event() ),
 			Meetup_Import\normalize_event( $this->raw_event( array(
@@ -509,6 +523,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * A draft picks up a date change made on Meetup.
 	 */
 	public function test_rerun_refreshes_draft() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
 
 		$moved = $this->raw_event(
@@ -606,6 +622,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * The preview reports what would happen and writes nothing.
 	 */
 	public function test_plan_writes_nothing() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
 
 		$plan = Meetup_Import\plan_events( $this->site_id, $events );
@@ -744,6 +762,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * Organizers publishing an imported upcoming draft still notifies members as usual.
 	 */
 	public function test_publishing_imported_draft_still_notifies() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$this->watch_publish_notifications();
 
 		try {
@@ -1373,6 +1393,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * An imported upcoming draft that has since happened stays a draft.
 	 */
 	public function test_draft_that_became_past_stays_draft() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_event() ) ) );
 
 		$happened = $this->raw_event(
@@ -2089,6 +2111,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * An RSVP request that fails leaves the event imported and counts the failure.
 	 */
 	public function test_failed_rsvp_fetch_still_imports_event() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		add_filter(
 			'wcorg_meetup_import_pre_fetch_rsvps',
 			static function () {
@@ -3119,6 +3143,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * A draft the organizer has edited since the import is left alone by reruns.
 	 */
 	public function test_edited_draft_is_kept() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
 		Meetup_Import\import_events( $this->site_id, $events );
 
@@ -3157,6 +3183,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * A refresh that dies partway isn't mistaken for an organizer's edit: the next run finishes it.
 	 */
 	public function test_interrupted_refresh_is_redone() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
 		Meetup_Import\import_events( $this->site_id, $events, true );
 
@@ -3198,6 +3226,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * Refreshing a draft keeps the meeting link the organizer added.
 	 */
 	public function test_refresh_keeps_meeting_link() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
 		$events = array( Meetup_Import\normalize_event( $this->raw_event( array( 'eventType' => 'ONLINE' ) ) ) );
 		Meetup_Import\import_events( $this->site_id, $events );
 

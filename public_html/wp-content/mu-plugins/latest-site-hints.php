@@ -6,24 +6,25 @@ use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLA
 
 defined( 'WPINC' ) || die();
 
+wp_cache_add_non_persistent_groups( 'latest-site-hints' );
+
 add_action( 'wp', __NAMESPACE__ . '\maybe_add_latest_site_hints' );
+
+/*
+ * Close comments and pings on past sites to prevent spam.
+ *
+ * These are registered for every request, rather than from `maybe_add_latest_site_hints()`, because
+ * comments and pingbacks also arrive through `wp-comments-post.php` and `xmlrpc.php`, which never fire `wp`.
+ */
+add_filter( 'comments_open', __NAMESPACE__ . '\close_discussion_on_past_sites' );
+add_filter( 'pings_open', __NAMESPACE__ . '\close_discussion_on_past_sites' );
 
 /**
  * If user or bot visits WordCamp site that has newer site for the same city,
  * add some hints for guiding them visit the latest site.
  */
 function maybe_add_latest_site_hints() {
-	global $current_blog;
-
-	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
-
-	// Check latest domain against current, in case there is newer site for the WordCamp.
-	if ( ! $latest_domain || trailingslashit( get_site_url() ) === $latest_domain ) {
-		return;
-	}
-
-	// Allow the banner to be skipped if necessary.
-	if ( wcorg_skip_feature( 'latest-site-hint' ) ) {
+	if ( ! is_past_site() ) {
 		return;
 	}
 
@@ -38,10 +39,49 @@ function maybe_add_latest_site_hints() {
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
 	add_action( 'wp_body_open', __NAMESPACE__ . '\show_notification_in_flow' );
 	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_overlay' );
+}
 
-	// Close comments on past sites to prevent spam.
-	add_filter( 'comments_open', '__return_false' );
-	add_filter( 'pings_open', '__return_false' );
+/**
+ * Check if the current site is a past WordCamp, i.e. there is a newer site for the same city.
+ *
+ * The result is cached for the rest of the request, because `comments_open` and `pings_open` run for
+ * every post on a page.
+ *
+ * @return bool
+ */
+function is_past_site() {
+	$blog_id = get_current_blog_id();
+	$cached  = wp_cache_get( $blog_id, 'latest-site-hints', false, $found );
+
+	if ( $found ) {
+		return $cached;
+	}
+
+	$is_past_site = false;
+
+	// Allow the hints to be skipped if necessary.
+	if ( ! wcorg_skip_feature( 'latest-site-hint', $blog_id ) ) {
+		$site          = get_site( $blog_id );
+		$latest_domain = get_latest_home_url( $site->domain, $site->path );
+
+		// Check latest domain against current, in case there is newer site for the WordCamp.
+		$is_past_site = $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain;
+	}
+
+	wp_cache_set( $blog_id, $is_past_site, 'latest-site-hints' );
+
+	return $is_past_site;
+}
+
+/**
+ * Close comments and pings on past WordCamp sites.
+ *
+ * @param bool $open
+ *
+ * @return bool
+ */
+function close_discussion_on_past_sites( $open ) {
+	return $open && ! is_past_site();
 }
 
 /**

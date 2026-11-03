@@ -15,6 +15,13 @@ defined( 'WPINC' ) || die();
  */
 class Test_WordCamp_SEO extends Database_TestCase {
 	/**
+	 * The `$current_blog` global saved by `switch_to_site()`.
+	 *
+	 * @var WP_Site
+	 */
+	protected $original_blog;
+
+	/**
 	 * Create sites we'll need for the tests.
 	 *
 	 * @param WP_UnitTest_Factory $factory
@@ -43,28 +50,21 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 	/**
 	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
+	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
 	 *
-	 * Verify that the banner hooks are registered and comments/pings are closed on past WordCamp sites.
+	 * Verify that comments/pings are closed and the banner hooks are registered on past WordCamp sites.
 	 */
 	public function test_comments_closed_on_past_site() {
-		global $current_blog;
+		// 2018 seattle has a newer 2019 site.
+		$this->switch_to_site( self::$year_dot_2018_site_id );
+		$post_id = $this->create_open_post();
 
-		// Save original state.
-		$original_blog = $current_blog;
-
-		// Set current blog to a past site (2018 seattle has a newer 2019 site).
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
-		$current_blog = get_site( self::$year_dot_2018_site_id );
-		switch_to_blog( self::$year_dot_2018_site_id );
-
-		// Remove any previously added filters to start clean.
-		remove_filter( 'comments_open', '__return_false' );
-		remove_filter( 'pings_open', '__return_false' );
+		// Comments and pings are closed without `maybe_add_latest_site_hints()` running, because
+		// `wp-comments-post.php` and `xmlrpc.php` never fire the `wp` action it's hooked to.
+		$this->assertFalse( comments_open( $post_id ), 'Comments should be closed on past sites.' );
+		$this->assertFalse( pings_open( $post_id ), 'Pings should be closed on past sites.' );
 
 		maybe_add_latest_site_hints();
-
-		$this->assertNotFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should be registered on past sites.' );
-		$this->assertNotFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should be registered on past sites.' );
 
 		// The banner prints in the normal flow at `wp_body_open`, with a `wp_footer` fallback. Locking
 		// both hooks in guards against a future refactor silently dropping one of the two paths.
@@ -72,46 +72,113 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$this->assertNotFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should be hooked to wp_footer on past sites.' );
 
 		// Clean up.
-		remove_filter( 'comments_open', '__return_false' );
-		remove_filter( 'pings_open', '__return_false' );
+		remove_action( 'wp_head', 'WordCamp\Latest_Site_Hints\canonical_link_past_home_pages_to_current_year', 9 );
+		remove_action( 'wp_head', 'WordCamp\Latest_Site_Hints\add_notification_styles' );
 		remove_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' );
 		remove_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' );
-		restore_current_blog();
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
-		$current_blog = $original_blog;
+		$this->restore_site();
+	}
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
+	 *
+	 * Verify that a comment sent straight to `wp-comments-post.php` is rejected on past WordCamp sites.
+	 */
+	public function test_comment_submission_rejected_on_past_site() {
+		$this->switch_to_site( self::$year_dot_2018_site_id );
+		$post_id = $this->create_open_post();
+
+		$result = wp_handle_comment_submission( array(
+			'comment_post_ID' => $post_id,
+			'author'          => 'Commenter',
+			'email'           => 'commenter@example.org',
+			'comment'         => 'A comment on a past site.',
+		) );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'comment_closed', $result->get_error_code() );
+
+		$this->restore_site();
 	}
 
 	/**
 	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
+	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
 	 *
 	 * Verify that comments and pings remain open on the latest WordCamp site.
 	 */
 	public function test_comments_open_on_latest_site() {
-		global $current_blog;
-
-		// Save original state.
-		$original_blog = $current_blog;
-
-		// Set current blog to the latest site (2019 seattle is the newest).
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
-		$current_blog = get_site( self::$year_dot_2019_site_id );
-		switch_to_blog( self::$year_dot_2019_site_id );
-
-		// Remove any previously added filters to start clean.
-		remove_filter( 'comments_open', '__return_false' );
-		remove_filter( 'pings_open', '__return_false' );
+		// 2019 seattle is the newest.
+		$this->switch_to_site( self::$year_dot_2019_site_id );
+		$post_id = $this->create_open_post();
 
 		maybe_add_latest_site_hints();
 
-		$this->assertFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should not be registered on the latest site.' );
-		$this->assertFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should not be registered on the latest site.' );
+		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open on the latest site.' );
+		$this->assertTrue( pings_open( $post_id ), 'Pings should stay open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should not be hooked to wp_body_open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should not be hooked to wp_footer on the latest site.' );
 
-		// Clean up.
+		$this->restore_site();
+	}
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
+	 *
+	 * Verify that the `latest-site-hint` skip flag keeps comments and pings open on a past site.
+	 */
+	public function test_comments_open_on_past_site_with_skip_flag() {
+		add_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );
+
+		$this->switch_to_site( self::$year_dot_2018_site_id );
+		$post_id = $this->create_open_post();
+
+		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open when the feature is skipped.' );
+		$this->assertTrue( pings_open( $post_id ), 'Pings should stay open when the feature is skipped.' );
+
+		$this->restore_site();
+		delete_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );
+	}
+
+	/**
+	 * Switch to a site the way a request for it would, and clear its cached past-site status.
+	 *
+	 * @param int $site_id
+	 */
+	protected function switch_to_site( $site_id ) {
+		global $current_blog;
+
+		$this->original_blog = $current_blog;
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
+		$current_blog = get_site( $site_id );
+		switch_to_blog( $site_id );
+		wp_cache_delete( $site_id, 'latest-site-hints' );
+	}
+
+	/**
+	 * Restore the site that was current before `switch_to_site()`.
+	 */
+	protected function restore_site() {
+		global $current_blog;
+
+		wp_cache_delete( get_current_blog_id(), 'latest-site-hints' );
 		restore_current_blog();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
-		$current_blog = $original_blog;
+		$current_blog = $this->original_blog;
+	}
+
+	/**
+	 * Create a published post that accepts comments and pings.
+	 *
+	 * @return int
+	 */
+	protected function create_open_post() {
+		return self::factory()->post->create( array(
+			'post_status'    => 'publish',
+			'comment_status' => 'open',
+			'ping_status'    => 'open',
+		) );
 	}
 
 	/**

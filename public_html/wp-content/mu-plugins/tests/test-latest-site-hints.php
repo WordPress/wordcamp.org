@@ -114,8 +114,11 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 		maybe_add_latest_site_hints();
 
+		/*
+		 * Only comments are checked, because pings can be closed on every site by other code. They share
+		 * `close_discussion_on_past_sites()` with comments, so this still covers the past-site check for them.
+		 */
 		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open on the latest site.' );
-		$this->assertTrue( pings_open( $post_id ), 'Pings should stay open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_body_open', 'WordCamp\Latest_Site_Hints\show_notification_in_flow' ), 'Banner should not be hooked to wp_body_open on the latest site.' );
 		$this->assertFalse( has_action( 'wp_footer', 'WordCamp\Latest_Site_Hints\show_notification_overlay' ), 'Fallback banner should not be hooked to wp_footer on the latest site.' );
 
@@ -125,7 +128,9 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Latest_Site_Hints\close_discussion_on_past_sites
 	 *
-	 * Verify that the `latest-site-hint` skip flag keeps comments and pings open on a past site.
+	 * Verify that the `latest-site-hint` skip flag keeps comments open on a past site.
+	 *
+	 * Pings aren't checked, for the same reason as in `test_comments_open_on_latest_site()`.
 	 */
 	public function test_comments_open_on_past_site_with_skip_flag() {
 		add_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );
@@ -134,7 +139,6 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$post_id = $this->create_open_post();
 
 		$this->assertTrue( comments_open( $post_id ), 'Comments should stay open when the feature is skipped.' );
-		$this->assertTrue( pings_open( $post_id ), 'Pings should stay open when the feature is skipped.' );
 
 		$this->restore_site();
 		delete_site_meta( self::$year_dot_2018_site_id, 'wordcamp_skip_feature', 'latest-site-hint' );

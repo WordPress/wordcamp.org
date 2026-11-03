@@ -148,13 +148,14 @@ function build_approval_email( int $sponsorship_id ): array|\WP_Error {
 /**
  * Whether an approved sponsorship still needs the approval email.
  *
- * Not when the camp has invoiced the sponsor: approving the invoice tells the organizers. Not twice, either.
+ * Not when the camp has invoiced the sponsor: approving the invoice tells the organizers. Not twice, either, nor
+ * when the event was told some other way, like the Airtable approvals the import carried over.
  *
  * @param int $sponsorship_id The sponsorship.
  * @return bool
  */
 function needs_approval_email( int $sponsorship_id ): bool {
-	if ( 'svs-approved' !== get_post_status( $sponsorship_id ) || get_conversations( $sponsorship_id, 'approval' ) ) {
+	if ( 'svs-approved' !== get_post_status( $sponsorship_id ) || get_conversations( $sponsorship_id, 'approval' ) || get_post_meta( $sponsorship_id, '_sv_approval_notified', true ) ) {
 		return false;
 	}
 

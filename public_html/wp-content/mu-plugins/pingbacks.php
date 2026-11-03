@@ -12,8 +12,10 @@ defined( 'WPINC' ) || die();
  * anything, and also drops the `X-Pingback` header. The XML-RPC methods that list a post's existing pingbacks
  * and trackbacks don't check whether pings are open, so they're removed too. The rest of XML-RPC stays, because
  * Jetpack needs it.
+ *
+ * Pings are closed early, so later callbacks that only ever close them can skip their own checks.
  */
-add_filter( 'pings_open', __NAMESPACE__ . '\close_pings' );
+add_filter( 'pings_open', __NAMESPACE__ . '\close_pings', 9 );
 add_filter( 'xmlrpc_methods', __NAMESPACE__ . '\remove_pingback_methods' );
 
 /**

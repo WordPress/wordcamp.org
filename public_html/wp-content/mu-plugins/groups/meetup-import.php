@@ -3514,7 +3514,13 @@ function find_or_sideload_photo( array $photo, int $post_id ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$attachment_id = media_sideload_image( $photo['url'], $post_id, null, 'id' );
+		add_filter( 'upload_dir', __NAMESPACE__ . '\switched_upload_dir' );
+
+		try {
+			$attachment_id = media_sideload_image( $photo['url'], $post_id, null, 'id' );
+		} finally {
+			remove_filter( 'upload_dir', __NAMESPACE__ . '\switched_upload_dir' );
+		}
 	}
 
 	if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
@@ -3536,6 +3542,39 @@ function find_or_sideload_photo( array $photo, int $post_id ) {
 	update_post_meta( (int) $attachment_id, PHOTO_ID_META, $photo['meetup_id'] );
 
 	return (int) $attachment_id;
+}
+
+/**
+ * Point uploads at the group site's own `blogs.dir` folder while switched to it.
+ *
+ * With ms-files rewriting, core only uses `BLOGUPLOADDIR` for the site the
+ * request started on. Switched to another site, `_wp_upload_dir()` falls back
+ * to that site's relative `upload_path` joined to `ABSPATH`, which is where
+ * WordPress itself lives (`mu/`), not `WP_CONTENT_DIR`. An import runs on the
+ * network's root site, switched to the group's, so photos would be written
+ * under `mu/wp-content/blogs.dir`, which production can't create, and get
+ * URLs that don't resolve.
+ *
+ * @param array $uploads From `wp_upload_dir()`.
+ * @return array
+ */
+function switched_upload_dir( array $uploads ): array {
+	if ( ! ms_is_switched() || ! get_site_option( 'ms_files_rewriting' ) ) {
+		return $uploads;
+	}
+
+	$basedir = WP_CONTENT_DIR . '/blogs.dir/' . get_current_blog_id() . '/files';
+	$baseurl = trailingslashit( get_option( 'siteurl' ) ) . 'files';
+
+	return array_merge(
+		$uploads,
+		array(
+			'path'    => $basedir . $uploads['subdir'],
+			'url'     => $baseurl . $uploads['subdir'],
+			'basedir' => $basedir,
+			'baseurl' => $baseurl,
+		)
+	);
 }
 
 /**

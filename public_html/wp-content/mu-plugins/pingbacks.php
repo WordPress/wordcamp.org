@@ -21,6 +21,8 @@ add_filter( 'xmlrpc_methods', __NAMESPACE__ . '\remove_pingback_methods' );
 /**
  * Close pings on every post.
  *
+ * This isn't `__return_false`, because other code removes that callback from `pings_open`.
+ *
  * @return bool
  */
 function close_pings() {

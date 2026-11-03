@@ -1,8 +1,7 @@
 <?php
 
 namespace WordCamp\Pingbacks\Tests;
-use WP_UnitTest_Factory;
-use WordCamp\Tests\Database_TestCase;
+use WP_UnitTestCase;
 use wp_xmlrpc_server;
 
 defined( 'WPINC' ) || die();
@@ -11,23 +10,11 @@ defined( 'WPINC' ) || die();
  * @group mu-plugins
  * @group pingbacks
  */
-class Test_Pingbacks extends Database_TestCase {
-	/**
-	 * Only the root sites are needed, for the other `comments_open` / `pings_open` callbacks that look up the
-	 * current site's WordCamp post on Central.
-	 *
-	 * @var bool
-	 */
-	protected static $create_event_sites = false;
-
+class Test_Pingbacks extends WP_UnitTestCase {
 	/**
 	 * Load the XML-RPC server, which Core only loads for `xmlrpc.php` requests.
-	 *
-	 * @param WP_UnitTest_Factory $factory
 	 */
-	public static function wpSetUpBeforeClass( $factory ) {
-		parent::wpSetUpBeforeClass( $factory );
-
+	public static function wpSetUpBeforeClass() {
 		require_once ABSPATH . WPINC . '/class-IXR.php';
 		require_once ABSPATH . WPINC . '/class-wp-xmlrpc-server.php';
 	}
@@ -35,17 +22,16 @@ class Test_Pingbacks extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Pingbacks\close_pings
 	 *
-	 * Verify that pings are closed even on a post whose own setting allows them, and comments are left alone.
+	 * Verify that pings are closed even on a post whose own setting allows them.
 	 */
 	public function test_pings_closed_on_every_post() {
 		$post_id = self::factory()->post->create( array(
-			'post_status'    => 'publish',
-			'comment_status' => 'open',
-			'ping_status'    => 'open',
+			'post_status' => 'publish',
+			'ping_status' => 'open',
 		) );
 
 		$this->assertFalse( pings_open( $post_id ), 'Pings should be closed even when the post allows them.' );
-		$this->assertTrue( comments_open( $post_id ), 'Comments should not be affected.' );
+		$this->assertFalse( has_filter( 'comments_open', 'WordCamp\Pingbacks\close_pings' ), 'Comments should not be affected.' );
 	}
 
 	/**

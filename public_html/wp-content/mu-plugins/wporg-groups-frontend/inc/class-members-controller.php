@@ -626,7 +626,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 
 		return array(
 			'id'        => $user->ID,
-			'name'      => $user->display_name,
+			'name'      => self::member_name( $user ),
 			'avatar'    => get_avatar_url( $user->ID, array( 'size' => 128 ) ),
 			'profile'   => sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename ),
 			'bio'       => wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" ),
@@ -661,7 +661,23 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			return $weight_a - $weight_b;
 		}
 
-		return strcasecmp( $a->display_name, $b->display_name );
+		return strcasecmp( self::member_name( $a ), self::member_name( $b ) );
+	}
+
+	/**
+	 * The name to show for a member.
+	 *
+	 * `display_name` isn't required on WordPress.org accounts and some older
+	 * ones have it empty, which left a blank card on the Members page. Fall
+	 * back to the username so every member has a visible name.
+	 *
+	 * @param \WP_User $user User object.
+	 * @return string
+	 */
+	public static function member_name( \WP_User $user ): string {
+		$name = trim( (string) $user->display_name );
+
+		return '' !== $name ? $name : (string) $user->user_login;
 	}
 
 	/**

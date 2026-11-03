@@ -47,7 +47,7 @@ usort(
 			return $weight_a - $weight_b;
 		}
 
-		return strcasecmp( $a->display_name, $b->display_name );
+		return strcasecmp( Members_Controller::member_name( $a ), Members_Controller::member_name( $b ) );
 	}
 );
 
@@ -173,7 +173,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					loading="lazy"
 				/>
 				<div class="wporg-group-members__info">
-					<span class="wporg-group-members__name"><?php echo esc_html( $user->display_name ); ?></span>
+					<span class="wporg-group-members__name"><?php echo esc_html( Members_Controller::member_name( $user ) ); ?></span>
 					<span class="wporg-group-members__role wporg-group-members__role--<?php echo esc_attr( $user_role ); ?>">
 						<?php echo esc_html( $role_label ); ?>
 					</span>

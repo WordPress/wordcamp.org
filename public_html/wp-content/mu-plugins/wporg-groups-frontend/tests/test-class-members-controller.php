@@ -203,6 +203,60 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
+	 * Some older w.org accounts have an empty `display_name`. `wp_insert_user()`
+	 * always fills one in, so blank it directly to reproduce them.
+	 */
+	private function create_member_without_display_name( string $login ): int {
+		global $wpdb;
+
+		$user_id = self::factory()->user->create(
+			array(
+				'role'       => 'subscriber',
+				'user_login' => $login,
+			)
+		);
+		$wpdb->update( $wpdb->users, array( 'display_name' => '' ), array( 'ID' => $user_id ) );
+		clean_user_cache( $user_id );
+
+		return $user_id;
+	}
+
+	/**
+	 * A member with no display name falls back to their username, instead of
+	 * returning an empty name the Members page renders as a blank card.
+	 */
+	public function test_member_without_display_name_falls_back_to_login() {
+		$user_id = $this->create_member_without_display_name( 'nonamemember' );
+
+		$request = $this->request( 'GET', '/members/' . $user_id );
+		$request->set_param( 'id', $user_id );
+		$response = self::$controller->get_item( $request );
+
+		$this->assertSame( 'nonamemember', $response->get_data()['name'] );
+	}
+
+	/**
+	 * The fallback name is also what members sort by, so a nameless member
+	 * doesn't jump to the top of their role tier.
+	 */
+	public function test_member_without_display_name_sorts_by_login() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Aaron Early',
+			)
+		);
+		$this->create_member_without_display_name( 'zzz-nameless' );
+
+		$request = $this->request( 'GET', '/members' );
+		$request->set_param( 'per_page', Members_Controller::MAX_PER_PAGE );
+		$names = wp_list_pluck( self::$controller->get_items( $request )->get_data(), 'name' );
+
+		$this->assertNotContains( '', $names );
+		$this->assertLessThan( array_search( 'zzz-nameless', $names, true ), array_search( 'Aaron Early', $names, true ) );
+	}
+
+	/**
 	 * Clears every organizer the fixture/site creation left behind, so
 	 * "is this the last organizer?" assertions are deterministic.
 	 */

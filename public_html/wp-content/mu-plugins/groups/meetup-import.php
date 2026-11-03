@@ -2680,6 +2680,13 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
+		// A published series isn't refreshed, but it still takes the dates
+		// Meetup has listed since, or once its first dates pass, a rerun
+		// finds none of its Meetup events and makes a second series.
+		if ( ! empty( $event['recurrence'] ) ) {
+			add_series_members( $existing->ID, $event['series_ids'] );
+		}
+
 		if ( needs_photo( $existing, $event ) ) {
 			return add_missing_photo( $existing, $event );
 		}
@@ -3165,10 +3172,20 @@ function save_recurrence( int $post_id, array $event ): void {
 		update_post_meta( $post_id, $prefix . $field, $value );
 	}
 
+	add_series_members( $post_id, $event['series_ids'] );
+}
+
+/**
+ * Record Meetup events as dates of an imported recurring event.
+ *
+ * @param int      $post_id   Recurring event, on the current site.
+ * @param string[] $meetup_ids Meetup event IDs.
+ */
+function add_series_members( int $post_id, array $meetup_ids ): void {
 	$known = array_map( 'strval', get_post_meta( $post_id, SERIES_MEMBER_META, false ) );
 
-	foreach ( array_diff( $event['series_ids'], $known ) as $meetup_id ) {
-		add_post_meta( $post_id, SERIES_MEMBER_META, (string) $meetup_id );
+	foreach ( array_diff( array_map( 'strval', $meetup_ids ), $known ) as $meetup_id ) {
+		add_post_meta( $post_id, SERIES_MEMBER_META, $meetup_id );
 	}
 }
 

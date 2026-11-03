@@ -47,6 +47,12 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 		$this->assertSame( 'groups-site', get_stylesheet() );
 		$this->assertSame( 'Australia/Brisbane', get_option( 'timezone_string' ) );
 
+		// Venue maps start on Google, not GatherPress's CARTO default.
+		$this->assertSame( 'google', get_option( 'gatherpress_settings' )['map_platform'] ?? '' );
+		if ( class_exists( \GatherPress\Core\Settings::class ) ) {
+			$this->assertSame( 'google', \GatherPress\Core\Settings::get_instance()->get( 'map_platform' ) );
+		}
+
 		$organizer = new \WP_User( self::$organizer_id );
 		$this->assertContains( 'administrator', $organizer->roles );
 

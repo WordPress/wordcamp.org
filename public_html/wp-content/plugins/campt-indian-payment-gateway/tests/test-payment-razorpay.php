@@ -164,25 +164,75 @@ class Test_CampTix_Payment_Razorpay extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A refund is requested for the order's payment, and its id recorded.
+	 * A refund is requested for the captured payment of the order's own Razorpay order, and
+	 * its id recorded. The recorded transaction id came back through the browser, so a
+	 * payment it names that isn't the order's is not what gets refunded.
 	 *
 	 * @covers CampTix_Payment_Method_Razorpay::send_refund_request
 	 */
-	public function test_refund_is_requested_for_the_orders_payment() {
+	public function test_refund_is_requested_for_the_orders_own_payment() {
 		$gateway = $this->make_gateway();
 		$this->make_order( 'tok_refund', 'order_refund', 50000, 'publish' );
 		$attendee = $this->make_order( 'tok_refund_2', 'order_refund_2', 50000, 'publish' );
-		update_post_meta( $attendee, 'tix_transaction_id', 'pay_refund_me' );
-		$gateway->refund = array(
+		update_post_meta( $attendee, 'tix_transaction_id', 'pay_of_another_order' );
+		$gateway->payments = array(
+			'order_refund'   => array(
+				array(
+					'id'       => 'pay_of_another_order',
+					'order_id' => 'order_refund',
+					'status'   => 'captured',
+				),
+			),
+			'order_refund_2' => array(
+				array(
+					'id'       => 'pay_refund_me',
+					'order_id' => 'order_refund_2',
+					'status'   => 'captured',
+				),
+			),
+		);
+		$gateway->refund   = array(
 			'id'     => 'rfnd_1',
 			'status' => 'processed',
 		);
 
 		$result = $gateway->send_refund_request( 'tok_refund_2' );
 
-		$this->assertSame( 'pay_refund_me', $gateway->refunds_requested[0][0] );
+		$this->assertSame( array( 'pay_refund_me' ), array_column( $gateway->refunds_requested, 0 ) );
 		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
 		$this->assertSame( 'rfnd_1', $result['refund_transaction_id'] );
+		$this->assertSame( 'pay_refund_me', $result['transaction_id'] );
+	}
+
+	/**
+	 * An order with no Razorpay order bound, or none captured, isn't refunded.
+	 *
+	 * @covers CampTix_Payment_Method_Razorpay::send_refund_request
+	 */
+	public function test_refund_needs_a_captured_payment_on_the_orders_razorpay_order() {
+		$gateway  = $this->make_gateway();
+		$attendee = $this->make_order( 'tok_unbound', '', 50000, 'publish' );
+		update_post_meta( $attendee, 'tix_transaction_id', 'pay_somewhere' );
+
+		$result = $gateway->send_refund_request( 'tok_unbound' );
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $result['status'], 'no Razorpay order' );
+
+		$this->make_order( 'tok_uncaptured', 'order_uncaptured', 50000, 'publish' );
+		$gateway->payments = array(
+			'order_uncaptured' => array(
+				array(
+					'id'       => 'pay_failed',
+					'order_id' => 'order_uncaptured',
+					'status'   => 'failed',
+				),
+			),
+		);
+
+		$result = $gateway->send_refund_request( 'tok_uncaptured' );
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $result['status'], 'nothing captured' );
+		$this->assertSame( array(), $gateway->refunds_requested );
 	}
 
 	/**
@@ -198,12 +248,14 @@ class Test_CampTix_Payment_Razorpay extends WP_UnitTestCase {
 		$gateway->payments = array(
 			'order_by_order' => array(
 				array(
-					'id'     => 'pay_failed',
-					'status' => 'failed',
+					'id'       => 'pay_failed',
+					'order_id' => 'order_by_order',
+					'status'   => 'failed',
 				),
 				array(
-					'id'     => 'pay_captured',
-					'status' => 'captured',
+					'id'       => 'pay_captured',
+					'order_id' => 'order_by_order',
+					'status'   => 'captured',
 				),
 			),
 		);
@@ -224,7 +276,16 @@ class Test_CampTix_Payment_Razorpay extends WP_UnitTestCase {
 		$gateway  = $this->make_gateway();
 		$attendee = $this->make_order( 'tok_refused', 'order_refused', 50000, 'publish' );
 		update_post_meta( $attendee, 'tix_transaction_id', 'pay_refused' );
-		$gateway->refund = new Razorpay\Api\Errors\BadRequestError( 'The payment has been fully refunded already', 'BAD_REQUEST_ERROR', 400 );
+		$gateway->payments = array(
+			'order_refused' => array(
+				array(
+					'id'       => 'pay_refused',
+					'order_id' => 'order_refused',
+					'status'   => 'captured',
+				),
+			),
+		);
+		$gateway->refund   = new Razorpay\Api\Errors\BadRequestError( 'The payment has been fully refunded already', 'BAD_REQUEST_ERROR', 400 );
 
 		$result = $gateway->send_refund_request( 'tok_refused' );
 

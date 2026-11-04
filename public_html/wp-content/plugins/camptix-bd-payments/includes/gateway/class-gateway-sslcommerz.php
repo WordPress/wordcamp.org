@@ -840,7 +840,10 @@ class SSLCommerz extends Base_Gateway {
 	 * SSLCommerz refunds by the bank transaction id, which is recorded in the order's
 	 * transaction details when the payment is validated. It answers `success` when the
 	 * refund was initiated and `processing` when one already was; either way the money is
-	 * on its way back.
+	 * on its way back. The refund's own id is derived from the order, so asking again (a
+	 * retry, two requests racing) names the same refund rather than a second one.
+	 *
+	 * The refund API only answers servers whose public IP is registered with SSLCommerz.
 	 *
 	 * @param string $payment_token CampTix payment token.
 	 *
@@ -871,17 +874,21 @@ class SSLCommerz extends Base_Gateway {
 		// Null without a POST body, e.g. when the refund-all cron sends it.
 		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
 
+		// Required by SSLCommerz since February 2025, at most 30 characters, and unique per refund.
+		$refund_trans_id = substr( (string) $payment_token, 0, 30 );
+
 		$response = $this->api(
 			'GET',
 			'/validator/api/merchantTransIDvalidationAPI.php',
 			[
-				'bank_tran_id'   => $bank_tran_id,
-				'refund_amount'  => number_format( $amount, 2, '.', '' ),
-				'refund_remarks' => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ),
-				'store_id'       => $this->options['merchant_id'],
-				'store_passwd'   => $this->options['store_password'],
-				'v'              => 1,
-				'format'         => 'json',
+				'bank_tran_id'    => $bank_tran_id,
+				'refund_trans_id' => $refund_trans_id,
+				'refund_amount'   => number_format( $amount, 2, '.', '' ),
+				'refund_remarks'  => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ),
+				'store_id'        => $this->options['merchant_id'],
+				'store_passwd'    => $this->options['store_password'],
+				'v'               => 1,
+				'format'          => 'json',
 			],
 			[],
 			$order['attendee_id']
@@ -915,6 +922,7 @@ class SSLCommerz extends Base_Gateway {
 		$result['refund_transaction_details'] = [
 			'raw' => [
 				'refund_transaction_id' => $refund_ref_id,
+				'refund_trans_id'       => $refund_trans_id,
 				'refund'                => $answer,
 			],
 		];
@@ -947,7 +955,8 @@ class SSLCommerz extends Base_Gateway {
 		if ( 'POST' === strtoupper( $method ) ) {
 			$request_args['body'] = $args;
 		} elseif ( ! empty( $args ) ) {
-			$full_url = add_query_arg( $args, $full_url );
+			// add_query_arg() doesn't encode values, and a refund remark is the buyer's own text.
+			$full_url = add_query_arg( rawurlencode_deep( $args ), $full_url );
 		}
 
 		$response = wp_remote_request( $full_url, $request_args );

@@ -117,6 +117,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		);
 
 		update_post_meta( $attendee, 'tix_payment_token', $token );
+		update_post_meta( $attendee, 'tix_payment_method', 'stripe' );
 		update_post_meta( $attendee, 'tix_access_token', 'acc_' . $token );
 		update_post_meta(
 			$attendee,
@@ -174,6 +175,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		);
 
 		update_post_meta( $attendee, 'tix_payment_token', $token );
+		update_post_meta( $attendee, 'tix_payment_method', 'stripe' );
 		update_post_meta( $attendee, 'tix_access_token', 'acc_' . $token );
 		update_post_meta(
 			$attendee,
@@ -494,9 +496,11 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Run the timeout backstop for a draft with the Stripe session fetch stubbed.
+	 * Run the timeout lookup for a draft with the Stripe session fetch stubbed.
+	 *
+	 * @return array The reconcile_payment() result.
 	 */
-	protected function drive_pre_attendee_timeout( $stripe, $attendee_id, $session ) {
+	protected function drive_reconcile_payment( $stripe, $attendee_id, $session ) {
 		update_post_meta( $attendee_id, '_stripe_checkout_session_id', $session['id'] );
 
 		$http_stub = function () use ( $session ) {
@@ -512,7 +516,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 
 		add_filter( 'pre_http_request', $http_stub, 10, 3 );
 		try {
-			$stripe->pre_attendee_timeout( $attendee_id );
+			return $stripe->reconcile_payment( get_post_meta( $attendee_id, 'tix_payment_token', true ) );
 		} finally {
 			remove_filter( 'pre_http_request', $http_stub, 10 );
 		}
@@ -521,26 +525,28 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	/**
 	 * Before a draft is timed out, its session is checked: only an expired one is left to
 	 * time out. A paid one completes the order, a delayed payment goes pending, and one Stripe
-	 * still reports open keeps its seat with the expiry re-recorded from Stripe.
+	 * still reports open is reported open with Stripe's expiry.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
-	public function test_pre_attendee_timeout_settles_any_session_that_is_not_expired() {
+	public function test_reconcile_payment_settles_any_session_that_is_not_expired() {
 		$stripe = $this->make_configured_stripe();
 
 		list( $token, $paid ) = $this->make_stripe_order( 'tok_paid', 500 );
-		$this->drive_pre_attendee_timeout( $stripe, $paid, $this->complete_session( get_current_blog_id() . ':' . $token, $stripe->get_fractional_unit_amount( 'USD', 500 ) ) );
+		$result               = $this->drive_reconcile_payment( $stripe, $paid, $this->complete_session( get_current_blog_id() . ':' . $token, $stripe->get_fractional_unit_amount( 'USD', 500 ) ) );
 		$this->assertSame( 'publish', get_post_status( $paid ) );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
 
 		list( $token, $delayed ) = $this->make_stripe_order( 'tok_delayed', 500 );
 		$session                 = $this->complete_session( get_current_blog_id() . ':' . $token, 50000 );
 		$session['payment_status'] = 'unpaid';
-		$this->drive_pre_attendee_timeout( $stripe, $delayed, $session );
+		$result                    = $this->drive_reconcile_payment( $stripe, $delayed, $session );
 		$this->assertSame( 'pending', get_post_status( $delayed ) );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
 
 		list( $token, $open ) = $this->make_stripe_order( 'tok_open', 500 );
 		$expires_at           = time() + 20 * MINUTE_IN_SECONDS;
-		$this->drive_pre_attendee_timeout(
+		$result               = $this->drive_reconcile_payment(
 			$stripe,
 			$open,
 			array(
@@ -551,10 +557,11 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertSame( 'draft', get_post_status( $open ) );
-		$this->assertSame( $expires_at, (int) get_post_meta( $open, 'tix_session_expires_at', true ) );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_OPEN, $result['status'] );
+		$this->assertSame( $expires_at, $result['expires_at'] );
 
 		list( $token, $expired ) = $this->make_stripe_order( 'tok_expired', 500 );
-		$this->drive_pre_attendee_timeout(
+		$result                  = $this->drive_reconcile_payment(
 			$stripe,
 			$expired,
 			array(
@@ -564,6 +571,45 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 			)
 		);
 		$this->assertSame( 'draft', get_post_status( $expired ), 'left for the sweep' );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_EXPIRED, $result['status'] );
+	}
+
+	/**
+	 * A session Stripe reports open until later keeps its draft, with the expiry re-recorded
+	 * from Stripe on the whole order.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_rerecords_the_expiry_of_a_session_still_open() {
+		list( $token, $first )  = $this->make_stripe_order( 'tok_open_until', 500 );
+		list( $token, $second ) = $this->make_stripe_order( 'tok_open_until', 500 );
+		$this->make_configured_stripe()->record_checkout_session( $token, 'cs_open_until', time() - 10 * MINUTE_IN_SECONDS );
+		$expires_at = time() + 20 * MINUTE_IN_SECONDS;
+
+		$this->sweep_with(
+			function () use ( $token, $expires_at ) {
+				return array(
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'body'     => wp_json_encode(
+						array(
+							'id'                  => 'cs_open_until',
+							'status'              => 'open',
+							'expires_at'          => $expires_at,
+							'client_reference_id' => get_current_blog_id() . ':' . $token,
+						)
+					),
+					'headers'  => array(),
+				);
+			}
+		);
+
+		foreach ( array( $first, $second ) as $attendee_id ) {
+			$this->assertSame( 'draft', get_post_status( $attendee_id ) );
+			$this->assertSame( $expires_at, (int) get_post_meta( $attendee_id, 'tix_session_expires_at', true ) );
+		}
 	}
 
 	/**
@@ -590,7 +636,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	 * A multi-attendee order whose confirmation never arrived is settled as a whole by the
 	 * sweep, whichever of its attendees the sweep reaches first.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
 	public function test_timeout_sweep_settles_a_whole_paid_order() {
 		global $camptix;
@@ -627,7 +673,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	/**
 	 * When Stripe can't be asked, the draft is kept for the next sweep rather than timed out.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
 	public function test_timeout_sweep_keeps_a_draft_when_stripe_cannot_be_asked() {
 		global $camptix;
@@ -671,7 +717,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	 * flight) keeps its draft for the next sweep, instead of being timed out in the same pass.
 	 * As when Stripe can't be asked, that stops after 24 hours.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
 	public function test_timeout_sweep_keeps_a_draft_whose_session_is_still_open() {
 		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_open_late', 500 );
@@ -735,7 +781,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	 * The sweep looks a session up once per order, not once per attendee, and once Stripe has
 	 * failed to answer it stops asking for the rest of the pass. Every draft is still kept.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
 	public function test_timeout_sweep_looks_up_each_order_once_and_stops_asking_once_stripe_is_down() {
 		$stripe = $this->make_configured_stripe();
@@ -793,7 +839,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	 * asked, and the draft is kept for the next sweep. A 404 included: it only says the session
 	 * isn't on the account and mode of the key asking.
 	 *
-	 * @covers CampTix_Payment_Method_Stripe::pre_attendee_timeout
+	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
 	public function test_timeout_sweep_tells_a_stripe_error_from_stripe_being_down() {
 		$stripe = $this->make_configured_stripe();

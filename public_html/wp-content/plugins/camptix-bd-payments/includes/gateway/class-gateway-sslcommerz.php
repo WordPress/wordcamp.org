@@ -16,6 +16,12 @@ class SSLCommerz extends Base_Gateway {
 	public $name                 = 'SSLCommerz';
 	public $description          = 'SSLCommerz payment gateway for Bangladesh.';
 	public $supported_currencies = [ 'BDT' ];
+	public $supported_features   = [
+		'refund-single'  => false,
+		'refund-all'     => false,
+		'refund-partial' => false,
+		'payment-lookup' => true,
+	];
 	public $options;
 
 	/**
@@ -48,9 +54,6 @@ class SSLCommerz extends Base_Gateway {
 			add_filter( 'camptix_form_register_complete_attendee_object', [ $this, 'add_attendee_info' ], 10, 3 );
 			add_action( 'template_redirect', [ $this, 'template_redirect' ], 6 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 			add_action( 'template_redirect', [ $this, 'early_template_redirect' ], 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
-
-			// Catch any attendee timeouts that actually paid.
-			add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 		}
 	}
 
@@ -732,23 +735,26 @@ class SSLCommerz extends Base_Gateway {
 	}
 
 	/**
-	 * Prevent a paid order from being marked as timeout.
+	 * Before the sweep times a draft order out, ask SSLCommerz whether it was paid.
 	 *
-	 * @param int $attendee_id The attendee ID that is about to be timed out.
-	 * @return void
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
 	 */
-	public function pre_attendee_timeout( $attendee_id ) {
+	public function reconcile_payment( $payment_token ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
-			return;
+		$session_key = '';
+		$attendee_id = 0;
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$session_key = get_post_meta( $attendee_id, '_sslcommerz_session_key', true );
+			if ( $session_key ) {
+				break;
+			}
 		}
-
-		$session_key   = get_post_meta( $attendee_id, '_sslcommerz_session_key', true );
-		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $session_key || ! $payment_token ) {
-			return;
+		if ( ! $session_key ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no SSLCommerz session recorded' );
 		}
 
 		$response = $this->api(
@@ -764,24 +770,25 @@ class SSLCommerz extends Base_Gateway {
 			$attendee_id
 		);
 		if ( ! $response ) {
-			return;
+			// api() has logged the reason, without secrets.
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not get an answer from SSLCommerz' );
 		}
 
 		if ( ! in_array( $response->status ?? '', [ 'VALID', 'VALIDATED' ], true ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'SSLCommerz reports no valid payment' );
 		}
 
-		// Bind the validator response to this attendee's payment_token. The session_key was
-		// stored against this attendee, so the response should be for the same transaction —
+		// Bind the validator response to this order's payment_token. The session_key was
+		// stored against this order, so the response should be for the same transaction —
 		// but cross-checking tran_id makes that an assertion rather than an assumption.
 		if ( ! hash_equals( (string) $payment_token, (string) ( $response->tran_id ?? '' ) ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'the SSLCommerz payment is for a different order' );
 		}
 
 		// If the order details don't match, bail out.
 		$order = $this->get_order( $payment_token );
 		if ( ! $this->sslcommerz_response_matches_order( $response, $order ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'the SSLCommerz payment does not match the order' );
 		}
 
 		$camptix->log(
@@ -801,6 +808,8 @@ class SSLCommerz extends Base_Gateway {
 			$payment_data,
 			false /* non-interactive */
 		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'SSLCommerz reports the order paid' );
 	}
 
 

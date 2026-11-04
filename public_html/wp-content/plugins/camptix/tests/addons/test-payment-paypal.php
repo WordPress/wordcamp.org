@@ -969,6 +969,18 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 		$attendee = $this->make_order( array( 'token' => 'tok_no_paypal_token' ) );
 		$result   = $this->reconcile_with( $paypal, 'tok_no_paypal_token', array() );
 		$this->assertSame( CampTix_Payment_Method::LOOKUP_EXPIRED, $result['status'], 'nothing to ask about' );
+
+		// PayPal still reports a checkout not started hours after its token expired.
+		$attendee = $this->make_order( array( 'token' => 'tok_past_expiry' ) );
+		update_post_meta( $attendee, 'tix_paypal_token', 'EC-PAST' );
+		update_post_meta( $attendee, 'tix_paypal_token_expires_at', time() - MINUTE_IN_SECONDS );
+		$result = $this->reconcile_with(
+			$paypal,
+			'tok_past_expiry',
+			array( 'GetExpressCheckoutDetails' => $this->checkout_details( array( 'CHECKOUTSTATUS' => 'PaymentActionNotInitiated' ) ) )
+		);
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_EXPIRED, $result['status'], 'gone by the expiry recorded at checkout' );
+		$this->assertSame( 'draft', get_post_status( $attendee ), 'the sweep times it out, not the lookup' );
 	}
 
 	/**
@@ -1148,6 +1160,27 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 
 		$this->assertSame( 'timeout', get_post_status( $attendee ) );
 		$this->assertContains( 'At timeout, the PayPal token has expired.', $sweep['logged'] );
+	}
+
+	/**
+	 * PayPal goes on reporting a checkout not started after its token's three hours, rather
+	 * than saying the token expired. The sweep releases the order then anyway, instead of
+	 * asking again every sweep until the 30 hour cap.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::reconcile_payment
+	 */
+	public function test_timeout_sweep_releases_a_checkout_not_started_once_its_token_expires() {
+		$paypal   = $this->make_configured_paypal();
+		$attendee = $this->make_checked_out_order( 'tok_never_started', 'EC-NEVER', CampTix_Payment_Method_PayPal::TOKEN_LIFETIME + CampTix_Plugin::DRAFT_LIFETIME_GRACE + MINUTE_IN_SECONDS );
+
+		// Where the first sweep left it: due once the token expires.
+		update_post_meta( $attendee, 'tix_session_expires_at', (int) get_post_meta( $attendee, 'tix_paypal_token_expires_at', true ) );
+
+		$sweep = $this->sweep_with( $paypal, array( 'GetExpressCheckoutDetails' => $this->checkout_details( array( 'CHECKOUTSTATUS' => 'PaymentActionNotInitiated' ) ) ) );
+
+		$this->assertSame( array( 'GetExpressCheckoutDetails' ), $sweep['asked'] );
+		$this->assertSame( 'timeout', get_post_status( $attendee ) );
+		$this->assertContains( 'At timeout, the PayPal checkout was not completed before its token expired.', $sweep['logged'] );
 	}
 
 	/**

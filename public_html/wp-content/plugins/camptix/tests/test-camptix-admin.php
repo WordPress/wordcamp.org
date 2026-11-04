@@ -1408,6 +1408,80 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Save the Payment setup screen with a fake gateway that supports the given features,
+	 * and return the saved enabled flag.
+	 *
+	 * @param array $features      The gateway's supported features.
+	 * @param bool  $was_enabled   Whether it was already enabled.
+	 * @param bool  $enable        What the form submits.
+	 *
+	 * @return bool
+	 */
+	protected function save_enabled_flag( $features, $was_enabled, $enable ) {
+		$gateway                     = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->name               = 'Gated Pay';
+		$gateway->supported_features = $features;
+		$available                   = function ( $methods ) {
+			$methods['gated'] = array( 'name' => 'Gated Pay' );
+			return $methods;
+		};
+		add_filter( 'camptix_available_payment_methods', $available );
+
+		$options       = new ReflectionProperty( CampTix_Plugin::class, 'options' );
+		$saved_options = self::$camptix->get_options();
+		$with_flag     = $saved_options;
+
+		$with_flag['payment_methods']['gated'] = $was_enabled;
+		$options->setValue( self::$camptix, $with_flag );
+
+		try {
+			$result = self::$camptix->validate_options( array( 'payment_methods' => array( 'gated' => $enable ? '1' : '0' ) ) );
+		} finally {
+			$options->setValue( self::$camptix, $saved_options );
+			remove_filter( 'camptix_available_payment_methods', $available );
+		}
+
+		return $result['payment_methods']['gated'];
+	}
+
+	/**
+	 * A gateway missing refunds or payment lookup can't be newly enabled, but one already
+	 * enabled stays enabled. One that supports both can be enabled.
+	 *
+	 * @covers CampTix_Admin_Setup::validate_options
+	 * @covers CampTix_Payment_Method::get_missing_requirements
+	 */
+	public function test_a_gateway_missing_a_requirement_cannot_be_newly_enabled() {
+		global $wp_settings_errors;
+
+		$compliant = array(
+			'refund-single'  => true,
+			'payment-lookup' => true,
+		);
+		$no_refund = array( 'payment-lookup' => true );
+
+		$this->assertFalse( $this->save_enabled_flag( $no_refund, false, true ), 'newly enabled: refused' );
+		$this->assertContains( 'payment-method-requirements-gated', wp_list_pluck( (array) $wp_settings_errors, 'code' ) );
+
+		$this->assertTrue( $this->save_enabled_flag( $no_refund, true, true ), 'already enabled: kept' );
+		$this->assertFalse( $this->save_enabled_flag( $no_refund, true, false ), 'can still be disabled' );
+		$this->assertTrue( $this->save_enabled_flag( $compliant, false, true ), 'compliant: enabled' );
+
+		$wp_settings_errors = array();
+	}
+
+	/**
+	 * The gateways in CampTix itself meet the requirements.
+	 *
+	 * @covers CampTix_Payment_Method::get_missing_requirements
+	 */
+	public function test_core_gateways_meet_the_requirements() {
+		foreach ( array( 'stripe', 'paypal' ) as $id ) {
+			$this->assertSame( array(), self::$camptix->get_payment_method_by_id( $id )->get_missing_requirements(), $id );
+		}
+	}
+
+	/**
 	 * Logged out, nothing is the buyer's own.
 	 */
 	public function test_abandoned_drafts_is_empty_when_logged_out() {

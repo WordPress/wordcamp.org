@@ -164,7 +164,48 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	}
 
 	/**
+	 * What a payment method must support before it can be enabled for an event, as feature
+	 * names and what to call them. See docs/camptix-payment-gateways.md.
+	 *
+	 * @return string[]
+	 */
+	public static function get_required_features() {
+		/**
+		 * Filters what a payment method must support before it can be newly enabled.
+		 *
+		 * @param string[] $features Feature names and what to call them.
+		 */
+		return (array) apply_filters(
+			'camptix_payment_method_required_features',
+			array(
+				'refund-single'  => __( 'refunds', 'wordcamporg' ),
+				'payment-lookup' => __( 'payment lookup', 'wordcamporg' ),
+			)
+		);
+	}
+
+	/**
+	 * The required features this payment method doesn't support.
+	 *
+	 * @return string[] What to call each one.
+	 */
+	public function get_missing_requirements() {
+		$missing = array();
+
+		foreach ( self::get_required_features() as $feature => $label ) {
+			if ( ! $this->supports_feature( $feature ) ) {
+				$missing[ $feature ] = $label;
+			}
+		}
+
+		return $missing;
+	}
+
+	/**
 	 * Render the markup for the Enabled button
+	 *
+	 * A payment method missing a required feature can't be newly enabled. One already enabled
+	 * stays switchable, with a warning, so an event mid-sale isn't cut off.
 	 *
 	 * @param array $args
 	 */
@@ -172,8 +213,34 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
+		$missing = $this->get_missing_requirements();
+
+		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) && ( ! $missing || ! empty( $args['value'] ) ) ) {
 			$camptix->field_yesno( $args );
+
+			if ( $missing ) {
+				?>
+				<p class="description">
+					<?php printf(
+						/* translators: %s: Missing features, e.g. "refunds, payment lookup". */
+						esc_html__( 'This payment method does not support %s, which every payment method now must. It stays available while enabled, but once disabled it cannot be enabled again.', 'wordcamporg' ),
+						esc_html( implode( ', ', $missing ) )
+					); ?>
+				</p>
+				<?php
+			}
+		} elseif ( $missing && in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
+			esc_html_e( 'Disabled', 'wordcamporg' );
+
+			?>
+			<p class="description">
+				<?php printf(
+					/* translators: %s: Missing features, e.g. "refunds, payment lookup". */
+					esc_html__( 'This payment method cannot be enabled: it does not support %s.', 'wordcamporg' ),
+					esc_html( implode( ', ', $missing ) )
+				); ?>
+			</p>
+			<?php
 		} else {
 			_e( 'Disabled', 'wordcamporg' );
 

@@ -48,6 +48,7 @@ class CampTix_Admin_Setup {
 		$section = $this->get_setup_section();
 
 		add_action( 'admin_notices', array( $this, 'admin_notice_supported_currencies' ) );
+		add_action( 'admin_notices', array( $this, 'admin_notice_payment_method_requirements' ) );
 
 		switch ( $section ) {
 			case 'general':
@@ -197,9 +198,33 @@ class CampTix_Admin_Setup {
 
 		// Enabled/disabled payment methods.
 		if ( isset( $input['payment_methods'] ) ) {
+			$saved = $this->plugin->get_options();
+
 			foreach ( $this->plugin->get_available_payment_methods() as $key => $method ) {
 				if ( isset( $input['payment_methods'][ $key ] ) ) {
-					$output['payment_methods'][ $key ] = (bool) $input['payment_methods'][ $key ];
+					$enable = (bool) $input['payment_methods'][ $key ];
+
+					// One missing a required feature can be kept on, but not newly turned on.
+					$payment_method_obj = $this->plugin->get_payment_method_by_id( $key );
+					$was_enabled        = ! empty( $saved['payment_methods'][ $key ] );
+					$missing            = $payment_method_obj ? $payment_method_obj->get_missing_requirements() : array();
+
+					if ( $enable && ! $was_enabled && $missing ) {
+						$enable = false;
+
+						add_settings_error(
+							'camptix_options',
+							'payment-method-requirements-' . $key,
+							sprintf(
+								/* translators: 1: Payment method name. 2: Missing features, e.g. "refunds, payment lookup". */
+								__( '%1$s was not enabled: it does not support %2$s.', 'wordcamporg' ),
+								$payment_method_obj->name,
+								implode( ', ', $missing )
+							)
+						);
+					}
+
+					$output['payment_methods'][ $key ] = $enable;
 				}
 			}
 		}
@@ -276,6 +301,47 @@ class CampTix_Admin_Setup {
 					esc_url( add_query_arg( 'tix_section', 'general', $base_url ) ),
 					esc_url( add_query_arg( 'tix_section', 'payment', $base_url ) )
 				) );
+				?>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Show an admin notice when an enabled payment method is missing a required feature.
+	 *
+	 * @return void
+	 */
+	public function admin_notice_payment_method_requirements() {
+		global $pagenow;
+		$page = wp_unslash( $_GET['page'] ?? '' );
+
+		if ( 'edit.php' !== $pagenow || 'camptix_options' !== $page ) {
+			return;
+		}
+
+		$options = $this->plugin->get_options();
+
+		foreach ( $this->plugin->get_available_payment_methods() as $key => $method ) {
+			$payment_method_obj = $this->plugin->get_payment_method_by_id( $key );
+			if ( empty( $options['payment_methods'][ $key ] ) || ! $payment_method_obj ) {
+				continue;
+			}
+
+			$missing = $payment_method_obj->get_missing_requirements();
+			if ( ! $missing ) {
+				continue;
+			}
+
+			?>
+			<div class="notice notice-warning">
+				<?php
+				echo wpautop( esc_html( sprintf(
+					/* translators: 1: Payment method name. 2: Missing features, e.g. "refunds, payment lookup". */
+					__( '%1$s does not support %2$s, which every payment method now must. It stays available while enabled, but once disabled it cannot be enabled again.', 'wordcamporg' ),
+					$payment_method_obj->name,
+					implode( ', ', $missing )
+				) ) );
 				?>
 			</div>
 			<?php

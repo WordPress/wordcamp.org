@@ -692,10 +692,10 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$this->assertSame( 'draft', get_post_status( $attendee_id ), 'no checkout time recorded: kept' );
 
 		// With no checkout time recorded the post date is the floor for the cap.
-		$this->date_draft( $attendee_id, time() - DAY_IN_SECONDS - 6 * MINUTE_IN_SECONDS );
+		$this->date_draft( $attendee_id, time() - DAY_IN_SECONDS - CampTix_Plugin::DRAFT_LOOKUP_RETRY - 6 * MINUTE_IN_SECONDS );
 		update_post_meta( $attendee_id, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
 		$this->sweep_with( $down );
-		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'no checkout time recorded, but a day old by post date' );
+		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'no checkout time recorded, but past the cap by post date' );
 
 		list( $token, $attendee_id ) = $this->make_stripe_order( 'tok_apidown2', 500 );
 		$stripe->record_checkout_session( $token, 'cs_apidown2', time() - 10 * MINUTE_IN_SECONDS );
@@ -705,8 +705,14 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
 		$this->assertGreaterThan( time(), $GLOBALS['camptix']->get_draft_release_at( $attendee_id ), 'retried by a later sweep' );
 
-		// But not forever: past the 24 hours plus grace, the draft is timed out even if Stripe still can't be asked.
+		// Past the 24 hours a draft with no recorded expiry gets, it is still retried for a while.
 		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - 6 * MINUTE_IN_SECONDS );
+		update_post_meta( $attendee_id, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
+		$this->sweep_with( $down );
+		$this->assertSame( 'draft', get_post_status( $attendee_id ), 'past 24 hours, inside the retry window' );
+
+		// But not forever: past the retry window, the draft is timed out even if Stripe still can't be asked.
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - CampTix_Plugin::DRAFT_LOOKUP_RETRY - 6 * MINUTE_IN_SECONDS );
 		update_post_meta( $attendee_id, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
 		$this->sweep_with( $down );
 		$this->assertSame( 'timeout', get_post_status( $attendee_id ) );
@@ -715,7 +721,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	/**
 	 * A session Stripe still reports open after its expiry (a UPI or bank confirmation in
 	 * flight) keeps its draft for the next sweep, instead of being timed out in the same pass.
-	 * As when Stripe can't be asked, that stops after 24 hours.
+	 * As when Stripe can't be asked, that stops after 24 hours and the retry window.
 	 *
 	 * @covers CampTix_Payment_Method_Stripe::reconcile_payment
 	 */
@@ -749,10 +755,10 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		$this->assertGreaterThan( time(), $GLOBALS['camptix']->get_draft_release_at( $attendee_id ), 'retried by a later sweep' );
 		$this->assertSame( 1, $calls, 'asked once: the kept draft is no longer due in this pass' );
 
-		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - 6 * MINUTE_IN_SECONDS );
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - DAY_IN_SECONDS - CampTix_Plugin::DRAFT_LOOKUP_RETRY - 6 * MINUTE_IN_SECONDS );
 		update_post_meta( $attendee_id, 'tix_session_expires_at', $expired_at );
 		$this->sweep_with( $open );
-		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'not past 24 hours' );
+		$this->assertSame( 'timeout', get_post_status( $attendee_id ), 'not past the 24 hours and the retry window' );
 	}
 
 	/**

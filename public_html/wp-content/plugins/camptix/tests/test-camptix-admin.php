@@ -1342,7 +1342,10 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$expires_at = time() + 20 * MINUTE_IN_SECONDS;
 
 		$answers = array(
-			'tok_expired' => array( 'status' => CampTix_Payment_Method::LOOKUP_EXPIRED ),
+			'tok_expired' => array(
+				'status' => CampTix_Payment_Method::LOOKUP_EXPIRED,
+				'reason' => 'the fake session expired',
+			),
 			'tok_open'    => array(
 				'status'     => CampTix_Payment_Method::LOOKUP_OPEN,
 				'expires_at' => $expires_at,
@@ -1352,9 +1355,19 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		);
 		$this->register_lookup_gateway( 'fake', $answers );
 
-		self::$camptix->review_timeout_payments();
+		$logged = array();
+		$log    = function ( $message, $post_id ) use ( &$logged ) {
+			$logged[] = array( $message, $post_id );
+		};
+		add_action( 'camptix_log_raw', $log, 10, 2 );
+		try {
+			self::$camptix->review_timeout_payments();
+		} finally {
+			remove_action( 'camptix_log_raw', $log, 10 );
+		}
 
 		$this->assertSame( 'timeout', get_post_status( $expired ) );
+		$this->assertContains( array( 'At timeout, the fake session expired.', $expired ), $logged, 'what the gateway found is logged' );
 		$this->assertSame( 'draft', get_post_status( $open ) );
 		$this->assertSame( $expires_at, (int) get_post_meta( $open, 'tix_session_expires_at', true ) );
 		$this->assertSame( 'draft', get_post_status( $unknown ) );
@@ -1405,6 +1418,47 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		}
 		$this->assertCount( 1, $up_gw->asked );
 		$this->assertSame( 'timeout', get_post_status( $up ) );
+	}
+
+	/**
+	 * A gateway that records no session expiry only has its drafts come due at 24 hours. A
+	 * lookup that can't answer then, or a gateway skipped for the rest of the pass after one
+	 * that couldn't, keeps them for the retry window rather than timing them out on the spot.
+	 *
+	 * @covers CampTix_Plugin::keep_draft_for_next_sweep
+	 */
+	public function test_timeout_sweep_retries_drafts_that_only_come_due_at_24_hours() {
+		$ticket_id = $this->create_ticket();
+		$age       = DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE + MINUTE_IN_SECONDS;
+		$drafts    = array();
+		foreach ( array( 'tok_day_1', 'tok_day_2' ) as $token ) {
+			$drafts[ $token ] = $this->create_own_draft( $ticket_id, 'buyer_' . $token, $token, $age );
+			update_post_meta( $drafts[ $token ], 'tix_payment_method', 'nolifetime' );
+		}
+
+		$unreachable = array( 'status' => CampTix_Payment_Method::LOOKUP_UNREACHABLE );
+		$gateway     = $this->register_lookup_gateway( 'nolifetime', array( $unreachable, $unreachable ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertCount( 1, $gateway->asked );
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'draft', get_post_status( $draft ), 'kept for the next sweep' );
+			$this->assertGreaterThan( time(), self::$camptix->get_draft_release_at( $draft ) );
+		}
+
+		// Once the retry window has passed too, the drafts time out.
+		foreach ( $drafts as $draft ) {
+			update_post_meta( $draft, 'tix_timestamp', time() - $age - CampTix_Plugin::DRAFT_LOOKUP_RETRY );
+			update_post_meta( $draft, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
+		}
+		$gateway->answers = array( $unreachable, $unreachable );
+
+		self::$camptix->review_timeout_payments();
+
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'timeout', get_post_status( $draft ) );
+		}
 	}
 
 	/**

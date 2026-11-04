@@ -1458,13 +1458,12 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A gateway missing refunds or payment lookup can't be newly enabled, but one already
-	 * enabled stays enabled. One that supports both can be enabled.
+	 * A gateway missing refunds or payment lookup is warned about, never blocked: it can be
+	 * newly enabled, kept enabled, and disabled, like one that supports both.
 	 *
 	 * @covers CampTix_Admin_Setup::validate_options
-	 * @covers CampTix_Payment_Method::get_missing_requirements
 	 */
-	public function test_a_gateway_missing_a_requirement_cannot_be_newly_enabled() {
+	public function test_a_gateway_missing_a_requirement_can_still_be_enabled() {
 		global $wp_settings_errors;
 
 		$compliant = array(
@@ -1473,12 +1472,13 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		);
 		$no_refund = array( 'payment-lookup' => true );
 
-		$this->assertFalse( $this->save_enabled_flag( $no_refund, false, true ), 'newly enabled: refused' );
-		$this->assertContains( 'payment-method-requirements-gated', wp_list_pluck( (array) $wp_settings_errors, 'code' ) );
-
-		$this->assertTrue( $this->save_enabled_flag( $no_refund, true, true ), 'already enabled: kept' );
-		$this->assertFalse( $this->save_enabled_flag( $no_refund, true, false ), 'can still be disabled' );
+		$this->assertTrue( $this->save_enabled_flag( $no_refund, false, true ), 'newly enabled' );
+		$this->assertTrue( $this->save_enabled_flag( $no_refund, true, true ), 'kept enabled' );
+		$this->assertFalse( $this->save_enabled_flag( $no_refund, true, false ), 'disabled' );
 		$this->assertTrue( $this->save_enabled_flag( $compliant, false, true ), 'compliant: enabled' );
+		foreach ( (array) $wp_settings_errors as $error ) {
+			$this->assertStringNotContainsString( 'Gated Pay', $error['message'], 'no error about the gateway' );
+		}
 
 		$wp_settings_errors = array();
 	}
@@ -1495,12 +1495,12 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The Enabled field offers the switch to a gateway that meets the requirements, or one
-	 * already enabled (with a warning), and to no other.
+	 * The Enabled field always offers the switch, and warns beside it when the gateway is
+	 * missing a requirement, whether or not it's enabled yet.
 	 *
 	 * @covers CampTix_Payment_Method::_camptix_settings_enabled_callback
 	 */
-	public function test_enabled_field_offers_the_switch_only_to_compliant_or_enabled_gateways() {
+	public function test_enabled_field_warns_about_a_missing_requirement() {
 		$gateway                       = $this->register_lookup_gateway( 'gated', array() );
 		$gateway->camptix_options      = array( 'currency' => 'USD' );
 		$gateway->supported_currencies = array( 'USD' );
@@ -1521,13 +1521,15 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		$no_refund = array( 'payment-lookup' => true );
 
-		$html = $render( $no_refund, false );
-		$this->assertStringNotContainsString( '<input', $html, 'nothing to switch on' );
-		$this->assertStringContainsString( 'cannot be enabled: it does not support refunds', $html );
-
-		$html = $render( $no_refund, true );
-		$this->assertSame( 2, substr_count( $html, 'type="radio"' ), 'already enabled: can still be switched off' );
-		$this->assertStringContainsString( 'once disabled it cannot be enabled again', $html );
+		$states = array(
+			'not enabled' => false,
+			'enabled'     => true,
+		);
+		foreach ( $states as $state => $enabled ) {
+			$html = $render( $no_refund, $enabled );
+			$this->assertSame( 2, substr_count( $html, 'type="radio"' ), "$state: the switch is offered" );
+			$this->assertStringContainsString( 'does not support refunds', $html, "$state: with a warning" );
+		}
 
 		$html = $render(
 			array(

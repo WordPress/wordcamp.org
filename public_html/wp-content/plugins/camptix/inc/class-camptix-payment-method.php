@@ -164,14 +164,15 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	}
 
 	/**
-	 * What a payment method must support before it can be enabled for an event, as feature
-	 * names and what to call them. See docs/camptix-payment-gateways.md.
+	 * What every payment method is expected to support, as feature names and what to call
+	 * them. One missing any of them gets a warning on the Payment screen, not a block. See
+	 * docs/camptix-payment-gateways.md.
 	 *
 	 * @return string[]
 	 */
 	public static function get_required_features() {
 		/**
-		 * Filters what a payment method must support before it can be newly enabled.
+		 * Filters what every payment method is expected to support.
 		 *
 		 * @param string[] $features Feature names and what to call them.
 		 */
@@ -204,8 +205,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	/**
 	 * Render the markup for the Enabled button
 	 *
-	 * A payment method missing a required feature can't be newly enabled. One already enabled
-	 * stays switchable, with a warning, so an event mid-sale isn't cut off.
+	 * A payment method missing a required feature can still be enabled, with a warning.
 	 *
 	 * @param array $args
 	 */
@@ -213,34 +213,21 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
-		$missing = $this->get_missing_requirements();
-
-		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) && ( ! $missing || ! empty( $args['value'] ) ) ) {
+		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
 			$camptix->field_yesno( $args );
 
+			$missing = $this->get_missing_requirements();
 			if ( $missing ) {
 				?>
 				<p class="description">
 					<?php printf(
 						/* translators: %s: Missing features, e.g. "refunds, payment lookup". */
-						esc_html__( 'This payment method does not support %s, which every payment method now must. It stays available while enabled, but once disabled it cannot be enabled again.', 'wordcamporg' ),
+						esc_html__( 'This payment method does not support %s. Refunds, or payments CampTix could not confirm, may have to be handled in the payment provider dashboard.', 'wordcamporg' ),
 						esc_html( implode( ', ', $missing ) )
 					); ?>
 				</p>
 				<?php
 			}
-		} elseif ( $missing && in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
-			esc_html_e( 'Disabled', 'wordcamporg' );
-
-			?>
-			<p class="description">
-				<?php printf(
-					/* translators: %s: Missing features, e.g. "refunds, payment lookup". */
-					esc_html__( 'This payment method cannot be enabled: it does not support %s.', 'wordcamporg' ),
-					esc_html( implode( ', ', $missing ) )
-				); ?>
-			</p>
-			<?php
 		} else {
 			_e( 'Disabled', 'wordcamporg' );
 

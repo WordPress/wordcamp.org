@@ -1,11 +1,11 @@
 # CampTix payment gateways
 
-What a payment gateway needs before WordCamp sites can use it. Decided in
+What a payment gateway is expected to support on WordCamp sites. Decided in
 [#1550](https://github.com/WordPress/wordcamp.org/issues/1550).
 
 ## Requirements
 
-A gateway extends `CampTix_Payment_Method` and must:
+A gateway extends `CampTix_Payment_Method` and should:
 
 1. **Report results as structured data.** Call `payment_result( $token, $status, $data )`
    with `$data` an array: `transaction_id`, `transaction_details`, and for refunds
@@ -28,10 +28,12 @@ A gateway extends `CampTix_Payment_Method` and must:
 4. **Have a sandbox mode**, and a test site that its maintainers can use. A gateway
    without a sandbox needs a maintainer who can test it with small live payments.
 
-A gateway missing refunds (`refund-single`) or payment lookup can't be newly enabled on a
-site. One already enabled stays enabled, with a warning, until it's turned off. The list
-of required features is filterable with `camptix_payment_method_required_features`, which
-is also how to exempt a gateway: there's no switch for it in the admin.
+A gateway missing refunds (`refund-single`) or payment lookup (`payment-lookup`) gets a
+warning on Tickets > Setup > Payment, beside its switch and, while it's enabled, at the top
+of the screen. It is not blocked. Camps rely on gateways that don't declare these yet (see
+Status), and every event year is a new site, so a block would cut them off from the
+gateway they used the year before. Their maintainers are asked to add both instead. The
+list of features is filterable with `camptix_payment_method_required_features`.
 
 The `camptix_pre_attendee_timeout` action still fires before each draft times out, for
 gateways that haven't moved to `reconcile_payment()` yet.
@@ -54,11 +56,13 @@ gateways that haven't moved to `reconcile_payment()` yet.
 | --- | --- | --- | --- |
 | Stripe | Yes | Yes | |
 | PayPal | Yes | Yes | |
-| Instamojo | Yes | Yes | Refunds not yet tried against the sandbox. |
+| Instamojo | Yes | Yes | Instamojo's sandbox host no longer resolves, so refunds are covered by unit tests only. |
 | Razorpay | Yes | Yes | Not offered: unregistered in `campt-indian-payment-gateway` since May 2026 as known broken. |
-| SSLCommerz | Yes | Yes | Refunds not yet tried against the sandbox. The refund API only answers servers whose public IP is registered with SSLCommerz. |
+| SSLCommerz | Yes | Yes | Purchase and refund tried against the sandbox. |
 | shurjoPay | No | Yes | shurjoPay's API has no refund call. |
-| Knit Pay | Yes | No | Outside this repository; site admins may activate it. |
-| MercadoPago, PagSeguro, PayFast, PayNow, Paystack, TrustCard, TrustPay | No | No | Outside this repository. |
+| Knit Pay | Yes | No | Outside this repository; site admins may activate it. Reports payment status to CampTix itself. In use by camps in India and the Philippines. |
+| Khalti | Yes | Through `camptix_pre_attendee_timeout` | Outside this repository ([nepali-payments-for-camptix](https://github.com/openarun/nepali-payments-for-camptix)). In use by camps in Nepal. |
+| Fonepay QR | No | Through `camptix_pre_attendee_timeout` | Same repository as Khalti. In use by camps in Nepal. |
+| MercadoPago, PagSeguro, PayFast, PayNow, Paystack, TrustCard, TrustPay | No | No | Outside this repository. Last used between 2013 and 2019. |
 
-Every gateway marked No above can't be newly enabled on a site.
+Every gateway with anything but Yes in both columns gets the warning.

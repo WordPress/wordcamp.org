@@ -334,6 +334,30 @@ function author_profile_link( $link, $author_id, $author_nicename ) {
 add_filter( 'author_link', __NAMESPACE__ . '\author_profile_link', 10, 3 );
 
 /**
+ * Answer author archives with a 404.
+ *
+ * Nothing links to them (see `author_profile_link()`), and Core keeps them
+ * alive for any member of the site, even one with no posts. So
+ * `?author=<id>` was a way to walk user IDs and list a group's members,
+ * names included, without the login the Members page asks for.
+ *
+ * Runs before `redirect_canonical()`, so it can't redirect `?author=<id>`
+ * to a slug first.
+ */
+function disable_author_archives() {
+	if ( ! is_author() ) {
+		return;
+	}
+
+	global $wp_query;
+
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
+}
+add_action( 'template_redirect', __NAMESPACE__ . '\disable_author_archives', 0 );
+
+/**
  * Register a block pattern category for the theme.
  */
 function register_pattern_category() {

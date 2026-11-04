@@ -448,6 +448,48 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Logged-out visitors get a login prompt on the Members page, not the
+	 * list: people join a group to hear about its events, not to be listed
+	 * publicly (#2304).
+	 */
+	public function test_group_members_block_hides_members_from_logged_out_visitors() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Hidden Member Name',
+			)
+		);
+		wp_set_current_user( 0 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-members__login', $output );
+		$this->assertStringContainsString( wp_login_url(), html_entity_decode( $output ) );
+		$this->assertStringNotContainsString( 'Hidden Member Name', $output );
+		$this->assertStringNotContainsString( 'wporg-group-members__card', $output );
+	}
+
+	/**
+	 * Any logged-in visitor sees the list, member of this group or not.
+	 */
+	public function test_group_members_block_lists_members_for_logged_in_visitors() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Listed Member Name',
+			)
+		);
+		$outsider_id = self::factory()->user->create();
+		remove_user_from_blog( $outsider_id, get_current_blog_id() );
+		wp_set_current_user( $outsider_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( 'Listed Member Name', $output );
+		$this->assertStringNotContainsString( 'wporg-group-members__login', $output );
+	}
+
+	/**
 	 * The default combined variant preserves the original unheaded output.
 	 * A plain member gets no role badge; see
 	 * `test_group_membership_block_badges_event_manager_roles()`.

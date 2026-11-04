@@ -961,10 +961,10 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * after charging and an IPN that hasn't arrived. That is settled the way payment_notify()
 	 * settles it, after the same checks that the transaction is this order's and covers it.
 	 *
-	 * A checkout PayPal still reports not started keeps its seats until the token expires; once
-	 * PayPal reports the token expired or invalid, nothing can be paid on it any more. The first
-	 * lookup comes before the token expires (see LOOKUP_LEAD), and a transaction found then is
-	 * remembered, since PayPal stops answering for the token itself once it expires.
+	 * A checkout PayPal still reports not started keeps its seats until the token expires, going
+	 * by the expiry recorded at checkout: PayPal can go on answering for a token well past its
+	 * three hours. The first lookup comes before then (see LOOKUP_LEAD), and a transaction found
+	 * is remembered, in case PayPal has stopped answering for the token by the next sweep.
 	 *
 	 * @param string $payment_token CampTix payment token of a draft order.
 	 *
@@ -1082,11 +1082,22 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 		switch ( $checkout_status ) {
 			case 'PaymentActionNotInitiated':
+				$expires_at = (int) get_post_meta( $attendee_id, 'tix_paypal_token_expires_at', true );
+
+				/*
+				 * Don't wait for PayPal to say the token expired: it can take many hours. Nothing was
+				 * charged (see above), and a buyer who still comes back and pays recovers the order
+				 * through payment_result().
+				 */
+				if ( $expires_at <= time() ) {
+					return $this->lookup_result( self::LOOKUP_EXPIRED, 'the PayPal checkout was not completed before its token expired', $checkout_log );
+				}
+
 				return $this->lookup_result(
 					self::LOOKUP_OPEN,
 					'the PayPal checkout was not completed, but its token has not expired yet',
 					$checkout_log,
-					(int) get_post_meta( $attendee_id, 'tix_paypal_token_expires_at', true )
+					$expires_at
 				);
 
 			case 'PaymentActionFailed':

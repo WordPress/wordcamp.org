@@ -24,7 +24,20 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		'refund-single'  => true,
 		'refund-all'     => true,
 		'refund-partial' => true,
+		'payment-lookup' => true,
 	);
+
+	/**
+	 * How long an Express Checkout token can be paid. PayPal documents three hours.
+	 */
+	const TOKEN_LIFETIME = 3 * HOUR_IN_SECONDS;
+
+	/**
+	 * How long before the token expires the sweep first asks about a checkout. PayPal stops
+	 * answering for a token once it expires, and the sweep reaches a draft up to the grace
+	 * plus one ten-minute cron interval after its recorded expiry.
+	 */
+	const LOOKUP_LEAD = 20 * MINUTE_IN_SECONDS;
 
 	/**
 	 * We can have an array to store our options.
@@ -907,6 +920,14 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 		if ( isset( $response['ACK'], $response['TOKEN'] ) && 'Success' == $response['ACK'] ) {
 			$token = $response['TOKEN'];
+
+			// So the timeout sweep can ask PayPal what became of this checkout, and release
+			// the order's seats once the token can no longer be paid instead of after a day.
+			// The order comes due for its first lookup while PayPal still answers for the
+			// token; one not completed by then keeps its seats until the token expires.
+			$camptix->update_payment_token_meta( $payment_token, 'tix_paypal_token', $token );
+			$camptix->update_payment_token_meta( $payment_token, 'tix_paypal_token_expires_at', time() + self::TOKEN_LIFETIME );
+			$camptix->set_order_session_expiry( $payment_token, time() + self::TOKEN_LIFETIME - self::LOOKUP_LEAD );
 			$url   = $options['sandbox'] ? 'https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout' : 'https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout';
 			$url   = add_query_arg( 'token', $token, $url );
 			wp_redirect( esc_url_raw( $url ) );
@@ -929,6 +950,165 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 				'raw' => $request,
 			) );
 		}
+	}
+
+	/**
+	 * Before the sweep times a draft order out, ask PayPal what became of its checkout.
+	 *
+	 * PayPal only charges when the buyer comes back and payment_return() calls
+	 * DoExpressCheckoutPayment, so a checkout that was never completed took no money. What
+	 * this catches is a charge whose result was never recorded, such as a request that died
+	 * after charging and an IPN that hasn't arrived. That is settled the way payment_notify()
+	 * settles it, after the same checks that the transaction is this order's and covers it.
+	 *
+	 * A checkout PayPal still reports not started keeps its seats until the token expires; once
+	 * PayPal reports the token expired or invalid, nothing can be paid on it any more. The first
+	 * lookup comes before the token expires (see LOOKUP_LEAD), and a transaction found then is
+	 * remembered, since PayPal stops answering for the token itself once it expires.
+	 *
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
+	 */
+	public function reconcile_payment( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$paypal_token = '';
+		$attendee_id  = 0;
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$paypal_token = get_post_meta( $attendee_id, 'tix_paypal_token', true );
+			if ( $paypal_token ) {
+				break;
+			}
+		}
+		if ( ! $paypal_token ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no PayPal token recorded' );
+		}
+
+		// A transaction an earlier sweep found, but couldn't fetch the details of.
+		$txn_id   = (string) get_post_meta( $attendee_id, 'tix_paypal_transaction_id', true );
+		$checkout = array();
+		if ( '' === $txn_id ) {
+			$checkout = $this->look_up_checkout( $payment_token, $paypal_token, $attendee_id );
+			if ( isset( $checkout['status'] ) ) {
+				return $checkout;
+			}
+			$txn_id = (string) $checkout['PAYMENTREQUEST_0_TRANSACTIONID'];
+		}
+
+		$request = $this->request( array(
+			'METHOD'        => 'GetTransactionDetails',
+			'TRANSACTIONID' => $txn_id,
+		) );
+		if ( is_wp_error( $request ) || 200 !== (int) wp_remote_retrieve_response_code( $request ) ) {
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not reach PayPal', $request );
+		}
+
+		$txn_details = wp_parse_args( wp_remote_retrieve_body( $request ) );
+		// What the log needs, without the payer's name, email and address.
+		$txn_log = array_intersect_key( $txn_details, array_flip( array( 'ACK', 'L_ERRORCODE0', 'L_LONGMESSAGE0', 'TRANSACTIONID', 'TRANSACTIONTYPE', 'PAYMENTSTATUS', 'PENDINGREASON', 'AMT', 'CURRENCYCODE', 'CUSTOM', 'CORRELATIONID' ) ) );
+		if ( ! isset( $txn_details['ACK'] ) || 'Success' !== $txn_details['ACK'] || empty( $txn_details['PAYMENTSTATUS'] ) ) {
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, sprintf( 'fetching PayPal transaction %s failed', $txn_id ), $txn_log );
+		}
+
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no order found for the payment token', $txn_log );
+		}
+
+		// Kept rather than released: someone should look at a charge that doesn't fit its order.
+		$refusal = $this->reason_transaction_is_not_for_order( $order, $txn_details );
+		if ( '' === $refusal ) {
+			$refusal = $this->reason_transaction_does_not_cover_order( $order, $txn_details );
+		}
+		if ( '' !== $refusal ) {
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, sprintf( 'PayPal transaction %1$s does not settle this order, %2$s', $txn_id, $refusal ), $txn_log );
+		}
+
+		$camptix->log( sprintf( 'PayPal checkout timed out, but transaction %s exists; processing it.', $txn_id ), $order['attendee_id'], $txn_log );
+
+		$camptix->payment_result(
+			$payment_token,
+			$this->get_status_from_string( $txn_details['PAYMENTSTATUS'] ),
+			array(
+				'transaction_id'      => $txn_id,
+				'transaction_details' => array(
+					'raw'      => $txn_details,
+					'checkout' => $checkout,
+				),
+			),
+			false /* non-interactive */
+		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, sprintf( 'PayPal transaction %s settled the order', $txn_id ), $txn_log );
+	}
+
+	/**
+	 * Ask PayPal what became of an Express Checkout, for reconcile_payment().
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 * @param string $paypal_token  The Express Checkout token.
+	 * @param int    $attendee_id   A draft of the order.
+	 *
+	 * @return array The checkout, when it completed with a transaction (which is then
+	 *               remembered on the order); otherwise a reconcile_payment() result.
+	 */
+	protected function look_up_checkout( $payment_token, $paypal_token, $attendee_id ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$request = $this->request( array(
+			'METHOD' => 'GetExpressCheckoutDetails',
+			'TOKEN'  => $paypal_token,
+		) );
+		if ( is_wp_error( $request ) || 200 !== (int) wp_remote_retrieve_response_code( $request ) ) {
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not reach PayPal', $request );
+		}
+
+		$checkout = wp_parse_args( wp_remote_retrieve_body( $request ) );
+		// What the log needs, without the payer's name, email and address.
+		$checkout_log = array_intersect_key( $checkout, array_flip( array( 'ACK', 'CHECKOUTSTATUS', 'L_ERRORCODE0', 'L_LONGMESSAGE0', 'PAYMENTREQUEST_0_TRANSACTIONID', 'CORRELATIONID' ) ) );
+		if ( ! isset( $checkout['ACK'] ) || ! in_array( $checkout['ACK'], array( 'Success', 'SuccessWithWarning' ), true ) ) {
+			// 10410: invalid token. 10411: the Express Checkout session has expired.
+			if ( isset( $checkout['L_ERRORCODE0'] ) && in_array( (string) $checkout['L_ERRORCODE0'], array( '10410', '10411' ), true ) ) {
+				return $this->lookup_result( self::LOOKUP_EXPIRED, 'the PayPal token has expired', $checkout_log );
+			}
+
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, 'PayPal answered with an error', $checkout_log );
+		}
+
+		$checkout_status = isset( $checkout['CHECKOUTSTATUS'] ) ? (string) $checkout['CHECKOUTSTATUS'] : '';
+
+		switch ( $checkout_status ) {
+			case 'PaymentActionNotInitiated':
+				return $this->lookup_result(
+					self::LOOKUP_OPEN,
+					'the PayPal checkout was not completed, but its token has not expired yet',
+					$checkout_log,
+					(int) get_post_meta( $attendee_id, 'tix_paypal_token_expires_at', true )
+				);
+
+			case 'PaymentActionFailed':
+				return $this->lookup_result( self::LOOKUP_EXPIRED, 'the PayPal payment failed', $checkout_log );
+
+			case 'PaymentActionCompleted':
+				break;
+
+			default:
+				// PaymentActionInProgress, or something new.
+				return $this->lookup_result( self::LOOKUP_UNKNOWN, sprintf( 'the PayPal checkout is %s', $checkout_status ? $checkout_status : 'in an unknown state' ), $checkout_log );
+		}
+
+		$txn_id = isset( $checkout['PAYMENTREQUEST_0_TRANSACTIONID'] ) ? (string) $checkout['PAYMENTREQUEST_0_TRANSACTIONID'] : '';
+		if ( '' === $txn_id ) {
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, 'PayPal reports the checkout completed but names no transaction', $checkout_log );
+		}
+
+		// Once the token expires PayPal won't name the transaction again, so a later sweep needs it.
+		$camptix->update_payment_token_meta( $payment_token, 'tix_paypal_transaction_id', $txn_id );
+
+		return $checkout;
 	}
 
 	/**

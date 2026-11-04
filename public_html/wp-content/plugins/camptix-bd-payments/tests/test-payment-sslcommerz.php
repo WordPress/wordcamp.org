@@ -426,10 +426,60 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 		$result = $this->gateway->send_refund_request( 'order-a' );
 
 		$this->assertStringStartsWith( 'https://sandbox.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php?', $asked );
-		$this->assertStringContainsString( 'bank_tran_id=bank-ref-1', $asked );
-		$this->assertStringContainsString( 'refund_amount=20.00', $asked );
+		parse_str( (string) wp_parse_url( $asked, PHP_URL_QUERY ), $query );
+		$this->assertSame( 'bank-ref-1', $query['bank_tran_id'] );
+		$this->assertSame( '20.00', $query['refund_amount'] );
+		$this->assertSame( 'order-a', $query['refund_trans_id'], 'the refund is named after the order, so a retry names the same one' );
+		$this->assertArrayHasKey( 'refund_remarks', $query );
 		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
 		$this->assertSame( 'refund-ref-1', $result['refund_transaction_id'] );
+	}
+
+	/**
+	 * Query values are encoded, so text in one (a refund remark is the buyer's own) can't
+	 * add or replace parameters, or cut the credentials off behind a `#`.
+	 */
+	public function test_api_encodes_query_values() {
+		$asked = null;
+		add_filter(
+			'pre_http_request',
+			function ( $pre, $args, $url ) use ( &$asked ) {
+				$asked = $url;
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'status' => 'success' ] ),
+				];
+			},
+			10,
+			3
+		);
+
+		$remark = "Can't come & sorry #1 x&bank_tran_id=other&refund_amount=5000";
+		$this->invoke(
+			'api',
+			'GET',
+			'/validator/api/merchantTransIDvalidationAPI.php',
+			[
+				'bank_tran_id'   => 'bank-ref-1',
+				'refund_amount'  => '20.00',
+				'refund_remarks' => $remark,
+				'store_id'       => 'store',
+				'store_passwd'   => 'p@ss#w&rd',
+			]
+		);
+
+		$this->assertNull( wp_parse_url( $asked, PHP_URL_FRAGMENT ) );
+		parse_str( (string) wp_parse_url( $asked, PHP_URL_QUERY ), $query );
+		$this->assertSame(
+			[
+				'bank_tran_id'   => 'bank-ref-1',
+				'refund_amount'  => '20.00',
+				'refund_remarks' => $remark,
+				'store_id'       => 'store',
+				'store_passwd'   => 'p@ss#w&rd',
+			],
+			$query
+		);
 	}
 
 	/** A refund SSLCommerz refuses, or one without a bank transaction to refund, fails. */

@@ -78,6 +78,9 @@ class CampTix_Plugin {
 	// Added to a draft's session expiry before it counts as abandoned; see get_draft_release_at().
 	public const DRAFT_LIFETIME_GRACE = 5 * MINUTE_IN_SECONDS;
 
+	// How long past the 24 hours a draft is kept when its payment can't be looked up; see keep_draft_for_next_sweep().
+	public const DRAFT_LOOKUP_RETRY = 6 * HOUR_IN_SECONDS;
+
 	/**
 	 * Forward field_* method calls to admin_setup for backward compatibility.
 	 *
@@ -6703,6 +6706,10 @@ class CampTix_Plugin {
 		$current_loop = 1;
 		$max_loops = 500;
 
+		// Orders already looked up this pass, and gateways that couldn't be reached.
+		$looked_up   = array();
+		$unreachable = array();
+
 		do_action( 'camptix_timeout_sweep_start' );
 
 		// Drafts whose recorded session expiry plus the grace has passed, and drafts with no
@@ -6747,9 +6754,12 @@ class CampTix_Plugin {
 		) ) ) {
 
 			foreach ( $attendees as $attendee_id ) {
+				$this->reconcile_draft_before_timeout( $attendee_id, $looked_up, $unreachable );
+
+				// For gateways outside this repo that still hook in here instead of implementing reconcile_payment().
 				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
 
-				// Check again, in case the action settled the order or found its session still open.
+				// Check again, in case the gateway settled the order or found its session still open.
 				if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) || $this->get_draft_release_at( $attendee_id ) > time() ) {
 					continue;
 				}
@@ -6772,6 +6782,104 @@ class CampTix_Plugin {
 		if ( $processed > 0 ) {
 			$this->log( sprintf( 'Reviewed timeout payments and set %d attendees to timeout status.', $processed ) );
 		}
+	}
+
+	/**
+	 * Before the sweep times a draft out, ask its gateway what became of the order's payment.
+	 *
+	 * The gateway settles a payment it finds (see CampTix_Payment_Method::reconcile_payment()).
+	 * Here is what is the same for every gateway: a session still open keeps its seats until
+	 * its expiry, and an answer that doesn't say what happened (the gateway can't be reached,
+	 * answers with an error, or reports a session still open past its expiry, as a UPI or bank
+	 * confirmation can be) keeps the order for the next sweep, since timing it out releases its
+	 * seats to other buyers. Not past 30 hours from checkout, though: see keep_draft_for_next_sweep().
+	 *
+	 * One lookup per order per pass: the attendees of an order share the payment and settling
+	 * it settles them all. And once a gateway could not be reached, the rest of the pass keeps
+	 * its drafts without waiting on a lookup each: a client's HTTP timeout is up to 30 seconds,
+	 * so twenty waits would outlast the ten-minute cron interval.
+	 *
+	 * @param int   $attendee_id A draft due to time out.
+	 * @param array $looked_up   Payment tokens already looked up this pass. Updated.
+	 * @param array $unreachable Ids of payment methods that couldn't be reached this pass. Updated.
+	 */
+	protected function reconcile_draft_before_timeout( $attendee_id, &$looked_up, &$unreachable ) {
+		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		if ( ! $payment_token || isset( $looked_up[ $payment_token ] ) ) {
+			return;
+		}
+		$looked_up[ $payment_token ] = true;
+
+		$method_id = get_post_meta( $attendee_id, 'tix_payment_method', true );
+		$method    = $method_id ? $this->get_payment_method_by_id( $method_id ) : null;
+		if ( ! $method instanceof CampTix_Payment_Method || ! $method->supports_feature( 'payment-lookup' ) ) {
+			return;
+		}
+
+		if ( isset( $unreachable[ $method_id ] ) ) {
+			$this->keep_draft_for_next_sweep( $attendee_id, $payment_token, sprintf( '%s was unreachable earlier this sweep, not asking', $method_id ), null );
+			return;
+		}
+
+		$result = $method->reconcile_payment( $payment_token );
+		$status = is_array( $result ) && isset( $result['status'] ) ? $result['status'] : CampTix_Payment_Method::LOOKUP_UNKNOWN;
+		$reason = is_array( $result ) && ! empty( $result['reason'] ) ? $result['reason'] : sprintf( '%s gave no usable answer', $method_id );
+		$data   = is_array( $result ) && isset( $result['data'] ) ? $result['data'] : null;
+
+		switch ( $status ) {
+			case CampTix_Payment_Method::LOOKUP_SETTLED:
+				return;
+
+			case CampTix_Payment_Method::LOOKUP_EXPIRED:
+				// Say what the gateway found, since the timeout that follows doesn't.
+				$this->log( sprintf( 'At timeout, %s.', $reason ), $attendee_id, $data );
+				return;
+
+			case CampTix_Payment_Method::LOOKUP_OPEN:
+				$expires_at = (int) ( $result['expires_at'] ?? 0 );
+				if ( $expires_at > time() ) {
+					$this->log( sprintf( '%s session still open at timeout; keeping the draft until it expires.', $method_id ), $attendee_id, $data );
+					$this->set_order_session_expiry( $payment_token, $expires_at );
+					return;
+				}
+
+				// Past its expiry, but the gateway hasn't expired it yet: a payment may still be confirming.
+				$this->keep_draft_for_next_sweep( $attendee_id, $payment_token, $reason, $data );
+				return;
+
+			case CampTix_Payment_Method::LOOKUP_UNREACHABLE:
+				$unreachable[ $method_id ] = true;
+				$this->keep_draft_for_next_sweep( $attendee_id, $payment_token, $reason, $data );
+				return;
+
+			default:
+				$this->keep_draft_for_next_sweep( $attendee_id, $payment_token, $reason, $data );
+				return;
+		}
+	}
+
+	/**
+	 * The payment couldn't be looked up: keep the order's drafts for the next sweep, but not past
+	 * the 24 hours (plus grace) a draft with no recorded expiry gets, plus DRAFT_LOOKUP_RETRY, so
+	 * a broken lookup can't hold seats forever. The retry window matters for gateways that record
+	 * no session expiry: their drafts only come due at 24 hours, and without it the first failed
+	 * lookup would be the last. The checkout time is tix_timestamp, or the post date if that is
+	 * missing, so the cap always has a floor.
+	 *
+	 * @param int    $attendee_id   The draft the sweep reached.
+	 * @param string $payment_token Its order.
+	 * @param string $why           For the log.
+	 * @param mixed  $data          For the log.
+	 */
+	protected function keep_draft_for_next_sweep( $attendee_id, $payment_token, $why, $data ) {
+		$checked_out = (int) get_post_meta( $attendee_id, 'tix_timestamp', true ) ?: (int) get_post_timestamp( $attendee_id );
+		if ( $checked_out + DAY_IN_SECONDS + self::DRAFT_LIFETIME_GRACE + self::DRAFT_LOOKUP_RETRY <= time() ) {
+			$this->log( sprintf( 'At timeout, %s; giving up after 30 hours.', $why ), $attendee_id, $data );
+			return;
+		}
+
+		$this->log( sprintf( 'At timeout, %s; keeping the draft for the next sweep.', $why ), $attendee_id, $data );
+		$this->set_order_session_expiry( $payment_token, time() );
 	}
 
 	/**

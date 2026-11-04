@@ -1261,6 +1261,207 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A fake gateway for the sweep's payment lookup, answering from a queue of results.
+	 *
+	 * @param string $id       Payment method id.
+	 * @param array  $answers  reconcile_payment() results, by payment token or in order.
+	 * @param bool   $supports Whether it sets the `payment-lookup` feature.
+	 *
+	 * @return CampTix_Payment_Method
+	 */
+	protected function register_lookup_gateway( $id, $answers, $supports = true ) {
+		$gateway = new class() extends CampTix_Payment_Method {
+			public $answers = array();
+			public $asked   = array();
+
+			/**
+			 * Skip the parent's registration with CampTix.
+			 */
+			public function __construct() {}
+
+			/**
+			 * Not used by the sweep.
+			 *
+			 * @param string $payment_token Payment token.
+			 */
+			public function payment_checkout( $payment_token ) {}
+
+			/**
+			 * Record the question, answer from the queue: by token, whatever order the sweep
+			 * visits them in, else in turn.
+			 *
+			 * @param string $payment_token Payment token.
+			 *
+			 * @return mixed
+			 */
+			public function reconcile_payment( $payment_token ) {
+				$this->asked[] = $payment_token;
+
+				return array_key_exists( $payment_token, $this->answers ) ? $this->answers[ $payment_token ] : array_shift( $this->answers );
+			}
+		};
+
+		$gateway->id                 = $id;
+		$gateway->answers            = $answers;
+		$gateway->supported_features = array( 'payment-lookup' => $supports );
+
+		add_filter(
+			'camptix_get_payment_method_by_id',
+			function ( $method, $method_id ) use ( $gateway ) {
+				return $method_id === $gateway->id ? $gateway : $method;
+			},
+			10,
+			2
+		);
+
+		return $gateway;
+	}
+
+	/**
+	 * A draft due to time out, paid through the given gateway.
+	 */
+	protected function create_due_draft( $ticket_id, $token, $method_id ) {
+		$id = $this->create_own_draft( $ticket_id, 'buyer_' . $token, $token, 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		update_post_meta( $id, 'tix_payment_method', $method_id );
+
+		return $id;
+	}
+
+	/**
+	 * What the sweep does with each lookup result: expired times out, open keeps until the
+	 * gateway's expiry, and unknown keeps for the next sweep.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_acts_on_each_payment_lookup_result() {
+		$ticket_id  = $this->create_ticket();
+		$expired    = $this->create_due_draft( $ticket_id, 'tok_expired', 'fake' );
+		$open       = $this->create_due_draft( $ticket_id, 'tok_open', 'fake' );
+		$unknown    = $this->create_due_draft( $ticket_id, 'tok_unknown', 'fake' );
+		$garbage    = $this->create_due_draft( $ticket_id, 'tok_garbage', 'fake' );
+		$expires_at = time() + 20 * MINUTE_IN_SECONDS;
+
+		$answers = array(
+			'tok_expired' => array(
+				'status' => CampTix_Payment_Method::LOOKUP_EXPIRED,
+				'reason' => 'the fake session expired',
+			),
+			'tok_open'    => array(
+				'status'     => CampTix_Payment_Method::LOOKUP_OPEN,
+				'expires_at' => $expires_at,
+			),
+			'tok_unknown' => array( 'status' => CampTix_Payment_Method::LOOKUP_UNKNOWN ),
+			'tok_garbage' => 'not an array',
+		);
+		$this->register_lookup_gateway( 'fake', $answers );
+
+		$logged = array();
+		$log    = function ( $message, $post_id ) use ( &$logged ) {
+			$logged[] = array( $message, $post_id );
+		};
+		add_action( 'camptix_log_raw', $log, 10, 2 );
+		try {
+			self::$camptix->review_timeout_payments();
+		} finally {
+			remove_action( 'camptix_log_raw', $log, 10 );
+		}
+
+		$this->assertSame( 'timeout', get_post_status( $expired ) );
+		$this->assertContains( array( 'At timeout, the fake session expired.', $expired ), $logged, 'what the gateway found is logged' );
+		$this->assertSame( 'draft', get_post_status( $open ) );
+		$this->assertSame( $expires_at, (int) get_post_meta( $open, 'tix_session_expires_at', true ) );
+		$this->assertSame( 'draft', get_post_status( $unknown ) );
+		$this->assertGreaterThan( time(), self::$camptix->get_draft_release_at( $unknown ), 'retried by a later sweep' );
+		$this->assertSame( 'draft', get_post_status( $garbage ), 'an unreadable answer is treated as unknown' );
+	}
+
+	/**
+	 * A gateway without the `payment-lookup` feature isn't asked, and its drafts time out as
+	 * before.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_does_not_ask_a_gateway_without_payment_lookup() {
+		$ticket_id = $this->create_ticket();
+		$draft     = $this->create_due_draft( $ticket_id, 'tok_legacy', 'legacy' );
+		$gateway   = $this->register_lookup_gateway( 'legacy', array( array( 'status' => CampTix_Payment_Method::LOOKUP_UNKNOWN ) ), false );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( array(), $gateway->asked );
+		$this->assertSame( 'timeout', get_post_status( $draft ) );
+	}
+
+	/**
+	 * Once a gateway can't be reached, the rest of the pass keeps its drafts without asking
+	 * it again. Other gateways are still asked.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_stops_asking_an_unreachable_gateway_but_asks_others() {
+		$ticket_id = $this->create_ticket();
+		$down      = array(
+			$this->create_due_draft( $ticket_id, 'tok_down_1', 'down' ),
+			$this->create_due_draft( $ticket_id, 'tok_down_2', 'down' ),
+		);
+		$up        = $this->create_due_draft( $ticket_id, 'tok_up', 'up' );
+
+		$unreachable = array( 'status' => CampTix_Payment_Method::LOOKUP_UNREACHABLE );
+		$down_gw     = $this->register_lookup_gateway( 'down', array( $unreachable, $unreachable ) );
+		$up_gw       = $this->register_lookup_gateway( 'up', array( array( 'status' => CampTix_Payment_Method::LOOKUP_EXPIRED ) ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertCount( 1, $down_gw->asked, 'asked once, then skipped for the rest of the pass' );
+		foreach ( $down as $draft ) {
+			$this->assertSame( 'draft', get_post_status( $draft ) );
+		}
+		$this->assertCount( 1, $up_gw->asked );
+		$this->assertSame( 'timeout', get_post_status( $up ) );
+	}
+
+	/**
+	 * A gateway that records no session expiry only has its drafts come due at 24 hours. A
+	 * lookup that can't answer then, or a gateway skipped for the rest of the pass after one
+	 * that couldn't, keeps them for the retry window rather than timing them out on the spot.
+	 *
+	 * @covers CampTix_Plugin::keep_draft_for_next_sweep
+	 */
+	public function test_timeout_sweep_retries_drafts_that_only_come_due_at_24_hours() {
+		$ticket_id = $this->create_ticket();
+		$age       = DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE + MINUTE_IN_SECONDS;
+		$drafts    = array();
+		foreach ( array( 'tok_day_1', 'tok_day_2' ) as $token ) {
+			$drafts[ $token ] = $this->create_own_draft( $ticket_id, 'buyer_' . $token, $token, $age );
+			update_post_meta( $drafts[ $token ], 'tix_payment_method', 'nolifetime' );
+		}
+
+		$unreachable = array( 'status' => CampTix_Payment_Method::LOOKUP_UNREACHABLE );
+		$gateway     = $this->register_lookup_gateway( 'nolifetime', array( $unreachable, $unreachable ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertCount( 1, $gateway->asked );
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'draft', get_post_status( $draft ), 'kept for the next sweep' );
+			$this->assertGreaterThan( time(), self::$camptix->get_draft_release_at( $draft ) );
+		}
+
+		// Once the retry window has passed too, the drafts time out.
+		foreach ( $drafts as $draft ) {
+			update_post_meta( $draft, 'tix_timestamp', time() - $age - CampTix_Plugin::DRAFT_LOOKUP_RETRY );
+			update_post_meta( $draft, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
+		}
+		$gateway->answers = array( $unreachable, $unreachable );
+
+		self::$camptix->review_timeout_payments();
+
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'timeout', get_post_status( $draft ) );
+		}
+	}
+
+	/**
 	 * Logged out, nothing is the buyer's own.
 	 */
 	public function test_abandoned_drafts_is_empty_when_logged_out() {

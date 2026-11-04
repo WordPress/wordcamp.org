@@ -229,6 +229,7 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 	/** Session-key queries return a flat transaction and retain reconciliation data. */
 	public function test_timeout_recovery_stores_references_but_redacts_its_log() {
 		$id = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		set_post_type( $id, 'tix_attendee' );
 		update_post_meta( $id, '_sslcommerz_session_key', 'session-secret' );
 		update_post_meta( $id, 'tix_payment_token', 'order-a' );
 		$this->gateway->method( 'get_order' )->willReturn( [ 'total' => 20 ] );
@@ -266,7 +267,8 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 			),
 			false
 		);
-		$this->gateway->pre_attendee_timeout( $id );
+		$result = $this->gateway->reconcile_payment( 'order-a' );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
 	}
 
 	/** Both HTTP clients retain useful errors without exposing echoed secrets. */

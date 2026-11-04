@@ -71,6 +71,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 		add_filter( 'wcorg_meetup_import_pre_fetch_organizers', '__return_empty_array', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_connection_member', '__return_empty_string', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array', 5 );
+
+		// Most of this suite is about member matching itself, so it runs with
+		// it on. The default, off, is covered by the `*_members_off_*` tests.
+		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
 	}
 
 	/**
@@ -2550,9 +2554,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 */
 	public function test_batch_progress( string $step, int $offset, bool $match_people, array $expected ) {
 		$job = array(
-			'status'       => 'importing',
-			'match_people' => $match_people,
-			'cursor'       => array(
+			'status'        => 'importing',
+			'match_people'  => $match_people,
+			'match_members' => $match_people,
+			'cursor'        => array(
 				'step'   => $step,
 				'offset' => $offset,
 			),
@@ -2576,6 +2581,172 @@ class Test_Meetup_Import extends Groups_TestCase {
 			'second batch of members' => array( 'members', 200, true, array( 3, 7 ) ),
 			'events, with people'     => array( 'events', 10, true, array( 5, 7 ) ),
 		);
+	}
+
+	/**
+	 * With members off, the progress bar has no members batches to count.
+	 */
+	public function test_batch_progress_members_off() {
+		$job = array(
+			'status'        => 'importing',
+			'match_people'  => true,
+			'match_members' => false,
+			'cursor'        => array(
+				'step'   => 'organizers',
+				'offset' => 0,
+			),
+			'data'          => array(
+				'members' => array(),
+				'events'  => array_fill( 0, Meetup_Import\EVENTS_PER_BATCH * 2 + 5, array() ),
+			),
+		);
+
+		// Group, organizers, three batches of events.
+		$this->assertSame( array( 1, 5 ), Meetup_Import\batch_progress( $job ) );
+
+		$job['cursor'] = array(
+			'step'   => 'events',
+			'offset' => 10,
+		);
+
+		$this->assertSame( array( 3, 5 ), Meetup_Import\batch_progress( $job ) );
+	}
+
+	/**
+	 * Member matching is off unless something turns it on (#2305).
+	 */
+	public function test_members_off_by_default() {
+		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		$this->assertFalse( Meetup_Import\matches_members() );
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+
+		$this->assertTrue( $job['match_people'] );
+		$this->assertFalse( $job['match_members'] );
+	}
+
+	/**
+	 * With members off, "Match people" still gives Meetup organizers their
+	 * role, but nobody else is fetched, previewed, or added to the group.
+	 */
+	public function test_members_off_still_matches_organizers() {
+		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		$organizer = self::factory()->user->create( array( 'user_email' => 'organizer@example.org' ) );
+		$member    = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
+		$fetched   = false;
+
+		$this->fake_events( array( $this->raw_event() ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_organizers',
+			static function () {
+				return array(
+					array(
+						'metadata' => array( 'role' => 'ORGANIZER' ),
+						'node'     => array(
+							'id'    => 'o1',
+							'email' => 'organizer@example.org',
+						),
+					),
+				);
+			}
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( &$fetched ) {
+				$fetched = true;
+
+				return array(
+					array(
+						'id'    => 'm1',
+						'email' => 'member@example.org',
+					),
+				);
+			}
+		);
+
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+
+		$this->assertFalse( $fetched, 'Members should not be fetched from Meetup at all.' );
+		$this->assertNull( Meetup_Import\get_job( $this->site_id )['plan']['member_counts'] );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( 'done', Meetup_Import\get_job( $this->site_id )['status'] );
+		$this->assertTrue( is_user_member_of_blog( $organizer, $this->site_id ) );
+		$this->assertFalse( is_user_member_of_blog( $member, $this->site_id ) );
+		$this->assertSame( array(), Meetup_Import\get_job( $this->site_id )['results']['member_counts'] );
+	}
+
+	/**
+	 * A job left paused on its members step from before the flag goes on to
+	 * the events without adding anyone.
+	 */
+	public function test_members_off_skips_a_paused_members_step() {
+		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		$member = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
+
+		$this->fake_events( array( $this->raw_event() ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () {
+				return array(
+					array(
+						'id'    => 'm1',
+						'email' => 'member@example.org',
+					),
+				);
+			}
+		);
+
+		// A job from before the flag: members fetched, no `match_members` key.
+		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+
+		$stored = Meetup_Import\get_job( $this->site_id );
+		unset( $stored['match_members'] );
+		$stored['cursor'] = array(
+			'step'   => 'members',
+			'offset' => 0,
+		);
+		Meetup_Import\save_job( $stored );
+
+		$this->run_batches();
+
+		$this->assertSame( 'done', Meetup_Import\get_job( $this->site_id )['status'] );
+		$this->assertFalse( is_user_member_of_blog( $member, $this->site_id ) );
+		$this->assertNotNull( $this->find_event( '315889305' ) );
+	}
+
+	/**
+	 * The "Match people" label says what it does with members off: it no
+	 * longer promises to bring members over.
+	 */
+	public function test_members_off_form_label() {
+		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		ob_start();
+		Meetup_Import\render_start_form( array() );
+		$off = ob_get_clean();
+
+		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+
+		ob_start();
+		Meetup_Import\render_start_form( array() );
+		$on = ob_get_clean();
+
+		$this->assertStringContainsString( 'name="match_people"', $off );
+		$this->assertStringContainsString( 'Other members are not brought over.', $off );
+		$this->assertStringNotContainsString( 'members join the group', $off );
+		$this->assertStringContainsString( 'members join the group', $on );
 	}
 
 	/**

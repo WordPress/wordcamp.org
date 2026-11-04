@@ -18,6 +18,12 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	public $name = 'Instamojo';
 	public $description = 'Redefining Payments, Simplifying Lives! Empowering any business to collect money online within minutes.';
 	public $supported_currencies = array( 'INR' );
+	public $supported_features   = array(
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => false,
+		'payment-lookup' => true,
+	);
 
 	/* We can have an array to store our options. Use $this->get_payment_options() to retrieve them. */
 	protected $options = array();
@@ -328,6 +334,8 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	}
 
 	public function payment_checkout( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
 
 		if ( ! $payment_token || empty( $payment_token ) ) {
 			return false;
@@ -458,6 +466,11 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 				return;
 			}
 
+			// So the timeout sweep can ask Instamojo whether the order was paid.
+			if ( ! empty( $json_decode->payment_request->id ) ) {
+				$camptix->update_payment_token_meta( $payment_token, 'tix_instamojo_payment_request_id', (string) $json_decode->payment_request->id );
+			}
+
 			$long_url = $json_decode->payment_request->longurl;
 			header( 'Location:' . $long_url );
 		} else {
@@ -520,6 +533,160 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		}
 		// Set the associated attendees to cancelled.
 		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
+	}
+
+	/**
+	 * Before the sweep times a draft order out, ask Instamojo whether it was paid.
+	 *
+	 * A payment Instamojo reports credited settles the order, as a signed webhook would.
+	 *
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
+	 */
+	public function reconcile_payment( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_request_id = '';
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$payment_request_id = get_post_meta( $attendee_id, 'tix_instamojo_payment_request_id', true );
+			if ( $payment_request_id ) {
+				break;
+			}
+		}
+		if ( ! $payment_request_id ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no Instamojo payment request recorded' );
+		}
+
+		$request = $this->get_payment_request( $payment_request_id );
+		if ( is_wp_error( $request ) ) {
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not reach Instamojo', array( 'error' => $request->get_error_message() ) );
+		}
+		if ( ! $request ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'Instamojo has no such payment request' );
+		}
+		if ( ! $this->payment_request_owns_token( $request, $payment_token ) ) {
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, 'the Instamojo payment request belongs to another order', array( 'payment_request_id' => $payment_request_id ) );
+		}
+
+		$credit = $this->get_credit_payment( $request );
+		if ( ! $credit ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'Instamojo credited no payment', array( 'status' => $request->status ?? '' ) );
+		}
+
+		$camptix->log( 'Instamojo checkout timed out, but a payment was credited; processing it.', $attendee_id, array( 'payment_id' => $credit->payment_id ?? '' ) );
+
+		$this->payment_result(
+			$payment_token,
+			CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+			array(
+				'transaction_id'      => $credit->payment_id ?? '',
+				'transaction_details' => $credit,
+				'payment_request'     => $request,
+			),
+			false
+		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'Instamojo credited a payment' );
+	}
+
+	/**
+	 * Refund an order in full, and record the result.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants.
+	 */
+	public function payment_refund( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+			$camptix->log( 'Instamojo refund failed', $order['attendee_id'] ?? null, $result, 'refund' );
+		}
+
+		return $camptix->payment_result( $payment_token, $result['status'], $result );
+	}
+
+	/**
+	 * Ask Instamojo to refund an order's payment in full.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = array(
+			'token'                      => $payment_token,
+			'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
+			'refund_transaction_id'      => null,
+			'refund_transaction_details' => array(),
+		);
+
+		$payment_id = $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_id' );
+		if ( ! $payment_id ) {
+			$camptix->log( 'Could not refund: the order has no Instamojo payment id.', null, compact( 'payment_token' ), 'refund' );
+
+			return $result;
+		}
+
+		// Null without a POST body, e.g. when the refund-all cron sends it.
+		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
+
+		$response = wp_remote_post(
+			'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/refunds/',
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Accept'       => 'application/json',
+					'X-Api-Key'    => $this->options['Instamojo-Api-Key'],
+					'X-Auth-Token' => $this->options['Instamojo-Auth-Token'],
+				),
+				'body'    => array(
+					'payment_id' => $payment_id,
+					// "Problem not described above": Instamojo requires one of its reason codes.
+					'type'       => 'PTH',
+					'body'       => $reason ? $reason : 'Refund requested through CampTix.',
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$result['refund_transaction_details'] = array( 'error' => $response->get_error_message() );
+
+			return $result;
+		}
+
+		$body   = json_decode( wp_remote_retrieve_body( $response ) );
+		$refund = $body->refund ?? null;
+
+		if ( empty( $body->success ) || empty( $refund->id ) ) {
+			$result['refund_transaction_details'] = array(
+				'code'    => wp_remote_retrieve_response_code( $response ),
+				'message' => $body->message ?? null,
+			);
+
+			return $result;
+		}
+
+		$result['status']                     = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		$result['transaction_id']             = $payment_id;
+		$result['refund_transaction_id']      = (string) $refund->id;
+		$result['refund_transaction_details'] = array(
+			'raw' => array(
+				'refund_transaction_id' => (string) $refund->id,
+				'refund'                => $refund,
+			),
+		);
+
+		return $result;
 	}
 
 	/**

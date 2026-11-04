@@ -44,6 +44,7 @@ function _get_network_plugin_state_list( $state ) {
 			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'jquery-ui-css/jquery-ui-css.php',
+			'sponsor-vetting/bootstrap.php',
 			'wordcamp-payments/bootstrap.php',
 			'wordcamp-payments-network/bootstrap.php',
 			'wordcamp-coming-soon-page/bootstrap.php',

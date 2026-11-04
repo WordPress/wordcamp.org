@@ -140,8 +140,7 @@ add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\enforce_status_transition',
  * Whether a sponsorship may be approved.
  *
  * Its company must be Compliant and vetted within the re-vetting threshold, or, only while
- * approve_sponsorship() approves it in good faith, have been asked for changes. While the Airtable import
- * imports a Compliant company, its vetting date doesn't count, so the approvals it had then carry over.
+ * approve_sponsorship() approves it in good faith, have been asked for changes.
  *
  * @param int $sponsorship_id The sponsorship.
  * @param int $company_id     Its company.
@@ -152,9 +151,7 @@ function may_approve( int $sponsorship_id, int $company_id ): bool {
 		return false;
 	}
 
-	$state = get_vetting_state( $company_id );
-
-	if ( $state['approvable'] || ( $state['expired'] && importing_company() === $company_id ) ) {
+	if ( get_vetting_state( $company_id )['approvable'] ) {
 		return true;
 	}
 
@@ -192,25 +189,6 @@ function restoring_approval( ?int $sponsorship_id = null ): int {
 
 	if ( null !== $sponsorship_id ) {
 		$current = $sponsorship_id;
-	}
-
-	return $current;
-}
-
-/**
- * Tracks the company the Airtable import is importing, so it can recreate that company's approvals.
- *
- * Kept in memory, like approving_in_good_faith(), so nothing outside the import can unlock it, and a run that dies
- * halfway leaves no company looking freshly vetted. Goes away with the import.
- *
- * @param int|null $company_id The company being imported, 0 when done, or null to read.
- * @return int The company being imported, or 0.
- */
-function importing_company( ?int $company_id = null ): int {
-	static $current = 0;
-
-	if ( null !== $company_id ) {
-		$current = $company_id;
 	}
 
 	return $current;

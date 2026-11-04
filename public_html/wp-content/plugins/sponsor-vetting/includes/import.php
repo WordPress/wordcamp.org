@@ -2,8 +2,6 @@
 /**
  * Importing sponsors from a spreadsheet: reading the CSV, and turning each row into a vetting request.
  *
- * The Airtable importer reuses parse_csv() and the domain matching.
- *
  * @package WordCamp\Sponsor_Vetting
  */
 

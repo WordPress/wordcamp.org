@@ -19,8 +19,8 @@ defined( 'WPINC' ) || die();
  * Members REST controller.
  *
  * Routes:
- *   GET    /wporg-groups/v1/members       — list group members
- *   GET    /wporg-groups/v1/members/{id}  — single member
+ *   GET    /wporg-groups/v1/members       — list group members (logged in)
+ *   GET    /wporg-groups/v1/members/{id}  — single member (logged in)
  *   POST   /wporg-groups/v1/members/me/role — change your own role (beta groups only)
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
@@ -79,7 +79,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'per_page' => array(
 							'default'           => 100,
@@ -109,7 +109,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'id' => array(
 							'validate_callback' => function ( $param ) {
@@ -219,6 +219,28 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Check permissions for reading the member list or a single member.
+	 *
+	 * People join a group to hear about its events, not to be listed
+	 * publicly, so the list is only shown to logged-in visitors (the same
+	 * line Meetup draws). The Members page applies the same rule in
+	 * `group-members/render.php`.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function read_permissions_check() {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in to see the members of this group.', 'wordcamporg' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		return true;
 	}
 
 	/**

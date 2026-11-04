@@ -140,6 +140,20 @@ function normalize_event_name( string $name ): string {
 }
 
 /**
+ * Checks whether a camp's event is over, going by its end date, or its start date when it has none. Runs on Central.
+ *
+ * @param int $blog_id The camp's site.
+ * @return bool
+ */
+function has_camp_ended( int $blog_id ): bool {
+	$camp = get_wordcamp_post( $blog_id );
+	$meta = $camp ? $camp->meta : array();
+	$end  = (int) ( $meta['End Date (YYYY-mm-dd)'][0] ?? 0 ) ?: (int) ( $meta['Start Date (YYYY-mm-dd)'][0] ?? 0 );
+
+	return $end && $end + DAY_IN_SECONDS < time();
+}
+
+/**
  * Splits a row's events into names: one per line, or comma-separated where a line isn't one camp's name.
  *
  * @param string $cell  The Current Event Name cell.
@@ -425,6 +439,13 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 	} else {
 		$result['outcome'] = 'pending';
 		$result['status']  = 'pending';
+	}
+
+	// Vetting for an event that's over would only fill the queue; the row is kept in the company's note.
+	if ( 'pending' === $result['status'] && ! $current && has_camp_ended( $blog_id ) ) {
+		$result['outcome'] = 'skipped: the event is over';
+		$result['status']  = '';
+		return $result;
 	}
 
 	if ( $dry_run ) {

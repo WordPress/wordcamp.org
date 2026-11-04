@@ -234,4 +234,71 @@ class Test_Airtable extends Database_TestCase {
 
 		$this->assertSame( array( 101, 103, 0, 104, 105 ), array_map( static fn( string $event ): int => $names[ normalize_event_name( $event ) ] ?? -1, $events ) );
 	}
+
+	/**
+	 * A row that isn't approved puts its company in the queue for a camp still to come, but not for one that's over.
+	 */
+	public function test_import_skips_pending_sponsorships_of_past_events(): void {
+		foreach ( array( self::$year_dot_2018_site_id, self::$year_dot_2019_site_id ) as $site_id ) {
+			switch_to_blog( $site_id );
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wcb_sponsor',
+					'post_title' => 'Initech',
+					'meta_input' => array( '_wcpt_sponsor_website' => 'https://initech.example/' ),
+				)
+			);
+			restore_current_blog();
+		}
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		register_types();
+
+		$camps = array(
+			'WordCamp Seattle 2018' => array( self::$year_dot_2018_site_id, time() + MONTH_IN_SECONDS ),
+			'WordCamp Seattle 2019' => array( self::$year_dot_2019_site_id, time() - MONTH_IN_SECONDS ),
+		);
+
+		foreach ( $camps as $title => list( $site_id, $end ) ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wordcamp',
+					'post_title' => $title,
+					'meta_input' => array(
+						'_site_id'              => $site_id,
+						'End Date (YYYY-mm-dd)' => $end,
+					),
+				)
+			);
+		}
+
+		$file = wp_tempnam( 'airtable.csv' );
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A test fixture.
+			$file,
+			"Sponsor Name,Company Link,Current Event Name,Status,Approval Status,Last modified\n"
+			. "Initech,initech.example,\"WordCamp Seattle 2018\nWordCamp Seattle 2019\",Needs Vetting,,3/4/2025 9:00am\n"
+		);
+		$grouped = group_airtable_rows( parse_csv( $file ) );
+		unlink( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- A test fixture.
+
+		$initech      = import_airtable_company( 'initech.example', $grouped['companies']['initech.example'], get_camps_by_name(), false );
+		$sponsorships = get_posts(
+			array(
+				'post_type'   => SPONSORSHIP_POST_TYPE,
+				'post_status' => array_keys( get_sponsorship_statuses() ),
+				'post_parent' => $initech['company_id'],
+			)
+		);
+
+		restore_current_blog();
+
+		$this->assertSame(
+			array(
+				'WordCamp Seattle 2018' => 'pending',
+				'WordCamp Seattle 2019' => 'skipped: the event is over',
+			),
+			$initech['sponsorships']
+		);
+		$this->assertCount( 1, $sponsorships );
+	}
 }

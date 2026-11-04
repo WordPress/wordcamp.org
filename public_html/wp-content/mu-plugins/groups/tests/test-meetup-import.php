@@ -86,6 +86,12 @@ class Test_Meetup_Import extends Groups_TestCase {
 		remove_all_filters( 'wcorg_meetup_import_pre_fetch_rsvps' );
 		remove_filter( 'wp_doing_ajax', '__return_true' );
 		remove_filter( 'wp_die_ajax_handler', array( $this, 'get_wp_die_handler' ) );
+		Meetup_Import\with_site(
+			GROUPS_ROOT_BLOG_ID,
+			static function () {
+				wp_clear_scheduled_hook( Meetup_Import\SWEEP_HOOK );
+			}
+		);
 		Meetup_Import\release_lock();
 
 		foreach ( Meetup_Import\get_jobs() as $job ) {
@@ -2658,6 +2664,55 @@ class Test_Meetup_Import extends Groups_TestCase {
 		Meetup_Import\sweep_jobs();
 
 		$this->assertSame( array(), Meetup_Import\get_job( $this->site_id ) );
+	}
+
+	/**
+	 * When the sweep is next due on a site: false if it isn't scheduled there.
+	 *
+	 * @param int $site_id Site whose cron to check.
+	 * @return int|false
+	 */
+	protected function sweep_scheduled( int $site_id ) {
+		return Meetup_Import\with_site(
+			$site_id,
+			static function () {
+				return wp_next_scheduled( Meetup_Import\SWEEP_HOOK );
+			}
+		);
+	}
+
+	/**
+	 * An hourly sweep on the root site expires a job whose page nobody opens
+	 * again, comes back if it goes missing, and stops once no job is left.
+	 */
+	public function test_sweep_runs_hourly_on_root_site_while_jobs_exist() {
+		$this->fake_events( array() );
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+
+		$this->assertNotFalse( $this->sweep_scheduled( GROUPS_ROOT_BLOG_ID ) );
+		$this->assertFalse( $this->sweep_scheduled( $this->site_id ) );
+
+		$this->age_job( $this->site_id, Meetup_Import\IDLE_TTL + 1 );
+		do_action( Meetup_Import\SWEEP_HOOK );
+
+		$this->assertSame( 'expired', Meetup_Import\get_job( $this->site_id )['status'] );
+
+		// Lost, e.g. when two requests write the root site's `cron` option at once.
+		Meetup_Import\with_site(
+			GROUPS_ROOT_BLOG_ID,
+			static function () {
+				wp_clear_scheduled_hook( Meetup_Import\SWEEP_HOOK );
+			}
+		);
+		Meetup_Import\sweep_jobs();
+
+		$this->assertNotFalse( $this->sweep_scheduled( GROUPS_ROOT_BLOG_ID ) );
+
+		$this->age_job( $this->site_id, Meetup_Import\FINISHED_TTL + 1 );
+		do_action( Meetup_Import\SWEEP_HOOK );
+
+		$this->assertSame( array(), Meetup_Import\get_job( $this->site_id ) );
+		$this->assertFalse( $this->sweep_scheduled( GROUPS_ROOT_BLOG_ID ) );
 	}
 
 	/**

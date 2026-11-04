@@ -250,11 +250,24 @@ const BUSY_RETRY_SECONDS = 5;
 const IDLE_TTL     = DAY_IN_SECONDS;
 const FINISHED_TTL = 30 * DAY_IN_SECONDS;
 
+/**
+ * Hourly cron event, on the Groups network's root site, that runs `sweep_jobs()`
+ * while any job exists.
+ *
+ * Only cleanup, never batches. Without it, a job whose page everyone has
+ * closed keeps its Meetup data until someone opens the import screen again.
+ * The root site's cron only runs when someone loads one of its admin pages
+ * (its front end redirects before WordPress loads), so this is best effort:
+ * it widens cleanup from the import screen to any network admin visit.
+ */
+const SWEEP_HOOK = 'wporg_meetup_import_sweep';
+
 add_action( 'network_admin_menu', __NAMESPACE__ . '\register_admin_page' );
 add_action( 'admin_post_' . START_ACTION, __NAMESPACE__ . '\handle_start' );
 add_action( 'admin_post_' . CONFIRM_ACTION, __NAMESPACE__ . '\handle_confirm' );
 add_action( 'admin_post_' . CANCEL_ACTION, __NAMESPACE__ . '\handle_cancel' );
 add_action( 'wp_ajax_' . STEP_ACTION, __NAMESPACE__ . '\handle_step' );
+add_action( SWEEP_HOOK, __NAMESPACE__ . '\sweep_jobs' );
 
 /**
  * Add the "Import from Meetup" screen under Network Admin > Groups.
@@ -484,6 +497,7 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 	);
 
 	update_site_option( job_option( $site_id ), $job );
+	schedule_sweep();
 
 	Logger\log( 'job_queued', array_intersect_key( $job, array_flip( array( 'id', 'urlname', 'site_id', 'include_past', 'match_people' ) ) ) );
 
@@ -565,7 +579,9 @@ function expire_job( array $job ): void {
 /**
  * Expire jobs left untouched, and delete finished ones after `FINISHED_TTL`.
  *
- * Runs whenever the import screen loads, and before every batch.
+ * Runs whenever the import screen loads, before every batch, and hourly
+ * through `SWEEP_HOOK` while any job is left. It queues that event again if
+ * it went missing, and clears it once the last job is gone.
  */
 function sweep_jobs(): void {
 	foreach ( get_jobs() as $job ) {
@@ -575,6 +591,34 @@ function sweep_jobs(): void {
 			delete_job( $job );
 		}
 	}
+
+	if ( get_jobs() ) {
+		schedule_sweep();
+	} else {
+		with_site(
+			GROUPS_ROOT_BLOG_ID,
+			static function () {
+				wp_clear_scheduled_hook( SWEEP_HOOK );
+			}
+		);
+	}
+}
+
+/**
+ * Queue the hourly sweep on the Groups network's root site, unless it's queued already.
+ *
+ * Always the root site, whichever site the request is on, as with the import
+ * lock (see `lock_table()`).
+ */
+function schedule_sweep(): void {
+	with_site(
+		GROUPS_ROOT_BLOG_ID,
+		static function () {
+			if ( ! wp_next_scheduled( SWEEP_HOOK ) ) {
+				wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', SWEEP_HOOK );
+			}
+		}
+	);
 }
 
 /**

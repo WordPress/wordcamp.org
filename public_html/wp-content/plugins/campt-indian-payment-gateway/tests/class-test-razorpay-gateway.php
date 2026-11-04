@@ -2,6 +2,15 @@
 
 defined( 'WPINC' ) || die();
 
+/*
+ * The bundled Razorpay SDK uses the PSR-0 `Requests` class, and loading WordPress's shim
+ * for it raises a deprecation. Nothing here makes a request, so silence it rather than
+ * have it land in the error log the test run checks.
+ */
+if ( ! defined( 'REQUESTS_SILENCE_PSR0_DEPRECATIONS' ) ) {
+	define( 'REQUESTS_SILENCE_PSR0_DEPRECATIONS', true );
+}
+
 require_once dirname( __DIR__ ) . '/inc/razorpay/class-camptix-payment-method-razorpay.php';
 
 /**

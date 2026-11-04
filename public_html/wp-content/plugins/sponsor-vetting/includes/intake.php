@@ -315,15 +315,14 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 /**
  * Puts a pending sponsorship's company back in the queue when its vetting has lapsed.
  *
- * A company still in the pipeline, or Not Eligible until a date still to come, stays where it is, as does one the
- * Airtable import is importing. Runs on Central.
+ * A company still in the pipeline, or Not Eligible until a date still to come, stays where it is. Runs on Central.
  *
  * @param int $sponsorship_id The sponsorship.
  */
 function queue_company( int $sponsorship_id ): void {
 	$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
 
-	if ( ! $company_id || importing_company() === $company_id || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! get_vetting_state( $company_id )['needs_requeue'] ) {
+	if ( ! $company_id || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! get_vetting_state( $company_id )['needs_requeue'] ) {
 		return;
 	}
 

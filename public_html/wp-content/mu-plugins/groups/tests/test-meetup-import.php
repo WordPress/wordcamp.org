@@ -3584,7 +3584,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 					'monthlyRecurrence' => null,
 					'weeklyRecurrence'  => array(
 						'weeklyInterval'   => 2,
-						'weeklyDaysOfWeek' => array( 'MONDAY', 'WEDNESDAY', 'SOMEDAY' ),
+						'weeklyDaysOfWeek' => array( 'WEDNESDAY', 'SOMEDAY', 'MONDAY', 'WEDNESDAY' ),
 					),
 				)
 			)
@@ -3704,7 +3704,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 				array(
 					'frequency' => 'weekly',
 					'interval'  => 2,
-					'weekdays'  => array( 'SA', 'TH' ),
+					'weekdays'  => array( 'TH', 'SA' ),
 				),
 			),
 		);
@@ -3773,7 +3773,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * A weekly series on two days, with an end date, folds and says so.
+	 * A weekly series on two days, with an end date, folds and says so, with
+	 * its days in week order whatever order Meetup sends them in.
 	 */
 	public function test_weekly_series_on_two_days() {
 		$events = $this->folded_series(
@@ -3783,13 +3784,23 @@ class Test_Meetup_Import extends Groups_TestCase {
 				'monthlyRecurrence' => null,
 				'weeklyRecurrence'  => array(
 					'weeklyInterval'   => 1,
-					'weeklyDaysOfWeek' => array( 'MONDAY', 'WEDNESDAY' ),
+					'weeklyDaysOfWeek' => array( 'WEDNESDAY', 'MONDAY' ),
 				),
 			)
 		);
 
 		$this->assertCount( 1, $events );
 		$this->assertSame( 'recurring every Monday and Wednesday until January 13, 2027, in place of 4 Meetup events', Meetup_Import\describe_recurrence( $events[0] ) );
+
+		// The network's main site, where the job runs, has no date format of its own.
+		$date_format = get_option( 'date_format' );
+		delete_option( 'date_format' );
+
+		try {
+			$this->assertStringContainsString( 'until January 13, 2027,', Meetup_Import\describe_recurrence( $events[0] ) );
+		} finally {
+			update_option( 'date_format', $date_format );
+		}
 	}
 
 	/**

@@ -2307,17 +2307,19 @@ function normalize_series( $series ): ?array {
 		return null;
 	}
 
-	$day_code = static function ( $day ): string {
+	$week     = array( 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' );
+	$day_code = static function ( $day ) use ( $week ): string {
 		$code = substr( strtoupper( (string) $day ), 0, 2 );
 
-		return in_array( $code, array( 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' ), true ) ? $code : '';
+		return in_array( $code, $week, true ) ? $code : '';
 	};
 
 	$weekly  = null;
 	$monthly = null;
 
 	if ( is_array( $series['weeklyRecurrence'] ?? null ) ) {
-		$days = array_values( array_unique( array_filter( array_map( $day_code, (array) ( $series['weeklyRecurrence']['weeklyDaysOfWeek'] ?? array() ) ) ) ) );
+		// In week order: Meetup's varies from one response to the next.
+		$days = array_values( array_intersect( $week, array_map( $day_code, (array) ( $series['weeklyRecurrence']['weeklyDaysOfWeek'] ?? array() ) ) ) );
 
 		if ( $days ) {
 			$weekly = array(
@@ -3273,7 +3275,7 @@ function describe_recurrence( array $event ): string {
 			/* translators: 1: How it repeats, e.g. "monthly on the second Wednesday", 2: Last date. */
 			__( '%1$s until %2$s', 'wordcamporg' ),
 			$repeats,
-			wp_date( get_option( 'date_format' ), ( new DateTimeImmutable( $rule['until'] . ' 12:00', $zone ) )->getTimestamp(), $zone )
+			wp_date( get_option( 'date_format' ) ?: __( 'F j, Y' ), ( new DateTimeImmutable( $rule['until'] . ' 12:00', $zone ) )->getTimestamp(), $zone )
 		);
 	}
 

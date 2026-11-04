@@ -17,8 +17,8 @@ class SSLCommerz extends Base_Gateway {
 	public $description          = 'SSLCommerz payment gateway for Bangladesh.';
 	public $supported_currencies = [ 'BDT' ];
 	public $supported_features   = [
-		'refund-single'  => false,
-		'refund-all'     => false,
+		'refund-single'  => true,
+		'refund-all'     => true,
 		'refund-partial' => false,
 		'payment-lookup' => true,
 	];
@@ -812,6 +812,115 @@ class SSLCommerz extends Base_Gateway {
 		return $this->lookup_result( self::LOOKUP_SETTLED, 'SSLCommerz reports the order paid' );
 	}
 
+
+	/**
+	 * Refund an order in full, and record the result.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants.
+	 */
+	public function payment_refund( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+			$camptix->log( 'SSLCommerz refund failed', $order['attendee_id'] ?? null, $result, 'refund' );
+		}
+
+		return $camptix->payment_result( $payment_token, $result['status'], $result );
+	}
+
+	/**
+	 * Ask SSLCommerz to refund an order's payment in full.
+	 *
+	 * SSLCommerz refunds by the bank transaction id, which is recorded in the order's
+	 * transaction details when the payment is validated. It answers `success` when the
+	 * refund was initiated and `processing` when one already was; either way the money is
+	 * on its way back.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = [
+			'token'                      => $payment_token,
+			'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
+			'refund_transaction_id'      => null,
+			'refund_transaction_details' => [],
+		];
+
+		$order        = $this->get_order( $payment_token );
+		$details      = $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_details' );
+		$bank_tran_id = is_array( $details ) ? (string) ( $details['bank_tran_id'] ?? '' ) : '';
+		$amount       = is_array( $details ) && is_numeric( $details['amount'] ?? null ) ? (float) $details['amount'] : (float) ( $order['total'] ?? 0 );
+
+		if ( ! $order || '' === $bank_tran_id || $amount <= 0 ) {
+			$camptix->log( 'Could not refund: the order has no SSLCommerz bank transaction id or amount.', $order['attendee_id'] ?? null, compact( 'payment_token' ), 'refund' );
+
+			return $result;
+		}
+
+		// Null without a POST body, e.g. when the refund-all cron sends it.
+		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
+
+		$response = $this->api(
+			'GET',
+			'/validator/api/merchantTransIDvalidationAPI.php',
+			[
+				'bank_tran_id'   => $bank_tran_id,
+				'refund_amount'  => number_format( $amount, 2, '.', '' ),
+				'refund_remarks' => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ),
+				'store_id'       => $this->options['merchant_id'],
+				'store_passwd'   => $this->options['store_password'],
+				'v'              => 1,
+				'format'         => 'json',
+			],
+			[],
+			$order['attendee_id']
+		);
+
+		if ( ! $response ) {
+			// api() has logged the reason, without secrets.
+			$result['refund_transaction_details'] = [ 'error' => 'Could not get an answer from SSLCommerz.' ];
+
+			return $result;
+		}
+
+		$status        = strtolower( (string) ( $response->status ?? '' ) );
+		$refund_ref_id = (string) ( $response->refund_ref_id ?? '' );
+		$answer        = [
+			'APIConnect'    => $response->APIConnect ?? null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- SSLCommerz's field name.
+			'status'        => $status,
+			'refund_ref_id' => $refund_ref_id,
+			'errorReason'   => $response->errorReason ?? null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- SSLCommerz's field name.
+		];
+
+		if ( ! in_array( $status, [ 'success', 'processing' ], true ) ) {
+			$result['refund_transaction_details'] = $answer;
+
+			return $result;
+		}
+
+		$result['status']                     = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		$result['transaction_id']             = $payment_token;
+		$result['refund_transaction_id']      = $refund_ref_id;
+		$result['refund_transaction_details'] = [
+			'raw' => [
+				'refund_transaction_id' => $refund_ref_id,
+				'refund'                => $answer,
+			],
+		];
+
+		return $result;
+	}
 
 	/**
 	 * Make an API call

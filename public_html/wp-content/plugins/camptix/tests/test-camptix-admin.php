@@ -1495,6 +1495,101 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The Enabled field offers the switch to a gateway that meets the requirements, or one
+	 * already enabled (with a warning), and to no other.
+	 *
+	 * @covers CampTix_Payment_Method::_camptix_settings_enabled_callback
+	 */
+	public function test_enabled_field_offers_the_switch_only_to_compliant_or_enabled_gateways() {
+		$gateway                       = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->camptix_options      = array( 'currency' => 'USD' );
+		$gateway->supported_currencies = array( 'USD' );
+
+		$render = function ( $features, $enabled ) use ( $gateway ) {
+			$gateway->supported_features = $features;
+
+			ob_start();
+			$gateway->_camptix_settings_enabled_callback(
+				array(
+					'name'  => 'camptix_options[payment_methods][gated]',
+					'value' => $enabled,
+				)
+			);
+
+			return ob_get_clean();
+		};
+
+		$no_refund = array( 'payment-lookup' => true );
+
+		$html = $render( $no_refund, false );
+		$this->assertStringNotContainsString( '<input', $html, 'nothing to switch on' );
+		$this->assertStringContainsString( 'cannot be enabled: it does not support refunds', $html );
+
+		$html = $render( $no_refund, true );
+		$this->assertSame( 2, substr_count( $html, 'type="radio"' ), 'already enabled: can still be switched off' );
+		$this->assertStringContainsString( 'once disabled it cannot be enabled again', $html );
+
+		$html = $render(
+			array(
+				'refund-single'  => true,
+				'payment-lookup' => true,
+			),
+			false
+		);
+		$this->assertSame( 2, substr_count( $html, 'type="radio"' ) );
+		$this->assertStringNotContainsString( 'does not support', $html );
+	}
+
+	/**
+	 * The Setup screen warns about an enabled gateway missing a requirement, and only there.
+	 *
+	 * @covers CampTix_Admin_Setup::admin_notice_payment_method_requirements
+	 */
+	public function test_setup_screen_warns_about_an_enabled_gateway_missing_a_requirement() {
+		global $pagenow;
+
+		$gateway                     = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->name               = 'Gated Pay';
+		$gateway->supported_features = array( 'payment-lookup' => true );
+		$available                   = function ( $methods ) {
+			$methods['gated'] = array( 'name' => 'Gated Pay' );
+			return $methods;
+		};
+		add_filter( 'camptix_available_payment_methods', $available );
+
+		$options = new ReflectionProperty( CampTix_Plugin::class, 'options' );
+		$saved   = self::$camptix->get_options();
+		$enabled = $saved;
+
+		$enabled['payment_methods']['gated'] = true;
+		$options->setValue( self::$camptix, $enabled );
+
+		$saved_pagenow = $pagenow;
+		$render        = function ( $screen, $page ) use ( &$pagenow ) {
+			$pagenow      = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The screen the notice checks.
+			$_GET['page'] = $page;
+
+			ob_start();
+			self::$camptix->admin_setup->admin_notice_payment_method_requirements();
+
+			return ob_get_clean();
+		};
+
+		try {
+			$this->assertStringContainsString( 'Gated Pay does not support refunds', $render( 'edit.php', 'camptix_options' ) );
+			$this->assertSame( '', $render( 'index.php', '' ), 'only on the Setup screen' );
+
+			$options->setValue( self::$camptix, $saved );
+			$this->assertSame( '', $render( 'edit.php', 'camptix_options' ), 'not enabled: nothing to warn about' );
+		} finally {
+			$options->setValue( self::$camptix, $saved );
+			$pagenow = $saved_pagenow; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring it.
+			unset( $_GET['page'] );
+			remove_filter( 'camptix_available_payment_methods', $available );
+		}
+	}
+
+	/**
 	 * A gateway that records no session expiry only has its drafts come due at 24 hours. A
 	 * lookup that can't answer then, or a gateway skipped for the rest of the pass after one
 	 * that couldn't, keeps them for the retry window rather than timing them out on the spot.

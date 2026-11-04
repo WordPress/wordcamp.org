@@ -11,22 +11,27 @@ A gateway extends `CampTix_Payment_Method` and must:
    with `$data` an array: `transaction_id`, `transaction_details`, and for refunds
    `refund_transaction_id` and `refund_transaction_details`. A bare transaction id still
    works, but raises `_doing_it_wrong()`.
-2. **Support refunds.** Set the `refund-single` and `refund-all` features, and implement
-   `payment_refund()` and `send_refund_request()`. Partial refunds (`refund-partial`) are
-   optional.
+2. **Support refunds.** Set the `refund-single` feature and implement `payment_refund()`.
+   Set `refund-all` and implement `send_refund_request()` too, or the Refund All tool skips
+   the gateway's orders. Partial refunds (`refund-partial`) are optional. Refund the
+   payment the gateway has on record for the order, never an id that came back through the
+   buyer's browser, and encode anything the buyer typed before it goes into a request.
 3. **Support payment lookup.** Set the `payment-lookup` feature and implement
    `reconcile_payment( $token )`. Before a draft order times out, the sweep asks the
    gateway what became of its payment. Record the gateway's session or order id at
    checkout with `CampTix_Plugin::update_payment_token_meta()`, so it is on every attendee
    of the order. If the gateway session has a known lifetime, record it with
-   `set_order_session_expiry()`; otherwise drafts hold their seats for 24 hours. See the
-   docblock on `reconcile_payment()` for the result statuses.
+   `set_order_session_expiry()`, early enough that the gateway still answers for the session
+   when the sweep asks (PayPal records its expiry 20 minutes before the token's). Otherwise
+   drafts hold their seats for 24 hours, and a lookup that can't answer then is retried for
+   six more. See the docblock on `reconcile_payment()` for the result statuses.
 4. **Have a sandbox mode**, and a test site that its maintainers can use. A gateway
    without a sandbox needs a maintainer who can test it with small live payments.
 
-A gateway missing refunds or payment lookup can't be newly enabled on a site. One
-already enabled stays enabled, with a warning, until it's turned off. The list of
-required features is filterable with `camptix_payment_method_required_features`.
+A gateway missing refunds (`refund-single`) or payment lookup can't be newly enabled on a
+site. One already enabled stays enabled, with a warning, until it's turned off. The list
+of required features is filterable with `camptix_payment_method_required_features`, which
+is also how to exempt a gateway: there's no switch for it in the admin.
 
 The `camptix_pre_attendee_timeout` action still fires before each draft times out, for
 gateways that haven't moved to `reconcile_payment()` yet.
@@ -49,8 +54,11 @@ gateways that haven't moved to `reconcile_payment()` yet.
 | --- | --- | --- | --- |
 | Stripe | Yes | Yes | |
 | PayPal | Yes | Yes | |
-| Instamojo | Yes | Yes | |
-| Razorpay | Yes | Yes | |
-| SSLCommerz | Yes | Yes | |
+| Instamojo | Yes | Yes | Refunds not yet tried against the sandbox. |
+| Razorpay | Yes | Yes | Not offered: unregistered in `campt-indian-payment-gateway` since May 2026 as known broken. |
+| SSLCommerz | Yes | Yes | Refunds not yet tried against the sandbox. The refund API only answers servers whose public IP is registered with SSLCommerz. |
 | shurjoPay | No | Yes | shurjoPay's API has no refund call. |
-| MercadoPago, PagSeguro, PayFast, TrustCard, TrustPay | Unknown | No | Outside this repository. |
+| Knit Pay | Yes | No | Outside this repository; site admins may activate it. |
+| MercadoPago, PagSeguro, PayFast, PayNow, Paystack, TrustCard, TrustPay | No | No | Outside this repository. |
+
+Every gateway marked No above can't be newly enabled on a site.

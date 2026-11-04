@@ -83,36 +83,74 @@ function group_airtable_rows( array $rows ): array {
 /**
  * Maps the camps' names to their sites. Runs on Central.
  *
- * @return int[] Site IDs, keyed by normalized name; 0 where two camps share a name.
+ * Many camps are titled without their year, like "WordCamp Europe" or "WordCamp Kraków, Poland", which Airtable calls
+ * "WordCamp Europe 2025" and "WordCamp Kraków 2025". So each camp is also listed under its title, and the part before
+ * the title's first comma, with the year it starts in. A title always wins over one of those.
+ *
+ * @return int[] Site IDs, keyed by normalized name; 0 where camps on different sites share a name.
  */
 function get_camps_by_name(): array {
 	global $wpdb;
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- A one-time read of every camp, which get_posts() would load whole.
 	$camps = $wpdb->get_results(
-		"SELECT p.post_title, m.meta_value AS site_id
+		"SELECT p.post_title, m.meta_value AS site_id, s.meta_value AS start_date
 		FROM {$wpdb->posts} AS p
 		INNER JOIN {$wpdb->postmeta} AS m ON m.post_id = p.ID AND m.meta_key = '_site_id'
+		LEFT JOIN {$wpdb->postmeta} AS s ON s.post_id = p.ID AND s.meta_key = 'Start Date (YYYY-mm-dd)'
 		WHERE p.post_type = 'wordcamp' AND p.post_status NOT IN ( 'trash', 'auto-draft' )"
 	);
 
-	$sites = array();
+	$titles = array();
+	$dated  = array();
+
 	foreach ( $camps as $camp ) {
-		$name           = normalize_event_name( (string) $camp->post_title );
-		$sites[ $name ] = isset( $sites[ $name ] ) ? 0 : (int) $camp->site_id;
+		$name              = normalize_event_name( (string) $camp->post_title );
+		$titles[ $name ][] = (int) $camp->site_id;
+
+		if ( ! $camp->start_date ) {
+			continue;
+		}
+
+		$year     = gmdate( 'Y', (int) $camp->start_date );
+		$undated  = trim( (string) preg_replace( '/\s*\b(?:19|20)\d{2}\b\s*/', ' ', $name ), ' ,' );
+		$locality = trim( explode( ',', $undated )[0] );
+
+		$dated[ "$undated $year" ][]  = (int) $camp->site_id;
+		$dated[ "$locality $year" ][] = (int) $camp->site_id;
 	}
 
-	return $sites;
+	$pick = static fn( array $site_ids ): int => 1 === count( array_unique( $site_ids ) ) ? $site_ids[0] : 0;
+
+	return array_map( $pick, $titles ) + array_map( $pick, $dated );
 }
 
 /**
- * Normalizes an event's name for matching: case, spacing and entities don't count.
+ * Normalizes an event's name for matching: case, spacing, entities, accents, apostrophes and the WCEU, WCUS and WC
+ * abbreviations don't count.
  *
  * @param string $name The name.
  * @return string
  */
 function normalize_event_name( string $name ): string {
-	return mb_strtolower( trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( $name, ENT_QUOTES ) ) ) );
+	$name = remove_accents( html_entity_decode( $name, ENT_QUOTES ) );
+	$name = mb_strtolower( trim( (string) preg_replace( '/\s+/u', ' ', str_replace( array( '’', '‘' ), "'", $name ) ) ) );
+
+	return (string) preg_replace( array( '/^wceu\b/', '/^wcus\b/', '/^wc\b/' ), array( 'wordcamp europe', 'wordcamp us', 'wordcamp' ), $name );
+}
+
+/**
+ * Checks whether a camp's event is over, going by its end date, or its start date when it has none. Runs on Central.
+ *
+ * @param int $blog_id The camp's site.
+ * @return bool
+ */
+function has_camp_ended( int $blog_id ): bool {
+	$camp = get_wordcamp_post( $blog_id );
+	$meta = $camp ? $camp->meta : array();
+	$end  = (int) ( $meta['End Date (YYYY-mm-dd)'][0] ?? 0 ) ?: (int) ( $meta['Start Date (YYYY-mm-dd)'][0] ?? 0 );
+
+	return $end && $end + DAY_IN_SECONDS < time();
 }
 
 /**
@@ -401,6 +439,13 @@ function import_airtable_sponsorship( array $row, string $event, string $domain,
 	} else {
 		$result['outcome'] = 'pending';
 		$result['status']  = 'pending';
+	}
+
+	// Vetting for an event that's over would only fill the queue; the row is kept in the company's note.
+	if ( 'pending' === $result['status'] && ! $current && has_camp_ended( $blog_id ) ) {
+		$result['outcome'] = 'skipped: the event is over';
+		$result['status']  = '';
+		return $result;
 	}
 
 	if ( $dry_run ) {

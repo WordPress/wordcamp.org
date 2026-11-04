@@ -8,6 +8,34 @@
 use WordCamp\Groups\Frontend\Members\Members_Controller;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role;
 
+/*
+ * People join a group to hear about its events, not to be listed publicly,
+ * so logged-out visitors get a login prompt instead of the list. The REST
+ * routes draw the same line in `Members_Controller::read_permissions_check()`.
+ */
+if ( ! is_user_logged_in() ) :
+	?>
+	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'wporg-group-members' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+		<h2 class="wporg-section-heading wporg-group-members__heading">
+			<?php esc_html_e( 'Members', 'wordcamporg' ); ?>
+		</h2>
+		<p class="wporg-group-members__login">
+			<?php
+			printf(
+				wp_kses(
+					/* translators: %s: login URL */
+					__( '<a href="%s">Log in</a> to see who is in this group.', 'wordcamporg' ),
+					array( 'a' => array( 'href' => array() ) )
+				),
+				esc_url( wp_login_url( get_permalink() ?: home_url() ) )
+			);
+			?>
+		</p>
+	</div>
+	<?php
+	return;
+endif;
+
 $role_labels = Members_Controller::ROLE_LABELS;
 
 $users = get_users(

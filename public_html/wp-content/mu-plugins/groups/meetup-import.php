@@ -10,9 +10,12 @@
  * - Past events (opt-in) land published, as the group's history, with
  *   Meetup's RSVP and attendance counts kept as meta. Individual RSVPs aren't
  *   imported.
- * - Members (opt-in) are only ever matched to existing WordPress.org accounts
- *   by email. A match joins the group as a Member with event emails off; no
- *   account is created for anyone else.
+ * - People (opt-in) are only ever matched to existing WordPress.org accounts
+ *   by email: Meetup organizers get the matching role, hosts are credited,
+ *   and RSVPs are kept. No account is created for anyone else.
+ * - The rest of the group's members are only brought over where
+ *   `matches_members()` allows it, off by default: a match joins the group as
+ *   a Member with event emails off, without being told first (#2305).
  *
  * Nothing here sends an email: events are published with the new-event
  * notification marked as already handled, and
@@ -478,6 +481,9 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 		'site_id'      => $site_id,
 		'include_past' => $include_past,
 		'match_people' => $match_people,
+		// Read once, so a job runs the same way however the flag changes
+		// while it's open.
+		'match_members' => $match_people && matches_members(),
 		'user_id'      => get_current_user_id(),
 		'created'      => time(),
 		'updated'      => time(),
@@ -485,7 +491,7 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 
 	update_site_option( job_option( $site_id ), $job );
 
-	Logger\log( 'job_queued', array_intersect_key( $job, array_flip( array( 'id', 'urlname', 'site_id', 'include_past', 'match_people' ) ) ) );
+	Logger\log( 'job_queued', array_intersect_key( $job, array_flip( array( 'id', 'urlname', 'site_id', 'include_past', 'match_people', 'match_members' ) ) ) );
 
 	return $job;
 }
@@ -695,7 +701,7 @@ function run_fetch( array $job ): void {
 	$raw = array(
 		'group'      => fetch_group( $job['urlname'] ),
 		'events'     => fetch_group_events( $job['urlname'], $job['include_past'] ),
-		'members'    => $job['match_people'] ? fetch_group_members( $job['urlname'] ) : array(),
+		'members'    => ! empty( $job['match_members'] ) ? fetch_group_members( $job['urlname'] ) : array(),
 		'organizers' => $job['match_people'] ? fetch_group_organizers( $job['urlname'] ) : array(),
 		'connection' => $job['match_people'] ? fetch_connection_member_id() : '',
 	);
@@ -720,7 +726,7 @@ function run_fetch( array $job ): void {
 		'group_results'    => plan_group( $job['site_id'], $job['data']['group'] ),
 		'events'           => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
 		'organizer_counts' => $job['match_people'] ? plan_organizers( $job['site_id'], $job['data']['organizers'] ) : null,
-		'member_counts'    => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
+		'member_counts'    => ! empty( $job['match_members'] ) ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
 	);
 
 	$job['status']   = 'ready';
@@ -761,7 +767,14 @@ function run_import_batch( array $job ): void {
 	} elseif ( 'organizers' === $step ) {
 		$job['results']['organizer_counts'] = import_organizers( $site_id, $data['organizers'] );
 		$job['cursor']                      = array(
-			'step'   => 'members',
+			'step'   => ! empty( $job['match_members'] ) ? 'members' : 'events',
+			'offset' => 0,
+		);
+	} elseif ( 'members' === $step && empty( $job['match_members'] ) ) {
+		// A job queued before members were put behind `matches_members()`
+		// can still be paused here; it goes on to the events without them.
+		$job['cursor'] = array(
+			'step'   => 'events',
 			'offset' => 0,
 		);
 	} elseif ( 'members' === $step ) {
@@ -898,7 +911,7 @@ function batch_progress( array $job ): array {
 	}
 
 	$people  = ! empty( $job['match_people'] );
-	$members = $people ? max( 1, (int) ceil( count( $job['data']['members'] ?? array() ) / MEMBERS_PER_BATCH ) ) : 0;
+	$members = ! empty( $job['match_members'] ) ? max( 1, (int) ceil( count( $job['data']['members'] ?? array() ) / MEMBERS_PER_BATCH ) ) : 0;
 	$events  = max( 1, (int) ceil( count( $job['data']['events'] ?? array() ) / EVENTS_PER_BATCH ) );
 	$step    = $job['cursor']['step'];
 	$before  = array(
@@ -1213,7 +1226,13 @@ function render_start_form( array $job ): void {
 						<br />
 						<label>
 							<input name="match_people" type="checkbox" value="1" <?php checked( ! empty( $job['match_people'] ) ); ?> />
-							<?php esc_html_e( 'Match people to WordPress.org accounts by email: members join the group (event emails off), Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' ); ?>
+							<?php
+							if ( matches_members() ) {
+								esc_html_e( 'Match people to WordPress.org accounts by email: members join the group (event emails off), Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' );
+							} else {
+								esc_html_e( 'Match people to WordPress.org accounts by email: Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Other members are not brought over. Nobody gets a new account.', 'wordcamporg' );
+							}
+							?>
 						</label>
 					</fieldset>
 				</td>
@@ -1292,7 +1311,9 @@ function render_job( array $job ): void {
 		<h3><?php esc_html_e( 'People', 'wordcamporg' ); ?></h3>
 		<ul class="ul-disc">
 			<li><?php echo esc_html( describe_organizer_counts( (array) ( $section['organizer_counts'] ?? array() ), $is_preview ) ); ?></li>
-			<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview ) ); ?></li>
+			<?php if ( ! empty( $job['match_members'] ) ) : ?>
+				<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview ) ); ?></li>
+			<?php endif; ?>
 			<li>
 				<?php
 				echo esc_html(
@@ -2939,6 +2960,23 @@ function publishes_upcoming(): bool {
 	 * @param bool $publish Whether to publish them. Default true.
 	 */
 	return (bool) apply_filters( 'wcorg_meetup_import_publish_upcoming', true );
+}
+
+/**
+ * Whether an import may bring a group's members over from Meetup.
+ *
+ * Off by default (#2305): a matched member is added to the group without
+ * being told first, and how members should come over from Meetup isn't
+ * settled yet. Organizer roles, hosts and RSVPs are matched either way.
+ */
+function matches_members(): bool {
+	/**
+	 * Filters whether "Match people" also brings the group's members over,
+	 * joining everyone with a matching WordPress.org account to the group.
+	 *
+	 * @param bool $match Whether to match members. Default false.
+	 */
+	return (bool) apply_filters( 'wcorg_meetup_import_match_members', false );
 }
 
 /**

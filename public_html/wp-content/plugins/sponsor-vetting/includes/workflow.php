@@ -221,17 +221,26 @@ function importing_company( ?int $company_id = null ): int {
  *
  * Callers check capabilities first.
  *
- * @param int  $sponsorship_id The sponsorship.
- * @param bool $good_faith     Whether to approve it in good faith: the sponsor has been asked for changes,
- *                             committed to them, and the event can't wait. Never carries over to other
- *                             sponsorships.
+ * @param int         $sponsorship_id The sponsorship.
+ * @param bool        $good_faith     Whether to approve it in good faith: the sponsor has been asked for changes,
+ *                                    committed to them, and the event can't wait. Never carries over to other
+ *                                    sponsorships.
+ * @param string|null $shown_domain   The camp sponsor's website the vetter was shown, if a vetter is approving.
+ *                                    The approval is for that website, so a different one now is refused.
  * @return true|\WP_Error
  */
-function approve_sponsorship( int $sponsorship_id, bool $good_faith = false ): true|\WP_Error {
+function approve_sponsorship( int $sponsorship_id, bool $good_faith = false, ?string $shown_domain = null ): true|\WP_Error {
 	$sponsorship = get_post( $sponsorship_id );
 
 	if ( ! $sponsorship || SPONSORSHIP_POST_TYPE !== $sponsorship->post_type || 'svs-pending' !== $sponsorship->post_status ) {
 		return new \WP_Error( 'sv_not_pending', __( 'Only a pending sponsorship can be approved.', 'wordcamporg' ) );
+	}
+
+	$current = (string) get_current_domain( $sponsorship_id );
+
+	if ( null !== $shown_domain && normalize_domain( $shown_domain ) !== $current ) {
+		/* translators: %s: Website domain. */
+		return new \WP_Error( 'sv_website_changed_since_shown', sprintf( __( 'The camp changed the sponsor’s website to %s while you had this page open. Check it, then approve again.', 'wordcamporg' ), $current ?: __( 'none', 'wordcamporg' ) ) );
 	}
 
 	if ( $good_faith && 'sv-compliance-req' !== get_post_status( $sponsorship->post_parent ) ) {
@@ -252,6 +261,9 @@ function approve_sponsorship( int $sponsorship_id, bool $good_faith = false ): t
 	if ( 'svs-approved' !== get_post_status( $sponsorship_id ) ) {
 		return new \WP_Error( 'sv_not_approvable', __( 'The company must be Compliant, and vetted within the re-vetting period, before its sponsorships can be approved.', 'wordcamporg' ) );
 	}
+
+	// The website just checked, not one read again since.
+	snapshot_approved_domain( $sponsorship_id, $current );
 
 	if ( $good_faith ) {
 		update_post_meta(
@@ -364,6 +376,7 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-approved' === $new_status ) {
 		update_post_meta( $post->ID, '_sv_approved_at', time() );
 		update_post_meta( $post->ID, '_sv_approved_by', get_current_user_id() );
+		snapshot_approved_domain( $post->ID );
 	}
 }
 add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );

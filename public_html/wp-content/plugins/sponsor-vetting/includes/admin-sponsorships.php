@@ -189,6 +189,7 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 	</p>
 
 	<?php if ( 'svs-pending' === $post->post_status ) : ?>
+		<input type="hidden" name="sv_shown_domain" value="<?php echo esc_attr( (string) get_current_domain( $post->ID ) ); ?>">
 		<?php if ( $state && $state['approvable'] ) : ?>
 			<p><button type="submit" name="sv_action" value="approve" class="button button-primary"><?php esc_html_e( 'Approve', 'wordcamporg' ); ?></button></p>
 		<?php elseif ( $state && 'sv-compliance-req' === $state['status'] ) : ?>
@@ -207,6 +208,24 @@ function render_sponsorship_status_box( \WP_Post $post ): void {
 				?>
 			</p>
 		<?php endif; ?>
+	<?php endif; ?>
+
+	<?php if ( 'svs-approved' === $post->post_status && website_changed( $post->ID ) ) : ?>
+		<div class="notice notice-warning inline">
+			<p>
+				<?php
+				printf(
+					/* translators: 1: Approved website domain, 2: New website domain. */
+					esc_html__( 'The camp changed the sponsor’s website from %1$s to %2$s after approval. Invoices can’t be approved until you confirm the new website.', 'wordcamporg' ),
+					'<code>' . esc_html( (string) get_post_meta( $post->ID, '_sv_approved_domain', true ) ?: __( 'none', 'wordcamporg' ) ) . '</code>',
+					'<code>' . esc_html( (string) get_current_domain( $post->ID ) ?: __( 'none', 'wordcamporg' ) ) . '</code>'
+				);
+				?>
+			</p>
+			<input type="hidden" name="sv_confirm_domain" value="<?php echo esc_attr( (string) get_current_domain( $post->ID ) ); ?>">
+			<p><button type="submit" name="sv_action" value="confirm_website" class="button"><?php esc_html_e( 'Confirm new website', 'wordcamporg' ); ?></button></p>
+			<p class="description"><?php esc_html_e( 'If it’s a different company now, cancel the sponsorship instead.', 'wordcamporg' ); ?></p>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( 'svs-approved' === $post->post_status ) : ?>
@@ -369,8 +388,20 @@ function save_sponsorship( int $post_id ): void {
 
 	save_note( $post_id );
 
+	if ( 'confirm_website' === $action ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by is_valid_save().
+		$confirmed = confirm_website( $post_id, sanitize_text_field( wp_unslash( (string) ( $_POST['sv_confirm_domain'] ?? '' ) ) ) );
+
+		if ( is_wp_error( $confirmed ) ) {
+			add_notice( 'error', $confirmed->get_error_message() );
+		} else {
+			add_notice( 'success', __( 'The new website was confirmed.', 'wordcamporg' ) );
+		}
+	}
+
 	if ( in_array( $action, array( 'approve', 'approve_good_faith' ), true ) ) {
-		$approved = approve_sponsorship( $post_id, 'approve_good_faith' === $action );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified by is_valid_save().
+		$approved = approve_sponsorship( $post_id, 'approve_good_faith' === $action, sanitize_text_field( wp_unslash( (string) ( $_POST['sv_shown_domain'] ?? '' ) ) ) );
 
 		if ( is_wp_error( $approved ) ) {
 			add_notice( 'error', $approved->get_error_message() );

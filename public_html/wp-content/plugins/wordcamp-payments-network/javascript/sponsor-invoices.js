@@ -13,7 +13,6 @@
 		start: function() {
 			try {
 				$( '.wcbdsi-approve-invoice' ).click( app.approveInvoice );
-				$( '.wcbdsi-vetting-status' ).change( app.updateVettingStatus );
 			} catch ( exception ) {
 				app.log( exception );
 			}
@@ -36,7 +35,7 @@
 			try {
 				approvalButton.addClass( 'hidden' );
 				statusMessage.html( 'Submitting to QuickBooks...' ); // todo show spinner instead
-				statusMessage.removeClass( 'hidden' );
+				statusMessage.removeClass( 'hidden notice notice-success notice-error inline' );
 
 				$.post(
 					ajaxurl,
@@ -58,57 +57,10 @@
 								statusMessage.addClass( 'notice notice-error inline' );
 								statusMessage.html( _.escape( 'ERROR: ' + response.data.error ) );
 
-								// todo bring button back so they can try again?
-							}
-						} catch ( exception ) {
-							app.log( exception );
-						}
-					}
-				);
-			} catch ( exception ) {
-				app.log( exception );
-			}
-		},
-
-		/**
-		 * Send an AJAX request to update the vetting status of an invoice
-		 *
-		 * @param {event} event
-		 */
-		updateVettingStatus: function( event ) {
-			const vettingStatusSelect = $( this ),
-				statusMessage = $( this ).parent().find( '.wcbd-inline-notice' ),
-				spinner = $( this ).parent().find( '.spinner' ),
-				siteID = vettingStatusSelect.data( 'site-id' ),
-				invoiceID = vettingStatusSelect.data( 'invoice-id' ),
-				nonce = vettingStatusSelect.data( 'nonce' ),
-				vettingStatus = vettingStatusSelect.val();
-
-			event.preventDefault();
-
-			try {
-
-				spinner.addClass( 'is-active' );
-				statusMessage.html( '' ).removeClass( 'notice notice-error inline' ).addClass( 'hidden' );
-
-				$.post(
-					ajaxurl,
-					{
-						action: 'wcbdsi_vetting_status',
-						nonce: nonce,
-						site_id: siteID,
-						invoice_id: invoiceID,
-						vetting_status: vettingStatus,
-					},
-
-					function( response ) {
-						try {
-							spinner.removeClass( 'is-active' );
-
-							if ( ! response.hasOwnProperty( 'success' ) || true !== response.success ) {
-								statusMessage.addClass( 'notice notice-error inline' );
-								statusMessage.removeClass( 'hidden' );
-								statusMessage.html( _.escape( 'ERROR: ' + response.data.error || 'Unknown Error' ) );
+								// Only a refusal before QuickBooks is safe to retry: a QuickBooks error may have created the invoice.
+								if ( response.data.retryable ) {
+									approvalButton.removeClass( 'hidden' );
+								}
 							}
 						} catch ( exception ) {
 							app.log( exception );

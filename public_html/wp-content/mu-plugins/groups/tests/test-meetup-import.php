@@ -3528,102 +3528,216 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Local start times as `DateTimeImmutable`s, for `infer_recurrence()`.
+	 * A Meetup `series`, as the API returns it: by default, every second Wednesday.
 	 *
-	 * @param string[] $starts Local start times, `Y-m-d H:i`, in America/New_York.
+	 * @param array $overrides Fields to replace.
 	 */
-	protected function local_starts( array $starts ): array {
-		return array_map(
-			static fn( $start ) => new \DateTimeImmutable( $start, new \DateTimeZone( 'America/New_York' ) ),
-			$starts
+	protected function raw_series( array $overrides = array() ): array {
+		return array_merge(
+			array(
+				'id'                => '48303683',
+				'endDate'           => null,
+				'monthlyRecurrence' => array(
+					'monthlyWeekOfMonth' => 2,
+					'monthlyDayOfWeek'   => 'WEDNESDAY',
+				),
+				'weeklyRecurrence'  => null,
+			),
+			$overrides
 		);
 	}
 
 	/**
-	 * Date patterns the recurring-events plugin can express are recognized,
-	 * across a DST change; anything with a gap or a stray date is not.
+	 * Raw dates of one Meetup series, normalized and folded.
 	 *
-	 * @dataProvider data_infer_recurrence
-	 *
-	 * @param string[]   $starts Local start times.
-	 * @param array|null $expect Expected rule fields, or null for none.
+	 * @param string[] $starts   Local start times.
+	 * @param array    $series   Overrides for `raw_series()`.
+	 * @param int      $first_id Meetup ID of the first one.
 	 */
-	public function test_infer_recurrence( array $starts, ?array $expect ) {
-		$rule = Meetup_Import\infer_recurrence( $this->local_starts( $starts ) );
+	protected function folded_series( array $starts, array $series = array(), int $first_id = 400000001 ): array {
+		$raw = $this->raw_dated_events( $starts, $first_id, array( 'series' => $this->raw_series( $series ) ) );
 
-		if ( null === $expect ) {
-			$this->assertNull( $rule );
-			return;
-		}
-
-		$this->assertIsArray( $rule );
-		$this->assertSame( $expect, array_intersect_key( $rule, $expect ) );
-		$this->assertSame( 'never', $rule['end_type'] );
+		return Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
 	}
 
 	/**
-	 * Cases for `test_infer_recurrence()`.
+	 * Meetup's `series` is read as given; anything malformed is no series.
 	 */
-	public function data_infer_recurrence(): array {
+	public function test_normalize_series() {
+		$this->assertNull( Meetup_Import\normalize_series( null ) );
+		$this->assertNull( Meetup_Import\normalize_series( array( 'id' => '' ) ) );
+
+		$this->assertSame(
+			array(
+				'id'       => '51125381',
+				'end_date' => '2027-01-27',
+				'weekly'   => array(
+					'interval' => 2,
+					'days'     => array( 'MO', 'WE' ),
+				),
+				'monthly'  => null,
+			),
+			Meetup_Import\normalize_series(
+				array(
+					'id'                => '51125381',
+					'endDate'           => '2027-01-27',
+					'monthlyRecurrence' => null,
+					'weeklyRecurrence'  => array(
+						'weeklyInterval'   => 2,
+						'weeklyDaysOfWeek' => array( 'MONDAY', 'WEDNESDAY', 'SOMEDAY' ),
+					),
+				)
+			)
+		);
+
+		$series = Meetup_Import\normalize_series(
+			$this->raw_series(
+				array(
+					'endDate'           => 'not a date',
+					'monthlyRecurrence' => array(
+						'monthlyWeekOfMonth' => 5,
+						'monthlyDayOfWeek'   => 'SUNDAY',
+					),
+				)
+			)
+		);
+
+		$this->assertSame( '', $series['end_date'] );
+		$this->assertSame(
+			array(
+				'week' => 5,
+				'day'  => 'SU',
+			),
+			$series['monthly']
+		);
+
+		// Neither rule: still a series, but one `fold_series()` leaves alone.
+		$series = Meetup_Import\normalize_series(
+			$this->raw_series(
+				array(
+					'monthlyRecurrence' => array(
+						'monthlyWeekOfMonth' => 0,
+						'monthlyDayOfWeek'   => 'SUNDAY',
+					),
+				)
+			)
+		);
+
+		$this->assertNull( $series['monthly'] );
+		$this->assertNull( $series['weekly'] );
+	}
+
+	/**
+	 * Meetup's rule maps onto the recurring-events plugin's, with a monthly
+	 * series' interval read off its dates.
+	 *
+	 * @dataProvider data_series_rule
+	 *
+	 * @param array    $series Overrides for `raw_series()`.
+	 * @param string[] $starts Local start times.
+	 * @param array    $expect Expected rule fields.
+	 */
+	public function test_series_rule( array $series, array $starts, array $expect ) {
+		$rule = Meetup_Import\series_rule(
+			Meetup_Import\normalize_series( $this->raw_series( $series ) ),
+			array_map( static fn( $start ) => new \DateTimeImmutable( $start, new \DateTimeZone( 'America/New_York' ) ), $starts )
+		);
+
+		$this->assertSame( $expect, array_intersect_key( $rule, $expect ) );
+	}
+
+	/**
+	 * Cases for `test_series_rule()`.
+	 */
+	public function data_series_rule(): array {
 		return array(
-			'second Wednesday, across DST' => array(
-				array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00', '2027-04-14 18:00' ),
+			'second Wednesday'               => array(
+				array(),
+				array( '2027-01-13 18:00', '2027-02-10 18:00' ),
 				array(
-					'frequency'     => 'monthly',
-					'interval'      => 1,
-					'monthly_mode'  => 'weekday',
-					'monthly_order' => 'second',
+					'frequency'       => 'monthly',
+					'interval'        => 1,
+					'monthly_mode'    => 'weekday',
+					'monthly_order'   => 'second',
+					'monthly_weekday' => 'WE',
+					'end_type'        => 'never',
 				),
 			),
-			'last Monday'                  => array(
-				array( '2027-01-25 09:00', '2027-02-22 09:00', '2027-03-29 09:00' ),
+			'every 3 months, 4th Sunday'     => array(
 				array(
-					'frequency'     => 'monthly',
-					'monthly_mode'  => 'weekday',
-					'monthly_order' => 'last',
+					'monthlyRecurrence' => array(
+						'monthlyWeekOfMonth' => 4,
+						'monthlyDayOfWeek'   => 'SUNDAY',
+					),
+				),
+				array( '2026-11-22 14:00', '2027-02-28 14:00' ),
+				array(
+					'interval'      => 3,
+					'monthly_order' => 'fourth',
 				),
 			),
-			'every other Tuesday'          => array(
-				array( '2027-01-05 19:00', '2027-01-19 19:00', '2027-02-02 19:00' ),
+			'last Sunday, until'             => array(
+				array(
+					'endDate'           => '2027-02-28',
+					'monthlyRecurrence' => array(
+						'monthlyWeekOfMonth' => 5,
+						'monthlyDayOfWeek'   => 'SUNDAY',
+					),
+				),
+				array( '2026-11-29 14:00', '2026-12-27 14:00' ),
+				array(
+					'monthly_order'   => 'last',
+					'monthly_weekday' => 'SU',
+					'end_type'        => 'until',
+					'until'           => '2027-02-28',
+				),
+			),
+			'every 2 weeks, Thursday and Saturday' => array(
+				array(
+					'monthlyRecurrence' => null,
+					'weeklyRecurrence'  => array(
+						'weeklyInterval'   => 2,
+						'weeklyDaysOfWeek' => array( 'SATURDAY', 'THURSDAY' ),
+					),
+				),
+				array( '2027-01-07 19:00', '2027-01-09 19:00' ),
 				array(
 					'frequency' => 'weekly',
 					'interval'  => 2,
-					'weekdays'  => array( 'TU' ),
+					'weekdays'  => array( 'SA', 'TH' ),
 				),
-			),
-			'same day of the month'        => array(
-				array( '2027-01-15 19:00', '2027-02-15 19:00', '2027-03-15 19:00' ),
-				array(
-					'frequency'    => 'monthly',
-					'monthly_mode' => 'day',
-					'monthly_day'  => 15,
-				),
-			),
-			'a skipped month'              => array(
-				array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-04-14 18:00' ),
-				null,
-			),
-			'a moved date'                 => array(
-				array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-17 18:00' ),
-				null,
 			),
 		);
 	}
 
 	/**
-	 * A run of matching upcoming dates folds into one row; past events, a
-	 * second event on the same day, and different meetups are left as they are.
+	 * A Meetup series' upcoming dates fold into one row; its past dates, events
+	 * outside any series, and series that don't fit are left as they are.
 	 */
 	public function test_fold_series() {
-		$series = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00', '2027-04-14 18:00' ) );
-		$twin   = $this->raw_dated_events( array( '2027-04-14 18:00' ), 400000050 );
-		$past   = $this->raw_dated_events( array( '2026-01-14 18:00' ), 400000060, array( 'status' => 'PAST' ) );
-		$other  = $this->raw_dated_events( array( '2027-01-25 09:00', '2027-02-22 09:00' ), 400000070, array( 'title' => 'Monday Morning' ) );
+		$past_extra = array(
+			'status' => 'PAST',
+			'series' => $this->raw_series(),
+		);
+		$monday     = array(
+			'id'                => '2',
+			'monthlyRecurrence' => array(
+				'monthlyWeekOfMonth' => 2,
+				'monthlyDayOfWeek'   => 'MONDAY',
+			),
+		);
 
-		$events = array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_merge( array_reverse( $series ), $twin, $past, $other ) );
+		$series    = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00', '2027-04-14 18:00' ), 400000001, array( 'series' => $this->raw_series() ) );
+		$past      = $this->raw_dated_events( array( '2026-01-14 18:00' ), 400000060, $past_extra );
+		$twin      = $this->raw_dated_events( array( '2027-04-14 18:00' ), 400000050 );
+		$gap       = $this->raw_dated_events( array( '2027-01-11 09:00', '2027-02-08 09:00', '2027-04-12 09:00' ), 400000070, array( 'series' => $this->raw_series( $monday ) ) );
+		$lone      = $this->raw_dated_events( array( '2027-01-20 18:00' ), 400000080, array( 'series' => $this->raw_series( array( 'id' => '3' ) ) ) );
+		$no_series = $this->raw_dated_events( array( '2027-01-25 09:00', '2027-02-22 09:00', '2027-03-29 09:00' ), 400000090, array( 'title' => 'Monday Morning' ) );
+
+		$events = array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_merge( array_reverse( $series ), $past, $twin, $gap, $lone, $no_series ) );
 		$folded = Meetup_Import\fold_series( $this->site_id, $events );
 
-		$this->assertCount( 5, $folded );
+		$this->assertCount( 10, $folded );
 
 		$rows = wp_list_filter( $folded, array( 'meetup_id' => '400000001' ) );
 		$row  = reset( $rows );
@@ -3631,21 +3745,59 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( '2027-01-13 18:00:00', $row['start'] );
 		$this->assertSame( array( '400000001', '400000002', '400000003', '400000004' ), $row['series_ids'] );
 		$this->assertSame( 'second', $row['recurrence']['monthly_order'] );
-		$this->assertStringContainsString( 'in place of 4 Meetup events', Meetup_Import\describe_recurrence( $row ) );
+		$this->assertSame( 'recurring monthly on the second Wednesday, in place of 4 Meetup events', Meetup_Import\describe_recurrence( $row ) );
 
-		foreach ( array( '400000050', '400000060', '400000070', '400000071' ) as $meetup_id ) {
+		foreach ( array( '400000060', '400000050', '400000070', '400000071', '400000072', '400000080', '400000090', '400000091', '400000092' ) as $meetup_id ) {
 			$rows = wp_list_filter( $folded, array( 'meetup_id' => $meetup_id ) );
 			$this->assertArrayNotHasKey( 'recurrence', reset( $rows ), $meetup_id );
 		}
 	}
 
 	/**
+	 * A series with a date edited on its own on Meetup isn't folded: the
+	 * recurring event would show that date the same as the others.
+	 */
+	public function test_series_with_an_edited_date_is_not_folded() {
+		$raw                  = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ), 400000001, array( 'series' => $this->raw_series() ) );
+		$moved                = $raw;
+		$moved[1]             = $this->raw_dated_events( array( '2027-02-10 19:00' ), 400000002, array( 'series' => $this->raw_series() ) )[0];
+		$retitled             = $raw;
+		$retitled[2]['title'] = 'Holiday edition';
+
+		foreach ( array( $moved, $retitled ) as $events ) {
+			$folded = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $events ) );
+
+			$this->assertCount( 3, $folded );
+			$this->assertSame( array(), array_column( $folded, 'recurrence' ) );
+		}
+	}
+
+	/**
+	 * A weekly series on two days, with an end date, folds and says so.
+	 */
+	public function test_weekly_series_on_two_days() {
+		$events = $this->folded_series(
+			array( '2027-01-04 19:00', '2027-01-06 19:00', '2027-01-11 19:00', '2027-01-13 19:00' ),
+			array(
+				'endDate'           => '2027-01-13',
+				'monthlyRecurrence' => null,
+				'weeklyRecurrence'  => array(
+					'weeklyInterval'   => 1,
+					'weeklyDaysOfWeek' => array( 'MONDAY', 'WEDNESDAY' ),
+				),
+			)
+		);
+
+		$this->assertCount( 1, $events );
+		$this->assertSame( 'recurring every Monday and Wednesday until January 13, 2027, in place of 4 Meetup events', Meetup_Import\describe_recurrence( $events[0] ) );
+	}
+
+	/**
 	 * A folded series becomes one published recurring event with its dates
-	 * projected; a rerun records the new date on it rather than making another.
+	 * projected; a rerun finds it by the Meetup series instead of making another.
 	 */
 	public function test_import_series_as_recurring_event() {
-		$raw    = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
-		$events = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
+		$events = $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
 
 		$this->assertSame( 'create', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
 
@@ -3664,7 +3816,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 				return array(
 					'recurring'   => Rule::is_recurring( $post_id ),
 					'rule'        => Rule::from_post( $post_id ),
-					'members'     => get_post_meta( $post_id, Meetup_Import\SERIES_MEMBER_META, false ),
+					'series'      => get_post_meta( $post_id, Meetup_Import\SERIES_ID_META, true ),
 					'rsvp_yes'    => get_post_meta( $post_id, Meetup_Import\RSVP_YES_META, true ),
 					'status'      => get_post_status( $post_id ),
 					'occurrences' => (int) $wpdb->get_var(
@@ -3683,36 +3835,40 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( 'weekday', $meta['rule']['monthly_mode'] );
 		$this->assertSame( 'second', $meta['rule']['monthly_order'] );
 		$this->assertSame( 'WE', $meta['rule']['monthly_weekday'] );
-		$this->assertSame( array( '400000001', '400000002', '400000003' ), $meta['members'] );
+		$this->assertSame( 'never', $meta['rule']['end_type'] );
+		$this->assertSame( '48303683', $meta['series'] );
 		$this->assertSame( '', $meta['rsvp_yes'] );
 
 		// Rerun: same series, one more date from Meetup.
-		$raw    = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00', '2027-04-14 18:00' ) );
-		$events = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
+		$events = $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00', '2027-04-14 18:00' ) );
 
 		$this->assertSame( 'skip', Meetup_Import\plan_events( $this->site_id, $events )[0]['status'] );
 		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events )[0]['status'] );
 		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
-		$this->assertCount(
-			4,
-			$this->on_site(
-				static function () use ( $post_id ) {
-					return get_post_meta( $post_id, Meetup_Import\SERIES_MEMBER_META, false );
-				}
-			)
-		);
 	}
 
 	/**
-	 * Once a series is imported, a later run whose remaining dates no longer
-	 * make a series leaves them to it instead of adding one-offs.
+	 * Meetup's end date carries over to the recurring event.
+	 */
+	public function test_series_end_date_is_imported() {
+		$events  = $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ), array( 'endDate' => '2027-03-10' ) );
+		$post_id = Meetup_Import\import_events( $this->site_id, $events )[0]['post_id'];
+		$rule    = $this->on_site( static fn() => Rule::from_post( $post_id ) );
+
+		$this->assertSame( 'until', $rule['end_type'] );
+		$this->assertSame( '2027-03-10', $rule['until'] );
+	}
+
+	/**
+	 * Once a series is imported, a later run whose dates no longer fold (one
+	 * was edited on Meetup) leaves them to it instead of adding one-offs.
 	 */
 	public function test_dates_of_imported_series_are_skipped() {
-		$raw = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
-		Meetup_Import\import_events( $this->site_id, Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) ) );
+		Meetup_Import\import_events( $this->site_id, $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) ) );
 
-		$later  = array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_slice( $raw, 1 ) );
-		$events = Meetup_Import\fold_series( $this->site_id, $later );
+		$raw             = $this->raw_dated_events( array( '2027-02-10 18:00', '2027-03-10 18:00' ), 400000002, array( 'series' => $this->raw_series() ) );
+		$raw[1]['title'] = 'Holiday edition';
+		$events          = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
 
 		$this->assertSame( array( 'in_series', 'in_series' ), wp_list_pluck( Meetup_Import\plan_events( $this->site_id, $events ), 'status' ) );
 		$this->assertSame( array( 'in_series', 'in_series' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
@@ -3727,31 +3883,31 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$raw = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
 		Meetup_Import\import_events( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
 
-		$events = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $raw ) );
+		$events = $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
 
 		$this->assertCount( 3, $events );
 		$this->assertSame( array(), array_column( $events, 'recurrence' ) );
+		$this->assertSame( array( 'skip', 'skip', 'skip' ), wp_list_pluck( Meetup_Import\plan_events( $this->site_id, $events ), 'status' ) );
 	}
 
 	/**
-	 * A published series still takes the dates Meetup lists after it, so a
-	 * rerun once its first dates have passed doesn't make a second series.
+	 * A rerun after a series' first dates have passed finds it by the Meetup
+	 * series alone. A past date it covers is skipped; one from before it
+	 * started is imported on its own, as history.
 	 */
-	public function test_published_series_takes_later_dates() {
-		$first = $this->raw_dated_events( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) );
-		Meetup_Import\import_events( $this->site_id, Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', $first ) ) );
+	public function test_series_found_after_its_first_dates_pass() {
+		Meetup_Import\import_events( $this->site_id, $this->folded_series( array( '2027-01-13 18:00', '2027-02-10 18:00', '2027-03-10 18:00' ) ) );
 
-		// Meetup now lists April to June too, alongside March.
-		$later  = $this->raw_dated_events( array( '2027-04-14 18:00', '2027-05-12 18:00', '2027-06-09 18:00' ), 400000004 );
-		$events = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_merge( array_slice( $first, 2 ), $later ) ) );
+		$past    = array(
+			'status' => 'PAST',
+			'series' => $this->raw_series(),
+		);
+		$earlier = $this->raw_dated_events( array( '2026-12-09 18:00' ), 400000000, $past );
+		$covered = $this->raw_dated_events( array( '2027-03-10 18:00' ), 400000003, $past );
+		$later   = $this->raw_dated_events( array( '2027-04-14 18:00', '2027-05-12 18:00', '2027-06-09 18:00' ), 400000004, array( 'series' => $this->raw_series() ) );
+		$events  = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_merge( $earlier, $covered, $later ) ) );
 
-		$this->assertSame( array( 'skipped' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
-
-		// Then March has passed, and only April to June are upcoming.
-		$past   = $this->raw_dated_events( array( '2027-03-10 18:00' ), 400000003, array( 'status' => 'PAST' ) );
-		$events = Meetup_Import\fold_series( $this->site_id, array_map( 'WordCamp\Groups\Meetup_Import\normalize_event', array_merge( $past, $later ) ) );
-
-		$this->assertSame( array( 'in_series', 'skipped' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
-		$this->assertSame( 1, $this->count_posts( Event::POST_TYPE ) );
+		$this->assertSame( array( 'created', 'in_series', 'skipped' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
+		$this->assertSame( 2, $this->count_posts( Event::POST_TYPE ) );
 	}
 }

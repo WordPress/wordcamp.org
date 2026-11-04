@@ -569,4 +569,74 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '/^[a-f0-9]{32}$/', $tokens[1] );
 		$this->assertNotSame( $tokens[0], $tokens[1] );
 	}
+
+	/**
+	 * A gateway that passes a bare transaction id is told it's doing it wrong, and the id is
+	 * recorded instead of being dropped.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_records_a_scalar_transaction_id_and_warns() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$this->setExpectedIncorrectUsage( 'CampTix_Plugin::payment_result' );
+
+		$payment_token = 'tok_scalar';
+		$attendee_id   = $this->create_attendee( $payment_token, 'draft' );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, 'txn_12345', false );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+		$this->assertSame( 'txn_12345', get_post_meta( $attendee_id, 'tix_transaction_id', true ) );
+	}
+
+	/**
+	 * Structured data is accepted without a warning.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_accepts_structured_data_silently() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_structured';
+		$attendee_id   = $this->create_attendee( $payment_token, 'draft' );
+
+		$camptix->payment_result(
+			$payment_token,
+			CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+			array(
+				'transaction_id'      => 'txn_structured',
+				'transaction_details' => array( 'raw' => array() ),
+			),
+			false
+		);
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+		$this->assertSame( 'txn_structured', get_post_meta( $attendee_id, 'tix_transaction_id', true ) );
+	}
+
+	/**
+	 * Order meta goes on every draft attendee of the order, and nowhere else.
+	 *
+	 * @covers CampTix_Plugin::update_payment_token_meta
+	 */
+	public function test_update_payment_token_meta_stamps_the_drafts_of_the_order() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$first     = $this->create_attendee( 'tok_meta', 'draft' );
+		$second    = $this->create_attendee( 'tok_meta', 'draft' );
+		$published = $this->create_attendee( 'tok_meta', 'publish' );
+		$other     = $this->create_attendee( 'tok_meta_other', 'draft' );
+
+		$updated = $camptix->update_payment_token_meta( 'tok_meta', '_gateway_session', 'sess\\with\\slashes' );
+
+		$this->assertEqualsCanonicalizing( array( $first, $second ), $updated );
+		$this->assertSame( 'sess\\with\\slashes', get_post_meta( $first, '_gateway_session', true ) );
+		$this->assertSame( 'sess\\with\\slashes', get_post_meta( $second, '_gateway_session', true ) );
+		$this->assertSame( '', get_post_meta( $published, '_gateway_session', true ) );
+		$this->assertSame( '', get_post_meta( $other, '_gateway_session', true ) );
+	}
 }

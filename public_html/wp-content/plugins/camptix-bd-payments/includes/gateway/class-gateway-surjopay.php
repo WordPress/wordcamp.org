@@ -214,10 +214,8 @@ class SurjoPay extends Base_Gateway {
 		}
 
 		// Store shurjoPay and customer order IDs for return validation and timeout recovery.
-		foreach ( $attendees as $attendee ) {
-			update_post_meta( $attendee->ID, 'tix_surjopay_order_id', $gateway_order_id );
-			update_post_meta( $attendee->ID, 'tix_surjopay_customer_order_id', $order_id );
-		}
+		$camptix->update_payment_token_meta( $payment_token, 'tix_surjopay_order_id', $gateway_order_id );
+		$camptix->update_payment_token_meta( $payment_token, 'tix_surjopay_customer_order_id', $order_id );
 
 		$this->log(
 			sprintf( 'Redirecting to Surjo Pay for order %s', $gateway_order_id ),

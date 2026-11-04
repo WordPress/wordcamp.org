@@ -982,10 +982,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
-			update_post_meta( $attendee_id, '_stripe_checkout_session_id', wp_slash( $session_id ) );
-			update_post_meta( $attendee_id, 'tix_session_expires_at', (int) $expires_at );
-		}
+		$camptix->update_payment_token_meta( $payment_token, '_stripe_checkout_session_id', $session_id );
+		$camptix->set_order_session_expiry( $payment_token, $expires_at );
 	}
 
 	/**

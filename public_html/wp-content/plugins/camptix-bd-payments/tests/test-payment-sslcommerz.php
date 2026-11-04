@@ -304,6 +304,70 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 			$this->assertFalse( $api->invoke( $gateway, 'POST', 'https://example.com/api', [ 'password' => 'secret-password' ] ) );
 		}
 	}
+	/**
+	 * Checkout records the session key on every attendee of the order, so the timeout sweep
+	 * can look the payment up from whichever attendee it reaches first.
+	 */
+	public function test_checkout_stores_the_session_key_on_every_attendee() {
+		$first  = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		$second = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		foreach ( [ $first, $second ] as $id ) {
+			// Retyped directly: inserting a tix_attendee runs CampTix's save hooks, which this suite doesn't set up for.
+			set_post_type( $id, 'tix_attendee' );
+			update_post_meta( $id, 'tix_payment_token', 'order-a' );
+		}
+
+		$GLOBALS['camptix'] = $this->getMockBuilder( CampTix_Plugin::class )->disableOriginalConstructor()->onlyMethods( [ 'log', 'error', 'get_attendees_from_payment_token', 'get_tickets_url', 'email_template_shortcode_event_name' ] )->getMock();
+		$GLOBALS['camptix']->method( 'get_attendees_from_payment_token' )->willReturn( [ get_post( $first ), get_post( $second ) ] );
+		$GLOBALS['camptix']->method( 'get_tickets_url' )->willReturn( 'https://example.test/tickets/' );
+		$GLOBALS['camptix']->method( 'email_template_shortcode_event_name' )->willReturn( 'WordCamp Test' );
+
+		$this->gateway->camptix_options = [ 'currency' => 'BDT' ];
+		$this->gateway->method( 'get_order' )->willReturn(
+			[
+				'total' => 20,
+				'items' => [
+					[
+						'name'     => 'General',
+						'quantity' => 2,
+					],
+				],
+			]
+		);
+
+		add_filter(
+			'pre_http_request',
+			static function () {
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'status'         => 'SUCCESS',
+							'GatewayPageURL' => 'https://sandbox.sslcommerz.com/EasyCheckOut/abc',
+							'sessionkey'     => 'session-for-both',
+						]
+					),
+				];
+			}
+		);
+		add_filter(
+			'wp_redirect',
+			static function () {
+				throw new RuntimeException( 'redirected' );
+			}
+		);
+
+		try {
+			$this->gateway->payment_checkout( 'order-a' );
+			$this->fail( 'Checkout should have redirected to SSLCommerz.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'redirected', $e->getMessage() );
+		}
+
+		$this->assertSame( 'session-for-both', get_post_meta( $first, '_sslcommerz_session_key', true ) );
+		$this->assertSame( 'session-for-both', get_post_meta( $second, '_sslcommerz_session_key', true ) );
+	}
+
 	/** Accept the observed live checkout host without accepting arbitrary subdomains. */
 	public function test_gateway_redirect_hosts_are_exact_and_mode_specific() {
 		$this->gateway->options['sandbox'] = false;

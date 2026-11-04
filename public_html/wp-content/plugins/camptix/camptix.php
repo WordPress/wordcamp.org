@@ -7003,9 +7003,29 @@ class CampTix_Plugin {
 	 * @param int    $expires_at    Unix timestamp.
 	 */
 	function set_order_session_expiry( $payment_token, $expires_at ) {
-		foreach ( $this->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
-			update_post_meta( $attendee_id, 'tix_session_expires_at', (int) $expires_at );
+		$this->update_payment_token_meta( $payment_token, 'tix_session_expires_at', (int) $expires_at );
+	}
+
+	/**
+	 * Set a meta value on every draft attendee of an order.
+	 *
+	 * Gateways record what they need to look a payment up again (a session or order id) at
+	 * checkout. The timeout sweep visits attendees one at a time, so a value written to only
+	 * one attendee of the order is missing when the sweep reaches its siblings first.
+	 *
+	 * @param string $payment_token Payment token shared by the order.
+	 * @param string $meta_key      Meta key.
+	 * @param mixed  $meta_value    Meta value, unslashed.
+	 * @return int[] Ids of the attendees updated.
+	 */
+	function update_payment_token_meta( $payment_token, $meta_key, $meta_value ) {
+		$attendee_ids = $this->get_draft_attendee_ids_from_payment_token( $payment_token );
+
+		foreach ( $attendee_ids as $attendee_id ) {
+			update_post_meta( $attendee_id, $meta_key, wp_slash( $meta_value ) );
 		}
+
+		return $attendee_ids;
 	}
 
 	/**
@@ -7701,6 +7721,18 @@ class CampTix_Plugin {
 		if ( $attendees_status != 'draft' ) {
 			$transaction_id = get_post_meta( $attendees[0]->ID, 'tix_transaction_id', true );
 			$transaction_details = get_post_meta( $attendees[0]->ID, 'tix_transaction_details', true );
+		}
+
+		// Gateways must pass structured data. A bare transaction id used to be dropped silently.
+		if ( is_scalar( $data ) ) {
+			_doing_it_wrong(
+				__METHOD__,
+				'Pass $data as an array, e.g. array( \'transaction_id\' => ..., \'transaction_details\' => ... ), not a bare transaction id.',
+				'WordCamp.org'
+			);
+			$this->log( 'payment_result() called with scalar $data.', $attendees[0]->ID, $data );
+
+			$data = ( '' === $data || false === $data ) ? array() : array( 'transaction_id' => $data );
 		}
 
 		if ( ! empty( $data['transaction_id'] ) )

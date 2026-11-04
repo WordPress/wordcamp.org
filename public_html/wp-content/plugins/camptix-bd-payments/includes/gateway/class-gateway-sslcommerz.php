@@ -276,9 +276,10 @@ class SSLCommerz extends Base_Gateway {
 				return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 			}
 
-			// Store the sessionkey for future reference (timeout).
+			// Store the sessionkey on every attendee of the order, so the timeout sweep can look
+			// the payment up from whichever attendee it reaches first.
 			if ( ! empty( $response_data['sessionkey'] ) ) {
-				update_post_meta( $attendee->ID, '_sslcommerz_session_key', $response_data['sessionkey'] );
+				$camptix->update_payment_token_meta( $payment_token, '_sslcommerz_session_key', $response_data['sessionkey'] );
 			}
 
 			wp_redirect( $gateway_page_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Scheme and exact host are validated above.

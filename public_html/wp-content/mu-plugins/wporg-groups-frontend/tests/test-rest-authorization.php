@@ -421,6 +421,24 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				'outsider'        => 403,
 			),
 
+			// Member directory: logged in, not role-gated (#2304). An
+			// outsider is logged in, so they can read it like the Members
+			// page; anonymous callers can't page through it.
+			'GET /members' => array(
+				'anonymous'       => 401,
+				'member'          => 200,
+				'event_organiser' => 200,
+				'organiser'       => 200,
+				'outsider'        => 200,
+			),
+			'GET /members/{id}' => array(
+				'anonymous'       => 401,
+				'member'          => 200,
+				'event_organiser' => 200,
+				'organiser'       => 200,
+				'outsider'        => 200,
+			),
+
 			// Role changes: both `manage_events` AND `manage_group_settings`.
 			'POST /members/{id}/role' => array(
 				'anonymous'       => 401,
@@ -550,17 +568,16 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 	}
 
 	/**
-	 * The member directory is intentionally public, so what it discloses is
-	 * the thing worth pinning down.
+	 * Any logged-in w.org account can read the member directory, so what it
+	 * discloses is the thing worth pinning down.
 	 *
-	 * `GET /members` and `GET /members/{id}` both register
-	 * `permission_callback => '__return_true'`. That is deliberate (w.org
-	 * profiles are public), which means there is no denial to assert and the
-	 * risk moves to a future field being added to the response. This fails if
-	 * one ever carries an email address or login.
+	 * The matrix above covers who gets in; the risk left is a future field
+	 * being added to the response. This fails if one ever carries an email
+	 * address or login. It reads as the outsider, the least-privileged actor
+	 * that gets through.
 	 */
-	public function test_public_member_routes_disclose_no_private_fields(): void {
-		wp_set_current_user( 0 );
+	public function test_member_routes_disclose_no_private_fields(): void {
+		wp_set_current_user( $this->actors['outsider'] );
 
 		$collection = rest_do_request( $this->build_request( 'GET /members' ) );
 		$this->assertSame( 200, $collection->get_status() );
@@ -580,7 +597,7 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				$this->assertArrayNotHasKey(
 					$field,
 					$member,
-					"An anonymous read of the member directory exposed '{$field}' (entry {$index})."
+					"A read of the member directory exposed '{$field}' (entry {$index})."
 				);
 			}
 		}

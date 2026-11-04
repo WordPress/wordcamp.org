@@ -835,4 +835,195 @@ class Test_Camptix_Payment_PayPal_Addon extends \WP_UnitTestCase {
 
 		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $paypal->get_status_from_string( 'Partially-Refunded' ) );
 	}
+
+	/**
+	 * Ask PayPal about an order, answering each NVP call by its METHOD.
+	 *
+	 * @param CampTix_Payment_Method_PayPal $paypal  Gateway.
+	 * @param string                        $token   Payment token.
+	 * @param array                         $answers Responses (or WP_Errors) keyed by METHOD.
+	 *
+	 * @return array The reconcile_payment() result.
+	 */
+	protected function reconcile_with( $paypal, $token, $answers ) {
+		$stub = function ( $pre, $args ) use ( $answers ) {
+			return $answers[ $args['body']['METHOD'] ];
+		};
+		add_filter( 'pre_http_request', $stub, 10, 2 );
+
+		try {
+			return $paypal->reconcile_payment( $token );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+	}
+
+	/** A GetExpressCheckoutDetails response. */
+	protected function checkout_details( $fields ) {
+		return $this->response( http_build_query( array_merge( array( 'ACK' => 'Success' ), $fields ) ) );
+	}
+
+	/**
+	 * Checkout records the PayPal token and its expiry on every attendee of the order, so
+	 * the sweep can ask about it and release the seats once the token can't be paid.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::payment_checkout
+	 */
+	public function test_checkout_records_the_token_and_its_expiry_on_the_whole_order() {
+		$paypal = $this->make_configured_paypal();
+		$first  = $this->make_order( array( 'token' => 'tok_checkout' ) );
+		$second = $this->make_order( array( 'token' => 'tok_checkout' ) );
+
+		$stub     = function () {
+			return $this->response( http_build_query( array(
+				'ACK' => 'Success', 'TOKEN' => 'EC-CHECKOUT',
+			) ) );
+		};
+		$redirect = function () {
+			throw new RuntimeException( 'redirected' );
+		};
+		add_filter( 'pre_http_request', $stub );
+		add_filter( 'wp_redirect', $redirect );
+
+		try {
+			$paypal->payment_checkout( 'tok_checkout' );
+			$this->fail( 'Checkout should have redirected to PayPal.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'redirected', $e->getMessage() );
+		} finally {
+			remove_filter( 'pre_http_request', $stub );
+			remove_filter( 'wp_redirect', $redirect );
+		}
+
+		foreach ( array( $first, $second ) as $attendee_id ) {
+			$this->assertSame( 'EC-CHECKOUT', get_post_meta( $attendee_id, 'tix_paypal_token', true ) );
+			$this->assertEqualsWithDelta( time() + 3 * HOUR_IN_SECONDS, (int) get_post_meta( $attendee_id, 'tix_session_expires_at', true ), 5 );
+		}
+	}
+
+	/**
+	 * What PayPal says about a checkout, and what the sweep is told.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::reconcile_payment
+	 */
+	public function test_reconcile_payment_reports_what_paypal_says() {
+		$paypal  = $this->make_configured_paypal();
+		$expires = time() + HOUR_IN_SECONDS;
+		$cases   = array(
+			'not completed'  => array(
+				array( 'GetExpressCheckoutDetails' => $this->checkout_details( array( 'CHECKOUTSTATUS' => 'PaymentActionNotInitiated' ) ) ),
+				CampTix_Payment_Method::LOOKUP_OPEN,
+			),
+			'expired token'  => array(
+				array(
+					'GetExpressCheckoutDetails' => $this->response( http_build_query( array(
+						'ACK' => 'Failure', 'L_ERRORCODE0' => '10411',
+					) ) ),
+				),
+				CampTix_Payment_Method::LOOKUP_EXPIRED,
+			),
+			'other error'    => array(
+				array(
+					'GetExpressCheckoutDetails' => $this->response( http_build_query( array(
+						'ACK' => 'Failure', 'L_ERRORCODE0' => '10002',
+					) ) ),
+				),
+				CampTix_Payment_Method::LOOKUP_UNKNOWN,
+			),
+			'unreachable'    => array(
+				array( 'GetExpressCheckoutDetails' => new WP_Error( 'http_request_failed', 'timed out' ) ),
+				CampTix_Payment_Method::LOOKUP_UNREACHABLE,
+			),
+			'failed payment' => array(
+				array( 'GetExpressCheckoutDetails' => $this->checkout_details( array( 'CHECKOUTSTATUS' => 'PaymentActionFailed' ) ) ),
+				CampTix_Payment_Method::LOOKUP_EXPIRED,
+			),
+			'in progress'    => array(
+				array( 'GetExpressCheckoutDetails' => $this->checkout_details( array( 'CHECKOUTSTATUS' => 'PaymentActionInProgress' ) ) ),
+				CampTix_Payment_Method::LOOKUP_UNKNOWN,
+			),
+		);
+
+		foreach ( $cases as $name => list( $answers, $expected ) ) {
+			$token    = 'tok_' . md5( $name );
+			$attendee = $this->make_order( array( 'token' => $token ) );
+			update_post_meta( $attendee, 'tix_paypal_token', 'EC-' . $token );
+			update_post_meta( $attendee, 'tix_session_expires_at', $expires );
+
+			$result = $this->reconcile_with( $paypal, $token, $answers );
+
+			$this->assertSame( $expected, $result['status'], $name );
+			$this->assertSame( 'draft', get_post_status( $attendee ), $name );
+			if ( CampTix_Payment_Method::LOOKUP_OPEN === $expected ) {
+				$this->assertSame( $expires, $result['expires_at'], 'open until the token expires' );
+			}
+		}
+
+		$attendee = $this->make_order( array( 'token' => 'tok_no_paypal_token' ) );
+		$result   = $this->reconcile_with( $paypal, 'tok_no_paypal_token', array() );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_EXPIRED, $result['status'], 'nothing to ask about' );
+	}
+
+	/**
+	 * A completed checkout whose result was never recorded settles the order, after the same
+	 * checks as the IPN; a transaction that isn't this order's leaves it for someone to look at.
+	 *
+	 * @covers CampTix_Payment_Method_PayPal::reconcile_payment
+	 */
+	public function test_reconcile_payment_settles_a_completed_checkout_after_the_ipn_checks() {
+		$paypal    = $this->make_configured_paypal();
+		$completed = $this->checkout_details(
+			array(
+				'CHECKOUTSTATUS'                 => 'PaymentActionCompleted',
+				'PAYMENTREQUEST_0_TRANSACTIONID' => 'TXN_PAID',
+			)
+		);
+
+		$paid = $this->make_order( array( 'token' => 'tok_paid_late' ) );
+		update_post_meta( $paid, 'tix_paypal_token', 'EC-PAID' );
+		$result = $this->reconcile_with(
+			$paypal,
+			'tok_paid_late',
+			array(
+				'GetExpressCheckoutDetails' => $completed,
+				'GetTransactionDetails'     => $this->response( $this->transaction_details( array( 'CUSTOM' => get_current_blog_id() . ':tok_paid_late' ) ) ),
+			)
+		);
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
+		$this->assertSame( 'publish', get_post_status( $paid ) );
+		$this->assertSame( 'TXN_PAID', get_post_meta( $paid, 'tix_transaction_id', true ) );
+
+		$other = $this->make_order( array( 'token' => 'tok_not_ours' ) );
+		update_post_meta( $other, 'tix_paypal_token', 'EC-OTHER' );
+		$result = $this->reconcile_with(
+			$paypal,
+			'tok_not_ours',
+			array(
+				'GetExpressCheckoutDetails' => $completed,
+				'GetTransactionDetails'     => $this->response( $this->transaction_details( array( 'CUSTOM' => get_current_blog_id() . ':tok_someone_else' ) ) ),
+			)
+		);
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_UNKNOWN, $result['status'] );
+		$this->assertSame( 'draft', get_post_status( $other ) );
+
+		$short = $this->make_order( array( 'token' => 'tok_short' ) );
+		update_post_meta( $short, 'tix_paypal_token', 'EC-SHORT' );
+		$result = $this->reconcile_with(
+			$paypal,
+			'tok_short',
+			array(
+				'GetExpressCheckoutDetails' => $completed,
+				'GetTransactionDetails'     => $this->response(
+					$this->transaction_details(
+						array(
+							'CUSTOM' => get_current_blog_id() . ':tok_short',
+							'AMT'    => '1.00',
+						)
+					)
+				),
+			)
+		);
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_UNKNOWN, $result['status'], 'underpaid' );
+		$this->assertSame( 'draft', get_post_status( $short ) );
+	}
 }

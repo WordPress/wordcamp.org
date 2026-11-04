@@ -19,6 +19,7 @@ use function WordCamp\Sponsor_Vetting\group_airtable_rows;
 use function WordCamp\Sponsor_Vetting\import_airtable_company;
 use function WordCamp\Sponsor_Vetting\link_sponsorship;
 use function WordCamp\Sponsor_Vetting\needs_approval_email;
+use function WordCamp\Sponsor_Vetting\normalize_event_name;
 use function WordCamp\Sponsor_Vetting\parse_csv;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\request_vetting;
@@ -193,5 +194,44 @@ class Test_Airtable extends Database_TestCase {
 		$this->assertSame( array( "Imported from Airtable.\nCurrent event name: wordcamp seattle 2018, WordCamp Seattle 2019\nApproval date: March 3, 2025\nPrivate notes: Asked twice.\nFixed." ), array_values( array_filter( $notes, static fn( ?string $note ): bool => str_starts_with( (string) $note, 'Imported' ) ) ) );
 
 		restore_current_blog();
+	}
+
+	/**
+	 * Airtable names a camp that Central titles without its year, or with its country, by the year it starts, and
+	 * spells it without accents or abbreviated. A camp's title still wins, and a name camps on two sites share matches
+	 * neither.
+	 */
+	public function test_camps_match_by_start_year(): void {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		$camps = array(
+			array( 'WordCamp Kraków, Poland', '2025-06-07', 101 ),
+			array( 'WordCamp Kathmandu', '2018-09-15', 102 ),
+			array( 'WordCamp Kathmandu', '2026-09-18', 103 ),
+			array( 'WordCamp Europe', '2025-06-05', 104 ),
+			array( 'WordCamp Lisboa 2025', '2025-05-01', 105 ),
+			array( 'WordCamp Lisboa', '2025-11-01', 106 ),
+		);
+
+		foreach ( $camps as list( $title, $start, $site_id ) ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wordcamp',
+					'post_title' => $title,
+					'meta_input' => array(
+						'_site_id'                => $site_id,
+						'Start Date (YYYY-mm-dd)' => strtotime( "$start UTC" ),
+					),
+				)
+			);
+		}
+
+		$names = get_camps_by_name();
+
+		restore_current_blog();
+
+		$events = array( 'WordCamp Krakow 2025', 'WordCamp Kathmandu 2026', 'WordCamp Kathmandu', 'WCEU 2025', 'WordCamp Lisboa 2025' );
+
+		$this->assertSame( array( 101, 103, 0, 104, 105 ), array_map( static fn( string $event ): int => $names[ normalize_event_name( $event ) ] ?? -1, $events ) );
 	}
 }

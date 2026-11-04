@@ -790,9 +790,9 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 	/**
 	 * Ask Razorpay to refund an order's payment in full.
 	 *
-	 * The transaction id recorded is the Razorpay payment id, except for a return that came
-	 * back without one, where it is the Razorpay order id; that order's captured payment is
-	 * looked up then.
+	 * What is refunded is the captured payment of the Razorpay order that checkout bound to
+	 * this order, as Razorpay lists it. Never the recorded transaction id: that came back
+	 * through the buyer's browser on return, unsigned, so it can name another payment.
 	 *
 	 * @param string $payment_token
 	 *
@@ -809,9 +809,9 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 			'refund_transaction_details' => array(),
 		);
 
-		$payment_id = (string) $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_id' );
-		if ( ! $payment_id ) {
-			$this->log( 'Could not refund: the order has no Razorpay payment id.', null, compact( 'payment_token' ), 'refund' );
+		$razorpay_order_id = (string) $camptix->get_post_meta_from_payment_token( $payment_token, '_razorpay_order_id' );
+		if ( ! $razorpay_order_id ) {
+			$this->log( 'Could not refund: the order has no Razorpay order.', null, compact( 'payment_token' ), 'refund' );
 
 			return $result;
 		}
@@ -820,20 +820,23 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
 
 		try {
-			if ( 0 === strpos( $payment_id, 'order_' ) ) {
-				$captured = null;
-				foreach ( $this->fetch_razorpay_order_payments( $payment_id ) as $payment ) {
-					if ( 'captured' === ( $payment['status'] ?? '' ) ) {
-						$captured = $payment;
-						break;
-					}
+			$captured = null;
+			foreach ( $this->fetch_razorpay_order_payments( $razorpay_order_id ) as $payment ) {
+				if ( 'captured' === ( $payment['status'] ?? '' ) ) {
+					$captured = $payment;
+					break;
 				}
-				if ( ! $captured ) {
-					$result['refund_transaction_details'] = array( 'error' => 'No captured payment on the Razorpay order.' );
+			}
+			if ( ! $captured ) {
+				$result['refund_transaction_details'] = array( 'error' => 'No captured payment on the Razorpay order.' );
 
-					return $result;
-				}
-				$payment_id = (string) $captured['id'];
+				return $result;
+			}
+			$payment_id = (string) $captured['id'];
+
+			$recorded = (string) $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_id' );
+			if ( $recorded && $recorded !== $payment_id && $recorded !== $razorpay_order_id ) {
+				$this->log( 'The recorded Razorpay payment is not the order\'s; refunding the order\'s captured payment.', null, compact( 'payment_token', 'recorded', 'payment_id' ), 'refund' );
 			}
 
 			$refund = $this->create_razorpay_refund( $payment_id, array( 'reason' => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ) ) );

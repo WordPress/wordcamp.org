@@ -59,8 +59,10 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 	 * @var array
 	 */
 	public $supported_features = array(
-		'refund-single' => false,
-		'refund-all'    => false,
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => false,
+		'payment-lookup' => true,
 	);
 
 	/**
@@ -121,7 +123,6 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		);
 
 		wp_localize_script( 'camptix-indian-payments-main-razorpayjs', 'camptix_inr_vars', $data );
-
 
 		wp_register_script( 'razorpay-js', 'https://checkout.razorpay.com/v1/checkout-new.js' );
 		wp_enqueue_script( 'razorpay-js' );
@@ -617,6 +618,248 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		$api = $this->get_razjorpay_api();
 
 		return $api->order->fetch( $razorpay_order_id );
+	}
+
+	/**
+	 * Fetch the payments made against a Razorpay order.
+	 *
+	 * Isolated in its own method so that the authenticated remote call can be
+	 * overridden in tests.
+	 *
+	 * @param string $razorpay_order_id
+	 *
+	 * @return array[] Payment entities as arrays.
+	 */
+	protected function fetch_razorpay_order_payments( $razorpay_order_id ) {
+		$payments = $this->get_razjorpay_api()->order->fetch( $razorpay_order_id )->payments()->toArray();
+
+		return isset( $payments['items'] ) ? (array) $payments['items'] : array();
+	}
+
+	/**
+	 * Ask Razorpay to refund a payment in full.
+	 *
+	 * Isolated in its own method so that the authenticated remote call can be
+	 * overridden in tests.
+	 *
+	 * @param string $razorpay_payment_id
+	 * @param array  $notes               Shown with the refund in the Razorpay dashboard.
+	 *
+	 * @return array The refund entity.
+	 */
+	protected function create_razorpay_refund( $razorpay_payment_id, $notes ) {
+		return $this->get_razjorpay_api()->payment->fetch( $razorpay_payment_id )->refund( array( 'notes' => $notes ) )->toArray();
+	}
+
+	/**
+	 * What a failed Razorpay call says to the timeout sweep: Razorpay answered with an error,
+	 * or Razorpay could not be reached at all.
+	 *
+	 * @param Exception $e
+	 * @param string    $doing What was being asked, for the log.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
+	 */
+	protected function lookup_result_for_exception( $e, $doing ) {
+		$data = array( 'error' => $e->getMessage() );
+
+		if ( $e instanceof Razorpay\Api\Errors\Error ) {
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, sprintf( 'Razorpay answered with an error %s', $doing ), $data );
+		}
+
+		return $this->lookup_result( self::LOOKUP_UNREACHABLE, sprintf( 'could not reach Razorpay %s', $doing ), $data );
+	}
+
+	/**
+	 * Before the sweep times a draft order out, ask Razorpay what became of its order.
+	 *
+	 * Settled the way payment_return() settles a verified payment: paid in full completes the
+	 * order, and money that moved without paying it in full (a payment authorized but not
+	 * captured, or the wrong amount) leaves it pending for an organizer. An order nothing was
+	 * paid against is left to time out.
+	 *
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
+	 */
+	public function reconcile_payment( $payment_token ) {
+		/* @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$razorpay_order_id = '';
+		$attendee_id       = 0;
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$razorpay_order_id = get_post_meta( $attendee_id, '_razorpay_order_id', true );
+			if ( $razorpay_order_id ) {
+				break;
+			}
+		}
+		if ( ! $razorpay_order_id ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no Razorpay order recorded' );
+		}
+
+		try {
+			$razorpay_order = $this->fetch_razorpay_order( $razorpay_order_id );
+		} catch ( Exception $e ) {
+			return $this->lookup_result_for_exception( $e, 'about the order' );
+		}
+
+		$razorpay_status = isset( $razorpay_order['status'] ) ? (string) $razorpay_order['status'] : '';
+		$log             = compact( 'razorpay_order_id', 'razorpay_status' );
+
+		// No payment was ever attempted against this order.
+		if ( 'created' === $razorpay_status ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'nothing was paid against the Razorpay order', $log );
+		}
+
+		try {
+			$payments = $this->fetch_razorpay_order_payments( $razorpay_order_id );
+		} catch ( Exception $e ) {
+			return $this->lookup_result_for_exception( $e, 'about the order\'s payments' );
+		}
+
+		// A captured payment first: that one is the money taken.
+		$moved = null;
+		foreach ( $payments as $payment ) {
+			$status = isset( $payment['status'] ) ? (string) $payment['status'] : '';
+			if ( 'captured' === $status ) {
+				$moved = $payment;
+				break;
+			}
+			if ( 'authorized' === $status && ! $moved ) {
+				$moved = $payment;
+			}
+		}
+
+		if ( ! $moved ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no Razorpay payment against the order went through', $log );
+		}
+
+		$expected_amount = (int) get_post_meta( $attendee_id, '_razorpay_amount', true );
+		$amount_paid     = isset( $razorpay_order['amount_paid'] ) ? (int) $razorpay_order['amount_paid'] : -1;
+		$paid_in_full    = 'paid' === $razorpay_status && 'captured' === $moved['status'] && $expected_amount && $amount_paid === $expected_amount;
+		$result          = $paid_in_full ? CampTix_Plugin::PAYMENT_STATUS_COMPLETED : CampTix_Plugin::PAYMENT_STATUS_PENDING;
+
+		$log['razorpay_payment_id'] = $moved['id'] ?? '';
+		$log['payment_status']      = $moved['status'];
+		$log['amount_paid']         = $amount_paid;
+		$log['expected_amount']     = $expected_amount;
+
+		$camptix->log(
+			$paid_in_full
+				? 'Razorpay checkout timed out, but the order was paid; completing it.'
+				: 'Razorpay checkout timed out, but money moved without paying the order in full; holding as pending.',
+			$attendee_id,
+			$log
+		);
+
+		$camptix->payment_result(
+			$payment_token,
+			$result,
+			array(
+				'transaction_id'      => (string) ( $moved['id'] ?? $razorpay_order_id ),
+				'transaction_details' => array( 'raw' => $moved ),
+			),
+			false
+		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'Razorpay reports money moved', $log );
+	}
+
+	/**
+	 * Refund an order in full, and record the result.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants.
+	 */
+	public function payment_refund( $payment_token ) {
+		/* @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+			$this->log( 'Razorpay refund failed', $order['attendee_id'] ?? null, $result, 'refund' );
+		}
+
+		return $camptix->payment_result( $payment_token, $result['status'], $result );
+	}
+
+	/**
+	 * Ask Razorpay to refund an order's payment in full.
+	 *
+	 * The transaction id recorded is the Razorpay payment id, except for a return that came
+	 * back without one, where it is the Razorpay order id; that order's captured payment is
+	 * looked up then.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token ) {
+		/* @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = array(
+			'token'                      => $payment_token,
+			'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
+			'refund_transaction_id'      => null,
+			'refund_transaction_details' => array(),
+		);
+
+		$payment_id = (string) $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_id' );
+		if ( ! $payment_id ) {
+			$this->log( 'Could not refund: the order has no Razorpay payment id.', null, compact( 'payment_token' ), 'refund' );
+
+			return $result;
+		}
+
+		// Null without a POST body, e.g. when the refund-all cron sends it.
+		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
+
+		try {
+			if ( 0 === strpos( $payment_id, 'order_' ) ) {
+				$captured = null;
+				foreach ( $this->fetch_razorpay_order_payments( $payment_id ) as $payment ) {
+					if ( 'captured' === ( $payment['status'] ?? '' ) ) {
+						$captured = $payment;
+						break;
+					}
+				}
+				if ( ! $captured ) {
+					$result['refund_transaction_details'] = array( 'error' => 'No captured payment on the Razorpay order.' );
+
+					return $result;
+				}
+				$payment_id = (string) $captured['id'];
+			}
+
+			$refund = $this->create_razorpay_refund( $payment_id, array( 'reason' => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ) ) );
+		} catch ( Exception $e ) {
+			$result['refund_transaction_details'] = array( 'error' => $e->getMessage() );
+
+			return $result;
+		}
+
+		if ( empty( $refund['id'] ) ) {
+			$result['refund_transaction_details'] = array( 'raw' => $refund );
+
+			return $result;
+		}
+
+		$result['status']                     = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		$result['transaction_id']             = $payment_id;
+		$result['refund_transaction_id']      = (string) $refund['id'];
+		$result['refund_transaction_details'] = array(
+			'raw' => array(
+				'refund_transaction_id' => (string) $refund['id'],
+				'refund'                => $refund,
+			),
+		);
+
+		return $result;
 	}
 
 	/**

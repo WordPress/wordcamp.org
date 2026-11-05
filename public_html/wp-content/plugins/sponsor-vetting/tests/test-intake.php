@@ -300,4 +300,50 @@ class Test_Intake extends Database_TestCase {
 			$statuses
 		);
 	}
+
+	/**
+	 * The route the block editor redraws the vetting box from serves only people who can edit the camp's sponsor.
+	 *
+	 * @dataProvider data_vetting_box_route_access
+	 *
+	 * @param string $role       The user's role on the camp site.
+	 * @param int    $status     The expected response status.
+	 * @param bool   $serves_box Whether the response holds the box.
+	 */
+	public function test_vetting_box_route_access( string $role, int $status, bool $serves_box ): void {
+		$sponsor_id = $this->create_camp_sponsor( 'https://acme.example' );
+		$user_id    = self::factory()->user->create();
+
+		add_user_to_blog( self::$year_dot_2018_site_id, $user_id, $role );
+		wp_set_current_user( $user_id );
+
+		$response = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static function () use ( $sponsor_id ): \WP_REST_Response {
+				$GLOBALS['wp_rest_server'] = new \WP_REST_Server();
+				do_action( 'rest_api_init', $GLOBALS['wp_rest_server'] );
+
+				$response = rest_do_request( new \WP_REST_Request( 'GET', '/sponsor-vetting/v1/vetting-box/' . $sponsor_id ) );
+
+				$GLOBALS['wp_rest_server'] = null;
+
+				return $response;
+			}
+		);
+
+		$this->assertSame( $status, $response->get_status() );
+		$this->assertSame( $serves_box, str_contains( (string) ( $response->get_data()['html'] ?? '' ), 'Request vetting' ) );
+	}
+
+	/**
+	 * Roles on the camp site, and what the route answers them.
+	 *
+	 * @return array[]
+	 */
+	public function data_vetting_box_route_access(): array {
+		return array(
+			'organizer who can edit the sponsor' => array( 'editor', 200, true ),
+			'subscriber'                         => array( 'subscriber', 403, false ),
+		);
+	}
 }

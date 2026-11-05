@@ -158,22 +158,22 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 /**
  * Loads the script that redraws the vetting box after the block editor saves, since that doesn't reload the page.
  *
- * Without it, a new sponsor's box keeps asking organizers to save it after they have.
- *
- * @param string $hook_suffix The admin page.
+ * Without it, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit screens' own
+ * script hooks, which run just before scripts are printed.
  */
-function enqueue_organizer_script( string $hook_suffix ): void {
+function enqueue_organizer_script(): void {
 	$screen = get_current_screen();
 
-	if ( is_central() || ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ), true ) || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
+	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
 		return;
 	}
 
-	$plugin_file = dirname( __DIR__ ) . '/bootstrap.php';
+	$plugin_dir = dirname( __DIR__ );
 
-	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_file ), array( 'wp-api-fetch', 'wp-hooks' ), (string) filemtime( dirname( __DIR__ ) . '/js/organizer.js' ), true );
+	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), array( 'wp-api-fetch', 'wp-hooks' ), (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
 }
-add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_organizer_script' );
+add_action( 'admin_print_scripts-post.php', __NAMESPACE__ . '\enqueue_organizer_script' );
+add_action( 'admin_print_scripts-post-new.php', __NAMESPACE__ . '\enqueue_organizer_script' );
 
 /**
  * Registers the route the script reads the vetting box from.

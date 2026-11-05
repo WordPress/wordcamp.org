@@ -1,0 +1,148 @@
+/**
+ * The company and sponsorship screens: the notes and history log.
+ */
+
+.sv-log-compose {
+	margin: 4px 0 16px;
+}
+
+.sv-log-compose .description {
+	display: block;
+	margin-top: 4px;
+}
+
+.sv-log-day h3 {
+	margin: 18px 0 6px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid #dcdcde;
+	color: #646970;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.sv-log-day ol {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.sv-log-day li {
+	display: grid;
+	grid-template-columns: 44px minmax(0, 1fr);
+	gap: 10px;
+	align-items: start;
+	margin: 0;
+	padding: 7px 0;
+	color: #50575e;
+	line-height: 20px;
+}
+
+.sv-log-day time {
+	color: #646970;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.sv-log-head {
+	margin: 0 0 4px;
+}
+
+.sv-log-author {
+	color: #1d2327;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.sv-log-author:hover,
+.sv-log-author:focus {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+.sv-log-head strong {
+	color: #1d2327;
+}
+
+.sv-log-system {
+	color: #646970;
+}
+
+.sv-log-text {
+	max-width: 720px;
+	padding: 8px 12px;
+	border-left: 3px solid #2271b1;
+	border-radius: 0 2px 2px 0;
+	background: #f6f7f7;
+	color: #1d2327;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.sv-log-status {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 2px;
+	background: #f6f7f7;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 18px;
+}
+
+.sv-log-status-sv-in-progress {
+	background: #f0f6fc;
+	color: #2271b1;
+}
+
+.sv-log-status-sv-compliance-req {
+	background: #fcf9e8;
+	color: #8a6100;
+}
+
+.sv-log-status-sv-compliant,
+.sv-log-status-svs-approved {
+	background: #edfaef;
+	color: #007017;
+}
+
+.sv-log-status-sv-not-eligible,
+.sv-log-status-svs-not-approved {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+.sv-log-day details summary {
+	color: #2271b1;
+	cursor: pointer;
+}
+
+.sv-log-fields {
+	max-width: 720px;
+	margin-top: 6px;
+	border-collapse: collapse;
+}
+
+.sv-log-fields th {
+	padding: 3px 16px 3px 0;
+	color: #646970;
+	font-weight: 400;
+	text-align: left;
+	vertical-align: top;
+	white-space: nowrap;
+}
+
+.sv-log-fields td {
+	padding: 3px 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+@media screen and (max-width: 600px) {
+	.sv-log-day li {
+		grid-template-columns: 38px minmax(0, 1fr);
+		gap: 6px;
+	}
+}

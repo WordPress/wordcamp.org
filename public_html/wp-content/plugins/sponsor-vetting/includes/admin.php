@@ -174,39 +174,209 @@ function render_conversations( array $conversations ): void {
 }
 
 /**
- * Renders the note field and the log of notes and status changes.
+ * Loads the styles for the company and sponsorship screens.
+ *
+ * Hooked to the edit screens' own style hooks, which run just before styles are printed.
+ */
+function enqueue_admin_assets(): void {
+	if ( ! in_array( get_current_screen()?->post_type, array( COMPANY_POST_TYPE, SPONSORSHIP_POST_TYPE ), true ) ) {
+		return;
+	}
+
+	$plugin_dir = dirname( __DIR__ );
+
+	wp_enqueue_style( 'sv-admin', plugins_url( 'css/admin.css', $plugin_dir . '/bootstrap.php' ), array(), (string) filemtime( $plugin_dir . '/css/admin.css' ) );
+}
+add_action( 'admin_print_styles-post.php', __NAMESPACE__ . '\enqueue_admin_assets' );
+add_action( 'admin_print_styles-post-new.php', __NAMESPACE__ . '\enqueue_admin_assets' );
+
+/**
+ * Renders the note field and the log of notes and status changes, grouped by day.
  *
  * @param \WP_Post $post The record.
  */
 function render_log_box( \WP_Post $post ): void {
-	$statuses = get_statuses( $post->post_type );
+	$days = array();
+
+	foreach ( get_log( $post->ID ) as $entry ) {
+		$days[ wp_date( 'Y-m-d', (int) $entry['time'] ) ][] = $entry;
+	}
 	?>
-	<p>
-		<label for="sv-note"><strong><?php esc_html_e( 'Add a private note', 'wordcamporg' ); ?></strong></label>
-		<textarea id="sv-note" name="sv_note" rows="3" class="widefat"></textarea>
+	<p class="sv-log-compose">
+		<label for="sv-note" class="screen-reader-text"><?php esc_html_e( 'Add a private note', 'wordcamporg' ); ?></label>
+		<textarea id="sv-note" name="sv_note" rows="2" class="widefat" placeholder="<?php esc_attr_e( 'Add a private note…', 'wordcamporg' ); ?>"></textarea>
+		<span class="description"><?php esc_html_e( 'Only the vetting team sees notes. Links become clickable.', 'wordcamporg' ); ?></span>
 	</p>
 
-	<ul>
-		<?php foreach ( get_log( $post->ID ) as $entry ) : ?>
-			<?php $author = get_userdata( (int) $entry['user_id'] ); ?>
-			<li>
-				<strong><?php echo esc_html( wp_date( 'Y-m-d H:i', (int) $entry['time'] ) ); ?></strong>
-				<?php echo esc_html( $author ? $author->user_login : __( 'System', 'wordcamporg' ) ); ?>:
-				<?php
-				if ( isset( $entry['text'] ) ) {
-					echo nl2br( esc_html( $entry['text'] ) );
-				} elseif ( 'new' === $entry['from'] ) {
-					/* translators: %s: Status. */
-					printf( esc_html__( 'Created as %s.', 'wordcamporg' ), esc_html( $statuses[ $entry['to'] ] ?? $entry['to'] ) );
-				} else {
-					/* translators: 1: Previous status. 2: New status. */
-					printf( esc_html__( 'Status changed from %1$s to %2$s.', 'wordcamporg' ), esc_html( $statuses[ $entry['from'] ] ?? $entry['from'] ), esc_html( $statuses[ $entry['to'] ] ?? $entry['to'] ) );
-				}
-				?>
-			</li>
-		<?php endforeach; ?>
-	</ul>
+	<?php foreach ( $days as $entries ) : ?>
+		<section class="sv-log-day">
+			<h3><?php echo esc_html( wp_date( 'l, F j, Y', (int) $entries[0]['time'] ) ); ?></h3>
+			<ol>
+				<?php foreach ( $entries as $entry ) : ?>
+					<li>
+						<time datetime="<?php echo esc_attr( wp_date( 'c', (int) $entry['time'] ) ); ?>"><?php echo esc_html( wp_date( 'H:i', (int) $entry['time'] ) ); ?></time>
+						<div><?php echo wp_kses_post( get_log_entry_html( $entry, $post->post_type ) ); ?></div>
+					</li>
+				<?php endforeach; ?>
+			</ol>
+		</section>
+	<?php endforeach; ?>
 	<?php
+}
+
+/**
+ * Builds what a log entry says.
+ *
+ * Notes the Airtable import added are shown by what they hold: a comment under its commenter's name, and the
+ * imported fields as a table.
+ *
+ * @param array  $entry     The entry, as get_log() returns it.
+ * @param string $post_type The record's post type.
+ * @return string HTML.
+ */
+function get_log_entry_html( array $entry, string $post_type ): string {
+	$author     = get_log_author_html( (int) $entry['user_id'] );
+	$is_company = COMPANY_POST_TYPE === $post_type;
+
+	if ( ! isset( $entry['text'] ) ) {
+		if ( 'new' === $entry['from'] ) {
+			return sprintf(
+				/* translators: 1: Who created it. 2: Status. */
+				esc_html( $is_company ? __( '%1$s created the company as %2$s', 'wordcamporg' ) : __( '%1$s created the sponsorship as %2$s', 'wordcamporg' ) ),
+				$author,
+				get_log_status_html( $post_type, (string) $entry['to'] )
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: Who changed it. 2: Previous status. 3: New status. */
+			esc_html__( '%1$s changed the status from %2$s to %3$s', 'wordcamporg' ),
+			$author,
+			get_log_status_html( $post_type, (string) $entry['from'] ),
+			get_log_status_html( $post_type, (string) $entry['to'] )
+		);
+	}
+
+	$text = (string) $entry['text'];
+
+	if ( preg_match( '/^Airtable comment by (.+?):\R(.*)$/s', $text, $comment ) ) {
+		return '<p class="sv-log-head"><strong>' . esc_html( $comment[1] ) . '</strong></p>' . get_log_text_html( $comment[2] );
+	}
+
+	if ( preg_match( '/^Imported from Airtable\.(?:\R(.*))?$/s', $text, $import ) ) {
+		$html = '<p class="sv-log-head">' . sprintf(
+			/* translators: %s: Who imported it. */
+			esc_html( $is_company ? __( '%s imported the company from Airtable', 'wordcamporg' ) : __( '%s imported the sponsorship from Airtable', 'wordcamporg' ) ),
+			$author
+		) . '</p>';
+
+		$fields = get_imported_fields( $import[1] ?? '' );
+
+		if ( $fields ) {
+			$html .= '<details><summary>' . esc_html__( 'Imported details', 'wordcamporg' ) . '</summary><table class="sv-log-fields">';
+
+			foreach ( $fields as $label => $value ) {
+				$html .= '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . get_clickable_html( $value ) . '</td></tr>';
+			}
+
+			$html .= '</table></details>';
+		}
+
+		return $html;
+	}
+
+	return '<p class="sv-log-head">' . sprintf(
+		/* translators: %s: Who added the note. */
+		esc_html__( '%s added a note', 'wordcamporg' ),
+		$author
+	) . '</p>' . get_log_text_html( $text );
+}
+
+/**
+ * Splits the fields the Airtable import listed, one `Label: value` per line, into a table's rows.
+ *
+ * Only the export's own columns start a row, so a line inside a value that happens to look like `Label: value` stays
+ * part of it. Any other line continues the value before it, and nothing is dropped.
+ *
+ * @param string $text The lines after the import's first line.
+ * @return string[] Values, keyed by label.
+ */
+function get_imported_fields( string $text ): array {
+	$columns = array( 'current event name', 'current event date', 'current event email', 'current event sponsorship amount in usd', 'past sponsorship total amount (qbo since 2016)', 'list of past events sponsored', '5ftf', 'type of business', 'private notes', 'contract', 'batch', 'approval date', 'previously approved dates (if any)', 'email conversation link' );
+	$fields  = array();
+	$label   = '';
+
+	if ( '' === trim( $text ) ) {
+		return $fields;
+	}
+
+	foreach ( preg_split( '/\R/', trim( $text ) ) as $line ) {
+		if ( preg_match( '/^([^:]{1,60}): (.*)$/', $line, $match ) && in_array( strtolower( $match[1] ), $columns, true ) ) {
+			$label            = $match[1];
+			$fields[ $label ] = $match[2];
+		} elseif ( isset( $fields[ $label ] ) ) {
+			$fields[ $label ] .= "\n" . $line;
+		} else {
+			$fields[ $label ] = $line;
+		}
+	}
+
+	return $fields;
+}
+
+/**
+ * Builds who made a log entry: their name, linked to their WordPress.org profile, or System.
+ *
+ * @param int $user_id The user, or 0 for the system.
+ * @return string HTML.
+ */
+function get_log_author_html( int $user_id ): string {
+	$user = get_userdata( $user_id );
+
+	if ( ! $user ) {
+		return '<strong class="sv-log-system">' . esc_html__( 'System', 'wordcamporg' ) . '</strong>';
+	}
+
+	return sprintf(
+		'<a class="sv-log-author" href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+		esc_url( 'https://profiles.wordpress.org/' . $user->user_nicename . '/' ),
+		esc_html( $user->display_name )
+	);
+}
+
+/**
+ * Builds a status label, colored by status.
+ *
+ * @param string $post_type The record's post type.
+ * @param string $status    The status.
+ * @return string HTML.
+ */
+function get_log_status_html( string $post_type, string $status ): string {
+	return sprintf(
+		'<span class="sv-log-status sv-log-status-%s">%s</span>',
+		esc_attr( $status ),
+		esc_html( get_statuses( $post_type )[ $status ] ?? $status )
+	);
+}
+
+/**
+ * Builds a note's text, with its line breaks kept and its links made clickable.
+ *
+ * @param string $text The note.
+ * @return string HTML.
+ */
+function get_log_text_html( string $text ): string {
+	return '<div class="sv-log-text">' . get_clickable_html( trim( $text ) ) . '</div>';
+}
+
+/**
+ * Escapes text and makes its links clickable, opening in a new tab so a half-written note isn't lost.
+ *
+ * @param string $text The text.
+ * @return string HTML.
+ */
+function get_clickable_html( string $text ): string {
+	return links_add_target( make_clickable( esc_html( $text ) ) );
 }
 
 /**

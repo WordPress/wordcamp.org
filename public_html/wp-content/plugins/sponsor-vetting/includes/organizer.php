@@ -156,6 +156,61 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 }
 
 /**
+ * Loads the script that redraws the vetting box after the block editor saves, since that doesn't reload the page.
+ *
+ * Without it, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit screens' own
+ * script hooks, which run just before scripts are printed.
+ */
+function enqueue_organizer_script(): void {
+	$screen = get_current_screen();
+
+	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
+		return;
+	}
+
+	$plugin_dir = dirname( __DIR__ );
+
+	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), array( 'wp-api-fetch', 'wp-hooks' ), (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
+}
+add_action( 'admin_print_scripts-post.php', __NAMESPACE__ . '\enqueue_organizer_script' );
+add_action( 'admin_print_scripts-post-new.php', __NAMESPACE__ . '\enqueue_organizer_script' );
+
+/**
+ * Registers the route the script reads the vetting box from.
+ *
+ * REST rather than admin-ajax, so the editor keeps the nonce fresh however long it stays open.
+ */
+function register_organizer_routes(): void {
+	register_rest_route(
+		'sponsor-vetting/v1',
+		'/vetting-box/(?P<id>\d+)',
+		array(
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => __NAMESPACE__ . '\get_organizer_meta_box',
+			'permission_callback' => static fn( \WP_REST_Request $request ): bool => ! is_central()
+				&& 'wcb_sponsor' === get_post_type( (int) $request['id'] )
+				&& current_user_can( 'edit_post', (int) $request['id'] ),
+		)
+	);
+}
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_organizer_routes' );
+
+/**
+ * Renders the vetting box's current contents, for the script that redraws it.
+ *
+ * @param \WP_REST_Request $request The request, naming the camp's sponsor.
+ * @return array {
+ *     @type string $html The box's contents.
+ * }
+ */
+function get_organizer_meta_box( \WP_REST_Request $request ): array {
+	ob_start();
+	render_organizer_meta_box( get_post( (int) $request['id'] ) );
+
+	return array( 'html' => (string) ob_get_clean() );
+}
+
+/**
  * Adds the vetting column to a camp's sponsor list.
  *
  * @param string[] $columns The list's columns.

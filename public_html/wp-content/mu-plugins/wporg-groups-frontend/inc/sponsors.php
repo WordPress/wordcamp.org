@@ -73,6 +73,12 @@ const CACHE_TTL = HOUR_IN_SECONDS;
 const EMPTY_CACHE_TTL = 5 * MINUTE_IN_SECONDS;
 
 /**
+ * The largest original file shown as a logo when it has no `medium` size, in
+ * bytes. See `is_oversized_original_logo()`.
+ */
+const MAX_ORIGINAL_LOGO_BYTES = 200 * KB_IN_BYTES;
+
+/**
  * Bootstrap the sponsors feature.
  *
  * Runs on both the groups network (where the block reads sponsors) and the
@@ -512,6 +518,39 @@ function rebase_url( string $url, string $from_base, string $to_base ): string {
 }
 
 /**
+ * Whether a logo would be served as an original too large to show.
+ *
+ * Logos are drawn at the `medium` size. When that size doesn't exist, which
+ * happens when WordPress couldn't process the upload, core hands back the
+ * original instead. One sponsor's original was a 17,055 × 8,713 PNG, 781 KB,
+ * downloaded and decoded on every group page that lists sponsors. Logos
+ * without a `medium` size because they're already small are still fine to
+ * show as they are, so this only rules out originals over
+ * `MAX_ORIGINAL_LOGO_BYTES`. The file's size is used rather than its
+ * dimensions, because when processing failed the stored dimensions can't be
+ * trusted either.
+ *
+ * Must be called in the store site's context, like `prepare_sponsor()`.
+ *
+ * @param int   $attachment_id The logo's attachment ID.
+ * @param array $image         What `wp_get_attachment_image_src()` returned for it.
+ * @return bool True if the logo shouldn't be shown.
+ */
+function is_oversized_original_logo( int $attachment_id, array $image ): bool {
+	if ( ! empty( $image[3] ) ) {
+		return false;
+	}
+
+	$file = get_attached_file( $attachment_id );
+
+	if ( ! $file || ! is_readable( $file ) ) {
+		return false;
+	}
+
+	return filesize( $file ) > MAX_ORIGINAL_LOGO_BYTES;
+}
+
+/**
  * Flatten a sponsor post into the array the block renders from.
  *
  * Must be called in the store site's context — see `get_sponsors()`.
@@ -532,9 +571,17 @@ function prepare_sponsor( WP_Post $post ): array {
 	if ( $thumbnail ) {
 		$image = wp_get_attachment_image_src( $thumbnail, 'medium' );
 
-		if ( $image ) {
+		if ( $image && ! is_oversized_original_logo( $thumbnail, $image ) ) {
 			list( $logo, $logo_width, $logo_height ) = $image;
 			$logo                                    = correct_switched_upload_url( $logo );
+
+			// Dimensions this small mean the attachment's metadata is broken,
+			// not that the logo is a dot. Leave them off rather than give
+			// the image a wrong 1:1 shape until it loads.
+			if ( $logo_width < 2 || $logo_height < 2 ) {
+				$logo_width  = 0;
+				$logo_height = 0;
+			}
 		}
 	}
 

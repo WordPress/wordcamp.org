@@ -203,7 +203,9 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 
 	/**
 	 * The card renders the event's featured image, with the image link kept
-	 * out of the tab order — the stretched title link already opens the card.
+	 * out of the tab order and hidden from screen readers. It goes where the
+	 * title link goes, and the image's alt text is the event title, so
+	 * leaving it exposed announces every event twice.
 	 */
 	public function test_card_renders_the_featured_image() {
 		$this->create_event( 'Winter Meetup', true );
@@ -212,8 +214,17 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'Winter Meetup', $output );
 		$this->assertStringContainsString( 'wp-post-image', $output );
-		$this->assertStringContainsString( '<a tabindex="-1" href=', $output );
 		$this->assertStringNotContainsString( 'groups-site-featured-placeholder', $output );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+
+		$this->assertTrue(
+			$processor->next_tag( array( 'class_name' => 'wp-block-post-featured-image' ) ),
+			'The card has no featured-image block.'
+		);
+		$this->assertTrue( $processor->next_tag( 'a' ), 'The featured image is no longer a link.' );
+		$this->assertSame( '-1', $processor->get_attribute( 'tabindex' ), 'The image link is back in the tab order.' );
+		$this->assertSame( 'true', $processor->get_attribute( 'aria-hidden' ), 'The image link is exposed to screen readers again.' );
 	}
 
 	/**

@@ -109,9 +109,11 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  * `is_singular()`: the group front page is a static Page, so it is singular
  * too, and the broader test excluded the very cards this is meant to fix.
  *
- *   - Drop the image link from the keyboard tab order. The title link already
- *     provides keyboard access to the event, so a second focusable link on
- *     the image is redundant and slows tab navigation.
+ *   - Take the image link out of the tab order and hide it from screen
+ *     readers. It goes to the same place as the title link, and its image's
+ *     alt text is the event title, so without this a screen reader announced
+ *     every event twice and keyboard users tabbed through each card twice.
+ *     The title link keeps the card reachable.
  *   - Substitute a placeholder when the event has no thumbnail. Core renders
  *     the block as an empty string in that case, so one image-less event in a
  *     row of three used to start its date where its neighbours started their
@@ -142,7 +144,14 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 		);
 	}
 
-	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+	$processor = new \WP_HTML_Tag_Processor( $content );
+
+	if ( $processor->next_tag( 'a' ) ) {
+		$processor->set_attribute( 'tabindex', '-1' );
+		$processor->set_attribute( 'aria-hidden', 'true' );
+	}
+
+	return $processor->get_updated_html();
 }
 add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_event_card_featured_image', 10, 2 );
 

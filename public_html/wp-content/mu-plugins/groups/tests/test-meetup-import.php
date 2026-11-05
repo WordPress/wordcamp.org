@@ -71,10 +71,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 		add_filter( 'wcorg_meetup_import_pre_fetch_organizers', '__return_empty_array', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_connection_member', '__return_empty_string', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array', 5 );
-
-		// Most of this suite is about member matching itself, so it runs with
-		// it on. The default, off, is covered by the `*_members_off_*` tests.
-		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
 	}
 
 	/**
@@ -2034,7 +2030,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 
 		$plan = Meetup_Import\get_job( $this->site_id )['plan'];
@@ -2391,7 +2387,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
 
@@ -2442,7 +2438,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( 0, $fetched_members );
 		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 		$this->assertSame( 2, Meetup_Import\get_job( $this->site_id )['plan']['organizer_counts']['added'] );
 		$this->assertFalse( is_user_member_of_blog( $users['organizer'], $this->site_id ) );
@@ -2480,7 +2476,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 
 		$plan = Meetup_Import\get_job( $this->site_id )['plan'];
@@ -2613,17 +2609,25 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Member matching is off unless something turns it on (#2305).
+	 * Members are only brought over when the import asks for them, and only
+	 * along with "Match people" (#2305).
 	 */
-	public function test_members_off_by_default() {
-		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
-
-		$this->assertFalse( Meetup_Import\matches_members() );
-
+	public function test_members_off_unless_asked() {
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
 
 		$this->assertTrue( $job['match_people'] );
 		$this->assertFalse( $job['match_members'] );
+
+		Meetup_Import\cancel_job( $this->site_id );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false, true );
+
+		$this->assertFalse( $job['match_people'] );
+		$this->assertFalse( $job['match_members'] );
+
+		Meetup_Import\cancel_job( $this->site_id );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
+
+		$this->assertTrue( $job['match_members'] );
 	}
 
 	/**
@@ -2631,8 +2635,6 @@ class Test_Meetup_Import extends Groups_TestCase {
 	 * role, but nobody else is fetched, previewed, or added to the group.
 	 */
 	public function test_members_off_still_matches_organizers() {
-		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
-
 		$organizer = self::factory()->user->create( array( 'user_email' => 'organizer@example.org' ) );
 		$member    = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
 		$fetched   = false;
@@ -2682,12 +2684,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * A job left paused on its members step from before the flag goes on to
-	 * the events without adding anyone.
+	 * A job left paused on its members step from before `match_members` goes
+	 * on to the events without adding anyone.
 	 */
 	public function test_members_off_skips_a_paused_members_step() {
-		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
-
 		$member = self::factory()->user->create( array( 'user_email' => 'member@example.org' ) );
 
 		$this->fake_events( array( $this->raw_event() ) );
@@ -2703,11 +2703,9 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		// A job from before the flag: members fetched, no `match_members` key.
-		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		// A job from before `match_members`: members fetched, no such key.
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
-		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
 
 		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
 
@@ -2727,26 +2725,22 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * The "Match people" label says what it does with members off: it no
-	 * longer promises to bring members over.
+	 * Members are their own checkbox, unticked, and say members must be told
+	 * first. A previewed job's choice is kept when the form shows again.
 	 */
-	public function test_members_off_form_label() {
-		remove_filter( 'wcorg_meetup_import_match_members', '__return_true' );
-
+	public function test_members_form_checkbox() {
 		ob_start();
 		Meetup_Import\render_start_form( array() );
-		$off = ob_get_clean();
-
-		add_filter( 'wcorg_meetup_import_match_members', '__return_true' );
+		$fresh = ob_get_clean();
 
 		ob_start();
-		Meetup_Import\render_start_form( array() );
-		$on = ob_get_clean();
+		Meetup_Import\render_start_form( array( 'match_members' => true ) );
+		$again = ob_get_clean();
 
-		$this->assertStringContainsString( 'name="match_people"', $off );
-		$this->assertStringContainsString( 'Other members are not brought over.', $off );
-		$this->assertStringNotContainsString( 'members join the group', $off );
-		$this->assertStringContainsString( 'members join the group', $on );
+		$this->assertStringContainsString( 'name="match_people"', $fresh );
+		$this->assertMatchesRegularExpression( '/name="match_members" type="checkbox" value="1"\s*\/>/', $fresh );
+		$this->assertStringContainsString( 'told on Meetup that they&#039;ll be added', $fresh );
+		$this->assertMatchesRegularExpression( '/name="match_members" type="checkbox" value="1"\s*checked=\'checked\'/', $again );
 	}
 
 	/**
@@ -2763,7 +2757,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 		$this->assertNotEmpty( Meetup_Import\get_job( $this->site_id )['data']['members'] );
 
@@ -2796,7 +2790,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 			}
 		);
 
-		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
 		Meetup_Import\process_batch( $this->site_id );
 		$this->assertNotEmpty( Meetup_Import\get_job( $this->site_id )['data']['members'] );
 
@@ -3172,15 +3166,16 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
 
-		$_POST['meetup_group'] = 'https://www.meetup.com/wma-wordpress-meetup/events/1/';
-		$_POST['site_id']      = (string) $this->site_id;
-		$_POST['match_people'] = '1';
-		$_REQUEST['_wpnonce']  = wp_create_nonce( Meetup_Import\START_ACTION );
+		$_POST['meetup_group']  = 'https://www.meetup.com/wma-wordpress-meetup/events/1/';
+		$_POST['site_id']       = (string) $this->site_id;
+		$_POST['match_people']  = '1';
+		$_POST['match_members'] = '1';
+		$_REQUEST['_wpnonce']   = wp_create_nonce( Meetup_Import\START_ACTION );
 
 		try {
 			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\handle_start' );
 		} finally {
-			unset( $GLOBALS['super_admins'], $_POST['meetup_group'], $_POST['site_id'], $_POST['match_people'], $_REQUEST['_wpnonce'] );
+			unset( $GLOBALS['super_admins'], $_POST['meetup_group'], $_POST['site_id'], $_POST['match_people'], $_POST['match_members'], $_REQUEST['_wpnonce'] );
 		}
 
 		$job = Meetup_Import\get_job( $this->site_id );
@@ -3189,6 +3184,7 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( 'fetching', $job['status'] );
 		$this->assertSame( 'wma-wordpress-meetup', $job['urlname'] );
 		$this->assertTrue( $job['match_people'] );
+		$this->assertTrue( $job['match_members'] );
 		$this->assertFalse( $job['include_past'] );
 	}
 

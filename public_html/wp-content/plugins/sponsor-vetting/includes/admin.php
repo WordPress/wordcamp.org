@@ -176,12 +176,10 @@ function render_conversations( array $conversations ): void {
 /**
  * Loads the styles for the company and sponsorship screens.
  *
- * @param string $hook_suffix The admin page.
+ * Hooked to the edit screens' own style hooks, which run just before styles are printed.
  */
-function enqueue_admin_assets( string $hook_suffix ): void {
-	$screen = get_current_screen();
-
-	if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ), true ) || ! $screen || ! in_array( $screen->post_type, array( COMPANY_POST_TYPE, SPONSORSHIP_POST_TYPE ), true ) ) {
+function enqueue_admin_assets(): void {
+	if ( ! in_array( get_current_screen()?->post_type, array( COMPANY_POST_TYPE, SPONSORSHIP_POST_TYPE ), true ) ) {
 		return;
 	}
 
@@ -189,7 +187,8 @@ function enqueue_admin_assets( string $hook_suffix ): void {
 
 	wp_enqueue_style( 'sv-admin', plugins_url( 'css/admin.css', $plugin_dir . '/bootstrap.php' ), array(), (string) filemtime( $plugin_dir . '/css/admin.css' ) );
 }
-add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
+add_action( 'admin_print_styles-post.php', __NAMESPACE__ . '\enqueue_admin_assets' );
+add_action( 'admin_print_styles-post-new.php', __NAMESPACE__ . '\enqueue_admin_assets' );
 
 /**
  * Renders the note field and the log of notes and status changes, grouped by day.

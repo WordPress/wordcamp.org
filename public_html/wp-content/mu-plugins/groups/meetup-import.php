@@ -13,9 +13,11 @@
  * - People (opt-in) are only ever matched to existing WordPress.org accounts
  *   by email: Meetup organizers get the matching role, hosts are credited,
  *   and RSVPs are kept. No account is created for anyone else.
- * - The rest of the group's members are only brought over where
- *   `matches_members()` allows it, off by default: a match joins the group as
- *   a Member with event emails off, without being told first (#2305).
+ * - The rest of the group's members (opt-in, per import) join the group as
+ *   Members with event emails off when they match an account. Only for a
+ *   group whose members were told on Meetup first that they'd be added, and
+ *   that they can leave: someone who leaves isn't added back by a later
+ *   import (#2305).
  *
  * Nothing here sends an email: events are published with the new-event
  * notification marked as already handled, and
@@ -453,13 +455,15 @@ function delete_job( array $job ): void {
  * Callers MUST verify the `manage_sites` capability before calling this, as
  * with `import_events()`.
  *
- * @param string $urlname      Meetup group urlname.
- * @param int    $site_id      Target group site.
- * @param bool   $include_past Whether to import past events.
- * @param bool   $match_people Whether to match people to WordPress.org accounts by email.
+ * @param string $urlname       Meetup group urlname.
+ * @param int    $site_id       Target group site.
+ * @param bool   $include_past  Whether to import past events.
+ * @param bool   $match_people  Whether to match people to WordPress.org accounts by email.
+ * @param bool   $match_members Whether matched members join the group too. Only
+ *                              with `$match_people`.
  * @return array|WP_Error The queued job.
  */
-function start_job( string $urlname, int $site_id, bool $include_past, bool $match_people ) {
+function start_job( string $urlname, int $site_id, bool $include_past, bool $match_people, bool $match_members = false ) {
 	if ( '' === $urlname ) {
 		return new WP_Error( 'invalid_group', __( 'Please enter a Meetup group URL or name.', 'wordcamporg' ) );
 	}
@@ -481,9 +485,7 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 		'site_id'      => $site_id,
 		'include_past' => $include_past,
 		'match_people' => $match_people,
-		// Read once, so a job runs the same way however the flag changes
-		// while it's open.
-		'match_members' => $match_people && matches_members(),
+		'match_members' => $match_people && $match_members,
 		'user_id'      => get_current_user_id(),
 		'created'      => time(),
 		'updated'      => time(),
@@ -771,8 +773,8 @@ function run_import_batch( array $job ): void {
 			'offset' => 0,
 		);
 	} elseif ( 'members' === $step && empty( $job['match_members'] ) ) {
-		// A job queued before members were put behind `matches_members()`
-		// can still be paused here; it goes on to the events without them.
+		// A job queued before `match_members` was its own choice can still be
+		// paused here; it goes on to the events without them.
 		$job['cursor'] = array(
 			'step'   => 'events',
 			'offset' => 0,
@@ -995,7 +997,8 @@ function handle_start(): void {
 		parse_group_urlname( isset( $_POST['meetup_group'] ) ? sanitize_text_field( wp_unslash( $_POST['meetup_group'] ) ) : '' ),
 		$site_id,
 		! empty( $_POST['include_past'] ),
-		! empty( $_POST['match_people'] )
+		! empty( $_POST['match_people'] ),
+		! empty( $_POST['match_members'] )
 	);
 
 	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'queued', is_wp_error( $job ) ? 0 : $site_id );
@@ -1226,14 +1229,16 @@ function render_start_form( array $job ): void {
 						<br />
 						<label>
 							<input name="match_people" type="checkbox" value="1" <?php checked( ! empty( $job['match_people'] ) ); ?> />
-							<?php
-							if ( matches_members() ) {
-								esc_html_e( 'Match people to WordPress.org accounts by email: members join the group (event emails off), Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' );
-							} else {
-								esc_html_e( 'Match people to WordPress.org accounts by email: Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Other members are not brought over. Nobody gets a new account.', 'wordcamporg' );
-							}
-							?>
+							<?php esc_html_e( 'Match people to WordPress.org accounts by email: Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' ); ?>
 						</label>
+						<br />
+						<label>
+							<input name="match_members" type="checkbox" value="1" <?php checked( ! empty( $job['match_members'] ) ); ?> />
+							<?php esc_html_e( 'Also add the group\'s members who match an account, with event emails off. Needs "Match people".', 'wordcamporg' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'Only tick this once the group\'s members were told on Meetup that they\'ll be added, and that they can leave the group anytime. Someone who leaves isn\'t added back by a later import.', 'wordcamporg' ); ?>
+						</p>
 					</fieldset>
 				</td>
 			</tr>
@@ -2960,23 +2965,6 @@ function publishes_upcoming(): bool {
 	 * @param bool $publish Whether to publish them. Default true.
 	 */
 	return (bool) apply_filters( 'wcorg_meetup_import_publish_upcoming', true );
-}
-
-/**
- * Whether an import may bring a group's members over from Meetup.
- *
- * Off by default (#2305): a matched member is added to the group without
- * being told first, and how members should come over from Meetup isn't
- * settled yet. Organizer roles, hosts and RSVPs are matched either way.
- */
-function matches_members(): bool {
-	/**
-	 * Filters whether "Match people" also brings the group's members over,
-	 * joining everyone with a matching WordPress.org account to the group.
-	 *
-	 * @param bool $match Whether to match members. Default false.
-	 */
-	return (bool) apply_filters( 'wcorg_meetup_import_match_members', false );
 }
 
 /**

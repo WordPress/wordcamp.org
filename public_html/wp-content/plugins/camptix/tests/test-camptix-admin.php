@@ -1261,6 +1261,378 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A fake gateway for the sweep's payment lookup, answering from a queue of results.
+	 *
+	 * @param string $id       Payment method id.
+	 * @param array  $answers  reconcile_payment() results, by payment token or in order.
+	 * @param bool   $supports Whether it sets the `payment-lookup` feature.
+	 *
+	 * @return CampTix_Payment_Method
+	 */
+	protected function register_lookup_gateway( $id, $answers, $supports = true ) {
+		$gateway = new class() extends CampTix_Payment_Method {
+			public $answers = array();
+			public $asked   = array();
+
+			/**
+			 * Skip the parent's registration with CampTix.
+			 */
+			public function __construct() {}
+
+			/**
+			 * Not used by the sweep.
+			 *
+			 * @param string $payment_token Payment token.
+			 */
+			public function payment_checkout( $payment_token ) {}
+
+			/**
+			 * Record the question, answer from the queue: by token, whatever order the sweep
+			 * visits them in, else in turn.
+			 *
+			 * @param string $payment_token Payment token.
+			 *
+			 * @return mixed
+			 */
+			public function reconcile_payment( $payment_token ) {
+				$this->asked[] = $payment_token;
+
+				return array_key_exists( $payment_token, $this->answers ) ? $this->answers[ $payment_token ] : array_shift( $this->answers );
+			}
+		};
+
+		$gateway->id                 = $id;
+		$gateway->answers            = $answers;
+		$gateway->supported_features = array( 'payment-lookup' => $supports );
+
+		add_filter(
+			'camptix_get_payment_method_by_id',
+			function ( $method, $method_id ) use ( $gateway ) {
+				return $method_id === $gateway->id ? $gateway : $method;
+			},
+			10,
+			2
+		);
+
+		return $gateway;
+	}
+
+	/**
+	 * A draft due to time out, paid through the given gateway.
+	 */
+	protected function create_due_draft( $ticket_id, $token, $method_id ) {
+		$id = $this->create_own_draft( $ticket_id, 'buyer_' . $token, $token, 40 * MINUTE_IN_SECONDS, -10 * MINUTE_IN_SECONDS );
+		update_post_meta( $id, 'tix_payment_method', $method_id );
+
+		return $id;
+	}
+
+	/**
+	 * What the sweep does with each lookup result: expired times out, open keeps until the
+	 * gateway's expiry, and unknown keeps for the next sweep.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_acts_on_each_payment_lookup_result() {
+		$ticket_id  = $this->create_ticket();
+		$expired    = $this->create_due_draft( $ticket_id, 'tok_expired', 'fake' );
+		$open       = $this->create_due_draft( $ticket_id, 'tok_open', 'fake' );
+		$unknown    = $this->create_due_draft( $ticket_id, 'tok_unknown', 'fake' );
+		$garbage    = $this->create_due_draft( $ticket_id, 'tok_garbage', 'fake' );
+		$expires_at = time() + 20 * MINUTE_IN_SECONDS;
+
+		$answers = array(
+			'tok_expired' => array(
+				'status' => CampTix_Payment_Method::LOOKUP_EXPIRED,
+				'reason' => 'the fake session expired',
+			),
+			'tok_open'    => array(
+				'status'     => CampTix_Payment_Method::LOOKUP_OPEN,
+				'expires_at' => $expires_at,
+			),
+			'tok_unknown' => array( 'status' => CampTix_Payment_Method::LOOKUP_UNKNOWN ),
+			'tok_garbage' => 'not an array',
+		);
+		$this->register_lookup_gateway( 'fake', $answers );
+
+		$logged = array();
+		$log    = function ( $message, $post_id ) use ( &$logged ) {
+			$logged[] = array( $message, $post_id );
+		};
+		add_action( 'camptix_log_raw', $log, 10, 2 );
+		try {
+			self::$camptix->review_timeout_payments();
+		} finally {
+			remove_action( 'camptix_log_raw', $log, 10 );
+		}
+
+		$this->assertSame( 'timeout', get_post_status( $expired ) );
+		$this->assertContains( array( 'At timeout, the fake session expired.', $expired ), $logged, 'what the gateway found is logged' );
+		$this->assertSame( 'draft', get_post_status( $open ) );
+		$this->assertSame( $expires_at, (int) get_post_meta( $open, 'tix_session_expires_at', true ) );
+		$this->assertSame( 'draft', get_post_status( $unknown ) );
+		$this->assertGreaterThan( time(), self::$camptix->get_draft_release_at( $unknown ), 'retried by a later sweep' );
+		$this->assertSame( 'draft', get_post_status( $garbage ), 'an unreadable answer is treated as unknown' );
+	}
+
+	/**
+	 * A gateway without the `payment-lookup` feature isn't asked, and its drafts time out as
+	 * before.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_does_not_ask_a_gateway_without_payment_lookup() {
+		$ticket_id = $this->create_ticket();
+		$draft     = $this->create_due_draft( $ticket_id, 'tok_legacy', 'legacy' );
+		$gateway   = $this->register_lookup_gateway( 'legacy', array( array( 'status' => CampTix_Payment_Method::LOOKUP_UNKNOWN ) ), false );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( array(), $gateway->asked );
+		$this->assertSame( 'timeout', get_post_status( $draft ) );
+	}
+
+	/**
+	 * Once a gateway can't be reached, the rest of the pass keeps its drafts without asking
+	 * it again. Other gateways are still asked.
+	 *
+	 * @covers CampTix_Plugin::reconcile_draft_before_timeout
+	 */
+	public function test_timeout_sweep_stops_asking_an_unreachable_gateway_but_asks_others() {
+		$ticket_id = $this->create_ticket();
+		$down      = array(
+			$this->create_due_draft( $ticket_id, 'tok_down_1', 'down' ),
+			$this->create_due_draft( $ticket_id, 'tok_down_2', 'down' ),
+		);
+		$up        = $this->create_due_draft( $ticket_id, 'tok_up', 'up' );
+
+		$unreachable = array( 'status' => CampTix_Payment_Method::LOOKUP_UNREACHABLE );
+		$down_gw     = $this->register_lookup_gateway( 'down', array( $unreachable, $unreachable ) );
+		$up_gw       = $this->register_lookup_gateway( 'up', array( array( 'status' => CampTix_Payment_Method::LOOKUP_EXPIRED ) ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertCount( 1, $down_gw->asked, 'asked once, then skipped for the rest of the pass' );
+		foreach ( $down as $draft ) {
+			$this->assertSame( 'draft', get_post_status( $draft ) );
+		}
+		$this->assertCount( 1, $up_gw->asked );
+		$this->assertSame( 'timeout', get_post_status( $up ) );
+	}
+
+	/**
+	 * Save the Payment setup screen with a fake gateway that supports the given features,
+	 * and return the saved enabled flag.
+	 *
+	 * @param array $features      The gateway's supported features.
+	 * @param bool  $was_enabled   Whether it was already enabled.
+	 * @param bool  $enable        What the form submits.
+	 *
+	 * @return bool
+	 */
+	protected function save_enabled_flag( $features, $was_enabled, $enable ) {
+		$gateway                     = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->name               = 'Gated Pay';
+		$gateway->supported_features = $features;
+		$available                   = function ( $methods ) {
+			$methods['gated'] = array( 'name' => 'Gated Pay' );
+			return $methods;
+		};
+		add_filter( 'camptix_available_payment_methods', $available );
+
+		$options       = new ReflectionProperty( CampTix_Plugin::class, 'options' );
+		$saved_options = self::$camptix->get_options();
+		$with_flag     = $saved_options;
+
+		$with_flag['payment_methods']['gated'] = $was_enabled;
+		$options->setValue( self::$camptix, $with_flag );
+
+		try {
+			$result = self::$camptix->validate_options( array( 'payment_methods' => array( 'gated' => $enable ? '1' : '0' ) ) );
+		} finally {
+			$options->setValue( self::$camptix, $saved_options );
+			remove_filter( 'camptix_available_payment_methods', $available );
+		}
+
+		return $result['payment_methods']['gated'];
+	}
+
+	/**
+	 * A gateway missing refunds or payment lookup is warned about, never blocked: it can be
+	 * newly enabled, kept enabled, and disabled, like one that supports both.
+	 *
+	 * @covers CampTix_Admin_Setup::validate_options
+	 */
+	public function test_a_gateway_missing_a_requirement_can_still_be_enabled() {
+		global $wp_settings_errors;
+
+		$compliant = array(
+			'refund-single'  => true,
+			'payment-lookup' => true,
+		);
+		$no_refund = array( 'payment-lookup' => true );
+
+		$this->assertTrue( $this->save_enabled_flag( $no_refund, false, true ), 'newly enabled' );
+		$this->assertTrue( $this->save_enabled_flag( $no_refund, true, true ), 'kept enabled' );
+		$this->assertFalse( $this->save_enabled_flag( $no_refund, true, false ), 'disabled' );
+		$this->assertTrue( $this->save_enabled_flag( $compliant, false, true ), 'compliant: enabled' );
+		foreach ( (array) $wp_settings_errors as $error ) {
+			$this->assertStringNotContainsString( 'Gated Pay', $error['message'], 'no error about the gateway' );
+		}
+
+		$wp_settings_errors = array();
+	}
+
+	/**
+	 * The gateways in CampTix itself meet the requirements.
+	 *
+	 * @covers CampTix_Payment_Method::get_missing_requirements
+	 */
+	public function test_core_gateways_meet_the_requirements() {
+		foreach ( array( 'stripe', 'paypal' ) as $id ) {
+			$this->assertSame( array(), self::$camptix->get_payment_method_by_id( $id )->get_missing_requirements(), $id );
+		}
+	}
+
+	/**
+	 * The Enabled field always offers the switch, and warns beside it when the gateway is
+	 * missing a requirement, whether or not it's enabled yet.
+	 *
+	 * @covers CampTix_Payment_Method::_camptix_settings_enabled_callback
+	 */
+	public function test_enabled_field_warns_about_a_missing_requirement() {
+		$gateway                       = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->camptix_options      = array( 'currency' => 'USD' );
+		$gateway->supported_currencies = array( 'USD' );
+
+		$render = function ( $features, $enabled ) use ( $gateway ) {
+			$gateway->supported_features = $features;
+
+			ob_start();
+			$gateway->_camptix_settings_enabled_callback(
+				array(
+					'name'  => 'camptix_options[payment_methods][gated]',
+					'value' => $enabled,
+				)
+			);
+
+			return ob_get_clean();
+		};
+
+		$no_refund = array( 'payment-lookup' => true );
+
+		$states = array(
+			'not enabled' => false,
+			'enabled'     => true,
+		);
+		foreach ( $states as $state => $enabled ) {
+			$html = $render( $no_refund, $enabled );
+			$this->assertSame( 2, substr_count( $html, 'type="radio"' ), "$state: the switch is offered" );
+			$this->assertStringContainsString( 'does not support refunds', $html, "$state: with a warning" );
+		}
+
+		$html = $render(
+			array(
+				'refund-single'  => true,
+				'payment-lookup' => true,
+			),
+			false
+		);
+		$this->assertSame( 2, substr_count( $html, 'type="radio"' ) );
+		$this->assertStringNotContainsString( 'does not support', $html );
+	}
+
+	/**
+	 * The Setup screen warns about an enabled gateway missing a requirement, and only there.
+	 *
+	 * @covers CampTix_Admin_Setup::admin_notice_payment_method_requirements
+	 */
+	public function test_setup_screen_warns_about_an_enabled_gateway_missing_a_requirement() {
+		global $pagenow;
+
+		$gateway                     = $this->register_lookup_gateway( 'gated', array() );
+		$gateway->name               = 'Gated Pay';
+		$gateway->supported_features = array( 'payment-lookup' => true );
+		$available                   = function ( $methods ) {
+			$methods['gated'] = array( 'name' => 'Gated Pay' );
+			return $methods;
+		};
+		add_filter( 'camptix_available_payment_methods', $available );
+
+		$options = new ReflectionProperty( CampTix_Plugin::class, 'options' );
+		$saved   = self::$camptix->get_options();
+		$enabled = $saved;
+
+		$enabled['payment_methods']['gated'] = true;
+		$options->setValue( self::$camptix, $enabled );
+
+		$saved_pagenow = $pagenow;
+		$render        = function ( $screen, $page ) use ( &$pagenow ) {
+			$pagenow      = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The screen the notice checks.
+			$_GET['page'] = $page;
+
+			ob_start();
+			self::$camptix->admin_setup->admin_notice_payment_method_requirements();
+
+			return ob_get_clean();
+		};
+
+		try {
+			$this->assertStringContainsString( 'Gated Pay does not support refunds', $render( 'edit.php', 'camptix_options' ) );
+			$this->assertSame( '', $render( 'index.php', '' ), 'only on the Setup screen' );
+
+			$options->setValue( self::$camptix, $saved );
+			$this->assertSame( '', $render( 'edit.php', 'camptix_options' ), 'not enabled: nothing to warn about' );
+		} finally {
+			$options->setValue( self::$camptix, $saved );
+			$pagenow = $saved_pagenow; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring it.
+			unset( $_GET['page'] );
+			remove_filter( 'camptix_available_payment_methods', $available );
+		}
+	}
+
+	/**
+	 * A gateway that records no session expiry only has its drafts come due at 24 hours. A
+	 * lookup that can't answer then, or a gateway skipped for the rest of the pass after one
+	 * that couldn't, keeps them for the retry window rather than timing them out on the spot.
+	 *
+	 * @covers CampTix_Plugin::keep_draft_for_next_sweep
+	 */
+	public function test_timeout_sweep_retries_drafts_that_only_come_due_at_24_hours() {
+		$ticket_id = $this->create_ticket();
+		$age       = DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE + MINUTE_IN_SECONDS;
+		$drafts    = array();
+		foreach ( array( 'tok_day_1', 'tok_day_2' ) as $token ) {
+			$drafts[ $token ] = $this->create_own_draft( $ticket_id, 'buyer_' . $token, $token, $age );
+			update_post_meta( $drafts[ $token ], 'tix_payment_method', 'nolifetime' );
+		}
+
+		$unreachable = array( 'status' => CampTix_Payment_Method::LOOKUP_UNREACHABLE );
+		$gateway     = $this->register_lookup_gateway( 'nolifetime', array( $unreachable, $unreachable ) );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertCount( 1, $gateway->asked );
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'draft', get_post_status( $draft ), 'kept for the next sweep' );
+			$this->assertGreaterThan( time(), self::$camptix->get_draft_release_at( $draft ) );
+		}
+
+		// Once the retry window has passed too, the drafts time out.
+		foreach ( $drafts as $draft ) {
+			update_post_meta( $draft, 'tix_timestamp', time() - $age - CampTix_Plugin::DRAFT_LOOKUP_RETRY );
+			update_post_meta( $draft, 'tix_session_expires_at', time() - 10 * MINUTE_IN_SECONDS );
+		}
+		$gateway->answers = array( $unreachable, $unreachable );
+
+		self::$camptix->review_timeout_payments();
+
+		foreach ( $drafts as $draft ) {
+			$this->assertSame( 'timeout', get_post_status( $draft ) );
+		}
+	}
+
+	/**
 	 * Logged out, nothing is the buyer's own.
 	 */
 	public function test_abandoned_drafts_is_empty_when_logged_out() {

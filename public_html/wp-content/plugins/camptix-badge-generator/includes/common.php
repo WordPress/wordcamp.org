@@ -196,6 +196,27 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 			$value = get_wporg_username( $attendee );
 			break;
 
+		case 'hometown':
+			$value = get_badge_field( $attendee, 'hometown', 'location' );
+			break;
+
+		case 'company':
+			/*
+			 * Only from a question, so an employer is on the badge only when the attendee gave it for this event.
+			 * See https://make.wordpress.org/core/2026/04/11/elevating-individuals/.
+			 */
+			$value = get_badge_field( $attendee, 'company' );
+			break;
+
+		case 'website':
+			// Gravatar only shares profile links with authenticated API requests, so this comes from a question.
+			$value = normalize_website( get_badge_field( $attendee, 'website' ) );
+			break;
+
+		case 'website_label':
+			$value = get_website_label( $attendee->website );
+			break;
+
 		case 'wporg_profile_url':
 			// Profile URLs use the nicename, which differs from the login for names with spaces, capitals, etc.
 			$user  = get_user_by( 'login', get_wporg_username( $attendee ) );
@@ -203,12 +224,7 @@ function add_dynamic_post_meta( $value, $post_id, $meta_key ) {
 			break;
 
 		case 'qr_code_target_url':
-			$type = get_option( 'cbg_qr_code_type', 'none' );
-			if ( 'gravatar' === $type ) {
-				$value = $attendee->gravatar_profile_url;
-			} elseif ( 'wporg' === $type ) {
-				$value = $attendee->wporg_profile_url;
-			}
+			$value = get_qr_code_target_url( $attendee, get_option( 'cbg_qr_code_type', 'none' ) );
 			break;
 
 		case 'qr_code_svg':
@@ -240,6 +256,151 @@ function get_wporg_username( $attendee ) {
 	}
 
 	return trim( $username );
+}
+
+/**
+ * Get the URL an attendee's QR code links to
+ *
+ * @param \WP_Post $attendee
+ * @param string   $qr_code_type `none`, `gravatar`, or `wporg`.
+ *
+ * @return string An empty string when there's no QR code.
+ */
+function get_qr_code_target_url( $attendee, $qr_code_type ) {
+	if ( 'gravatar' === $qr_code_type ) {
+		return $attendee->gravatar_profile_url;
+	}
+
+	if ( 'wporg' === $qr_code_type ) {
+		return $attendee->wporg_profile_url;
+	}
+
+	return '';
+}
+
+/**
+ * Get the CampTix questions that organizers mapped to badge fields
+ *
+ * @return array Question IDs keyed by `hometown`, `website`, and `company`. 0 when a field isn't mapped.
+ */
+function get_badge_field_questions() {
+	$saved     = (array) get_option( 'cbg_field_questions', array() );
+	$questions = array();
+
+	foreach ( array_keys( get_badge_field_labels() ) as $field ) {
+		$questions[ $field ] = absint( $saved[ $field ] ?? 0 );
+	}
+
+	return $questions;
+}
+
+/**
+ * Get the labels of the badge fields that can be mapped to CampTix questions
+ *
+ * @return array
+ */
+function get_badge_field_labels() {
+	return array(
+		'hometown' => __( 'Hometown', 'wordcamporg' ),
+		'website'  => __( 'Website', 'wordcamporg' ),
+		'company'  => __( 'Company', 'wordcamporg' ),
+	);
+}
+
+/**
+ * Get a badge field for an attendee
+ *
+ * For the hometown, the attendee's public Gravatar profile wins, because that's what they've chosen to share
+ * publicly. The answer to the question the organizer mapped to the field is the fallback, and the only source for
+ * the other fields.
+ *
+ * @param \WP_Post $attendee
+ * @param string   $field          `hometown`, `website`, or `company`.
+ * @param string   $gravatar_field The matching Gravatar profile field, if there is one.
+ *
+ * @return string
+ */
+function get_badge_field( $attendee, $field, $gravatar_field = '' ) {
+	if ( $gravatar_field && use_gravatar_profiles() ) {
+		$profile = get_gravatar_profile( $attendee->tix_email );
+
+		if ( ! empty( $profile[ $gravatar_field ] ) ) {
+			return $profile[ $gravatar_field ];
+		}
+	}
+
+	$question_id = get_badge_field_questions()[ $field ] ?? 0;
+	$answers     = (array) $attendee->tix_questions;
+
+	if ( ! $question_id || ! isset( $answers[ $question_id ] ) ) {
+		return '';
+	}
+
+	$answer = $answers[ $question_id ];
+
+	return trim( is_array( $answer ) ? implode( ', ', $answer ) : (string) $answer );
+}
+
+/**
+ * Turn a website answer into a full URL
+ *
+ * Attendees often type `example.org` without the scheme.
+ *
+ * @param string $website
+ *
+ * @return string An empty string when it isn't a usable http(s) URL.
+ */
+function normalize_website( $website ) {
+	$website = trim( (string) $website );
+
+	if ( '' === $website ) {
+		return '';
+	}
+
+	if ( ! preg_match( '#^https?://#i', $website ) ) {
+		$website = 'https://' . ltrim( $website, '/' );
+	}
+
+	$website = esc_url_raw( $website, array( 'http', 'https' ) );
+	$host    = wp_parse_url( $website, PHP_URL_HOST );
+
+	if ( ! $host || false === strpos( $host, '.' ) ) {
+		return '';
+	}
+
+	return $website;
+}
+
+/**
+ * Get the short form of a website to print on a badge
+ *
+ * @param string $website A URL from normalize_website().
+ *
+ * @return string For example, `example.org/blog`.
+ */
+function get_website_label( $website ) {
+	$label = preg_replace( '#^https?://(www\.)?#i', '', (string) $website );
+
+	return untrailingslashit( $label );
+}
+
+/**
+ * Prime the caches needed to render many badges
+ *
+ * @param array $attendees
+ */
+function prefetch_badge_data( $attendees ) {
+	if ( ! use_gravatar_profiles() ) {
+		return;
+	}
+
+	$hashes = array();
+
+	foreach ( $attendees as $attendee ) {
+		$hashes[] = get_gravatar_hash( $attendee->tix_email );
+	}
+
+	prefetch_gravatar_profiles( $hashes );
 }
 
 /**

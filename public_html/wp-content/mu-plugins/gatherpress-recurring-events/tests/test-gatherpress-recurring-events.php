@@ -648,6 +648,42 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		);
 	}
 
+	/** The series calendar download follows the post password. */
+	public function test_series_ical_follows_the_post_password(): void {
+		global $wp_query;
+
+		$post_id = $this->create_published_recurring_event();
+		update_post_meta( $post_id, Rule::META_PREFIX . 'rrule', 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO' );
+
+		$wp_query->queried_object    = get_post( $post_id );
+		$wp_query->queried_object_id = $post_id;
+		set_query_var( 'gatherpress_calendar', 'ical' );
+		$cookie = 'wp-postpass_' . COOKIEHASH;
+
+		try {
+			$this->assertStringContainsString( 'RRULE:FREQ=WEEKLY', Plugin::series_ical_body(), 'Precondition: an open series is served.' );
+
+			wp_update_post(
+				array(
+					'ID'            => $post_id,
+					'post_password' => 'secret',
+				)
+			);
+			$wp_query->queried_object = get_post( $post_id );
+			$this->assertSame( '', Plugin::series_ical_body() );
+
+			require_once ABSPATH . WPINC . '/class-phpass.php';
+			$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );
+			$this->assertStringContainsString( 'RRULE:FREQ=WEEKLY', Plugin::series_ical_body(), 'A visitor with the password lost the download.' );
+		} finally {
+			unset( $_COOKIE[ $cookie ] );
+			set_query_var( 'gatherpress_calendar', '' );
+			Context::set( null );
+			$wp_query->queried_object    = null;
+			$wp_query->queried_object_id = 0;
+		}
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();
@@ -1651,12 +1687,115 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 			Context::set( Occurrences::select_for_series( $other_series ) );
 			$this->assertSame( 'Body', Context::prepend_selector( 'Body' ) );
+
+			wp_update_post(
+				array(
+					'ID'            => $page_series,
+					'post_password' => 'secret',
+				)
+			);
+			Context::set( Occurrences::select_for_series( $page_series ) );
+			$this->assertSame( 'Body', Context::prepend_selector( 'Body' ), 'A protected series showed its dates.' );
 		} finally {
 			Context::set( null );
 			// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the queries this test replaced.
 			$GLOBALS['wp_query']     = $main_query;
 			$GLOBALS['wp_the_query'] = $main_main_query;
 			// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
+	}
+
+	/**
+	 * A protected series' page resolves no date until the password is entered,
+	 * and answers a real date and a made-up one alike.
+	 */
+	public function test_a_protected_series_resolves_no_date(): void {
+		$post_id = $this->create_projected_weekly_series( 'Protected Series' );
+		$real_id = Occurrences::select_for_series( $post_id )->recurrence_id;
+		$made_up = '19990104T100000';
+		$cookie  = 'wp-postpass_' . COOKIEHASH;
+
+		wp_update_post(
+			array(
+				'ID'            => $post_id,
+				'post_password' => 'secret',
+			)
+		);
+
+		$main_query = $GLOBALS['wp_query'];
+
+		$resolve = static function ( string $recurrence_id ) use ( $post_id ): void {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the series page; restored below.
+			$GLOBALS['wp_query'] = new WP_Query(
+				array(
+					'p'         => $post_id,
+					'post_type' => 'gatherpress_event',
+				)
+			);
+			set_query_var( 'gpre_occurrence', $recurrence_id );
+			Context::set( null );
+			Context::resolve();
+		};
+
+		try {
+			foreach ( array( '', $real_id, $made_up ) as $recurrence_id ) {
+				$resolve( $recurrence_id );
+				$this->assertNull( Context::get(), "A protected series resolved a date for '{$recurrence_id}'." );
+				$this->assertFalse( is_404(), "A protected series answered '{$recurrence_id}' differently." );
+			}
+
+			require_once ABSPATH . WPINC . '/class-phpass.php';
+			$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );
+
+			$resolve( $real_id );
+			$this->assertSame( $real_id, Context::recurrence_id(), 'A visitor with the password lost the date.' );
+
+			$resolve( $made_up );
+			$this->assertTrue( is_404(), 'A visitor with the password got a page for a date the series doesn\'t have.' );
+		} finally {
+			unset( $_COOKIE[ $cookie ] );
+			Context::set( null );
+			$GLOBALS['wp_query'] = $main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the query this test replaced.
+		}
+	}
+
+	/**
+	 * A protected series listed on another page links to its series URL and
+	 * keeps a canceled date to itself.
+	 */
+	public function test_a_listed_protected_series_names_no_date(): void {
+		$open_id      = $this->create_published_recurring_event();
+		$protected_id = $this->create_published_recurring_event();
+		$rsvp_block   = '<div data-wp-context="{}"></div>';
+
+		wp_update_post(
+			array(
+				'ID'            => $protected_id,
+				'post_password' => 'secret',
+			)
+		);
+		$series_url = get_permalink( $protected_id );
+
+		$list = static function ( int $post_id ): void {
+			Context::set(
+				(object) array(
+					'series_post_id' => $post_id,
+					'recurrence_id'  => '20261006T180000',
+					'status'         => 'cancelled',
+				)
+			);
+		};
+
+		try {
+			$list( $open_id );
+			$this->assertStringContainsString( '20261006T180000', get_permalink( $open_id ), 'Precondition: an open series links to its date.' );
+			$this->assertNotSame( $rsvp_block, Context::render_rsvp_block( $rsvp_block ), 'Precondition: an open series says the date is canceled.' );
+
+			$list( $protected_id );
+			$this->assertSame( $series_url, get_permalink( $protected_id ) );
+			$this->assertSame( $rsvp_block, Context::render_rsvp_block( $rsvp_block ) );
+		} finally {
+			Context::set( null );
 		}
 	}
 

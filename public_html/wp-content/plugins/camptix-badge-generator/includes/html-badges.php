@@ -97,6 +97,60 @@ function register_customizer_components( $wp_customize ) {
 	);
 
 	$wp_customize->add_setting(
+		'cbg_use_gravatar_profiles',
+		array(
+			'default'           => false,
+			'type'              => 'option',
+			'capability'        => Badge_Generator\REQUIRED_CAPABILITY,
+			'transport'         => 'refresh',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_checkbox',
+		)
+	);
+
+	$wp_customize->add_control(
+		'cbg_use_gravatar_profiles',
+		array(
+			'section'     => 'camptix_html_badges',
+			'type'        => 'checkbox',
+			'priority'    => 2,
+			'label'       => __( 'Use Gravatar profiles', 'wordcamporg' ),
+			'description' => __( "Show the hometown from each attendee's public Gravatar profile, when they've filled it in.", 'wordcamporg' ),
+		)
+	);
+
+	$question_choices = get_question_choices();
+
+	foreach ( Badge_Generator\get_badge_field_labels() as $field => $label ) {
+		$setting_id = "cbg_field_questions[$field]";
+
+		$wp_customize->add_setting(
+			$setting_id,
+			array(
+				'default'           => 0,
+				'type'              => 'option',
+				'capability'        => Badge_Generator\REQUIRED_CAPABILITY,
+				'transport'         => 'refresh',
+				'sanitize_callback' => __NAMESPACE__ . '\sanitize_question_id',
+			)
+		);
+
+		$wp_customize->add_control(
+			$setting_id,
+			array(
+				'section'     => 'camptix_html_badges',
+				'type'        => 'select',
+				'priority'    => 2,
+				// translators: %s: A badge field, like "Hometown".
+				'label'       => sprintf( __( '%s question', 'wordcamporg' ), $label ),
+				'description' => 'hometown' === $field
+					? __( "The ticket question that asks attendees for this. It's used when their Gravatar profile doesn't have it.", 'wordcamporg' )
+					: __( 'The ticket question that asks attendees for this.', 'wordcamporg' ),
+				'choices'     => $question_choices,
+			)
+		);
+	}
+
+	$wp_customize->add_setting(
 		'cbg_badge_css',
 		array(
 			'default'           => file_get_contents( dirname( __DIR__ ) . '/css/html-badges-default-styles.css' ),
@@ -129,6 +183,50 @@ function sanitize_qr_code_type( $value ) {
 	$valid_types = array( 'none', 'gravatar', 'wporg' );
 
 	return in_array( $value, $valid_types, true ) ? $value : 'none';
+}
+
+/**
+ * Get the CampTix questions to choose from when mapping badge fields
+ *
+ * @return array Question titles keyed by ID, with `0` for not using a question.
+ */
+function get_question_choices() {
+	/** @global CampTix_Plugin $camptix */
+	global $camptix;
+
+	$choices = array( 0 => __( 'None', 'wordcamporg' ) );
+
+	foreach ( $camptix->get_all_questions() as $question ) {
+		$choices[ $question->ID ] = $question->post_title;
+	}
+
+	return $choices;
+}
+
+/**
+ * Sanitize a checkbox setting
+ *
+ * Saved as an integer, because update_option() skips saving `false` for an option that doesn't exist yet.
+ *
+ * @param mixed $value
+ *
+ * @return int
+ */
+function sanitize_checkbox( $value ) {
+	return rest_sanitize_boolean( $value ) ? 1 : 0;
+}
+
+/**
+ * Sanitize a question ID setting
+ *
+ * @param mixed $value
+ *
+ * @return int The ID, or 0 if it isn't a CampTix question.
+ */
+function sanitize_question_id( $value ) {
+	$question = get_post( absint( $value ) );
+
+	return $question && 'tix_question' === $question->post_type ? $question->ID : 0;
 }
 
 /**
@@ -275,6 +373,8 @@ function render_badges_template() {
 	);
 
 	$attendees = Badge_Generator\get_attendees( 'all' );
+
+	Badge_Generator\prefetch_badge_data( $attendees );
 
 	require( dirname( __DIR__ ) . '/views/html-badges/template-badges.php' );
 }

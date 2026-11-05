@@ -124,6 +124,10 @@ function setup_flagship_landing_site( string $domain ): bool {
 		}
 	);
 
+	// This request only stands in for the latest site, so it shouldn't sync anything.
+	add_filter( 'jetpack_sync_listener_should_load', '__return_false' );
+	add_filter( 'jetpack_sync_sender_should_load', '__return_false' );
+
 	return true;
 }
 

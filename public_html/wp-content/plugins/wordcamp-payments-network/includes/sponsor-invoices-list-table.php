@@ -6,6 +6,22 @@ defined( 'WPINC' ) or die();
 class Sponsor_Invoices_List_Table extends \WP_List_Table {
 
 	/**
+	 * Each listed invoice's vetting, as HTML keyed by "{blog_id}:{invoice_id}".
+	 *
+	 * @var string[]
+	 */
+	protected $vetting = array();
+
+	/**
+	 * Whether anything reports vetting for the dashboard.
+	 *
+	 * @return bool
+	 */
+	protected function shows_vetting() {
+		return 'submitted' === get_current_section() && has_filter( 'wcbdsi_vetting_statuses' );
+	}
+
+	/**
 	 * Define the table columns that will be rendered
 	 */
 	public function get_columns() {
@@ -17,8 +33,11 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			'amount'        => 'Amount',
 		);
 
+		if ( $this->shows_vetting() ) {
+			$columns['vetting'] = 'Vetting';
+		}
+
 		if ( 'submitted' === get_current_section() ) {
-			$columns['vetting_status']  = 'Status';
 			$columns['approve_invoice'] = 'Approve';
 		}
 
@@ -87,6 +106,16 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			$table_name,
 			$status
 		) );
+
+		if ( $this->shows_vetting() ) {
+			/**
+			 * Filters the vetting shown for the listed invoices, read once for the page.
+			 *
+			 * @param string[] $vetting HTML keyed by "{blog_id}:{invoice_id}".
+			 * @param object[] $items   The listed index rows, with `blog_id`, `invoice_id` and `sponsor_id`.
+			 */
+			$this->vetting = (array) apply_filters( 'wcbdsi_vetting_statuses', array(), $this->items );
+		}
 
 		$this->set_pagination_args( array(
 			'total_items' => $total_items,
@@ -168,37 +197,12 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	}
 
 	/**
-	 * Render the value for the Status column.
+	 * Render the value for the Vetting column.
 	 *
 	 * @param object $index_row
 	 */
-	protected function column_vetting_status( $index_row ) {
-		$statuses = [
-			'needs-vetting'   => 'Needs vetting',
-			'needs-approval'  => 'Needs approval',
-			'needs-follow-up' => 'Needs follow up',
-		];
-
-		ob_start();
-		?>
-		<select
-			class="wcbdsi-vetting-status"
-			name="wcbdsi-vetting-status"
-			data-site-id="<?php echo esc_attr( $index_row->blog_id ); ?>"
-			data-invoice-id="<?php echo esc_attr( $index_row->invoice_id ); ?>"
-			data-nonce="<?php echo esc_attr( wp_create_nonce( "wcbdsi-vetting-status-{$index_row->blog_id}-{$index_row->invoice_id}" ) ); ?>"
-		>
-			<?php foreach ( $statuses as $value => $label ) : ?>
-				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $index_row->vetting_status ?: 'needs-vetting', $value ); ?>>
-					<?php echo esc_html( $label ); ?>
-				</option>
-			<?php endforeach; ?>
-		</select>
-		<span class="spinner"></span>
-		<div class="wcbd-inline-notice hidden"></div>
-		<?php
-
-		return ob_get_clean();
+	protected function column_vetting( $index_row ) {
+		return wp_kses_post( $this->vetting[ "{$index_row->blog_id}:{$index_row->invoice_id}" ] ?? '' );
 	}
 
 	/**

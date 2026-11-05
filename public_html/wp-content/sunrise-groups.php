@@ -2,7 +2,7 @@
 
 namespace WordCamp\Sunrise\Groups;
 use WP_Network, WP_Site;
-use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url, get_url_port };
+use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_group_url, get_url_port };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\PATTERN_GROUP_PATH;
@@ -72,8 +72,13 @@ function set_network_and_site() {
 	}
 
 	if ( ! $current_blog ) {
-		// Check if this URL was previously used by a group that has since been renamed.
-		$renamed_url = get_renamed_site_url( DOMAIN_CURRENT_SITE, $path );
+		// Check if this URL was previously used by a group that has since been
+		// renamed, keeping the rest of the path and the query string.
+		$renamed_url = get_renamed_group_url( DOMAIN_CURRENT_SITE, $path );
+
+		if ( $renamed_url && ! empty( $_SERVER['QUERY_STRING'] ) ) {
+			$renamed_url .= '?' . $_SERVER['QUERY_STRING'];
+		}
 
 		if ( $renamed_url ) {
 			header( 'X-Redirect-By: Groups/Sunrise::set_network_and_site (renamed site)' );

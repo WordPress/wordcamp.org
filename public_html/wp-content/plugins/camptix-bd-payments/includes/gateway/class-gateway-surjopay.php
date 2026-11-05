@@ -19,6 +19,12 @@ class SurjoPay extends Base_Gateway {
 	public $name                 = 'Surjo Pay';
 	public $description          = 'Surjo Pay payment gateway for Bangladesh.';
 	public $supported_currencies = array( 'BDT' );
+	public $supported_features   = array(
+		'refund-single'  => false,
+		'refund-all'     => false,
+		'refund-partial' => false,
+		'payment-lookup' => true,
+	);
 
 	/** @var array Gateway options */
 	protected $options = array();
@@ -62,7 +68,6 @@ class SurjoPay extends Base_Gateway {
 
 		add_action( 'template_redirect', array( $this, 'early_template_redirect' ), 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 		add_action( 'template_redirect', array( $this, 'template_redirect' ), 6 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
-		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 	}
 
 	/**
@@ -214,10 +219,8 @@ class SurjoPay extends Base_Gateway {
 		}
 
 		// Store shurjoPay and customer order IDs for return validation and timeout recovery.
-		foreach ( $attendees as $attendee ) {
-			update_post_meta( $attendee->ID, 'tix_surjopay_order_id', $gateway_order_id );
-			update_post_meta( $attendee->ID, 'tix_surjopay_customer_order_id', $order_id );
-		}
+		$camptix->update_payment_token_meta( $payment_token, 'tix_surjopay_order_id', $gateway_order_id );
+		$camptix->update_payment_token_meta( $payment_token, 'tix_surjopay_customer_order_id', $order_id );
 
 		$this->log(
 			sprintf( 'Redirecting to Surjo Pay for order %s', $gateway_order_id ),
@@ -531,36 +534,43 @@ class SurjoPay extends Base_Gateway {
 	}
 
 	/**
-	 * Prevent a paid order from being marked as timeout
+	 * Before the sweep times a draft order out, ask shurjoPay whether it was paid.
 	 *
-	 * @param int $attendee_id The attendee ID about to be timed out.
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
 	 */
-	public function pre_attendee_timeout( $attendee_id ) {
-		$order_id = get_post_meta( $attendee_id, 'tix_surjopay_order_id', true );
-
+	public function reconcile_payment( $payment_token ) {
+		$order_id = '';
+		foreach ( $GLOBALS['camptix']->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$order_id = get_post_meta( $attendee_id, 'tix_surjopay_order_id', true );
+			if ( $order_id ) {
+				break;
+			}
+		}
 		if ( ! $order_id ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no shurjoPay order recorded' );
 		}
 
 		if ( ! $this->authenticate() ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not authenticate with shurjoPay' );
 		}
 
-		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $payment_token ) {
-			return;
-		}
-
+		// verify_payment() answers false both for an unpaid order and for a failed request, so
+		// this can't tell the two apart; it is treated as unpaid, as before.
 		$verified = $this->verify_payment( $order_id, $payment_token );
-
-		if ( $verified ) {
-			$GLOBALS['camptix']->payment_result(
-				$payment_token,
-				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
-				array( 'transaction_details' => $this->prepare_surjopay_transaction_details( $verified ) ),
-				false
-			);
+		if ( ! $verified ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'shurjoPay did not verify a payment' );
 		}
+
+		$GLOBALS['camptix']->payment_result(
+			$payment_token,
+			CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+			array( 'transaction_details' => $this->prepare_surjopay_transaction_details( $verified ) ),
+			false
+		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'shurjoPay verified the payment' );
 	}
 
 	/**

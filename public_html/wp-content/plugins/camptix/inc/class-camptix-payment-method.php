@@ -14,8 +14,23 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		'refund-single'  => false,
 		'refund-all'     => false,
 		'refund-partial' => false,
+		'payment-lookup' => false,
 	);
 	public $camptix_options;
+
+	/**
+	 * Results of reconcile_payment(), telling the timeout sweep what to do with a draft order.
+	 */
+	// The gateway found a payment and settled the order through payment_result().
+	const LOOKUP_SETTLED = 'settled';
+	// The gateway session can still be paid until `expires_at`: keep the order's seats until then.
+	const LOOKUP_OPEN = 'open';
+	// No payment can still complete: let the sweep time the order out.
+	const LOOKUP_EXPIRED = 'expired';
+	// The gateway answered, but not in a way that says what became of the payment: retry next sweep.
+	const LOOKUP_UNKNOWN = 'unknown';
+	// The gateway could not be reached: retry next sweep, and don't ask it again this pass.
+	const LOOKUP_UNREACHABLE = 'unreachable';
 
 	/**
 	 * Constructor
@@ -149,7 +164,48 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	}
 
 	/**
+	 * What every payment method is expected to support, as feature names and what to call
+	 * them. One missing any of them gets a warning on the Payment screen, not a block. See
+	 * docs/camptix-payment-gateways.md.
+	 *
+	 * @return string[]
+	 */
+	public static function get_required_features() {
+		/**
+		 * Filters what every payment method is expected to support.
+		 *
+		 * @param string[] $features Feature names and what to call them.
+		 */
+		return (array) apply_filters(
+			'camptix_payment_method_required_features',
+			array(
+				'refund-single'  => __( 'refunds', 'wordcamporg' ),
+				'payment-lookup' => __( 'payment lookup', 'wordcamporg' ),
+			)
+		);
+	}
+
+	/**
+	 * The required features this payment method doesn't support.
+	 *
+	 * @return string[] What to call each one.
+	 */
+	public function get_missing_requirements() {
+		$missing = array();
+
+		foreach ( self::get_required_features() as $feature => $label ) {
+			if ( ! $this->supports_feature( $feature ) ) {
+				$missing[ $feature ] = $label;
+			}
+		}
+
+		return $missing;
+	}
+
+	/**
 	 * Render the markup for the Enabled button
+	 *
+	 * A payment method missing a required feature can still be enabled, with a warning.
 	 *
 	 * @param array $args
 	 */
@@ -159,6 +215,19 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 
 		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
 			$camptix->field_yesno( $args );
+
+			$missing = $this->get_missing_requirements();
+			if ( $missing ) {
+				?>
+				<p class="description">
+					<?php printf(
+						/* translators: %s: Missing features, e.g. "refunds, payment lookup". */
+						esc_html__( 'This payment method does not support %s. Refunds, or payments CampTix could not confirm, may have to be handled in the payment provider dashboard.', 'wordcamporg' ),
+						esc_html( implode( ', ', $missing ) )
+					); ?>
+				</p>
+				<?php
+			}
 		} else {
 			_e( 'Disabled', 'wordcamporg' );
 
@@ -284,6 +353,48 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 
 		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );
 		return $result;
+	}
+
+	/**
+	 * Ask the gateway what became of an order's payment, before the timeout sweep releases it.
+	 *
+	 * Gateways that implement this must also set the `payment-lookup` feature. The sweep calls
+	 * it at most once per order per pass, for orders that are still in draft and due to time
+	 * out. A payment found complete, pending or failed must be settled here, through the same
+	 * validated path as the gateway's own return or notification handler (so amount and order
+	 * checks apply), and reported as LOOKUP_SETTLED. Everything else is reported, and the sweep
+	 * does the bookkeeping: see CampTix_Plugin::reconcile_draft_before_timeout().
+	 *
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array {
+	 *     @type string $status     One of the LOOKUP_* constants.
+	 *     @type int    $expires_at For LOOKUP_OPEN, when the gateway session stops being payable.
+	 *     @type string $reason     For the log: why the order is kept, or what was found.
+	 *     @type mixed  $data       For the log: the gateway's answer, without secrets.
+	 * }
+	 */
+	public function reconcile_payment( $payment_token ) {
+		return $this->lookup_result( self::LOOKUP_EXPIRED, 'payment lookup not implemented in payment module' );
+	}
+
+	/**
+	 * Build a reconcile_payment() result.
+	 *
+	 * @param string $status     One of the LOOKUP_* constants.
+	 * @param string $reason     For the log.
+	 * @param mixed  $data       For the log.
+	 * @param int    $expires_at For LOOKUP_OPEN.
+	 *
+	 * @return array
+	 */
+	protected function lookup_result( $status, $reason = '', $data = null, $expires_at = 0 ) {
+		return array(
+			'status'     => $status,
+			'expires_at' => (int) $expires_at,
+			'reason'     => $reason,
+			'data'       => $data,
+		);
 	}
 
 	/**

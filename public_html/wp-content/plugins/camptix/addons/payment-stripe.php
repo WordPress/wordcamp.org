@@ -33,6 +33,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		'refund-single'  => true,
 		'refund-all'     => true,
 		'refund-partial' => true,
+		'payment-lookup' => true,
 	);
 
 	/**
@@ -42,10 +43,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	protected $options = array();
 
 	/**
-	 * Orders whose Checkout Session the timeout sweep has already looked up this pass, by
-	 * payment token, and whether a lookup has already failed to reach Stripe this pass.
+	 * Whether a lookup has already failed to reach Stripe this pass. The pending sweep, which
+	 * runs after the timeout sweep, skips its own lookups then.
 	 */
-	protected $sessions_looked_up = array();
 	protected $stripe_unreachable = false;
 
 	/**
@@ -63,7 +63,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_timeout_sweep_start', array( $this, 'reset_timeout_sweep_state' ) );
-		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 		// After CampTix's own draft timeout sweep, so a pass that found Stripe down skips this too.
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'review_pending_payments' ), 20 );
 
@@ -982,66 +981,48 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
-			update_post_meta( $attendee_id, '_stripe_checkout_session_id', wp_slash( $session_id ) );
-			update_post_meta( $attendee_id, 'tix_session_expires_at', (int) $expires_at );
-		}
+		$camptix->update_payment_token_meta( $payment_token, '_stripe_checkout_session_id', $session_id );
+		$camptix->set_order_session_expiry( $payment_token, $expires_at );
 	}
 
 	/**
-	 * A new sweep pass: forget which orders were looked up and whether Stripe was reachable.
+	 * A new sweep pass: forget whether Stripe was reachable.
 	 */
 	public function reset_timeout_sweep_state() {
-		$this->sessions_looked_up = array();
 		$this->stripe_unreachable = false;
 	}
 
 	/**
-	 * Before the sweep times a draft out, ask Stripe what became of its Checkout Session.
+	 * Before the sweep times a draft order out, ask Stripe what became of its Checkout Session.
 	 *
 	 * Only an expired session is left for the sweep. Anything else goes through the normal
 	 * return handling: a paid session completes the order (the buyer paid in the session's last
 	 * moments and neither the return nor the webhook reached us), a complete-but-unpaid one is
 	 * a delayed payment still in flight and goes pending, a failed one fails. A session Stripe
-	 * still reports open has its expiry re-recorded from Stripe and the sweep checks the release
-	 * time again, so it keeps its seat until then. Stripe expires sessions a little after the
-	 * timestamp, and a payment can still be confirming then (UPI, bank redirects), so an open
-	 * session already past it is kept for the next sweep, like one Stripe can't be asked about,
-	 * rather than timed out while it can still be paid. If Stripe can't be
-	 * asked, or answers with an error, the draft is kept for the next sweep to try again, for
-	 * up to 24 hours: not knowing is not evidence the session died, and a timed-out order can't
-	 * be revived. That includes a 404, which only says the session isn't on the account and
-	 * mode of the key asking; after a credentials edit every in-flight session 404s while
-	 * still payable on the other key.
+	 * still reports open is reported open with Stripe's expiry; Stripe expires sessions a
+	 * little after the timestamp, and a payment can still be confirming then (UPI, bank
+	 * redirects), so the sweep keeps one already past it for the next pass. An error answer is
+	 * reported unknown, including a 404, which only says the session isn't on the account and
+	 * mode of the key asking; after a credentials edit every in-flight session 404s while still
+	 * payable on the other key.
 	 *
-	 * One lookup per order per pass: the attendees of an order share the session and settling
-	 * it settles them all. And once a lookup has failed to reach Stripe at all (a transport
-	 * error or an unreadable response, as opposed to Stripe answering with an error), the rest
-	 * of the pass keeps its drafts without waiting on a lookup each.
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
 	 */
-	public function pre_attendee_timeout( $attendee_id ) {
+	public function reconcile_payment( $payment_token ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		// precheck the attendee is in draft.
-		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
-			return;
+		$stripe_session_id = '';
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+			if ( $stripe_session_id ) {
+				break;
+			}
 		}
-
-		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
-		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $stripe_session_id || ! $payment_token ) {
-			return;
-		}
-
-		if ( isset( $this->sessions_looked_up[ $payment_token ] ) ) {
-			return;
-		}
-		$this->sessions_looked_up[ $payment_token ] = true;
-
-		if ( $this->stripe_unreachable ) {
-			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe was unreachable earlier this sweep, not asking', null );
-			return;
+		if ( ! $stripe_session_id ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no Stripe checkout session recorded' );
 		}
 
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
@@ -1050,65 +1031,33 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		if ( is_wp_error( $session ) ) {
 			if ( 0 !== strpos( $session->get_error_code(), 'camptix_stripe_request_error_' ) ) {
 				$this->stripe_unreachable = true;
-				$this->keep_for_next_sweep( $attendee_id, $payment_token, 'could not reach Stripe', $session );
-				return;
+				return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not reach Stripe', $session );
 			}
 
-			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered with an error', $session );
-			return;
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, 'Stripe answered with an error', $session );
 		}
 
 		if ( empty( $session['status'] ) ) {
-			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'Stripe answered without a session status', $session );
-			return;
+			return $this->lookup_result( self::LOOKUP_UNKNOWN, 'Stripe answered without a session status', $session );
 		}
 
 		if ( 'expired' === $session['status'] ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'the Stripe checkout session expired', $session );
 		}
 
 		if ( 'open' === $session['status'] ) {
-			$expires_at = (int) ( $session['expires_at'] ?? 0 );
-
-			if ( $expires_at > time() ) {
-				$camptix->log( 'Stripe checkout session still open at timeout; keeping the draft until it expires.', $attendee_id, $session );
-				$camptix->set_order_session_expiry( $payment_token, $expires_at );
-				return;
-			}
-
-			// Past its expiry, but Stripe hasn't expired it yet: a payment may still be confirming.
-			$this->keep_for_next_sweep( $attendee_id, $payment_token, 'the Stripe checkout session is still open past its expiry', $session );
-			return;
+			return $this->lookup_result( self::LOOKUP_OPEN, 'the Stripe checkout session is still open past its expiry', $session, (int) ( $session['expires_at'] ?? 0 ) );
 		}
-
-		$camptix->log( 'Stripe checkout timed out, but the session settled; processing it.', $attendee_id, $session );
 
 		$order = $this->get_order( $payment_token );
 		if ( ! $order ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no order found for the payment token', $session );
 		}
 
+		$camptix->log( 'Stripe checkout timed out, but the session settled; processing it.', $attendee_id, $session );
 		$this->process_payment_return_session( $payment_token, $session, $order, false /* non-interactive */ );
-	}
 
-	/**
-	 * The session couldn't be looked up: keep the order's drafts for the next sweep, unless the
-	 * order is already past the 24 hours (plus grace) a draft with no recorded expiry gets, so a
-	 * broken lookup can't hold seats forever. The checkout time is tix_timestamp, or the post
-	 * date if that is missing, so the cap always has a floor.
-	 */
-	protected function keep_for_next_sweep( $attendee_id, $payment_token, $why, $data ) {
-		/** @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		$checked_out = (int) get_post_meta( $attendee_id, 'tix_timestamp', true ) ?: (int) get_post_timestamp( $attendee_id );
-		if ( $checked_out + DAY_IN_SECONDS + CampTix_Plugin::DRAFT_LIFETIME_GRACE <= time() ) {
-			$camptix->log( sprintf( 'At timeout, %s; giving up after 24 hours.', $why ), $attendee_id, $data );
-			return;
-		}
-
-		$camptix->log( sprintf( 'At timeout, %s; keeping the draft for the next sweep.', $why ), $attendee_id, $data );
-		$camptix->set_order_session_expiry( $payment_token, time() );
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'the Stripe checkout session settled', $session );
 	}
 
 	/**

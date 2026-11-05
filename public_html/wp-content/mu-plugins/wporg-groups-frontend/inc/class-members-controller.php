@@ -19,8 +19,8 @@ defined( 'WPINC' ) || die();
  * Members REST controller.
  *
  * Routes:
- *   GET    /wporg-groups/v1/members       — list group members
- *   GET    /wporg-groups/v1/members/{id}  — single member
+ *   GET    /wporg-groups/v1/members       — list group members (logged in)
+ *   GET    /wporg-groups/v1/members/{id}  — single member (logged in)
  *   POST   /wporg-groups/v1/members/me/role — change your own role (beta groups only)
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
@@ -79,7 +79,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'per_page' => array(
 							'default'           => 100,
@@ -109,7 +109,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'id' => array(
 							'validate_callback' => function ( $param ) {
@@ -219,6 +219,28 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Check permissions for reading the member list or a single member.
+	 *
+	 * People join a group to hear about its events, not to be listed
+	 * publicly, so the list is only shown to logged-in visitors (the same
+	 * line Meetup draws). The Members page applies the same rule in
+	 * `group-members/render.php`.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function read_permissions_check() {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in to see the members of this group.', 'wordcamporg' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		return true;
 	}
 
 	/**
@@ -626,7 +648,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 
 		return array(
 			'id'        => $user->ID,
-			'name'      => $user->display_name,
+			'name'      => self::member_name( $user ),
 			'avatar'    => get_avatar_url( $user->ID, array( 'size' => 128 ) ),
 			'profile'   => sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename ),
 			'bio'       => wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" ),
@@ -661,7 +683,23 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			return $weight_a - $weight_b;
 		}
 
-		return strcasecmp( $a->display_name, $b->display_name );
+		return strcasecmp( self::member_name( $a ), self::member_name( $b ) );
+	}
+
+	/**
+	 * The name to show for a member.
+	 *
+	 * `display_name` isn't required on WordPress.org accounts and some older
+	 * ones have it empty, which left a blank card on the Members page. Fall
+	 * back to the username so every member has a visible name.
+	 *
+	 * @param \WP_User $user User object.
+	 * @return string
+	 */
+	public static function member_name( \WP_User $user ): string {
+		$name = trim( (string) $user->display_name );
+
+		return '' !== $name ? $name : (string) $user->user_login;
 	}
 
 	/**

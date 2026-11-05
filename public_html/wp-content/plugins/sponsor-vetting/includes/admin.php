@@ -333,6 +333,10 @@ function get_imported_fields( string $text ): array {
 	$fields  = array();
 	$label   = '';
 
+	if ( '' === trim( $text ) ) {
+		return $fields;
+	}
+
 	foreach ( preg_split( '/\R/', trim( $text ) ) as $line ) {
 		if ( preg_match( '/^([^:]{1,60}): (.*)$/', $line, $match ) && in_array( strtolower( $match[1] ), $columns, true ) ) {
 			$label            = $match[1];

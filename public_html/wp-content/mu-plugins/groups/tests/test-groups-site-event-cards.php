@@ -351,6 +351,83 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * Each grid's cards sit under an `h2`, so their `h3` titles don't skip a
+	 * level. The front page has its visible "Upcoming events" heading; the
+	 * archive has only its `h1`, so it carries a visually hidden one.
+	 */
+	public function test_card_grids_sit_under_an_h2() {
+		foreach ( self::CARD_GRID_TEMPLATES as $template ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as test-groups-site-event-info-card.php does.
+			$markup = file_get_contents( self::THEME_DIR . 'templates/' . $template );
+
+			$this->assertNotFalse( $markup, "Could not read {$template}." );
+
+			$last_heading_level = null;
+
+			foreach ( $this->flatten_blocks( parse_blocks( $markup ) ) as $block ) {
+				if ( 'core/post-template' === $block['blockName'] ) {
+					break;
+				}
+
+				if ( 'core/heading' === $block['blockName'] ) {
+					$last_heading_level = $block['attrs']['level'] ?? 2;
+				}
+			}
+
+			$this->assertSame( 2, $last_heading_level, "The cards in {$template} no longer follow an h2." );
+		}
+	}
+
+	/**
+	 * The card's title is its only heading. The venue name is a paragraph:
+	 * as an `h4` it doubled the number of headings on a page of cards.
+	 */
+	public function test_card_venue_is_not_a_heading() {
+		ob_start();
+		include self::THEME_DIR . 'patterns/event-card.php';
+		$blocks = $this->flatten_blocks( parse_blocks( ob_get_clean() ) );
+
+		$venue = $this->find_block( $blocks, 'gatherpress/venue' );
+
+		$this->assertNotNull( $venue, 'The card no longer shows its venue.' );
+
+		$venue_title = $this->find_block( $venue['innerBlocks'], 'core/post-title' );
+
+		$this->assertNotNull( $venue_title, "The card's venue no longer shows its name." );
+		$this->assertSame( 0, $venue_title['attrs']['level'] ?? null, "The card's venue name is a heading again." );
+
+		$titles = array_filter(
+			$blocks,
+			static function ( $block ) {
+				return 'core/post-title' === $block['blockName'];
+			}
+		);
+
+		$this->assertSame( 3, reset( $titles )['attrs']['level'] ?? null, "The card's title is no longer an h3." );
+	}
+
+	/**
+	 * List a parsed block tree in document order, parents before children.
+	 *
+	 * @param array $blocks Parsed blocks to walk.
+	 *
+	 * @return array The blocks, flattened.
+	 */
+	private function flatten_blocks( array $blocks ): array {
+		$flat = array();
+
+		foreach ( $blocks as $block ) {
+			$flat[] = $block;
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$flat = array_merge( $flat, $this->flatten_blocks( $block['innerBlocks'] ) );
+			}
+		}
+
+		return $flat;
+	}
+
+	/**
 	 * Create a published event post and return its post ID.
 	 *
 	 * @param string $title The event title.

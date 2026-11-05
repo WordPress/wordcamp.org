@@ -174,7 +174,7 @@ function render_conversations( array $conversations ): void {
 }
 
 /**
- * Loads the styles for the company and sponsorship screens, and the script that filters their log.
+ * Loads the styles for the company and sponsorship screens.
  *
  * @param string $hook_suffix The admin page.
  */
@@ -185,10 +185,9 @@ function enqueue_admin_assets( string $hook_suffix ): void {
 		return;
 	}
 
-	$dir = dirname( __DIR__ );
+	$plugin_dir = dirname( __DIR__ );
 
-	wp_enqueue_style( 'sv-admin', plugins_url( 'css/admin.css', __DIR__ ), array(), (string) filemtime( $dir . '/css/admin.css' ) );
-	wp_enqueue_script( 'sv-log', plugins_url( 'js/log.js', __DIR__ ), array(), (string) filemtime( $dir . '/js/log.js' ), true );
+	wp_enqueue_style( 'sv-admin', plugins_url( 'css/admin.css', $plugin_dir . '/bootstrap.php' ), array(), (string) filemtime( $plugin_dir . '/css/admin.css' ) );
 }
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
 
@@ -209,28 +208,13 @@ function render_log_box( \WP_Post $post ): void {
 		<textarea id="sv-note" name="sv_note" rows="2" class="widefat" placeholder="<?php esc_attr_e( 'Add a private note…', 'wordcamporg' ); ?>"></textarea>
 		<span class="description"><?php esc_html_e( 'Only the vetting team sees notes. Links become clickable.', 'wordcamporg' ); ?></span>
 	</p>
-	<?php
-	if ( ! $days ) {
-		return;
-	}
-	?>
-
-	<div class="sv-log-filter hide-if-no-js" role="group" aria-label="<?php esc_attr_e( 'Show', 'wordcamporg' ); ?>">
-		<button type="button" class="button button-small" aria-pressed="true" data-sv-log-filter="all"><?php esc_html_e( 'All activity', 'wordcamporg' ); ?></button>
-		<button type="button" class="button button-small" aria-pressed="false" data-sv-log-filter="notes"><?php esc_html_e( 'Notes only', 'wordcamporg' ); ?></button>
-	</div>
-
-	<?php if ( ! array_filter( array_merge( ...array_values( $days ) ), __NAMESPACE__ . '\is_log_note' ) ) : ?>
-		<p class="sv-log-no-notes"><?php esc_html_e( 'No notes yet.', 'wordcamporg' ); ?></p>
-	<?php endif; ?>
 
 	<?php foreach ( $days as $entries ) : ?>
-		<?php $has_notes = (bool) array_filter( $entries, __NAMESPACE__ . '\is_log_note' ); ?>
-		<section class="sv-log-day<?php echo $has_notes ? ' sv-log-day-has-notes' : ''; ?>">
+		<section class="sv-log-day">
 			<h3><?php echo esc_html( wp_date( 'l, F j, Y', (int) $entries[0]['time'] ) ); ?></h3>
 			<ol>
 				<?php foreach ( $entries as $entry ) : ?>
-					<li class="<?php echo is_log_note( $entry ) ? 'sv-log-note' : 'sv-log-event'; ?>">
+					<li>
 						<time datetime="<?php echo esc_attr( wp_date( 'c', (int) $entry['time'] ) ); ?>"><?php echo esc_html( wp_date( 'H:i', (int) $entry['time'] ) ); ?></time>
 						<div><?php echo wp_kses_post( get_log_entry_html( $entry, $post->post_type ) ); ?></div>
 					</li>
@@ -239,16 +223,6 @@ function render_log_box( \WP_Post $post ): void {
 		</section>
 	<?php endforeach; ?>
 	<?php
-}
-
-/**
- * Whether a log entry is something someone wrote, which the notes-only view keeps, rather than something that happened.
- *
- * @param array $entry The entry, as get_log() returns it.
- * @return bool
- */
-function is_log_note( array $entry ): bool {
-	return isset( $entry['text'] ) && ! str_starts_with( (string) $entry['text'], 'Imported from Airtable.' );
 }
 
 /**

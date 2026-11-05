@@ -11,18 +11,6 @@
 	margin-top: 4px;
 }
 
-.sv-log-filter {
-	display: flex;
-	gap: 4px;
-	margin-bottom: 8px;
-}
-
-.sv-log-filter .button[aria-pressed="true"] {
-	background: #2271b1;
-	border-color: #2271b1;
-	color: #fff;
-}
-
 .sv-log-day h3 {
 	margin: 18px 0 6px;
 	padding-bottom: 4px;
@@ -150,20 +138,6 @@
 	padding: 3px 0;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
-}
-
-.sv-log-no-notes {
-	display: none;
-	color: #646970;
-}
-
-.sv-log-notes-only .sv-log-no-notes {
-	display: block;
-}
-
-.sv-log-notes-only .sv-log-event,
-.sv-log-notes-only .sv-log-day:not(.sv-log-day-has-notes) {
-	display: none;
 }
 
 @media screen and (max-width: 600px) {

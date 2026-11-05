@@ -156,6 +156,54 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 }
 
 /**
+ * Loads the script that redraws the vetting box after the block editor saves, since that doesn't reload the page.
+ *
+ * Without it, a new sponsor's box keeps asking organizers to save it after they have.
+ *
+ * @param string $hook_suffix The admin page.
+ */
+function enqueue_organizer_script( string $hook_suffix ): void {
+	$screen = get_current_screen();
+
+	if ( is_central() || ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ), true ) || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
+		return;
+	}
+
+	$path = dirname( __DIR__ ) . '/js/organizer.js';
+
+	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', __DIR__ ), array( 'wp-data', 'wp-editor', 'wp-edit-post' ), (string) filemtime( $path ), true );
+	wp_add_inline_script(
+		'sv-organizer',
+		'window.svVettingBox = ' . wp_json_encode(
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'sv_vetting_box' ),
+			)
+		) . ';',
+		'before'
+	);
+}
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_organizer_script' );
+
+/**
+ * Sends the vetting box's current contents, for the script that redraws it.
+ */
+function send_organizer_meta_box(): void {
+	check_ajax_referer( 'sv_vetting_box' );
+
+	$sponsor = get_post( absint( $_GET['sponsor_id'] ?? 0 ) );
+
+	if ( is_central() || ! $sponsor || 'wcb_sponsor' !== $sponsor->post_type || ! current_user_can( 'edit_post', $sponsor->ID ) ) {
+		wp_send_json_error( null, 403 );
+	}
+
+	ob_start();
+	render_organizer_meta_box( $sponsor );
+	wp_send_json_success( ob_get_clean() );
+}
+add_action( 'wp_ajax_sv_vetting_box', __NAMESPACE__ . '\send_organizer_meta_box' );
+
+/**
  * Adds the vetting column to a camp's sponsor list.
  *
  * @param string[] $columns The list's columns.

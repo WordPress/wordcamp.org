@@ -228,6 +228,59 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * On an event page, only the event's own image loads right away. The
+	 * single template renders inside the main loop, so core counted the
+	 * "More events" cards at the bottom of the page among the first images
+	 * on it and downloaded them alongside the event's image.
+	 */
+	public function test_event_page_lazy_loads_other_events_images() {
+		$this->create_event( 'Other Meetup 1', true );
+		$this->create_event( 'Other Meetup 2', true );
+
+		$viewed_id = get_post( $this->create_event( 'Viewed Meetup', true ) )->post_parent;
+
+		add_filter( 'query_loop_block_query_vars', 'WordCamp\\Groups\\Site\\exclude_current_event_from_query', 10, 2 );
+		add_action( 'begin_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\start_other_event_thumbnail' );
+		add_action( 'end_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\end_other_event_thumbnail' );
+
+		// Core keeps its per-page image count and high-priority flag in
+		// statics, so start this page from zero like a real request does.
+		wp_increase_content_media_count( - wp_increase_content_media_count( 0 ) );
+		wp_high_priority_element_flag( true );
+
+		$this->go_to( home_url( "?p={$viewed_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ) );
+
+		// Core skips all of this in the admin, which the suite otherwise is.
+		set_current_screen( 'front' );
+
+		// A block theme renders the whole single template inside this loop.
+		the_post();
+
+		$hero = new \WP_Block(
+			parse_blocks( '<!-- wp:post-featured-image /-->' )[0],
+			array(
+				'postId'   => $viewed_id,
+				'postType' => 'gatherpress_event',
+			)
+		);
+		$grid = str_replace( '"inherit":false', '"inherit":false,"groups_site_exclude_current":true', self::GRID );
+
+		$images    = array();
+		$processor = new \WP_HTML_Tag_Processor( $hero->render() . do_blocks( $grid ) );
+
+		while ( $processor->next_tag( 'IMG' ) ) {
+			$images[] = $processor->get_attribute( 'loading' ) . '/' . $processor->get_attribute( 'fetchpriority' );
+		}
+
+		$this->assertSame(
+			array( '/high', 'lazy/', 'lazy/' ),
+			$images,
+			'Only the event\'s own image should load right away; the "More events" cards should be lazy.'
+		);
+	}
+
+	/**
 	 * An event with no image keeps the same 16:9 region so its neighbours in
 	 * the grid row don't start their titles at a different height. Core
 	 * renders the featured-image block as an empty string in that case, so

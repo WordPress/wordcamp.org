@@ -224,6 +224,53 @@ function exclude_current_event_from_query( array $query_vars, \WP_Block $block )
 add_filter( 'query_loop_block_query_vars', __NAMESPACE__ . '\exclude_current_event_from_query', 10, 2 );
 
 /**
+ * Lazy-load other events' images on an event page.
+ *
+ * A block theme renders the whole single template inside the main query's
+ * loop, so core counts every image on the page towards the first few it
+ * loads right away (`wp_omit_loading_attr_threshold()`, 3 by default). The
+ * event's own image is the first. The next two were the first cards of the
+ * "More events from this group" grid at the bottom of the page, which then
+ * downloaded alongside the event's image, the page's Largest Contentful
+ * Paint, and slowed it down.
+ *
+ * Any featured image on an event page that isn't the event's own is now
+ * lazy. Core fires `begin_fetch_post_thumbnail_html` and
+ * `end_fetch_post_thumbnail_html` around each featured image, so the filter
+ * applies to that one image only. Core still adds `auto` to its `sizes`,
+ * because the image is lazy by the time `sizes` is built.
+ *
+ * @param int $post_id The post whose featured image is about to render.
+ */
+function start_other_event_thumbnail( $post_id ): void {
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() !== (int) $post_id ) {
+		add_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+	}
+}
+add_action( 'begin_fetch_post_thumbnail_html', __NAMESPACE__ . '\start_other_event_thumbnail' );
+
+/**
+ * Remove the filter `start_other_event_thumbnail()` added.
+ */
+function end_other_event_thumbnail(): void {
+	remove_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+}
+add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_other_event_thumbnail' );
+
+/**
+ * Make an image lazy and drop any high fetch priority core gave it.
+ *
+ * @param array $loading_attrs The loading attributes core chose.
+ * @return array The loading attributes to use.
+ */
+function lazy_load_other_event_thumbnail( $loading_attrs ): array {
+	unset( $loading_attrs['fetchpriority'] );
+	$loading_attrs['loading'] = 'lazy';
+
+	return $loading_attrs;
+}
+
+/**
  * Drop the "More events from this group" section when it has nothing to show.
  *
  * The Post Template renders nothing for an empty query, but the section's

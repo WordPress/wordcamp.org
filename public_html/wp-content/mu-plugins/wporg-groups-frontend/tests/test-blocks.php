@@ -111,6 +111,10 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	/**
 	 * The attendee summary is a native button and its avatar stack is
 	 * decorative, so attendee names do not pollute the control's name.
+	 *
+	 * Its name starts with the count it shows, so a voice-control user can
+	 * say what they see (WCAG 2.5.3, Label in Name). An `aria-label` would
+	 * replace that text, so what the button does follows it as hidden text.
 	 */
 	public function test_event_rsvp_summary_uses_accessible_markup() {
 		$event_id = self::factory()->post->create(
@@ -139,6 +143,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'actions.handleSummaryKeydown', $output );
 		$this->assertSame( 2, substr_count( $output, 'alt=""' ) );
 		$this->assertStringNotContainsString( 'alt="Avatar Name Must Stay Decorative"', $output );
+
+		$this->assertSame( 1, preg_match( '/<button[^>]*wporg-event-rsvp__summary.*?<\/button>/s', $output, $summary ) );
+		$this->assertStringNotContainsString( 'aria-label', strtok( $summary[0], '>' ), 'An aria-label would hide the visible count from the button\'s name.' );
+		$this->assertSame(
+			\WordCamp\Groups\Frontend\RSVP_Labels\get_count_label( 1, false ) . ' View attendees',
+			trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $summary[0] ) ) ),
+			'The button\'s name should be its visible count, then what it does.'
+		);
 	}
 
 	/**

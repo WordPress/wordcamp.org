@@ -50,7 +50,7 @@ class Test_Admin extends WP_UnitTestCase {
 			)
 		);
 
-		add_note( $company_id, "Imported from Airtable.\nCurrent event name: WordCamp Narnia\nPrivate notes: first line\nsecond line" );
+		add_note( $company_id, "Imported from Airtable.\nCurrent event name: WordCamp Narnia\nPrivate notes: first line\nUpdate: they agreed" );
 		add_note( $company_id, "Airtable comment by Community Support:\nPlease vet for WordCamp Narnia" );
 		add_post_meta(
 			$company_id,
@@ -64,17 +64,17 @@ class Test_Admin extends WP_UnitTestCase {
 		);
 
 		wp_set_current_user( $vetter_id );
-		add_note( $company_id, '<script>alert(1)</script> See https://example.org/findings' );
+		add_note( $company_id, '<script>alert(1)</script> See https://acme.example/findings' );
 
 		ob_start();
 		render_log_box( get_post( $company_id ) );
 		$html = (string) ob_get_clean();
 
 		$this->assertStringNotContainsString( '<script>', $html );
-		$this->assertStringContainsString( '&lt;script&gt;alert(1)&lt;/script&gt; See <a href="https://example.org/findings">https://example.org/findings</a>', $html );
+		$this->assertStringContainsString( '&lt;script&gt;alert(1)&lt;/script&gt; See <a href="https://acme.example/findings" rel="nofollow" target="_blank">https://acme.example/findings</a>', $html );
 		$this->assertStringContainsString( '<a class="sv-log-author" href="https://profiles.wordpress.org/jane-vetter/" target="_blank" rel="noopener noreferrer">Jane Vetter</a> added a note', $html );
 		$this->assertStringContainsString( 'System</strong> changed the status from <span class="sv-log-status sv-log-status-sv-needs-vetting">Needs Vetting</span> to <span class="sv-log-status sv-log-status-sv-in-progress">In Progress</span>', $html );
 		$this->assertStringContainsString( '<strong>Community Support</strong></p><div class="sv-log-text">Please vet for WordCamp Narnia</div>', $html );
-		$this->assertStringContainsString( '<tr><th scope="row">Current event name</th><td>WordCamp Narnia</td></tr><tr><th scope="row">Private notes</th><td>first line' . "\n" . 'second line</td></tr>', $html );
+		$this->assertStringContainsString( '<tr><th scope="row">Current event name</th><td>WordCamp Narnia</td></tr><tr><th scope="row">Private notes</th><td>first line' . "\n" . 'Update: they agreed</td></tr>', $html );
 	}
 }

@@ -220,6 +220,10 @@ function render_log_box( \WP_Post $post ): void {
 		<button type="button" class="button button-small" aria-pressed="false" data-sv-log-filter="notes"><?php esc_html_e( 'Notes only', 'wordcamporg' ); ?></button>
 	</div>
 
+	<?php if ( ! array_filter( array_merge( ...array_values( $days ) ), __NAMESPACE__ . '\is_log_note' ) ) : ?>
+		<p class="sv-log-no-notes"><?php esc_html_e( 'No notes yet.', 'wordcamporg' ); ?></p>
+	<?php endif; ?>
+
 	<?php foreach ( $days as $entries ) : ?>
 		<?php $has_notes = (bool) array_filter( $entries, __NAMESPACE__ . '\is_log_note' ); ?>
 		<section class="sv-log-day<?php echo $has_notes ? ' sv-log-day-has-notes' : ''; ?>">
@@ -299,7 +303,7 @@ function get_log_entry_html( array $entry, string $post_type ): string {
 			$html .= '<details><summary>' . esc_html__( 'Imported details', 'wordcamporg' ) . '</summary><table class="sv-log-fields">';
 
 			foreach ( $fields as $label => $value ) {
-				$html .= '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . make_clickable( esc_html( $value ) ) . '</td></tr>';
+				$html .= '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . get_clickable_html( $value ) . '</td></tr>';
 			}
 
 			$html .= '</table></details>';
@@ -318,21 +322,25 @@ function get_log_entry_html( array $entry, string $post_type ): string {
 /**
  * Splits the fields the Airtable import listed, one `Label: value` per line, into a table's rows.
  *
- * A line without a label continues the value before it, since some values span lines.
+ * Only the export's own columns start a row, so a line inside a value that happens to look like `Label: value` stays
+ * part of it. Any other line continues the value before it, and nothing is dropped.
  *
  * @param string $text The lines after the import's first line.
  * @return string[] Values, keyed by label.
  */
 function get_imported_fields( string $text ): array {
-	$fields = array();
-	$label  = '';
+	$columns = array( 'current event name', 'current event date', 'current event email', 'current event sponsorship amount in usd', 'past sponsorship total amount (qbo since 2016)', 'list of past events sponsored', '5ftf', 'type of business', 'private notes', 'contract', 'batch', 'approval date', 'previously approved dates (if any)', 'email conversation link' );
+	$fields  = array();
+	$label   = '';
 
 	foreach ( preg_split( '/\R/', trim( $text ) ) as $line ) {
-		if ( preg_match( '/^([^:]{1,60}): (.*)$/', $line, $match ) ) {
+		if ( preg_match( '/^([^:]{1,60}): (.*)$/', $line, $match ) && in_array( strtolower( $match[1] ), $columns, true ) ) {
 			$label            = $match[1];
 			$fields[ $label ] = $match[2];
-		} elseif ( '' !== $label ) {
+		} elseif ( isset( $fields[ $label ] ) ) {
 			$fields[ $label ] .= "\n" . $line;
+		} else {
+			$fields[ $label ] = $line;
 		}
 	}
 
@@ -381,7 +389,17 @@ function get_log_status_html( string $post_type, string $status ): string {
  * @return string HTML.
  */
 function get_log_text_html( string $text ): string {
-	return '<div class="sv-log-text">' . make_clickable( esc_html( trim( $text ) ) ) . '</div>';
+	return '<div class="sv-log-text">' . get_clickable_html( trim( $text ) ) . '</div>';
+}
+
+/**
+ * Escapes text and makes its links clickable, opening in a new tab so a half-written note isn't lost.
+ *
+ * @param string $text The text.
+ * @return string HTML.
+ */
+function get_clickable_html( string $text ): string {
+	return links_add_target( make_clickable( esc_html( $text ) ) );
 }
 
 /**

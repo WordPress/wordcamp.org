@@ -152,6 +152,15 @@
 	overflow-wrap: anywhere;
 }
 
+.sv-log-no-notes {
+	display: none;
+	color: #646970;
+}
+
+.sv-log-notes-only .sv-log-no-notes {
+	display: block;
+}
+
 .sv-log-notes-only .sv-log-event,
 .sv-log-notes-only .sv-log-day:not(.sv-log-day-has-notes) {
 	display: none;

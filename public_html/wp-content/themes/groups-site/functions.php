@@ -104,10 +104,10 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
 /**
  * Adjust the featured image inside event card grids.
  *
- * Two changes, both scoped so the single-event hero is left alone. The guard
- * tests `is_singular( 'gatherpress_event' )` rather than a bare
- * `is_singular()`: the group front page is a static Page, so it is singular
- * too, and the broader test excluded the very cards this is meant to fix.
+ * Two changes, applied to every event card grid: the archive, the front page
+ * and an event page's "More events from this group". On an event page only
+ * the event's own image, the page's hero, is left alone. It isn't a card,
+ * has no link, and shouldn't gain a placeholder when the event has no image.
  *
  *   - Take the image link out of the tab order and hide it from screen
  *     readers. It goes to the same place as the title link, and its image's
@@ -130,13 +130,18 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  */
 function filter_event_card_featured_image( string $content, array $block ): string {
 	$post_type = $block['context']['postType'] ?? get_post_type();
+	$post_id   = (int) ( $block['context']['postId'] ?? get_the_ID() );
 
-	if ( 'gatherpress_event' !== $post_type || is_singular( 'gatherpress_event' ) ) {
+	if ( 'gatherpress_event' !== $post_type ) {
+		return $content;
+	}
+
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() === $post_id ) {
 		return $content;
 	}
 
 	if ( '' === trim( $content ) ) {
-		$permalink = get_permalink( $block['context']['postId'] ?? get_the_ID() );
+		$permalink = get_permalink( $post_id );
 
 		return sprintf(
 			'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true">%s</div>',

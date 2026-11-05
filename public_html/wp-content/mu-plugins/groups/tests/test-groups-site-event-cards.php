@@ -281,6 +281,60 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The "More events" cards on an event page get the same treatment as
+	 * the archive's: the image link is hidden from screen readers and out of
+	 * the tab order, and an image-less card gets the placeholder. The event's
+	 * own image at the top of the page isn't a card, so an event with no
+	 * image still gets no placeholder there.
+	 */
+	public function test_event_page_cards_get_the_card_image_treatment() {
+		$this->create_event( 'Pictured Meetup', true );
+		$this->create_event( 'Imageless Meetup', false );
+
+		$viewed_id = $this->create_event_post( 'Viewed Meetup' );
+
+		add_filter( 'query_loop_block_query_vars', 'WordCamp\\Groups\\Site\\exclude_current_event_from_query', 10, 2 );
+
+		$this->go_to( home_url( "?p={$viewed_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ) );
+
+		// A block theme renders the whole single template inside this loop.
+		the_post();
+
+		$hero = new \WP_Block(
+			parse_blocks( '<!-- wp:post-featured-image /-->' )[0],
+			array(
+				'postId'   => $viewed_id,
+				'postType' => 'gatherpress_event',
+			)
+		);
+
+		$this->assertSame( '', trim( $hero->render() ), "The event's own missing image gained a placeholder." );
+
+		$grid = do_blocks( str_replace( '"inherit":false', '"inherit":false,"groups_site_exclude_current":true', self::GRID ) );
+
+		$this->assertSame( 1, substr_count( $grid, 'groups-site-featured-placeholder' ), 'The image-less card has no placeholder.' );
+
+		$processor = new \WP_HTML_Tag_Processor( $grid );
+		$links     = 0;
+
+		while ( $processor->next_tag( array( 'class_name' => 'wp-block-post-featured-image' ) ) ) {
+			// The placeholder hides its wrapper; a real image hides its link.
+			$wrapper_hidden = 'true' === $processor->get_attribute( 'aria-hidden' );
+
+			$this->assertTrue( $processor->next_tag( 'a' ), 'A card image is no longer a link.' );
+			$this->assertSame( '-1', $processor->get_attribute( 'tabindex' ), 'A card image link is in the tab order.' );
+			$this->assertTrue(
+				$wrapper_hidden || 'true' === $processor->get_attribute( 'aria-hidden' ),
+				'A card image link is exposed to screen readers.'
+			);
+			++$links;
+		}
+
+		$this->assertSame( 2, $links, 'Both "More events" cards should have an image region.' );
+	}
+
+	/**
 	 * An event with no image keeps the same 16:9 region so its neighbours in
 	 * the grid row don't start their titles at a different height. Core
 	 * renders the featured-image block as an empty string in that case, so

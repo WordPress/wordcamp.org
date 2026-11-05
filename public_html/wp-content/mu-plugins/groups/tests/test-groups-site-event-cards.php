@@ -202,6 +202,65 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The archive grid renders from the main query, so core treats its first
+	 * cards as the page's leading content: no lazy-loading for the images in
+	 * the first viewport, and the first one fetched at high priority. It is
+	 * the page's largest contentful paint. A grid on its own query would
+	 * lazy-load every card.
+	 */
+	public function test_archive_grid_loads_its_first_card_images_eagerly() {
+		for ( $i = 1; $i <= 4; $i++ ) {
+			$this->create_event( "Event {$i}", true );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk.
+		$markup = file_get_contents( self::THEME_DIR . 'templates/archive-gatherpress_event.html' );
+		$grid   = $this->find_block( parse_blocks( $markup ), 'core/query' );
+
+		$this->assertNotNull( $grid, 'archive-gatherpress_event.html no longer holds a core/query.' );
+		$this->assertTrue( $grid['attrs']['query']['inherit'] ?? false, 'The archive grid no longer inherits the main query.' );
+
+		/*
+		 * The test events have no dates, so only the "All" view lists them.
+		 * This bootstrap defines `WP_ADMIN`, and both the archive's main query
+		 * and core's lazy-loading rules stand aside in the admin. `go_to()`
+		 * clears `$current_screen`, so the front-end screen goes in from
+		 * `parse_request`, inside it, ahead of the main query.
+		 */
+		$front = static function (): void {
+			set_current_screen( 'front' );
+		};
+
+		add_action( 'parse_request', $front );
+		$this->go_to( home_url( '/?post_type=gatherpress_event&event_time=all' ) );
+		remove_action( 'parse_request', $front );
+
+		// Both counters are per request in core, and earlier tests moved them.
+		wp_increase_content_media_count( - wp_increase_content_media_count( 0 ) );
+		wp_high_priority_element_flag( true );
+
+		$output = render_block( $grid );
+
+		$_GET = array();
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+		$images    = array();
+
+		while ( $processor->next_tag( 'img' ) ) {
+			$images[] = array(
+				'loading'       => $processor->get_attribute( 'loading' ),
+				'fetchpriority' => $processor->get_attribute( 'fetchpriority' ),
+			);
+		}
+
+		$this->assertCount( 4, $images, 'Every card should have rendered its featured image.' );
+		$this->assertNull( $images[0]['loading'], 'The first card image is lazy-loaded.' );
+		$this->assertSame( 'high', $images[0]['fetchpriority'], 'The first card image is not fetched at high priority.' );
+		$this->assertNull( $images[1]['loading'], 'The second card image is lazy-loaded.' );
+		$this->assertSame( 'lazy', $images[3]['loading'], 'Card images past the first viewport should still be lazy-loaded.' );
+	}
+
+	/**
 	 * The card renders the event's featured image, with the image link kept
 	 * out of the tab order — the stretched title link already opens the card.
 	 */

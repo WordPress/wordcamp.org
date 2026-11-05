@@ -4,6 +4,8 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
+use function WordCamp\Groups\GatherPress_Tweaks\get_event_archive_query_vars;
+use function WordCamp\Groups\GatherPress_Tweaks\get_legacy_event_archive_pagination_redirect;
 use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
@@ -14,6 +16,16 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
  * @group groups
  */
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
+
+	/**
+	 * Drop the query string `go_to()` leaves in `$_GET`, which the archive's
+	 * filters would otherwise read in the next test.
+	 */
+	protected function tearDown(): void {
+		$_GET = array();
+
+		parent::tearDown();
+	}
 
 	/**
 	 * Groups-network sites always show the event timezone and never offer
@@ -400,7 +412,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Build the tax query the archive's Query Loop would run.
+	 * Build the query arguments the archive's grid would run with.
 	 *
 	 * @param string|null $event_format   The `event_format` query arg to simulate.
 	 * @param string|null $event_language The `event_language` query arg to simulate.
@@ -425,25 +437,11 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$_GET['event_language'] = $event_language;
 		}
 
-		$block = new \WP_Block(
+		$query_vars = get_event_archive_query_vars(
 			array(
-				'blockName'   => 'core/query',
-				'attrs'       => array(),
-				'innerBlocks' => array(),
-			)
-		);
-
-		$block->context = array(
-			'query' => array(
-				'postType'                => 'gatherpress_event',
+				'post_type'               => 'gatherpress_event',
 				'gatherpress_event_query' => 'upcoming',
-			),
-		);
-
-		$query_vars = apply_filters(
-			'query_loop_block_query_vars',
-			array( 'post_type' => 'gatherpress_event' ),
-			$block
+			)
 		);
 
 		unset( $_GET['event_format'], $_GET['event_language'], $_GET['event_topic'] );
@@ -551,6 +549,202 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
 			$this->assertArrayNotHasKey( 'tax_query', $query_vars );
 		}
+	}
+
+	/**
+	 * Run `go_to()` as a front-end request.
+	 *
+	 * This bootstrap defines `WP_ADMIN`, and the archive's main query is left
+	 * alone in the admin. `go_to()` clears `$current_screen` before it runs
+	 * the request, so the front-end screen goes in from `parse_request`, which
+	 * fires inside it, ahead of the main query.
+	 *
+	 * @param string $url The URL to load.
+	 */
+	private function go_to_front_end( string $url ): void {
+		$front = static function (): void {
+			set_current_screen( 'front' );
+		};
+
+		add_action( 'parse_request', $front );
+		$this->go_to( $url );
+		remove_action( 'parse_request', $front );
+	}
+
+	/**
+	 * Load the events archive as the main query.
+	 *
+	 * Through its plain `?post_type=` URL, since rewrite rules aren't flushed
+	 * in this suite. `go_to()` also fills `$_GET` from the URL, which is
+	 * where the archive's filters read their state from.
+	 *
+	 * @param array  $args View state to put in the query string.
+	 * @param string $url  The archive URL to start from.
+	 *
+	 * @return \WP_Query The main query.
+	 */
+	private function go_to_event_archive( array $args = array(), string $url = '/?post_type=gatherpress_event' ): \WP_Query {
+		$this->go_to_front_end( add_query_arg( $args, home_url( $url ) ) );
+
+		$this->assertTrue( is_post_type_archive( 'gatherpress_event' ), 'Could not set up the events archive request.' );
+
+		return $GLOBALS['wp_query'];
+	}
+
+	/**
+	 * The archive grid inherits the main query, so the main query is what
+	 * has to carry the grid's page size, order and upcoming window.
+	 */
+	public function test_archive_main_query_lists_upcoming_events_twelve_to_a_page() {
+		$query = $this->go_to_event_archive();
+
+		$this->assertSame( 12, $query->get( 'posts_per_page' ) );
+		$this->assertSame( 'upcoming', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 1, $query->get( 'include_unfinished' ) );
+		$this->assertSame( 'datetime', $query->get( 'orderby' ) );
+		$this->assertSame( 'ASC', $query->get( 'order' ) );
+	}
+
+	/**
+	 * The Time filter switches the main query between GatherPress's past and
+	 * upcoming windows, or drops the window for "All".
+	 */
+	public function test_archive_main_query_follows_the_time_filter() {
+		$query = $this->go_to_event_archive( array( 'event_time' => 'past' ) );
+
+		$this->assertSame( 'past', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 0, $query->get( 'include_unfinished' ) );
+		$this->assertSame( 'DESC', $query->get( 'order' ) );
+
+		$query = $this->go_to_event_archive( array( 'event_time' => 'all' ) );
+
+		$this->assertSame( '', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 'date', $query->get( 'orderby' ) );
+		$this->assertSame( 'DESC', $query->get( 'order' ) );
+	}
+
+	/**
+	 * The archive's filters narrow the main query, and what it finds is what
+	 * the grid and its result count show.
+	 */
+	public function test_archive_main_query_applies_the_filters() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query = $this->go_to_event_archive(
+			array(
+				'event_time'   => 'all',
+				'event_format' => 'online',
+			)
+		);
+
+		$this->assertSame( array( $online ), $query->get( 'post__in' ) );
+		$this->assertSame( array( $online ), wp_list_pluck( $query->posts, 'ID' ) );
+		$this->assertSame( 1, $query->found_posts );
+	}
+
+	/**
+	 * A filter that matches nothing leaves an empty archive, not a 404, so
+	 * the grid can show its empty state.
+	 */
+	public function test_archive_with_no_matching_events_is_not_a_404() {
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query = $this->go_to_event_archive( array( 'event_format' => 'online' ) );
+
+		$this->assertSame( array(), $query->posts );
+		$this->assertFalse( is_404() );
+	}
+
+	/**
+	 * Only the archive's main query is changed. The front page and "More
+	 * events" grids run their own queries, which keep their block settings
+	 * and ignore the archive's controls even when the URL carries them.
+	 */
+	public function test_archive_view_state_stays_off_other_event_queries() {
+		$this->make_format_event( 'Online office hours', true );
+		$this->go_to_event_archive( array( 'event_format' => 'online' ) );
+
+		$secondary = new \WP_Query( array( 'post_type' => 'gatherpress_event' ) );
+
+		$this->assertNotSame( 12, $secondary->get( 'posts_per_page' ) );
+		$this->assertSame( '', $secondary->get( 'gatherpress_event_query' ) );
+		$this->assertSame( array(), $secondary->get( 'post__in' ) );
+
+		$block          = new \WP_Block(
+			array(
+				'blockName'   => 'core/post-template',
+				'attrs'       => array(),
+				'innerBlocks' => array(),
+			)
+		);
+		$block->context = array(
+			'query' => array(
+				'postType'                => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+			),
+		);
+
+		$query_vars = array(
+			'post_type'               => 'gatherpress_event',
+			'gatherpress_event_query' => 'upcoming',
+		);
+
+		$this->assertSame( $query_vars, apply_filters( 'query_loop_block_query_vars', $query_vars, $block ) );
+	}
+
+	/**
+	 * Feeds of the archive keep their own query.
+	 */
+	public function test_archive_feed_is_left_alone() {
+		$this->go_to_front_end( home_url( '/?post_type=gatherpress_event&feed=rss2' ) );
+
+		$this->assertTrue( is_feed() );
+		$this->assertSame( '', $GLOBALS['wp_query']->get( 'gatherpress_event_query' ) );
+	}
+
+	/**
+	 * Old Query Loop page links move to the main query's paged URL and keep
+	 * the rest of the view state.
+	 */
+	public function test_legacy_query_loop_page_links_redirect_to_the_paged_archive() {
+		$this->go_to_event_archive(
+			array(
+				'query-page' => '3',
+				'event_time' => 'past',
+			)
+		);
+
+		$location = get_legacy_event_archive_pagination_redirect();
+
+		$this->assertStringContainsString( '/page/3/', $location );
+		$this->assertStringContainsString( 'event_time=past', $location );
+		$this->assertStringNotContainsString( 'query-page', $location );
+	}
+
+	/**
+	 * A Query Loop with an ID names its page argument after it; page 1 needs
+	 * no page in the URL at all.
+	 */
+	public function test_legacy_numbered_query_loop_page_link_redirects_to_page_one() {
+		$this->go_to_event_archive( array( 'query-7-page' => '1' ) );
+
+		$location = get_legacy_event_archive_pagination_redirect();
+
+		$this->assertNotSame( '', $location );
+		$this->assertStringNotContainsString( '/page/', $location );
+		$this->assertStringNotContainsString( 'query-7-page', $location );
+	}
+
+	/**
+	 * Without an old page link, or off the archive, nothing redirects.
+	 */
+	public function test_archive_without_legacy_page_link_does_not_redirect() {
+		$this->go_to_event_archive( array( 'event_time' => 'past' ) );
+		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
+
+		$this->go_to_front_end( home_url( '/?query-page=2' ) );
+		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
 	}
 
 	/**

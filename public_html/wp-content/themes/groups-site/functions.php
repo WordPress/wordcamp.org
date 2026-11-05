@@ -156,14 +156,13 @@ add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_ev
  * through `wp:pattern`, which core only expands at render time, so that
  * scan sees a lone `core/pattern` and skips the priming. Every card then
  * resolves its own thumbnail: one `get_post()` for the attachment plus one
- * `wp_get_attachment_metadata()` lookup, up to twelve cards per archive
- * page.
+ * `wp_get_attachment_metadata()` lookup per card.
  *
  * `loop_start` fires from the first `the_post()` of the loop, before any
  * card renders, which is exactly where core would have primed. Scoped to
- * secondary `gatherpress_event` queries: the main query is primed by
- * whichever template renders it, and no other loop on these sites draws
- * card thumbnails.
+ * secondary `gatherpress_event` queries: the events archive renders its grid
+ * from the main query, which `get_the_post_thumbnail()` primes on its own
+ * while in the loop, and no other loop on these sites draws card thumbnails.
  *
  * @param \WP_Query $query The query starting its loop.
  */

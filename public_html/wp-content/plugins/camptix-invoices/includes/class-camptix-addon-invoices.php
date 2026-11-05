@@ -396,7 +396,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
 		}
 
-		$camptix_opts   = get_option( 'camptix_options' );
+		global $camptix;
+
+		// Sites that never saved the Invoices settings tab have none of its keys stored.
+		$camptix_opts   = array_merge( $camptix->get_default_options(), (array) get_option( 'camptix_options', array() ) );
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
 		$invoice_date   = get_the_date( $camptix_opts['invoice-date-format'], $invoice_id );
 		$invoice_metas  = get_post_meta( $invoice_id, 'invoice_metas', true );
@@ -429,8 +432,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$upload_dir = wp_upload_dir();
 		$tmp_path   = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename, array( 'assets' => array( $logo_file ) ) );
-
-		global $camptix;
 
 		// Only record the document once the PDF verifiably exists, so a generator
 		// failure can't leave the invoice pointing at a file that was never written.

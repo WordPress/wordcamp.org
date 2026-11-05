@@ -283,28 +283,37 @@ final class Plugin {
 		}
 	}
 
-	/** Enqueues occurrence selector assets. */
+	/**
+	 * Enqueues occurrence selector assets.
+	 *
+	 * Only on a page with an active occurrence, which is a date of a series
+	 * viewed on its own page. Everything these assets act on exists only
+	 * there: the stylesheet styles the date selector and the "series has
+	 * ended" notice, both printed by `Context::selector()`, and the script
+	 * drives that selector and tags GatherPress's RSVP requests with the
+	 * date. Every other page was loading a render-blocking stylesheet and a
+	 * script for nothing. `wp_enqueue_scripts` runs after
+	 * `template_redirect`, so the context is already resolved here.
+	 */
 	public function assets(): void {
+		if ( ! Context::get() ) {
+			return;
+		}
+
 		$style_path  = DIR . '/assets/style.css';
 		$script_path = DIR . '/assets/view.js';
 
 		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), (string) filemtime( $style_path ) );
 		wp_enqueue_script( 'gpre', plugin_dir_url( FILE ) . 'assets/view.js', array(), (string) filemtime( $script_path ), true );
 
-		// Only on a date's own page, and only for a series that has one: the
-		// script below uses this to tell GatherPress's RSVP requests which
-		// date they are about. `wp_enqueue_scripts` runs after
-		// `template_redirect`, so the context is already resolved here.
-		if ( Context::get() ) {
-			wp_localize_script(
-				'gpre',
-				'gpreOccurrence',
-				array(
-					'recurrenceId' => Context::recurrence_id(),
-					'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
-				)
-			);
-		}
+		wp_localize_script(
+			'gpre',
+			'gpreOccurrence',
+			array(
+				'recurrenceId' => Context::recurrence_id(),
+				'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
+			)
+		);
 	}
 
 	/**

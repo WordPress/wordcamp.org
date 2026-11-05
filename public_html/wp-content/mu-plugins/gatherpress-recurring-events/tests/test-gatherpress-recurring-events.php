@@ -562,6 +562,42 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The selector's stylesheet and script load only where there's a
+	 * selector: a page with an active occurrence. Everywhere else they were
+	 * a render-blocking stylesheet and a script that did nothing.
+	 */
+	public function test_assets_load_only_with_an_active_occurrence(): void {
+		$plugin = Plugin::get_instance();
+
+		try {
+			$plugin->assets();
+
+			$this->assertFalse( wp_style_is( 'gpre' ), 'The selector stylesheet loaded on a page without an occurrence.' );
+			$this->assertFalse( wp_script_is( 'gpre' ), 'The selector script loaded on a page without an occurrence.' );
+
+			Context::set(
+				(object) array(
+					'series_post_id' => $this->create_published_recurring_event(),
+					'recurrence_id'  => '20260810T100000',
+				)
+			);
+			$plugin->assets();
+
+			$this->assertTrue( wp_style_is( 'gpre' ), 'The selector stylesheet no longer loads on an occurrence page.' );
+			$this->assertTrue( wp_script_is( 'gpre' ), 'The selector script no longer loads on an occurrence page.' );
+			$this->assertStringContainsString(
+				'"recurrenceId":"20260810T100000"',
+				(string) wp_scripts()->get_data( 'gpre', 'data' ),
+				'The script no longer tells RSVP requests which date they are for.'
+			);
+		} finally {
+			Context::set( null );
+			wp_dequeue_style( 'gpre' );
+			wp_dequeue_script( 'gpre' );
+		}
+	}
+
+	/**
 	 * Calendar links on an occurrence name the occurrence once.
 	 *
 	 * GatherPress builds them from `get_permalink()`, which already points at

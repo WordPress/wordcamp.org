@@ -518,6 +518,35 @@ function rebase_url( string $url, string $from_base, string $to_base ): string {
 }
 
 /**
+ * Repair an upload's file path resolved while `switch_to_blog()` is active.
+ *
+ * The same switch that breaks the URL (see `correct_switched_upload_url()`)
+ * breaks the path. Switched, `_wp_upload_dir()` skips `BLOGUPLOADDIR` and
+ * joins the site's relative `upload_path` to `ABSPATH`, which is where
+ * WordPress itself lives (`mu/`), not `WP_CONTENT_DIR`. So a store-site file
+ * read from a group site comes back as `mu/wp-content/blogs.dir/…`, which
+ * doesn't exist. The directory below is what `BLOGUPLOADDIR` would have been,
+ * as `switched_upload_dir()` in the Meetup importer also builds it.
+ *
+ * @param string $path A file path resolved in the store site's context.
+ * @return string The path the file is really at.
+ */
+function correct_switched_upload_path( string $path ): string {
+	// The URL and the path go wrong under the same conditions.
+	if ( ! upload_url_needs_correcting( $path ) ) {
+		return $path;
+	}
+
+	$uploads = wp_get_upload_dir();
+
+	return rebase_url(
+		$path,
+		$uploads['basedir'],
+		WP_CONTENT_DIR . '/blogs.dir/' . get_current_blog_id() . '/files'
+	);
+}
+
+/**
  * Whether a logo would be served as an original too large to show.
  *
  * Logos are drawn at the `medium` size. When that size doesn't exist, which
@@ -541,9 +570,9 @@ function is_oversized_original_logo( int $attachment_id, array $image ): bool {
 		return false;
 	}
 
-	$file = get_attached_file( $attachment_id );
+	$file = correct_switched_upload_path( (string) get_attached_file( $attachment_id ) );
 
-	if ( ! $file || ! is_readable( $file ) ) {
+	if ( '' === $file || ! is_readable( $file ) ) {
 		return false;
 	}
 

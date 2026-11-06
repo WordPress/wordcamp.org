@@ -624,7 +624,11 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 		wp_update_attachment_metadata( $attachment_id, array_merge( array( 'file' => '2026/08/sized-logo.png' ), $metadata ) );
 		set_post_thumbnail( $post_id, $attachment_id );
 
-		$file = get_attached_file( $attachment_id );
+		// Where the store site really keeps the file, which is what
+		// `BLOGUPLOADDIR` is on a request that starts there. Not wherever
+		// `get_attached_file()` points while switched, since that's the bug
+		// `correct_switched_upload_path()` works around.
+		$file = WP_CONTENT_DIR . '/blogs.dir/' . self::$events_root_site_id . '/files/2026/08/sized-logo.png';
 		wp_mkdir_p( dirname( $file ) );
 		file_put_contents( $file, str_repeat( "\0", $bytes ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing a test fixture.
 
@@ -640,10 +644,27 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	 * @return array{0: array, 1: string} The sponsors, and the rendered block.
 	 */
 	protected function sponsors_from_a_group_site(): array {
+		/*
+		 * In production `ABSPATH` is `mu/`, beside `WP_CONTENT_DIR` rather
+		 * than above it, so the upload directory core builds while switched
+		 * doesn't exist. Here both sit in the test install, which would hide
+		 * that, so move the switched directory the same way.
+		 */
+		$like_production = static function ( array $uploads ): array {
+			if ( ms_is_switched() && str_starts_with( $uploads['basedir'], ABSPATH ) ) {
+				$uploads['basedir'] = ABSPATH . 'mu/' . substr( $uploads['basedir'], strlen( ABSPATH ) );
+			}
+
+			return $uploads;
+		};
+		add_filter( 'upload_dir', $like_production );
+
 		switch_to_blog( $this->other_group_id );
 		$sponsors = Sponsors\get_sponsors();
 		$rendered = do_blocks( '<!-- wp:wporg/sponsors /-->' );
 		restore_current_blog();
+
+		remove_filter( 'upload_dir', $like_production );
 
 		return array( $sponsors, $rendered );
 	}

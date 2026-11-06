@@ -1428,6 +1428,10 @@ function render_job( array $job ): void {
  * the page, which shows the preview or the result. A reload, or opening the
  * page again later, starts it over from the job's saved cursor.
  *
+ * Under the bar it estimates the time left from the last few batches, since
+ * members and events batches take different times. Only requests that ran a
+ * batch count, and the estimate is hidden while waiting on the lock or a retry.
+ *
  * @param array $job Import job, `fetching` or `importing`.
  */
 function render_step_loop( array $job ): void {
@@ -1442,12 +1446,16 @@ function render_step_loop( array $job ): void {
 		data-step="<?php echo esc_attr( $job['cursor']['step'] ?? '' ); ?>"
 		data-retry-message="<?php esc_attr_e( 'Could not reach the server. Trying again shortly.', 'wordcamporg' ); ?>"
 		data-stopped-message="<?php esc_attr_e( 'This page can no longer run the import, perhaps because you were signed out. Reload it to carry on.', 'wordcamporg' ); ?>"
+		data-eta-soon="<?php esc_attr_e( 'About a minute left.', 'wordcamporg' ); ?>"
+		<?php /* translators: %d: Minutes left, always 2 or more. */ ?>
+		data-eta-minutes="<?php esc_attr_e( 'About %d minutes left.', 'wordcamporg' ); ?>"
 	>
 		<?php if ( $total ) : ?>
 			<progress style="width:100%;max-width:400px;" aria-labelledby="wporg-meetup-import-status" max="<?php echo esc_attr( $total ); ?>" value="<?php echo esc_attr( $done ); ?>"></progress>
 		<?php else : ?>
 			<progress style="width:100%;max-width:400px;" aria-labelledby="wporg-meetup-import-status"></progress>
 		<?php endif; ?>
+		<p class="description" id="wporg-meetup-import-eta"></p>
 		<p class="description"><?php esc_html_e( 'Keep this page open: the import only runs while it is. If you close it, the import pauses; open this page again within a day to carry on.', 'wordcamporg' ); ?></p>
 		<p class="screen-reader-text" role="status" id="wporg-meetup-import-announce"></p>
 	</div>
@@ -1458,10 +1466,14 @@ function render_step_loop( array $job ): void {
 	const loop = document.getElementById( 'wporg-meetup-import-loop' );
 	const status = document.getElementById( 'wporg-meetup-import-status' );
 	const announce = document.getElementById( 'wporg-meetup-import-announce' );
+	const eta = document.getElementById( 'wporg-meetup-import-eta' );
 	const bar = loop.querySelector( 'progress' );
+	const recent = [];
 	let step = loop.dataset.step;
 	let failures = 0;
 	let running = true;
+	let done = bar.value;
+	let unmeasured = 0;
 
 	// Leaving mid-batch is safe, but the import pauses until the page is open again.
 	window.addEventListener( 'beforeunload', ( event ) => {
@@ -1471,8 +1483,30 @@ function render_step_loop( array $job ): void {
 		}
 	} );
 
+	// Time spent since the bar last moved counts towards the batches it moved by.
+	const updateEta = ( data, elapsed ) => {
+		unmeasured += elapsed;
+
+		if ( data.done > done ) {
+			recent.push( unmeasured / ( data.done - done ) );
+			recent.splice( 0, recent.length - 5 );
+			done = data.done;
+			unmeasured = 0;
+		}
+
+		if ( recent.length < 3 ) {
+			return;
+		}
+
+		const perBatch = recent.reduce( ( sum, time ) => sum + time ) / recent.length;
+		const minutes = Math.ceil( ( perBatch * ( data.total - data.done ) ) / 60000 );
+
+		eta.textContent = minutes > 1 ? loop.dataset.etaMinutes.replace( '%d', minutes ) : loop.dataset.etaSoon;
+	};
+
 	const stop = ( message ) => {
 		running = false;
+		eta.textContent = '';
 		status.textContent = message;
 		announce.textContent = message;
 	};
@@ -1487,11 +1521,13 @@ function render_step_loop( array $job ): void {
 
 	const retry = () => {
 		failures++;
+		eta.textContent = '';
 		status.textContent = loop.dataset.retryMessage;
 		setTimeout( next, Math.min( 60, 5 * 2 ** ( failures - 1 ) ) * 1000 );
 	};
 
 	async function next() {
+		const started = performance.now();
 		let response;
 		let body;
 
@@ -1523,6 +1559,7 @@ function render_step_loop( array $job ): void {
 		}
 
 		const data = body.data;
+		const elapsed = performance.now() - started;
 		failures = 0;
 
 		if ( ! data.running ) {
@@ -1535,6 +1572,13 @@ function render_step_loop( array $job ): void {
 		if ( data.total ) {
 			bar.max = data.total;
 			bar.value = data.done;
+		}
+
+		// A request that waited on the lock ran nothing, so it says nothing about the time left.
+		if ( data.total && ! data.retry_after ) {
+			updateEta( data, elapsed );
+		} else {
+			eta.textContent = '';
 		}
 
 		if ( data.step !== step ) {

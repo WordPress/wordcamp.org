@@ -259,6 +259,21 @@ function send_approval_email( int $sponsorship_id ): array|\WP_Error|null {
 }
 
 /**
+ * Words a sending error for the reviewer, warning them when FreeScout may have sent it anyway.
+ *
+ * @param \WP_Error $error The error.
+ * @return string
+ */
+function get_send_error_message( \WP_Error $error ): string {
+	if ( 'freescout_no_response' === $error->get_error_code() ) {
+		return __( 'FreeScout didn’t answer, so the email may have been sent. Check FreeScout before sending it again.', 'wordcamporg' );
+	}
+
+	/* translators: %s: Error message. */
+	return sprintf( __( 'The email wasn’t sent: %s', 'wordcamporg' ), $error->get_error_message() );
+}
+
+/**
  * Saves a conversation on the record that started it, alongside earlier ones.
  *
  * @param int    $post_id        The company or sponsorship.
@@ -275,7 +290,7 @@ function record_conversation( int $post_id, array $conversation, string $type, i
 			'url'            => esc_url_raw( (string) ( $conversation['url'] ?? '' ) ),
 			'type'           => $type,
 			'sponsorship_id' => $sponsorship_id,
-			'user_id'        => get_current_user_id(),
+			'user_id'        => get_acting_user_id(),
 			'time'           => time(),
 		)
 	);

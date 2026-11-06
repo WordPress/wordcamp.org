@@ -16,9 +16,9 @@ defined( 'WPINC' ) || die();
 /**
  * Requests vetting for a camp's sponsor.
  *
- * Finds or creates the sponsorship, links it to a company where that's certain, queues the company if its vetting
- * has lapsed, and points the camp's sponsor at the sponsorship. Safe to call again: each camp sponsor has one
- * sponsorship.
+ * Finds or creates the sponsorship, links it to a company where that's certain, which approves it if the company is
+ * vetted, queues the company if its vetting has lapsed, and points the camp's sponsor at the sponsorship. Safe to
+ * call again: each camp sponsor has one sponsorship.
  *
  * Callers check capabilities first.
  *
@@ -214,7 +214,8 @@ function get_mes_company( int $mes_id ): int {
  *   on the copy, so copies organizers have edited (which the propagator no longer updates) resolve too. It links
  *   only while the copy's website is one of the company's domains; a copy pointed at another site is only
  *   suggested, since organizers can repurpose a copy as a different sponsor.
- * - A domain an existing company uses is only suggested: a reviewer confirms it.
+ * - A domain only one company uses links to it when that company is vetted, so the sponsorship can be approved
+ *   right away. Otherwise, a domain existing companies use is only suggested: a reviewer confirms it.
  * - A domain no company uses gets a new company.
  * - Without a domain, a reviewer links it.
  *
@@ -242,6 +243,11 @@ function resolve_company( int $sponsorship_id, array $sponsor ): void {
 	}
 
 	$matches = find_companies_by_domain( $domain );
+
+	if ( 1 === count( $matches ) && get_vetting_state( $matches[0] )['approvable'] ) {
+		link_sponsorship( $sponsorship_id, $matches[0] );
+		return;
+	}
 
 	if ( $matches ) {
 		update_post_meta( $sponsorship_id, '_sv_suggested_company', $matches[0] );
@@ -284,7 +290,7 @@ function create_company( array $sponsor ): int|\WP_Error {
 }
 
 /**
- * Links a sponsorship to its company. Runs on Central.
+ * Links a sponsorship to its company, and approves it if the company is vetted. Runs on Central.
  *
  * An approved sponsorship keeps its company: its approval was for that company's vetting.
  *
@@ -308,6 +314,8 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 
 	/* translators: %s: Company name. */
 	add_note( $sponsorship_id, sprintf( __( 'Linked to “%s”.', 'wordcamporg' ), get_the_title( $company_id ) ) );
+
+	auto_approve( $sponsorship_id );
 
 	return true;
 }

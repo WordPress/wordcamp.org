@@ -821,98 +821,180 @@ add_filter(
 );
 
 /**
- * Apply the event archive controls to GatherPress Event Query Loop blocks.
+ * Map the archive's controls onto the event query's arguments.
  *
- * GatherPress supplies the SQL for upcoming and past event queries. This
- * filter only maps the archive's event_time control and search field onto
- * the native query arguments.
+ * GatherPress supplies the SQL for upcoming and past event queries. This only
+ * maps the archive's event_time, format, language, and topic controls and its
+ * search field onto the native query arguments.
+ *
+ * @param array $query_vars The query's arguments, already set to the default
+ *                          (upcoming) view.
+ * @return array The arguments for the view the request asks for.
  */
-add_filter(
-	'query_loop_block_query_vars',
-	static function ( array $query_vars, \WP_Block $block ): array {
-		$block_query = $block->context['query'] ?? array();
+function get_event_archive_query_vars( array $query_vars ): array {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
 
-		if (
-			! isset( $block_query['gatherpress_event_query'] ) ||
-			! isset( $query_vars['post_type'] ) ||
-			'gatherpress_event' !== $query_vars['post_type']
-		) {
-			return $query_vars;
+	// An empty search query should not force the "all" time view.
+	if ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time_filter ) {
+		$time_filter = 'upcoming';
+	}
+
+	if ( 'past' === $time_filter ) {
+		$query_vars['gatherpress_event_query'] = 'past';
+		$query_vars['include_unfinished']      = 0;
+		$query_vars['order']                   = 'DESC';
+	} elseif ( 'all' === $time_filter ) {
+		unset( $query_vars['gatherpress_event_query'] );
+
+		// GatherPress's datetime ordering is tied to its upcoming/past
+		// filters, so use a stable core ordering when showing both.
+		$query_vars['orderby'] = 'date';
+		$query_vars['order']   = 'DESC';
+	}
+
+	$format_filter   = get_event_format_filter();
+	$language_filter = get_event_language_filter();
+	$topic_filter    = get_event_topic_filter();
+
+	/*
+	 * Every ID filter has to resolve into the one `post__in`. WP_Query
+	 * treats `post__in` and `post__not_in` as an if/elseif (see
+	 * `parse_where()`), so a `post__not_in` left beside a `post__in`
+	 * would be dropped without a word. Each filter that narrows to a set
+	 * adds it to `$included`, and the sets are intersected in PHP; the
+	 * in-person filter's exclusion is subtracted from the result. Only
+	 * when nothing narrows to a set does the exclusion ride on
+	 * `post__not_in`.
+	 */
+	$included = array();
+	$excluded = array();
+
+	if ( 'all' !== $language_filter ) {
+		$included[] = get_event_ids_for_language( $language_filter );
+	}
+
+	if ( 'all' !== $topic_filter ) {
+		$included[] = get_event_ids_for_topic( $topic_filter );
+	}
+
+	if ( 'online' === $format_filter ) {
+		$included[] = get_online_event_ids();
+	} elseif ( 'in-person' === $format_filter ) {
+		$excluded = get_online_event_ids();
+	}
+
+	if ( $included ) {
+		$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
+		$ids = array_values( array_diff( $ids, $excluded ) );
+
+		// `array( 0 )` rather than an empty array: an empty `post__in` is
+		// ignored by WP_Query, which would show every event under a
+		// filter that matched none.
+		$query_vars['post__in'] = $ids ? $ids : array( 0 );
+	} elseif ( $excluded ) {
+		$query_vars['post__not_in'] = $excluded;
+	}
+
+	// Pass through search if present.
+	if ( ! empty( $_GET['s'] ) ) {
+		$query_vars['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+	}
+
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+	return $query_vars;
+}
+
+/**
+ * Render the events archive grid from the main query.
+ *
+ * The archive template's Query Loop inherits the main query, so this is where
+ * the grid's page size, order, and the archive's filters are applied. Being
+ * the main query is what lets core skip lazy-loading the first card images,
+ * which hold the page's largest contentful paint, and it saves running a main
+ * query only to throw it away for a Query Loop of its own.
+ *
+ * Runs at priority 5 so `gatherpress_event_query` is set before GatherPress
+ * reads it at 10 (`Event\Query::prepare_event_query_before_execution()`).
+ *
+ * @param \WP_Query $query The query about to run.
+ */
+function apply_event_archive_main_query( \WP_Query $query ): void {
+	if ( is_admin() || ! $query->is_main_query() || $query->is_feed() || ! $query->is_post_type_archive( 'gatherpress_event' ) ) {
+		return;
+	}
+
+	$query_vars = get_event_archive_query_vars(
+		array(
+			'posts_per_page'          => 12,
+			'gatherpress_event_query' => 'upcoming',
+			'include_unfinished'      => 1,
+			'orderby'                 => 'datetime',
+			'order'                   => 'ASC',
+		)
+	);
+
+	// The "All" view drops the upcoming/past constraint altogether.
+	if ( ! isset( $query_vars['gatherpress_event_query'] ) ) {
+		$query->set( 'gatherpress_event_query', '' );
+	}
+
+	foreach ( $query_vars as $name => $value ) {
+		$query->set( $name, $value );
+	}
+}
+add_action( 'pre_get_posts', __NAMESPACE__ . '\apply_event_archive_main_query', 5 );
+
+/**
+ * Where an old Query Loop page link on the events archive now lives.
+ *
+ * Before the grid rendered from the main query, its Query Loop paginated with
+ * `?query-page=N` (or `?query-{id}-page=N`). Those links are bookmarked and
+ * indexed, and would now quietly show page 1, so they move to `/page/N/` with
+ * the rest of the view state kept.
+ *
+ * @return string The URL to send the request to, or an empty string when it
+ *                is not an old page link on the events archive.
+ */
+function get_legacy_event_archive_pagination_redirect(): string {
+	if ( ! is_post_type_archive( 'gatherpress_event' ) ) {
+		return '';
+	}
+
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	foreach ( $_GET as $key => $value ) {
+		if ( ! preg_match( '/^query(-\d+)?-page$/', (string) $key ) ) {
+			continue;
 		}
 
-		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+		$page = is_string( $value ) ? absint( $value ) : 0;
 
-		// An empty search query should not force the "all" time view.
-		if ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time_filter ) {
-			$time_filter = 'upcoming';
-		}
+		// `get_pagenum_link()` keeps the rest of the query string, and writes
+		// `/page/N/` or `?paged=N` to suit the permalink structure.
+		return remove_query_arg( $key, get_pagenum_link( max( 1, $page ), false ) );
+	}
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		if ( 'past' === $time_filter ) {
-			$query_vars['gatherpress_event_query'] = 'past';
-			$query_vars['include_unfinished']      = 0;
-			$query_vars['order']                   = 'DESC';
-		} elseif ( 'all' === $time_filter ) {
-			unset( $query_vars['gatherpress_event_query'] );
+	return '';
+}
 
-			// GatherPress's datetime ordering is tied to its upcoming/past
-			// filters, so use a stable core ordering when showing both.
-			$query_vars['orderby'] = 'date';
-			$query_vars['order']   = 'DESC';
-		}
+/**
+ * Redirect old Query Loop page links on the events archive.
+ *
+ * @see get_legacy_event_archive_pagination_redirect()
+ */
+function redirect_legacy_event_archive_pagination(): void {
+	$url = get_legacy_event_archive_pagination_redirect();
 
-		$format_filter   = get_event_format_filter();
-		$language_filter = get_event_language_filter();
-		$topic_filter    = get_event_topic_filter();
+	if ( '' === $url ) {
+		return;
+	}
 
-		/*
-		 * Every ID filter has to resolve into the one `post__in`. WP_Query
-		 * treats `post__in` and `post__not_in` as an if/elseif (see
-		 * `parse_where()`), so a `post__not_in` left beside a `post__in`
-		 * would be dropped without a word. Each filter that narrows to a set
-		 * adds it to `$included`, and the sets are intersected in PHP; the
-		 * in-person filter's exclusion is subtracted from the result. Only
-		 * when nothing narrows to a set does the exclusion ride on
-		 * `post__not_in`.
-		 */
-		$included = array();
-		$excluded = array();
-
-		if ( 'all' !== $language_filter ) {
-			$included[] = get_event_ids_for_language( $language_filter );
-		}
-
-		if ( 'all' !== $topic_filter ) {
-			$included[] = get_event_ids_for_topic( $topic_filter );
-		}
-
-		if ( 'online' === $format_filter ) {
-			$included[] = get_online_event_ids();
-		} elseif ( 'in-person' === $format_filter ) {
-			$excluded = get_online_event_ids();
-		}
-
-		if ( $included ) {
-			$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
-			$ids = array_values( array_diff( $ids, $excluded ) );
-
-			// `array( 0 )` rather than an empty array: an empty `post__in` is
-			// ignored by WP_Query, which would show every event under a
-			// filter that matched none.
-			$query_vars['post__in'] = $ids ? $ids : array( 0 );
-		} elseif ( $excluded ) {
-			$query_vars['post__not_in'] = $excluded;
-		}
-
-		// Pass through search if present.
-		if ( ! empty( $_GET['s'] ) ) {
-			$query_vars['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
-		}
-
-		return $query_vars;
-	},
-	20,
-	2
-);
+	wp_safe_redirect( $url, 301 );
+	exit;
+}
+add_action( 'template_redirect', __NAMESPACE__ . '\redirect_legacy_event_archive_pagination', 5 );
 
 /**
  * Prevent GatherPress from 404-ing the event archive.

@@ -239,6 +239,36 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 
 		$viewed_id = get_post( $this->create_event( 'Viewed Meetup', true ) )->post_parent;
 
+		$this->assertSame(
+			array( '/high', 'lazy/', 'lazy/' ),
+			$this->render_event_page_images( $viewed_id ),
+			'Only the event\'s own image should load right away; the "More events" cards should be lazy.'
+		);
+	}
+
+	/**
+	 * An event without an image of its own has no hero for core to give the
+	 * high fetch priority to, so core gives it to the first "More events"
+	 * card instead. That card is lazy, and an image can't be both.
+	 */
+	public function test_event_page_without_an_image_gives_no_card_high_priority() {
+		$this->create_event( 'Other Meetup 1', true );
+		$this->create_event( 'Other Meetup 2', true );
+
+		$this->assertSame(
+			array( 'lazy/', 'lazy/' ),
+			$this->render_event_page_images( $this->create_event_post( 'Viewed Meetup' ) )
+		);
+	}
+
+	/**
+	 * Render an event page's own image and its "More events" grid, the way
+	 * the single template does, and list each image's loading attributes.
+	 *
+	 * @param int $viewed_id The event whose page this is.
+	 * @return string[] `loading/fetchpriority` for each image, in page order.
+	 */
+	private function render_event_page_images( int $viewed_id ): array {
 		add_filter( 'query_loop_block_query_vars', 'WordCamp\\Groups\\Site\\exclude_current_event_from_query', 10, 2 );
 		add_action( 'begin_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\start_other_event_thumbnail' );
 		add_action( 'end_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\end_other_event_thumbnail' );
@@ -273,11 +303,7 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 			$images[] = $processor->get_attribute( 'loading' ) . '/' . $processor->get_attribute( 'fetchpriority' );
 		}
 
-		$this->assertSame(
-			array( '/high', 'lazy/', 'lazy/' ),
-			$images,
-			'Only the event\'s own image should load right away; the "More events" cards should be lazy.'
-		);
+		return $images;
 	}
 
 	/**

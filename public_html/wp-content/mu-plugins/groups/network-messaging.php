@@ -2,15 +2,18 @@
 /**
  * Network-admin messaging for WordPress Group sites.
  *
- * Gives Program Managers and Program Supporters a single Network Admin screen for
- * emailing group people, covering two audiences that were previously
- * impossible to reach without hand-assembling address lists:
+ * Gives Program Managers a single Network Admin screen for emailing group
+ * people, covering two audiences that were previously impossible to reach
+ * without hand-assembling address lists:
  *
  * - Every group organizer across the whole Groups network (#1775).
  * - Every member of a hand-picked set of groups (#1776).
  *
  * Both are the same underlying tool: an audience filter (organizers only vs.
  * all members) crossed with a group filter (all groups vs. selected ones).
+ *
+ * Program Supporters can use it too, but only for organizers (#2294). All
+ * members stays with `manage_network`, see `current_user_can_message_members()`.
  *
  * Delivery runs on cron in small batches rather than in the submit request,
  * so a send to thousands of recipients can't time out the browser. The queue
@@ -35,6 +38,12 @@ defined( 'WPINC' ) || die();
  * `capabilities.php`.
  */
 const CAPABILITY = \WordCamp\Groups\Capabilities\CAPABILITY;
+
+/**
+ * Capability required to message every member of a group, not just its
+ * organizers. Program Supporters don't have it.
+ */
+const MEMBERS_CAPABILITY = 'manage_network';
 
 /** Network Admin page slug. */
 const MENU_SLUG = 'wporg-groups-messaging';
@@ -108,6 +117,13 @@ wp_cache_add_global_groups( array( LOCK_GROUP ) );
  */
 function current_user_can_send_messages(): bool {
 	return current_user_can( CAPABILITY );
+}
+
+/**
+ * Whether the current user may pick the "All members" audience.
+ */
+function current_user_can_message_members(): bool {
+	return current_user_can( MEMBERS_CAPABILITY );
 }
 
 /**
@@ -558,6 +574,11 @@ function handle_form_post(): void {
 		redirect_with_notice( 'invalid-audience' );
 	}
 
+	// The form doesn't offer it, so only a hand-made request gets here.
+	if ( AUDIENCE_MEMBERS === $audience && ! current_user_can_message_members() ) {
+		wp_die( 'You do not have permission to message all members of a group.', 403 );
+	}
+
 	if ( '' === $subject || '' === $body ) {
 		redirect_with_notice( 'empty-message' );
 	}
@@ -734,10 +755,14 @@ function render_page(): void {
 								Organizers only (editors and administrators)
 							</label>
 							<br />
-							<label>
-								<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_MEMBERS ); ?>" />
-								All members, whatever their role
-							</label>
+							<?php if ( current_user_can_message_members() ) : ?>
+								<label>
+									<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_MEMBERS ); ?>" />
+									All members, whatever their role
+								</label>
+							<?php else : ?>
+								<p class="description">Messaging all members of a group is limited to network admins.</p>
+							<?php endif; ?>
 						</fieldset>
 					</td>
 				</tr>

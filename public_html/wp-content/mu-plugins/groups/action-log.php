@@ -9,9 +9,15 @@
  * later (#2075, #2076).
  *
  * Each entry is a post of a non-public type on the Groups network's root
- * site, with the actor as its author, so "everything user X did" is an
- * ordinary author query. Entries are never capped or pruned, and are kept
- * when their author is deleted.
+ * site, with the actor in its `_user_id` meta, so "everything user X did" is
+ * an ordinary meta query. Entries are never capped or pruned, and are kept
+ * when their actor's account is deleted.
+ *
+ * The post itself has no author, on purpose. Deleting a user from the network
+ * (`wpmu_delete_user()`) deletes every post they authored on each site they
+ * belong to, whatever the post type's `delete_with_user` says. That can start
+ * from any network's admin, where this file isn't loaded, so no hook here
+ * could stop it.
  *
  * Only loaded on the Groups network, via
  * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
@@ -65,14 +71,13 @@ function register_log_post_type(): void {
 	register_post_type(
 		POST_TYPE,
 		array(
-			'label'            => __( 'Groups activity', 'wordcamporg' ),
-			'public'           => false,
-			'rewrite'          => false,
-			'query_var'        => false,
-			'can_export'       => false,
-			// The record has to outlive the account, or deleting a user would erase their credit.
-			'delete_with_user' => false,
-			'supports'         => array( 'author' ),
+			'label'      => __( 'Groups activity', 'wordcamporg' ),
+			'public'     => false,
+			'rewrite'    => false,
+			'query_var'  => false,
+			'can_export' => false,
+			// Entries have no author; see the file docblock.
+			'supports'   => false,
 		)
 	);
 }
@@ -104,12 +109,14 @@ function record( string $action, int $site_id = 0, array $context = array() ) {
 		array(
 			'post_type'   => POST_TYPE,
 			'post_status' => 'publish',
-			'post_author' => $user_id,
+			// Not the actor: see the file docblock for why the actor lives in `_user_id`.
+			'post_author' => 0,
 			'post_title'  => $action,
 			// Unique up front; otherwise `wp_unique_post_slug()` runs one
 			// query per existing entry with the same action to find a free slug.
 			'post_name'   => wp_generate_uuid4(),
 			'meta_input'  => array(
+				'_user_id' => $user_id,
 				'_action'  => $action,
 				'_site_id' => $site_id,
 				'_context' => $context,
@@ -156,7 +163,7 @@ function get_entries( int $page = 1 ): array {
 	foreach ( $query->posts as $post ) {
 		$entries[] = array(
 			'id'      => $post->ID,
-			'user_id' => (int) $post->post_author,
+			'user_id' => (int) get_post_meta( $post->ID, '_user_id', true ),
 			'action'  => (string) get_post_meta( $post->ID, '_action', true ),
 			'site_id' => (int) get_post_meta( $post->ID, '_site_id', true ),
 			'context' => (array) get_post_meta( $post->ID, '_context', true ),

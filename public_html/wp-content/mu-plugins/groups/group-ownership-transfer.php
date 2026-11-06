@@ -324,8 +324,8 @@ function current_user_can_initiate( int $site_id ): bool { // phpcs:ignore Gener
  *
  * The same Groups tools capability as every other screen under Network
  * Admin > Groups, so Program Supporters can decide transfers. See
- * `capabilities.php`. `execute_transfer()` still refuses an approval by the
- * candidate themselves.
+ * `capabilities.php`. `execute_transfer()` still refuses an approval by
+ * either party to the transfer.
  */
 function current_user_can_approve(): bool {
 	return Capabilities\current_user_can_manage_groups();
@@ -751,11 +751,11 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 	}
 
 	// Approval is the one step someone other than the two parties signs off
-	// on. Program Supporters can approve and can also be organizers of a
-	// group, so without this one person could be nominated, accept, and
-	// approve their own takeover.
-	if ( (int) $pending['to_user_id'] === $decided_by ) {
-		return new WP_Error( 'self_approval', __( 'You can\'t approve a transfer to yourself. Someone else needs to approve it.', 'wordcamporg' ), array( 'status' => 403 ) );
+	// on. Program Supporters can approve and can also run or organize a
+	// group, so without this one person could approve their own takeover,
+	// or hand their own group over with nobody else checking.
+	if ( in_array( $decided_by, array( (int) $pending['from_user_id'], (int) $pending['to_user_id'] ), true ) ) {
+		return new WP_Error( 'self_approval', __( 'You can\'t approve a transfer you\'re part of. Someone else needs to approve it.', 'wordcamporg' ), array( 'status' => 403 ) );
 	}
 
 	if ( get_current_blog_id() !== $site_id ) {

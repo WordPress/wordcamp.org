@@ -132,7 +132,8 @@ class Test_Group_Action_Log extends Groups_TestCase {
 	}
 
 	/**
-	 * An entry is a post on the Groups root site, authored by whoever acted.
+	 * An entry is a post on the Groups root site, with whoever acted in its
+	 * meta rather than as its author (see `test_entries_survive_their_author_being_deleted()`).
 	 */
 	public function test_record_stores_who_did_what_where() {
 		$user_id = self::factory()->user->create();
@@ -155,7 +156,7 @@ class Test_Group_Action_Log extends Groups_TestCase {
 		restore_current_blog();
 
 		$this->assertSame( Action_Log\POST_TYPE, $post->post_type );
-		$this->assertSame( $user_id, (int) $post->post_author );
+		$this->assertSame( 0, (int) $post->post_author );
 	}
 
 	/**
@@ -173,23 +174,51 @@ class Test_Group_Action_Log extends Groups_TestCase {
 	}
 
 	/**
-	 * Entries are the record behind future profile credit, so removing the
-	 * user from the site that stores them mustn't delete them.
+	 * Entries are the audit trail and the record behind future profile
+	 * credit, so neither removing the actor from the site that stores them
+	 * nor deleting their account from the network may delete them.
+	 *
+	 * Network deletion deletes every post a user authored on each site they
+	 * belong to, whatever the post type says, so the actor is made a member
+	 * of the root site for this to prove anything.
 	 */
-	public function test_entries_survive_their_author_being_removed() {
+	public function test_entries_survive_their_author_being_deleted() {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
+		require_once ABSPATH . 'wp-admin/includes/ms.php';
 
-		$user_id = self::factory()->user->create();
-		wp_set_current_user( $user_id );
-		$entry_id = Action_Log\record( 'export_started', 0, array( 'group_count' => 3 ) );
-
+		$removed_id = $this->record_as_root_site_member();
 		switch_to_blog( GROUPS_ROOT_BLOG_ID );
-		add_user_to_blog( GROUPS_ROOT_BLOG_ID, $user_id, 'subscriber' );
-		wp_delete_user( $user_id );
-		$post = get_post( $entry_id );
+		wp_delete_user( $removed_id );
 		restore_current_blog();
 
-		$this->assertNotNull( $post );
+		$this->assertCount( 1, $this->entries_by( $removed_id ), 'Removing the actor from the root site should keep their entry.' );
+
+		// `wpmu_delete_user()` checks `get_super_admins()`, and an earlier suite
+		// can leave the `site_admins` option as an empty string, which it
+		// can't read. `restore_role_fixtures()` unsets this again.
+		$GLOBALS['super_admins'] = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$deleted_id = $this->record_as_root_site_member();
+		$this->assertTrue( wpmu_delete_user( $deleted_id ) );
+
+		$this->assertFalse( get_userdata( $deleted_id ), 'Precondition: the account is gone.' );
+		$this->assertCount( 1, $this->entries_by( $deleted_id ), 'Deleting the actor from the network should keep their entry.' );
+	}
+
+	/**
+	 * Log an action as a new user who is a member of the Groups root site.
+	 *
+	 * @return int The user's ID.
+	 */
+	private function record_as_root_site_member(): int {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( GROUPS_ROOT_BLOG_ID, $user_id, 'subscriber' );
+
+		wp_set_current_user( $user_id );
+		Action_Log\record( 'export_started', 0, array( 'group_count' => 3 ) );
+		wp_set_current_user( 0 );
+
+		return $user_id;
 	}
 
 	/**

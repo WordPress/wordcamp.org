@@ -348,11 +348,12 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	}
 
 	/**
-	 * Nobody approves their own takeover: Program Supporters can approve and
-	 * can also organize a group, so one person could otherwise be nominated,
-	 * accept, and approve. Approval by anyone else still works afterwards.
+	 * Neither party approves their own transfer: Program Supporters can
+	 * approve and can also run or organize a group, so one person could
+	 * otherwise approve their own takeover, or hand their group over with
+	 * nobody else checking. Approval by anyone else still works afterwards.
 	 */
-	public function test_candidate_cannot_approve_their_own_transfer() {
+	public function test_parties_cannot_approve_their_own_transfer() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$admin_id     = $this->create_network_admin();
@@ -360,13 +361,20 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		accept_transfer( $this->group_site_id, $candidate_id );
 
-		$result = execute_transfer( $this->group_site_id, $candidate_id );
+		$parties = array(
+			'candidate' => $candidate_id,
+			'owner'     => $owner_id,
+		);
 
-		$this->assertWPError( $result );
-		$this->assertSame( 'self_approval', $result->get_error_code() );
-		$this->assertSame( STATUS_PENDING_APPROVAL, get_pending_transfer( $this->group_site_id )['status'] );
-		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
-		$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+		foreach ( $parties as $party => $user_id ) {
+			$result = execute_transfer( $this->group_site_id, $user_id );
+
+			$this->assertWPError( $result, "The $party should not be able to approve." );
+			$this->assertSame( 'self_approval', $result->get_error_code() );
+			$this->assertSame( STATUS_PENDING_APPROVAL, get_pending_transfer( $this->group_site_id )['status'] );
+			$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+			$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+		}
 
 		$this->assertTrue( execute_transfer( $this->group_site_id, $admin_id ) );
 	}

@@ -8,6 +8,7 @@ use WordCamp\Groups\Messaging;
 use WordCamp\Groups\Network_Export;
 use WordCamp\Groups\Ownership_Transfer;
 use WP_Admin_Bar;
+use WPDieException;
 
 defined( 'WPINC' ) || die();
 
@@ -117,6 +118,8 @@ class Test_Group_Capabilities extends Groups_TestCase {
 		foreach ( $this->tool_gates() as $tool => $allowed ) {
 			$this->assertTrue( $allowed, "A trusted deputy should be able to use: $tool." );
 		}
+
+		$this->assertTrue( Messaging\current_user_can_message_members(), 'A trusted deputy should be able to message all members.' );
 	}
 
 	/**
@@ -133,6 +136,61 @@ class Test_Group_Capabilities extends Groups_TestCase {
 		foreach ( $this->tool_gates() as $tool => $allowed ) {
 			$this->assertTrue( $allowed, "A super admin should be able to use: $tool." );
 		}
+
+		$this->assertTrue( Messaging\current_user_can_message_members(), 'A super admin should be able to message all members.' );
+		$this->assertStringContainsString( 'value="' . Messaging\AUDIENCE_MEMBERS . '"', $this->render_messaging_form() );
+	}
+
+	/**
+	 * Program Supporters message organizers only. "All members" stays with
+	 * network admins and deputies: the form doesn't offer it, and the handler
+	 * refuses a hand-made request for it.
+	 */
+	public function test_program_supporter_can_only_message_organizers() {
+		$this->become_program_supporter();
+
+		$this->assertFalse( Messaging\current_user_can_message_members() );
+		$this->assertStringNotContainsString( 'value="' . Messaging\AUDIENCE_MEMBERS . '"', $this->render_messaging_form() );
+
+		$fields = array(
+			'subject'  => 'Hello everyone',
+			'body'     => 'To every member of every group.',
+			'audience' => Messaging\AUDIENCE_MEMBERS,
+			'scope'    => 'all',
+			'_wpnonce' => wp_create_nonce( Messaging\FORM_ACTION ),
+		);
+
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+
+		// A regression would queue the job and redirect; fail instead of exiting.
+		$redirected = static function () {
+			throw new \Exception( 'The handler redirected instead of refusing.' );
+		};
+		add_filter( 'wp_redirect', $redirected );
+
+		try {
+			Messaging\handle_form_post();
+			$this->fail( 'The handler should have refused.' );
+		} catch ( WPDieException $refused ) {
+			$this->assertStringContainsString( 'all members', $refused->getMessage() );
+		} finally {
+			remove_filter( 'wp_redirect', $redirected );
+			$_POST    = array();
+			$_REQUEST = array();
+		}
+
+		$this->assertEmpty( get_site_option( Messaging\JOBS_OPTION ), 'Nothing should be queued.' );
+	}
+
+	/**
+	 * The Message Groups screen as the current user sees it.
+	 */
+	private function render_messaging_form(): string {
+		ob_start();
+		Messaging\render_page();
+
+		return ob_get_clean();
 	}
 
 	/**

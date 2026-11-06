@@ -74,13 +74,12 @@ class WordCamp_API_ICS {
 		while ( $query->have_posts() ) {
 			$query->the_post();
 
-			$uid = get_permalink();
-			$start = get_post_meta( get_the_ID(), 'Start Date (YYYY-mm-dd)', true );
-			$end = get_post_meta( get_the_ID(), 'End Date (YYYY-mm-dd)', true );
+			$uid = get_the_ID();
+			$start = get_post_meta( $uid, 'Start Date (YYYY-mm-dd)', true );
+			$end = get_post_meta( $uid, 'End Date (YYYY-mm-dd)', true );
 			if ( ! $end )
 				$end = strtotime( '+1 day', $start );
 
-			$uid = get_the_ID();
 			$title = get_the_title();
 			$start = date( 'Ymd', $start );
 			$end = date( 'Ymd', $end );

@@ -142,12 +142,24 @@ function get_speaker_sessions( array $speaker_ids ) {
 		// A password-protected session withholds its speakers, so don't list it under one.
 		'has_password'   => false,
 		'posts_per_page' => -1,
-		'meta_key'       => '_wcpt_session_time',
-		'orderby'        => 'meta_value_num',
-		'order'          => 'ASC',
 	);
 
 	$session_posts = get_posts( $session_args );
+
+	// List sessions by time, and the ones without a time yet after them.
+	usort(
+		$session_posts,
+		function ( $session_a, $session_b ) {
+			$time_a = absint( $session_a->_wcpt_session_time );
+			$time_b = absint( $session_b->_wcpt_session_time );
+
+			if ( ! $time_a || ! $time_b ) {
+				return (int) ! $time_a - (int) ! $time_b;
+			}
+
+			return $time_a <=> $time_b;
+		}
+	);
 
 	foreach ( $session_posts as $session ) {
 		$session_speaker_ids = get_post_meta( $session->ID, '_wcpt_speaker_id', false );

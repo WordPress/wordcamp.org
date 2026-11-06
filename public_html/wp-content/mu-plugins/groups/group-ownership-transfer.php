@@ -26,6 +26,7 @@
 namespace WordCamp\Groups\Ownership_Transfer;
 
 use WordCamp\Groups\Archive;
+use WordCamp\Groups\Capabilities;
 use WordCamp\Logger;
 use WP_Error;
 
@@ -187,6 +188,49 @@ function get_pending_transfer( int $site_id ): ?array {
 }
 
 /**
+ * Identify one nomination, so a decision applies to the nomination the
+ * decider was shown and nothing else.
+ *
+ * The owner can cancel and nominate someone else at any time, and the
+ * decision form otherwise only names the group, so a page left open would
+ * approve whoever is nominated by the time it's submitted.
+ *
+ * @param array $record A pending-transfer record.
+ */
+function get_nomination_key( array $record ): string {
+	return sprintf(
+		'%d:%d:%d',
+		$record['from_user_id'] ?? 0,
+		$record['to_user_id'] ?? 0,
+		$record['initiated_at'] ?? 0
+	);
+}
+
+/**
+ * Refuse a decision on a nomination that has since been replaced.
+ *
+ * Must run under the per-site lock, against the record the decision is about
+ * to act on.
+ *
+ * @param array       $pending    The pending-transfer record.
+ * @param string|null $nomination `get_nomination_key()` of the nomination the
+ *                                decider was shown, or null for callers that
+ *                                weren't shown one.
+ * @return true|WP_Error
+ */
+function check_nomination( array $pending, ?string $nomination ) {
+	if ( null === $nomination || hash_equals( get_nomination_key( $pending ), $nomination ) ) {
+		return true;
+	}
+
+	return new WP_Error(
+		'transfer_changed',
+		__( 'This transfer has changed since you opened the page. Reload it and decide again.', 'wordcamporg' ),
+		array( 'status' => 409 )
+	);
+}
+
+/**
  * Get a group's decided-transfer history, newest first.
  *
  * @param int $site_id Group site ID.
@@ -320,15 +364,13 @@ function current_user_can_initiate( int $site_id ): bool { // phpcs:ignore Gener
 /**
  * Whether the current user may approve or reject a pending transfer.
  *
- * `manage_sites` matches `Archive\current_user_can_archive_groups()` — this
- * codebase already uses that capability for "one specific group's sensitive
- * state, decided one at a time, surfaced on a network-wide listing screen,"
- * which is exactly this shape of action. `manage_network` is reserved
- * elsewhere in this codebase (`Groups\Messaging`) for tooling that
- * broadcasts to every group at once, which this isn't.
+ * The same Groups tools capability as every other screen under Network
+ * Admin > Groups, so Program Supporters can decide transfers. See
+ * `capabilities.php`. `execute_transfer()` still refuses an approval by
+ * either party to the transfer.
  */
 function current_user_can_approve(): bool {
-	return current_user_can( 'manage_sites' );
+	return Capabilities\current_user_can_manage_groups();
 }
 
 /*
@@ -707,15 +749,16 @@ function cancel_transfer_unlocked( int $site_id, int $user_id ) {
  * result is a `WP_Error` plus a Slack-relayed warning, and the transfer stays
  * pending so it can be retried -- never a false report of success.
  *
- * @param int $site_id    Group site ID. The current blog MUST already be this site.
- * @param int $decided_by The approving network admin.
+ * @param int         $site_id    Group site ID. The current blog MUST already be this site.
+ * @param int         $decided_by The approving network admin.
+ * @param string|null $nomination The nomination the approver was shown, see `check_nomination()`.
  * @return true|WP_Error
  */
-function execute_transfer( int $site_id, int $decided_by ) {
+function execute_transfer( int $site_id, int $decided_by, ?string $nomination = null ) {
 	$record = with_transfer_lock(
 		$site_id,
-		static function () use ( $site_id, $decided_by ) {
-			return execute_transfer_unlocked( $site_id, $decided_by );
+		static function () use ( $site_id, $decided_by, $nomination ) {
+			return execute_transfer_unlocked( $site_id, $decided_by, $nomination );
 		}
 	);
 
@@ -739,15 +782,29 @@ function execute_transfer( int $site_id, int $decided_by ) {
  *
  * @return array|WP_Error The completed record, for the caller to announce.
  */
-function execute_transfer_unlocked( int $site_id, int $decided_by ) {
+function execute_transfer_unlocked( int $site_id, int $decided_by, ?string $nomination = null ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
 		return new WP_Error( 'no_pending_transfer', __( 'There is no pending transfer for this group.', 'wordcamporg' ), array( 'status' => 404 ) );
 	}
 
+	$same_nomination = check_nomination( $pending, $nomination );
+
+	if ( is_wp_error( $same_nomination ) ) {
+		return $same_nomination;
+	}
+
 	if ( STATUS_PENDING_APPROVAL !== $pending['status'] ) {
 		return new WP_Error( 'transfer_not_awaiting_approval', __( 'This transfer has not been accepted by the candidate yet.', 'wordcamporg' ), array( 'status' => 400 ) );
+	}
+
+	// Approval is the one step someone other than the two parties signs off
+	// on. Program Supporters can approve and can also run or organize a
+	// group, so without this one person could approve their own takeover,
+	// or hand their own group over with nobody else checking.
+	if ( in_array( $decided_by, array( (int) $pending['from_user_id'], (int) $pending['to_user_id'] ), true ) ) {
+		return new WP_Error( 'self_approval', __( 'You can\'t approve a transfer you\'re part of. Someone else needs to approve it.', 'wordcamporg' ), array( 'status' => 403 ) );
 	}
 
 	if ( get_current_blog_id() !== $site_id ) {
@@ -952,16 +1009,17 @@ function report_inconsistent_execution( int $site_id, array $pending, string $st
 /**
  * A network admin rejects an in-flight transfer, at either pending stage.
  *
- * @param int    $site_id    Group site ID.
- * @param int    $decided_by The rejecting network admin.
- * @param string $reason     Optional reason shown to both parties by email.
+ * @param int         $site_id    Group site ID.
+ * @param int         $decided_by The rejecting network admin.
+ * @param string      $reason     Optional reason shown to both parties by email.
+ * @param string|null $nomination The nomination the decider was shown, see `check_nomination()`.
  * @return true|WP_Error
  */
-function reject_transfer( int $site_id, int $decided_by, string $reason = '' ) {
+function reject_transfer( int $site_id, int $decided_by, string $reason = '', ?string $nomination = null ) {
 	$record = with_transfer_lock(
 		$site_id,
-		static function () use ( $site_id, $decided_by, $reason ) {
-			return reject_transfer_unlocked( $site_id, $decided_by, $reason );
+		static function () use ( $site_id, $decided_by, $reason, $nomination ) {
+			return reject_transfer_unlocked( $site_id, $decided_by, $reason, $nomination );
 		}
 	);
 
@@ -986,11 +1044,17 @@ function reject_transfer( int $site_id, int $decided_by, string $reason = '' ) {
  *
  * @return array|WP_Error The rejected record, for the caller to announce.
  */
-function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason = '' ) {
+function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason = '', ?string $nomination = null ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
 		return new WP_Error( 'no_pending_transfer', __( 'There is no pending transfer for this group.', 'wordcamporg' ), array( 'status' => 404 ) );
+	}
+
+	$same_nomination = check_nomination( $pending, $nomination );
+
+	if ( is_wp_error( $same_nomination ) ) {
+		return $same_nomination;
 	}
 
 	$finalized = finalize_transfer(
@@ -1033,7 +1097,7 @@ function add_page(): void {
 		Archive\PAGE_SLUG,
 		__( 'Ownership Transfers', 'wordcamporg' ),
 		__( 'Ownership Transfers', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		MENU_SLUG,
 		__NAMESPACE__ . '\render_page'
 	);
@@ -1217,6 +1281,8 @@ function handle_decision(): void {
 	$site_id  = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
 	$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
 	$reason   = isset( $_POST['reason'] ) ? sanitize_reason( wp_unslash( $_POST['reason'] ) ) : '';
+	// Always checked: a request without it can't say what it was shown, so it's refused.
+	$nomination = isset( $_POST['nomination'] ) ? sanitize_text_field( wp_unslash( $_POST['nomination'] ) ) : '';
 
 	check_admin_referer( DECIDE_ACTION . '_' . $site_id );
 
@@ -1227,9 +1293,10 @@ function handle_decision(): void {
 	switch_to_blog( $site_id );
 	$decided_by = get_current_user_id();
 
+	// Both log themselves to the Activity screen; see `Action_Log\record_transfer_decision()`.
 	$result = 'approve' === $decision
-		? execute_transfer( $site_id, $decided_by )
-		: reject_transfer( $site_id, $decided_by, $reason );
+		? execute_transfer( $site_id, $decided_by, $nomination )
+		: reject_transfer( $site_id, $decided_by, $reason, $nomination );
 
 	restore_current_blog();
 
@@ -1368,6 +1435,7 @@ function render_page(): void {
 										<input type="hidden" name="action" value="<?php echo esc_attr( DECIDE_ACTION ); ?>" />
 										<input type="hidden" name="site_id" value="<?php echo esc_attr( $site_id ); ?>" />
 										<input type="hidden" name="decision" value="approve" />
+										<input type="hidden" name="nomination" value="<?php echo esc_attr( get_nomination_key( $pending ) ); ?>" />
 										<?php wp_nonce_field( DECIDE_ACTION . '_' . $site_id ); ?>
 										<button
 											type="submit"
@@ -1380,6 +1448,7 @@ function render_page(): void {
 									<input type="hidden" name="action" value="<?php echo esc_attr( DECIDE_ACTION ); ?>" />
 									<input type="hidden" name="site_id" value="<?php echo esc_attr( $site_id ); ?>" />
 									<input type="hidden" name="decision" value="reject" />
+									<input type="hidden" name="nomination" value="<?php echo esc_attr( get_nomination_key( $pending ) ); ?>" />
 									<?php wp_nonce_field( DECIDE_ACTION . '_' . $site_id ); ?>
 									<?php
 									/*

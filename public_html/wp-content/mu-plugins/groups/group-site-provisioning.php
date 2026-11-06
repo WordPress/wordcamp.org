@@ -2,7 +2,7 @@
 /**
  * Network-admin tool for provisioning new Group sites.
  *
- * Deputies/Program Managers can create a fully configured Group site
+ * Program Managers and Program Supporters can create a fully configured Group site
  * (`events.wordpress.org/group/{slug}/`) from Network Admin > Groups, instead
  * of hand-running `wp_insert_site()`/`wp site create` on the sandbox.
  *
@@ -14,6 +14,8 @@
 
 namespace WordCamp\Groups\Site_Provisioning;
 
+use WordCamp\Groups\Action_Log;
+use WordCamp\Groups\Capabilities;
 use WordCamp\Logger;
 use WP_Error;
 
@@ -34,7 +36,7 @@ function register_admin_page() {
 		\WordCamp\Groups\Archive\PAGE_SLUG,
 		__( 'Add Group Site', 'wordcamporg' ),
 		__( 'Add Group Site', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		PAGE_SLUG,
 		__NAMESPACE__ . '\render_admin_page'
 	);
@@ -53,7 +55,7 @@ function handle_form_submission() {
 		return;
 	}
 
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! Capabilities\current_user_can_manage_groups() ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to create sites on this network.', 'wordcamporg' ) );
 	}
 
@@ -70,6 +72,8 @@ function handle_form_submission() {
 		add_settings_error( 'wcorg-add-group-site', $result->get_error_code(), $result->get_error_message() );
 		return;
 	}
+
+	Action_Log\record( 'group_created', $result, array( 'organizer_login' => $organizer_login ) );
 
 	add_settings_error(
 		'wcorg-add-group-site',
@@ -88,7 +92,7 @@ function handle_form_submission() {
  * Render the "Add Group Site" form.
  */
 function render_admin_page() {
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! Capabilities\current_user_can_manage_groups() ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to create sites on this network.', 'wordcamporg' ) );
 	}
 
@@ -163,7 +167,7 @@ function parse_utc_offset( string $value ) {
 /**
  * Create and configure a new Group site.
  *
- * Callers MUST verify the `manage_sites` capability before calling this --
+ * Callers MUST verify `Capabilities\current_user_can_manage_groups()` before calling this --
  * it performs no capability check of its own, matching the convention in
  * `WordCamp_New_Site::_create_site()`.
  *

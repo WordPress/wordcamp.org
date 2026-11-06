@@ -141,6 +141,25 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 				break;
 
 			/**
+			 * Program Supporter
+			 *
+			 * - Use the Groups tools in Network Admin on events.wordpress.org: create, archive and reactivate
+			 *   groups, decide ownership transfers, message organizers and export activity. See
+			 *   `mu-plugins/groups/capabilities.php`.
+			 *
+			 * Network admins and trusted deputies get the same capability through `manage_network`, so this
+			 * is only for people who should have the Groups tools and nothing else on the network.
+			 */
+			case 'program_supporter':
+				// These capabilities only apply on the Groups network.
+				if ( defined( 'GROUPS_NETWORK_ID' ) && GROUPS_NETWORK_ID === get_current_network_id() ) {
+					$newcaps = array(
+						'manage_groups' => true,
+					);
+				}
+				break;
+
+			/**
 			 * Sponsor Vetter
 			 *
 			 * - Vet sponsor companies and approve sponsorships on Central.

@@ -11,6 +11,7 @@ use function WordCamp\Groups\Ownership_Transfer\decline_transfer;
 use function WordCamp\Groups\Ownership_Transfer\execute_transfer;
 use function WordCamp\Groups\Ownership_Transfer\get_final_status_label;
 use function WordCamp\Groups\Ownership_Transfer\get_group_sites_with_meta_key;
+use function WordCamp\Groups\Ownership_Transfer\get_nomination_key;
 use function WordCamp\Groups\Ownership_Transfer\get_pending_transfer;
 use function WordCamp\Groups\Ownership_Transfer\get_recent_decided_transfers;
 use function WordCamp\Groups\Ownership_Transfer\get_sites_with_pending_transfers;
@@ -177,9 +178,10 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	}
 
 	/**
-	 * Only `manage_sites` holders (network admins by default) can approve.
+	 * Only holders of the Groups tools capability (network admins and Program
+	 * Supporters, see `test-group-capabilities.php`) can approve.
 	 */
-	public function test_only_manage_sites_can_approve() {
+	public function test_only_groups_managers_can_approve() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 
 		wp_set_current_user( $owner_id );
@@ -344,6 +346,75 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		// Roles are untouched by a rejection.
 		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
 		$this->assertContains( 'editor', get_userdata( $candidate_id )->roles );
+	}
+
+	/**
+	 * Neither party approves their own transfer: Program Supporters can
+	 * approve and can also run or organize a group, so one person could
+	 * otherwise approve their own takeover, or hand their group over with
+	 * nobody else checking. Approval by anyone else still works afterwards.
+	 */
+	public function test_parties_cannot_approve_their_own_transfer() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		$parties = array(
+			'candidate' => $candidate_id,
+			'owner'     => $owner_id,
+		);
+
+		foreach ( $parties as $party => $user_id ) {
+			$result = execute_transfer( $this->group_site_id, $user_id );
+
+			$this->assertWPError( $result, "The $party should not be able to approve." );
+			$this->assertSame( 'self_approval', $result->get_error_code() );
+			$this->assertSame( STATUS_PENDING_APPROVAL, get_pending_transfer( $this->group_site_id )['status'] );
+			$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+			$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+		}
+
+		$this->assertTrue( execute_transfer( $this->group_site_id, $admin_id ) );
+	}
+
+	/**
+	 * A decision applies to the nomination the decider was shown. The owner
+	 * can cancel and nominate someone else at any time, so an approval from a
+	 * page left open would otherwise promote a candidate nobody reviewed.
+	 */
+	public function test_a_replaced_nomination_cannot_be_decided() {
+		$owner_id   = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$shown_id   = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$swapped_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id   = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $shown_id, $owner_id );
+		accept_transfer( $this->group_site_id, $shown_id );
+		$shown = get_nomination_key( get_pending_transfer( $this->group_site_id ) );
+
+		wp_set_current_user( $owner_id );
+		cancel_transfer( $this->group_site_id, $owner_id );
+		initiate_transfer( $this->group_site_id, $owner_id, $swapped_id, $owner_id );
+		accept_transfer( $this->group_site_id, $swapped_id );
+
+		$approved = execute_transfer( $this->group_site_id, $admin_id, $shown );
+		$rejected = reject_transfer( $this->group_site_id, $admin_id, '', $shown );
+
+		foreach ( array( $approved, $rejected ) as $result ) {
+			$this->assertWPError( $result );
+			$this->assertSame( 'transfer_changed', $result->get_error_code() );
+		}
+
+		$this->assertSame( $swapped_id, get_pending_transfer( $this->group_site_id )['to_user_id'] );
+		$this->assertNotContains( 'administrator', get_userdata( $swapped_id )->roles );
+
+		$current = get_nomination_key( get_pending_transfer( $this->group_site_id ) );
+
+		$this->assertTrue( execute_transfer( $this->group_site_id, $admin_id, $current ) );
+		$this->assertContains( 'administrator', get_userdata( $swapped_id )->roles );
 	}
 
 	/**
@@ -795,7 +866,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	 * decoration on top of a check further in: `execute_transfer()` and
 	 * `reject_transfer()` don't re-check who is asking.
 	 */
-	public function test_handle_decision_requires_manage_sites() {
+	public function test_handle_decision_requires_the_groups_capability() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 
 		wp_set_current_user( $owner_id );
@@ -887,6 +958,31 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		$reject_form = strstr( $html, 'value="reject"' );
 		$this->assertStringContainsString( 'name="reason"', $reject_form );
 		$this->assertStringNotContainsString( 'name="reason"', strstr( $html, 'value="reject"', true ) );
+	}
+
+	/**
+	 * Both decision forms say which nomination they were shown.
+	 * `handle_decision()` refuses a decision that doesn't, so without this
+	 * every decision made on the screen would be refused.
+	 */
+	public function test_decision_forms_carry_the_nomination_shown() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		wp_set_current_user( $admin_id );
+
+		ob_start();
+		render_page();
+		$html = ob_get_clean();
+
+		$field = 'name="nomination" value="' . get_nomination_key( get_pending_transfer( $this->group_site_id ) ) . '"';
+
+		$this->assertStringContainsString( $field, strstr( $html, 'value="reject"', true ), 'The approve form should carry the nomination.' );
+		$this->assertStringContainsString( $field, strstr( $html, 'value="reject"' ), 'The reject form should carry the nomination.' );
 	}
 
 	/**

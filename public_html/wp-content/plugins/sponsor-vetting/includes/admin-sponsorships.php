@@ -388,7 +388,7 @@ function save_sponsorship( int $post_id ): void {
 				add_notice( 'success', __( 'The sponsorship was approved automatically: its company is vetted.', 'wordcamporg' ) );
 
 				if ( needs_approval_email( $post_id ) ) {
-					add_notice( 'error', __( 'The approval email wasn’t sent. The history says why; send it again below.', 'wordcamporg' ) );
+					add_notice( 'error', __( 'The approval email wasn’t sent (see history). Send it again below.', 'wordcamporg' ) );
 				}
 
 				// Already approved, so an Approve button sent with the link has nothing left to do.

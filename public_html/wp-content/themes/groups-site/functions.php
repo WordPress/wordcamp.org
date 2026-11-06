@@ -147,6 +147,45 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_event_card_featured_image', 10, 2 );
 
 /**
+ * Tell the browser how wide the events archive's card images really are.
+ *
+ * Core's default `sizes` says the image fills the viewport. Core only makes up
+ * for that with `auto` on lazy images, and the archive's first cards aren't
+ * lazy, so desktop browsers would download a near full-size file for each one.
+ * Core fires these hooks around each featured image, so the filter only applies
+ * to event card images on the archive. The front page's cards are narrower.
+ *
+ * @param int $post_id The post whose featured image is being rendered.
+ */
+function start_archive_event_card_image( $post_id ): void {
+	if ( is_post_type_archive( 'gatherpress_event' ) && 'gatherpress_event' === get_post_type( $post_id ) ) {
+		add_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\archive_event_card_image_sizes' );
+	}
+}
+add_action( 'begin_fetch_post_thumbnail_html', __NAMESPACE__ . '\start_archive_event_card_image' );
+
+/**
+ * Remove the filter `start_archive_event_card_image()` added.
+ */
+function end_archive_event_card_image(): void {
+	remove_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\archive_event_card_image_sizes' );
+}
+add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_archive_event_card_image' );
+
+/**
+ * The archive grid's card width, for an image's `sizes`.
+ *
+ * One column up to 480px and two up to 781px (`responsive.css`), three above
+ * that, never wider than 414px. Rounded up slightly so the browser never picks
+ * a smaller image. Core still adds `auto` in front of this on lazy images.
+ *
+ * @return string The card image's `sizes`.
+ */
+function archive_event_card_image_sizes(): string {
+	return '(max-width: 480px) 90vw, (max-width: 781px) 46vw, (max-width: 1376px) 30vw, 414px';
+}
+
+/**
  * Prime the featured-image cache for the theme's event card grids.
  *
  * `core/post-template` primes it itself — but only after

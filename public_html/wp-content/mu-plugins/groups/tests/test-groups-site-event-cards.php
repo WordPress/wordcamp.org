@@ -99,6 +99,8 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 			2
 		);
 		add_action( 'loop_start', 'WordCamp\\Groups\\Site\\prime_event_card_thumbnails' );
+		add_action( 'begin_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\start_archive_event_card_image' );
+		add_action( 'end_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\end_archive_event_card_image' );
 	}
 
 	/**
@@ -138,7 +140,15 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 				'width'  => 1200,
 				'height' => 675,
 				'file'   => 'event.jpg',
-				'sizes'  => array(),
+				'sizes'  => array(
+					// Core only prints `srcset` and `sizes` with a second size to offer.
+					'medium' => array(
+						'file'      => 'event-300x169.jpg',
+						'width'     => 300,
+						'height'    => 169,
+						'mime-type' => 'image/jpeg',
+					),
+				),
 			)
 		);
 
@@ -250,14 +260,36 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 			$images[] = array(
 				'loading'       => $processor->get_attribute( 'loading' ),
 				'fetchpriority' => $processor->get_attribute( 'fetchpriority' ),
+				'sizes'         => $processor->get_attribute( 'sizes' ),
 			);
 		}
+
+		$grid_sizes = \WordCamp\Groups\Site\archive_event_card_image_sizes();
 
 		$this->assertCount( 4, $images, 'Every card should have rendered its featured image.' );
 		$this->assertNull( $images[0]['loading'], 'The first card image is lazy-loaded.' );
 		$this->assertSame( 'high', $images[0]['fetchpriority'], 'The first card image is not fetched at high priority.' );
 		$this->assertNull( $images[1]['loading'], 'The second card image is lazy-loaded.' );
 		$this->assertSame( 'lazy', $images[3]['loading'], 'Card images past the first viewport should still be lazy-loaded.' );
+		$this->assertSame( $grid_sizes, $images[0]['sizes'], 'An eager card image should describe the grid width, or it downloads a near full-size file.' );
+		$this->assertSame( 'auto, ' . $grid_sizes, $images[3]['sizes'], 'A lazy card image should keep core\'s `auto` ahead of the grid width.' );
+		$this->assertFalse( has_filter( 'wp_calculate_image_sizes', 'WordCamp\\Groups\\Site\\archive_event_card_image_sizes' ), 'The grid width should not reach images rendered after the cards.' );
+	}
+
+	/**
+	 * The grid's width only applies on the archive. The same card sits in a
+	 * narrower column on the front page.
+	 */
+	public function test_card_images_outside_the_archive_keep_cores_sizes() {
+		$this->create_event( 'Group meetup', true );
+
+		$processor = new \WP_HTML_Tag_Processor( do_blocks( self::GRID ) );
+
+		$this->assertTrue( $processor->next_tag( 'img' ) );
+		$this->assertStringNotContainsString(
+			\WordCamp\Groups\Site\archive_event_card_image_sizes(),
+			(string) $processor->get_attribute( 'sizes' )
+		);
 	}
 
 	/**

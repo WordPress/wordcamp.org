@@ -104,14 +104,16 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
 /**
  * Adjust the featured image inside event card grids.
  *
- * Two changes, both scoped so the single-event hero is left alone. The guard
- * tests `is_singular( 'gatherpress_event' )` rather than a bare
- * `is_singular()`: the group front page is a static Page, so it is singular
- * too, and the broader test excluded the very cards this is meant to fix.
+ * Two changes, applied to every event card grid: the archive, the front page
+ * and an event page's "More events from this group". On an event page only
+ * the event's own image, the page's hero, is left alone. It isn't a card,
+ * has no link, and shouldn't gain a placeholder when the event has no image.
  *
- *   - Drop the image link from the keyboard tab order. The title link already
- *     provides keyboard access to the event, so a second focusable link on
- *     the image is redundant and slows tab navigation.
+ *   - Take the image link out of the tab order and hide it from screen
+ *     readers. It goes to the same place as the title link, and its image's
+ *     alt text is the event title, so without this a screen reader announced
+ *     every event twice and keyboard users tabbed through each card twice.
+ *     The title link keeps the card reachable.
  *   - Substitute a placeholder when the event has no thumbnail. Core renders
  *     the block as an empty string in that case, so one image-less event in a
  *     row of three used to start its date where its neighbours started their
@@ -128,13 +130,18 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  */
 function filter_event_card_featured_image( string $content, array $block ): string {
 	$post_type = $block['context']['postType'] ?? get_post_type();
+	$post_id   = (int) ( $block['context']['postId'] ?? get_the_ID() );
 
-	if ( 'gatherpress_event' !== $post_type || is_singular( 'gatherpress_event' ) ) {
+	if ( 'gatherpress_event' !== $post_type ) {
+		return $content;
+	}
+
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() === $post_id ) {
 		return $content;
 	}
 
 	if ( '' === trim( $content ) ) {
-		$permalink = get_permalink( $block['context']['postId'] ?? get_the_ID() );
+		$permalink = get_permalink( $post_id );
 
 		return sprintf(
 			'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true">%s</div>',
@@ -142,7 +149,14 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 		);
 	}
 
-	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+	$processor = new \WP_HTML_Tag_Processor( $content );
+
+	if ( $processor->next_tag( 'a' ) ) {
+		$processor->set_attribute( 'tabindex', '-1' );
+		$processor->set_attribute( 'aria-hidden', 'true' );
+	}
+
+	return $processor->get_updated_html();
 }
 add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_event_card_featured_image', 10, 2 );
 
@@ -213,6 +227,53 @@ function exclude_current_event_from_query( array $query_vars, \WP_Block $block )
 	return $query_vars;
 }
 add_filter( 'query_loop_block_query_vars', __NAMESPACE__ . '\exclude_current_event_from_query', 10, 2 );
+
+/**
+ * Lazy-load other events' images on an event page.
+ *
+ * A block theme renders the whole single template inside the main query's
+ * loop, so core counts every image on the page towards the first few it
+ * loads right away (`wp_omit_loading_attr_threshold()`, 3 by default). The
+ * event's own image is the first. The next two were the first cards of the
+ * "More events from this group" grid at the bottom of the page, which then
+ * downloaded alongside the event's image, the page's Largest Contentful
+ * Paint, and slowed it down.
+ *
+ * Any featured image on an event page that isn't the event's own is now
+ * lazy. Core fires `begin_fetch_post_thumbnail_html` and
+ * `end_fetch_post_thumbnail_html` around each featured image, so the filter
+ * applies to that one image only. Core still adds `auto` to its `sizes`,
+ * because the image is lazy by the time `sizes` is built.
+ *
+ * @param int $post_id The post whose featured image is about to render.
+ */
+function start_other_event_thumbnail( $post_id ): void {
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() !== (int) $post_id ) {
+		add_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+	}
+}
+add_action( 'begin_fetch_post_thumbnail_html', __NAMESPACE__ . '\start_other_event_thumbnail' );
+
+/**
+ * Remove the filter `start_other_event_thumbnail()` added.
+ */
+function end_other_event_thumbnail(): void {
+	remove_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+}
+add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_other_event_thumbnail' );
+
+/**
+ * Make an image lazy and drop any high fetch priority core gave it.
+ *
+ * @param array $loading_attrs The loading attributes core chose.
+ * @return array The loading attributes to use.
+ */
+function lazy_load_other_event_thumbnail( $loading_attrs ): array {
+	unset( $loading_attrs['fetchpriority'] );
+	$loading_attrs['loading'] = 'lazy';
+
+	return $loading_attrs;
+}
 
 /**
  * Drop the "More events from this group" section when it has nothing to show.

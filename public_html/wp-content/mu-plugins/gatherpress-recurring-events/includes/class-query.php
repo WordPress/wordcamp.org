@@ -128,11 +128,16 @@ final class Query {
 	/**
 	 * Activates occurrence context as the Query Loop advances.
 	 *
+	 * Core's Query Loop block resets post data when it finishes, which fires
+	 * `the_post` for the main query's first post even though that query isn't
+	 * looping. On an events archive that would bring back a date after
+	 * `deactivate()` cleared it, so only a running loop counts.
+	 *
 	 * @param WP_Post       $post  Current post.
 	 * @param WP_Query|null $query Post query instance when invoked by the_post action.
 	 */
 	public static function activate( WP_Post $post, ?WP_Query $query = null ): void {
-		if ( $query && ! $query->get( 'gpre_occurrence_query' ) ) {
+		if ( $query && ( ! $query->in_the_loop || ! $query->get( 'gpre_occurrence_query' ) ) ) {
 			return;
 		}
 

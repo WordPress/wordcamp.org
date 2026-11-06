@@ -562,6 +562,80 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The selector's stylesheet and script load only where there's a
+	 * selector: a page with an active occurrence. Everywhere else they were
+	 * a render-blocking stylesheet and a script that did nothing.
+	 */
+	public function test_assets_load_only_with_an_active_occurrence(): void {
+		$plugin = Plugin::get_instance();
+
+		try {
+			$plugin->assets();
+
+			$this->assertFalse( wp_style_is( 'gpre' ), 'The selector stylesheet loaded on a page without an occurrence.' );
+			$this->assertFalse( wp_script_is( 'gpre' ), 'The selector script loaded on a page without an occurrence.' );
+
+			Context::set(
+				(object) array(
+					'series_post_id' => $this->create_published_recurring_event(),
+					'recurrence_id'  => '20260810T100000',
+				)
+			);
+			$plugin->assets();
+
+			$this->assertTrue( wp_style_is( 'gpre' ), 'The selector stylesheet no longer loads on an occurrence page.' );
+			$this->assertTrue( wp_script_is( 'gpre' ), 'The selector script no longer loads on an occurrence page.' );
+			$this->assertStringContainsString(
+				'"recurrenceId":"20260810T100000"',
+				(string) wp_scripts()->get_data( 'gpre', 'data' ),
+				'The script no longer tells RSVP requests which date they are for.'
+			);
+		} finally {
+			Context::set( null );
+			wp_dequeue_style( 'gpre' );
+			wp_dequeue_script( 'gpre' );
+		}
+	}
+
+	/**
+	 * Core's Query Loop block resets post data after its loop, which fires
+	 * `the_post` for a query that is no longer looping. On an events archive
+	 * that left the first event's date active, so a block theme, which renders
+	 * before `wp_head`, loaded the selector's assets on the archive anyway.
+	 */
+	public function test_resetting_post_data_after_a_loop_leaves_no_occurrence(): void {
+		set_current_screen( 'front' );
+
+		$this->create_projected_weekly_series( 'Weekly series' );
+
+		$query = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+			)
+		);
+
+		try {
+			$this->assertNotEmpty( $query->posts );
+
+			while ( $query->have_posts() ) {
+				$query->the_post();
+				$this->assertNotNull( Context::get(), 'An occurrence should be active inside the loop.' );
+			}
+
+			$this->assertNull( Context::get(), 'The occurrence should end with the loop.' );
+
+			$query->reset_postdata();
+
+			$this->assertNull( Context::get(), 'Resetting post data brought an occurrence back.' );
+		} finally {
+			Context::set( null );
+			wp_reset_postdata();
+		}
+	}
+
+	/**
 	 * Calendar links on an occurrence name the occurrence once.
 	 *
 	 * GatherPress builds them from `get_permalink()`, which already points at

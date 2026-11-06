@@ -273,8 +273,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		type="button"
 		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
 		data-wp-class--has-no-attendees="state.hasNoAttendees"
-		data-wp-on--click="actions.openModal"
-		aria-label="<?php esc_attr_e( 'View attendees', 'wordcamporg' ); ?>">
+		data-wp-on--click="actions.openModal">
 
 		<span class="wporg-event-rsvp__avatars" aria-hidden="true">
 			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
@@ -295,6 +294,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
 			<?php echo esc_html( $count_label ); ?>
 		</span>
+
+		<?php
+		/*
+		 * The button's accessible name has to start with the count it shows,
+		 * so a voice-control user can say what they see ("click 5 going").
+		 * An `aria-label` would replace that text, so what the button does is
+		 * added after it as hidden text instead.
+		 */
+		?>
+		<span class="screen-reader-text"><?php esc_html_e( 'View attendees', 'wordcamporg' ); ?></span>
 	</button>
 
 	<p

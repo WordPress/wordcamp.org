@@ -203,7 +203,9 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 
 	/**
 	 * The card renders the event's featured image, with the image link kept
-	 * out of the tab order — the stretched title link already opens the card.
+	 * out of the tab order and hidden from screen readers. It goes where the
+	 * title link goes, and the image's alt text is the event title, so
+	 * leaving it exposed announces every event twice.
 	 */
 	public function test_card_renders_the_featured_image() {
 		$this->create_event( 'Winter Meetup', true );
@@ -212,8 +214,150 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'Winter Meetup', $output );
 		$this->assertStringContainsString( 'wp-post-image', $output );
-		$this->assertStringContainsString( '<a tabindex="-1" href=', $output );
 		$this->assertStringNotContainsString( 'groups-site-featured-placeholder', $output );
+
+		$processor = new \WP_HTML_Tag_Processor( $output );
+
+		$this->assertTrue(
+			$processor->next_tag( array( 'class_name' => 'wp-block-post-featured-image' ) ),
+			'The card has no featured-image block.'
+		);
+		$this->assertTrue( $processor->next_tag( 'a' ), 'The featured image is no longer a link.' );
+		$this->assertSame( '-1', $processor->get_attribute( 'tabindex' ), 'The image link is back in the tab order.' );
+		$this->assertSame( 'true', $processor->get_attribute( 'aria-hidden' ), 'The image link is exposed to screen readers again.' );
+	}
+
+	/**
+	 * On an event page, only the event's own image loads right away. The
+	 * single template renders inside the main loop, so core counted the
+	 * "More events" cards at the bottom of the page among the first images
+	 * on it and downloaded them alongside the event's image.
+	 */
+	public function test_event_page_lazy_loads_other_events_images() {
+		$this->create_event( 'Other Meetup 1', true );
+		$this->create_event( 'Other Meetup 2', true );
+
+		$viewed_id = get_post( $this->create_event( 'Viewed Meetup', true ) )->post_parent;
+
+		$this->assertSame(
+			array( '/high', 'lazy/', 'lazy/' ),
+			$this->render_event_page_images( $viewed_id ),
+			'Only the event\'s own image should load right away; the "More events" cards should be lazy.'
+		);
+	}
+
+	/**
+	 * An event without an image of its own has no hero for core to give the
+	 * high fetch priority to, so core gives it to the first "More events"
+	 * card instead. That card is lazy, and an image can't be both.
+	 */
+	public function test_event_page_without_an_image_gives_no_card_high_priority() {
+		$this->create_event( 'Other Meetup 1', true );
+		$this->create_event( 'Other Meetup 2', true );
+
+		$this->assertSame(
+			array( 'lazy/', 'lazy/' ),
+			$this->render_event_page_images( $this->create_event_post( 'Viewed Meetup' ) )
+		);
+	}
+
+	/**
+	 * Render an event page's own image and its "More events" grid, the way
+	 * the single template does, and list each image's loading attributes.
+	 *
+	 * @param int $viewed_id The event whose page this is.
+	 * @return string[] `loading/fetchpriority` for each image, in page order.
+	 */
+	private function render_event_page_images( int $viewed_id ): array {
+		add_filter( 'query_loop_block_query_vars', 'WordCamp\\Groups\\Site\\exclude_current_event_from_query', 10, 2 );
+		add_action( 'begin_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\start_other_event_thumbnail' );
+		add_action( 'end_fetch_post_thumbnail_html', 'WordCamp\\Groups\\Site\\end_other_event_thumbnail' );
+
+		// Core keeps its per-page image count and high-priority flag in
+		// statics, so start this page from zero like a real request does.
+		wp_increase_content_media_count( - wp_increase_content_media_count( 0 ) );
+		wp_high_priority_element_flag( true );
+
+		$this->go_to( home_url( "?p={$viewed_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ) );
+
+		// Core skips all of this in the admin, which the suite otherwise is.
+		set_current_screen( 'front' );
+
+		// A block theme renders the whole single template inside this loop.
+		the_post();
+
+		$hero = new \WP_Block(
+			parse_blocks( '<!-- wp:post-featured-image /-->' )[0],
+			array(
+				'postId'   => $viewed_id,
+				'postType' => 'gatherpress_event',
+			)
+		);
+		$grid = str_replace( '"inherit":false', '"inherit":false,"groups_site_exclude_current":true', self::GRID );
+
+		$images    = array();
+		$processor = new \WP_HTML_Tag_Processor( $hero->render() . do_blocks( $grid ) );
+
+		while ( $processor->next_tag( 'IMG' ) ) {
+			$images[] = $processor->get_attribute( 'loading' ) . '/' . $processor->get_attribute( 'fetchpriority' );
+		}
+
+		return $images;
+	}
+
+	/**
+	 * The "More events" cards on an event page get the same treatment as
+	 * the archive's: the image link is hidden from screen readers and out of
+	 * the tab order, and an image-less card gets the placeholder. The event's
+	 * own image at the top of the page isn't a card, so an event with no
+	 * image still gets no placeholder there.
+	 */
+	public function test_event_page_cards_get_the_card_image_treatment() {
+		$this->create_event( 'Pictured Meetup', true );
+		$this->create_event( 'Imageless Meetup', false );
+
+		$viewed_id = $this->create_event_post( 'Viewed Meetup' );
+
+		add_filter( 'query_loop_block_query_vars', 'WordCamp\\Groups\\Site\\exclude_current_event_from_query', 10, 2 );
+
+		$this->go_to( home_url( "?p={$viewed_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ) );
+
+		// A block theme renders the whole single template inside this loop.
+		the_post();
+
+		$hero = new \WP_Block(
+			parse_blocks( '<!-- wp:post-featured-image /-->' )[0],
+			array(
+				'postId'   => $viewed_id,
+				'postType' => 'gatherpress_event',
+			)
+		);
+
+		$this->assertSame( '', trim( $hero->render() ), "The event's own missing image gained a placeholder." );
+
+		$grid = do_blocks( str_replace( '"inherit":false', '"inherit":false,"groups_site_exclude_current":true', self::GRID ) );
+
+		$this->assertSame( 1, substr_count( $grid, 'groups-site-featured-placeholder' ), 'The image-less card has no placeholder.' );
+
+		$processor = new \WP_HTML_Tag_Processor( $grid );
+		$links     = 0;
+
+		while ( $processor->next_tag( array( 'class_name' => 'wp-block-post-featured-image' ) ) ) {
+			// The placeholder hides its wrapper; a real image hides its link.
+			$wrapper_hidden = 'true' === $processor->get_attribute( 'aria-hidden' );
+
+			$this->assertTrue( $processor->next_tag( 'a' ), 'A card image is no longer a link.' );
+			$this->assertSame( '-1', $processor->get_attribute( 'tabindex' ), 'A card image link is in the tab order.' );
+			$this->assertTrue(
+				$wrapper_hidden || 'true' === $processor->get_attribute( 'aria-hidden' ),
+				'A card image link is exposed to screen readers.'
+			);
+			++$links;
+		}
+
+		$this->assertSame( 2, $links, 'Both "More events" cards should have an image region.' );
 	}
 
 	/**
@@ -337,6 +481,83 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 				"{$template} references a different card pattern."
 			);
 		}
+	}
+
+	/**
+	 * Each grid's cards sit under an `h2`, so their `h3` titles don't skip a
+	 * level. The front page has its visible "Upcoming events" heading; the
+	 * archive has only its `h1`, so it carries a visually hidden one.
+	 */
+	public function test_card_grids_sit_under_an_h2() {
+		foreach ( self::CARD_GRID_TEMPLATES as $template ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as test-groups-site-event-info-card.php does.
+			$markup = file_get_contents( self::THEME_DIR . 'templates/' . $template );
+
+			$this->assertNotFalse( $markup, "Could not read {$template}." );
+
+			$last_heading_level = null;
+
+			foreach ( $this->flatten_blocks( parse_blocks( $markup ) ) as $block ) {
+				if ( 'core/post-template' === $block['blockName'] ) {
+					break;
+				}
+
+				if ( 'core/heading' === $block['blockName'] ) {
+					$last_heading_level = $block['attrs']['level'] ?? 2;
+				}
+			}
+
+			$this->assertSame( 2, $last_heading_level, "The cards in {$template} no longer follow an h2." );
+		}
+	}
+
+	/**
+	 * The card's title is its only heading. The venue name is a paragraph:
+	 * as an `h4` it doubled the number of headings on a page of cards.
+	 */
+	public function test_card_venue_is_not_a_heading() {
+		ob_start();
+		include self::THEME_DIR . 'patterns/event-card.php';
+		$blocks = $this->flatten_blocks( parse_blocks( ob_get_clean() ) );
+
+		$venue = $this->find_block( $blocks, 'gatherpress/venue' );
+
+		$this->assertNotNull( $venue, 'The card no longer shows its venue.' );
+
+		$venue_title = $this->find_block( $venue['innerBlocks'], 'core/post-title' );
+
+		$this->assertNotNull( $venue_title, "The card's venue no longer shows its name." );
+		$this->assertSame( 0, $venue_title['attrs']['level'] ?? null, "The card's venue name is a heading again." );
+
+		$titles = array_filter(
+			$blocks,
+			static function ( $block ) {
+				return 'core/post-title' === $block['blockName'];
+			}
+		);
+
+		$this->assertSame( 3, reset( $titles )['attrs']['level'] ?? null, "The card's title is no longer an h3." );
+	}
+
+	/**
+	 * List a parsed block tree in document order, parents before children.
+	 *
+	 * @param array $blocks Parsed blocks to walk.
+	 *
+	 * @return array The blocks, flattened.
+	 */
+	private function flatten_blocks( array $blocks ): array {
+		$flat = array();
+
+		foreach ( $blocks as $block ) {
+			$flat[] = $block;
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$flat = array_merge( $flat, $this->flatten_blocks( $block['innerBlocks'] ) );
+			}
+		}
+
+		return $flat;
 	}
 
 	/**

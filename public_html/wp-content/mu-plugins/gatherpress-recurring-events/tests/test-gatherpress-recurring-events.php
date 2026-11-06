@@ -598,6 +598,44 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Core's Query Loop block resets post data after its loop, which fires
+	 * `the_post` for a query that is no longer looping. On an events archive
+	 * that left the first event's date active, so a block theme, which renders
+	 * before `wp_head`, loaded the selector's assets on the archive anyway.
+	 */
+	public function test_resetting_post_data_after_a_loop_leaves_no_occurrence(): void {
+		set_current_screen( 'front' );
+
+		$this->create_projected_weekly_series( 'Weekly series' );
+
+		$query = new WP_Query(
+			array(
+				'post_type'               => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+				'include_unfinished'      => 1,
+			)
+		);
+
+		try {
+			$this->assertNotEmpty( $query->posts );
+
+			while ( $query->have_posts() ) {
+				$query->the_post();
+				$this->assertNotNull( Context::get(), 'An occurrence should be active inside the loop.' );
+			}
+
+			$this->assertNull( Context::get(), 'The occurrence should end with the loop.' );
+
+			$query->reset_postdata();
+
+			$this->assertNull( Context::get(), 'Resetting post data brought an occurrence back.' );
+		} finally {
+			Context::set( null );
+			wp_reset_postdata();
+		}
+	}
+
+	/**
 	 * Calendar links on an occurrence name the occurrence once.
 	 *
 	 * GatherPress builds them from `get_permalink()`, which already points at

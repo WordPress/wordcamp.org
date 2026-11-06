@@ -12,6 +12,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_company_domains;
+use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\import_row;
 use function WordCamp\Sponsor_Vetting\normalize_domain;
@@ -219,7 +220,9 @@ class Test_Intake extends Database_TestCase {
 			$this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn() => set_company_domains( self::factory()->post->create( array( 'post_type' => COMPANY_POST_TYPE ) ), array( 'acme.example' ) ) );
 		}
 
-		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example', $is_mes ? array( '_mes_id' => $mes_id ) : array() );
+		$sponsor_id = $this->create_camp_sponsor( 'https://acme.example', $is_mes ? array( '_mes_id' => $mes_id ) : array() );
+
+		wp_set_current_user( self::factory()->user->create() );
 		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
 
 		$result = $this->on_site(
@@ -228,6 +231,16 @@ class Test_Intake extends Database_TestCase {
 				'status'      => get_post_status( $sponsorship_id ),
 				'approved_by' => get_post_meta( $sponsorship_id, '_sv_approved_by', true ),
 				'parent'      => (int) get_post_field( 'post_parent', $sponsorship_id ),
+				// What the approval logged, leaving out the organizer's request and the link it made.
+				'logged_by'   => array_values(
+					array_column(
+						array_filter(
+							get_log( $sponsorship_id ),
+							static fn( array $entry ): bool => 'new' !== ( $entry['from'] ?? '' ) && ! str_starts_with( $entry['text'] ?? '', 'Linked to' )
+						),
+						'user_id'
+					)
+				),
 			)
 		);
 
@@ -236,6 +249,7 @@ class Test_Intake extends Database_TestCase {
 
 		if ( $approved ) {
 			$this->assertSame( $company_id, $result['parent'] );
+			$this->assertSame( array( 0, 0, 0 ), $result['logged_by'] );
 		}
 	}
 

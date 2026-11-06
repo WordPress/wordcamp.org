@@ -15,6 +15,8 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\build_compliance_email;
 use function WordCamp\Sponsor_Vetting\get_conversations;
+use function WordCamp\Sponsor_Vetting\get_log;
+use function WordCamp\Sponsor_Vetting\needs_approval_email;
 use function WordCamp\Sponsor_Vetting\record_conversation;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\send_compliance_request;
@@ -283,7 +285,39 @@ class Test_Emails extends Database_TestCase {
 
 		$this->assertSame( $approved ? 'svs-approved' : 'svs-pending', get_post_status( $this->sponsorship_id ) );
 		$this->assertSame( $approved ? '0' : '', get_post_meta( $this->sponsorship_id, '_sv_approved_by', true ) );
-		$this->assertCount( $emailed ? 1 : 0, get_conversations( $this->sponsorship_id, 'approval' ) );
+		$this->assertSame( $emailed ? array( 0 ) : array(), array_column( get_conversations( $this->sponsorship_id, 'approval' ), 'user_id' ) );
+		// Everything the approval logged is the system's, not the vetter's who marked the company Compliant.
+		$this->assertSame( array( 0 ), array_values( array_unique( array_column( get_log( $this->sponsorship_id ), 'user_id' ) ) ) );
+	}
+
+	/**
+	 * An automatic approval's email FreeScout doesn't take is noted in the sponsorship's history, and is still
+	 * needed, so vetters can send it again.
+	 *
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_freescout(), with creating the conversation
+	 * timing out instead.
+	 */
+	public function test_a_failed_approval_email_can_be_sent_again(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
+
+		$requests = array();
+		$fake     = $this->fake_freescout( $requests );
+		$down     = static fn( mixed $response, array $args ): mixed => 'POST' === $args['method'] ? new \WP_Error( 'http_request_failed', 'Timed out.' ) : $response;
+
+		add_filter( 'pre_http_request', $fake, 10, 3 );
+		add_filter( 'pre_http_request', $down, 11, 2 );
+		wp_update_post(
+			array(
+				'ID'          => $this->company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		remove_filter( 'pre_http_request', $down, 11 );
+		remove_filter( 'pre_http_request', $fake, 10 );
+
+		$this->assertSame( 'svs-approved', get_post_status( $this->sponsorship_id ) );
+		$this->assertTrue( needs_approval_email( $this->sponsorship_id ) );
+		$this->assertContains( 'FreeScout didn’t answer, so the email may have been sent. Check FreeScout before sending it again.', array_column( get_log( $this->sponsorship_id ), 'text' ) );
 	}
 
 	/**

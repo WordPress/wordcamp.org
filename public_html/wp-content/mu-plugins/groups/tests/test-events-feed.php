@@ -353,8 +353,8 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 				'city'         => 'Brisbane',
 				'state'        => 'Queensland',
 				'country_code' => 'AU',
-				'latitude'     => -27.4705,
-				'longitude'    => 153.026,
+				'latitude'     => -27.47,
+				'longitude'    => 153.03,
 			),
 			$event['venue']
 		);
@@ -666,6 +666,38 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
+	 * A venue can be someone's home, so the feed must not carry a point
+	 * precise enough to find the house, only enough to place the event on a
+	 * map or near a visitor.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\format_venue
+	 */
+	public function test_venue_coordinates_are_rounded() {
+		$brisbane = $this->group_sites['brisbane'];
+		$event_id = $this->create_site_event(
+			$brisbane,
+			array(
+				'new_venue_name'    => 'Sam’s Place',
+				'new_venue_address' => '27 Quiet Close, Brisbane',
+			)
+		);
+
+		$this->geocode_event_venue(
+			$brisbane,
+			$event_id,
+			array(
+				'latitude'  => '-27.468713',
+				'longitude' => '153.023495',
+			)
+		);
+
+		$event = $this->by_source_id( $this->get_page() )[ $this->source_id( $brisbane, $event_id ) ];
+
+		$this->assertSame( -27.47, $event['venue']['latitude'] );
+		$this->assertSame( 153.02, $event['venue']['longitude'] );
+	}
+
+	/**
 	 * @covers \WordCamp\Groups\Events_Feed\format_venue
 	 */
 	public function test_ungeocoded_venue_has_no_coordinates() {
@@ -735,7 +767,7 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 
 		$json = wp_json_encode( $this->get_page() );
 
-		foreach ( array( 'feed_attendee_login', 'feed-attendee@example.com', 'Feed Attendee Name', '5555 0199', 'contact-hall.example.com' ) as $needle ) {
+		foreach ( array( 'feed_attendee_login', 'feed-attendee@example.com', 'Feed Attendee Name', '5555 0199', 'contact-hall.example.com', 'River St' ) as $needle ) {
 			$this->assertStringNotContainsString( $needle, $json );
 		}
 	}

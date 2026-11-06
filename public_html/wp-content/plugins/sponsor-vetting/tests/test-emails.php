@@ -134,9 +134,10 @@ class Test_Emails extends Database_TestCase {
 	 * Sending the compliance request emails the sponsor with the event copied in, moves the company to Compliance
 	 * Requested, and records the conversation.
 	 *
-	 * Fakes, through `pre_http_request`, the three FreeScout API calls `FreeScout::send()` makes: looking up the
-	 * sending agent (`GET /api/users`), creating the conversation (`POST /api/conversations`), and tagging it
-	 * (`PUT /api/conversations/{id}/tags`). The responses follow the API's shape.
+	 * Fakes, through `pre_http_request`, the FreeScout API calls `FreeScout::send()` makes: creating the
+	 * conversation (`POST /api/conversations`) and tagging it (`PUT /api/conversations/{id}/tags`). Clients older
+	 * than WordPress/wporg-mu-plugins#797 also look up the sending agent first (`GET /api/users`), and local
+	 * checkouts may still have one, so that call is answered but not required. The responses follow the API's shape.
 	 */
 	public function test_sending_the_compliance_request_records_the_conversation(): void {
 		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
@@ -207,10 +208,18 @@ class Test_Emails extends Database_TestCase {
 		$conversation = send_compliance_request( $this->company_id, $this->sponsorship_id );
 		remove_filter( 'pre_http_request', $fake, 10 );
 
+		// Older FreeScout clients look the sending agent up first. Order and repeats still count.
+		$sent = array_values(
+			array_filter(
+				$requests,
+				static fn ( array $request ): bool => 'GET users' !== $request['request']
+			)
+		);
+
 		$this->assertIsArray( $conversation );
-		$this->assertSame( array( 'GET users', 'POST conversations', 'PUT conversations/12345/tags' ), array_column( $requests, 'request' ) );
-		$this->assertSame( array( 'seattle@wordcamp.test' ), $requests[1]['body']['threads'][0]['cc'] );
-		$this->assertSame( array( 'sponsor-vetting', 'sponsor-infringing' ), $requests[2]['body']['tags'] );
+		$this->assertSame( array( 'POST conversations', 'PUT conversations/12345/tags' ), array_column( $sent, 'request' ) );
+		$this->assertSame( array( 'seattle@wordcamp.test' ), $sent[0]['body']['threads'][0]['cc'] );
+		$this->assertSame( array( 'sponsor-vetting', 'sponsor-infringing' ), $sent[1]['body']['tags'] );
 		$this->assertSame( 'sv-compliance-req', get_post_status( $this->company_id ) );
 		$this->assertSame(
 			array(

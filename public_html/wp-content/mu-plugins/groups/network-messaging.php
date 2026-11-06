@@ -2,7 +2,7 @@
 /**
  * Network-admin messaging for WordPress Group sites.
  *
- * Gives Program Managers (network admins) a single Network Admin screen for
+ * Gives Program Managers and Program Supporters a single Network Admin screen for
  * emailing group people, covering two audiences that were previously
  * impossible to reach without hand-assembling address lists:
  *
@@ -30,11 +30,11 @@ use WordCamp\Logger;
 defined( 'WPINC' ) || die();
 
 /**
- * Capability required to compose and send. `manage_network` is what makes
- * someone a Program Manager on this network; there's no narrower cap that
- * fits, and this tool can reach every group at once.
+ * Capability required to compose and send: the Groups tools capability,
+ * held by Program Supporters and by everyone with `manage_network`. See
+ * `capabilities.php`.
  */
-const CAPABILITY = 'manage_network';
+const CAPABILITY = \WordCamp\Groups\Capabilities\CAPABILITY;
 
 /** Network Admin page slug. */
 const MENU_SLUG = 'wporg-groups-messaging';
@@ -579,6 +579,19 @@ function handle_form_post(): void {
 	if ( ! queue_message( $subject, $body, $audience, $group_ids ) ) {
 		redirect_with_notice( 'queue-busy' );
 	}
+
+	$log_context = array(
+		'audience'    => $audience,
+		'scope'       => 'selected' === $scope ? 'selected' : 'all',
+		'group_count' => count( $group_ids ),
+		'subject'     => $subject,
+	);
+
+	if ( 'selected' === $scope ) {
+		$log_context['group_ids'] = $group_ids;
+	}
+
+	\WordCamp\Groups\Action_Log\record( 'message_queued', 0, $log_context );
 
 	redirect_with_notice( 'queued', count( $group_ids ) );
 }

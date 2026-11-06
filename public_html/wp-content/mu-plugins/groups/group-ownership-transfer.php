@@ -25,7 +25,9 @@
 
 namespace WordCamp\Groups\Ownership_Transfer;
 
+use WordCamp\Groups\Action_Log;
 use WordCamp\Groups\Archive;
+use WordCamp\Groups\Capabilities;
 use WordCamp\Logger;
 use WP_Error;
 
@@ -320,15 +322,13 @@ function current_user_can_initiate( int $site_id ): bool { // phpcs:ignore Gener
 /**
  * Whether the current user may approve or reject a pending transfer.
  *
- * `manage_sites` matches `Archive\current_user_can_archive_groups()` — this
- * codebase already uses that capability for "one specific group's sensitive
- * state, decided one at a time, surfaced on a network-wide listing screen,"
- * which is exactly this shape of action. `manage_network` is reserved
- * elsewhere in this codebase (`Groups\Messaging`) for tooling that
- * broadcasts to every group at once, which this isn't.
+ * The same Groups tools capability as every other screen under Network
+ * Admin > Groups, so Program Supporters can decide transfers. See
+ * `capabilities.php`. `execute_transfer()` still refuses an approval by the
+ * candidate themselves.
  */
 function current_user_can_approve(): bool {
-	return current_user_can( 'manage_sites' );
+	return Capabilities\current_user_can_manage_groups();
 }
 
 /*
@@ -750,6 +750,14 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 		return new WP_Error( 'transfer_not_awaiting_approval', __( 'This transfer has not been accepted by the candidate yet.', 'wordcamporg' ), array( 'status' => 400 ) );
 	}
 
+	// Approval is the one step someone other than the two parties signs off
+	// on. Program Supporters can approve and can also be organizers of a
+	// group, so without this one person could be nominated, accept, and
+	// approve their own takeover.
+	if ( (int) $pending['to_user_id'] === $decided_by ) {
+		return new WP_Error( 'self_approval', __( 'You can\'t approve a transfer to yourself. Someone else needs to approve it.', 'wordcamporg' ), array( 'status' => 403 ) );
+	}
+
 	if ( get_current_blog_id() !== $site_id ) {
 		return new WP_Error( 'wrong_site_context', 'execute_transfer() must be called with the target site as the current blog.' );
 	}
@@ -1033,7 +1041,7 @@ function add_page(): void {
 		Archive\PAGE_SLUG,
 		__( 'Ownership Transfers', 'wordcamporg' ),
 		__( 'Ownership Transfers', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		MENU_SLUG,
 		__NAMESPACE__ . '\render_page'
 	);
@@ -1224,6 +1232,9 @@ function handle_decision(): void {
 		wp_die( esc_html__( 'Invalid decision.', 'wordcamporg' ), '', array( 'response' => 400 ) );
 	}
 
+	// Read before deciding: both outcomes clear the pending record.
+	$pending = get_pending_transfer( $site_id );
+
 	switch_to_blog( $site_id );
 	$decided_by = get_current_user_id();
 
@@ -1240,6 +1251,15 @@ function handle_decision(): void {
 			array( 'response' => 400 )
 		);
 	}
+
+	Action_Log\record(
+		'approve' === $decision ? 'transfer_approved' : 'transfer_rejected',
+		$site_id,
+		array(
+			'from_user_id' => (int) ( $pending['from_user_id'] ?? 0 ),
+			'to_user_id'   => (int) ( $pending['to_user_id'] ?? 0 ),
+		)
+	);
 
 	$redirect_url = add_query_arg(
 		array(

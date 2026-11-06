@@ -31,6 +31,10 @@ function manually_load_plugin() {
 	// autoloaded in the test environment the way it is on a real request.
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
+	// Before the tools below: `network-messaging.php` and `network-export.php`
+	// define their capability from `Capabilities\CAPABILITY` at load time.
+	require_once dirname( __DIR__ ) . '/capabilities.php';
+	require_once dirname( __DIR__ ) . '/action-log.php';
 	require_once dirname( __DIR__ ) . '/front-end-locale.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';

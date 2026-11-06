@@ -4,7 +4,8 @@
  *
  * Uses WordPress multisite's native archived-site flag so group content,
  * RSVPs, and memberships remain intact. Organizers cannot request archival
- * in v1; only users who can manage network sites can use this screen.
+ * in v1; only users with the Groups tools capability (Program Supporters and
+ * network admins, see `capabilities.php`) can use this screen.
  *
  * Only loaded on the Groups network, via
  * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
@@ -14,6 +15,8 @@
 
 namespace WordCamp\Groups\Archive;
 
+use WordCamp\Groups\Action_Log;
+use WordCamp\Groups\Capabilities;
 use WordCamp\Groups\Frontend\Sponsors;
 use WP_Error;
 use WP_Site;
@@ -97,7 +100,7 @@ function register_page(): void {
 	add_menu_page(
 		__( 'Groups', 'wordcamporg' ),
 		__( 'Groups', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		PAGE_SLUG,
 		__NAMESPACE__ . '\\render_page',
 		'dashicons-groups'
@@ -109,7 +112,7 @@ function register_page(): void {
 		PAGE_SLUG,
 		__( 'Groups', 'wordcamporg' ),
 		__( 'Groups', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		PAGE_SLUG,
 		__NAMESPACE__ . '\\render_page'
 	);
@@ -149,7 +152,7 @@ function register_sponsors_link(): void {
  * @return bool
  */
 function current_user_can_archive_groups(): bool {
-	return current_user_can( 'manage_sites' );
+	return Capabilities\current_user_can_manage_groups();
 }
 
 /**
@@ -217,6 +220,8 @@ function handle_update(): void {
 		);
 	}
 
+	Action_Log\record( $archived ? 'group_archived' : 'group_reactivated', $site_id );
+
 	$redirect_url = add_query_arg(
 		array(
 			'page'    => PAGE_SLUG,
@@ -263,7 +268,7 @@ function render_page(): void {
 			<?php esc_html_e( 'Archive a group without deleting its events, RSVPs, or member records. Archived group sites are unavailable on the front end until reactivated.', 'wordcamporg' ); ?>
 		</p>
 		<p>
-			<?php esc_html_e( 'Only network site managers can perform this action. Already scheduled jobs are left unchanged.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Only Program Supporters and network admins can perform this action. Already scheduled jobs are left unchanged.', 'wordcamporg' ); ?>
 		</p>
 
 		<table class="wp-list-table widefat fixed striped">

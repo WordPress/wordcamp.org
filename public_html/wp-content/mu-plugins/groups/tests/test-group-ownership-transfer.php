@@ -177,9 +177,10 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	}
 
 	/**
-	 * Only `manage_sites` holders (network admins by default) can approve.
+	 * Only holders of the Groups tools capability (network admins and Program
+	 * Supporters, see `test-group-capabilities.php`) can approve.
 	 */
-	public function test_only_manage_sites_can_approve() {
+	public function test_only_groups_managers_can_approve() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 
 		wp_set_current_user( $owner_id );
@@ -344,6 +345,30 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		// Roles are untouched by a rejection.
 		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
 		$this->assertContains( 'editor', get_userdata( $candidate_id )->roles );
+	}
+
+	/**
+	 * Nobody approves their own takeover: Program Supporters can approve and
+	 * can also organize a group, so one person could otherwise be nominated,
+	 * accept, and approve. Approval by anyone else still works afterwards.
+	 */
+	public function test_candidate_cannot_approve_their_own_transfer() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		$result = execute_transfer( $this->group_site_id, $candidate_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'self_approval', $result->get_error_code() );
+		$this->assertSame( STATUS_PENDING_APPROVAL, get_pending_transfer( $this->group_site_id )['status'] );
+		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+		$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+
+		$this->assertTrue( execute_transfer( $this->group_site_id, $admin_id ) );
 	}
 
 	/**
@@ -795,7 +820,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	 * decoration on top of a check further in: `execute_transfer()` and
 	 * `reject_transfer()` don't re-check who is asking.
 	 */
-	public function test_handle_decision_requires_manage_sites() {
+	public function test_handle_decision_requires_the_groups_capability() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 
 		wp_set_current_user( $owner_id );

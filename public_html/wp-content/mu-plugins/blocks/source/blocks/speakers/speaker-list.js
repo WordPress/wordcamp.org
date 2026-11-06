@@ -8,6 +8,7 @@ import { get } from 'lodash';
  */
 import { __, _n } from '@wordpress/i18n';
 import { Component } from '@wordpress/element';
+import { decodeEntities } from '@wordpress/html-entities';
 
 /**
  * Internal dependencies
@@ -58,7 +59,7 @@ function SpeakerSessions( { speaker, tracks } ) {
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							{ session.title.rendered.trim() ||
+							{ decodeEntities( session.title.rendered.trim() ) ||
 								__( '(Untitled)', 'wordcamporg' ) }
 						</a>
 						<span className="wordcamp-speakers__session-info">

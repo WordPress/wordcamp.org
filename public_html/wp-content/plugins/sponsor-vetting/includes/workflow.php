@@ -375,7 +375,7 @@ function auto_approve_on_compliant( int $post_id, \WP_Post $post, bool $update, 
 
 	if ( $unsent ) {
 		/* translators: %d: Number of sponsorships. */
-		add_notice( 'error', sprintf( _n( '%d approval email wasn’t sent. The sponsorship’s history says why; send it from there.', '%d approval emails weren’t sent. Each sponsorship’s history says why; send them from there.', count( $unsent ), 'wordcamporg' ), count( $unsent ) ) );
+		add_notice( 'error', sprintf( _n( '%d approval email wasn’t sent (see the log in its history).', '%d approval emails weren’t sent (see logs in their history).', count( $unsent ), 'wordcamporg' ), count( $unsent ) ) );
 	}
 }
 add_action( 'wp_after_insert_post', __NAMESPACE__ . '\auto_approve_on_compliant', 10, 4 );

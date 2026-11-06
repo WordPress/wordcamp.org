@@ -43,6 +43,8 @@ const PER_PAGE  = 50;
 add_action( 'init', __NAMESPACE__ . '\register_log_post_type' );
 // After Network_Export's tab at 11, before the Sponsors link at 20.
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page', 12 );
+add_action( 'wporg_groups_ownership_transfer_executed', __NAMESPACE__ . '\record_transfer_approved', 10, 2 );
+add_action( 'wporg_groups_ownership_transfer_rejected', __NAMESPACE__ . '\record_transfer_rejected', 10, 3 );
 
 /**
  * The actions that can be logged, and how the Activity screen describes them.
@@ -132,6 +134,57 @@ function record( string $action, int $site_id = 0, array $context = array() ) {
 	}
 
 	return $entry_id;
+}
+
+/**
+ * Log an approved transfer.
+ *
+ * @param int   $site_id Group site ID.
+ * @param array $record  The transfer record the approval acted on.
+ */
+function record_transfer_approved( int $site_id, array $record ): void {
+	record_transfer_decision( 'transfer_approved', $site_id, $record );
+}
+
+/**
+ * Log a rejected transfer.
+ *
+ * @param int    $site_id Group site ID.
+ * @param array  $record  The transfer record the rejection acted on.
+ * @param string $reason  The reason given, if any.
+ */
+function record_transfer_rejected( int $site_id, array $record, string $reason = '' ): void {
+	record_transfer_decision( 'transfer_rejected', $site_id, $record, $reason );
+}
+
+/**
+ * Log a transfer decision from the transition's own hook.
+ *
+ * The hooks carry the record the decision acted on, read under the per-site
+ * lock, so the entry names the parties that were actually decided on.
+ * Decisions are only made from the Ownership Transfers screen, so a
+ * transition with nobody logged in (WP-CLI, tests) isn't a use of the tools.
+ *
+ * @param string $action  `transfer_approved` or `transfer_rejected`.
+ * @param int    $site_id Group site ID.
+ * @param array  $record  The transfer record.
+ * @param string $reason  The rejection reason, if any.
+ */
+function record_transfer_decision( string $action, int $site_id, array $record, string $reason = '' ): void {
+	if ( ! get_current_user_id() ) {
+		return;
+	}
+
+	$context = array(
+		'from_user_id' => (int) ( $record['from_user_id'] ?? 0 ),
+		'to_user_id'   => (int) ( $record['to_user_id'] ?? 0 ),
+	);
+
+	if ( '' !== $reason ) {
+		$context['reason'] = $reason;
+	}
+
+	record( $action, $site_id, $context );
 }
 
 /**
@@ -226,12 +279,22 @@ function format_details( array $entry ): string {
 
 		case 'transfer_approved':
 		case 'transfer_rejected':
-			return sprintf(
+			$details = sprintf(
 				/* translators: 1: current owner, 2: nominated owner. */
 				__( 'From %1$s to %2$s', 'wordcamporg' ),
 				format_user( (int) ( $context['from_user_id'] ?? 0 ) ),
 				format_user( (int) ( $context['to_user_id'] ?? 0 ) )
 			);
+
+			if ( ! empty( $context['reason'] ) ) {
+				$details .= ' ' . sprintf(
+					/* translators: %s: why the transfer was rejected. */
+					__( 'Reason: "%s"', 'wordcamporg' ),
+					$context['reason']
+				);
+			}
+
+			return $details;
 
 		case 'message_queued':
 			return sprintf(

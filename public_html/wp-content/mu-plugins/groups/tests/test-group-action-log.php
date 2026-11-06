@@ -334,47 +334,150 @@ class Test_Group_Action_Log extends Groups_TestCase {
 	}
 
 	/**
-	 * Deciding a transfer is logged with who it was between.
+	 * Nominate a candidate on the test group and have them accept.
+	 *
+	 * @param int $owner_id     The group's owner.
+	 * @param int $candidate_id The candidate.
+	 *
+	 * @return string The nomination's key, as the Ownership Transfers screen shows it.
 	 */
-	public function test_transfer_decisions_are_logged() {
+	private function nominate( int $owner_id, int $candidate_id ): string {
 		// Someone for the "awaiting approval" email to go to, or it warns.
 		$GLOBALS['super_admins'] = array( get_userdata( self::factory()->user->create() )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 
 		switch_to_blog( $this->group_site_id );
-		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
-
 		Ownership_Transfer\initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		Ownership_Transfer\accept_transfer( $this->group_site_id, $candidate_id );
 		restore_current_blog();
 
 		unset( $GLOBALS['super_admins'] );
 
-		$user_id = $this->become_program_supporter();
+		return Ownership_Transfer\get_nomination_key( Ownership_Transfer\get_pending_transfer( $this->group_site_id ) );
+	}
 
+	/**
+	 * Post a decision on the test group to the Ownership Transfers handler.
+	 *
+	 * @param string $decision   `approve` or `reject`.
+	 * @param string $nomination The nomination key the form carried.
+	 * @param string $reason     The rejection reason.
+	 */
+	private function post_decision( string $decision, string $nomination, string $reason = '' ): void {
 		$this->post(
 			array(
-				'site_id'  => (string) $this->group_site_id,
-				'decision' => 'approve',
-				'_wpnonce' => wp_create_nonce( Ownership_Transfer\DECIDE_ACTION . '_' . $this->group_site_id ),
+				'site_id'    => (string) $this->group_site_id,
+				'decision'   => $decision,
+				'nomination' => $nomination,
+				'reason'     => $reason,
+				'_wpnonce'   => wp_create_nonce( Ownership_Transfer\DECIDE_ACTION . '_' . $this->group_site_id ),
 			)
 		);
+	}
+
+	/**
+	 * Run a handler that should refuse, failing instead of exiting if it redirects.
+	 *
+	 * @param callable $handler The handler.
+	 *
+	 * @return string The refusal message.
+	 */
+	private function run_refused_handler( callable $handler ): string {
+		$catcher = static function () {
+			throw new \Exception( esc_html( self::REDIRECTED ) );
+		};
+
+		add_filter( 'wp_redirect', $catcher );
+
+		try {
+			$handler();
+		} catch ( WPDieException $refused ) {
+			return $refused->getMessage();
+		} finally {
+			remove_filter( 'wp_redirect', $catcher );
+		}
+
+		$this->fail( 'The handler should have refused.' );
+	}
+
+	/**
+	 * Deciding a transfer is logged with who it was between, and a
+	 * rejection with its reason.
+	 */
+	public function test_transfer_decisions_are_logged() {
+		switch_to_blog( $this->group_site_id );
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		restore_current_blog();
+
+		$nomination = $this->nominate( $owner_id, $candidate_id );
+		$user_id    = $this->become_program_supporter();
+
+		$this->post_decision( 'approve', $nomination );
 		$this->run_redirecting_handler( 'WordCamp\Groups\Ownership_Transfer\handle_decision' );
 
 		$this->assertNull( Ownership_Transfer\get_pending_transfer( $this->group_site_id ), 'A Program Supporter should be able to approve a transfer.' );
 
+		// The candidate owns the group now, and hands it back.
+		$this->post_decision( 'reject', $this->nominate( $candidate_id, $owner_id ), 'Too soon' );
+		$this->run_redirecting_handler( 'WordCamp\Groups\Ownership_Transfer\handle_decision' );
+
 		$entries = $this->entries_by( $user_id );
 
-		$this->assertCount( 1, $entries );
-		$this->assertSame( 'transfer_approved', $entries[0]['action'] );
-		$this->assertSame( $this->group_site_id, $entries[0]['site_id'] );
+		$this->assertCount( 2, $entries );
+		$this->assertSame( array( 'transfer_rejected', 'transfer_approved' ), array_column( $entries, 'action' ) );
+		$this->assertSame( array( $this->group_site_id, $this->group_site_id ), array_column( $entries, 'site_id' ) );
+		$this->assertSame(
+			array(
+				'from_user_id' => $candidate_id,
+				'to_user_id'   => $owner_id,
+				'reason'       => 'Too soon',
+			),
+			$entries[0]['context']
+		);
 		$this->assertSame(
 			array(
 				'from_user_id' => $owner_id,
 				'to_user_id'   => $candidate_id,
 			),
-			$entries[0]['context']
+			$entries[1]['context']
 		);
+	}
+
+	/**
+	 * A decision made on a nomination that has since been replaced is
+	 * refused and logs nothing, as is one that doesn't say which nomination
+	 * it was made on. The owner can cancel and nominate someone else at any
+	 * time, so a page left open would otherwise approve a candidate nobody
+	 * reviewed.
+	 */
+	public function test_decision_on_a_replaced_nomination_is_refused() {
+		switch_to_blog( $this->group_site_id );
+		$owner_id   = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$shown_id   = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$swapped_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		restore_current_blog();
+
+		$shown = $this->nominate( $owner_id, $shown_id );
+
+		switch_to_blog( $this->group_site_id );
+		wp_set_current_user( $owner_id );
+		Ownership_Transfer\cancel_transfer( $this->group_site_id, $owner_id );
+		restore_current_blog();
+
+		$this->nominate( $owner_id, $swapped_id );
+
+		$user_id = $this->become_program_supporter();
+
+		foreach ( array( 'approve', 'reject' ) as $decision ) {
+			foreach ( array( $shown, '' ) as $nomination ) {
+				$this->post_decision( $decision, $nomination );
+
+				$this->assertStringContainsString( 'changed', $this->run_refused_handler( 'WordCamp\Groups\Ownership_Transfer\handle_decision' ) );
+			}
+		}
+
+		$this->assertSame( $swapped_id, Ownership_Transfer\get_pending_transfer( $this->group_site_id )['to_user_id'] );
+		$this->assertSame( array(), $this->entries_by( $user_id ) );
 	}
 
 	/**

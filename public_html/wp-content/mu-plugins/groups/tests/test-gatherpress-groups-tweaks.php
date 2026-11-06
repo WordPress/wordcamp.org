@@ -624,6 +624,63 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Each view lists the events it's named for. GatherPress only applies its
+	 * upcoming/past window to a query that asks for one by the time its own
+	 * `pre_get_posts` runs, so the archive's settings have to be in place
+	 * before that, or every view lists every event.
+	 */
+	public function test_archive_views_list_their_events() {
+		$last_month = $this->make_dated_event( 'Last month', '-30 days' );
+		$next_week  = $this->make_dated_event( 'Next week', '+7 days' );
+		$next_month = $this->make_dated_event( 'Next month', '+30 days' );
+
+		$this->assertSame(
+			array( $next_week, $next_month ),
+			wp_list_pluck( $this->go_to_event_archive()->posts, 'ID' ),
+			'Upcoming should list the events to come, soonest first.'
+		);
+
+		$this->assertSame(
+			array( $last_month ),
+			wp_list_pluck( $this->go_to_event_archive( array( 'event_time' => 'past' ) )->posts, 'ID' )
+		);
+
+		$this->assertEqualsCanonicalizing(
+			array( $last_month, $next_week, $next_month ),
+			wp_list_pluck( $this->go_to_event_archive( array( 'event_time' => 'all' ) )->posts, 'ID' )
+		);
+	}
+
+	/**
+	 * Create a published event two hours long.
+	 *
+	 * @param string $title  Event title.
+	 * @param string $starts When it starts, relative to now (`strtotime()`).
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_dated_event( string $title, string $starts ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $starts ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $starts . ' +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
 	 * The archive's filters narrow the main query, and what it finds is what
 	 * the grid and its result count show.
 	 */
@@ -704,6 +761,26 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * The Events screen in wp-admin runs a main query for the same post type
+	 * and has to keep listing every event, past ones included.
+	 */
+	public function test_admin_events_list_is_left_alone() {
+		$last_month = $this->make_dated_event( 'Last month', '-30 days' );
+		$next_week  = $this->make_dated_event( 'Next week', '+7 days' );
+
+		$screen = $GLOBALS['current_screen'] ?? null;
+		set_current_screen( 'edit-gatherpress_event' );
+
+		$this->go_to( home_url( '/?post_type=gatherpress_event' ) );
+		$query = $GLOBALS['wp_query'];
+
+		$GLOBALS['current_screen'] = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Putting back the screen this test changed.
+
+		$this->assertNotSame( 12, $query->get( 'posts_per_page' ) );
+		$this->assertEqualsCanonicalizing( array( $last_month, $next_week ), wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
 	 * Old Query Loop page links move to the main query's paged URL and keep
 	 * the rest of the view state.
 	 */
@@ -745,6 +822,17 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->go_to_front_end( home_url( '/?query-page=2' ) );
 		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
+	}
+
+	/**
+	 * The tests above ask the redirect where it would go. This is what makes
+	 * a request actually go there.
+	 */
+	public function test_legacy_page_link_redirect_runs_on_template_redirect() {
+		$this->assertSame(
+			5,
+			has_action( 'template_redirect', 'WordCamp\\Groups\\GatherPress_Tweaks\\redirect_legacy_event_archive_pagination' )
+		);
 	}
 
 	/**

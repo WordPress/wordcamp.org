@@ -383,6 +383,11 @@ function save_sponsorship( int $post_id ): void {
 			add_notice( 'error', $linked->get_error_message() );
 		} else {
 			queue_company( $post_id );
+
+			// Approving it here too would leave the Approve button below refusing an approved sponsorship.
+			if ( ! in_array( $action, array( 'approve', 'approve_good_faith' ), true ) && auto_approve( $post_id ) ) {
+				add_notice( 'success', __( 'The sponsorship was approved automatically: its company is vetted.', 'wordcamporg' ) );
+			}
 		}
 	}
 

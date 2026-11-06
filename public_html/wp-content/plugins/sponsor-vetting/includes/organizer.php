@@ -263,7 +263,16 @@ function handle_vetting_request(): void {
 	if ( is_wp_error( $result ) ) {
 		add_notice( 'error', $result->get_error_message() );
 	} else {
-		add_notice( 'success', __( 'Vetting requested. The Community Team will be in touch with the sponsor if anything needs changing.', 'wordcamporg' ) );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$approved = 'svs-approved' === get_post_status( $result );
+		restore_current_blog();
+
+		add_notice(
+			'success',
+			$approved
+				? __( 'Approved: the Community Team has already vetted this sponsor’s company.', 'wordcamporg' )
+				: __( 'Vetting requested. The Community Team will be in touch with the sponsor if anything needs changing.', 'wordcamporg' )
+		);
 	}
 
 	wp_safe_redirect( admin_url( 'post.php?post=' . $sponsor_id . '&action=edit' ) );

@@ -195,6 +195,32 @@ function restoring_approval( ?int $sponsorship_id = null ): int {
 }
 
 /**
+ * Tracks whether the plugin is acting on its own, so its log entries and approvals are put down to the system
+ * rather than to whoever's request set it off.
+ *
+ * @param bool|null $acting Whether it's acting on its own, or null to read.
+ * @return bool
+ */
+function acting_as_system( ?bool $acting = null ): bool {
+	static $current = false;
+
+	if ( null !== $acting ) {
+		$current = $acting;
+	}
+
+	return $current;
+}
+
+/**
+ * Gets who is acting, for the log: the current user, or 0 for the system.
+ *
+ * @return int
+ */
+function get_acting_user_id(): int {
+	return acting_as_system() ? 0 : get_current_user_id();
+}
+
+/**
  * Approves a sponsorship.
  *
  * Callers check capabilities first.
@@ -264,6 +290,80 @@ function approve_sponsorship( int $sponsorship_id, bool $good_faith = false, ?st
 }
 
 /**
+ * Approves a pending sponsorship whose company is already vetted, and emails the event.
+ *
+ * Only for a website the company was vetted for: another one needs a vetter's look. Put down to the system, not to
+ * the organizer or vetter whose request set it off. A failed email is noted, and vetters can send it again.
+ *
+ * Runs on Central.
+ *
+ * @param int $sponsorship_id The sponsorship.
+ * @return bool Whether it was approved.
+ */
+function auto_approve( int $sponsorship_id ): bool {
+	$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
+
+	if (
+		'svs-pending' !== get_post_status( $sponsorship_id )
+		|| ! $company_id
+		|| ! get_vetting_state( $company_id )['approvable']
+		|| ! in_array( (string) get_current_domain( $sponsorship_id ), get_company_domains( $company_id ), true )
+	) {
+		return false;
+	}
+
+	acting_as_system( true );
+
+	$approved = true === approve_sponsorship( $sponsorship_id );
+
+	if ( $approved ) {
+		add_note( $sponsorship_id, __( 'Approved automatically: the company is vetted.', 'wordcamporg' ) );
+
+		$sent = send_approval_email( $sponsorship_id );
+
+		if ( is_wp_error( $sent ) ) {
+			add_note( $sponsorship_id, get_send_error_message( $sent ) );
+		}
+	}
+
+	acting_as_system( false );
+
+	return $approved;
+}
+
+/**
+ * Approves a company's pending sponsorships once it's Compliant.
+ *
+ * After apply_status_side_effects(), which dates the vetting that makes them approvable. Restoring a company from the
+ * trash isn't a new vetting.
+ *
+ * @param string   $new_status The new status.
+ * @param string   $old_status The previous status.
+ * @param \WP_Post $post       The record.
+ */
+function auto_approve_on_compliant( string $new_status, string $old_status, \WP_Post $post ): void {
+	if ( COMPANY_POST_TYPE !== $post->post_type || 'sv-compliant' !== $new_status || in_array( $old_status, array( 'sv-compliant', 'trash' ), true ) ) {
+		return;
+	}
+
+	$sponsorship_ids = get_posts(
+		array(
+			'post_type'      => SPONSORSHIP_POST_TYPE,
+			'post_status'    => 'svs-pending',
+			'post_parent'    => $post->ID,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		)
+	);
+
+	foreach ( $sponsorship_ids as $sponsorship_id ) {
+		auto_approve( $sponsorship_id );
+	}
+}
+add_action( 'transition_post_status', __NAMESPACE__ . '\auto_approve_on_compliant', 20, 3 );
+
+/**
  * Works out where a company's vetting stands today.
  *
  * Computed when read, so no cron job changes a status as time passes.
@@ -315,7 +415,7 @@ function log_status_change( string $new_status, string $old_status, \WP_Post $po
 		$post->ID,
 		'_sv_status_change',
 		array(
-			'user_id' => get_current_user_id(),
+			'user_id' => get_acting_user_id(),
 			'time'    => time(),
 			'from'    => 'auto-draft' === $old_status ? 'new' : $old_status,
 			'to'      => $new_status,
@@ -353,7 +453,7 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 
 	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-approved' === $new_status ) {
 		update_post_meta( $post->ID, '_sv_approved_at', time() );
-		update_post_meta( $post->ID, '_sv_approved_by', get_current_user_id() );
+		update_post_meta( $post->ID, '_sv_approved_by', get_acting_user_id() );
 		snapshot_approved_domain( $post->ID );
 	}
 }
@@ -435,7 +535,7 @@ function add_note( int $post_id, string $text ): void {
 		$post_id,
 		'_sv_note',
 		array(
-			'user_id' => get_current_user_id(),
+			'user_id' => get_acting_user_id(),
 			'time'    => time(),
 			'text'    => $text,
 		)

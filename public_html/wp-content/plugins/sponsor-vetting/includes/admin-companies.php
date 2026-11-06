@@ -428,21 +428,6 @@ function save_company( int $post_id ): void {
 add_action( 'save_post_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\save_company' );
 
 /**
- * Words a sending error for the reviewer, warning them when FreeScout may have sent it anyway.
- *
- * @param \WP_Error $error The error.
- * @return string
- */
-function get_send_error_message( \WP_Error $error ): string {
-	if ( 'freescout_no_response' === $error->get_error_code() ) {
-		return __( 'FreeScout didn’t answer, so the email may have been sent. Check FreeScout before sending it again.', 'wordcamporg' );
-	}
-
-	/* translators: %s: Error message. */
-	return sprintf( __( 'The email wasn’t sent: %s', 'wordcamporg' ), $error->get_error_message() );
-}
-
-/**
  * Links a company to its Multi-Event Sponsor, replacing any earlier link. Each Multi-Event Sponsor has one company.
  *
  * @param int $company_id The company.

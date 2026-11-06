@@ -93,14 +93,16 @@ class Test_Invoices extends Database_TestCase {
 
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 		$sponsorship_id = find_sponsorship( self::$year_dot_2018_site_id, $sponsor_id );
+		$stale_approval = approve_sponsorship( $sponsorship_id, false, 'other.example' );
+
+		// A Compliant company's sponsorships are approved automatically.
 		wp_update_post(
 			array(
 				'ID'          => (int) get_post_field( 'post_parent', $sponsorship_id ),
 				'post_status' => 'sv-compliant',
 			)
 		);
-		$stale_approval = approve_sponsorship( $sponsorship_id, false, 'other.example' );
-		$this->assertTrue( approve_sponsorship( $sponsorship_id, false, 'https://www.acme.example/' ) );
+		$this->assertSame( 'svs-approved', get_post_status( $sponsorship_id ) );
 		restore_current_blog();
 
 		$this->assertSame( 'sv_website_changed_since_shown', $stale_approval->get_error_code() );
@@ -162,7 +164,6 @@ class Test_Invoices extends Database_TestCase {
 				'post_status' => 'sv-compliant',
 			)
 		);
-		approve_sponsorship( $sponsorship_id );
 		restore_current_blog();
 
 		$statuses = get_invoice_statuses(

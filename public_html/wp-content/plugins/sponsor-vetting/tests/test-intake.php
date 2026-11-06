@@ -201,6 +201,59 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
+	 * A sponsor of a vetted company is approved as soon as vetting is requested, as the system: a website only that
+	 * company uses links to it, as a Multi-Event Sponsor's copy does. A website two companies use, or a company still
+	 * being vetted, waits for a reviewer.
+	 *
+	 * @dataProvider data_auto_approvals
+	 *
+	 * @param string $status   The company's status.
+	 * @param bool   $is_mes   Whether the sponsor is a Multi-Event Sponsor's copy.
+	 * @param bool   $shared   Whether another company uses the website too.
+	 * @param bool   $approved Whether the sponsorship is approved.
+	 */
+	public function test_request_vetting_approves_a_vetted_company( string $status, bool $is_mes, bool $shared, bool $approved ): void {
+		list( $company_id, $mes_id ) = $this->create_mes_company( $status );
+
+		if ( $shared ) {
+			$this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn() => set_company_domains( self::factory()->post->create( array( 'post_type' => COMPANY_POST_TYPE ) ), array( 'acme.example' ) ) );
+		}
+
+		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example', $is_mes ? array( '_mes_id' => $mes_id ) : array() );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		$result = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static fn(): array => array(
+				'status'      => get_post_status( $sponsorship_id ),
+				'approved_by' => get_post_meta( $sponsorship_id, '_sv_approved_by', true ),
+				'parent'      => (int) get_post_field( 'post_parent', $sponsorship_id ),
+			)
+		);
+
+		$this->assertSame( $approved ? 'svs-approved' : 'svs-pending', $result['status'] );
+		$this->assertSame( $approved ? '0' : '', $result['approved_by'] );
+
+		if ( $approved ) {
+			$this->assertSame( $company_id, $result['parent'] );
+		}
+	}
+
+	/**
+	 * Companies a camp sponsor's website leads to, and whether requesting vetting approves it.
+	 *
+	 * @return array[]
+	 */
+	public function data_auto_approvals(): array {
+		return array(
+			'website a vetted company uses'        => array( 'sv-compliant', false, false, true ),
+			'multi-event copy of a vetted company' => array( 'sv-compliant', true, false, true ),
+			'website two companies use'            => array( 'sv-compliant', false, true, false ),
+			'website a company being vetted uses'  => array( 'sv-in-progress', false, false, false ),
+		);
+	}
+
+	/**
 	 * A company whose Compliant vetting has lapsed goes back in the queue when a new sponsorship comes in.
 	 */
 	public function test_request_vetting_requeues_a_stale_company(): void {

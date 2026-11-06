@@ -302,47 +302,52 @@ function approve_sponsorship( int $sponsorship_id, bool $good_faith = false, ?st
  */
 function auto_approve( int $sponsorship_id ): bool {
 	$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
+	$domain     = (string) get_current_domain( $sponsorship_id );
 
 	if (
 		'svs-pending' !== get_post_status( $sponsorship_id )
 		|| ! $company_id
 		|| ! get_vetting_state( $company_id )['approvable']
-		|| ! in_array( (string) get_current_domain( $sponsorship_id ), get_company_domains( $company_id ), true )
+		|| ! in_array( $domain, get_company_domains( $company_id ), true )
 	) {
 		return false;
 	}
 
+	$was_system = acting_as_system();
 	acting_as_system( true );
 
-	$approved = true === approve_sponsorship( $sponsorship_id );
+	try {
+		// The website just checked, so the approval is for that one.
+		$approved = true === approve_sponsorship( $sponsorship_id, false, $domain );
 
-	if ( $approved ) {
-		add_note( $sponsorship_id, __( 'Approved automatically: the company is vetted.', 'wordcamporg' ) );
+		if ( $approved ) {
+			add_note( $sponsorship_id, __( 'Approved automatically: the company is vetted.', 'wordcamporg' ) );
 
-		$sent = send_approval_email( $sponsorship_id );
+			$sent = send_approval_email( $sponsorship_id );
 
-		if ( is_wp_error( $sent ) ) {
-			add_note( $sponsorship_id, get_send_error_message( $sent ) );
+			if ( is_wp_error( $sent ) ) {
+				add_note( $sponsorship_id, get_send_error_message( $sent ) );
+			}
 		}
+	} finally {
+		acting_as_system( $was_system );
 	}
-
-	acting_as_system( false );
 
 	return $approved;
 }
 
 /**
- * Approves a company's pending sponsorships once it's Compliant.
+ * Approves a company's pending sponsorships once it's Compliant, and tells a vetter on the screen how that went.
  *
- * After apply_status_side_effects(), which dates the vetting that makes them approvable. Restoring a company from the
- * trash isn't a new vetting.
+ * After the save, so the domains saved with the status count. Restoring a company from the trash isn't a new vetting.
  *
- * @param string   $new_status The new status.
- * @param string   $old_status The previous status.
- * @param \WP_Post $post       The record.
+ * @param int           $post_id     The post ID.
+ * @param \WP_Post      $post        The post.
+ * @param bool          $update      Whether this is an update.
+ * @param \WP_Post|null $post_before The post before the save, if it existed.
  */
-function auto_approve_on_compliant( string $new_status, string $old_status, \WP_Post $post ): void {
-	if ( COMPANY_POST_TYPE !== $post->post_type || 'sv-compliant' !== $new_status || in_array( $old_status, array( 'sv-compliant', 'trash' ), true ) ) {
+function auto_approve_on_compliant( int $post_id, \WP_Post $post, bool $update, ?\WP_Post $post_before ): void {
+	if ( COMPANY_POST_TYPE !== $post->post_type || 'sv-compliant' !== $post->post_status || in_array( $post_before?->post_status, array( 'sv-compliant', 'trash' ), true ) ) {
 		return;
 	}
 
@@ -357,11 +362,23 @@ function auto_approve_on_compliant( string $new_status, string $old_status, \WP_
 		)
 	);
 
-	foreach ( $sponsorship_ids as $sponsorship_id ) {
-		auto_approve( $sponsorship_id );
+	$approved = array_filter( $sponsorship_ids, __NAMESPACE__ . '\auto_approve' );
+	$unsent   = array_filter( $approved, __NAMESPACE__ . '\needs_approval_email' );
+
+	// Outside wp-admin, the history is where vetters find it.
+	if ( ! $approved || ! function_exists( __NAMESPACE__ . '\add_notice' ) ) {
+		return;
+	}
+
+	/* translators: %d: Number of sponsorships. */
+	add_notice( 'success', sprintf( _n( '%d pending sponsorship was approved automatically.', '%d pending sponsorships were approved automatically.', count( $approved ), 'wordcamporg' ), count( $approved ) ) );
+
+	if ( $unsent ) {
+		/* translators: %d: Number of sponsorships. */
+		add_notice( 'error', sprintf( _n( '%d approval email wasn’t sent. The sponsorship’s history says why; send it from there.', '%d approval emails weren’t sent. Each sponsorship’s history says why; send them from there.', count( $unsent ), 'wordcamporg' ), count( $unsent ) ) );
 	}
 }
-add_action( 'transition_post_status', __NAMESPACE__ . '\auto_approve_on_compliant', 20, 3 );
+add_action( 'wp_after_insert_post', __NAMESPACE__ . '\auto_approve_on_compliant', 10, 4 );
 
 /**
  * Works out where a company's vetting stands today.

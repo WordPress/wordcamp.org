@@ -240,6 +240,37 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
+	 * Requesting vetting again, as an invoice does, leaves a pending sponsorship alone even when its company is
+	 * vetted: a vetter may have reopened it to move it to another company.
+	 */
+	public function test_request_vetting_again_doesnt_approve(): void {
+		$this->create_mes_company( 'sv-compliant' );
+
+		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example' );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		$status = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static function () use ( $sponsorship_id, $sponsor_id ): string {
+				foreach ( array( 'svs-canceled', 'svs-pending' ) as $reopen ) {
+					wp_update_post(
+						array(
+							'ID'          => $sponsorship_id,
+							'post_status' => $reopen,
+						)
+					);
+				}
+
+				request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+				return (string) get_post_status( $sponsorship_id );
+			}
+		);
+
+		$this->assertSame( 'svs-pending', $status );
+	}
+
+	/**
 	 * Companies a camp sponsor's website leads to, and whether requesting vetting approves it.
 	 *
 	 * @return array[]

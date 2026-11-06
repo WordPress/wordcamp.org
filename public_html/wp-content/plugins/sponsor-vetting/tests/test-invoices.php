@@ -94,6 +94,7 @@ class Test_Invoices extends Database_TestCase {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 		$sponsorship_id = find_sponsorship( self::$year_dot_2018_site_id, $sponsor_id );
 		$stale_approval = approve_sponsorship( $sponsorship_id, false, 'other.example' );
+		$shown_approval = approve_sponsorship( $sponsorship_id, false, 'https://www.acme.example/' );
 
 		// A Compliant company's sponsorships are approved automatically.
 		wp_update_post(
@@ -106,6 +107,8 @@ class Test_Invoices extends Database_TestCase {
 		restore_current_blog();
 
 		$this->assertSame( 'sv_website_changed_since_shown', $stale_approval->get_error_code() );
+		// The website shown matches, so it's only refused for the company not being vetted yet.
+		$this->assertSame( 'sv_not_approvable', $shown_approval->get_error_code() );
 		$this->assertSame( 'allowed', $this->check( $invoice_id ) );
 
 		$this->set_website( $sponsor_id, 'https://www.other.example' );

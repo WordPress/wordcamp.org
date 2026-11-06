@@ -16,9 +16,9 @@ defined( 'WPINC' ) || die();
 /**
  * Requests vetting for a camp's sponsor.
  *
- * Finds or creates the sponsorship, links it to a company where that's certain, queues the company if its vetting
- * has lapsed or approves the sponsorship if it's vetted, and points the camp's sponsor at the sponsorship. Safe to call again: each camp sponsor has one
- * sponsorship.
+ * Finds or creates the sponsorship, links it to a company where that's certain, which approves it if the company is
+ * vetted, queues the company if its vetting has lapsed, and points the camp's sponsor at the sponsorship. Safe to
+ * call again: each camp sponsor has one sponsorship.
  *
  * Callers check capabilities first.
  *
@@ -65,7 +65,6 @@ function request_vetting( int $blog_id, int $sponsor_id ): int|\WP_Error {
 		}
 
 		queue_company( $sponsorship_id );
-		auto_approve( $sponsorship_id );
 	}
 
 	restore_current_blog();
@@ -291,7 +290,7 @@ function create_company( array $sponsor ): int|\WP_Error {
 }
 
 /**
- * Links a sponsorship to its company. Runs on Central.
+ * Links a sponsorship to its company, and approves it if the company is vetted. Runs on Central.
  *
  * An approved sponsorship keeps its company: its approval was for that company's vetting.
  *
@@ -315,6 +314,8 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 
 	/* translators: %s: Company name. */
 	add_note( $sponsorship_id, sprintf( __( 'Linked to “%s”.', 'wordcamporg' ), get_the_title( $company_id ) ) );
+
+	auto_approve( $sponsorship_id );
 
 	return true;
 }

@@ -384,9 +384,15 @@ function save_sponsorship( int $post_id ): void {
 		} else {
 			queue_company( $post_id );
 
-			// Approving it here too would leave the Approve button below refusing an approved sponsorship.
-			if ( ! in_array( $action, array( 'approve', 'approve_good_faith' ), true ) && auto_approve( $post_id ) ) {
+			if ( 'svs-approved' === get_post_status( $post_id ) ) {
 				add_notice( 'success', __( 'The sponsorship was approved automatically: its company is vetted.', 'wordcamporg' ) );
+
+				if ( needs_approval_email( $post_id ) ) {
+					add_notice( 'error', __( 'The approval email wasn’t sent. The history says why; send it again below.', 'wordcamporg' ) );
+				}
+
+				// Already approved, so an Approve button sent with the link has nothing left to do.
+				$action = in_array( $action, array( 'approve', 'approve_good_faith' ), true ) ? '' : $action;
 			}
 		}
 	}

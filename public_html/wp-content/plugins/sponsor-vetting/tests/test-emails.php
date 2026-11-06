@@ -18,7 +18,9 @@ use function WordCamp\Sponsor_Vetting\get_conversations;
 use function WordCamp\Sponsor_Vetting\record_conversation;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\send_compliance_request;
+use function WordCamp\Sponsor_Vetting\set_company_domains;
 use function WordCamp\Sponsor_Vetting\sponsor_wrote_last;
+use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -282,6 +284,31 @@ class Test_Emails extends Database_TestCase {
 		$this->assertSame( $approved ? 'svs-approved' : 'svs-pending', get_post_status( $this->sponsorship_id ) );
 		$this->assertSame( $approved ? '0' : '', get_post_meta( $this->sponsorship_id, '_sv_approved_by', true ) );
 		$this->assertCount( $emailed ? 1 : 0, get_conversations( $this->sponsorship_id, 'approval' ) );
+	}
+
+	/**
+	 * A website added in the same save that marks the company Compliant counts, since the screen saves the domains
+	 * after the status.
+	 */
+	public function test_domains_saved_with_compliant_count(): void {
+		set_company_domains( $this->company_id, array( 'other.example' ) );
+
+		$save_domains = function ( int $post_id ): void {
+			if ( $post_id === $this->company_id ) {
+				set_company_domains( $post_id, array( 'other.example', 'acme.example' ) );
+			}
+		};
+
+		add_action( 'save_post_' . COMPANY_POST_TYPE, $save_domains );
+		wp_update_post(
+			array(
+				'ID'          => $this->company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		remove_action( 'save_post_' . COMPANY_POST_TYPE, $save_domains );
+
+		$this->assertSame( 'svs-approved', get_post_status( $this->sponsorship_id ) );
 	}
 
 	/**

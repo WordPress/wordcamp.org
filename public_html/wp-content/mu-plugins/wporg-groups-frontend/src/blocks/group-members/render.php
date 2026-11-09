@@ -6,7 +6,9 @@
  */
 
 use WordCamp\Groups\Frontend\Members\Members_Controller;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role;
+use function WordCamp\Groups\Frontend\Member_Joined\describe_join;
 
 /*
  * People join a group to hear about its events, not to be listed publicly,
@@ -122,6 +124,10 @@ if ( $renders_role_switcher ) {
 
 $total_count = count( $users );
 
+// When and how each member joined is for the group's organizers, like the
+// rest of member management; members only see who's in the group.
+$shows_joined = current_user_can_manage_group_settings();
+
 $wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-group-members' )
 );
@@ -190,6 +196,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			$role_label = $role_labels[ $user_role ] ?? __( 'Member', 'wordcamporg' );
 			$bio        = wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" );
 			$profile    = sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename );
+			$joined     = $shows_joined ? describe_join( $user->ID ) : '';
 			?>
 			<a class="wporg-group-members__card" href="<?php echo esc_url( $profile ); ?>" target="_blank" rel="noopener">
 				<img
@@ -205,6 +212,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<span class="wporg-group-members__role wporg-group-members__role--<?php echo esc_attr( $user_role ); ?>">
 						<?php echo esc_html( $role_label ); ?>
 					</span>
+					<?php if ( $joined ) : ?>
+						<span class="wporg-group-members__joined"><?php echo esc_html( $joined ); ?></span>
+					<?php endif; ?>
 					<?php if ( $bio ) : ?>
 						<span class="wporg-group-members__bio"><?php echo esc_html( $bio ); ?></span>
 					<?php endif; ?>

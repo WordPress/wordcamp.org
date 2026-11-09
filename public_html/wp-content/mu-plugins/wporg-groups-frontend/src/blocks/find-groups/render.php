@@ -11,7 +11,7 @@ use function WordCamp\Groups\Frontend\Group_Location\get_location_label;
 use function WordCamp\Groups\Frontend\Group_Location\search_groups;
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A public, read-only search.
-$search_term = is_string( $_GET['groups_near'] ?? null ) ? sanitize_text_field( wp_unslash( $_GET['groups_near'] ) ) : '';
+$search_term = sanitize_text_field( wp_unslash( $_GET['groups_near'] ?? '' ) );
 $groups      = search_groups( $search_term );
 ?>
 <section <?php echo get_block_wrapper_attributes( array( 'id' => 'find-groups' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core. ?>>

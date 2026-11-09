@@ -38,10 +38,30 @@ add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_sponsors_link', 20
 add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_update' );
 
 /**
- * Get the group sites on the Groups network.
+ * Get the `get_sites()` arguments that select group sites on the Groups network.
  *
  * Active-only is the safe default for directories and other public listings.
  * The Groups network placeholder site is never a group and is always omitted.
+ *
+ * @param bool $include_archived Whether archived groups should be selected.
+ */
+function get_group_query_args( bool $include_archived = false ): array {
+	$args = array(
+		'network_id'   => GROUPS_NETWORK_ID,
+		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
+		'deleted'      => 0,
+		'spam'         => 0,
+	);
+
+	if ( ! $include_archived ) {
+		$args['archived'] = 0;
+	}
+
+	return $args;
+}
+
+/**
+ * Get the group sites on the Groups network.
  *
  * @param bool $include_archived Whether archived groups should be returned.
  * @param int  $number           Maximum number of groups to return; 0 returns all.
@@ -49,22 +69,17 @@ add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_upd
  * @return WP_Site[]
  */
 function get_group_sites( bool $include_archived = false, int $number = 0, int $offset = 0 ): array {
-	$args = array(
-		'network_id'   => GROUPS_NETWORK_ID,
-		'number'       => max( 0, $number ),
-		'offset'       => max( 0, $offset ),
-		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
-		'deleted'      => 0,
-		'spam'         => 0,
-		'orderby'      => 'id',
-		'order'        => 'ASC',
+	return get_sites(
+		array_merge(
+			get_group_query_args( $include_archived ),
+			array(
+				'number'  => max( 0, $number ),
+				'offset'  => max( 0, $offset ),
+				'orderby' => 'id',
+				'order'   => 'ASC',
+			)
+		)
 	);
-
-	if ( ! $include_archived ) {
-		$args['archived'] = 0;
-	}
-
-	return get_sites( $args );
 }
 
 /**
@@ -73,19 +88,7 @@ function get_group_sites( bool $include_archived = false, int $number = 0, int $
  * @param bool $include_archived Whether archived groups should be counted.
  */
 function get_group_site_count( bool $include_archived = false ): int {
-	$args = array(
-		'network_id'   => GROUPS_NETWORK_ID,
-		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
-		'deleted'      => 0,
-		'spam'         => 0,
-		'count'        => true,
-	);
-
-	if ( ! $include_archived ) {
-		$args['archived'] = 0;
-	}
-
-	return (int) get_sites( $args );
+	return (int) get_sites( array_merge( get_group_query_args( $include_archived ), array( 'count' => true ) ) );
 }
 
 /**

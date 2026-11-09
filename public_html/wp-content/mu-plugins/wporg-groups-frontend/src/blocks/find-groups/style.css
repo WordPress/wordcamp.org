@@ -3,31 +3,16 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
-.wporg-find-groups__heading {
-	margin: 0 0 var(--wp--preset--spacing--10);
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--normal);
-	font-weight: 600;
-	line-height: 1.4;
-}
-
 .wporg-find-groups__form {
 	display: flex;
 	flex-direction: column;
 	gap: var(--wp--preset--spacing--10);
+	margin-top: var(--wp--preset--spacing--10);
 }
 
 .wporg-find-groups__form input {
-	box-sizing: border-box;
 	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid var(--wp--preset--color--charcoal-4);
-	border-radius: 2px;
-}
-
-.wporg-find-groups__form input:focus-visible {
-	outline: 2px solid var(--wp--preset--color--blueberry-1);
-	outline-offset: 2px;
+	border-color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-find-groups__results {

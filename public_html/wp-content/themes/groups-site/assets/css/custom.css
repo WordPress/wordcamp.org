@@ -398,7 +398,8 @@ body.error404 .site-content-container h1 {
 .groups-site-event-sidebar .wporg-sponsors__heading,
 .groups-site-become-organizer__heading,
 .groups-site-sidebar .wporg-group-membership__heading,
-.groups-site-sidebar .wporg-group-membership__preference-heading {
+.groups-site-sidebar .wporg-group-membership__preference-heading,
+.groups-site-sidebar .wporg-find-groups__heading {
 	box-sizing: border-box;
 	width: 100%;
 	padding: 0;

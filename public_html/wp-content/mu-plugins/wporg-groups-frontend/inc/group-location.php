@@ -12,6 +12,8 @@ namespace WordCamp\Groups\Frontend\Group_Location;
 
 use WP_Error;
 
+use function WordCamp\Groups\Archive\get_group_query_args;
+
 defined( 'WPINC' ) || die();
 
 const TYPE_META_KEY    = 'wporg_group_location_type';
@@ -196,18 +198,27 @@ function search_groups( string $term ): array {
 	}
 
 	return get_sites(
-		array(
-			'network_id'   => GROUPS_NETWORK_ID,
-			'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
-			'archived'     => 0,
-			'deleted'      => 0,
-			'spam'         => 0,
-			'number'       => SEARCH_LIMIT,
-			'orderby'      => 'path',
-			'order'        => 'ASC',
-			'meta_query'   => $matches, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- `blogmeta` has one row per group setting, and results are capped.
+		array_merge(
+			get_group_query_args(),
+			array(
+				'number'     => SEARCH_LIMIT,
+				'orderby'    => 'path',
+				'meta_query' => $matches, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- `blogmeta` has one row per group setting, and results are capped.
+			)
 		)
 	);
+}
+
+/**
+ * Get a country's name, remembering it for the rest of the request.
+ *
+ * `wcorg_get_country_name_from_code()` rebuilds and sorts the whole country list
+ * on every call, which adds up when labelling a page of search results.
+ */
+function get_country_name( string $country_code ): string {
+	static $names = array();
+
+	return $names[ $country_code ] ??= (string) wcorg_get_country_name_from_code( $country_code );
 }
 
 /**
@@ -230,7 +241,7 @@ function get_location_label( int $site_id = 0 ): string {
 	}
 
 	$city         = $location['city'];
-	$country_name = (string) wcorg_get_country_name_from_code( $location['countryCode'] );
+	$country_name = get_country_name( $location['countryCode'] );
 
 	if ( '' === $city || '' === $country_name ) {
 		return $city . $country_name;

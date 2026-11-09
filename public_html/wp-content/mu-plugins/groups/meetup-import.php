@@ -99,6 +99,22 @@ const IMPORTED_MODIFIED_META = '_wporg_meetup_imported_modified';
 const REFRESHING_META = '_wporg_meetup_refreshing';
 
 /**
+ * When an import last matched an event's Meetup RSVPs and hosts to accounts,
+ * as a GMT `Y-m-d H:i:s`.
+ *
+ * A rerun adds RSVPs and hosts to a published event only for accounts made
+ * after this: people who signed up since, not ones an organizer has removed.
+ * Events imported before this was recorded fall back to
+ * `IMPORTED_MODIFIED_META`.
+ */
+const PEOPLE_MATCHED_META = '_wporg_meetup_people_matched';
+
+/**
+ * `PEOPLE_MATCHED_META` for an event imported without matching people.
+ */
+const PEOPLE_NEVER_MATCHED = '0000-00-00 00:00:00';
+
+/**
  * Post meta on a recurring event: the Meetup series it was imported from.
  *
  * Meetup lists each date of a repeating event as its own event, all carrying
@@ -947,7 +963,8 @@ function summarize_event_row( array $row ): array {
 		),
 		'status'  => $row['status'],
 		'message' => $row['message'] ?? '',
-		'rsvps'   => $row['rsvps'] ?? null,
+		'rsvps'    => $row['rsvps'] ?? null,
+		'backfill' => $row['backfill'] ?? null,
 	);
 }
 
@@ -1377,11 +1394,14 @@ function render_job( array $job ): void {
 				<?php
 				echo esc_html(
 					$is_preview
-						? __( 'RSVPs are fetched per event, so they are matched during the import rather than previewed.', 'wordcamporg' )
+						? __( 'RSVPs are fetched per event, so they are matched during the import rather than previewed. Published events get RSVPs and hosts for people who have made an account since they were imported.', 'wordcamporg' )
 						: describe_rsvp_counts( sum_rsvp_counts( $rows ) )
 				);
 				?>
 			</li>
+			<?php if ( ! $is_preview ) : ?>
+				<li><?php echo esc_html( describe_backfill_counts( sum_backfill_counts( $rows ) ) ); ?></li>
+			<?php endif; ?>
 		</ul>
 	<?php endif; ?>
 
@@ -1601,7 +1621,7 @@ function describe_job_status( array $job ): string {
 				/* translators: 1: Created count, 2: Updated count, 3: Skipped count, 4: Failed count. */
 				__( 'Import finished: %1$d events created, %2$d updated, %3$d skipped, %4$d failed.', 'wordcamporg' ),
 				$counts['created'] ?? 0,
-				( $counts['updated'] ?? 0 ) + ( $counts['photo_added'] ?? 0 ),
+				( $counts['updated'] ?? 0 ) + ( $counts['photo_added'] ?? 0 ) + ( $counts['backfilled'] ?? 0 ),
 				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ) + ( $counts['in_series'] ?? 0 ),
 				$counts['failed'] ?? 0
 			);
@@ -1635,6 +1655,7 @@ function describe_status( string $status, bool $is_past = false, string $message
 		'skip'        => __( 'Skipped: already published or trashed', 'wordcamporg' ),
 		'photo'       => __( 'Already published: Meetup\'s photo will be added', 'wordcamporg' ),
 		'photo_added' => __( 'Already published: Meetup\'s photo added', 'wordcamporg' ),
+		'backfilled'  => __( 'Already published: RSVPs and hosts added for people who signed up since', 'wordcamporg' ),
 		'keep'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'kept'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'created'     => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : $upcoming_created,
@@ -1753,6 +1774,22 @@ function describe_rsvp_counts( array $counts ): string {
 		$counts['unmatched'],
 		$counts['skipped'],
 		$counts['failed']
+	);
+}
+
+/**
+ * One-line summary of what a rerun added to published events.
+ *
+ * @param array $counts From `sum_backfill_counts()`.
+ */
+function describe_backfill_counts( array $counts ): string {
+	return sprintf(
+		/* translators: 1: RSVPs added, 2: Of which checked in, 3: Hosts added, 4: Published events they were added to. */
+		__( 'People who signed up since: %1$d RSVPs (%2$d checked in as attended) and %3$d hosts added to %4$d published events.', 'wordcamporg' ),
+		$counts['rsvps'],
+		$counts['checked_in'],
+		$counts['hosts'],
+		$counts['events']
 	);
 }
 
@@ -2804,14 +2841,20 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
+		$backfill = $match_people && 'publish' === $existing->post_status
+			? backfill_people( $existing, $event )
+			: null;
+
 		if ( needs_photo( $existing, $event ) ) {
-			return add_missing_photo( $existing, $event );
+			return array_merge( add_missing_photo( $existing, $event ), array( 'backfill' => $backfill ) );
 		}
 
 		return array(
-			'event'   => $event,
-			'status'  => 'skipped',
-			'post_id' => $existing->ID,
+			'event'    => $event,
+			'status'   => $backfill && ( $backfill['rsvps'] || $backfill['hosts'] ) ? 'backfilled' : 'skipped',
+			'post_id'  => $existing->ID,
+			'message'  => $backfill['error'] ?? '',
+			'backfill' => $backfill,
 		);
 	}
 
@@ -3014,6 +3057,13 @@ function import_event( array $event, bool $match_people = false ): array {
 	clean_post_cache( $post_id );
 	update_post_meta( $post_id, IMPORTED_MODIFIED_META, get_post_field( 'post_modified_gmt', $post_id ) );
 	delete_post_meta( $post_id, REFRESHING_META );
+
+	if ( $match_people ) {
+		update_post_meta( $post_id, PEOPLE_MATCHED_META, gmdate( 'Y-m-d H:i:s' ) );
+	} elseif ( ! metadata_exists( 'post', $post_id, PEOPLE_MATCHED_META ) ) {
+		// Nobody was matched, so every account is new to it.
+		update_post_meta( $post_id, PEOPLE_MATCHED_META, PEOPLE_NEVER_MATCHED );
+	}
 
 	return array(
 		'event'   => $event,
@@ -3873,14 +3923,16 @@ function import_hosts( int $post_id, array $emails ): void {
  * (`Frontend\RSVP_Confirmation\send_confirmation()`), and this runs as the
  * admin, on an event that's still a draft. Runs on the event's own site.
  *
- * @param int    $post_id         Event post ID.
- * @param string $meetup_event_id Meetup event ID.
- * @param bool   $is_past         Whether the event has already happened, so
- *                                its waiting list is left out (see `RSVP_STATUSES`).
+ * @param int           $post_id         Event post ID.
+ * @param string        $meetup_event_id Meetup event ID.
+ * @param bool          $is_past         Whether the event has already happened, so
+ *                                       its waiting list is left out (see `RSVP_STATUSES`).
+ * @param callable|null $accept          Optional `( WP_User $user, Rsvp $rsvp ): bool`;
+ *                                       a matched person it refuses is counted as skipped.
  * @return int[]|WP_Error Counts: `saved`, `checked_in`, `unmatched`, `skipped`,
  *                        `failed`; or the error if Meetup's RSVPs couldn't be fetched.
  */
-function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = false ) {
+function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = false, ?callable $accept = null ) {
 	$counts = array_fill_keys( array( 'saved', 'checked_in', 'unmatched', 'skipped', 'failed' ), 0 );
 	$raw    = fetch_event_rsvps( $meetup_event_id );
 	$rsvp   = new Rsvp( $post_id );
@@ -3899,6 +3951,11 @@ function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = fa
 
 		if ( ! $user ) {
 			++$counts['unmatched'];
+			continue;
+		}
+
+		if ( $accept && ! $accept( $user, $rsvp ) ) {
+			++$counts['skipped'];
 			continue;
 		}
 
@@ -3934,6 +3991,157 @@ function import_rsvps( int $post_id, string $meetup_event_id, bool $is_past = fa
 	}
 
 	return $counts;
+}
+
+/**
+ * Add RSVPs and hosts to a published event for people who signed up since.
+ *
+ * The migration plan is to import a group, ask its Meetup members to make a
+ * WordPress.org account, then import again before the Meetup group is
+ * deleted. A rerun leaves published events alone, so without this the RSVPs,
+ * check-ins and host credits of everyone who signed up in between would be
+ * lost with the Meetup group.
+ *
+ * Only adds, and only for accounts made after the event's people were last
+ * matched (see `PEOPLE_MATCHED_META`): existing RSVPs, hosts, and the event
+ * itself are left alone. Published events send RSVP confirmations, so no
+ * email goes out while this runs. Runs on the event's own site.
+ *
+ * @param \WP_Post $post  Published imported event.
+ * @param array    $event Normalized event.
+ * @return array{rsvps: int, checked_in: int, hosts: int, error?: string}
+ */
+function backfill_people( \WP_Post $post, array $event ): array {
+	$counts = array(
+		'rsvps'      => 0,
+		'checked_in' => 0,
+		'hosts'      => 0,
+	);
+	$since  = (string) get_post_meta( $post->ID, PEOPLE_MATCHED_META, true );
+	$since  = '' !== $since ? $since : (string) get_post_meta( $post->ID, IMPORTED_MODIFIED_META, true );
+
+	$is_new = static function ( WP_User $user ) use ( $since ): bool {
+		return '' === $since || $user->user_registered > $since;
+	};
+
+	add_filter( 'pre_wp_mail', __NAMESPACE__ . '\suppress_mail', PHP_INT_MAX );
+
+	try {
+		// Never matched, the hosts there were picked on the site, and stay
+		// the organizer's choice, as `import_hosts()` leaves them.
+		if ( PEOPLE_NEVER_MATCHED !== $since || ! get_post_meta( $post->ID, Event_Hosts\META_KEY, true ) ) {
+			$counts['hosts'] = add_new_hosts( $post->ID, $event['hosts'], $is_new );
+		}
+
+		// As for drafts, RSVPs to a recurring event stay on Meetup.
+		if ( empty( $event['recurrence'] ) ) {
+			$rsvps = import_rsvps(
+				$post->ID,
+				$event['meetup_id'],
+				$event['is_past'],
+				static function ( WP_User $user, Rsvp $rsvp ) use ( $is_new ): bool {
+					return $is_new( $user ) && null === $rsvp->get( (int) $user->ID );
+				}
+			);
+
+			if ( is_wp_error( $rsvps ) ) {
+				$counts['error'] = sprintf(
+					/* translators: %s: Error message. */
+					__( 'RSVPs from people who signed up since could not be fetched from Meetup (%s). Import again to try again.', 'wordcamporg' ),
+					$rsvps->get_error_message()
+				);
+			} else {
+				$counts['rsvps']      = $rsvps['saved'];
+				$counts['checked_in'] = $rsvps['checked_in'];
+			}
+		}
+	} finally {
+		remove_filter( 'pre_wp_mail', __NAMESPACE__ . '\suppress_mail', PHP_INT_MAX );
+	}
+
+	// A failed fetch leaves the date, so the next run looks at the same people.
+	if ( ! isset( $counts['error'] ) ) {
+		update_post_meta( $post->ID, PEOPLE_MATCHED_META, gmdate( 'Y-m-d H:i:s' ) );
+	}
+
+	return $counts;
+}
+
+/**
+ * Short-circuit `wp_mail()` while a backfill runs.
+ *
+ * @return false
+ */
+function suppress_mail(): bool {
+	return false;
+}
+
+/**
+ * Add Meetup hosts with new accounts to an event's existing hosts.
+ *
+ * Unlike `import_hosts()`, which only fills an event with no hosts yet, this
+ * merges: the hosts already there stay, in their order, and new ones go
+ * after them, up to `Event_Hosts\MAX_HOSTS`. Written straight to the meta so
+ * a host who has since left the group isn't dropped (see
+ * `Event_Hosts\get_event_hosts()`).
+ *
+ * @param int      $post_id Event post ID.
+ * @param string[] $emails  Normalized host emails.
+ * @param callable $is_new  `( WP_User $user ): bool`, whether to consider them.
+ * @return int How many hosts were added.
+ */
+function add_new_hosts( int $post_id, array $emails, callable $is_new ): int {
+	$stored = get_post_meta( $post_id, Event_Hosts\META_KEY, true );
+	$hosts  = array_map( 'intval', is_array( $stored ) ? $stored : array() );
+	$added  = 0;
+
+	foreach ( $emails as $email ) {
+		if ( count( $hosts ) >= Event_Hosts\MAX_HOSTS ) {
+			break;
+		}
+
+		$user = get_user_by( 'email', $email );
+
+		if ( ! $user || ! $is_new( $user ) || in_array( (int) $user->ID, $hosts, true ) ) {
+			continue;
+		}
+
+		if ( ensure_member( get_current_blog_id(), (int) $user->ID ) ) {
+			$hosts[] = (int) $user->ID;
+			++$added;
+		}
+	}
+
+	if ( $added ) {
+		update_post_meta( $post_id, Event_Hosts\META_KEY, $hosts );
+	}
+
+	return $added;
+}
+
+/**
+ * Add up what reruns added to published events.
+ *
+ * @param array[] $results Event rows.
+ * @return int[] `events`, `rsvps`, `checked_in`, `hosts`.
+ */
+function sum_backfill_counts( array $results ): array {
+	$totals = array_fill_keys( array( 'events', 'rsvps', 'checked_in', 'hosts' ), 0 );
+
+	foreach ( $results as $result ) {
+		$backfill = $result['backfill'] ?? null;
+
+		if ( ! $backfill || ! ( $backfill['rsvps'] || $backfill['hosts'] ) ) {
+			continue;
+		}
+
+		++$totals['events'];
+		$totals['rsvps']      += $backfill['rsvps'];
+		$totals['checked_in'] += $backfill['checked_in'];
+		$totals['hosts']      += $backfill['hosts'];
+	}
+
+	return $totals;
 }
 
 /**

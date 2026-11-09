@@ -1601,7 +1601,7 @@ function describe_job_status( array $job ): string {
 				/* translators: 1: Created count, 2: Updated count, 3: Skipped count, 4: Failed count. */
 				__( 'Import finished: %1$d events created, %2$d updated, %3$d skipped, %4$d failed.', 'wordcamporg' ),
 				$counts['created'] ?? 0,
-				( $counts['updated'] ?? 0 ) + ( $counts['photo_added'] ?? 0 ),
+				( $counts['updated'] ?? 0 ) + ( $counts['photo_added'] ?? 0 ) + ( $counts['reformatted'] ?? 0 ),
 				( $counts['skipped'] ?? 0 ) + ( $counts['kept'] ?? 0 ) + ( $counts['in_series'] ?? 0 ),
 				$counts['failed'] ?? 0
 			);
@@ -1635,6 +1635,8 @@ function describe_status( string $status, bool $is_past = false, string $message
 		'skip'        => __( 'Skipped: already published or trashed', 'wordcamporg' ),
 		'photo'       => __( 'Already published: Meetup\'s photo will be added', 'wordcamporg' ),
 		'photo_added' => __( 'Already published: Meetup\'s photo added', 'wordcamporg' ),
+		'reformat'    => __( 'Already published: its description\'s formatting will be fixed', 'wordcamporg' ),
+		'reformatted' => __( 'Already published: its description\'s formatting fixed', 'wordcamporg' ),
 		'keep'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'kept'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
 		'created'     => $is_past ? __( 'Published as a past event', 'wordcamporg' ) : $upcoming_created,
@@ -1686,6 +1688,7 @@ function describe_group_results( array $results, bool $is_preview ): array {
 		'about'    => array(
 			'set'     => $is_preview ? __( 'About page: the example text will be replaced with Meetup\'s group description.', 'wordcamporg' ) : __( 'About page: example text replaced with Meetup\'s group description.', 'wordcamporg' ),
 			'kept'    => __( 'About page: already edited, or missing, left as is.', 'wordcamporg' ),
+			'fixed'   => $is_preview ? __( 'About page: the formatting of Meetup\'s group description will be fixed.', 'wordcamporg' ) : __( 'About page: the formatting of Meetup\'s group description fixed.', 'wordcamporg' ),
 			'missing' => __( 'About page: Meetup has no group description.', 'wordcamporg' ),
 		),
 		'icon'     => array(
@@ -2206,13 +2209,52 @@ function fetch_event_rsvps( string $meetup_event_id ) {
 }
 
 /**
+ * Convert a Meetup description from Markdown to HTML.
+ *
+ * Meetup's API returns event and group descriptions as Markdown. Uses the
+ * parser bundled with Jetpack, like Sponsor Vetting's `render_markdown()`.
+ * Like WordPress content, the result leaves plain paragraphs unwrapped for
+ * `wpautop()`. HTML in older descriptions passes through.
+ *
+ * @param string $markdown Description, as Meetup returns it.
+ */
+function markdown_to_html( string $markdown ): string {
+	if ( '' === trim( $markdown ) ) {
+		return $markdown;
+	}
+
+	if ( ! class_exists( 'WPCom_GHF_Markdown_Parser' ) ) {
+		$library = WP_PLUGIN_DIR . '/jetpack/_inc/lib/markdown';
+
+		if ( ! is_readable( $library . '/gfm.php' ) ) {
+			return $markdown;
+		}
+
+		if ( ! class_exists( 'MarkdownExtra_Parser' ) ) {
+			require_once $library . '/extra.php';
+		}
+
+		require_once $library . '/gfm.php';
+	}
+
+	$parser = new \WPCom_GHF_Markdown_Parser();
+
+	// Text from Meetup, so a `[shortcode]` in it is just text.
+	$parser->use_code_shortcode  = false;
+	$parser->preserve_shortcodes = false;
+
+	return $parser->transform( $markdown );
+}
+
+/**
  * Map a Meetup group node to the details the importer writes.
  *
  * @param array $raw The `groupByUrlname` node.
  * @return array
  */
 function normalize_group( array $raw ): array {
-	$founded = '';
+	$founded     = '';
+	$description = (string) ( $raw['description'] ?? '' );
 
 	if ( ! empty( $raw['foundedDate'] ) ) {
 		try {
@@ -2225,7 +2267,10 @@ function normalize_group( array $raw ): array {
 	return array(
 		'meetup_id'    => (string) ( $raw['id'] ?? '' ),
 		'urlname'      => (string) ( $raw['urlname'] ?? '' ),
-		'description'  => '' !== trim( (string) ( $raw['description'] ?? '' ) ) ? wp_kses_post( wpautop( (string) $raw['description'] ) ) : '',
+		'description'  => '' !== trim( $description ) ? wp_kses_post( wpautop( markdown_to_html( $description ) ) ) : '',
+		// What imports wrote before Markdown was converted (#2332), so a rerun
+		// can recognize an About page that still holds it.
+		'legacy_html'  => '' !== trim( $description ) ? wp_kses_post( wpautop( $description ) ) : '',
 		'city'         => trim( (string) ( $raw['city'] ?? '' ) ),
 		'country_code' => strtoupper( trim( (string) ( $raw['country'] ?? '' ) ) ),
 		'founded'      => $founded,
@@ -2318,16 +2363,21 @@ function normalize_event( array $raw ): array {
 		break;
 	}
 
-	$description = wpautop( (string) ( $raw['description'] ?? '' ) );
+	$raw_description = (string) ( $raw['description'] ?? '' );
+	$description     = wpautop( markdown_to_html( $raw_description ) );
+	$legacy_html     = wpautop( $raw_description );
 
 	if ( ! empty( $raw['howToFindUs'] ) ) {
-		$description .= wpautop(
+		$how_to_find_us = wpautop(
 			sprintf(
 				/* translators: %s: Directions to the venue, as written on Meetup. */
 				__( 'How to find us: %s', 'wordcamporg' ),
 				$raw['howToFindUs']
 			)
 		);
+
+		$description .= $how_to_find_us;
+		$legacy_html .= $how_to_find_us;
 	}
 
 	return array(
@@ -2335,6 +2385,9 @@ function normalize_event( array $raw ): array {
 		'meetup_url'  => (string) ( $raw['eventUrl'] ?? '' ),
 		'title'       => (string) ( $raw['title'] ?? '' ),
 		'description' => to_paragraph_blocks( wp_kses_post( $description ) ),
+		// What imports wrote before Markdown was converted (#2332), so a rerun
+		// can recognize a published event that still holds it.
+		'legacy_html' => to_paragraph_blocks( wp_kses_post( $legacy_html ) ),
 		'timezone'    => $zone->getName(),
 		'start'       => $start->setTimezone( $zone )->format( 'Y-m-d H:i:s' ),
 		'end'         => $end->setTimezone( $zone )->format( 'Y-m-d H:i:s' ),
@@ -2698,6 +2751,8 @@ function plan_events( int $site_id, array $events ): array {
 					$status = 'update';
 				} elseif ( needs_photo( $existing, $event ) ) {
 					$status = 'photo';
+				} elseif ( needs_markdown_fix( $existing, $event ) ) {
+					$status = 'reformat';
 				} else {
 					$status = 'skip';
 				}
@@ -2804,8 +2859,18 @@ function import_event( array $event, bool $match_people = false ): array {
 	}
 
 	if ( $existing && 'draft' !== $existing->post_status ) {
+		$reformatted = needs_markdown_fix( $existing, $event ) && fix_markdown( $existing, $event );
+
 		if ( needs_photo( $existing, $event ) ) {
 			return add_missing_photo( $existing, $event );
+		}
+
+		if ( $reformatted ) {
+			return array(
+				'event'   => $event,
+				'status'  => 'reformatted',
+				'post_id' => $existing->ID,
+			);
 		}
 
 		return array(
@@ -3505,6 +3570,73 @@ function add_missing_photo( \WP_Post $post, array $event ): array {
 }
 
 /**
+ * Whether a published event still shows Meetup's Markdown as plain text.
+ *
+ * Imports before #2332 didn't convert Meetup's Markdown, and a rerun leaves
+ * published events alone, so those events would keep `**bold**` and
+ * `[links](...)` as typed. This picks out the ones holding exactly what that
+ * import wrote from the description Meetup still has, and that nobody has
+ * edited since.
+ *
+ * @param \WP_Post $post  Existing imported event, on the current site.
+ * @param array    $event Normalized event.
+ */
+function needs_markdown_fix( \WP_Post $post, array $event ): bool {
+	return 'publish' === $post->post_status
+		&& isset( $event['legacy_html'] )
+		&& $event['legacy_html'] !== $event['description']
+		&& holds_legacy_html( $post->post_content, $event['legacy_html'] )
+		&& ! is_edited_since_import( $post );
+}
+
+/**
+ * Whether stored content is what an import wrote before #2332.
+ *
+ * Content is saved through KSES when the import runs without
+ * `unfiltered_html`, so the filtered version counts too.
+ *
+ * @param string $content     Stored post content.
+ * @param string $legacy_html What that import would have written.
+ */
+function holds_legacy_html( string $content, string $legacy_html ): bool {
+	$content = trim( $content );
+
+	return trim( $legacy_html ) === $content || trim( wp_kses_post( $legacy_html ) ) === $content;
+}
+
+/**
+ * Replace a published event's unconverted description with the HTML.
+ *
+ * Changes the content only, and re-records the modified date, so the event
+ * still counts as untouched. Publishing doesn't happen again, so no one is
+ * emailed.
+ *
+ * @param \WP_Post $post  Existing imported event, on the current site.
+ * @param array    $event Normalized event.
+ * @return bool Whether it was saved.
+ */
+function fix_markdown( \WP_Post $post, array $event ): bool {
+	$updated = wp_update_post(
+		wp_slash(
+			array(
+				'ID'           => $post->ID,
+				'post_content' => $event['description'],
+			)
+		),
+		true
+	);
+
+	if ( is_wp_error( $updated ) ) {
+		return false;
+	}
+
+	clean_post_cache( $post->ID );
+	update_post_meta( $post->ID, IMPORTED_MODIFIED_META, get_post_field( 'post_modified_gmt', $post->ID ) );
+
+	return true;
+}
+
+/**
  * Work out what an import would do with the group's own details.
  *
  * @param int   $site_id Target group site.
@@ -3599,6 +3731,25 @@ function apply_group_details( array $group, bool $write ): array {
 
 	if ( '' === $group['description'] ) {
 		$results['about'] = 'missing';
+	} elseif (
+		$about
+		&& ! empty( $group['legacy_html'] )
+		&& $group['legacy_html'] !== $group['description']
+		&& holds_legacy_html( $about->post_content, to_paragraph_blocks( $group['legacy_html'] ) )
+	) {
+		// Still exactly what an import before #2332 wrote, Markdown and all.
+		if ( $write ) {
+			wp_update_post(
+				wp_slash(
+					array(
+						'ID'           => $about->ID,
+						'post_content' => to_paragraph_blocks( $group['description'] ),
+					)
+				)
+			);
+		}
+
+		$results['about'] = 'fixed';
 	} elseif ( ! $about || 'draft' !== $about->post_status || wp_get_post_revisions( $about->ID ) ) {
 		$results['about'] = 'kept';
 	} else {

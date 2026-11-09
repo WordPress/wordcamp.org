@@ -3297,6 +3297,152 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Meetup returns descriptions as Markdown, which the import converts
+	 * rather than showing `**bold**` and `[links](...)` as typed (#2332).
+	 */
+	public function test_event_description_markdown_is_converted() {
+		$event = Meetup_Import\normalize_event(
+			$this->raw_event(
+				array(
+					'description' => "Come join us at **The Venue** to connect.\n\n## Agenda\n\n- Talks\n- Networking\n\nRSVP on [our site](https://example.com/rsvp).",
+				)
+			)
+		);
+
+		$this->assertStringContainsString( '<strong>The Venue</strong>', $event['description'] );
+		$this->assertStringContainsString( '<h2 class="wp-block-heading">Agenda</h2>', $event['description'] );
+		$this->assertStringContainsString( '<!-- wp:list -->', $event['description'] );
+		$this->assertStringContainsString( '<li>Talks</li>', $event['description'] );
+		$this->assertStringContainsString( '<a href="https://example.com/rsvp">our site</a>', $event['description'] );
+		$this->assertStringContainsString( 'How to find us: Room E103', $event['description'] );
+		$this->assertStringNotContainsString( '**', $event['description'] );
+		$this->assertStringNotContainsString( '](', $event['description'] );
+	}
+
+	/**
+	 * The group description on the About page is converted too.
+	 */
+	public function test_group_description_markdown_is_converted() {
+		$group = Meetup_Import\normalize_group(
+			$this->raw_group( array( 'description' => "We're **local** WordPress users.\n\n- Monthly meetups\n- [Slack](https://example.com/slack)" ) )
+		);
+
+		$this->assertStringContainsString( '<strong>local</strong>', $group['description'] );
+		$this->assertStringContainsString( '<li>Monthly meetups</li>', $group['description'] );
+		$this->assertStringContainsString( '<a href="https://example.com/slack">Slack</a>', $group['description'] );
+	}
+
+	/**
+	 * Descriptions without Markdown come out as before, so a rerun doesn't
+	 * see every earlier import as needing a fix.
+	 */
+	public function test_plain_description_unchanged_by_markdown() {
+		$event = Meetup_Import\normalize_event( $this->raw_event() );
+		$group = Meetup_Import\normalize_group( $this->raw_group() );
+
+		$this->assertSame( $event['legacy_html'], $event['description'] );
+		$this->assertSame( $group['legacy_html'], $group['description'] );
+	}
+
+	/**
+	 * Script tags in Meetup's description are still stripped after converting.
+	 */
+	public function test_markdown_description_is_still_sanitized() {
+		$event = Meetup_Import\normalize_event(
+			$this->raw_event( array( 'description' => "**Hi**\n\n<script>alert(1)</script>\n\n[x](javascript:alert(1))" ) )
+		);
+
+		$this->assertStringNotContainsString( '<script', $event['description'] );
+		$this->assertStringNotContainsString( 'javascript:', $event['description'] );
+	}
+
+	/**
+	 * Imports the event the way imports before #2332 did, Markdown as typed.
+	 *
+	 * @param array $event Normalized event.
+	 */
+	private function import_unconverted( array $event ): void {
+		$event['description'] = $event['legacy_html'];
+
+		Meetup_Import\import_events( $this->site_id, array( $event ) );
+	}
+
+	/**
+	 * A published event an earlier import left with raw Markdown is fixed by
+	 * a rerun, and is then left alone again.
+	 */
+	public function test_rerun_fixes_markdown_in_published_event() {
+		$event = Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'Come join us at **The Venue** to connect.' ) ) );
+
+		$this->import_unconverted( $event );
+
+		$post = $this->find_event( '300000001' );
+		$this->assertSame( 'publish', $post->post_status );
+		$this->assertStringContainsString( '**The Venue**', $post->post_content );
+
+		$this->assertSame( 'reformat', Meetup_Import\plan_events( $this->site_id, array( $event ) )[0]['status'] );
+		$this->assertSame( 'reformatted', Meetup_Import\import_events( $this->site_id, array( $event ) )[0]['status'] );
+
+		$after = $this->find_event( '300000001' );
+		$this->assertStringContainsString( '<strong>The Venue</strong>', $after->post_content );
+		$this->assertSame( 'publish', $after->post_status );
+		$this->assertFalse(
+			$this->on_site(
+				static function () use ( $after ) {
+					return Meetup_Import\is_edited_since_import( $after );
+				}
+			)
+		);
+
+		$this->assertSame( 'skip', Meetup_Import\plan_events( $this->site_id, array( $event ) )[0]['status'] );
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, array( $event ) )[0]['status'] );
+	}
+
+	/**
+	 * An event edited on the site since the import is the organizer's, even
+	 * if it still has Markdown in it.
+	 */
+	public function test_rerun_leaves_edited_published_event_markdown_alone() {
+		$event = Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'Come join us at **The Venue**.' ) ) );
+
+		$this->import_unconverted( $event );
+		$post = $this->find_event( '300000001' );
+
+		$this->on_site(
+			static function () use ( $post ) {
+				// One second on, so the modified date differs from the import's.
+				$modified = gmdate( 'Y-m-d H:i:s', strtotime( $post->post_modified_gmt ) + 1 );
+
+				$GLOBALS['wpdb']->update(
+					$GLOBALS['wpdb']->posts,
+					array(
+						'post_content'      => $post->post_content . "\n<!-- wp:paragraph -->\n<p>Edited.</p>\n<!-- /wp:paragraph -->",
+						'post_modified_gmt' => $modified,
+					),
+					array( 'ID' => $post->ID )
+				);
+				clean_post_cache( $post->ID );
+			}
+		);
+
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, array( $event ) )[0]['status'] );
+		$this->assertStringContainsString( '**The Venue**', $this->find_event( '300000001' )->post_content );
+	}
+
+	/**
+	 * A published event whose Meetup description has changed since is left
+	 * alone: only what the old import wrote is fixed, nothing is refreshed.
+	 */
+	public function test_rerun_leaves_published_event_with_changed_meetup_description() {
+		$this->import_unconverted( Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'Old **text**.' ) ) ) );
+
+		$changed = Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'New **text**.' ) ) );
+
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, array( $changed ) )[0]['status'] );
+		$this->assertStringContainsString( 'Old **text**.', $this->find_event( '300000001' )->post_content );
+	}
+
+	/**
 	 * An imported description with headings, lists, quotes, and separators opens in the editor without losing markup.
 	 */
 	public function test_rich_description_blocks_load_in_editor() {
@@ -3571,6 +3717,60 @@ class Test_Meetup_Import extends Groups_TestCase {
 				}
 			)
 		);
+	}
+
+	/**
+	 * An About page an earlier import filled with raw Markdown is fixed by a
+	 * rerun, while one edited since is left alone.
+	 */
+	public function test_rerun_fixes_markdown_in_imported_about_page() {
+		$about_id = $this->seed_about_page();
+		$group    = Meetup_Import\normalize_group( $this->raw_group( array( 'description' => "We're **local** WordPress users." ) ) );
+
+		$unconverted                = $group;
+		$unconverted['description'] = $group['legacy_html'];
+		$this->assertSame( 'set', Meetup_Import\import_group( $this->site_id, $unconverted )['about'] );
+
+		$content = function () use ( $about_id ) {
+			return $this->on_site(
+				static function () use ( $about_id ) {
+					return get_post( $about_id )->post_content;
+				}
+			);
+		};
+		$this->assertStringContainsString( '**local**', $content() );
+
+		$this->assertSame( 'fixed', Meetup_Import\plan_group( $this->site_id, $group )['about'] );
+		$this->assertSame( 'fixed', Meetup_Import\import_group( $this->site_id, $group )['about'] );
+		$this->assertStringContainsString( '<strong>local</strong>', $content() );
+
+		// Fixed once, it's kept like any imported About page.
+		$this->assertSame( 'kept', Meetup_Import\import_group( $this->site_id, $group )['about'] );
+	}
+
+	/**
+	 * An About page an organizer edited keeps their text, Markdown or not.
+	 */
+	public function test_rerun_keeps_edited_about_page_with_markdown() {
+		$about_id = $this->seed_about_page();
+		$group    = Meetup_Import\normalize_group( $this->raw_group( array( 'description' => "We're **local** WordPress users." ) ) );
+
+		$unconverted                = $group;
+		$unconverted['description'] = $group['legacy_html'];
+		Meetup_Import\import_group( $this->site_id, $unconverted );
+
+		$this->on_site(
+			static function () use ( $about_id ) {
+				wp_update_post(
+					array(
+						'ID'           => $about_id,
+						'post_content' => get_post( $about_id )->post_content . '<!-- wp:paragraph --><p>Edited.</p><!-- /wp:paragraph -->',
+					)
+				);
+			}
+		);
+
+		$this->assertSame( 'kept', Meetup_Import\import_group( $this->site_id, $group )['about'] );
 	}
 
 	/**

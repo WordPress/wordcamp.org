@@ -527,6 +527,59 @@ class Test_CampTix_Partial_Refunds extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * PayPal notifies about a partial refund, and the status it then reports for the original
+	 * payment arrives as pending. That result must leave the tickets still paid for as they were:
+	 * the payment was settled long ago, and the refund only covered the other tickets.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 *
+	 * @dataProvider data_results_that_do_not_downgrade_a_partly_refunded_order
+	 *
+	 * @param int $result
+	 */
+	public function test_a_later_result_keeps_the_rest_of_a_partly_refunded_order_paid( $result ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+		$this->refund_form( 'tokpartial', array( $first ) );
+
+		$camptix->payment_result( 'tokpartial', $result, array( 'transaction_id' => 'ch_tokpartial' ), false );
+
+		$this->assertSame( 'refund', get_post_status( $first ) );
+		$this->assertSame( 'publish', get_post_status( $second ) );
+		$this->assertSame( 're_1', get_post_meta( $first, 'tix_refund_transaction_id', true ) );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_results_that_do_not_downgrade_a_partly_refunded_order() {
+		return array(
+			'pending' => array( CampTix_Plugin::PAYMENT_STATUS_PENDING ),
+			'failed'  => array( CampTix_Plugin::PAYMENT_STATUS_FAILED ),
+		);
+	}
+
+	/**
+	 * The guard is only for orders that were partly refunded. A pending result for an order
+	 * with no refund is applied as before.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_a_pending_result_still_applies_to_an_order_without_refunds() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		list( $first, $second ) = $this->make_order( array( 10, 15 ) );
+
+		$camptix->payment_result( 'tokpartial', CampTix_Plugin::PAYMENT_STATUS_PENDING, array( 'transaction_id' => 'ch_tokpartial' ), false );
+
+		$this->assertSame( 'pending', get_post_status( $first ) );
+		$this->assertSame( 'pending', get_post_status( $second ) );
+	}
+
+	/**
 	 * A request whose selected ticket was already refunded by an earlier request refunds
 	 * nothing and makes no gateway call. This is the window two parallel requests for the same
 	 * ticket used to race through: both read it as paid, both refunded it, and the order was

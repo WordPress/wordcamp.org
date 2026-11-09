@@ -21,6 +21,8 @@ const COUNTRY_META_KEY = 'wporg_group_location_country';
 const TYPE_PHYSICAL = 'physical';
 const TYPE_ONLINE   = 'online';
 
+const SEARCH_LIMIT = 20;
+
 /**
  * Missing metadata is treated as an unspecified location.
  *
@@ -152,13 +154,72 @@ function clear_location(): void {
 }
 
 /**
+ * Find active groups whose city or country contains a search term.
+ *
+ * Groups only store a city and country, not coordinates, so this is a text match
+ * rather than a distance search.
+ *
+ * @param string $term What the visitor searched for.
+ * @return \WP_Site[]
+ */
+function search_groups( string $term ): array {
+	$term = trim( $term );
+
+	if ( '' === $term ) {
+		return array();
+	}
+
+	$matches = array(
+		'relation' => 'OR',
+		array(
+			'key'     => CITY_META_KEY,
+			'value'   => $term,
+			'compare' => 'LIKE',
+		),
+	);
+
+	// Country names aren't stored, only their codes.
+	$country_codes = array();
+
+	foreach ( wcorg_get_countries() as $country ) {
+		if ( false !== mb_stripos( $country['name'], $term ) ) {
+			$country_codes[] = $country['alpha2'];
+		}
+	}
+
+	if ( $country_codes ) {
+		$matches[] = array(
+			'key'     => COUNTRY_META_KEY,
+			'value'   => $country_codes,
+			'compare' => 'IN',
+		);
+	}
+
+	return get_sites(
+		array(
+			'network_id'   => GROUPS_NETWORK_ID,
+			'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
+			'archived'     => 0,
+			'deleted'      => 0,
+			'spam'         => 0,
+			'number'       => SEARCH_LIMIT,
+			'orderby'      => 'path',
+			'order'        => 'ASC',
+			'meta_query'   => $matches, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- `blogmeta` has one row per group setting, and results are capped.
+		)
+	);
+}
+
+/**
  * Build the public location label, or an empty string when unspecified.
  *
  * A stored country code that no longer resolves is dropped from the label rather
  * than shown as a bare code or an empty half of "City, ".
+ *
+ * @param int $site_id Group site ID; defaults to the current site.
  */
-function get_location_label(): string {
-	$location = get_location();
+function get_location_label( int $site_id = 0 ): string {
+	$location = get_location( $site_id );
 
 	if ( null === $location ) {
 		return '';

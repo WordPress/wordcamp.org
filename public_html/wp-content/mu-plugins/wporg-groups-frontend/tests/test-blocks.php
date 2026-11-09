@@ -22,6 +22,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/event-short-link',
 		'wporg/event-speakers',
 		'wporg/event-topics',
+		'wporg/find-groups',
 		'wporg/group-members',
 		'wporg/group-membership',
 		'wporg/group-location',

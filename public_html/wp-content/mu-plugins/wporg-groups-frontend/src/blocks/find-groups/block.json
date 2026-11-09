@@ -1,0 +1,17 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/find-groups",
+	"version": "1.0.0",
+	"title": "Find Groups",
+	"category": "widgets",
+	"icon": "search",
+	"description": "Lets visitors search every group by city or country.",
+	"supports": {
+		"html": false,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}

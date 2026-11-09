@@ -29,6 +29,7 @@ function register_blocks(): void {
 		'event-manage',
 		'group-settings',
 		'group-location',
+		'find-groups',
 		'group-membership',
 		'group-news',
 		'group-members',

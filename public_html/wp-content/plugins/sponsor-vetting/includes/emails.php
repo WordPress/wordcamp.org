@@ -44,7 +44,50 @@ function render_markdown( string $markdown ): string {
 	$parser->preserve_shortcodes = false;
 
 	// The parser leaves a lone paragraph unwrapped; WordPress normally adds the tags on display.
-	return wp_kses_post( wpautop( $parser->transform( $markdown ) ) );
+	return style_tables( wp_kses_post( wpautop( $parser->transform( $markdown ) ) ) );
+}
+
+/**
+ * Gives tables borders and padding inline, since email clients drop stylesheets and FreeScout adds none.
+ *
+ * Uses only what FreeScout's HTML purifier keeps: it strips `border-collapse` and the `align` attribute on headers.
+ *
+ * @param string $html The rendered findings.
+ * @return string
+ */
+function style_tables( string $html ): string {
+	$border    = '1px solid #dcdcde';
+	$processor = new \WP_HTML_Tag_Processor( $html );
+
+	while ( $processor->next_tag() ) {
+		$tag = $processor->get_tag();
+
+		if ( 'TABLE' === $tag ) {
+			// Without border-collapse, the table draws the top and left edges and each cell its right and bottom.
+			$processor->set_attribute( 'cellspacing', '0' );
+			$processor->set_attribute( 'style', "border-top:$border;border-left:$border;margin:0 0 1.6em 0" );
+			continue;
+		}
+
+		if ( 'TH' !== $tag && 'TD' !== $tag ) {
+			continue;
+		}
+
+		$align = $processor->get_attribute( 'align' );
+		$align = in_array( $align, array( 'center', 'right' ), true ) ? $align : 'left';
+		$style = "border-right:$border;border-bottom:$border;padding:6px 10px;text-align:$align";
+
+		$processor->remove_attribute( 'align' );
+
+		if ( 'TH' === $tag ) {
+			$processor->set_attribute( 'style', $style . ';background-color:#f6f7f7' );
+		} else {
+			$processor->set_attribute( 'style', $style );
+			$processor->set_attribute( 'valign', 'top' );
+		}
+	}
+
+	return $processor->get_updated_html();
 }
 
 /**

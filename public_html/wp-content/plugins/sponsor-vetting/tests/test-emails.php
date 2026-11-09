@@ -177,10 +177,10 @@ class Test_Emails extends Database_TestCase {
 
 	/**
 	 * The compliance request carries Legal's wording and the rendered findings to the sponsor, copies the event in
-	 * and is tagged, which the Zap it replaces didn't do.
+	 * and is tagged, which the Zap it replaces didn't do. Tables are styled inline, as FreeScout styles none.
 	 */
 	public function test_compliance_email_follows_the_template(): void {
-		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
+		update_post_meta( $this->company_id, '_sv_gpl_findings', "The **theme shop** sells themes under a non-GPL license.\n\n| Page | Themes |\n| --- | --: |\n| /shop | 12 |" );
 
 		$email = build_compliance_email( $this->company_id, $this->sponsorship_id );
 
@@ -201,6 +201,9 @@ class Test_Emails extends Database_TestCase {
 		);
 		$this->assertStringContainsString( '<p>Thanks so much for offering to sponsor WordCamp Seattle 2026! We’re excited to have you on board.</p>', $email['body'] );
 		$this->assertStringContainsString( '<p><strong>GPL:</strong></p><p>The <strong>theme shop</strong> sells themes under a non-GPL license.</p>', $email['body'] );
+		$this->assertStringContainsString( '<th style="border-right:1px solid #dcdcde;border-bottom:1px solid #dcdcde;padding:6px 10px;text-align:left;background-color:#f6f7f7">Page</th>', $email['body'] );
+		$this->assertStringContainsString( '<table cellspacing="0" style="border-top:1px solid #dcdcde;border-left:1px solid #dcdcde;margin:0 0 1.6em 0">', $email['body'] );
+		$this->assertMatchesRegularExpression( '#<td style="border-right:1px solid \#dcdcde;border-bottom:1px solid \#dcdcde;padding:6px 10px;text-align:right" valign="top"\s*>12</td>#', $email['body'] );
 		$this->assertStringNotContainsString( 'Trademark:', $email['body'] );
 	}
 

@@ -14,6 +14,7 @@ use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Utility;
 use WP_Error;
 use WP_Post;
+use WP_REST_Posts_Controller;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -264,6 +265,43 @@ final class Rest_API {
 		return 'publish' === $post->post_status
 			? ! post_password_required( $post )
 			: current_user_can( 'read_post', $post->ID );
+	}
+
+	/**
+	 * Removes a protected series' recurrence settings from its REST response
+	 * until the password is entered. Editors keep them for the block editor.
+	 *
+	 * @param WP_REST_Response $response Event response.
+	 * @param WP_Post          $post     Event post.
+	 * @param WP_REST_Request  $request  REST request.
+	 * @return WP_REST_Response The response, without the settings when gated.
+	 */
+	public static function hide_protected_schedule( WP_REST_Response $response, WP_Post $post, WP_REST_Request $request ): WP_REST_Response {
+		if ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) ) {
+			return $response;
+		}
+
+		// Core has dropped its own override for a password sent with the
+		// request by the time this runs, so ask it about that password here.
+		if ( ( new WP_REST_Posts_Controller( $post->post_type ) )->can_access_password_content( $post, $request ) ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+
+		if ( empty( $data['meta'] ) ) {
+			return $response;
+		}
+
+		$data['meta'] = array_filter(
+			$data['meta'],
+			static fn( string $key ): bool => ! str_starts_with( $key, Rule::META_PREFIX ),
+			ARRAY_FILTER_USE_KEY
+		);
+
+		$response->set_data( $data );
+
+		return $response;
 	}
 
 	/**

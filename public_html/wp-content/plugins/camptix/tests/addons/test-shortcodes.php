@@ -207,4 +207,39 @@ class Test_Camptix_Shortcodes_Addon extends \WP_UnitTestCase {
 
 		$this->assertSame( array( $private_id, $public_id ), $this->search_pages( '' ) );
 	}
+
+	/**
+	 * Ask the filter the way Jetpack does before syncing a post.
+	 *
+	 * @param int  $post_id Post ID.
+	 * @param bool $prevent What earlier callbacks decided.
+	 *
+	 * @return bool
+	 */
+	protected function sync_prevented( $post_id, $prevent = false ) {
+		return (bool) apply_filters( 'jetpack_sync_prevent_sending_post_data', $prevent, get_post( $post_id ) );
+	}
+
+	/**
+	 * Pages with attendee-only sections aren't synced to WordPress.com; other pages are.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_sync
+	 */
+	public function test_sync_leaves_private_pages_out() {
+		list( $private_id, $public_id ) = $this->create_pages_for_search();
+
+		$this->assertTrue( $this->sync_prevented( $private_id ) );
+		$this->assertFalse( $this->sync_prevented( $public_id ) );
+	}
+
+	/**
+	 * Another plugin's decision to withhold a post is kept.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_sync
+	 */
+	public function test_sync_keeps_an_earlier_prevent() {
+		list( , $public_id ) = $this->create_pages_for_search();
+
+		$this->assertTrue( $this->sync_prevented( $public_id, true ) );
+	}
 }

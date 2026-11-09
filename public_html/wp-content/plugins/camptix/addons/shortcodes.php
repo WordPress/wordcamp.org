@@ -24,6 +24,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		add_filter( 'update_post_metadata', array( $this, 'clear_view_token_on_email_change' ), 10, 4 );
 		add_filter( 'add_post_metadata', array( $this, 'clear_view_token_on_email_change' ), 10, 4 );
 		add_filter( 'posts_search', array( $this, 'leave_private_pages_out_of_search' ) );
+		add_filter( 'jetpack_sync_prevent_sending_post_data', array( $this, 'leave_private_pages_out_of_sync' ), 10, 2 );
 
 		add_shortcode( 'camptix_attendees', array( $this, 'shortcode_attendees' ) );
 		add_shortcode( 'camptix_stats', array( $this, 'shortcode_stats' ) );
@@ -526,6 +527,24 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			" AND {$wpdb->posts}.post_content NOT LIKE %s",
 			'%' . $wpdb->esc_like( '[camptix_private' ) . '%'
 		);
+	}
+
+	/**
+	 * Keeps pages with [camptix_private] sections out of what Jetpack syncs to WordPress.com.
+	 *
+	 * WordPress.com search then leaves them out too, like search on the site does.
+	 *
+	 * @param bool    $prevent Whether Jetpack should withhold the post data.
+	 * @param WP_Post $post    The post Jetpack is about to send.
+	 *
+	 * @return bool
+	 */
+	public function leave_private_pages_out_of_sync( $prevent, $post ) {
+		if ( $prevent ) {
+			return $prevent;
+		}
+
+		return isset( $post->post_content ) && false !== stripos( $post->post_content, '[camptix_private' );
 	}
 
 	/**

@@ -1979,6 +1979,487 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * A user whose WordPress.org account was made after the import ran.
+	 *
+	 * @param string $email Their email.
+	 */
+	private function signs_up_later( string $email ): int {
+		return self::factory()->user->create(
+			array(
+				'user_email'      => $email,
+				'user_registered' => gmdate( 'Y-m-d H:i:s', time() + HOUR_IN_SECONDS ),
+			)
+		);
+	}
+
+	/**
+	 * Feed `fetch_event_rsvps()` from a variable the test can change between runs.
+	 *
+	 * @param array $raw RSVP nodes, by reference.
+	 */
+	private function fake_rsvps( array &$raw ): void {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( &$raw ) {
+				return $raw;
+			}
+		);
+	}
+
+	/**
+	 * The RSVP status a user has on an event, or null.
+	 *
+	 * @param int $post_id Event.
+	 * @param int $user_id User.
+	 */
+	private function rsvp_status( int $post_id, int $user_id ): ?string {
+		return $this->on_site(
+			static function () use ( $post_id, $user_id ) {
+				return ( new \GatherPress\Core\Rsvp\Rsvp( $post_id ) )->get( $user_id )['status'] ?? null;
+			}
+		);
+	}
+
+	/**
+	 * A rerun adds the RSVPs of people who made an account since the import
+	 * to a published event, and leaves everyone else's alone (#2334).
+	 */
+	public function test_rerun_backfills_rsvps_for_new_accounts() {
+		list( $raw, $users ) = $this->setup_rsvps();
+		$raw[]               = array(
+			'status'      => 'ATTENDED',
+			'guestsCount' => 0,
+			'member'      => array( 'email' => 'late@example.org' ),
+		);
+		$this->fake_rsvps( $raw );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		$first  = Meetup_Import\import_events( $this->site_id, $events, true );
+		$post   = $this->find_event( '300000001' );
+
+		$this->assertSame( 'publish', $post->post_status );
+		$this->assertSame( 3, $first[0]['rsvps']['unmatched'] );
+
+		$late = $this->signs_up_later( 'late@example.org' );
+
+		// Meetup now says yes for someone who already has an RSVP here; theirs stays.
+		$raw[1]['status'] = 'YES';
+
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame( 'backfilled', $results[0]['status'] );
+		$this->assertSame(
+			array(
+				'rsvps'      => 1,
+				'checked_in' => 1,
+				'hosts'      => 0,
+			),
+			$results[0]['backfill']
+		);
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $late ) );
+		$this->assertSame( 'not_attending', $this->rsvp_status( $post->ID, $users['no'] ) );
+		$this->assertSame( $post->post_modified_gmt, $this->find_event( '300000001' )->post_modified_gmt );
+		$this->assertSame( array(), $this->sent_mail );
+
+		$this->assertSame(
+			array(
+				'events'     => 1,
+				'rsvps'      => 1,
+				'checked_in' => 1,
+				'hosts'      => 0,
+			),
+			Meetup_Import\sum_backfill_counts( array_map( 'WordCamp\Groups\Meetup_Import\summarize_event_row', $results ) )
+		);
+
+		// They're in now; a third run has nobody new to add.
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
+	}
+
+	/**
+	 * Someone whose account existed at import time, and so whose RSVP an
+	 * organizer may have removed since, isn't brought back.
+	 */
+	public function test_rerun_does_not_restore_removed_rsvp() {
+		list( $raw, $users ) = $this->setup_rsvps();
+		$this->fake_rsvps( $raw );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		$post = $this->find_event( '300000001' );
+
+		$this->on_site(
+			static function () use ( $post, $users ) {
+				$comment_id = ( new \GatherPress\Core\Rsvp\Rsvp( $post->ID ) )->get( $users['yes'] )['comment_id'];
+				wp_delete_comment( $comment_id, true );
+			}
+		);
+
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
+		$this->assertNull( $this->rsvp_status( $post->ID, $users['yes'] ) );
+	}
+
+	/**
+	 * New hosts are added after the ones already there, and become members.
+	 */
+	public function test_rerun_merges_new_hosts() {
+		$host = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		$raw  = array();
+		$this->fake_rsvps( $raw );
+
+		$events = array(
+			Meetup_Import\normalize_event(
+				$this->raw_past_event(
+					array(
+						'eventHosts' => array(
+							array( 'member' => array( 'email' => 'host@example.org' ) ),
+							array( 'member' => array( 'email' => 'cohost@example.org' ) ),
+						),
+					)
+				)
+			),
+		);
+
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		$post = $this->find_event( '300000001' );
+
+		$cohost  = $this->signs_up_later( 'cohost@example.org' );
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame( 'backfilled', $results[0]['status'] );
+		$this->assertSame( 1, $results[0]['backfill']['hosts'] );
+		$this->assertTrue( is_user_member_of_blog( $cohost, $this->site_id ) );
+		$this->assertSame(
+			array( $host, $cohost ),
+			$this->on_site(
+				static function () use ( $post ) {
+					return array_map( 'intval', (array) get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) );
+				}
+			)
+		);
+	}
+
+	/**
+	 * A host an organizer took off a published event stays off.
+	 */
+	public function test_rerun_does_not_restore_removed_host() {
+		self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		$raw = array();
+		$this->fake_rsvps( $raw );
+
+		$events = array(
+			Meetup_Import\normalize_event( $this->raw_past_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'host@example.org' ) ) ) ) ) ),
+		);
+
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		$post = $this->find_event( '300000001' );
+
+		$this->on_site(
+			static function () use ( $post ) {
+				delete_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY );
+			}
+		);
+
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
+		$this->assertSame(
+			'',
+			$this->on_site(
+				static function () use ( $post ) {
+					return get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true );
+				}
+			)
+		);
+	}
+
+	/**
+	 * An event first imported without matching people has every account to
+	 * match on a rerun with matching.
+	 */
+	public function test_rerun_matches_everyone_on_event_imported_without_matching() {
+		list( $raw, $users ) = $this->setup_rsvps();
+		$this->fake_rsvps( $raw );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+		$post = $this->find_event( '300000001' );
+
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame( 'backfilled', $results[0]['status'] );
+		$this->assertSame( 3, $results[0]['backfill']['rsvps'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $users['yes'] ) );
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * Without the matching box, published events aren't looked at.
+	 */
+	public function test_rerun_without_matching_does_not_backfill() {
+		$raw     = array();
+		$fetched = 0;
+
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( &$fetched ) {
+				++$fetched;
+				return array();
+			}
+		);
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+		$results = Meetup_Import\import_events( $this->site_id, $events );
+
+		$this->assertSame( 0, $fetched );
+		$this->assertSame( 'skipped', $results[0]['status'] );
+		$this->assertNull( $results[0]['backfill'] );
+	}
+
+	/**
+	 * A GMT time some hours back, as WordPress stores dates.
+	 *
+	 * @param int $hours How long ago.
+	 */
+	private function hours_ago( int $hours ): string {
+		return gmdate( 'Y-m-d H:i:s', time() - $hours * HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * A user with a given account date.
+	 *
+	 * @param string $email      Email.
+	 * @param string $registered GMT `Y-m-d H:i:s`.
+	 */
+	private function registered( string $email, string $registered ): int {
+		return self::factory()->user->create(
+			array(
+				'user_email'      => $email,
+				'user_registered' => $registered,
+			)
+		);
+	}
+
+	/**
+	 * Set when an event's people were last matched.
+	 *
+	 * @param int    $post_id Event post ID.
+	 * @param string $cutoff  GMT `Y-m-d H:i:s`.
+	 */
+	private function set_people_cutoff( int $post_id, string $cutoff ): void {
+		$this->on_site(
+			static function () use ( $post_id, $cutoff ) {
+				update_post_meta( $post_id, Meetup_Import\PEOPLE_MATCHED_META, $cutoff );
+			}
+		);
+	}
+
+	/**
+	 * Make an event look as an import before `PEOPLE_MATCHED_META` left it:
+	 * no cutoff, imported (and last modified) at the given time.
+	 *
+	 * @param int    $post_id     Event post ID.
+	 * @param string $imported_at GMT `Y-m-d H:i:s`.
+	 */
+	private function as_earlier_import( int $post_id, string $imported_at ): void {
+		$this->on_site(
+			static function () use ( $post_id, $imported_at ) {
+				delete_post_meta( $post_id, Meetup_Import\PEOPLE_MATCHED_META );
+				update_post_meta( $post_id, Meetup_Import\IMPORTED_MODIFIED_META, $imported_at );
+				$GLOBALS['wpdb']->update(
+					$GLOBALS['wpdb']->posts,
+					array(
+						'post_modified_gmt' => $imported_at,
+						'post_modified'     => get_date_from_gmt( $imported_at ),
+					),
+					array( 'ID' => $post_id )
+				);
+				clean_post_cache( $post_id );
+			}
+		);
+	}
+
+	/**
+	 * An event an earlier import published without matching people has no
+	 * RSVPs or hosts, so everyone who matches now is added, however old their
+	 * account.
+	 */
+	public function test_rerun_matches_everyone_on_earlier_import_without_people() {
+		$raw = array(
+			array(
+				'status'      => 'ATTENDED',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => 'early@example.org' ),
+			),
+		);
+		$this->fake_rsvps( $raw );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'early@example.org' ) ) ) ) ) ) );
+		Meetup_Import\import_events( $this->site_id, $events );
+		$post = $this->find_event( '300000001' );
+		$this->as_earlier_import( $post->ID, $this->hours_ago( 24 ) );
+
+		$early = $this->registered( 'early@example.org', $this->hours_ago( 48 ) );
+
+		$results = Meetup_Import\import_events( $this->site_id, $events, true );
+
+		$this->assertSame( 'backfilled', $results[0]['status'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $early ) );
+		$this->assertSame(
+			array( $early ),
+			array_map( 'intval', (array) $this->on_site( static fn() => get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) ) )
+		);
+		$this->assertSame( array(), $this->sent_mail );
+	}
+
+	/**
+	 * An event an earlier import matched people on keeps the time of that
+	 * import as its cutoff, so an RSVP an organizer removed stays removed.
+	 */
+	public function test_rerun_keeps_import_cutoff_on_earlier_import_with_people() {
+		$raw = array(
+			array(
+				'status'      => 'ATTENDED',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => 'kept@example.org' ),
+			),
+			array(
+				'status'      => 'ATTENDED',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => 'removed@example.org' ),
+			),
+		);
+		$this->fake_rsvps( $raw );
+
+		$kept    = $this->registered( 'kept@example.org', $this->hours_ago( 48 ) );
+		$removed = $this->registered( 'removed@example.org', $this->hours_ago( 48 ) );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		$post = $this->find_event( '300000001' );
+		$this->as_earlier_import( $post->ID, $this->hours_ago( 24 ) );
+
+		$this->on_site(
+			static function () use ( $post, $removed ) {
+				$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $post->ID ) )->get( $removed );
+				wp_delete_comment( $rsvp['comment_id'], true );
+			}
+		);
+
+		$this->assertSame( 'skipped', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $kept ) );
+		$this->assertNull( $this->rsvp_status( $post->ID, $removed ) );
+	}
+
+	/**
+	 * Fixing a description's formatting re-records the import's modified
+	 * date. The backfill's cutoff for an earlier import must not move with it,
+	 * even when the formatting is fixed by a rerun without matching.
+	 */
+	public function test_fixing_formatting_does_not_move_backfill_cutoff() {
+		$raw = array(
+			array(
+				'status'      => 'ATTENDED',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => 'first@example.org' ),
+			),
+		);
+		$this->fake_rsvps( $raw );
+		$this->registered( 'first@example.org', $this->hours_ago( 48 ) );
+
+		$event = Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'Come join us at **The Venue**.' ) ) );
+
+		// As an import before Markdown was converted left it, with people matched.
+		$unconverted                = $event;
+		$unconverted['description'] = $unconverted['legacy_html'];
+		Meetup_Import\import_events( $this->site_id, array( $unconverted ), true );
+		$post = $this->find_event( '300000001' );
+		$this->as_earlier_import( $post->ID, $this->hours_ago( 24 ) );
+
+		$late = $this->registered( 'late@example.org', $this->hours_ago( 12 ) );
+
+		$this->assertSame( 'reformatted', Meetup_Import\import_events( $this->site_id, array( $event ) )[0]['status'] );
+
+		$raw[] = array(
+			'status'      => 'ATTENDED',
+			'guestsCount' => 0,
+			'member'      => array( 'email' => 'late@example.org' ),
+		);
+
+		$this->assertSame( 'backfilled', Meetup_Import\import_events( $this->site_id, array( $event ), true )[0]['status'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $late ) );
+	}
+
+	/**
+	 * A rerun that both fixes the formatting and backfills reports both.
+	 */
+	public function test_reformatted_row_keeps_backfill_counts() {
+		$raw = array();
+		$this->fake_rsvps( $raw );
+
+		$event                      = Meetup_Import\normalize_event( $this->raw_past_event( array( 'description' => 'Come join us at **The Venue**.' ) ) );
+		$unconverted                = $event;
+		$unconverted['description'] = $unconverted['legacy_html'];
+		Meetup_Import\import_events( $this->site_id, array( $unconverted ), true );
+		$post = $this->find_event( '300000001' );
+		$this->set_people_cutoff( $post->ID, $this->hours_ago( 24 ) );
+
+		$late  = $this->registered( 'late@example.org', $this->hours_ago( 12 ) );
+		$raw[] = array(
+			'status'      => 'YES',
+			'guestsCount' => 0,
+			'member'      => array( 'email' => 'late@example.org' ),
+		);
+
+		$results = Meetup_Import\import_events( $this->site_id, array( $event ), true );
+
+		$this->assertSame( 'reformatted', $results[0]['status'] );
+		$this->assertSame( 1, $results[0]['backfill']['rsvps'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $late ) );
+		$this->assertSame( 1, Meetup_Import\sum_backfill_counts( array_map( 'WordCamp\Groups\Meetup_Import\summarize_event_row', $results ) )['rsvps'] );
+	}
+
+	/**
+	 * A failed fetch is reported, and the next run looks at the same people.
+	 */
+	public function test_failed_backfill_fetch_is_retried() {
+		$raw = array();
+		$this->fake_rsvps( $raw );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_past_event() ) );
+		Meetup_Import\import_events( $this->site_id, $events, true );
+		$post = $this->find_event( '300000001' );
+
+		// Matched a day ago, and they signed up since: after the failed run,
+		// not after the next one would look.
+		$this->set_people_cutoff( $post->ID, $this->hours_ago( 24 ) );
+		$late = $this->registered( 'late@example.org', $this->hours_ago( 12 ) );
+
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_rsvps' );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () {
+				return new \WP_Error( 'http_request_failed', 'Timed out' );
+			}
+		);
+
+		$failed = Meetup_Import\import_events( $this->site_id, $events, true );
+		$this->assertSame( 'skipped', $failed[0]['status'] );
+		$this->assertStringContainsString( 'Timed out', $failed[0]['message'] );
+
+		remove_all_filters( 'wcorg_meetup_import_pre_fetch_rsvps' );
+		$raw = array(
+			array(
+				'status'      => 'YES',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => 'late@example.org' ),
+			),
+		);
+		$this->fake_rsvps( $raw );
+
+		$this->assertSame( 'backfilled', Meetup_Import\import_events( $this->site_id, $events, true )[0]['status'] );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $late ) );
+	}
+
+	/**
 	 * On an upcoming event, Meetup's waiting list comes over as attending, for
 	 * GatherPress to place.
 	 */

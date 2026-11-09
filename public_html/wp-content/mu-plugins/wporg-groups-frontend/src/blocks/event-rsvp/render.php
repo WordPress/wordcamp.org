@@ -155,7 +155,8 @@ $context = array(
 	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
-	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
+	// A non-member's RSVP joins the group first; `source` records that it was by RSVPing.
+	'joinApi'           => add_query_arg( 'source', 'rsvp', rest_url( 'wporg-groups/v1/members/join' ) ),
 	'rsvpApi'           => rest_url( sprintf( 'wporg-groups/v1/event/%d/rsvp', $event_post_id ) ),
 	'recurrenceId'      => '',
 	'hasQuestions'      => ! empty( $questions ),

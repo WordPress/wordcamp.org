@@ -75,6 +75,13 @@
 	color: #007a2f;
 }
 
+/* Organizers only: when and how the member joined. */
+.wporg-group-members__joined {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+	line-height: 1.55;
+}
+
 .wporg-group-members__bio {
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal-4);

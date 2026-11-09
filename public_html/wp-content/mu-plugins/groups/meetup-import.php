@@ -58,6 +58,7 @@ use WordCamp\Groups\Frontend\Defaults;
 use WordCamp\Groups\Frontend\Event_Hosts;
 use WordCamp\Groups\Frontend\Event_Language;
 use WordCamp\Groups\Frontend\Group_Location;
+use WordCamp\Groups\Frontend\Member_Joined;
 use WordCamp\Logger;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WordPressdotorg\MU_Plugins\Utilities\Meetup_Client;
@@ -3829,7 +3830,14 @@ function ensure_member( int $site_id, int $user_id, string $role = 'subscriber' 
 
 	update_user_meta( $user_id, get_scoped_opt_in_meta_key( $site_id ), '0' );
 
-	if ( is_wp_error( add_user_to_blog( $site_id, $user_id, $role ) ) ) {
+	$added = Member_Joined\with_source(
+		Member_Joined\SOURCE_IMPORT,
+		static function () use ( $site_id, $user_id, $role ) {
+			return add_user_to_blog( $site_id, $user_id, $role );
+		}
+	);
+
+	if ( is_wp_error( $added ) ) {
 		return false;
 	}
 

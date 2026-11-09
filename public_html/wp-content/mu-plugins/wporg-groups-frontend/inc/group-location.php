@@ -12,7 +12,7 @@ namespace WordCamp\Groups\Frontend\Group_Location;
 
 use WP_Error;
 
-use function WordCamp\Groups\Archive\get_group_query_args;
+use function WordCamp\Groups\Archive\get_group_sites_query_args;
 
 defined( 'WPINC' ) || die();
 
@@ -199,7 +199,7 @@ function search_groups_by_location( string $term ): array {
 
 	return get_sites(
 		array_merge(
-			get_group_query_args(),
+			get_group_sites_query_args(),
 			array(
 				'number'     => SEARCH_LIMIT,
 				'orderby'    => 'path',

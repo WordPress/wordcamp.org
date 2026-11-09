@@ -45,7 +45,7 @@ add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_upd
  *
  * @param bool $include_archived Whether archived groups should be selected.
  */
-function get_group_query_args( bool $include_archived = false ): array {
+function get_group_sites_query_args( bool $include_archived = false ): array {
 	$args = array(
 		'network_id'   => GROUPS_NETWORK_ID,
 		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
@@ -71,7 +71,7 @@ function get_group_query_args( bool $include_archived = false ): array {
 function get_group_sites( bool $include_archived = false, int $number = 0, int $offset = 0 ): array {
 	return get_sites(
 		array_merge(
-			get_group_query_args( $include_archived ),
+			get_group_sites_query_args( $include_archived ),
 			array(
 				'number'  => max( 0, $number ),
 				'offset'  => max( 0, $offset ),
@@ -88,7 +88,7 @@ function get_group_sites( bool $include_archived = false, int $number = 0, int $
  * @param bool $include_archived Whether archived groups should be counted.
  */
 function get_group_site_count( bool $include_archived = false ): int {
-	return (int) get_sites( array_merge( get_group_query_args( $include_archived ), array( 'count' => true ) ) );
+	return (int) get_sites( array_merge( get_group_sites_query_args( $include_archived ), array( 'count' => true ) ) );
 }
 
 /**

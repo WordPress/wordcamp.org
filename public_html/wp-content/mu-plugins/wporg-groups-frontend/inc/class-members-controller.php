@@ -184,6 +184,14 @@ class Members_Controller extends \WP_REST_Users_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'join_group' ),
 					'permission_callback' => 'is_user_logged_in',
+					'args'                => array(
+						// The RSVP block joins through here before it RSVPs.
+						'source' => array(
+							'type'    => 'string',
+							'enum'    => array( Member_Joined\SOURCE_JOIN, Member_Joined\SOURCE_RSVP ),
+							'default' => Member_Joined\SOURCE_JOIN,
+						),
+					),
 				),
 			)
 		);
@@ -328,8 +336,12 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
+		$source = Member_Joined\SOURCE_RSVP === $request->get_param( 'source' )
+			? Member_Joined\SOURCE_RSVP
+			: Member_Joined\SOURCE_JOIN;
+
 		$result = Member_Joined\with_source(
-			Member_Joined\SOURCE_JOIN,
+			$source,
 			static function () use ( $blog_id, $user_id ) {
 				return add_user_to_blog( $blog_id, $user_id, 'subscriber' );
 			}

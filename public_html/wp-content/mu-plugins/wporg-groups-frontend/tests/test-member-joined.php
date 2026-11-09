@@ -78,6 +78,70 @@ class Test_Groups_Member_Joined extends Groups_TestCase {
 	}
 
 	/**
+	 * A non-member's RSVP from the event page joins through `/members/join`
+	 * first, with the URL the RSVP block hands its script, so that's where
+	 * "by RSVPing" has to come from.
+	 */
+	public function test_rsvp_block_join_records_rsvp() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		$user_id = $this->outsider();
+		wp_set_current_user( $user_id );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$join_api = '';
+		$tags     = new \WP_HTML_Tag_Processor( $output );
+		while ( '' === $join_api && $tags->next_tag() ) {
+			$context  = json_decode( (string) $tags->get_attribute( 'data-wp-context' ), true );
+			$join_api = (string) ( $context['joinApi'] ?? '' );
+		}
+		$this->assertNotSame( '', $join_api );
+
+		wp_parse_str( (string) wp_parse_url( $join_api, PHP_URL_QUERY ), $query );
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/members/join' );
+		$request->set_query_params( $query );
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( Member_Joined\SOURCE_RSVP, Member_Joined\get_join( $user_id )['source'] );
+	}
+
+	/**
+	 * The Join button sends no source, and gets "join".
+	 */
+	public function test_join_route_defaults_to_join() {
+		$user_id = $this->outsider();
+		wp_set_current_user( $user_id );
+
+		$response = rest_do_request( new WP_REST_Request( 'POST', '/wporg-groups/v1/members/join' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( Member_Joined\SOURCE_JOIN, Member_Joined\get_join( $user_id )['source'] );
+	}
+
+	/**
+	 * Only the two ways a person joins from the front end can be asked for.
+	 */
+	public function test_join_route_refuses_other_sources() {
+		$user_id = $this->outsider();
+		wp_set_current_user( $user_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/members/join' );
+		$request->set_param( 'source', Member_Joined\SOURCE_IMPORT );
+
+		$this->assertSame( 400, rest_do_request( $request )->get_status() );
+		$this->assertFalse( is_user_member_of_blog( $user_id, self::$groups_root_site_id ) );
+	}
+
+	/**
 	 * Anything else, like wp-admin's "Add Existing User", counts as added.
 	 */
 	public function test_other_adds_record_added() {

@@ -94,4 +94,117 @@ class Test_Camptix_Shortcodes_Addon extends \WP_UnitTestCase {
 
 		$this->assertStringNotContainsString( 'COLLATE utf8mb4_unicode_520_ci', $captured );
 	}
+
+	/**
+	 * Create a page with an attendee-only section, and an ordinary page, that both match "afterparty".
+	 *
+	 * @return int[] The IDs of the private and the ordinary page, in that order.
+	 */
+	protected function create_pages_for_search() {
+		$private_id = self::factory()->post->create( array(
+			'post_type'    => 'page',
+			'post_title'   => 'Livestream',
+			'post_content' => 'Watch here: [camptix_private]Afterparty stream: example.org/live/1234[/camptix_private]',
+		) );
+
+		$public_id = self::factory()->post->create( array(
+			'post_type'    => 'page',
+			'post_title'   => 'Schedule',
+			'post_content' => 'The afterparty starts at 7pm.',
+		) );
+
+		return array( $private_id, $public_id );
+	}
+
+	/**
+	 * Run a page search as the current user.
+	 *
+	 * @param string $terms Search terms.
+	 *
+	 * @return int[] Matching page IDs.
+	 */
+	protected function search_pages( $terms ) {
+		$query = new WP_Query( array(
+			'post_type' => 'page',
+			's'         => $terms,
+			'fields'    => 'ids',
+			'orderby'   => 'ID',
+			'order'     => 'ASC',
+		) );
+
+		return array_map( 'intval', $query->posts );
+	}
+
+	/**
+	 * Visitors don't find pages with attendee-only sections through search.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_search
+	 */
+	public function test_search_leaves_private_pages_out_for_visitors() {
+		list( $private_id, $public_id ) = $this->create_pages_for_search();
+
+		wp_set_current_user( 0 );
+
+		$this->assertSame( array( $public_id ), $this->search_pages( 'afterparty' ) );
+		$this->assertSame( array(), $this->search_pages( 'example.org/live/1234' ) );
+		$this->assertNotContains( $private_id, $this->search_pages( 'Livestream' ) );
+	}
+
+	/**
+	 * Subscribers and authors are treated like visitors.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_search
+	 */
+	public function test_search_leaves_private_pages_out_for_authors() {
+		list( , $public_id ) = $this->create_pages_for_search();
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$this->assertSame( array( $public_id ), $this->search_pages( 'afterparty' ) );
+	}
+
+	/**
+	 * Editors still find every page.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_search
+	 */
+	public function test_search_includes_private_pages_for_editors() {
+		list( $private_id, $public_id ) = $this->create_pages_for_search();
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$this->assertSame( array( $private_id, $public_id ), $this->search_pages( 'afterparty' ) );
+	}
+
+	/**
+	 * The REST API's page and site-wide search follow the same rule.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_search
+	 */
+	public function test_rest_search_leaves_private_pages_out_for_visitors() {
+		list( , $public_id ) = $this->create_pages_for_search();
+
+		wp_set_current_user( 0 );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/pages' );
+		$request->set_param( 'search', 'afterparty' );
+		$this->assertSame( array( $public_id ), wp_list_pluck( rest_do_request( $request )->get_data(), 'id' ) );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/search' );
+		$request->set_param( 'search', 'afterparty' );
+		$this->assertSame( array( $public_id ), wp_list_pluck( rest_do_request( $request )->get_data(), 'id' ) );
+	}
+
+	/**
+	 * Queries without search terms are left alone.
+	 *
+	 * @covers CampTix_Addon_Shortcodes::leave_private_pages_out_of_search
+	 */
+	public function test_listing_pages_without_search_includes_private_pages() {
+		list( $private_id, $public_id ) = $this->create_pages_for_search();
+
+		wp_set_current_user( 0 );
+
+		$this->assertSame( array( $private_id, $public_id ), $this->search_pages( '' ) );
+	}
 }

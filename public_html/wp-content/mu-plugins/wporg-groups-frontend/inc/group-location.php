@@ -164,7 +164,7 @@ function clear_location(): void {
  * @param string $term What the visitor searched for.
  * @return \WP_Site[]
  */
-function search_groups( string $term ): array {
+function search_groups_by_location( string $term ): array {
 	$term = trim( $term );
 
 	if ( '' === $term ) {

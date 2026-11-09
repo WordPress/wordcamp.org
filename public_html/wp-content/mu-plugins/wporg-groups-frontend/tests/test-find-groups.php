@@ -5,7 +5,7 @@ namespace WordCamp\Groups\Tests;
 use function WordCamp\Groups\Archive\update_group_archive_status;
 use function WordCamp\Groups\Frontend\Group_Location\get_location_label;
 use function WordCamp\Groups\Frontend\Group_Location\save_location;
-use function WordCamp\Groups\Frontend\Group_Location\search_groups;
+use function WordCamp\Groups\Frontend\Group_Location\search_groups_by_location;
 
 defined( 'WPINC' ) || die();
 
@@ -71,7 +71,7 @@ class Test_Find_Groups extends Groups_TestCase {
 	 * @return int[]
 	 */
 	private function search( string $term ): array {
-		return array_map( 'intval', wp_list_pluck( search_groups( $term ), 'blog_id' ) );
+		return array_map( 'intval', wp_list_pluck( search_groups_by_location( $term ), 'blog_id' ) );
 	}
 
 	/**

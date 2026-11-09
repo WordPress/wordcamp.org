@@ -8,11 +8,11 @@
  */
 
 use function WordCamp\Groups\Frontend\Group_Location\get_location_label;
-use function WordCamp\Groups\Frontend\Group_Location\search_groups;
+use function WordCamp\Groups\Frontend\Group_Location\search_groups_by_location;
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A public, read-only search.
 $search_term = sanitize_text_field( wp_unslash( $_GET['groups_near'] ?? '' ) );
-$groups      = search_groups( $search_term );
+$groups      = search_groups_by_location( $search_term );
 ?>
 <section <?php echo get_block_wrapper_attributes( array( 'id' => 'find-groups' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core. ?>>
 	<h2 class="wporg-find-groups__heading"><?php esc_html_e( 'Find groups near you', 'wordcamporg' ); ?></h2>

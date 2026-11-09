@@ -547,6 +547,42 @@ class Test_Event_Flyer extends Groups_TestCase {
 	}
 
 	/**
+	 * A protected series answers every dated short URL alike until the
+	 * password is entered, so its dates can't be found by asking for them.
+	 */
+	public function test_protected_dated_short_url_resolves_no_date() {
+		$event_id = $this->create_recurring_event();
+		$second   = Occurrences::all( $event_id, 'upcoming', 10 )[1];
+		$by_day   = substr( $second->recurrence_id, 0, 8 );
+		$expected = Context::occurrence_url( $event_id, $second->recurrence_id );
+		$cookie   = 'wp-postpass_' . COOKIEHASH;
+
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret',
+			)
+		);
+
+		wp_set_current_user( 0 );
+
+		foreach ( array( $by_day, $second->recurrence_id, '19990101', '19990104T100000' ) as $date ) {
+			$this->assertSame( get_permalink( $event_id ), get_short_url_target( $event_id, $date ), "A protected series answered '{$date}' differently." );
+		}
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );
+
+		try {
+			$this->assertSame( $expected, get_short_url_target( $event_id, $by_day ), 'A visitor with the password lost the date.' );
+			$this->assertSame( $expected, get_short_url_target( $event_id, $second->recurrence_id ), 'A visitor with the password lost the exact date.' );
+			$this->assertSame( '', get_short_url_target( $event_id, '19990101' ), 'A visitor with the password got a date the series doesn\'t have.' );
+		} finally {
+			unset( $_COOKIE[ $cookie ] );
+		}
+	}
+
+	/**
 	 * A series' own undated flyer gets an undated short URL, like its
 	 * permalink.
 	 */

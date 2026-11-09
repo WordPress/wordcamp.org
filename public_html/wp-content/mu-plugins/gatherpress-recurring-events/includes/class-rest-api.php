@@ -267,6 +267,36 @@ final class Rest_API {
 	}
 
 	/**
+	 * Removes a protected series' recurrence settings from its REST response
+	 * until the password is entered. Editors keep them for the block editor.
+	 *
+	 * @param WP_REST_Response $response Event response.
+	 * @param WP_Post          $post     Event post.
+	 * @return WP_REST_Response The response, without the settings when gated.
+	 */
+	public static function hide_protected_schedule( WP_REST_Response $response, WP_Post $post ): WP_REST_Response {
+		if ( ! post_password_required( $post ) || current_user_can( 'edit_post', $post->ID ) ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+
+		if ( empty( $data['meta'] ) ) {
+			return $response;
+		}
+
+		$data['meta'] = array_filter(
+			$data['meta'],
+			static fn( string $key ): bool => ! str_starts_with( $key, Rule::META_PREFIX ),
+			ARRAY_FILTER_USE_KEY
+		);
+
+		$response->set_data( $data );
+
+		return $response;
+	}
+
+	/**
 	 * Whether the request comes from this site rather than another origin.
 	 *
 	 * Browsers send an `Origin` header with every cross-origin request, so a

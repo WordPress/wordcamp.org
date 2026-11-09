@@ -1864,13 +1864,16 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			);
 		};
 
-		$single = static function ( int $post_id ) use ( $schedule_keys ): array {
-			return $schedule_keys( rest_do_request( new WP_REST_Request( 'GET', "/wp/v2/gatherpress_events/{$post_id}" ) )->get_data() );
+		$single = static function ( int $post_id, array $query = array() ) use ( $schedule_keys ): array {
+			$request = new WP_REST_Request( 'GET', "/wp/v2/gatherpress_events/{$post_id}" );
+			$request->set_query_params( $query );
+
+			return $schedule_keys( rest_do_request( $request )->get_data() );
 		};
 
-		$listed = static function ( int $post_id ) use ( $schedule_keys ): array {
+		$listed = static function ( int $post_id, array $query = array() ) use ( $schedule_keys ): array {
 			$request = new WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
-			$request->set_param( 'include', array( $post_id ) );
+			$request->set_query_params( array_merge( $query, array( 'include' => array( $post_id ) ) ) );
 
 			return $schedule_keys( rest_do_request( $request )->get_data()[0] );
 		};
@@ -1879,7 +1882,9 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 		$this->assertSame( array(), $single( $protected_id ), 'A protected series showed its schedule on the single route.' );
 		$this->assertSame( array(), $listed( $protected_id ), 'A protected series showed its schedule on the collection route.' );
+		$this->assertSame( array(), $listed( $protected_id, array( 'password' => 'wrong' ) ), 'A wrong password showed the schedule.' );
 		$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $open_id ), 'An open series lost its schedule.' );
+		$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $protected_id, array( 'password' => 'secret' ) ), 'A request carrying the password lost the schedule.' );
 
 		require_once ABSPATH . WPINC . '/class-phpass.php';
 		$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );

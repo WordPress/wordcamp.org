@@ -278,7 +278,15 @@ function redirect_short_url( WP $wp ): void {
 		return;
 	}
 
-	wp_safe_redirect( $target, 301 );
+	// Where a protected event's URL leads depends on the visitor's password
+	// cookie, so neither a browser nor a cache may keep the answer.
+	$is_protected = '' !== get_post( absint( $event_id ) )->post_password;
+
+	if ( $is_protected ) {
+		nocache_headers();
+	}
+
+	wp_safe_redirect( $target, $is_protected ? 302 : 301 );
 	exit;
 }
 

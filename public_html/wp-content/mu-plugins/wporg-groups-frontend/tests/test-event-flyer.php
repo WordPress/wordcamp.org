@@ -466,6 +466,26 @@ class Test_Event_Flyer extends Groups_TestCase {
 	 */
 	public function test_short_url_redirects_to_the_event() {
 		$event_id = $this->create_event();
+
+		$this->assertSame( array( 301, get_permalink( $event_id ) ), $this->capture_redirect( "e/{$event_id}/" ) );
+	}
+
+	/**
+	 * Where a protected event's short URL leads depends on the visitor's
+	 * password cookie, so the redirect is only temporary.
+	 */
+	public function test_protected_short_url_redirect_is_temporary() {
+		$event_id = $this->create_event( array( 'post_password' => 'secret' ) );
+
+		$this->assertSame( array( 302, get_permalink( $event_id ) ), $this->capture_redirect( "e/{$event_id}/19990101/" ) );
+	}
+
+	/**
+	 * The status and location a path redirects with.
+	 *
+	 * @param string $path Path from the site's home.
+	 */
+	private function capture_redirect( string $path ): ?array {
 		$redirect = null;
 
 		// Stop at the redirect, ahead of the `exit` that follows it.
@@ -480,13 +500,13 @@ class Test_Event_Flyer extends Groups_TestCase {
 		);
 
 		try {
-			$this->go_to( home_url( "e/{$event_id}/" ) );
+			$this->go_to( home_url( $path ) );
 		} catch ( \RuntimeException $e ) {
 			// Expected.
 			unset( $e );
 		}
 
-		$this->assertSame( array( 301, get_permalink( $event_id ) ), $redirect );
+		return $redirect;
 	}
 
 	/**

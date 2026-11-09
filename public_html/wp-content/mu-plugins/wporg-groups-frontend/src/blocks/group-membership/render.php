@@ -5,8 +5,9 @@
  * @package WordCamp\Groups\Frontend
  */
 
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_step_down;
 use function WordCamp\Groups\Frontend\Capabilities\get_role_tier_label;
-use const WordCamp\Groups\Frontend\Capabilities\EVENT_MANAGER_ROLES;
+use function WordCamp\Groups\Frontend\Capabilities\is_only_organizer;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
@@ -37,11 +38,17 @@ $is_organizer       = in_array( $user_role, ORGANIZER_ROLES, true );
 $renders_leave      = $shows_membership && $is_member && ! $is_organizer;
 $renders_preference = $shows_preference && $is_member;
 
-// Plain "Member" is the default for everyone who isn't an organizer or
-// event organizer — badging it back at people who already know they've
-// joined adds a status pill with nothing to say. Reserve the badge for
-// roles the label actually distinguishes.
-$renders_role_badge = $shows_membership && $is_member && in_array( $user_role, EVENT_MANAGER_ROLES, true );
+// Organizers can't leave outright: they step down to Member first, which
+// keeps the role from being lost to a stray click and lets the endpoint
+// refuse the group's last organizer. Administrators are managed in wp-admin.
+$can_step_down       = $shows_membership && $is_member && current_user_can_step_down();
+$is_only_organizer   = $can_step_down && is_only_organizer( get_current_user_id() );
+$renders_step_down   = $can_step_down && ! $is_only_organizer;
+$renders_role_action = $renders_leave || $renders_step_down;
+
+// Everyone who belongs sees their role, so an organizer knows why they get
+// "Step down" rather than "Leave group", and a member knows where they stand.
+$renders_role_badge = $shows_membership && $is_member;
 
 if ( ! $shows_membership && ! $renders_preference && ! $shows_count ) {
 	return;
@@ -54,6 +61,15 @@ $member_count = 0;
 $count_label  = '';
 $members_url  = '';
 
+// Also where an only organizer goes to promote someone before stepping down.
+$members_page_url = '';
+if ( $shows_count || $is_only_organizer ) {
+	$members_page = get_page_by_path( 'members' );
+	if ( $members_page && 'publish' === $members_page->post_status ) {
+		$members_page_url = get_permalink( $members_page );
+	}
+}
+
 // `count_users()` runs Core's CPU-intensive usermeta aggregate, so only the
 // variants that actually print the number pay for it.
 if ( $shows_count ) {
@@ -64,10 +80,7 @@ if ( $shows_count ) {
 		number_format_i18n( $member_count )
 	);
 
-	$members_page = get_page_by_path( 'members' );
-	if ( $members_page && 'publish' === $members_page->post_status ) {
-		$members_url = get_permalink( $members_page );
-	}
+	$members_url = $members_page_url;
 }
 
 $notification_opt_in = $renders_preference
@@ -104,6 +117,7 @@ if ( $shows_membership ) {
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
 			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
 			'loading'      => false,
+			'errorMessage' => '',
 		)
 	);
 }
@@ -129,6 +143,17 @@ if ( $shows_membership || $shows_count ) {
 	}
 
 	wp_interactivity_state( 'wporg/group-membership', $interactivity_state );
+}
+
+if ( $renders_step_down ) {
+	$context = array_merge(
+		$context,
+		array(
+			'stepDownApi'     => rest_url( 'wporg-groups/v1/members/me/role' ),
+			'stepDownConfirm' => __( "Step down to Member?\n\nYou won't be able to manage this group's events, members or settings anymore. Another organizer can make you an organizer again.", 'wordcamporg' ),
+			'stepDownError'   => __( 'You could not step down. Please try again.', 'wordcamporg' ),
+		)
+	);
 }
 
 if ( $renders_preference ) {
@@ -183,7 +208,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endif; ?>
 	<?php endif; ?>
 
-	<?php if ( $shows_count || $renders_leave ) : ?>
+	<?php if ( $shows_count || $renders_role_action || $is_only_organizer ) : ?>
 		<div class="wporg-group-membership__meta">
 			<?php if ( $shows_count ) : ?>
 				<?php if ( $members_url ) : ?>
@@ -197,7 +222,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<?php endif; ?>
 			<?php endif; ?>
 
-			<?php if ( $shows_count && $renders_leave ) : ?>
+			<?php if ( $shows_count && $renders_role_action ) : ?>
 				<span class="wporg-group-membership__meta-divider" aria-hidden="true">&middot;</span>
 			<?php endif; ?>
 
@@ -209,7 +234,39 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-bind--aria-busy="context.loading"
 				><?php esc_html_e( 'Leave group', 'wordcamporg' ); ?></button>
 			<?php endif; ?>
+
+			<?php if ( $renders_step_down ) : ?>
+				<button
+					type="button"
+					class="wporg-group-membership__leave wporg-group-membership__step-down"
+					data-wp-on--click="actions.stepDown"
+					data-wp-bind--disabled="context.loading"
+					data-wp-bind--aria-busy="context.loading"
+				><?php esc_html_e( 'Step down to Member', 'wordcamporg' ); ?></button>
+			<?php endif; ?>
 		</div>
+
+		<?php if ( $is_only_organizer ) : ?>
+			<p class="wporg-group-membership__note">
+				<?php
+				// The link opens Settings → Members where the settings block is
+				// on the page, and falls back to the public Members page.
+				echo wp_kses_post( sprintf(
+					/* translators: %s: URL of the group's Members page. */
+					__( 'You are this group&#8217;s only organizer. To step down, first <a href="%s" data-wporg-settings-open="members">make another member an organizer</a>.', 'wordcamporg' ),
+					esc_url( $members_page_url ?: '#' )
+				) );
+				?>
+			</p>
+		<?php endif; ?>
+
+		<?php if ( $renders_step_down ) : ?>
+			<p
+				class="wporg-group-membership__status is-error"
+				role="alert"
+				data-wp-text="context.errorMessage"
+			></p>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>

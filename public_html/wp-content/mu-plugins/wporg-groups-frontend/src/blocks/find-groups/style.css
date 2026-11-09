@@ -15,6 +15,18 @@
 	border-color: var(--wp--preset--color--charcoal-4);
 }
 
+/*
+ * The parent theme's outline button `:focus` rule outweighs the global
+ * `:focus-visible` ring and swaps it for a thinner, inset one. Its inset white
+ * shadow only makes sense alongside that inset outline, so it goes too.
+ */
+
+.wporg-find-groups__form .wp-block-button.is-style-outline .wp-block-button__link:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+	box-shadow: none;
+}
+
 .wporg-find-groups__results {
 	display: flex;
 	flex-direction: column;

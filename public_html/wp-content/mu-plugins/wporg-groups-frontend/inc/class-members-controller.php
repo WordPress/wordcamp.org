@@ -11,6 +11,7 @@
 namespace WordCamp\Groups\Frontend\Members;
 
 use WordCamp\Groups\Frontend\Leave_Cleanup;
+use WordCamp\Groups\Frontend\Member_Joined;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 defined( 'WPINC' ) || die();
@@ -327,7 +328,12 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
-		$result = add_user_to_blog( $blog_id, $user_id, 'subscriber' );
+		$result = Member_Joined\with_source(
+			Member_Joined\SOURCE_JOIN,
+			static function () use ( $blog_id, $user_id ) {
+				return add_user_to_blog( $blog_id, $user_id, 'subscriber' );
+			}
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;

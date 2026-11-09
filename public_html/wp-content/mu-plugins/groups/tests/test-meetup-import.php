@@ -1012,6 +1012,16 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertSame( array( 'subscriber' ), ( new \WP_User( $users['match'], '', $this->site_id ) )->roles );
 		$this->assertSame( '0', get_user_meta( $users['match'], \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
 
+		// Organizers can tell imported members from ones who joined later.
+		$this->assertSame(
+			\WordCamp\Groups\Frontend\Member_Joined\SOURCE_IMPORT,
+			$this->on_site(
+				static function () use ( $users ) {
+					return \WordCamp\Groups\Frontend\Member_Joined\get_join( $users['match'] )['source'] ?? '';
+				}
+			)
+		);
+
 		// The member who was already there keeps whatever they had chosen.
 		$this->assertSame( '', get_user_meta( $users['already'], \WordCamp\Groups\Frontend\Notifications\get_scoped_opt_in_meta_key( $this->site_id ), true ) );
 

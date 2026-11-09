@@ -36,6 +36,7 @@ require_once __DIR__ . '/inc/event-email.php';
 require_once __DIR__ . '/inc/my-events.php';
 require_once __DIR__ . '/inc/check-in.php';
 require_once __DIR__ . '/inc/leave-cleanup.php';
+require_once __DIR__ . '/inc/member-joined.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
@@ -52,6 +53,10 @@ function bootstrap(): void {
 	// network root site where they're edited doesn't run GatherPress at all,
 	// so this has to be registered before the guard below.
 	Sponsors\bootstrap();
+
+	// The Meetup import adds members from the network root site, which
+	// doesn't run GatherPress either.
+	Member_Joined\bootstrap();
 
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;

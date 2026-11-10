@@ -105,13 +105,36 @@ function get_company_filters(): array {
  * @return string The filter's key, or an empty string for none.
  */
 function get_current_company_filter(): string {
-	$filter = sanitize_key( wp_unslash( (string) ( $_GET['sv_filter'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list filter.
+	$filter = $_GET['sv_filter'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the filters' keys.
 
-	return isset( get_company_filters()[ $filter ] ) ? $filter : '';
+	return is_string( $filter ) && isset( get_company_filters()[ $filter ] ) ? $filter : '';
 }
 
 /**
- * Renders the filter dropdown above the company list, with each filter's count.
+ * Gets the status the reviewer picked from the list's status links.
+ *
+ * @return string The status, or an empty string for all.
+ */
+function get_picked_company_status(): string {
+	$status = $_GET['post_status'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the statuses.
+
+	return is_string( $status ) && isset( get_company_statuses()[ $status ] ) ? $status : '';
+}
+
+/**
+ * Gets the statuses a filter lists within the status the reviewer picked.
+ *
+ * @param array $filter A filter, as get_company_filters() returns it.
+ * @return string[] None when the picked status is outside the filter's.
+ */
+function get_filtered_statuses( array $filter ): array {
+	$status = get_picked_company_status();
+
+	return '' === $status ? $filter['statuses'] : array_values( array_intersect( $filter['statuses'], array( $status ) ) );
+}
+
+/**
+ * Renders the filter dropdown above the company list, with each filter's count within the status picked.
  *
  * @param string $post_type The listed post type.
  * @param string $which     Where the filters are shown, above or below the list.
@@ -128,14 +151,17 @@ function render_company_filter( string $post_type, string $which ): void {
 		<option value=""><?php esc_html_e( 'All companies', 'wordcamporg' ); ?></option>
 		<?php
 		foreach ( get_company_filters() as $key => $filter ) :
-			$count = ( new \WP_Query(
+			$statuses = get_filtered_statuses( $filter );
+			$count    = $statuses ? ( new \WP_Query(
 				array(
 					'post_type'      => COMPANY_POST_TYPE,
-					'post_status'    => $filter['statuses'],
+					'post_status'    => $statuses,
+					'meta_key'       => $filter['query']['meta_key'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+					'orderby'        => 'none',
 					'posts_per_page' => 1,
 					'fields'         => 'ids',
-				) + $filter['query']
-			) )->found_posts;
+				)
+			) )->found_posts : 0;
 			?>
 			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $current, $key ); ?>>
 				<?php
@@ -162,8 +188,7 @@ function filter_companies( \WP_Query $query ): void {
 	}
 
 	$filter   = get_company_filters()[ $current ];
-	$status   = (string) $query->get( 'post_status' );
-	$statuses = '' === $status ? $filter['statuses'] : array_intersect( $filter['statuses'], array( $status ) );
+	$statuses = get_filtered_statuses( $filter );
 	$args     = isset( $_GET['orderby'] ) ? array_diff_key( $filter['query'], array_flip( array( 'orderby', 'order' ) ) ) : $filter['query']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list sort.
 
 	foreach ( $args as $key => $value ) {

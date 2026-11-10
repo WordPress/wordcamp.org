@@ -39,8 +39,7 @@ class Test_Admin extends WP_UnitTestCase {
 	 * Clears what a list test set up for the admin screen.
 	 */
 	public function tear_down(): void {
-		unset( $_GET['sv_filter'] );
-		set_current_screen( 'front' );
+		unset( $_GET['sv_filter'], $_GET['post_status'] );
 
 		parent::tear_down();
 	}
@@ -78,7 +77,8 @@ class Test_Admin extends WP_UnitTestCase {
 			);
 		}
 
-		$_GET['sv_filter'] = $filter;
+		$_GET['sv_filter']   = $filter;
+		$_GET['post_status'] = $status;
 		set_current_screen( 'edit-' . COMPANY_POST_TYPE );
 		do_action( 'load-edit.php' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's hook for the list screen.
 
@@ -96,7 +96,7 @@ class Test_Admin extends WP_UnitTestCase {
 		$dropdown = (string) ob_get_clean();
 
 		$this->assertSame( array_map( static fn( string $name ): int => $ids[ $name ], $expected ), $listed );
-		$this->assertMatchesRegularExpression( "#<option value=\"{$filter}\"\\s+selected='selected'>\\s*{$label} \\(2\\)\\s*</option>#", $dropdown );
+		$this->assertMatchesRegularExpression( "#<option value=\"{$filter}\"\\s+selected='selected'>\\s*{$label} \\(" . count( $expected ) . '\\)\\s*</option>#', $dropdown );
 	}
 
 	/**

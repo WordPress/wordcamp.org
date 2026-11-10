@@ -79,6 +79,7 @@ class Test_Admin extends WP_UnitTestCase {
 
 		$_GET[ $view ] = '1';
 		set_current_screen( 'edit-' . COMPANY_POST_TYPE );
+		do_action( 'load-edit.php' );
 
 		// The list screen's query is the main one, which the test case resets afterwards.
 		$listed = $GLOBALS['wp_the_query']->query(

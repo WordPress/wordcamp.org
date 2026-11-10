@@ -134,7 +134,7 @@ add_filter( 'views_edit-' . COMPANY_POST_TYPE, __NAMESPACE__ . '\add_company_vie
  * @param \WP_Query $query The list's query.
  */
 function filter_companies( \WP_Query $query ): void {
-	if ( ! is_admin() || ! $query->is_main_query() || COMPANY_POST_TYPE !== $query->get( 'post_type' ) ) {
+	if ( ! $query->is_main_query() ) {
 		return;
 	}
 
@@ -154,7 +154,16 @@ function filter_companies( \WP_Query $query ): void {
 	}
 	// phpcs:enable
 }
-add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+
+/**
+ * Filters the queries of the company list screen only.
+ */
+function load_company_list(): void {
+	if ( COMPANY_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_company_list' );
 
 /**
  * Counts the sponsorships of the companies on the list screen, in one query for the page.

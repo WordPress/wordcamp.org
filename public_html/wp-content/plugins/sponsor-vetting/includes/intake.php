@@ -330,11 +330,13 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 function queue_company( int $sponsorship_id ): void {
 	$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
 
-	if ( ! $company_id || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! get_vetting_state( $company_id )['needs_requeue'] ) {
+	$state = $company_id ? get_vetting_state( $company_id ) : array();
+
+	if ( ! $state || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! $state['needs_requeue'] ) {
 		return;
 	}
 
-	$was_inactive = 'sv-inactive' === get_post_status( $company_id );
+	$was_inactive = 'sv-inactive' === $state['status'];
 
 	wp_update_post(
 		array(

@@ -12,6 +12,8 @@ declare( strict_types = 1 );
 
 namespace WordCamp\Sponsor_Vetting;
 
+use WordPressdotorg\MU_Plugins\Utilities\FreeScout;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -31,7 +33,7 @@ add_action( 'admin_init', __NAMESPACE__ . '\schedule_inactive_check' );
  * to come, or it has none.
  *
  * A company whose sponsor replied is waiting on a reviewer, and one approved in Good Faith still owes its changes,
- * so both stay.
+ * so both stay. A reply the hourly check hasn't flagged yet is read from FreeScout before the company moves.
  */
 function deactivate_stalled_companies(): void {
 	if ( ! is_central() ) {
@@ -61,6 +63,10 @@ function deactivate_stalled_companies(): void {
 			}
 		}
 
+		if ( sponsor_replied_since_check( $company_id ) ) {
+			continue;
+		}
+
 		$was_system = acting_as_system();
 		acting_as_system( true );
 
@@ -71,6 +77,10 @@ function deactivate_stalled_companies(): void {
 					'post_status' => 'sv-inactive',
 				)
 			);
+
+			if ( 'sv-inactive' !== get_post_status( $company_id ) ) {
+				continue;
+			}
 
 			add_note(
 				$company_id,
@@ -86,10 +96,42 @@ function deactivate_stalled_companies(): void {
 add_action( 'sv_check_inactive', __NAMESPACE__ . '\deactivate_stalled_companies' );
 
 /**
+ * Whether the sponsor wrote last in the company's latest compliance conversation, flagging the reply if so.
+ *
+ * Counts FreeScout being unreachable as a reply, so a company isn't moved on without its conversation being read.
+ *
+ * @param int $company_id The company.
+ * @return bool
+ */
+function sponsor_replied_since_check( int $company_id ): bool {
+	$conversations = get_conversations( $company_id, 'compliance' );
+	$latest        = end( $conversations );
+
+	if ( ! $latest ) {
+		return false;
+	}
+
+	$conversation = FreeScout::get( (int) $latest['id'] );
+
+	if ( is_wp_error( $conversation ) ) {
+		return true;
+	}
+
+	if ( ! sponsor_wrote_last( $conversation ) ) {
+		return false;
+	}
+
+	update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+
+	return true;
+}
+
+/**
  * Cancels a company's pending sponsorships once it's Inactive, however it got there.
  *
  * Nothing is left waiting on an Inactive company: a sponsorship left pending would read "In review" to its
- * organizers indefinitely. Restoring a company from the trash isn't a new decision.
+ * organizers indefinitely. The cancellations are put down to whoever made the company Inactive: a reviewer, or the
+ * daily job as the system. Restoring a company from the trash isn't a new decision.
  *
  * @param int           $post_id     The post ID.
  * @param \WP_Post      $post        The post.
@@ -101,22 +143,15 @@ function cancel_inactive_sponsorships( int $post_id, \WP_Post $post, bool $updat
 		return;
 	}
 
-	$was_system = acting_as_system();
-	acting_as_system( true );
+	foreach ( get_pending_sponsorships( $post->ID ) as $sponsorship_id ) {
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_status' => 'svs-canceled',
+			)
+		);
 
-	try {
-		foreach ( get_pending_sponsorships( $post->ID ) as $sponsorship_id ) {
-			wp_update_post(
-				array(
-					'ID'          => $sponsorship_id,
-					'post_status' => 'svs-canceled',
-				)
-			);
-
-			add_note( $sponsorship_id, __( 'Canceled automatically: its company is Inactive.', 'wordcamporg' ) );
-		}
-	} finally {
-		acting_as_system( $was_system );
+		add_note( $sponsorship_id, __( 'Canceled automatically: its company is Inactive.', 'wordcamporg' ) );
 	}
 }
 add_action( 'wp_after_insert_post', __NAMESPACE__ . '\cancel_inactive_sponsorships', 10, 4 );
@@ -141,31 +176,37 @@ function get_pending_sponsorships( int $company_id ): array {
 }
 
 /**
- * Whether a camp's event is over: its end date, or its start date for a one-day event, is before today.
+ * Whether a camp's event is over: canceled, or its end date, or its start date for a one-day event, is before today.
  *
- * An event without a date, or without a `wordcamp` post, isn't taken for over. Runs on Central.
+ * Every `wordcamp` post for the site has to be over, in case it has more than one. An event without a date, or
+ * without a `wordcamp` post, isn't taken for over. Runs on Central.
  *
  * @param int $blog_id The camp site.
  * @return bool
  */
 function event_has_ended( int $blog_id ): bool {
-	$event_ids = $blog_id ? get_posts(
+	$events = $blog_id ? get_posts(
 		array(
 			'post_type'      => 'wordcamp',
 			'post_status'    => 'any',
 			'meta_key'       => '_site_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- An exact match on one site.
 			'meta_value'     => $blog_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- An exact match on one site.
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
+			'posts_per_page' => -1,
 			'no_found_rows'  => true,
 		)
 	) : array();
 
-	if ( ! $event_ids ) {
-		return false;
+	foreach ( $events as $event ) {
+		if ( 'wcpt-cancelled' === $event->post_status ) {
+			continue;
+		}
+
+		$end = (int) get_post_meta( $event->ID, 'End Date (YYYY-mm-dd)', true ) ?: (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
+
+		if ( ! $end || gmdate( 'Y-m-d', $end ) >= gmdate( 'Y-m-d' ) ) {
+			return false;
+		}
 	}
 
-	$end = (int) get_post_meta( $event_ids[0], 'End Date (YYYY-mm-dd)', true ) ?: (int) get_post_meta( $event_ids[0], 'Start Date (YYYY-mm-dd)', true );
-
-	return $end && gmdate( 'Y-m-d', $end ) < gmdate( 'Y-m-d' );
+	return (bool) $events;
 }

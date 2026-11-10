@@ -25,8 +25,8 @@ defined( 'WPINC' ) || die();
  */
 class Test_Inactive extends Database_TestCase {
 	/**
-	 * Registers the types, and gives the 2018 camp an event that ended last month and the 2019 camp one still to
-	 * come.
+	 * Registers the types, and gives the 2018 camp an event that ended last month, the 2019 camp one still to come,
+	 * and the 2020 camp one still to come that was canceled.
 	 */
 	public function set_up(): void {
 		parent::set_up();
@@ -35,13 +35,14 @@ class Test_Inactive extends Database_TestCase {
 		register_types();
 
 		foreach ( array(
-			self::$year_dot_2018_site_id => array( '-1 month -1 day', '-1 month' ),
-			self::$year_dot_2019_site_id => array( '+1 month', '+1 month +1 day' ),
-		) as $site_id => list( $start, $end ) ) {
+			self::$year_dot_2018_site_id   => array( '-1 month -1 day', '-1 month', 'wcpt-closed' ),
+			self::$year_dot_2019_site_id   => array( '+1 month', '+1 month +1 day', 'wcpt-scheduled' ),
+			self::$slash_year_2020_site_id => array( '+2 months', '+2 months +1 day', 'wcpt-cancelled' ),
+		) as $site_id => list( $start, $end, $status ) ) {
 			self::factory()->post->create(
 				array(
 					'post_type'   => 'wordcamp',
-					'post_status' => 'publish',
+					'post_status' => $status,
 					'meta_input'  => array(
 						'_site_id'                => $site_id,
 						'Start Date (YYYY-mm-dd)' => strtotime( $start ),
@@ -60,7 +61,7 @@ class Test_Inactive extends Database_TestCase {
 	 *
 	 * @dataProvider data_stalled_requests
 	 *
-	 * @param string[] $events   The events of its pending sponsorships: `ended` or `upcoming`.
+	 * @param string[] $events   The events of its pending sponsorships: `ended`, `upcoming` or `canceled`.
 	 * @param array    $meta     The company's meta.
 	 * @param bool     $inactive Whether it goes Inactive.
 	 */
@@ -82,7 +83,13 @@ class Test_Inactive extends Database_TestCase {
 					'post_type'   => SPONSORSHIP_POST_TYPE,
 					'post_status' => 'svs-pending',
 					'post_parent' => $company_id,
-					'meta_input'  => array( '_sv_blog_id' => 'ended' === $event ? self::$year_dot_2018_site_id : self::$year_dot_2019_site_id ),
+					'meta_input'  => array(
+						'_sv_blog_id' => array(
+							'ended'    => self::$year_dot_2018_site_id,
+							'upcoming' => self::$year_dot_2019_site_id,
+							'canceled' => self::$slash_year_2020_site_id,
+						)[ $event ],
+					),
 				)
 			);
 		}
@@ -114,6 +121,7 @@ class Test_Inactive extends Database_TestCase {
 			'no pending sponsorship'         => array( array(), array(), true ),
 			'every event has ended'          => array( array( 'ended', 'ended' ), array(), true ),
 			'one event is still to come'     => array( array( 'ended', 'upcoming' ), array(), false ),
+			'the event to come was canceled' => array( array( 'ended', 'canceled' ), array(), true ),
 			'the sponsor replied'            => array( array( 'ended' ), array( '_sv_sponsor_replied' => time() ), false ),
 			'approved in Good Faith, no sponsorship pending' => array( array(), array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '+5 days' ) ) ), false ),
 		);

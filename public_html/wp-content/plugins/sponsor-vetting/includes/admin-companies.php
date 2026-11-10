@@ -70,29 +70,29 @@ function render_company_column( string $column, int $company_id ): void {
 add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
 
 /**
- * The company list's own views, of the companies a reviewer should pick up first.
+ * The company list's own filters, for the companies a reviewer should pick up first.
  *
- * @return array[] Each view's label and query arguments, keyed by its query var.
+ * @return array[] Each filter's label, the statuses it's limited to, and its query arguments, keyed by its value.
  */
-function get_company_views(): array {
+function get_company_filters(): array {
 	// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
 	return array(
-		'sv_replied'    => array(
-			'label' => __( 'Sponsor replied', 'wordcamporg' ),
-			'query' => array(
-				'post_status' => 'sv-compliance-req',
-				'meta_key'    => '_sv_sponsor_replied',
-				'orderby'     => 'meta_value_num',
-				'order'       => 'ASC',
+		'replied'    => array(
+			'label'    => __( 'Sponsor replied', 'wordcamporg' ),
+			'statuses' => array( 'sv-compliance-req' ),
+			'query'    => array(
+				'meta_key' => '_sv_sponsor_replied',
+				'orderby'  => 'meta_value_num',
+				'order'    => 'ASC',
 			),
 		),
-		'sv_good_faith' => array(
-			'label' => __( 'Good Faith', 'wordcamporg' ),
-			'query' => array(
-				'post_status' => array_keys( get_company_statuses() ),
-				'meta_key'    => '_sv_good_faith_due',
-				'orderby'     => 'meta_value',
-				'order'       => 'ASC',
+		'good_faith' => array(
+			'label'    => __( 'Good Faith', 'wordcamporg' ),
+			'statuses' => array_keys( get_company_statuses() ),
+			'query'    => array(
+				'meta_key' => '_sv_good_faith_due',
+				'orderby'  => 'meta_value',
+				'order'    => 'ASC',
 			),
 		),
 	);
@@ -100,66 +100,90 @@ function get_company_views(): array {
 }
 
 /**
- * Adds the views of companies whose sponsor replied and of companies approved in Good Faith, with their counts.
+ * Gets the company list filter the reviewer picked.
  *
- * @param string[] $views The list's views.
- * @return string[]
+ * @return string The filter's key, or an empty string for none.
  */
-function add_company_views( array $views ): array {
-	foreach ( get_company_views() as $var => $view ) {
-		$count = ( new \WP_Query(
-			array(
-				'post_type'      => COMPANY_POST_TYPE,
-				'posts_per_page' => 1,
-				'fields'         => 'ids',
-			) + $view['query']
-		) )->found_posts;
+function get_current_company_filter(): string {
+	$filter = sanitize_key( wp_unslash( (string) ( $_GET['sv_filter'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list filter.
 
-		$views[ $var ] = sprintf(
-			'<a href="%s"%s>%s <span class="count">(%s)</span></a>',
-			esc_url( admin_url( 'edit.php?post_type=' . COMPANY_POST_TYPE . '&' . $var . '=1' ) ),
-			isset( $_GET[ $var ] ) ? ' class="current" aria-current="page"' : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list filter.
-			esc_html( $view['label'] ),
-			esc_html( number_format_i18n( $count ) )
-		);
-	}
-
-	return $views;
+	return isset( get_company_filters()[ $filter ] ) ? $filter : '';
 }
-add_filter( 'views_edit-' . COMPANY_POST_TYPE, __NAMESPACE__ . '\add_company_views' );
 
 /**
- * Limits the company list to a view's companies, longest waiting first unless the reviewer sorts by a column.
+ * Renders the filter dropdown above the company list, with each filter's count.
+ *
+ * @param string $post_type The listed post type.
+ * @param string $which     Where the filters are shown, above or below the list.
+ */
+function render_company_filter( string $post_type, string $which ): void {
+	if ( 'top' !== $which ) {
+		return;
+	}
+
+	$current = get_current_company_filter();
+	?>
+	<label for="sv-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by follow-up', 'wordcamporg' ); ?></label>
+	<select name="sv_filter" id="sv-filter">
+		<option value=""><?php esc_html_e( 'All companies', 'wordcamporg' ); ?></option>
+		<?php
+		foreach ( get_company_filters() as $key => $filter ) :
+			$count = ( new \WP_Query(
+				array(
+					'post_type'      => COMPANY_POST_TYPE,
+					'post_status'    => $filter['statuses'],
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+				) + $filter['query']
+			) )->found_posts;
+			?>
+			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $current, $key ); ?>>
+				<?php
+				/* translators: 1: Filter name, 2: Number of companies. */
+				echo esc_html( sprintf( __( '%1$s (%2$s)', 'wordcamporg' ), $filter['label'], number_format_i18n( $count ) ) );
+				?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+	<?php
+}
+
+/**
+ * Limits the company list to the picked filter's companies, within the status picked, longest waiting first
+ * unless the reviewer sorts by a column.
  *
  * @param \WP_Query $query The list's query.
  */
 function filter_companies( \WP_Query $query ): void {
-	if ( ! $query->is_main_query() ) {
+	$current = get_current_company_filter();
+
+	if ( ! $query->is_main_query() || '' === $current ) {
 		return;
 	}
 
-	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- List filters.
-	foreach ( get_company_views() as $var => $view ) {
-		if ( ! isset( $_GET[ $var ] ) ) {
-			continue;
-		}
+	$filter   = get_company_filters()[ $current ];
+	$status   = (string) $query->get( 'post_status' );
+	$statuses = '' === $status ? $filter['statuses'] : array_intersect( $filter['statuses'], array( $status ) );
+	$args     = isset( $_GET['orderby'] ) ? array_diff_key( $filter['query'], array_flip( array( 'orderby', 'order' ) ) ) : $filter['query']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list sort.
 
-		$args = isset( $_GET['orderby'] ) ? array_diff_key( $view['query'], array_flip( array( 'orderby', 'order' ) ) ) : $view['query'];
-
-		foreach ( $args as $key => $value ) {
-			$query->set( $key, $value );
-		}
-
-		return;
+	foreach ( $args as $key => $value ) {
+		$query->set( $key, $value );
 	}
-	// phpcs:enable
+
+	$query->set( 'post_status', $statuses );
+
+	// The picked status is outside the filter's, and an empty status list would list every status.
+	if ( ! $statuses ) {
+		$query->set( 'post__in', array( 0 ) );
+	}
 }
 
 /**
- * Filters the queries of the company list screen only.
+ * Filters the company list screen only.
  */
 function load_company_list(): void {
 	if ( COMPANY_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_company_filter', 10, 2 );
 		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
 	}
 }

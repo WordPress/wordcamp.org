@@ -10,7 +10,6 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WP_UnitTestCase;
-use function WordCamp\Sponsor_Vetting\add_company_views;
 use function WordCamp\Sponsor_Vetting\add_note;
 use function WordCamp\Sponsor_Vetting\get_company_flags;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -40,22 +39,24 @@ class Test_Admin extends WP_UnitTestCase {
 	 * Clears what a list test set up for the admin screen.
 	 */
 	public function tear_down(): void {
-		unset( $_GET['sv_replied'], $_GET['sv_good_faith'] );
+		unset( $_GET['sv_filter'] );
 		set_current_screen( 'front' );
 
 		parent::tear_down();
 	}
 
 	/**
-	 * Each company list view shows only its companies, the longest waiting first, and counts them.
+	 * Each company list filter shows only its companies within the status picked, the longest waiting first, and
+	 * counts them in the dropdown.
 	 *
-	 * @dataProvider data_company_views
+	 * @dataProvider data_company_filters
 	 *
-	 * @param string   $view     The view's query var.
-	 * @param string   $label    The view's label.
+	 * @param string   $filter   The filter's value.
+	 * @param string   $status   The status picked, or an empty string for all.
+	 * @param string   $label    The filter's label.
 	 * @param string[] $expected The companies it lists, in order.
 	 */
-	public function test_company_views( string $view, string $label, array $expected ): void {
+	public function test_company_filters( string $filter, string $status, string $label, array $expected ): void {
 		$companies = array(
 			'replied_later'   => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 2000 ) ),
 			'replied_earlier' => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 1000 ) ),
@@ -67,41 +68,48 @@ class Test_Admin extends WP_UnitTestCase {
 		);
 
 		$ids = array();
-		foreach ( $companies as $name => list( $status, $meta ) ) {
+		foreach ( $companies as $name => list( $company_status, $meta ) ) {
 			$ids[ $name ] = self::factory()->post->create(
 				array(
 					'post_type'   => COMPANY_POST_TYPE,
-					'post_status' => $status,
+					'post_status' => $company_status,
 					'meta_input'  => $meta,
 				)
 			);
 		}
 
-		$_GET[ $view ] = '1';
+		$_GET['sv_filter'] = $filter;
 		set_current_screen( 'edit-' . COMPANY_POST_TYPE );
-		do_action( 'load-edit.php' );
+		do_action( 'load-edit.php' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's hook for the list screen.
 
 		// The list screen's query is the main one, which the test case resets afterwards.
 		$listed = $GLOBALS['wp_the_query']->query(
 			array(
-				'post_type' => COMPANY_POST_TYPE,
-				'fields'    => 'ids',
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => $status,
+				'fields'      => 'ids',
 			)
 		);
 
+		ob_start();
+		do_action( 'restrict_manage_posts', COMPANY_POST_TYPE, 'top' );
+		$dropdown = (string) ob_get_clean();
+
 		$this->assertSame( array_map( static fn( string $name ): int => $ids[ $name ], $expected ), $listed );
-		$this->assertStringContainsString( ' class="current" aria-current="page">' . $label . ' <span class="count">(2)</span></a>', add_company_views( array() )[ $view ] );
+		$this->assertMatchesRegularExpression( "#<option value=\"{$filter}\"\\s+selected='selected'>\\s*{$label} \\(2\\)\\s*</option>#", $dropdown );
 	}
 
 	/**
-	 * The company list views.
+	 * The company list filters, alone and with a status picked.
 	 *
 	 * @return array[]
 	 */
-	public function data_company_views(): array {
+	public function data_company_filters(): array {
 		return array(
-			'sponsor replied' => array( 'sv_replied', 'Sponsor replied', array( 'replied_earlier', 'replied_later' ) ),
-			'good faith'      => array( 'sv_good_faith', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
+			'sponsor replied'                => array( 'replied', '', 'Sponsor replied', array( 'replied_earlier', 'replied_later' ) ),
+			'sponsor replied, in progress'   => array( 'replied', 'sv-in-progress', 'Sponsor replied', array() ),
+			'good faith'                     => array( 'good_faith', '', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
+			'good faith, compliance request' => array( 'good_faith', 'sv-compliance-req', 'Good Faith', array( 'due_later' ) ),
 		);
 	}
 

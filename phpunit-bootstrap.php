@@ -1,8 +1,18 @@
 <?php
 
-// Require composer dependencies.
-if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
-	require_once __DIR__ . '/vendor/autoload.php';
+// Require Composer dependencies from the `vendor-dir` in `composer.json`, the same autoloader that
+// `load-other-mu-plugins.php` loads in production.
+//
+// CI runs that vendor's own `phpunit`, so it's already loaded there. The local Docker image runs a PHPUnit of
+// its own, so without this, code that checks for a Composer package (e.g., the QuickBooks SDK) finds it
+// missing. It's appended rather than prepended, so a PHPUnit from another vendor keeps loading its own classes.
+$wordcamp_composer_autoload = __DIR__ . '/public_html/wp-content/mu-plugins/vendor/autoload.php';
+
+if ( file_exists( $wordcamp_composer_autoload ) ) {
+	$wordcamp_composer_loader = require $wordcamp_composer_autoload;
+
+	$wordcamp_composer_loader->unregister();
+	$wordcamp_composer_loader->register( false );
 }
 
 /*
@@ -117,6 +127,7 @@ require_once WP_PLUGIN_DIR . '/camptix-badge-generator/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-invoices/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-visa-letters/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/camptix-companion-tickets/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/camptix-admin-flags/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/wporg-groups-frontend/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/gatherpress-recurring-events/tests/bootstrap.php';

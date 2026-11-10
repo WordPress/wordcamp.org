@@ -68,6 +68,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Admin Flags">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-admin-flags/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="Multi-Event Sponsors">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/multi-event-sponsors/tests/

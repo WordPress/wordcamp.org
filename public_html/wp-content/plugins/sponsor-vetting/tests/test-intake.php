@@ -12,6 +12,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_company_domains;
+use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\import_row;
 use function WordCamp\Sponsor_Vetting\normalize_domain;
@@ -197,6 +198,103 @@ class Test_Intake extends Database_TestCase {
 			'website a company uses'           => array( 'https://www.acme.example/', false, 'suggested' ),
 			'website no company uses'          => array( 'https://new.example', false, 'new' ),
 			'no website'                       => array( '', false, 'none' ),
+		);
+	}
+
+	/**
+	 * A sponsor of a vetted company is approved as soon as vetting is requested, as the system: a website only that
+	 * company uses links to it, as a Multi-Event Sponsor's copy does. A website two companies use, or a company still
+	 * being vetted, waits for a reviewer.
+	 *
+	 * @dataProvider data_auto_approvals
+	 *
+	 * @param string $status   The company's status.
+	 * @param bool   $is_mes   Whether the sponsor is a Multi-Event Sponsor's copy.
+	 * @param bool   $shared   Whether another company uses the website too.
+	 * @param bool   $approved Whether the sponsorship is approved.
+	 */
+	public function test_request_vetting_approves_a_vetted_company( string $status, bool $is_mes, bool $shared, bool $approved ): void {
+		list( $company_id, $mes_id ) = $this->create_mes_company( $status );
+
+		if ( $shared ) {
+			$this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn() => set_company_domains( self::factory()->post->create( array( 'post_type' => COMPANY_POST_TYPE ) ), array( 'acme.example' ) ) );
+		}
+
+		$sponsor_id = $this->create_camp_sponsor( 'https://acme.example', $is_mes ? array( '_mes_id' => $mes_id ) : array() );
+
+		wp_set_current_user( self::factory()->user->create() );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		$result = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static fn(): array => array(
+				'status'      => get_post_status( $sponsorship_id ),
+				'approved_by' => get_post_meta( $sponsorship_id, '_sv_approved_by', true ),
+				'parent'      => (int) get_post_field( 'post_parent', $sponsorship_id ),
+				// What the approval logged, leaving out the organizer's request and the link it made.
+				'logged_by'   => array_values(
+					array_column(
+						array_filter(
+							get_log( $sponsorship_id ),
+							static fn( array $entry ): bool => 'new' !== ( $entry['from'] ?? '' ) && ! str_starts_with( $entry['text'] ?? '', 'Linked to' )
+						),
+						'user_id'
+					)
+				),
+			)
+		);
+
+		$this->assertSame( $approved ? 'svs-approved' : 'svs-pending', $result['status'] );
+		$this->assertSame( $approved ? '0' : '', $result['approved_by'] );
+
+		if ( $approved ) {
+			$this->assertSame( $company_id, $result['parent'] );
+			$this->assertSame( array( 0, 0, 0 ), $result['logged_by'] );
+		}
+	}
+
+	/**
+	 * Requesting vetting again, as an invoice does, leaves a pending sponsorship alone even when its company is
+	 * vetted: a vetter may have reopened it to move it to another company.
+	 */
+	public function test_request_vetting_again_doesnt_approve(): void {
+		$this->create_mes_company( 'sv-compliant' );
+
+		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example' );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		$status = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static function () use ( $sponsorship_id, $sponsor_id ): string {
+				foreach ( array( 'svs-canceled', 'svs-pending' ) as $reopen ) {
+					wp_update_post(
+						array(
+							'ID'          => $sponsorship_id,
+							'post_status' => $reopen,
+						)
+					);
+				}
+
+				request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+				return (string) get_post_status( $sponsorship_id );
+			}
+		);
+
+		$this->assertSame( 'svs-pending', $status );
+	}
+
+	/**
+	 * Companies a camp sponsor's website leads to, and whether requesting vetting approves it.
+	 *
+	 * @return array[]
+	 */
+	public function data_auto_approvals(): array {
+		return array(
+			'website a vetted company uses'        => array( 'sv-compliant', false, false, true ),
+			'multi-event copy of a vetted company' => array( 'sv-compliant', true, false, true ),
+			'website two companies use'            => array( 'sv-compliant', false, true, false ),
+			'website a company being vetted uses'  => array( 'sv-in-progress', false, false, false ),
 		);
 	}
 

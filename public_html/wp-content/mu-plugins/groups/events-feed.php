@@ -26,6 +26,8 @@
  * - Online events are flagged, but the meeting link is never included.
  * - RSVPs only as an aggregate attending count; never names or accounts.
  * - Venue phone numbers and websites are left out; nothing here needs them.
+ * - Venue coordinates are rounded to about a kilometre, and the street
+ *   address is left out; see `COORDINATE_PRECISION`.
  * - The description is the event's own prose, never the text of GatherPress's
  *   blocks (RSVP, calendar links) that an event built in wp-admin carries.
  * - The Meetup.com event and group an event or site was imported from, which
@@ -118,6 +120,17 @@ const CLIENT_MAX_AGE = 5 * MINUTE_IN_SECONDS;
  * `varchar(32)`.
  */
 const SOURCE_ID_MAX_LENGTH = 32;
+
+/**
+ * Decimal places venue coordinates are rounded to: about 1.1 km north to
+ * south, and less east to west away from the equator.
+ *
+ * Some group venues are organisers' homes. The event page shows its address
+ * to the people looking at that one event, but this feed is copied into every
+ * WordPress dashboard's Events Widget and onto the events map, which only
+ * need to know roughly where an event is (#2087).
+ */
+const COORDINATE_PRECISION = 2;
 
 /**
  * Longest `url` the importer can tell apart from another: `wporg_events` has
@@ -701,8 +714,8 @@ function format_venue( \WP_Post $venue_post ): array {
 		'city'         => $meta( 'city' ),
 		'state'        => $meta( 'state' ),
 		'country_code' => strtoupper( $meta( 'country_code' ) ),
-		'latitude'     => $has_point ? (float) $latitude : null,
-		'longitude'    => $has_point ? (float) $longitude : null,
+		'latitude'     => $has_point ? round( (float) $latitude, COORDINATE_PRECISION ) : null,
+		'longitude'    => $has_point ? round( (float) $longitude, COORDINATE_PRECISION ) : null,
 	);
 }
 

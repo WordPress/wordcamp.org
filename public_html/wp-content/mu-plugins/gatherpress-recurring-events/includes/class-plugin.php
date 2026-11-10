@@ -184,6 +184,7 @@ final class Plugin {
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
 		add_filter( 'rest_request_before_callbacks', array( Rest_API::class, 'upstream_context' ), 10, 3 );
+		add_filter( 'rest_prepare_gatherpress_event', array( Rest_API::class, 'hide_protected_schedule' ), 10, 3 );
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );

@@ -6,7 +6,7 @@ on:
     paths:
     - public_html/**
     - .github/workflows/**
-    - phpunit.*
+    - phpunit*
     - composer.json
     - composer-dev.json
   push:
@@ -14,7 +14,7 @@ on:
     paths:
     - public_html/**
     - .github/workflows/**
-    - phpunit.*
+    - phpunit*
     - composer.json
     - composer-dev.json
 

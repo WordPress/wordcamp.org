@@ -202,3 +202,52 @@ function current_user_can_switch_own_role(): bool {
 
 	return ! in_array( 'administrator', wp_get_current_user()->roles, true );
 }
+
+/**
+ * Whether the current user may step down from Organizer to Member.
+ *
+ * Unlike `current_user_can_switch_own_role()` this isn't limited to the
+ * beta groups: going down to Member can't grant anything, so the only
+ * thing worth guarding is the group's last organizer, which
+ * `is_only_organizer()` covers. Administrators stay out for the same reason
+ * they're out of self-serve switching: that account is managed in wp-admin.
+ */
+function current_user_can_step_down(): bool {
+	if ( ! is_user_logged_in() || ! is_user_member_of_blog() ) {
+		return false;
+	}
+
+	$roles = wp_get_current_user()->roles;
+
+	return in_array( 'editor', $roles, true ) && ! in_array( 'administrator', $roles, true );
+}
+
+/**
+ * Whether a user is the only organizer this group has.
+ *
+ * A group must keep at least one organizer, so this is the floor behind
+ * every demotion: by another organizer, by self-serve switching, or by
+ * stepping down.
+ *
+ * @param int $user_id User ID.
+ */
+function is_only_organizer( int $user_id ): bool {
+	$user = get_userdata( $user_id );
+
+	if ( ! $user || ! array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
+		return false;
+	}
+
+	$other_organizers = get_users(
+		array(
+			'blog_id'     => get_current_blog_id(),
+			'role__in'    => ORGANIZER_ROLES,
+			'exclude'     => array( $user_id ),
+			'number'      => 1,
+			'count_total' => false,
+			'fields'      => 'ids',
+		)
+	);
+
+	return empty( $other_organizers );
+}

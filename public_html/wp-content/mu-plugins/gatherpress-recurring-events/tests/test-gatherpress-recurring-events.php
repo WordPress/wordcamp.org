@@ -11,6 +11,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Cache;
+use WordPressdotorg\GatherPress_Recurring_Events\Admin;
 use WordPressdotorg\GatherPress_Recurring_Events\Comments;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database;
@@ -19,6 +20,7 @@ use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_Comment_Query;
 use WP_Query;
+use WP_REST_Request;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -1831,6 +1833,71 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			Context::set( null );
 			$GLOBALS['wp_query'] = $main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring the query this test replaced.
 		}
+	}
+
+	/**
+	 * A protected series keeps its recurrence settings out of REST until the
+	 * password is entered, on the single and collection routes. Editors, whose
+	 * block editor reads them, keep them, and an open series is left alone.
+	 */
+	public function test_a_protected_series_keeps_its_schedule_out_of_rest(): void {
+		// `init` fires once per run, and each test's tear-down unregisters meta.
+		Admin::register_meta();
+
+		$protected_id = $this->create_projected_weekly_series( 'Protected Series' );
+		$open_id      = $this->create_projected_weekly_series( 'Open Series' );
+		$cookie       = 'wp-postpass_' . COOKIEHASH;
+
+		wp_update_post(
+			array(
+				'ID'            => $protected_id,
+				'post_password' => 'secret',
+			)
+		);
+
+		$schedule_keys = static function ( array $event ): array {
+			return array_values(
+				array_filter(
+					array_keys( $event['meta'] ),
+					static fn( string $key ): bool => str_starts_with( $key, Rule::META_PREFIX )
+				)
+			);
+		};
+
+		$single = static function ( int $post_id, array $query = array() ) use ( $schedule_keys ): array {
+			$request = new WP_REST_Request( 'GET', "/wp/v2/gatherpress_events/{$post_id}" );
+			$request->set_query_params( $query );
+
+			return $schedule_keys( rest_do_request( $request )->get_data() );
+		};
+
+		$listed = static function ( int $post_id, array $query = array() ) use ( $schedule_keys ): array {
+			$request = new WP_REST_Request( 'GET', '/wp/v2/gatherpress_events' );
+			$request->set_query_params( array_merge( $query, array( 'include' => array( $post_id ) ) ) );
+
+			return $schedule_keys( rest_do_request( $request )->get_data()[0] );
+		};
+
+		wp_set_current_user( 0 );
+
+		$this->assertSame( array(), $single( $protected_id ), 'A protected series showed its schedule on the single route.' );
+		$this->assertSame( array(), $listed( $protected_id ), 'A protected series showed its schedule on the collection route.' );
+		$this->assertSame( array(), $listed( $protected_id, array( 'password' => 'wrong' ) ), 'A wrong password showed the schedule.' );
+		$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $open_id ), 'An open series lost its schedule.' );
+		$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $protected_id, array( 'password' => 'secret' ) ), 'A request carrying the password lost the schedule.' );
+
+		require_once ABSPATH . WPINC . '/class-phpass.php';
+		$_COOKIE[ $cookie ] = ( new \PasswordHash( 8, true ) )->HashPassword( 'secret' );
+
+		try {
+			$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $protected_id ), 'A visitor with the password lost the schedule.' );
+		} finally {
+			unset( $_COOKIE[ $cookie ] );
+		}
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$this->assertContains( Rule::META_PREFIX . 'rrule', $single( $protected_id ), 'An editor lost the schedule.' );
 	}
 
 	/**

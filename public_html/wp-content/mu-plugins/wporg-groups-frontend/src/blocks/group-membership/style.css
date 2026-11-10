@@ -2,8 +2,9 @@
  * Group Membership block styles.
  *
  * Three variants share this file: the membership block (join button or
- * role badge, plus leave), the notification-preference checkbox, and the
- * standalone member count that renders in the front page hero. The first
+ * role badge, plus leave or step down), the notification-preference
+ * checkbox, and the standalone member count that renders in the front
+ * page hero. The first
  * two live in the front page's sidebar, so text here is the 14px secondary
  * size rather than the 16px body size used in the main column.
  */
@@ -120,7 +121,16 @@ span.wporg-group-membership__count {
 	color: var(--wp--preset--color--charcoal-4);
 }
 
-.wporg-group-membership__preference-status:empty {
+.wporg-group-membership__note {
+	flex-basis: 100%;
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wporg-group-membership__preference-status:empty,
+.wporg-group-membership__status:empty {
 	display: none;
 }
 
@@ -130,7 +140,8 @@ span.wporg-group-membership__count {
  * colours this used to borrow. Left-aligned with an icon in the leading
  * position — centring the text made a one-line "Saved" read as a banner.
  */
-.wporg-group-membership__preference-status:not(:empty) {
+.wporg-group-membership__preference-status:not(:empty),
+.wporg-group-membership__status:not(:empty) {
 	display: flex;
 	align-items: flex-start;
 	gap: var(--wp--preset--spacing--10);
@@ -154,13 +165,20 @@ span.wporg-group-membership__count {
 	line-height: 1.55;
 }
 
-.wporg-group-membership__preference-status.is-error {
+.wporg-group-membership__status:not(:empty) {
+	flex-basis: 100%;
+	margin-bottom: 0;
+}
+
+.wporg-group-membership__preference-status.is-error,
+.wporg-group-membership__status.is-error {
 	border-color: #b32d0f;
 	background: var(--wp--preset--color--pomegranate-3);
 	color: var(--wp--preset--color--charcoal-0);
 }
 
-.wporg-group-membership__preference-status.is-error::before {
+.wporg-group-membership__preference-status.is-error::before,
+.wporg-group-membership__status.is-error::before {
 	content: "!";
 	font-weight: 600;
 	line-height: 1.55;

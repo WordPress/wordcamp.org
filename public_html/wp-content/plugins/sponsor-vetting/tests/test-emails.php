@@ -15,11 +15,14 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\build_compliance_email;
 use function WordCamp\Sponsor_Vetting\get_conversations;
+use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\needs_approval_email;
 use function WordCamp\Sponsor_Vetting\record_conversation;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\send_compliance_request;
+use function WordCamp\Sponsor_Vetting\set_company_domains;
 use function WordCamp\Sponsor_Vetting\sponsor_wrote_last;
+use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -102,48 +105,16 @@ class Test_Emails extends Database_TestCase {
 	}
 
 	/**
-	 * The compliance request carries Legal's wording and the rendered findings to the sponsor, copies the event in
-	 * and is tagged, which the Zap it replaces didn't do.
-	 */
-	public function test_compliance_email_follows_the_template(): void {
-		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
-
-		$email = build_compliance_email( $this->company_id, $this->sponsorship_id );
-
-		$this->assertIsArray( $email );
-		$this->assertSame(
-			array(
-				'mailbox' => 'community',
-				'to'      => array(
-					'email'      => 'pat@acme.example',
-					'first_name' => 'Pat',
-					'last_name'  => 'Lee',
-				),
-				'subject' => 'Action Required: Compliance for WordPress Event Sponsorship',
-				'cc'      => array( 'seattle@wordcamp.test' ),
-				'tags'    => array( 'sponsor-vetting', 'sponsor-infringing' ),
-			),
-			array_diff_key( $email, array( 'body' => true ) )
-		);
-		$this->assertStringContainsString( '<p>Thanks so much for offering to sponsor WordCamp Seattle 2026! We’re excited to have you on board.</p>', $email['body'] );
-		$this->assertStringContainsString( '<p><strong>GPL:</strong></p><p>The <strong>theme shop</strong> sells themes under a non-GPL license.</p>', $email['body'] );
-		$this->assertStringNotContainsString( 'Trademark:', $email['body'] );
-	}
-
-	/**
-	 * Sending the compliance request emails the sponsor with the event copied in, moves the company to Compliance
-	 * Requested, and records the conversation.
+	 * Fakes the FreeScout API calls `FreeScout::send()` makes: creating the conversation (`POST /api/conversations`)
+	 * and tagging it (`PUT /api/conversations/{id}/tags`). Clients older than WordPress/wporg-mu-plugins#797 also look
+	 * up the sending agent first (`GET /api/users`), and local checkouts may still have one, so that call is answered
+	 * but not required. The responses follow the API's shape.
 	 *
-	 * Fakes, through `pre_http_request`, the three FreeScout API calls `FreeScout::send()` makes: looking up the
-	 * sending agent (`GET /api/users`), creating the conversation (`POST /api/conversations`), and tagging it
-	 * (`PUT /api/conversations/{id}/tags`). The responses follow the API's shape.
+	 * @param array $requests Collects each request and its decoded body.
+	 * @return \Closure A `pre_http_request` callback.
 	 */
-	public function test_sending_the_compliance_request_records_the_conversation(): void {
-		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
-		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
-
-		$requests = array();
-		$fake     = static function ( mixed $response, array $args, string $url ) use ( &$requests ): mixed {
+	protected function fake_freescout( array &$requests ): \Closure {
+		return static function ( mixed $response, array $args, string $url ) use ( &$requests ): mixed {
 			$api = 'https://freescout.wordpress.net/api/';
 
 			if ( ! str_starts_with( $url, $api ) ) {
@@ -202,15 +173,69 @@ class Test_Emails extends Database_TestCase {
 				'filename' => null,
 			);
 		};
+	}
+
+	/**
+	 * The compliance request carries Legal's wording and the rendered findings to the sponsor, copies the event in
+	 * and is tagged, which the Zap it replaces didn't do. Tables are styled inline, as FreeScout styles none.
+	 */
+	public function test_compliance_email_follows_the_template(): void {
+		update_post_meta( $this->company_id, '_sv_gpl_findings', "The **theme shop** sells themes under a non-GPL license.\n\n| Page | Themes |\n| --- | --: |\n| /shop | 12 |" );
+
+		$email = build_compliance_email( $this->company_id, $this->sponsorship_id );
+
+		$this->assertIsArray( $email );
+		$this->assertSame(
+			array(
+				'mailbox' => 'community',
+				'to'      => array(
+					'email'      => 'pat@acme.example',
+					'first_name' => 'Pat',
+					'last_name'  => 'Lee',
+				),
+				'subject' => 'Action Required: Compliance for WordPress Event Sponsorship',
+				'cc'      => array( 'seattle@wordcamp.test' ),
+				'tags'    => array( 'sponsor-vetting', 'sponsor-infringing' ),
+			),
+			array_diff_key( $email, array( 'body' => true ) )
+		);
+		$this->assertStringContainsString( '<p>Thanks so much for offering to sponsor WordCamp Seattle 2026! We’re excited to have you on board.</p>', $email['body'] );
+		$this->assertStringContainsString( '<p><strong>GPL:</strong></p><p>The <strong>theme shop</strong> sells themes under a non-GPL license.</p>', $email['body'] );
+		$this->assertStringContainsString( '<th style="border-right:1px solid #dcdcde;border-bottom:1px solid #dcdcde;padding:6px 10px;text-align:left;background-color:#f6f7f7">Page</th>', $email['body'] );
+		$this->assertStringContainsString( '<table cellspacing="0" style="border-top:1px solid #dcdcde;border-left:1px solid #dcdcde;margin:0 0 1.6em 0">', $email['body'] );
+		$this->assertMatchesRegularExpression( '#<td style="border-right:1px solid \#dcdcde;border-bottom:1px solid \#dcdcde;padding:6px 10px;text-align:right" valign="top"\s*>12</td>#', $email['body'] );
+		$this->assertStringNotContainsString( 'Trademark:', $email['body'] );
+	}
+
+	/**
+	 * Sending the compliance request emails the sponsor with the event copied in, moves the company to Compliance
+	 * Requested, and records the conversation.
+	 *
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_freescout().
+	 */
+	public function test_sending_the_compliance_request_records_the_conversation(): void {
+		update_post_meta( $this->company_id, '_sv_gpl_findings', 'The **theme shop** sells themes under a non-GPL license.' );
+		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
+
+		$requests = array();
+		$fake     = $this->fake_freescout( $requests );
 
 		add_filter( 'pre_http_request', $fake, 10, 3 );
 		$conversation = send_compliance_request( $this->company_id, $this->sponsorship_id );
 		remove_filter( 'pre_http_request', $fake, 10 );
 
+		// Older FreeScout clients look the sending agent up first. Order and repeats still count.
+		$sent = array_values(
+			array_filter(
+				$requests,
+				static fn ( array $request ): bool => 'GET users' !== $request['request']
+			)
+		);
+
 		$this->assertIsArray( $conversation );
-		$this->assertSame( array( 'GET users', 'POST conversations', 'PUT conversations/12345/tags' ), array_column( $requests, 'request' ) );
-		$this->assertSame( array( 'seattle@wordcamp.test' ), $requests[1]['body']['threads'][0]['cc'] );
-		$this->assertSame( array( 'sponsor-vetting', 'sponsor-infringing' ), $requests[2]['body']['tags'] );
+		$this->assertSame( array( 'POST conversations', 'PUT conversations/12345/tags' ), array_column( $sent, 'request' ) );
+		$this->assertSame( array( 'seattle@wordcamp.test' ), $sent[0]['body']['threads'][0]['cc'] );
+		$this->assertSame( array( 'sponsor-vetting', 'sponsor-infringing' ), $sent[1]['body']['tags'] );
 		$this->assertSame( 'sv-compliance-req', get_post_status( $this->company_id ) );
 		$this->assertSame(
 			array(
@@ -224,48 +249,116 @@ class Test_Emails extends Database_TestCase {
 	}
 
 	/**
-	 * The approval email goes to events that haven't invoiced the sponsor; approving an invoice already tells them.
+	 * Marking a company Compliant approves its pending sponsorship, as the system, and emails the event unless it has
+	 * invoiced the sponsor, since approving the invoice tells them. A sponsor whose website isn't one the company was
+	 * vetted for waits for a vetter.
 	 *
-	 * @dataProvider data_invoice_statuses
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_freescout().
 	 *
+	 * @dataProvider data_auto_approvals
+	 *
+	 * @param string $website        The camp sponsor's website.
 	 * @param string $invoice_status The camp's invoice for the sponsor, or '' for none.
-	 * @param bool   $expected       Whether the approval email is needed.
+	 * @param bool   $approved       Whether the sponsorship is approved.
+	 * @param bool   $emailed        Whether the event is emailed.
 	 */
-	public function test_approval_email_only_without_an_invoice( string $invoice_status, bool $expected ): void {
+	public function test_a_compliant_company_approves_its_sponsorships( string $website, string $invoice_status, bool $approved, bool $emailed ): void {
+		switch_to_blog( self::$year_dot_2018_site_id );
+		update_post_meta( $this->sponsor_id, '_wcpt_sponsor_website', $website );
+
+		if ( '' !== $invoice_status ) {
+			$this->assertSame( $invoice_status, get_post_status( $this->invoice_sponsor( $this->sponsor_id, $invoice_status ) ) );
+		}
+
+		restore_current_blog();
+
+		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
+
+		$requests = array();
+		$fake     = $this->fake_freescout( $requests );
+
+		add_filter( 'pre_http_request', $fake, 10, 3 );
 		wp_update_post(
 			array(
 				'ID'          => $this->company_id,
 				'post_status' => 'sv-compliant',
 			)
 		);
-		wp_update_post(
-			array(
-				'ID'          => $this->sponsorship_id,
-				'post_status' => 'svs-approved',
-			)
-		);
+		remove_filter( 'pre_http_request', $fake, 10 );
 
-		if ( '' !== $invoice_status ) {
-			switch_to_blog( self::$year_dot_2018_site_id );
-			$invoice_id = $this->invoice_sponsor( $this->sponsor_id, $invoice_status );
-			$this->assertSame( $invoice_status, get_post_status( $invoice_id ) );
-			restore_current_blog();
-		}
-
-		$this->assertSame( 'svs-approved', get_post_status( $this->sponsorship_id ) );
-		$this->assertSame( $expected, needs_approval_email( $this->sponsorship_id ) );
+		$this->assertSame( $approved ? 'svs-approved' : 'svs-pending', get_post_status( $this->sponsorship_id ) );
+		$this->assertSame( $approved ? '0' : '', get_post_meta( $this->sponsorship_id, '_sv_approved_by', true ) );
+		$this->assertSame( $emailed ? array( 0 ) : array(), array_column( get_conversations( $this->sponsorship_id, 'approval' ), 'user_id' ) );
+		// Everything the approval logged is the system's, not the vetter's who marked the company Compliant.
+		$this->assertSame( array( 0 ), array_values( array_unique( array_column( get_log( $this->sponsorship_id ), 'user_id' ) ) ) );
 	}
 
 	/**
-	 * Invoice statuses, and whether the approval email is needed.
+	 * An automatic approval's email FreeScout doesn't take is noted in the sponsorship's history, and is still
+	 * needed, so vetters can send it again.
+	 *
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_freescout(), with creating the conversation
+	 * timing out instead.
+	 */
+	public function test_a_failed_approval_email_can_be_sent_again(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'user_email' => 'vetter@wordcamp.test' ) ) );
+
+		$requests = array();
+		$fake     = $this->fake_freescout( $requests );
+		$down     = static fn( mixed $response, array $args ): mixed => 'POST' === $args['method'] ? new \WP_Error( 'http_request_failed', 'Timed out.' ) : $response;
+
+		add_filter( 'pre_http_request', $fake, 10, 3 );
+		add_filter( 'pre_http_request', $down, 11, 2 );
+		wp_update_post(
+			array(
+				'ID'          => $this->company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		remove_filter( 'pre_http_request', $down, 11 );
+		remove_filter( 'pre_http_request', $fake, 10 );
+
+		$this->assertSame( 'svs-approved', get_post_status( $this->sponsorship_id ) );
+		$this->assertTrue( needs_approval_email( $this->sponsorship_id ) );
+		$this->assertContains( 'FreeScout didn’t answer, so the email may have been sent. Check FreeScout before sending it again.', array_column( get_log( $this->sponsorship_id ), 'text' ) );
+	}
+
+	/**
+	 * A website added in the same save that marks the company Compliant counts, since the screen saves the domains
+	 * after the status.
+	 */
+	public function test_domains_saved_with_compliant_count(): void {
+		set_company_domains( $this->company_id, array( 'other.example' ) );
+
+		$save_domains = function ( int $post_id ): void {
+			if ( $post_id === $this->company_id ) {
+				set_company_domains( $post_id, array( 'other.example', 'acme.example' ) );
+			}
+		};
+
+		add_action( 'save_post_' . COMPANY_POST_TYPE, $save_domains );
+		wp_update_post(
+			array(
+				'ID'          => $this->company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		remove_action( 'save_post_' . COMPANY_POST_TYPE, $save_domains );
+
+		$this->assertSame( 'svs-approved', get_post_status( $this->sponsorship_id ) );
+	}
+
+	/**
+	 * Camp sponsors, and whether marking their company Compliant approves them and emails the event.
 	 *
 	 * @return array[]
 	 */
-	public function data_invoice_statuses(): array {
+	public function data_auto_approvals(): array {
 		return array(
-			'no invoice'        => array( '', true ),
-			'draft invoice'     => array( 'draft', true ),
-			'submitted invoice' => array( 'wcbsi_submitted', false ),
+			'no invoice'        => array( 'https://acme.example', '', true, true ),
+			'draft invoice'     => array( 'https://acme.example', 'draft', true, true ),
+			'submitted invoice' => array( 'https://acme.example', 'wcbsi_submitted', true, false ),
+			'another website'   => array( 'https://other.example', '', false, false ),
 		);
 	}
 

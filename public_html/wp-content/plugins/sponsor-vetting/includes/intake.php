@@ -321,7 +321,7 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 }
 
 /**
- * Puts a pending sponsorship's company back in the queue when its vetting has lapsed.
+ * Puts a pending sponsorship's company back in the queue when its vetting has lapsed or it's Inactive.
  *
  * A company still in the pipeline, or Not Eligible until a date still to come, stays where it is. Runs on Central.
  *
@@ -334,6 +334,8 @@ function queue_company( int $sponsorship_id ): void {
 		return;
 	}
 
+	$was_inactive = 'sv-inactive' === get_post_status( $company_id );
+
 	wp_update_post(
 		array(
 			'ID'          => $company_id,
@@ -342,5 +344,7 @@ function queue_company( int $sponsorship_id ): void {
 	);
 
 	/* translators: %s: Sponsorship title. */
-	add_note( $company_id, sprintf( __( 'Back in the queue: “%s” needs vetting, and the last vetting has lapsed.', 'wordcamporg' ), get_the_title( $sponsorship_id ) ) );
+	$note = $was_inactive ? __( 'Back in the queue: “%s” needs vetting.', 'wordcamporg' ) : __( 'Back in the queue: “%s” needs vetting, and the last vetting has lapsed.', 'wordcamporg' );
+
+	add_note( $company_id, sprintf( $note, get_the_title( $sponsorship_id ) ) );
 }

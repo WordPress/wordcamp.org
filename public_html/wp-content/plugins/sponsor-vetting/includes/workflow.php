@@ -25,11 +25,12 @@ defined( 'WPINC' ) || die();
 function get_allowed_transitions( string $post_type ): array {
 	if ( COMPANY_POST_TYPE === $post_type ) {
 		return array(
-			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible' ),
-			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible' ),
-			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible' ),
+			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
 			'sv-compliant'      => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
 			'sv-not-eligible'   => array( 'sv-needs-vetting', 'sv-in-progress' ),
+			'sv-inactive'       => array( 'sv-needs-vetting', 'sv-in-progress' ),
 		);
 	}
 
@@ -392,7 +393,8 @@ add_action( 'wp_after_insert_post', __NAMESPACE__ . '\auto_approve_on_compliant'
  *     @type bool   $expired             Compliant, but vetted before the threshold.
  *     @type bool   $not_eligible_active Not Eligible, with no end date or one still to come.
  *     @type bool   $good_faith_overdue  A Good Faith due date has passed and the company still isn't Compliant.
- *     @type bool   $needs_requeue       A new sponsorship should put the company back in the queue.
+ *     @type bool   $needs_requeue       A new sponsorship should put the company back in the queue: its vetting has
+ *                                        lapsed, its Not Eligible period has ended, or it's Inactive.
  * }
  */
 function get_vetting_state( int $company_id ): array {
@@ -411,7 +413,7 @@ function get_vetting_state( int $company_id ): array {
 		'good_faith_overdue'  => '' !== $due && $due < $today && 'sv-compliant' !== $status,
 	);
 
-	$state['needs_requeue'] = $state['expired'] || ( 'sv-not-eligible' === $status && ! $state['not_eligible_active'] );
+	$state['needs_requeue'] = $state['expired'] || 'sv-inactive' === $status || ( 'sv-not-eligible' === $status && ! $state['not_eligible_active'] );
 
 	return $state;
 }

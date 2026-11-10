@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the notes and history log on the company and sponsorship screens.
+ * Tests for the company flags and the notes and history log on the company and sponsorship screens.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -11,6 +11,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WP_UnitTestCase;
 use function WordCamp\Sponsor_Vetting\add_note;
+use function WordCamp\Sponsor_Vetting\get_company_flags;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\render_log_box;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
@@ -19,6 +20,7 @@ defined( 'WPINC' ) || die();
 
 // The plugin loads its screens only in the admin.
 require_once dirname( __DIR__ ) . '/includes/admin.php';
+require_once dirname( __DIR__ ) . '/includes/admin-companies.php';
 
 /**
  * @group sponsor-vetting
@@ -31,6 +33,37 @@ class Test_Admin extends WP_UnitTestCase {
 		parent::set_up();
 
 		register_types();
+	}
+
+	/**
+	 * The reply flag links to the newest compliance conversation, the one the reply check reads, which FreeScout's
+	 * IDs pick among conversations the Airtable import recorded at the same time.
+	 */
+	public function test_reply_flag_links_the_newest_conversation(): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliance-req',
+				'meta_input'  => array( '_sv_sponsor_replied' => time() ),
+			)
+		);
+
+		foreach ( array( 118147, 104760, 111564 ) as $conversation_id ) {
+			add_post_meta(
+				$company_id,
+				'_sv_conversation',
+				array(
+					'id'             => $conversation_id,
+					'url'            => 'https://freescout.wordpress.net/conversation/' . $conversation_id,
+					'type'           => 'compliance',
+					'sponsorship_id' => 0,
+					'user_id'        => 0,
+					'time'           => 1790000000,
+				)
+			);
+		}
+
+		$this->assertContains( '<a href="https://freescout.wordpress.net/conversation/118147">Sponsor replied</a>', get_company_flags( $company_id ) );
 	}
 
 	/**

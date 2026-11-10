@@ -73,6 +73,128 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
+ * Print the wporg fonts in the page, without their Noto Serif stylesheets.
+ *
+ * `wporg-global-fonts` starts by importing three more stylesheets, one each
+ * for Japanese, Korean and Chinese. They are about 110KB compressed, the
+ * browser only finds them once it has the stylesheet that imports them, and
+ * the page stays blank until all three arrive. The parent theme only uses
+ * those fonts on `ja`, `ko_KR` and `zh_CN` sites (`inc/rosetta-styles.php`),
+ * so every other group waited for them and used none.
+ *
+ * Those three locales keep the stylesheet as it is. Everywhere else its
+ * `@font-face` rules are printed inline and the Noto Serif imports are left
+ * out. A stylesheet that imports anything else is left alone too, because
+ * nothing here knows who needs that. The rules are read from the stylesheet
+ * on each request rather than copied into this theme, so they can't drift
+ * from the fonts `wporg-mu-plugins` ships. The handle stays registered, which
+ * keeps its dependants and its font preloads working.
+ */
+function inline_global_fonts_without_noto_serif(): void {
+	if ( in_array( get_locale(), array( 'ja', 'ko_KR', 'zh_CN' ), true ) ) {
+		return;
+	}
+
+	$style = wp_styles()->query( 'wporg-global-fonts', 'registered' );
+
+	if ( ! $style || ! is_string( $style->src ) || ! str_starts_with( $style->src, content_url() ) ) {
+		return;
+	}
+
+	$url  = strtok( $style->src, '?' );
+	$path = WP_CONTENT_DIR . substr( $url, strlen( content_url() ) );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a stylesheet from disk.
+	$css = is_readable( $path ) ? file_get_contents( $path ) : '';
+
+	$css = preg_replace( '/@import[^;]*NotoSerif[^;]*;/', '', (string) $css );
+
+	if ( '' === $css || str_contains( $css, '@import' ) ) {
+		return;
+	}
+
+	// The font files are relative to the stylesheet, not to the page.
+	$css = str_replace( 'url(./', 'url(' . dirname( $url ) . '/', $css );
+
+	// It's on every page now, so drop the comments and the indentation.
+	$css = preg_replace( '~/\*.*?\*/~s', '', $css );
+	$css = trim( preg_replace( '/\s+/', ' ', $css ) );
+
+	$style->src = false;
+	wp_add_inline_style( 'wporg-global-fonts', $css );
+}
+add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inline_global_fonts_without_noto_serif' );
+
+/**
+ * Keep Jetpack's sharing styles off the members page.
+ *
+ * Jetpack loads them on every page it could add sharing buttons to. It adds
+ * the buttons to a page's content, and `templates/page-members.html` draws
+ * the member list in place of any content, so that page loaded two
+ * render-blocking stylesheets for buttons it never shows.
+ *
+ * @param bool $enqueue Whether Jetpack is about to load its sharing assets.
+ *
+ * @return bool Whether it should.
+ */
+function skip_sharing_assets_on_members_page( $enqueue ) {
+	return is_page( 'members' ) ? false : $enqueue;
+}
+add_filter( 'sharing_enqueue_scripts', __NAMESPACE__ . '\skip_sharing_assets_on_members_page' );
+
+/**
+ * The current page's description, for search results.
+ *
+ * An event, a post or a page is described in its own words, by the helper
+ * that describes events in the network's feed: its excerpt, or failing that
+ * the prose written on it. Blocks that draw something, like an RSVP button or
+ * a calendar menu, are left out, or their labels would land in the middle of
+ * the sentence.
+ *
+ * Everything else falls back to the group's tagline: the front page, the
+ * events archive, the members list, and a page with nothing written on it.
+ * So does an event behind a password, whose words aren't public.
+ *
+ * @return string The description, as plain text. Empty when there is nothing to say.
+ */
+function get_meta_description(): string {
+	$text = '';
+	$post = is_singular() && ! is_front_page() ? get_queried_object() : null;
+
+	if (
+		$post instanceof \WP_Post &&
+		! post_password_required( $post ) &&
+		function_exists( '\WordCamp\Groups\Events_Feed\get_description' )
+	) {
+		$text = \WordCamp\Groups\Events_Feed\get_description( $post );
+	}
+
+	if ( '' === $text ) {
+		$text = get_bloginfo( 'description', 'display' );
+	}
+
+	return wp_trim_words( $text, 30, '&hellip;' );
+}
+
+/**
+ * Print the page's description for search engines.
+ *
+ * Group sites had none, so a search result showed whatever text the search
+ * engine found first on the page.
+ */
+function print_meta_description(): void {
+	if ( is_404() ) {
+		return;
+	}
+
+	$description = get_meta_description();
+
+	if ( '' !== $description ) {
+		printf( '<meta name="description" content="%s" />' . "\n", esc_attr( $description ) );
+	}
+}
+add_action( 'wp_head', __NAMESPACE__ . '\print_meta_description', 1 );
+
+/**
  * Give the post editor canvas a side gutter. See #1967.
  *
  * Not `styles.spacing.padding` in `theme.json`: root padding also hits
@@ -198,6 +320,67 @@ add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_archive_event
 function archive_event_card_image_sizes(): string {
 	return '(max-width: 480px) 90vw, (max-width: 781px) 46vw, (max-width: 1376px) 30vw, 414px';
 }
+
+/**
+ * How wide each hero image is drawn, for its `sizes`.
+ *
+ * Keyed by the class the template gives the image's block. Each value is
+ * never smaller than the image at any viewport width, so the browser can't
+ * pick a file that's too small, and close enough that it doesn't pick one
+ * that's far too big.
+ *
+ * An event's image fills the page between its two 20px gutters while the
+ * hero's columns are stacked, up to 781px. Above that it takes 38% of the
+ * content width, which is narrower than the viewport and stops growing at
+ * 1160px.
+ *
+ * The front page's image sits inside a card inside a mat, which take 140px
+ * off the stacked column between them. Side by side, the column is half of a
+ * content width that stops growing at 1280px, and the image never passes 35%
+ * of the viewport or 500px.
+ */
+const HERO_IMAGE_SIZES = array(
+	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
+	'groups-site-home-hero-image'  => '(max-width: 781px) calc(100vw - 140px), (max-width: 1428px) 35vw, 500px',
+);
+
+/**
+ * Tell the browser how wide a hero image really is.
+ *
+ * A hero image sits in one of the hero's two columns, but core's default
+ * `sizes` says it fills the viewport. It's the first image on the page, so it
+ * isn't lazy and core doesn't add `auto` either. Desktop browsers downloaded
+ * a file three or four times wider than the space it was drawn in.
+ *
+ * The widths belong to one place in one template, so `single-event.html` and
+ * `front-page.html` each mark that block with a class and only those blocks
+ * are changed. An event's flyer draws the same image at another size. Core
+ * keeps the block it is rendering in `WP_Block_Supports::$block_to_render`,
+ * which is how a filter on an image's `sizes` can tell which block the image
+ * is for.
+ *
+ * @param string $sizes The `sizes` core worked out for the image.
+ *
+ * @return string The hero's `sizes` for a hero image, core's for any other.
+ */
+function hero_image_sizes( $sizes ) {
+	$block = \WP_Block_Supports::$block_to_render;
+
+	if ( 'core/post-featured-image' !== ( $block['blockName'] ?? '' ) ) {
+		return $sizes;
+	}
+
+	$classes = explode( ' ', $block['attrs']['className'] ?? '' );
+
+	foreach ( HERO_IMAGE_SIZES as $class => $hero_sizes ) {
+		if ( in_array( $class, $classes, true ) ) {
+			return $hero_sizes;
+		}
+	}
+
+	return $sizes;
+}
+add_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\hero_image_sizes' );
 
 /**
  * Prime the featured-image cache for the theme's event card grids.
@@ -951,6 +1134,47 @@ function label_the_online_event_link( $block_content, $parsed_block ) {
 	return $tags->get_updated_html();
 }
 add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
+
+/**
+ * Hold a venue's interactive map back until it scrolls into view.
+ *
+ * GatherPress renders the map as a static image, then replaces it with a
+ * live map as soon as the page loads. That downloads the map library and its
+ * tiles, about 440KB with Google Maps, for a map most visitors never scroll
+ * to.
+ *
+ * The block starts the live map from its `data-wp-init`. This points that at
+ * `assets/js/venue-map.js`, which waits for the map to be on screen and then
+ * runs GatherPress's own callback. A static map has no `data-wp-init` and is
+ * left alone.
+ *
+ * @param string $block_content The rendered block.
+ *
+ * @return string The block, with its live map deferred.
+ */
+function defer_venue_map( $block_content ) {
+	$tags = new \WP_HTML_Tag_Processor( (string) $block_content );
+
+	if ( ! $tags->next_tag() || 'callbacks.init' !== $tags->get_attribute( 'data-wp-init' ) ) {
+		return $block_content;
+	}
+
+	wp_enqueue_script_module(
+		'groups-site-venue-map',
+		get_theme_file_uri( 'assets/js/venue-map.js' ),
+		array( '@wordpress/interactivity' ),
+		filemtime( get_theme_file_path( 'assets/js/venue-map.js' ) ),
+		array(
+			'in_footer'     => true,
+			'fetchpriority' => 'low',
+		)
+	);
+
+	$tags->set_attribute( 'data-wp-init', 'groups-site/venue-map::callbacks.init' );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/venue-map', __NAMESPACE__ . '\defer_venue_map' );
 
 /**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.

@@ -245,6 +245,25 @@ function register_event_speakers_meta(): void {
 add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 
 /**
+ * Register an image size between core's `medium` (300px) and `medium_large` (768px).
+ *
+ * Event cards and the hero images are 300 to 500px wide, so a
+ * standard-density screen had nothing smaller than the 768px file to pick.
+ * Core adds every registered size to an image's `srcset`, so nothing has to
+ * ask for this one by name.
+ *
+ * It lives here and not in the `groups-site` theme because WordPress only
+ * cuts the sizes that are registered while an image is being uploaded, and a
+ * Meetup import sideloads its photos from the network admin, where no group's
+ * theme is loaded. Images uploaded before this have no file at this size
+ * until their thumbnails are regenerated.
+ */
+function register_event_card_image_size(): void {
+	add_image_size( 'groups-event-card', 480, 0 );
+}
+add_action( 'after_setup_theme', __NAMESPACE__ . '\register_event_card_image_size' );
+
+/**
  * Rewrite the search block form action on the events archive to submit
  * to the archive URL instead of the default search URL, so search results
  * stay scoped to events. Also remove the required attribute and handle clearing

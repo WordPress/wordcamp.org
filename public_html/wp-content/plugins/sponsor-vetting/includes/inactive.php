@@ -3,7 +3,8 @@
  * The Inactive status: a vetting request dropped without a decision, so nothing is left pending on it.
  *
  * A daily job moves companies out of Compliance Requested once no sponsorship waiting on the request has an event
- * still to come. The next vetting request for an Inactive company puts it back in the queue (see queue_company()).
+ * still to come. Going Inactive cancels what was pending, and requesting vetting again for one of those camp
+ * sponsors reopens it, which puts the company back in the queue (see queue_company()).
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -151,10 +152,58 @@ function cancel_inactive_sponsorships( int $post_id, \WP_Post $post, bool $updat
 			)
 		);
 
+		update_post_meta( $sponsorship_id, '_sv_canceled_inactive', 1 );
 		add_note( $sponsorship_id, __( 'Canceled automatically: its company is Inactive.', 'wordcamporg' ) );
 	}
 }
 add_action( 'wp_after_insert_post', __NAMESPACE__ . '\cancel_inactive_sponsorships', 10, 4 );
+
+/**
+ * Whether a sponsorship was canceled because its company went Inactive, rather than by a reviewer.
+ *
+ * @param int $sponsorship_id The sponsorship.
+ * @return bool
+ */
+function is_canceled_for_inactive( int $sponsorship_id ): bool {
+	return 'svs-canceled' === get_post_status( $sponsorship_id ) && (bool) get_post_meta( $sponsorship_id, '_sv_canceled_inactive', true );
+}
+
+/**
+ * Reopens a sponsorship canceled because its company went Inactive, when vetting is requested for it again.
+ *
+ * Runs on Central.
+ *
+ * @param int $sponsorship_id The sponsorship.
+ */
+function reopen_for_inactive( int $sponsorship_id ): void {
+	if ( ! is_canceled_for_inactive( $sponsorship_id ) ) {
+		return;
+	}
+
+	wp_update_post(
+		array(
+			'ID'          => $sponsorship_id,
+			'post_status' => 'svs-pending',
+		)
+	);
+
+	add_note( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) );
+}
+
+/**
+ * Forgets why a sponsorship was canceled once it's reopened, so a reviewer canceling it later isn't undone by the
+ * next request.
+ *
+ * @param string   $new_status The new status.
+ * @param string   $old_status The previous status.
+ * @param \WP_Post $post       The record.
+ */
+function forget_inactive_cancellation( string $new_status, string $old_status, \WP_Post $post ): void {
+	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-canceled' === $old_status && 'svs-canceled' !== $new_status && 'trash' !== $new_status ) {
+		delete_post_meta( $post->ID, '_sv_canceled_inactive' );
+	}
+}
+add_action( 'transition_post_status', __NAMESPACE__ . '\forget_inactive_cancellation', 10, 3 );
 
 /**
  * Gets a company's pending sponsorships. Runs on Central.

@@ -12,7 +12,9 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\deactivate_stalled_companies;
 use function WordCamp\Sponsor_Vetting\get_log;
+use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\register_types;
+use function WordCamp\Sponsor_Vetting\request_vetting;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
@@ -125,5 +127,57 @@ class Test_Inactive extends Database_TestCase {
 			'the sponsor replied'            => array( array( 'ended' ), array( '_sv_sponsor_replied' => time() ), false ),
 			'approved in Good Faith, no sponsorship pending' => array( array(), array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '+5 days' ) ) ), false ),
 		);
+	}
+
+	/**
+	 * A reviewer making a company Inactive stops the vetting its camps asked for, which organizers can ask for
+	 * again: that reopens the sponsorship and puts the company back in the queue.
+	 */
+	public function test_requesting_vetting_again_reopens_an_inactive_companys_sponsorship(): void {
+		switch_to_blog( self::$year_dot_2019_site_id );
+		$sponsor_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'wcb_sponsor',
+				'post_status' => 'publish',
+				'post_title'  => 'Acme',
+				'meta_input'  => array( '_wcpt_sponsor_website' => 'https://acme.example' ),
+			)
+		);
+		restore_current_blog();
+
+		$sponsorship_id = request_vetting( self::$year_dot_2019_site_id, $sponsor_id );
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
+		wp_update_post(
+			array(
+				'ID'          => $company_id,
+				'post_status' => 'sv-inactive',
+			)
+		);
+		$canceled = get_post_status( $sponsorship_id );
+		restore_current_blog();
+
+		switch_to_blog( self::$year_dot_2019_site_id );
+		$organizer = get_organizer_statuses( array( $sponsor_id ) )[ $sponsor_id ];
+		restore_current_blog();
+
+		request_vetting( self::$year_dot_2019_site_id, $sponsor_id );
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$reopened = get_post_status( $sponsorship_id );
+		$company  = get_post_status( $company_id );
+		restore_current_blog();
+
+		$this->assertSame( 'svs-canceled', $canceled );
+		$this->assertSame(
+			array(
+				'label'     => 'Vetting stopped',
+				'requested' => false,
+			),
+			$organizer
+		);
+		$this->assertSame( 'svs-pending', $reopened );
+		$this->assertSame( 'sv-needs-vetting', $company );
 	}
 }

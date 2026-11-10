@@ -1428,9 +1428,11 @@ function render_job( array $job ): void {
  * the page, which shows the preview or the result. A reload, or opening the
  * page again later, starts it over from the job's saved cursor.
  *
- * Under the bar it estimates the time left from the last few batches, since
- * members and events batches take different times. Only requests that ran a
- * batch count, and the estimate is hidden while waiting on the lock or a retry.
+ * Under the bar it estimates the time left from the last few events batches.
+ * Events come last and take the longest, so the quicker group, organizers and
+ * members batches before them aren't timed, and the estimate only shows once
+ * events are importing. Only requests that ran a batch count, and the estimate
+ * is hidden while waiting on the lock or a retry.
  *
  * @param array $job Import job, `fetching` or `importing`.
  */
@@ -1484,12 +1486,18 @@ function render_step_loop( array $job ): void {
 	} );
 
 	// Time spent since the bar last moved counts towards the batches it moved by.
+	// Only events batches are timed: the batches before them are much quicker,
+	// and timing those would promise a minute for an import that takes many.
 	const updateEta = ( data, elapsed ) => {
 		unmeasured += elapsed;
 
 		if ( data.done > done ) {
-			recent.push( unmeasured / ( data.done - done ) );
-			recent.splice( 0, recent.length - 5 );
+			// `step` is still the one this request's batch ran in.
+			if ( 'events' === step ) {
+				recent.push( unmeasured / ( data.done - done ) );
+				recent.splice( 0, recent.length - 5 );
+			}
+
 			done = data.done;
 			unmeasured = 0;
 		}

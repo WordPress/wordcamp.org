@@ -16,13 +16,15 @@ defined( 'WPINC' ) || die();
 
 /**
  * Schedules the daily check on Central.
+ *
+ * Only on admin requests: the event recurs once scheduled, and vetters are in Central's admin every day.
  */
 function schedule_inactive_check(): void {
 	if ( is_central() && ! wp_next_scheduled( 'sv_check_inactive' ) ) {
 		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'sv_check_inactive' );
 	}
 }
-add_action( 'init', __NAMESPACE__ . '\schedule_inactive_check' );
+add_action( 'admin_init', __NAMESPACE__ . '\schedule_inactive_check' );
 
 /**
  * Moves each company in Compliance Requested to Inactive once none of its pending sponsorships has an event still

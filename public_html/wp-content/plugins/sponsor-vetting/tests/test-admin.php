@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the company flags and the notes and history log on the company and sponsorship screens.
+ * Tests for the company list and its flags, and the notes and history log on the company and sponsorship screens.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -10,6 +10,7 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WP_UnitTestCase;
+use function WordCamp\Sponsor_Vetting\add_company_views;
 use function WordCamp\Sponsor_Vetting\add_note;
 use function WordCamp\Sponsor_Vetting\get_company_flags;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -33,6 +34,74 @@ class Test_Admin extends WP_UnitTestCase {
 		parent::set_up();
 
 		register_types();
+	}
+
+	/**
+	 * Clears what a list test set up for the admin screen.
+	 */
+	public function tear_down(): void {
+		unset( $_GET['sv_replied'], $_GET['sv_good_faith'] );
+		set_current_screen( 'front' );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Each company list view shows only its companies, the longest waiting first, and counts them.
+	 *
+	 * @dataProvider data_company_views
+	 *
+	 * @param string   $view     The view's query var.
+	 * @param string   $label    The view's label.
+	 * @param string[] $expected The companies it lists, in order.
+	 */
+	public function test_company_views( string $view, string $label, array $expected ): void {
+		$companies = array(
+			'replied_later'   => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 2000 ) ),
+			'replied_earlier' => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 1000 ) ),
+			'waiting'         => array( 'sv-compliance-req', array() ),
+			// Leaving Compliance Requested clears the flag; one left behind mustn't list the company.
+			'moved_on'        => array( 'sv-in-progress', array( '_sv_sponsor_replied' => 500 ) ),
+			'due_later'       => array( 'sv-compliance-req', array( '_sv_good_faith_due' => '2026-12-01' ) ),
+			'due_earlier'     => array( 'sv-in-progress', array( '_sv_good_faith_due' => '2026-10-01' ) ),
+		);
+
+		$ids = array();
+		foreach ( $companies as $name => list( $status, $meta ) ) {
+			$ids[ $name ] = self::factory()->post->create(
+				array(
+					'post_type'   => COMPANY_POST_TYPE,
+					'post_status' => $status,
+					'meta_input'  => $meta,
+				)
+			);
+		}
+
+		$_GET[ $view ] = '1';
+		set_current_screen( 'edit-' . COMPANY_POST_TYPE );
+
+		// The list screen's query is the main one, which the test case resets afterwards.
+		$listed = $GLOBALS['wp_the_query']->query(
+			array(
+				'post_type' => COMPANY_POST_TYPE,
+				'fields'    => 'ids',
+			)
+		);
+
+		$this->assertSame( array_map( static fn( string $name ): int => $ids[ $name ], $expected ), $listed );
+		$this->assertStringContainsString( ' class="current" aria-current="page">' . $label . ' <span class="count">(2)</span></a>', add_company_views( array() )[ $view ] );
+	}
+
+	/**
+	 * The company list views.
+	 *
+	 * @return array[]
+	 */
+	public function data_company_views(): array {
+		return array(
+			'sponsor replied' => array( 'sv_replied', 'Sponsor replied', array( 'replied_earlier', 'replied_later' ) ),
+			'good faith'      => array( 'sv_good_faith', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
+		);
 	}
 
 	/**

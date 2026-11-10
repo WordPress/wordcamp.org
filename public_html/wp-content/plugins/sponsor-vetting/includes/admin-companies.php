@@ -70,6 +70,93 @@ function render_company_column( string $column, int $company_id ): void {
 add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
 
 /**
+ * The company list's own views, of the companies a reviewer should pick up first.
+ *
+ * @return array[] Each view's label and query arguments, keyed by its query var.
+ */
+function get_company_views(): array {
+	// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+	return array(
+		'sv_replied'    => array(
+			'label' => __( 'Sponsor replied', 'wordcamporg' ),
+			'query' => array(
+				'post_status' => 'sv-compliance-req',
+				'meta_key'    => '_sv_sponsor_replied',
+				'orderby'     => 'meta_value_num',
+				'order'       => 'ASC',
+			),
+		),
+		'sv_good_faith' => array(
+			'label' => __( 'Good Faith', 'wordcamporg' ),
+			'query' => array(
+				'post_status' => array_keys( get_company_statuses() ),
+				'meta_key'    => '_sv_good_faith_due',
+				'orderby'     => 'meta_value',
+				'order'       => 'ASC',
+			),
+		),
+	);
+	// phpcs:enable
+}
+
+/**
+ * Adds the views of companies whose sponsor replied and of companies approved in Good Faith, with their counts.
+ *
+ * @param string[] $views The list's views.
+ * @return string[]
+ */
+function add_company_views( array $views ): array {
+	foreach ( get_company_views() as $var => $view ) {
+		$count = ( new \WP_Query(
+			array(
+				'post_type'      => COMPANY_POST_TYPE,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			) + $view['query']
+		) )->found_posts;
+
+		$views[ $var ] = sprintf(
+			'<a href="%s"%s>%s <span class="count">(%s)</span></a>',
+			esc_url( admin_url( 'edit.php?post_type=' . COMPANY_POST_TYPE . '&' . $var . '=1' ) ),
+			isset( $_GET[ $var ] ) ? ' class="current" aria-current="page"' : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list filter.
+			esc_html( $view['label'] ),
+			esc_html( number_format_i18n( $count ) )
+		);
+	}
+
+	return $views;
+}
+add_filter( 'views_edit-' . COMPANY_POST_TYPE, __NAMESPACE__ . '\add_company_views' );
+
+/**
+ * Limits the company list to a view's companies, longest waiting first unless the reviewer sorts by a column.
+ *
+ * @param \WP_Query $query The list's query.
+ */
+function filter_companies( \WP_Query $query ): void {
+	if ( ! is_admin() || ! $query->is_main_query() || COMPANY_POST_TYPE !== $query->get( 'post_type' ) ) {
+		return;
+	}
+
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- List filters.
+	foreach ( get_company_views() as $var => $view ) {
+		if ( ! isset( $_GET[ $var ] ) ) {
+			continue;
+		}
+
+		$args = isset( $_GET['orderby'] ) ? array_diff_key( $view['query'], array_flip( array( 'orderby', 'order' ) ) ) : $view['query'];
+
+		foreach ( $args as $key => $value ) {
+			$query->set( $key, $value );
+		}
+
+		return;
+	}
+	// phpcs:enable
+}
+add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+
+/**
  * Counts the sponsorships of the companies on the list screen, in one query for the page.
  *
  * @return int[] Counts, keyed by company ID.

@@ -75,8 +75,8 @@ function deactivate_stalled_companies(): void {
 			add_note(
 				$company_id,
 				$pending
-					? __( 'Inactive automatically: the events of its pending sponsorships have ended.', 'wordcamporg' )
-					: __( 'Inactive automatically: no sponsorship is waiting on its compliance request.', 'wordcamporg' )
+					? __( 'Moved to Inactive automatically: the events it was being vetted for are over.', 'wordcamporg' )
+					: __( 'Moved to Inactive automatically: no sponsorship is waiting on its compliance request.', 'wordcamporg' )
 			);
 		} finally {
 			acting_as_system( $was_system );

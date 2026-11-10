@@ -356,7 +356,20 @@ function get_conversations( int $post_id, string $type = '' ): array {
 		$conversations = array_filter( $conversations, static fn( array $conversation ): bool => $type === $conversation['type'] );
 	}
 
-	usort( $conversations, static fn( array $a, array $b ): int => array( $a['time'], $a['id'] ) <=> array( $b['time'], $b['id'] ) );
+	usort( $conversations, static fn( array $a, array $b ): int => array( (int) $a['time'], (int) ( $a['id'] ?? 0 ) ) <=> array( (int) $b['time'], (int) ( $b['id'] ?? 0 ) ) );
 
 	return $conversations;
+}
+
+/**
+ * Gets the newest conversation of a type a record started: the one the reply check reads.
+ *
+ * @param int    $post_id The company or sponsorship.
+ * @param string $type    The conversation type.
+ * @return array The conversation, or an empty array.
+ */
+function get_latest_conversation( int $post_id, string $type ): array {
+	$conversations = get_conversations( $post_id, $type );
+
+	return $conversations ? end( $conversations ) : array();
 }

@@ -44,8 +44,7 @@ function check_replies(): void {
 	);
 
 	foreach ( $company_ids as $company_id ) {
-		$conversations = get_conversations( $company_id, 'compliance' );
-		$latest        = end( $conversations );
+		$latest = get_latest_conversation( $company_id, 'compliance' );
 
 		if ( ! $latest ) {
 			continue;

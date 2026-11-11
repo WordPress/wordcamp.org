@@ -144,7 +144,7 @@ add_filter( 'views_edit-' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_unlinke
  * @param \WP_Query $query The list's query.
  */
 function filter_sponsorships( \WP_Query $query ): void {
-	if ( ! is_admin() || ! $query->is_main_query() || SPONSORSHIP_POST_TYPE !== $query->get( 'post_type' ) ) {
+	if ( ! $query->is_main_query() ) {
 		return;
 	}
 
@@ -156,7 +156,16 @@ function filter_sponsorships( \WP_Query $query ): void {
 	}
 	// phpcs:enable
 }
-add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
+
+/**
+ * Filters the queries of the sponsorship list screen only.
+ */
+function load_sponsorship_list(): void {
+	if ( SPONSORSHIP_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_sponsorship_list' );
 
 /**
  * Replaces core's Publish box with the review boxes.

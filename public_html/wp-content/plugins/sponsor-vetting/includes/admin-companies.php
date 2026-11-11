@@ -70,6 +70,151 @@ function render_company_column( string $column, int $company_id ): void {
 add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
 
 /**
+ * The company list's own filters, for the companies a reviewer should pick up first.
+ *
+ * @return array[] Each filter's label, the statuses it's limited to, and its query arguments, keyed by its value.
+ */
+function get_company_filters(): array {
+	// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+	return array(
+		'replied'    => array(
+			'label'    => __( 'Sponsor replied', 'wordcamporg' ),
+			'statuses' => array( 'sv-compliance-req' ),
+			'query'    => array(
+				'meta_key' => '_sv_sponsor_replied',
+				'orderby'  => 'meta_value_num',
+				'order'    => 'ASC',
+			),
+		),
+		'good_faith' => array(
+			'label'    => __( 'Good Faith', 'wordcamporg' ),
+			'statuses' => array_keys( get_company_statuses() ),
+			'query'    => array(
+				'meta_key' => '_sv_good_faith_due',
+				'orderby'  => 'meta_value',
+				'order'    => 'ASC',
+			),
+		),
+	);
+	// phpcs:enable
+}
+
+/**
+ * Gets the company list filter the reviewer picked.
+ *
+ * @return string The filter's key, or an empty string for none.
+ */
+function get_current_company_filter(): string {
+	$filter = $_GET['sv_filter'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the filters' keys.
+
+	return is_string( $filter ) && isset( get_company_filters()[ $filter ] ) ? $filter : '';
+}
+
+/**
+ * Gets the status the reviewer picked from the list's status links.
+ *
+ * @return string The status, or an empty string for all.
+ */
+function get_picked_company_status(): string {
+	$status = $_GET['post_status'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the statuses.
+
+	return is_string( $status ) && isset( get_company_statuses()[ $status ] ) ? $status : '';
+}
+
+/**
+ * Gets the statuses a filter lists within the status the reviewer picked.
+ *
+ * @param array $filter A filter, as get_company_filters() returns it.
+ * @return string[] None when the picked status is outside the filter's.
+ */
+function get_filtered_statuses( array $filter ): array {
+	$status = get_picked_company_status();
+
+	return '' === $status ? $filter['statuses'] : array_values( array_intersect( $filter['statuses'], array( $status ) ) );
+}
+
+/**
+ * Renders the filter dropdown above the company list, with each filter's count within the status picked.
+ *
+ * @param string $post_type The listed post type.
+ * @param string $which     Where the filters are shown, above or below the list.
+ */
+function render_company_filter( string $post_type, string $which ): void {
+	if ( 'top' !== $which ) {
+		return;
+	}
+
+	$current = get_current_company_filter();
+	?>
+	<label for="sv-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by follow-up', 'wordcamporg' ); ?></label>
+	<select name="sv_filter" id="sv-filter">
+		<option value=""><?php esc_html_e( 'All companies', 'wordcamporg' ); ?></option>
+		<?php
+		foreach ( get_company_filters() as $key => $filter ) :
+			$statuses = get_filtered_statuses( $filter );
+			$count    = $statuses ? ( new \WP_Query(
+				array(
+					'post_type'      => COMPANY_POST_TYPE,
+					'post_status'    => $statuses,
+					'meta_key'       => $filter['query']['meta_key'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+					'orderby'        => 'none',
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+				)
+			) )->found_posts : 0;
+			?>
+			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $current, $key ); ?>>
+				<?php
+				/* translators: 1: Filter name, 2: Number of companies. */
+				echo esc_html( sprintf( __( '%1$s (%2$s)', 'wordcamporg' ), $filter['label'], number_format_i18n( $count ) ) );
+				?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+	<?php
+}
+
+/**
+ * Limits the company list to the picked filter's companies, within the status picked, longest waiting first
+ * unless the reviewer sorts by a column.
+ *
+ * @param \WP_Query $query The list's query.
+ */
+function filter_companies( \WP_Query $query ): void {
+	$current = get_current_company_filter();
+
+	if ( ! $query->is_main_query() || '' === $current ) {
+		return;
+	}
+
+	$filter   = get_company_filters()[ $current ];
+	$statuses = get_filtered_statuses( $filter );
+	$args     = isset( $_GET['orderby'] ) ? array_diff_key( $filter['query'], array_flip( array( 'orderby', 'order' ) ) ) : $filter['query']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list sort.
+
+	foreach ( $args as $key => $value ) {
+		$query->set( $key, $value );
+	}
+
+	$query->set( 'post_status', $statuses );
+
+	// The picked status is outside the filter's, and an empty status list would list every status.
+	if ( ! $statuses ) {
+		$query->set( 'post__in', array( 0 ) );
+	}
+}
+
+/**
+ * Filters the company list screen only.
+ */
+function load_company_list(): void {
+	if ( COMPANY_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_company_filter', 10, 2 );
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_company_list' );
+
+/**
  * Counts the sponsorships of the companies on the list screen, in one query for the page.
  *
  * @return int[] Counts, keyed by company ID.
@@ -133,15 +278,28 @@ function get_company_flags( int $company_id ): array {
 		$flags[] = __( 'Not Eligible period has ended', 'wordcamporg' );
 	}
 
+	$links   = array();
+	$classes = array();
+	$titles  = array();
+
+	$due = (string) get_post_meta( $company_id, '_sv_good_faith_due', true );
+
 	if ( $state['good_faith_overdue'] ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith overdue since %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
-	} elseif ( get_post_meta( $company_id, '_sv_good_faith_due', true ) ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith due %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
+		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( $due ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[]                             = sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days );
+		$classes[ array_key_last( $flags ) ] = 'sv-flag-overdue';
+	} elseif ( '' !== $due ) {
+		$days = (int) ( ( strtotime( $due ) - strtotime( gmdate( 'Y-m-d' ) ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[] = $days ? sprintf( _n( 'Good Faith due in %d day', 'Good Faith due in %d days', $days, 'wordcamporg' ), $days ) : __( 'Good Faith due today', 'wordcamporg' );
 	}
 
-	$links = array();
+	if ( '' !== $due ) {
+		$titles[ array_key_last( $flags ) ] = $due;
+	}
 
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
 		$flags[]                           = __( 'Sponsor replied', 'wordcamporg' );
@@ -150,6 +308,20 @@ function get_company_flags( int $company_id ): array {
 
 	foreach ( $flags as $index => $flag ) {
 		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
+
+		$attributes = '';
+
+		if ( isset( $classes[ $index ] ) ) {
+			$attributes .= sprintf( ' class="%s"', esc_attr( $classes[ $index ] ) );
+		}
+
+		if ( isset( $titles[ $index ] ) ) {
+			$attributes .= sprintf( ' title="%s"', esc_attr( $titles[ $index ] ) );
+		}
+
+		if ( '' !== $attributes ) {
+			$flags[ $index ] = "<span{$attributes}>{$flags[ $index ]}</span>";
+		}
 	}
 
 	return $flags;

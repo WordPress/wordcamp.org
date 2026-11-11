@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the company flags and the notes and history log on the company and sponsorship screens.
+ * Tests for the company list and its flags, and the notes and history log on the company and sponsorship screens.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -36,6 +36,84 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Clears what a list test set up for the admin screen.
+	 */
+	public function tear_down(): void {
+		unset( $_GET['sv_filter'], $_GET['post_status'] );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Each company list filter shows only its companies within the status picked, the longest waiting first, and
+	 * counts them in the dropdown.
+	 *
+	 * @dataProvider data_company_filters
+	 *
+	 * @param string   $filter   The filter's value.
+	 * @param string   $status   The status picked, or an empty string for all.
+	 * @param string   $label    The filter's label.
+	 * @param string[] $expected The companies it lists, in order.
+	 */
+	public function test_company_filters( string $filter, string $status, string $label, array $expected ): void {
+		$companies = array(
+			'replied_later'   => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 2000 ) ),
+			'replied_earlier' => array( 'sv-compliance-req', array( '_sv_sponsor_replied' => 1000 ) ),
+			'waiting'         => array( 'sv-compliance-req', array() ),
+			// Leaving Compliance Requested clears the flag; one left behind mustn't list the company.
+			'moved_on'        => array( 'sv-in-progress', array( '_sv_sponsor_replied' => 500 ) ),
+			'due_later'       => array( 'sv-compliance-req', array( '_sv_good_faith_due' => '2026-12-01' ) ),
+			'due_earlier'     => array( 'sv-in-progress', array( '_sv_good_faith_due' => '2026-10-01' ) ),
+		);
+
+		$ids = array();
+		foreach ( $companies as $name => list( $company_status, $meta ) ) {
+			$ids[ $name ] = self::factory()->post->create(
+				array(
+					'post_type'   => COMPANY_POST_TYPE,
+					'post_status' => $company_status,
+					'meta_input'  => $meta,
+				)
+			);
+		}
+
+		$_GET['sv_filter']   = $filter;
+		$_GET['post_status'] = $status;
+		set_current_screen( 'edit-' . COMPANY_POST_TYPE );
+		do_action( 'load-edit.php' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's hook for the list screen.
+
+		// The list screen's query is the main one, which the test case resets afterwards.
+		$listed = $GLOBALS['wp_the_query']->query(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => $status,
+				'fields'      => 'ids',
+			)
+		);
+
+		ob_start();
+		do_action( 'restrict_manage_posts', COMPANY_POST_TYPE, 'top' );
+		$dropdown = (string) ob_get_clean();
+
+		$this->assertSame( array_map( static fn( string $name ): int => $ids[ $name ], $expected ), $listed );
+		$this->assertMatchesRegularExpression( "#<option value=\"{$filter}\"\\s+selected='selected'>\\s*{$label} \\(" . count( $expected ) . '\\)\\s*</option>#', $dropdown );
+	}
+
+	/**
+	 * The company list filters, alone and with a status picked.
+	 *
+	 * @return array[]
+	 */
+	public function data_company_filters(): array {
+		return array(
+			'sponsor replied'                => array( 'replied', '', 'Sponsor replied', array( 'replied_earlier', 'replied_later' ) ),
+			'sponsor replied, in progress'   => array( 'replied', 'sv-in-progress', 'Sponsor replied', array() ),
+			'good faith'                     => array( 'good_faith', '', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
+			'good faith, compliance request' => array( 'good_faith', 'sv-compliance-req', 'Good Faith', array( 'due_later' ) ),
+		);
+	}
+
+	/**
 	 * The reply flag links to the newest compliance conversation, the one the reply check reads, which FreeScout's
 	 * IDs pick among conversations the Airtable import recorded at the same time.
 	 */
@@ -64,6 +142,41 @@ class Test_Admin extends WP_UnitTestCase {
 		}
 
 		$this->assertContains( '<a href="https://freescout.wordpress.net/conversation/118147">Sponsor replied</a>', get_company_flags( $company_id ) );
+	}
+
+	/**
+	 * The Good Faith flag counts the days until it's due, or since, when it's marked to show in red, with the date on
+	 * hover.
+	 *
+	 * @dataProvider data_good_faith_flags
+	 *
+	 * @param string $due  When it's due, relative to today.
+	 * @param string $flag The flag, with `%s` for the date.
+	 */
+	public function test_good_faith_flag_counts_the_days( string $due, string $flag ): void {
+		$date       = gmdate( 'Y-m-d', strtotime( $due ) );
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliance-req',
+				'meta_input'  => array( '_sv_good_faith_due' => $date ),
+			)
+		);
+
+		$this->assertSame( array( sprintf( $flag, $date ) ), get_company_flags( $company_id ) );
+	}
+
+	/**
+	 * Good Faith due dates, and their flags.
+	 *
+	 * @return array[]
+	 */
+	public function data_good_faith_flags(): array {
+		return array(
+			'due later' => array( '+5 days', '<span title="%s">Good Faith due in 5 days</span>' ),
+			'due today' => array( 'today', '<span title="%s">Good Faith due today</span>' ),
+			'overdue'   => array( '-10 days', '<span class="sv-flag-overdue" title="%s">Good Faith overdue for 10 days</span>' ),
+		);
 	}
 
 	/**

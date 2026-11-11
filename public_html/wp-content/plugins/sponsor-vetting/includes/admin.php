@@ -174,7 +174,7 @@ function render_conversations( array $conversations ): void {
 }
 
 /**
- * Loads the styles for the company and sponsorship screens.
+ * Loads the styles for the company and sponsorship screens and lists.
  *
  * Hooked to the edit screens' own style hooks, which run just before styles are printed.
  */
@@ -189,6 +189,7 @@ function enqueue_admin_assets(): void {
 }
 add_action( 'admin_print_styles-post.php', __NAMESPACE__ . '\enqueue_admin_assets' );
 add_action( 'admin_print_styles-post-new.php', __NAMESPACE__ . '\enqueue_admin_assets' );
+add_action( 'admin_print_styles-edit.php', __NAMESPACE__ . '\enqueue_admin_assets' );
 
 /**
  * Renders the note field and the log of notes and status changes, grouped by day.

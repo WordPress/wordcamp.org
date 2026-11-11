@@ -278,15 +278,19 @@ function get_company_flags( int $company_id ): array {
 		$flags[] = __( 'Not Eligible period has ended', 'wordcamporg' );
 	}
 
+	$links   = array();
+	$classes = array();
+
 	if ( $state['good_faith_overdue'] ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith overdue since %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
+		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( (string) get_post_meta( $company_id, '_sv_good_faith_due', true ) ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[]                             = sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days );
+		$classes[ array_key_last( $flags ) ] = 'sv-flag-overdue';
 	} elseif ( get_post_meta( $company_id, '_sv_good_faith_due', true ) ) {
 		/* translators: %s: Date. */
 		$flags[] = sprintf( __( 'Good Faith due %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
 	}
-
-	$links = array();
 
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
 		$flags[]                           = __( 'Sponsor replied', 'wordcamporg' );
@@ -295,6 +299,10 @@ function get_company_flags( int $company_id ): array {
 
 	foreach ( $flags as $index => $flag ) {
 		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
+
+		if ( isset( $classes[ $index ] ) ) {
+			$flags[ $index ] = sprintf( '<span class="%s">%s</span>', esc_attr( $classes[ $index ] ), $flags[ $index ] );
+		}
 	}
 
 	return $flags;

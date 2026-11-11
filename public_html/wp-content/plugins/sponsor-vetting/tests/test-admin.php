@@ -145,6 +145,21 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An overdue Good Faith flag counts the days since it was due, and is marked to show in red.
+	 */
+	public function test_overdue_good_faith_flag_counts_the_days(): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliance-req',
+				'meta_input'  => array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '-10 days' ) ) ),
+			)
+		);
+
+		$this->assertSame( array( '<span class="sv-flag-overdue">Good Faith overdue for 10 days</span>' ), get_company_flags( $company_id ) );
+	}
+
+	/**
 	 * Renders a company's log, with a note, a status change, and what the Airtable import added.
 	 */
 	public function test_log_shows_each_kind_of_entry_escaped(): void {

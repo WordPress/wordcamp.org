@@ -51,6 +51,13 @@ else
 	fi
 	WP_TESTS_TAG="tags/$LATEST_VERSION"
 fi
+
+# The same tag or branch in wordpress-develop's git mirror: tags/X is refs/tags/X, branches/X and trunk are branches.
+if [[ $WP_TESTS_TAG == tags/* ]]; then
+	WP_TESTS_REF="refs/$WP_TESTS_TAG"
+else
+	WP_TESTS_REF="refs/heads/${WP_TESTS_TAG#branches/}"
+fi
 set -ex
 
 install_wp() {
@@ -103,14 +110,20 @@ install_test_suite() {
 
 	# set up testing suite if it doesn't yet exist
 	if [ ! -d $WP_TESTS_DIR ]; then
-		# set up testing suite
+		# A shallow, sparse clone without trees or blobs up front fetches only these two directories, and no svn is needed.
+		local CLONE_DIR=$TMPDIR/wordpress-develop
+		rm -rf $CLONE_DIR
+		git init --quiet $CLONE_DIR
+		git -C $CLONE_DIR sparse-checkout set --no-cone /tests/phpunit/includes/ /tests/phpunit/data/
+		git -C $CLONE_DIR fetch --quiet --depth=1 --filter=tree:0 https://github.com/WordPress/wordpress-develop.git "$WP_TESTS_REF"
+		git -C $CLONE_DIR -c advice.detachedHead=false checkout --quiet FETCH_HEAD
 		mkdir -p $WP_TESTS_DIR
-		svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-		svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
+		mv $CLONE_DIR/tests/phpunit/includes $CLONE_DIR/tests/phpunit/data $WP_TESTS_DIR/
+		rm -rf $CLONE_DIR
 	fi
 
 	if [ ! -f wp-tests-config.php ]; then
-		download https://develop.svn.wordpress.org/${WP_TESTS_TAG}/wp-tests-config-sample.php "$WP_TESTS_DIR"/wp-tests-config.php
+		download https://raw.githubusercontent.com/WordPress/wordpress-develop/${WP_TESTS_REF}/wp-tests-config-sample.php "$WP_TESTS_DIR"/wp-tests-config.php
 		# remove all forward slashes in the end
 		WP_CORE_DIR=$(echo $WP_CORE_DIR | sed "s:/\+$::")
 		sed $ioption "s:dirname( __FILE__ ) . '/src/':'$WP_CORE_DIR/':" "$WP_TESTS_DIR"/wp-tests-config.php

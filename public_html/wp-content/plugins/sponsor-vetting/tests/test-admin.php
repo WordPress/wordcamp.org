@@ -162,7 +162,7 @@ class Test_Admin extends Database_TestCase {
 			}
 		}
 
-		$columns = $this->list_sorted( COMPANY_POST_TYPE, 'sv_next_event', 'sv_next_event' );
+		$columns = $this->list_sorted( COMPANY_POST_TYPE, 'sv_next_event', 'asc' );
 
 		restore_current_blog();
 
@@ -177,9 +177,14 @@ class Test_Admin extends Database_TestCase {
 	}
 
 	/**
-	 * Sorted by event date, the sponsorship list puts the soonest event first, and sponsorships without one last.
+	 * Sorted by event date, the sponsorship list puts the soonest or the latest event first, and sponsorships without
+	 * one last either way.
+	 *
+	 * @dataProvider data_orders
+	 *
+	 * @param string $order The order picked.
 	 */
-	public function test_sponsorships_sort_by_event_date(): void {
+	public function test_sponsorships_sort_by_event_date( string $order ): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 		$this->create_events();
 
@@ -189,22 +194,32 @@ class Test_Admin extends Database_TestCase {
 			$this->create_sponsorship( 902, 'svs-pending', 0 ),
 		);
 
-		$columns = $this->list_sorted( SPONSORSHIP_POST_TYPE, 'sv_event', 'sv_event' );
+		$columns = $this->list_sorted( SPONSORSHIP_POST_TYPE, 'sv_event', $order );
 
 		restore_current_blog();
 
-		$this->assertSame(
-			array(
-				$ids[1] => gmdate( 'F j, Y', strtotime( '-10 days' ) ),
-				$ids[2] => gmdate( 'F j, Y', strtotime( '+20 days' ) ),
-				$ids[0] => '—',
-			),
-			$columns
+		$dated = array(
+			$ids[1] => gmdate( 'F j, Y', strtotime( '-10 days' ) ),
+			$ids[2] => gmdate( 'F j, Y', strtotime( '+20 days' ) ),
+		);
+
+		$this->assertSame( ( 'desc' === $order ? array_reverse( $dated, true ) : $dated ) + array( $ids[0] => '—' ), $columns );
+	}
+
+	/**
+	 * The orders a list can be sorted in.
+	 *
+	 * @return array[]
+	 */
+	public function data_orders(): array {
+		return array(
+			'ascending'  => array( 'asc' ),
+			'descending' => array( 'desc' ),
 		);
 	}
 
 	/**
-	 * Creates events on Central for camp sites 901 to 904; 905 has none.
+	 * Creates events on Central for camp sites 901 to 904. 905 has two, and only the older one has a date.
 	 */
 	private function create_events(): void {
 		$events = array(
@@ -225,6 +240,23 @@ class Test_Admin extends Database_TestCase {
 				)
 			);
 		}
+
+		self::factory()->post->create(
+			array(
+				'post_type'  => 'wordcamp',
+				'post_date'  => '2023-01-01 00:00:00',
+				'meta_input' => array(
+					'_site_id'                => 905,
+					'Start Date (YYYY-mm-dd)' => strtotime( '+1 day' ),
+				),
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'  => 'wordcamp',
+				'meta_input' => array( '_site_id' => 905 ),
+			)
+		);
 	}
 
 	/**
@@ -250,11 +282,11 @@ class Test_Admin extends Database_TestCase {
 	 * Lists a post type sorted by a column, as a sponsor vetter on its list screen on Central, and renders that column.
 	 *
 	 * @param string $post_type The post type.
-	 * @param string $orderby   The column's sort key.
-	 * @param string $column    The column.
+	 * @param string $column    The column, and its sort key.
+	 * @param string $order     The order.
 	 * @return string[] The column of each listed post, in order, keyed by post.
 	 */
-	private function list_sorted( string $post_type, string $orderby, string $column ): array {
+	private function list_sorted( string $post_type, string $column, string $order ): array {
 		$vetter_id                 = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		$GLOBALS['wcorg_subroles'] = array( $vetter_id => array( 'sponsor_vetter' ) );
 		wp_set_current_user( $vetter_id );
@@ -268,8 +300,8 @@ class Test_Admin extends Database_TestCase {
 			array(
 				'post_type'   => $post_type,
 				'post_status' => array_keys( get_statuses( $post_type ) ),
-				'orderby'     => $orderby,
-				'order'       => 'asc',
+				'orderby'     => $column,
+				'order'       => $order,
 			)
 		);
 

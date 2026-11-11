@@ -176,7 +176,8 @@ function render_conversations( array $conversations ): void {
 /**
  * Gets when the events of camp sites start, with one query for them all.
  *
- * A site with more than one `wordcamp` post gets the newest one's, as get_wordcamp_post() does.
+ * A site with more than one `wordcamp` post gets the newest one's, as get_wordcamp_post() does, even when only an
+ * older one has a date.
  *
  * @param int[] $blog_ids The camp sites.
  * @return int[] Start dates, as timestamps of midnight UTC, keyed by camp site; only sites whose event has one.
@@ -209,16 +210,28 @@ function get_event_dates( array $blog_ids ): array {
 
 	// Oldest first, so the newest overwrites it.
 	foreach ( $events as $event ) {
-		$start = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
-
-		if ( $start ) {
-			$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = $start;
-		}
+		$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
 	}
 
 	restore_current_blog();
 
-	return $dates;
+	return array_filter( $dates );
+}
+
+/**
+ * Gets the camp sites of sponsorships.
+ *
+ * @param int[] $sponsorship_ids The sponsorships.
+ * @return int[] Camp sites, keyed by sponsorship.
+ */
+function get_sponsorship_blog_ids( array $sponsorship_ids ): array {
+	$blog_ids = array();
+
+	foreach ( $sponsorship_ids as $sponsorship_id ) {
+		$blog_ids[ (int) $sponsorship_id ] = (int) get_post_meta( (int) $sponsorship_id, '_sv_blog_id', true );
+	}
+
+	return $blog_ids;
 }
 
 /**
@@ -232,42 +245,31 @@ function format_event_date( int $start ): string {
 }
 
 /**
- * Gets SQL for when a camp site's event starts, as get_event_dates() reads it, for sorting a list by it.
+ * Sorts a list screen's query in the order of the IDs given, reversed when the reviewer sorts descending, with the
+ * rows whose ID isn't listed last either way.
  *
- * @param string $blog_id_sql SQL for the camp site's ID, as post meta stores it.
- * @return string SQL for the start date's timestamp, or NULL when there's none.
- */
-function get_event_start_sql( string $blog_id_sql ): string {
-	global $wpdb;
-
-	$prefix = $wpdb->get_blog_prefix( WORDCAMP_ROOT_BLOG_ID );
-
-	return "(
-		SELECT CAST( event_start.meta_value AS UNSIGNED )
-		FROM {$prefix}postmeta event_site
-		INNER JOIN {$prefix}posts event ON event.ID = event_site.post_id AND event.post_type = 'wordcamp' AND event.post_status NOT IN ( 'trash', 'auto-draft' )
-		INNER JOIN {$prefix}postmeta event_start ON event_start.post_id = event.ID AND event_start.meta_key = 'Start Date (YYYY-mm-dd)' AND CAST( event_start.meta_value AS UNSIGNED ) > 0
-		WHERE event_site.meta_key = '_site_id' AND event_site.meta_value = {$blog_id_sql}
-		ORDER BY event.post_date DESC, event.ID DESC
-		LIMIT 1
-	)";
-}
-
-/**
- * Sorts a list screen's query by an event date, soonest first unless reversed, and the rows without one last.
- *
- * @param string[]  $clauses  The query's clauses.
- * @param \WP_Query $query    The query.
- * @param string    $date_sql SQL for each row's date, a timestamp or NULL.
+ * @param string[]  $clauses The query's clauses.
+ * @param \WP_Query $query   The query.
+ * @param string    $id_sql  SQL for the ID each row is sorted by, an integer.
+ * @param int[]     $ids     The IDs, in ascending order.
  * @return string[]
  */
-function sort_by_event_date( array $clauses, \WP_Query $query, string $date_sql ): array {
+function sort_by_ids( array $clauses, \WP_Query $query, string $id_sql, array $ids ): array {
 	global $wpdb;
 
-	$order = 'DESC' === strtoupper( (string) $query->get( 'order' ) ) ? 'DESC' : 'ASC';
-	$none  = 'ASC' === $order ? PHP_INT_MAX : 0;
+	$desc  = 'DESC' === strtoupper( (string) $query->get( 'order' ) );
+	$order = $desc ? 'DESC' : 'ASC';
 
-	$clauses['orderby'] = "COALESCE( {$date_sql}, {$none} ) {$order}, {$wpdb->posts}.ID {$order}";
+	if ( ! $ids ) {
+		$clauses['orderby'] = "{$wpdb->posts}.ID {$order}";
+
+		return $clauses;
+	}
+
+	// FIELD() is 0 for an ID that isn't listed, so sorting by it descending puts those last.
+	$ids = array_map( 'intval', $desc ? $ids : array_reverse( $ids ) );
+
+	$clauses['orderby'] = sprintf( 'FIELD( %s, %s ) DESC, %s.ID %s', $id_sql, implode( ', ', $ids ), $wpdb->posts, $order );
 
 	return $clauses;
 }

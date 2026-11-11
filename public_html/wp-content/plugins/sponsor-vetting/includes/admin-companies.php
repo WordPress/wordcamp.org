@@ -54,7 +54,7 @@ function render_company_column( string $column, int $company_id ): void {
 			break;
 
 		case 'sv_next_event':
-			$next = get_listed_next_events()[ $company_id ] ?? null;
+			$next = get_listed_next_event( $company_id );
 
 			if ( $next ) {
 				printf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $next['sponsorship_id'] ) ), esc_html( format_event_date( $next['start'] ) ) );
@@ -228,7 +228,7 @@ function filter_companies( \WP_Query $query ): void {
 }
 
 /**
- * Sorts the company list by next event, as get_listed_next_events() finds it, when the reviewer picks that column.
+ * Sorts the company list by next event, as get_next_events() finds it, when the reviewer picks that column.
  *
  * @param string[]  $clauses The list's query clauses.
  * @param \WP_Query $query   The list's query.
@@ -241,20 +241,7 @@ function sort_companies( array $clauses, \WP_Query $query ): array {
 		return $clauses;
 	}
 
-	$start = get_event_start_sql( 'sponsorship_blog.meta_value' );
-
-	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and get_event_start_sql()'s fixed SQL.
-	$next = $wpdb->prepare(
-		"( SELECT MIN( {$start} )
-		FROM {$wpdb->posts} sponsorship
-		INNER JOIN {$wpdb->postmeta} sponsorship_blog ON sponsorship_blog.post_id = sponsorship.ID AND sponsorship_blog.meta_key = '_sv_blog_id'
-		WHERE sponsorship.post_parent = {$wpdb->posts}.ID AND sponsorship.post_type = %s AND sponsorship.post_status = 'svs-pending' AND {$start} >= %d )",
-		SPONSORSHIP_POST_TYPE,
-		strtotime( gmdate( 'Y-m-d' ) . ' UTC' )
-	);
-	// phpcs:enable
-
-	return sort_by_event_date( $clauses, $query, $next );
+	return sort_by_ids( $clauses, $query, "{$wpdb->posts}.ID", array_keys( get_next_events() ) );
 }
 
 /**
@@ -309,41 +296,33 @@ function get_listed_sponsorship_counts(): array {
 }
 
 /**
- * Gets the soonest event still to come for each company on the list screen, among the events its pending
- * sponsorships are for, with one query for them all.
+ * Gets the soonest event still to come for companies, among the events their pending sponsorships are for.
  *
+ * @param int[]|null $company_ids The companies, or null for all of them.
  * @return array[] The event's start date, as get_event_dates() returns it, and the sponsorship it's for, keyed by
- *                 company; only companies with one.
+ *                 company, soonest first; only companies with one.
  */
-function get_listed_next_events(): array {
-	static $next = null;
+function get_next_events( ?array $company_ids = null ): array {
+	$next = array();
 
-	if ( null !== $next ) {
-		return $next;
-	}
-
-	$next        = array();
-	$company_ids = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
-
-	if ( ! $company_ids ) {
+	if ( array() === $company_ids ) {
 		return $next;
 	}
 
 	$sponsorships = get_posts(
 		array(
-			'post_type'       => SPONSORSHIP_POST_TYPE,
-			'post_status'     => 'svs-pending',
-			'post_parent__in' => $company_ids,
-			'posts_per_page'  => -1,
-			'no_found_rows'   => true,
-		)
+			'post_type'      => SPONSORSHIP_POST_TYPE,
+			'post_status'    => 'svs-pending',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+		) + ( null === $company_ids ? array( 'post_parent__not_in' => array( 0 ) ) : array( 'post_parent__in' => $company_ids ) )
 	);
-	$blog_ids     = array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_blog_id', true ), $sponsorships );
+	$blog_ids     = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
 	$dates        = get_event_dates( $blog_ids );
 	$today        = strtotime( gmdate( 'Y-m-d' ) . ' UTC' );
 
-	foreach ( $sponsorships as $index => $sponsorship ) {
-		$start = $dates[ $blog_ids[ $index ] ] ?? 0;
+	foreach ( $sponsorships as $sponsorship ) {
+		$start = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? 0;
 
 		if ( $start >= $today && $start < ( $next[ $sponsorship->post_parent ]['start'] ?? PHP_INT_MAX ) ) {
 			$next[ $sponsorship->post_parent ] = array(
@@ -353,7 +332,29 @@ function get_listed_next_events(): array {
 		}
 	}
 
+	uasort( $next, static fn( array $a, array $b ): int => $a['start'] <=> $b['start'] );
+
 	return $next;
+}
+
+/**
+ * Gets a company's next event on the list screen, looking up the companies listed with it at once.
+ *
+ * Quick Edit redraws one row without the list's query, so a company that wasn't listed is looked up on its own.
+ *
+ * @param int $company_id The company.
+ * @return array|null As get_next_events() returns it, or null for none.
+ */
+function get_listed_next_event( int $company_id ): ?array {
+	static $next = array();
+
+	if ( ! array_key_exists( $company_id, $next ) ) {
+		$listed = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
+		$ids    = array_values( array_diff( array_merge( $listed, array( $company_id ) ), array_keys( $next ) ) );
+		$next   = array_replace( $next, array_fill_keys( $ids, null ), get_next_events( $ids ) );
+	}
+
+	return $next[ $company_id ];
 }
 
 /**
@@ -631,13 +632,13 @@ function render_company_sponsorships_box( \WP_Post $post ): void {
 		return;
 	}
 
-	$blog_ids = array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_blog_id', true ), $sponsorships );
+	$blog_ids = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
 	$dates    = get_event_dates( $blog_ids );
 	?>
 	<ul>
-		<?php foreach ( $sponsorships as $index => $sponsorship ) : ?>
+		<?php foreach ( $sponsorships as $sponsorship ) : ?>
 			<li>
-				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a><?php echo isset( $dates[ $blog_ids[ $index ] ] ) ? esc_html( ' (' . format_event_date( $dates[ $blog_ids[ $index ] ] ) . ')' ) : ''; ?>:
+				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a><?php echo isset( $dates[ $blog_ids[ $sponsorship->ID ] ] ) ? esc_html( ' (' . format_event_date( $dates[ $blog_ids[ $sponsorship->ID ] ] ) . ')' ) : ''; ?>:
 				<?php echo esc_html( get_sponsorship_statuses()[ $sponsorship->post_status ] ?? '' ); ?>
 			</li>
 		<?php endforeach; ?>

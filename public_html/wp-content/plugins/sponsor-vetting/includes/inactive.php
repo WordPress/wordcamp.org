@@ -128,8 +128,7 @@ function get_compliance_requested_at( int $company_id ): int {
  * @return bool
  */
 function sponsor_replied_since_check( int $company_id ): bool {
-	$conversations = get_conversations( $company_id, 'compliance' );
-	$latest        = end( $conversations );
+	$latest = get_latest_conversation( $company_id, 'compliance' );
 
 	if ( ! $latest ) {
 		return false;

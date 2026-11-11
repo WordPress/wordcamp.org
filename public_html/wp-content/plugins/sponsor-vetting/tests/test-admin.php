@@ -9,12 +9,13 @@ declare( strict_types = 1 );
 
 namespace WordCamp\Sponsor_Vetting\Tests;
 
-use WP_UnitTestCase;
+use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\add_note;
 use function WordCamp\Sponsor_Vetting\get_company_flags;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\render_log_box;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
+use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -25,7 +26,14 @@ require_once dirname( __DIR__ ) . '/includes/admin-companies.php';
 /**
  * @group sponsor-vetting
  */
-class Test_Admin extends WP_UnitTestCase {
+class Test_Admin extends Database_TestCase {
+	/**
+	 * Only Central is needed, for its `wordcamp` posts.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = false;
+
 	/**
 	 * Registers the post types, as `init` does on Central.
 	 */
@@ -110,6 +118,79 @@ class Test_Admin extends WP_UnitTestCase {
 			'sponsor replied, in progress'   => array( 'replied', 'sv-in-progress', 'Sponsor replied', array() ),
 			'good faith'                     => array( 'good_faith', '', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
 			'good faith, compliance request' => array( 'good_faith', 'sv-compliance-req', 'Good Faith', array( 'due_later' ) ),
+		);
+	}
+
+	/**
+	 * The company list shows when the soonest event still to come starts among those its pending sponsorships are for.
+	 */
+	public function test_next_event_is_the_soonest_pending_one_to_come(): void {
+		$events = array(
+			901 => '-10 days',
+			902 => '+20 days',
+			903 => '+10 days',
+			904 => '+5 days',
+		);
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		foreach ( $events as $blog_id => $start ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wordcamp',
+					'meta_input' => array(
+						'_site_id'                => $blog_id,
+						'Start Date (YYYY-mm-dd)' => strtotime( $start ),
+					),
+				)
+			);
+		}
+		restore_current_blog();
+
+		$sponsorships = array(
+			'upcoming' => array(
+				901 => 'svs-pending', 902 => 'svs-pending', 903 => 'svs-pending', 904 => 'svs-not-approved',
+			),
+			'past'     => array(
+				901 => 'svs-pending', 904 => 'svs-canceled',
+			),
+		);
+
+		$ids = array();
+		foreach ( $sponsorships as $name => $statuses ) {
+			$ids[ $name ] = self::factory()->post->create(
+				array(
+					'post_type'   => COMPANY_POST_TYPE,
+					'post_status' => 'sv-in-progress',
+				)
+			);
+
+			foreach ( $statuses as $blog_id => $status ) {
+				self::factory()->post->create(
+					array(
+						'post_type'   => SPONSORSHIP_POST_TYPE,
+						'post_status' => $status,
+						'post_parent' => $ids[ $name ],
+						'meta_input'  => array( '_sv_blog_id' => $blog_id ),
+					)
+				);
+			}
+		}
+
+		$GLOBALS['wp_the_query']->query( array( 'post_type' => COMPANY_POST_TYPE ) );
+
+		$columns = array();
+		foreach ( $ids as $name => $company_id ) {
+			ob_start();
+			do_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', 'sv_next_event', $company_id );
+			$columns[ $name ] = (string) ob_get_clean();
+		}
+
+		$this->assertSame(
+			array(
+				'upcoming' => gmdate( 'Y-m-d', strtotime( '+10 days' ) ),
+				'past'     => '—',
+			),
+			$columns
 		);
 	}
 

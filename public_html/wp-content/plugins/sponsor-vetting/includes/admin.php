@@ -174,6 +174,52 @@ function render_conversations( array $conversations ): void {
 }
 
 /**
+ * Gets when the events of camp sites start, with one query for them all.
+ *
+ * A site with more than one `wordcamp` post gets the newest one's, as get_wordcamp_post() does.
+ *
+ * @param int[] $blog_ids The camp sites.
+ * @return string[] Start dates as `Y-m-d`, keyed by camp site; only sites whose event has one.
+ */
+function get_event_dates( array $blog_ids ): array {
+	$blog_ids = array_values( array_unique( array_filter( array_map( 'intval', $blog_ids ) ) ) );
+	$dates    = array();
+
+	if ( ! $blog_ids ) {
+		return $dates;
+	}
+
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	$events = get_posts(
+		array(
+			'post_type'      => 'wordcamp',
+			'post_status'    => 'any',
+			'meta_key'       => '_site_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- An exact match on a page of sites.
+			'meta_value'     => array_map( 'strval', $blog_ids ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- An exact match on a page of sites.
+			'meta_compare'   => 'IN',
+			'orderby'        => 'date',
+			'order'          => 'ASC',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+		)
+	);
+
+	// Oldest first, so the newest overwrites it.
+	foreach ( $events as $event ) {
+		$start = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
+
+		if ( $start ) {
+			$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = gmdate( 'Y-m-d', $start );
+		}
+	}
+
+	restore_current_blog();
+
+	return $dates;
+}
+
+/**
  * Loads the styles for the company and sponsorship screens and lists.
  *
  * Hooked to the edit screens' own style hooks, which run just before styles are printed.

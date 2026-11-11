@@ -23,6 +23,7 @@ function get_company_columns( array $columns ): array {
 		'title'           => __( 'Company', 'wordcamporg' ),
 		'sv_domains'      => __( 'Domains', 'wordcamporg' ),
 		'sv_status'       => __( 'Status', 'wordcamporg' ),
+		'sv_next_event'   => __( 'Next event', 'wordcamporg' ),
 		'sv_last_vetted'  => __( 'Last vetted', 'wordcamporg' ),
 		'sv_sponsorships' => __( 'Sponsorships', 'wordcamporg' ),
 	);
@@ -50,6 +51,10 @@ function render_company_column( string $column, int $company_id ): void {
 			foreach ( get_company_flags( $company_id ) as $flag ) {
 				echo '<br><em>' . $flag . '</em>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by get_company_flags().
 			}
+			break;
+
+		case 'sv_next_event':
+			echo esc_html( get_listed_next_events()[ $company_id ] ?? '—' );
 			break;
 
 		case 'sv_last_vetted':
@@ -251,6 +256,50 @@ function get_listed_sponsorship_counts(): array {
 	}
 
 	return $counts;
+}
+
+/**
+ * Gets when the soonest event still to come starts for each company on the list screen, among the events its
+ * pending sponsorships are for, with one query for them all.
+ *
+ * @return string[] Start dates as `Y-m-d`, keyed by company; only companies with one.
+ */
+function get_listed_next_events(): array {
+	static $next = null;
+
+	if ( null !== $next ) {
+		return $next;
+	}
+
+	$next        = array();
+	$company_ids = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
+
+	if ( ! $company_ids ) {
+		return $next;
+	}
+
+	$sponsorships = get_posts(
+		array(
+			'post_type'       => SPONSORSHIP_POST_TYPE,
+			'post_status'     => 'svs-pending',
+			'post_parent__in' => $company_ids,
+			'posts_per_page'  => -1,
+			'no_found_rows'   => true,
+		)
+	);
+	$blog_ids     = array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_blog_id', true ), $sponsorships );
+	$dates        = get_event_dates( $blog_ids );
+	$today        = gmdate( 'Y-m-d' );
+
+	foreach ( $sponsorships as $index => $sponsorship ) {
+		$date = $dates[ $blog_ids[ $index ] ] ?? '';
+
+		if ( $date >= $today && $date < ( $next[ $sponsorship->post_parent ] ?? '9999' ) ) {
+			$next[ $sponsorship->post_parent ] = $date;
+		}
+	}
+
+	return $next;
 }
 
 /**
@@ -527,11 +576,14 @@ function render_company_sponsorships_box( \WP_Post $post ): void {
 		echo '<p>' . esc_html__( 'No sponsorships yet.', 'wordcamporg' ) . '</p>';
 		return;
 	}
+
+	$blog_ids = array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_blog_id', true ), $sponsorships );
+	$dates    = get_event_dates( $blog_ids );
 	?>
 	<ul>
-		<?php foreach ( $sponsorships as $sponsorship ) : ?>
+		<?php foreach ( $sponsorships as $index => $sponsorship ) : ?>
 			<li>
-				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a>:
+				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a><?php echo isset( $dates[ $blog_ids[ $index ] ] ) ? esc_html( ' (' . $dates[ $blog_ids[ $index ] ] . ')' ) : ''; ?>:
 				<?php echo esc_html( get_sponsorship_statuses()[ $sponsorship->post_status ] ?? '' ); ?>
 			</li>
 		<?php endforeach; ?>

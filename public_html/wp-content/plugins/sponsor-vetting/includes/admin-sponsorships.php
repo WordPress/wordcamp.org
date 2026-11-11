@@ -21,6 +21,7 @@ function get_sponsorship_columns( array $columns ): array {
 	return array(
 		'cb'          => $columns['cb'],
 		'title'       => __( 'Sponsorship', 'wordcamporg' ),
+		'sv_event'    => __( 'Event date', 'wordcamporg' ),
 		'sv_company'  => __( 'Company', 'wordcamporg' ),
 		'sv_status'   => __( 'Status', 'wordcamporg' ),
 		'sv_approved' => __( 'Approved', 'wordcamporg' ),
@@ -53,6 +54,10 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 			}
 			break;
 
+		case 'sv_event':
+			echo esc_html( get_listed_event_dates()[ (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ] ?? '—' );
+			break;
+
 		case 'sv_status':
 			echo esc_html( get_sponsorship_statuses()[ get_post_status( $sponsorship_id ) ] ?? '' );
 			break;
@@ -79,6 +84,19 @@ function prime_listed_sponsorships(): void {
 
 	_prime_post_caches( array_filter( array_map( 'intval', wp_list_pluck( $sponsorships, 'post_parent' ) ) ), false, false );
 	cache_users( array_filter( array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_approved_by', true ), $sponsorships ) ) );
+}
+
+/**
+ * Gets when the events of the sponsorships on the list screen start, at once, instead of one row at a time.
+ *
+ * @return string[] Start dates, as get_event_dates() returns them.
+ */
+function get_listed_event_dates(): array {
+	static $dates = null;
+
+	$dates ??= get_event_dates( array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_blog_id', true ), $GLOBALS['wp_query']->posts ?? array() ) );
+
+	return $dates;
 }
 
 /**
@@ -333,8 +351,9 @@ function render_camp_sponsor_box( \WP_Post $post ): void {
 	}
 
 	$rows = array(
-		__( 'Event', 'wordcamporg' ) => get_event_name( $blog_id ),
-		__( 'Name', 'wordcamporg' )  => $sponsor['name'],
+		__( 'Event', 'wordcamporg' )      => get_event_name( $blog_id ),
+		__( 'Event date', 'wordcamporg' ) => get_event_dates( array( $blog_id ) )[ $blog_id ] ?? '—',
+		__( 'Name', 'wordcamporg' )       => $sponsor['name'],
 	);
 	?>
 	<table class="form-table" role="presentation">

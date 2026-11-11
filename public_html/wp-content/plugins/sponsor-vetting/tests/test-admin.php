@@ -145,18 +145,38 @@ class Test_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An overdue Good Faith flag counts the days since it was due, and is marked to show in red.
+	 * The Good Faith flag counts the days until it's due, or since, when it's marked to show in red, with the date on
+	 * hover.
+	 *
+	 * @dataProvider data_good_faith_flags
+	 *
+	 * @param string $due  When it's due, relative to today.
+	 * @param string $flag The flag, with `%s` for the date.
 	 */
-	public function test_overdue_good_faith_flag_counts_the_days(): void {
+	public function test_good_faith_flag_counts_the_days( string $due, string $flag ): void {
+		$date       = gmdate( 'Y-m-d', strtotime( $due ) );
 		$company_id = self::factory()->post->create(
 			array(
 				'post_type'   => COMPANY_POST_TYPE,
 				'post_status' => 'sv-compliance-req',
-				'meta_input'  => array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '-10 days' ) ) ),
+				'meta_input'  => array( '_sv_good_faith_due' => $date ),
 			)
 		);
 
-		$this->assertSame( array( '<span class="sv-flag-overdue">Good Faith overdue for 10 days</span>' ), get_company_flags( $company_id ) );
+		$this->assertSame( array( sprintf( $flag, $date ) ), get_company_flags( $company_id ) );
+	}
+
+	/**
+	 * Good Faith due dates, and their flags.
+	 *
+	 * @return array[]
+	 */
+	public function data_good_faith_flags(): array {
+		return array(
+			'due later' => array( '+5 days', '<span title="%s">Good Faith due in 5 days</span>' ),
+			'due today' => array( 'today', '<span title="%s">Good Faith due today</span>' ),
+			'overdue'   => array( '-10 days', '<span class="sv-flag-overdue" title="%s">Good Faith overdue for 10 days</span>' ),
+		);
 	}
 
 	/**

@@ -280,16 +280,25 @@ function get_company_flags( int $company_id ): array {
 
 	$links   = array();
 	$classes = array();
+	$titles  = array();
+
+	$due = (string) get_post_meta( $company_id, '_sv_good_faith_due', true );
 
 	if ( $state['good_faith_overdue'] ) {
-		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( (string) get_post_meta( $company_id, '_sv_good_faith_due', true ) ) ) / DAY_IN_SECONDS );
+		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( $due ) ) / DAY_IN_SECONDS );
 
 		/* translators: %d: Number of days. */
 		$flags[]                             = sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days );
 		$classes[ array_key_last( $flags ) ] = 'sv-flag-overdue';
-	} elseif ( get_post_meta( $company_id, '_sv_good_faith_due', true ) ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith due %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
+	} elseif ( '' !== $due ) {
+		$days = (int) ( ( strtotime( $due ) - strtotime( gmdate( 'Y-m-d' ) ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[] = $days ? sprintf( _n( 'Good Faith due in %d day', 'Good Faith due in %d days', $days, 'wordcamporg' ), $days ) : __( 'Good Faith due today', 'wordcamporg' );
+	}
+
+	if ( '' !== $due ) {
+		$titles[ array_key_last( $flags ) ] = $due;
 	}
 
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
@@ -300,8 +309,18 @@ function get_company_flags( int $company_id ): array {
 	foreach ( $flags as $index => $flag ) {
 		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
 
+		$attributes = '';
+
 		if ( isset( $classes[ $index ] ) ) {
-			$flags[ $index ] = sprintf( '<span class="%s">%s</span>', esc_attr( $classes[ $index ] ), $flags[ $index ] );
+			$attributes .= sprintf( ' class="%s"', esc_attr( $classes[ $index ] ) );
+		}
+
+		if ( isset( $titles[ $index ] ) ) {
+			$attributes .= sprintf( ' title="%s"', esc_attr( $titles[ $index ] ) );
+		}
+
+		if ( '' !== $attributes ) {
+			$flags[ $index ] = "<span{$attributes}>{$flags[ $index ]}</span>";
 		}
 	}
 

@@ -48,7 +48,7 @@ function render_company_column( string $column, int $company_id ): void {
 			echo esc_html( get_company_statuses()[ get_post_status( $company_id ) ] ?? '' );
 
 			foreach ( get_company_flags( $company_id ) as $flag ) {
-				echo '<br><em>' . esc_html( $flag ) . '</em>';
+				echo '<br><em>' . $flag . '</em>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by get_company_flags().
 			}
 			break;
 
@@ -111,8 +111,10 @@ function get_listed_sponsorship_counts(): array {
 /**
  * Describes what a reviewer should know about a company beyond its status.
  *
+ * A sponsor's reply links to the conversation the reply check read.
+ *
  * @param int $company_id The company.
- * @return string[]
+ * @return string[] HTML, escaped.
  */
 function get_company_flags( int $company_id ): array {
 	$state = get_vetting_state( $company_id );
@@ -139,8 +141,15 @@ function get_company_flags( int $company_id ): array {
 		$flags[] = sprintf( __( 'Good Faith due %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
 	}
 
+	$links = array();
+
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
-		$flags[] = __( 'Sponsor replied', 'wordcamporg' );
+		$flags[]                           = __( 'Sponsor replied', 'wordcamporg' );
+		$links[ array_key_last( $flags ) ] = (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' );
+	}
+
+	foreach ( $flags as $index => $flag ) {
+		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
 	}
 
 	return $flags;
@@ -190,7 +199,7 @@ function render_company_status_box( \WP_Post $post ): void {
 	render_status_select( $post );
 
 	foreach ( get_company_flags( $post->ID ) as $flag ) {
-		echo '<p><em>' . esc_html( $flag ) . '</em></p>';
+		echo '<p><em>' . $flag . '</em></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by get_company_flags().
 	}
 	?>
 	<p>

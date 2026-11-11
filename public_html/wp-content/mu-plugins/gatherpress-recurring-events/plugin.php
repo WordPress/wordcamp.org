@@ -27,6 +27,7 @@ require_once DIR . '/includes/class-rsvp-cache.php';
 require_once DIR . '/includes/class-rest-api.php';
 require_once DIR . '/includes/class-admin.php';
 require_once DIR . '/includes/class-query.php';
+require_once DIR . '/includes/class-ical.php';
 require_once DIR . '/includes/class-plugin.php';
 
 register_deactivation_hook( FILE, array( Plugin::class, 'deactivate' ) );

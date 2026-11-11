@@ -160,6 +160,9 @@ final class Plugin {
 		add_filter( 'query_vars', array( Context::class, 'query_vars' ) );
 		add_action( 'template_redirect', array( Context::class, 'resolve' ), 1 );
 		add_action( 'template_redirect', array( $this, 'series_ical' ), 5 );
+		add_action( 'template_redirect', array( Ical::class, 'intercept_feed' ), 20 );
+		add_action( 'gpre_occurrence_status_changed', array( Ical::class, 'mark_changed' ), 10, 0 );
+		add_action( 'gpre_series_ended', array( Ical::class, 'mark_changed' ), 10, 0 );
 		add_filter( 'get_post_metadata', array( Context::class, 'metadata' ), 10, 4 );
 		add_filter( 'post_type_link', array( Context::class, 'post_link' ), 10, 2 );
 		add_filter( 'redirect_canonical', array( Context::class, 'canonical_redirect' ) );
@@ -417,9 +420,8 @@ final class Plugin {
 
 		Context::set( null );
 		$event = ( new Calendar( $post_id ) )->get_ical_event_string();
-		$rrule = (string) get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true );
-		$event = str_replace( 'END:VEVENT', 'RRULE:' . $rrule . "\r\nEND:VEVENT", $event );
 
-		return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n";
+		// The visitor is past the password check above, so the schedule is theirs to see.
+		return Ical::recur( "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n", true );
 	}
 }

@@ -291,6 +291,25 @@ final class Occurrences {
 	}
 
 	/**
+	 * Gets every cancelled date of a series, oldest first.
+	 *
+	 * @param int $post_id Series post ID.
+	 * @return object[] Occurrence rows.
+	 */
+	public static function cancelled( int $post_id ): array {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM %i WHERE series_post_id = %d AND status = 'cancelled' ORDER BY datetime_start_gmt ASC",
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+	}
+
+	/**
 	 * Cancels or restores a future occurrence.
 	 *
 	 * @param int    $post_id       Series post ID.
@@ -416,7 +435,7 @@ final class Occurrences {
 	 * @param int $post_id Series post ID.
 	 * @return array|null Master date data.
 	 */
-	private static function master_datetime( int $post_id ): ?array {
+	public static function master_datetime( int $post_id ): ?array {
 		global $wpdb;
 
 		// Read the immutable series seed directly so active occurrence metadata overrides

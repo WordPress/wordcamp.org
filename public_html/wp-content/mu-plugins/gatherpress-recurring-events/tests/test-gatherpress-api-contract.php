@@ -65,6 +65,15 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 		'GatherPress\Core\Calendar\Calendar'    => array(
 			'methods' => array( 'get_ical_event_string' ),
 		),
+		// `Ical::serve_feed()` sends a feed's response the way GatherPress's own
+		// `send_ics_file()` does, out of the same parts.
+		'GatherPress\Core\Calendar\Setup'       => array(
+			'methods'   => array( 'get_ics_body', 'get_ics_cache_key', 'generate_ics_filename', 'get_etag', 'is_not_modified', 'send_ics_headers' ),
+			'constants' => array( 'ICAL_SLUG' ),
+		),
+		'GatherPress\Core\Calendar\Cache'       => array(
+			'methods' => array( 'remember', 'get_last_modified', 'mark_changed' ),
+		),
 		// Only this suite's fixtures call this, to sign a block template the
 		// same way the server does when it emits one.
 		'GatherPress\Core\Blocks\Rsvp_Template' => array(

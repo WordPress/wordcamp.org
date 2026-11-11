@@ -23,6 +23,7 @@ function get_company_columns( array $columns ): array {
 		'title'           => __( 'Company', 'wordcamporg' ),
 		'sv_domains'      => __( 'Domains', 'wordcamporg' ),
 		'sv_status'       => __( 'Status', 'wordcamporg' ),
+		'sv_next_event'   => __( 'Next event', 'wordcamporg' ),
 		'sv_last_vetted'  => __( 'Last vetted', 'wordcamporg' ),
 		'sv_sponsorships' => __( 'Sponsorships', 'wordcamporg' ),
 	);
@@ -52,6 +53,16 @@ function render_company_column( string $column, int $company_id ): void {
 			}
 			break;
 
+		case 'sv_next_event':
+			$next = get_listed_next_event( $company_id );
+
+			if ( $next ) {
+				printf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $next['sponsorship_id'] ) ), esc_html( format_event_date( $next['start'] ) ) );
+			} else {
+				echo '—';
+			}
+			break;
+
 		case 'sv_last_vetted':
 			$last_vetted = (int) get_post_meta( $company_id, '_sv_last_vetted', true );
 			echo esc_html( $last_vetted ? wp_date( 'Y-m-d', $last_vetted ) : '—' );
@@ -68,6 +79,19 @@ function render_company_column( string $column, int $company_id ): void {
 	}
 }
 add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
+
+/**
+ * Lets the company list be sorted by next event.
+ *
+ * @param array $columns The sortable columns.
+ * @return array
+ */
+function get_sortable_company_columns( array $columns ): array {
+	$columns['sv_next_event'] = array( 'sv_next_event', false );
+
+	return $columns;
+}
+add_filter( 'manage_edit-' . COMPANY_POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_company_columns' );
 
 /**
  * The company list's own filters, for the companies a reviewer should pick up first.
@@ -204,12 +228,30 @@ function filter_companies( \WP_Query $query ): void {
 }
 
 /**
+ * Sorts the company list by next event, as get_next_events() finds it, when the reviewer picks that column.
+ *
+ * @param string[]  $clauses The list's query clauses.
+ * @param \WP_Query $query   The list's query.
+ * @return string[]
+ */
+function sort_companies( array $clauses, \WP_Query $query ): array {
+	global $wpdb;
+
+	if ( ! $query->is_main_query() || 'sv_next_event' !== $query->get( 'orderby' ) ) {
+		return $clauses;
+	}
+
+	return sort_by_ids( $clauses, $query, "{$wpdb->posts}.ID", array_keys( get_next_events() ) );
+}
+
+/**
  * Filters the company list screen only.
  */
 function load_company_list(): void {
 	if ( COMPANY_POST_TYPE === get_current_screen()?->post_type ) {
 		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_company_filter', 10, 2 );
 		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+		add_filter( 'posts_clauses', __NAMESPACE__ . '\sort_companies', 10, 2 );
 	}
 }
 add_action( 'load-edit.php', __NAMESPACE__ . '\load_company_list' );
@@ -251,6 +293,68 @@ function get_listed_sponsorship_counts(): array {
 	}
 
 	return $counts;
+}
+
+/**
+ * Gets the soonest event still to come for companies, among the events their pending sponsorships are for.
+ *
+ * @param int[]|null $company_ids The companies, or null for all of them.
+ * @return array[] The event's start date, as get_event_dates() returns it, and the sponsorship it's for, keyed by
+ *                 company, soonest first; only companies with one.
+ */
+function get_next_events( ?array $company_ids = null ): array {
+	$next = array();
+
+	if ( array() === $company_ids ) {
+		return $next;
+	}
+
+	$sponsorships = get_posts(
+		array(
+			'post_type'      => SPONSORSHIP_POST_TYPE,
+			'post_status'    => 'svs-pending',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+		) + ( null === $company_ids ? array( 'post_parent__not_in' => array( 0 ) ) : array( 'post_parent__in' => $company_ids ) )
+	);
+	$blog_ids     = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
+	$dates        = get_event_dates( $blog_ids );
+	$today        = strtotime( gmdate( 'Y-m-d' ) . ' UTC' );
+
+	foreach ( $sponsorships as $sponsorship ) {
+		$start = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? 0;
+
+		if ( $start >= $today && $start < ( $next[ $sponsorship->post_parent ]['start'] ?? PHP_INT_MAX ) ) {
+			$next[ $sponsorship->post_parent ] = array(
+				'start'          => $start,
+				'sponsorship_id' => $sponsorship->ID,
+			);
+		}
+	}
+
+	uasort( $next, static fn( array $a, array $b ): int => $a['start'] <=> $b['start'] );
+
+	return $next;
+}
+
+/**
+ * Gets a company's next event on the list screen, looking up the companies listed with it at once.
+ *
+ * Quick Edit redraws one row without the list's query, so a company that wasn't listed is looked up on its own.
+ *
+ * @param int $company_id The company.
+ * @return array|null As get_next_events() returns it, or null for none.
+ */
+function get_listed_next_event( int $company_id ): ?array {
+	static $next = array();
+
+	if ( ! array_key_exists( $company_id, $next ) ) {
+		$listed = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
+		$ids    = array_values( array_diff( array_merge( $listed, array( $company_id ) ), array_keys( $next ) ) );
+		$next   = array_replace( $next, array_fill_keys( $ids, null ), get_next_events( $ids ) );
+	}
+
+	return $next[ $company_id ];
 }
 
 /**
@@ -527,11 +631,14 @@ function render_company_sponsorships_box( \WP_Post $post ): void {
 		echo '<p>' . esc_html__( 'No sponsorships yet.', 'wordcamporg' ) . '</p>';
 		return;
 	}
+
+	$blog_ids = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
+	$dates    = get_event_dates( $blog_ids );
 	?>
 	<ul>
 		<?php foreach ( $sponsorships as $sponsorship ) : ?>
 			<li>
-				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a>:
+				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a><?php echo isset( $dates[ $blog_ids[ $sponsorship->ID ] ] ) ? esc_html( ' (' . format_event_date( $dates[ $blog_ids[ $sponsorship->ID ] ] ) . ')' ) : ''; ?>:
 				<?php echo esc_html( get_sponsorship_statuses()[ $sponsorship->post_status ] ?? '' ); ?>
 			</li>
 		<?php endforeach; ?>

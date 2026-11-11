@@ -9,12 +9,15 @@ declare( strict_types = 1 );
 
 namespace WordCamp\Sponsor_Vetting\Tests;
 
-use WP_UnitTestCase;
+use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\add_note;
 use function WordCamp\Sponsor_Vetting\get_company_flags;
+use function WordCamp\Sponsor_Vetting\get_statuses;
+use function WordCamp\Sponsor_Vetting\register_post_types;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\render_log_box;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
+use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -25,7 +28,14 @@ require_once dirname( __DIR__ ) . '/includes/admin-companies.php';
 /**
  * @group sponsor-vetting
  */
-class Test_Admin extends WP_UnitTestCase {
+class Test_Admin extends Database_TestCase {
+	/**
+	 * Only Central is needed, for its `wordcamp` posts.
+	 *
+	 * @var bool
+	 */
+	protected static $create_event_sites = false;
+
 	/**
 	 * Registers the post types, as `init` does on Central.
 	 */
@@ -39,7 +49,7 @@ class Test_Admin extends WP_UnitTestCase {
 	 * Clears what a list test set up for the admin screen.
 	 */
 	public function tear_down(): void {
-		unset( $_GET['sv_filter'], $_GET['post_status'] );
+		unset( $_GET['sv_filter'], $_GET['post_status'], $GLOBALS['wcorg_subroles'] );
 
 		parent::tear_down();
 	}
@@ -111,6 +121,198 @@ class Test_Admin extends WP_UnitTestCase {
 			'good faith'                     => array( 'good_faith', '', 'Good Faith', array( 'due_earlier', 'due_later' ) ),
 			'good faith, compliance request' => array( 'good_faith', 'sv-compliance-req', 'Good Faith', array( 'due_later' ) ),
 		);
+	}
+
+	/**
+	 * Sorted by next event, the company list puts the soonest event still to come among each company's pending
+	 * sponsorships first, linked to its sponsorship, and companies without one last.
+	 */
+	public function test_companies_sort_by_next_event(): void {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$this->create_events();
+
+		$sponsorships = array(
+			'none'  => array(
+				901 => 'svs-pending',
+				904 => 'svs-canceled',
+			),
+			'later' => array(
+				902 => 'svs-pending',
+			),
+			'soon'  => array(
+				901 => 'svs-pending',
+				902 => 'svs-pending',
+				903 => 'svs-pending',
+				904 => 'svs-not-approved',
+			),
+		);
+
+		$ids = array();
+		$for = array();
+		foreach ( $sponsorships as $name => $statuses ) {
+			$ids[ $name ] = self::factory()->post->create(
+				array(
+					'post_type'   => COMPANY_POST_TYPE,
+					'post_status' => 'sv-in-progress',
+				)
+			);
+
+			foreach ( $statuses as $blog_id => $status ) {
+				$for[ $name ][ $blog_id ] = $this->create_sponsorship( $blog_id, $status, $ids[ $name ] );
+			}
+		}
+
+		$columns = $this->list_sorted( COMPANY_POST_TYPE, 'sv_next_event', 'asc' );
+
+		restore_current_blog();
+
+		$this->assertSame(
+			array(
+				$ids['soon']  => sprintf( '<a href="%s">%s</a>', esc_url( get_admin_url( WORDCAMP_ROOT_BLOG_ID, 'post.php?post=' . $for['soon'][903] . '&action=edit' ) ), gmdate( 'F j, Y', strtotime( '+10 days' ) ) ),
+				$ids['later'] => sprintf( '<a href="%s">%s</a>', esc_url( get_admin_url( WORDCAMP_ROOT_BLOG_ID, 'post.php?post=' . $for['later'][902] . '&action=edit' ) ), gmdate( 'F j, Y', strtotime( '+20 days' ) ) ),
+				$ids['none']  => '—',
+			),
+			$columns
+		);
+	}
+
+	/**
+	 * Sorted by event date, the sponsorship list puts the soonest or the latest event first, and sponsorships without
+	 * one last either way.
+	 *
+	 * @dataProvider data_orders
+	 *
+	 * @param string $order The order picked.
+	 */
+	public function test_sponsorships_sort_by_event_date( string $order ): void {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		$this->create_events();
+
+		$ids = array(
+			$this->create_sponsorship( 905, 'svs-pending', 0 ),
+			$this->create_sponsorship( 901, 'svs-pending', 0 ),
+			$this->create_sponsorship( 902, 'svs-pending', 0 ),
+		);
+
+		$columns = $this->list_sorted( SPONSORSHIP_POST_TYPE, 'sv_event', $order );
+
+		restore_current_blog();
+
+		$dated = array(
+			$ids[1] => gmdate( 'F j, Y', strtotime( '-10 days' ) ),
+			$ids[2] => gmdate( 'F j, Y', strtotime( '+20 days' ) ),
+		);
+
+		$this->assertSame( ( 'desc' === $order ? array_reverse( $dated, true ) : $dated ) + array( $ids[0] => '—' ), $columns );
+	}
+
+	/**
+	 * The orders a list can be sorted in.
+	 *
+	 * @return array[]
+	 */
+	public function data_orders(): array {
+		return array(
+			'ascending'  => array( 'asc' ),
+			'descending' => array( 'desc' ),
+		);
+	}
+
+	/**
+	 * Creates events on Central for camp sites 901 to 904. 905 has two, and only the older one has a date.
+	 */
+	private function create_events(): void {
+		$events = array(
+			901 => '-10 days',
+			902 => '+20 days',
+			903 => '+10 days',
+			904 => '+5 days',
+		);
+
+		foreach ( $events as $blog_id => $start ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wordcamp',
+					'meta_input' => array(
+						'_site_id'                => $blog_id,
+						'Start Date (YYYY-mm-dd)' => strtotime( $start ),
+					),
+				)
+			);
+		}
+
+		self::factory()->post->create(
+			array(
+				'post_type'  => 'wordcamp',
+				'post_date'  => '2023-01-01 00:00:00',
+				'meta_input' => array(
+					'_site_id'                => 905,
+					'Start Date (YYYY-mm-dd)' => strtotime( '+1 day' ),
+				),
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'  => 'wordcamp',
+				'meta_input' => array( '_site_id' => 905 ),
+			)
+		);
+	}
+
+	/**
+	 * Creates a sponsorship for a camp site.
+	 *
+	 * @param int    $blog_id    The camp site.
+	 * @param string $status     Its status.
+	 * @param int    $company_id Its company.
+	 * @return int
+	 */
+	private function create_sponsorship( int $blog_id, string $status, int $company_id ): int {
+		return self::factory()->post->create(
+			array(
+				'post_type'   => SPONSORSHIP_POST_TYPE,
+				'post_status' => $status,
+				'post_parent' => $company_id,
+				'meta_input'  => array( '_sv_blog_id' => $blog_id ),
+			)
+		);
+	}
+
+	/**
+	 * Lists a post type sorted by a column, as a sponsor vetter on its list screen on Central, and renders that column.
+	 *
+	 * @param string $post_type The post type.
+	 * @param string $column    The column, and its sort key.
+	 * @param string $order     The order.
+	 * @return string[] The column of each listed post, in order, keyed by post.
+	 */
+	private function list_sorted( string $post_type, string $column, string $order ): array {
+		$vetter_id                 = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$GLOBALS['wcorg_subroles'] = array( $vetter_id => array( 'sponsor_vetter' ) );
+		wp_set_current_user( $vetter_id );
+
+		// Only on Central do the post types have screens to link to.
+		register_post_types();
+		set_current_screen( 'edit-' . $post_type );
+		do_action( 'load-edit.php' ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- Core's hook for the list screen.
+
+		$posts = $GLOBALS['wp_the_query']->query(
+			array(
+				'post_type'   => $post_type,
+				'post_status' => array_keys( get_statuses( $post_type ) ),
+				'orderby'     => $column,
+				'order'       => $order,
+			)
+		);
+
+		$columns = array();
+		foreach ( $posts as $post ) {
+			ob_start();
+			do_action( "manage_{$post_type}_posts_custom_column", $column, $post->ID );
+			$columns[ $post->ID ] = (string) ob_get_clean();
+		}
+
+		return $columns;
 	}
 
 	/**

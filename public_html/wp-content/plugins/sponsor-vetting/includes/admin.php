@@ -179,7 +179,7 @@ function render_conversations( array $conversations ): void {
  * A site with more than one `wordcamp` post gets the newest one's, as get_wordcamp_post() does.
  *
  * @param int[] $blog_ids The camp sites.
- * @return string[] Start dates as `Y-m-d`, keyed by camp site; only sites whose event has one.
+ * @return int[] Start dates, as timestamps of midnight UTC, keyed by camp site; only sites whose event has one.
  */
 function get_event_dates( array $blog_ids ): array {
 	$blog_ids = array_values( array_unique( array_filter( array_map( 'intval', $blog_ids ) ) ) );
@@ -198,8 +198,10 @@ function get_event_dates( array $blog_ids ): array {
 			'meta_key'       => '_site_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- An exact match on a page of sites.
 			'meta_value'     => array_map( 'strval', $blog_ids ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- An exact match on a page of sites.
 			'meta_compare'   => 'IN',
-			'orderby'        => 'date',
-			'order'          => 'ASC',
+			'orderby'        => array(
+				'date' => 'ASC',
+				'ID'   => 'ASC',
+			),
 			'posts_per_page' => -1,
 			'no_found_rows'  => true,
 		)
@@ -210,13 +212,64 @@ function get_event_dates( array $blog_ids ): array {
 		$start = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
 
 		if ( $start ) {
-			$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = gmdate( 'Y-m-d', $start );
+			$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = $start;
 		}
 	}
 
 	restore_current_blog();
 
 	return $dates;
+}
+
+/**
+ * Formats when an event starts, in the site's date format.
+ *
+ * @param int $start The start date, as get_event_dates() returns it.
+ * @return string
+ */
+function format_event_date( int $start ): string {
+	return (string) wp_date( (string) get_option( 'date_format' ), $start, new \DateTimeZone( 'UTC' ) );
+}
+
+/**
+ * Gets SQL for when a camp site's event starts, as get_event_dates() reads it, for sorting a list by it.
+ *
+ * @param string $blog_id_sql SQL for the camp site's ID, as post meta stores it.
+ * @return string SQL for the start date's timestamp, or NULL when there's none.
+ */
+function get_event_start_sql( string $blog_id_sql ): string {
+	global $wpdb;
+
+	$prefix = $wpdb->get_blog_prefix( WORDCAMP_ROOT_BLOG_ID );
+
+	return "(
+		SELECT CAST( event_start.meta_value AS UNSIGNED )
+		FROM {$prefix}postmeta event_site
+		INNER JOIN {$prefix}posts event ON event.ID = event_site.post_id AND event.post_type = 'wordcamp' AND event.post_status NOT IN ( 'trash', 'auto-draft' )
+		INNER JOIN {$prefix}postmeta event_start ON event_start.post_id = event.ID AND event_start.meta_key = 'Start Date (YYYY-mm-dd)' AND CAST( event_start.meta_value AS UNSIGNED ) > 0
+		WHERE event_site.meta_key = '_site_id' AND event_site.meta_value = {$blog_id_sql}
+		ORDER BY event.post_date DESC, event.ID DESC
+		LIMIT 1
+	)";
+}
+
+/**
+ * Sorts a list screen's query by an event date, soonest first unless reversed, and the rows without one last.
+ *
+ * @param string[]  $clauses  The query's clauses.
+ * @param \WP_Query $query    The query.
+ * @param string    $date_sql SQL for each row's date, a timestamp or NULL.
+ * @return string[]
+ */
+function sort_by_event_date( array $clauses, \WP_Query $query, string $date_sql ): array {
+	global $wpdb;
+
+	$order = 'DESC' === strtoupper( (string) $query->get( 'order' ) ) ? 'DESC' : 'ASC';
+	$none  = 'ASC' === $order ? PHP_INT_MAX : 0;
+
+	$clauses['orderby'] = "COALESCE( {$date_sql}, {$none} ) {$order}, {$wpdb->posts}.ID {$order}";
+
+	return $clauses;
 }
 
 /**

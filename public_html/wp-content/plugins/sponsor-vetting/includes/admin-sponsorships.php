@@ -55,7 +55,8 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 			break;
 
 		case 'sv_event':
-			echo esc_html( get_listed_event_dates()[ (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ] ?? '—' );
+			$start = get_listed_event_dates()[ (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ] ?? 0;
+			echo esc_html( $start ? format_event_date( $start ) : '—' );
 			break;
 
 		case 'sv_status':
@@ -68,6 +69,36 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 	}
 }
 add_action( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_sponsorship_column', 10, 2 );
+
+/**
+ * Lets the sponsorship list be sorted by event date.
+ *
+ * @param array $columns The sortable columns.
+ * @return array
+ */
+function get_sortable_sponsorship_columns( array $columns ): array {
+	$columns['sv_event'] = array( 'sv_event', false );
+
+	return $columns;
+}
+add_filter( 'manage_edit-' . SPONSORSHIP_POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_sponsorship_columns' );
+
+/**
+ * Sorts the sponsorship list by event date, when the reviewer picks that column.
+ *
+ * @param string[]  $clauses The list's query clauses.
+ * @param \WP_Query $query   The list's query.
+ * @return string[]
+ */
+function sort_sponsorships( array $clauses, \WP_Query $query ): array {
+	global $wpdb;
+
+	if ( ! $query->is_main_query() || 'sv_event' !== $query->get( 'orderby' ) ) {
+		return $clauses;
+	}
+
+	return sort_by_event_date( $clauses, $query, get_event_start_sql( "( SELECT sponsorship_blog.meta_value FROM {$wpdb->postmeta} sponsorship_blog WHERE sponsorship_blog.post_id = {$wpdb->posts}.ID AND sponsorship_blog.meta_key = '_sv_blog_id' LIMIT 1 )" ) );
+}
 
 /**
  * Loads the companies and approvers of the sponsorships on the list screen at once, instead of one row at a time.
@@ -181,6 +212,7 @@ function filter_sponsorships( \WP_Query $query ): void {
 function load_sponsorship_list(): void {
 	if ( SPONSORSHIP_POST_TYPE === get_current_screen()?->post_type ) {
 		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
+		add_filter( 'posts_clauses', __NAMESPACE__ . '\sort_sponsorships', 10, 2 );
 	}
 }
 add_action( 'load-edit.php', __NAMESPACE__ . '\load_sponsorship_list' );
@@ -350,9 +382,10 @@ function render_camp_sponsor_box( \WP_Post $post ): void {
 		return;
 	}
 
-	$rows = array(
+	$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? null;
+	$rows  = array(
 		__( 'Event', 'wordcamporg' )      => get_event_name( $blog_id ),
-		__( 'Event date', 'wordcamporg' ) => get_event_dates( array( $blog_id ) )[ $blog_id ] ?? '—',
+		__( 'Event date', 'wordcamporg' ) => isset( $start ) ? format_event_date( $start ) : '—',
 		__( 'Name', 'wordcamporg' )       => $sponsor['name'],
 	);
 	?>

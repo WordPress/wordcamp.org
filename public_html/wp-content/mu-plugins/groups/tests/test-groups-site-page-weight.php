@@ -478,6 +478,15 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				),
 				'Bring a laptop.',
 			),
+			// The event form saves blocks with nothing between them.
+			'blocks saved back to back'        => array(
+				array(
+					'post_content' => '<!-- wp:paragraph --><p>Doors at six.</p><!-- /wp:paragraph -->'
+						. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Bring a laptop</li><!-- /wp:list-item -->'
+						. '<!-- wp:list-item --><li>Bring a question</li><!-- /wp:list-item --></ul><!-- /wp:list -->',
+				),
+				'Doors at six. Bring a laptop Bring a question',
+			),
 			'no more than thirty words'        => array(
 				array( 'post_content' => implode( ' ', array_fill( 0, 40, 'word' ) ) ),
 				implode( ' ', array_fill( 0, 30, 'word' ) ) . '&hellip;',

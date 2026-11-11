@@ -921,7 +921,15 @@ function get_description( \WP_Post $post ): string {
 			: '';
 	}
 
-	$text = preg_replace( '/<!--.*?-->/s', '', $text );
+	/*
+	 * Blocks the event form saves sit back to back, with no line break
+	 * between them, so taking the markup away would run the last word of one
+	 * into the first word of the next: "…and a charger.Your questions…". A
+	 * block delimiter, and the end of anything that starts a new line, each
+	 * leave a space behind instead.
+	 */
+	$text = preg_replace( '/<!--.*?-->/s', ' ', $text );
+	$text = preg_replace( '#</(?:p|li|h[1-6]|blockquote|pre|div|figcaption|t[dh]|d[dt])>|<[bh]r\b[^>]*>#i', '$0 ', (string) $text );
 	$text = wp_strip_all_tags( strip_shortcodes( (string) $text ), true );
 
 	return decode( wp_trim_words( $text, DESCRIPTION_WORDS, '…' ) );

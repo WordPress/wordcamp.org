@@ -15,6 +15,63 @@
 // eslint-disable-next-line import/no-extraneous-dependencies -- WordPress serves this through its import map.
 import { getElement, store, withScope } from '@wordpress/interactivity';
 
+/**
+ * Hands keyboard focus to the live map when the swap removes the element
+ * that had it.
+ *
+ * The static map ends in attribution links, and tabbing to one is what
+ * scrolls the map into view for someone using a keyboard. The live map then
+ * replaces the link they have just reached. A browser doesn't say when it
+ * removes a focused element: focus falls back to the page, and a screen
+ * reader starts again from the top.
+ *
+ * So this remembers what was last focused inside the map. When the map's
+ * contents are replaced and that element is gone, focus moves to the live
+ * map: Leaflet's container, which is named after the venue, or the embedded
+ * map's frame, or failing those the wrapper itself.
+ *
+ * @param {HTMLElement} map The venue map's wrapper.
+ */
+function keepFocusThroughSwap( map ) {
+	let focused = null;
+
+	map.addEventListener( 'focusin', ( event ) => {
+		focused = event.target;
+	} );
+
+	// Focus moving on is not the same as its element being taken away. Chrome
+	// reports both here, but only the first names where focus went.
+	map.addEventListener( 'focusout', ( event ) => {
+		if ( event.relatedTarget ) {
+			focused = null;
+		}
+	} );
+
+	new window.MutationObserver( () => {
+		if ( ! focused || focused.isConnected ) {
+			return;
+		}
+
+		focused = null;
+
+		const { activeElement, body } = map.ownerDocument;
+
+		// Anywhere but the page itself means focus has already been put
+		// somewhere on purpose.
+		if ( activeElement !== body ) {
+			return;
+		}
+
+		const target = map.querySelector( '[tabindex="0"], iframe' ) ?? map;
+
+		if ( target === map ) {
+			map.tabIndex = -1;
+		}
+
+		target.focus( { preventScroll: true } );
+	} ).observe( map, { childList: true } );
+}
+
 store( 'groups-site/venue-map', {
 	callbacks: {
 		init() {
@@ -33,6 +90,7 @@ store( 'groups-site/venue-map', {
 				}
 			} );
 
+			keepFocusThroughSwap( ref );
 			observer.observe( ref );
 		},
 	},

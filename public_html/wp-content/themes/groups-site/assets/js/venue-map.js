@@ -25,10 +25,14 @@ import { getElement, store, withScope } from '@wordpress/interactivity';
  * removes a focused element: focus falls back to the page, and a screen
  * reader starts again from the top.
  *
- * So this remembers what was last focused inside the map. When the map's
- * contents are replaced and that element is gone, focus moves to the live
- * map: Leaflet's container, which is named after the venue, or the embedded
- * map's frame, or failing those the wrapper itself.
+ * So this remembers what is focused inside the map. When the map's contents
+ * are replaced and that element is gone, focus moves to the live map:
+ * Leaflet's container, which is named after the venue, or the embedded map's
+ * frame, or failing those the wrapper itself.
+ *
+ * Someone who has left the map keeps their place. That includes clicking on
+ * an empty part of the page, which puts focus nowhere in particular: still a
+ * choice, and not one to undo by pulling them back when the map arrives.
  *
  * @param {HTMLElement} map The venue map's wrapper.
  */
@@ -39,12 +43,20 @@ function keepFocusThroughSwap( map ) {
 		focused = event.target;
 	} );
 
-	// Focus moving on is not the same as its element being taken away. Chrome
-	// reports both here, but only the first names where focus went.
-	map.addEventListener( 'focusout', ( event ) => {
-		if ( event.relatedTarget ) {
-			focused = null;
-		}
+	// An element that loses focus is forgotten, unless it lost it by being
+	// removed. Chrome reports a removal here before it happens, so the two
+	// look the same until the script doing the removing has finished. An
+	// element that was only left behind is by then still in the page, and no
+	// longer the focused one. One that is still focused belongs to a window
+	// its visitor has switched away from, and will come back to.
+	map.addEventListener( 'focusout', ( { target } ) => {
+		window.queueMicrotask( () => {
+			const { activeElement } = map.ownerDocument;
+
+			if ( focused === target && target.isConnected && activeElement !== target ) {
+				focused = null;
+			}
+		} );
 	} );
 
 	new window.MutationObserver( () => {

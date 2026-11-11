@@ -899,7 +899,8 @@ function get_timezone( string $timezone ): DateTimeZone {
  * A short plain-text description of an event.
  *
  * Only the blocks the event form edits as the description
- * (`Defaults\filter_to_description_blocks()`). An event created or edited in
+ * (`Defaults\filter_to_description_blocks()`), and Classic blocks, which hold
+ * nothing but prose. An event created or edited in
  * wp-admin also carries GatherPress's own blocks, and their saved markup is
  * interface text: "Add to calendar Google Calendar iCal … Login Required".
  *
@@ -917,7 +918,7 @@ function get_description( \WP_Post $post ): string {
 		// The front end always loads on this network; without it, say nothing
 		// rather than risk the interface text.
 		$text = function_exists( 'WordCamp\Groups\Frontend\Defaults\filter_to_description_blocks' )
-			? serialize_blocks( filter_to_description_blocks( parse_blocks( $post->post_content ) ) )
+			? serialize_blocks( filter_to_description_blocks( unwrap_classic_blocks( parse_blocks( $post->post_content ) ) ) )
 			: '';
 	}
 
@@ -933,6 +934,31 @@ function get_description( \WP_Post $post ): string {
 	$text = wp_strip_all_tags( strip_shortcodes( (string) $text ), true );
 
 	return decode( wp_trim_words( $text, DESCRIPTION_WORDS, '…' ) );
+}
+
+/**
+ * Turn Classic blocks back into the plain HTML they hold.
+ *
+ * The editor saves a Classic block as bare HTML, and the description filter
+ * keeps bare HTML. But only at the top level, and only while the editor has
+ * the classic editor loaded to fall back on. Inside a group or a column, or
+ * without that fallback, the same block is saved between `wp:freeform`
+ * delimiters. That gives it a name, the name isn't one the event form edits,
+ * and the filter dropped what is as much prose as a paragraph.
+ *
+ * @param array $blocks Parsed blocks.
+ * @return array The same blocks, with every Classic block left unnamed.
+ */
+function unwrap_classic_blocks( array $blocks ): array {
+	foreach ( $blocks as &$block ) {
+		if ( 'core/freeform' === $block['blockName'] ) {
+			$block['blockName'] = null;
+		}
+
+		$block['innerBlocks'] = unwrap_classic_blocks( $block['innerBlocks'] );
+	}
+
+	return $blocks;
 }
 
 /**

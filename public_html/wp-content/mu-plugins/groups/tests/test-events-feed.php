@@ -882,6 +882,61 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
+	 * What's written in a Classic block is part of the description. Saved
+	 * between `wp:freeform` delimiters it used to be dropped as a block the
+	 * event form doesn't edit, though the same words saved bare were kept.
+	 *
+	 * @covers \WordCamp\Groups\Events_Feed\get_description
+	 * @covers \WordCamp\Groups\Events_Feed\unwrap_classic_blocks
+	 *
+	 * @dataProvider provide_content_with_a_classic_block
+	 *
+	 * @param string $content Event content with a Classic block in it.
+	 */
+	public function test_description_includes_classic_blocks( string $content ) {
+		$post = new \WP_Post(
+			(object) array(
+				'post_content' => $content,
+				'post_excerpt' => '',
+			)
+		);
+
+		$this->assertSame( 'Short intro. Written in the classic editor. See you there.', Events_Feed\get_description( $post ) );
+	}
+
+	/**
+	 * The same three lines, with the middle one in a Classic block saved each
+	 * way the editor saves one. A block that draws a control still stays out.
+	 *
+	 * @return array[]
+	 */
+	public function provide_content_with_a_classic_block(): array {
+		$intro   = '<!-- wp:paragraph --><p>Short intro.</p><!-- /wp:paragraph -->';
+		$outro   = '<!-- wp:paragraph --><p>See you there.</p><!-- /wp:paragraph -->';
+		$classic = '<!-- wp:freeform --><p>Written in the <strong>classic</strong> editor.</p><!-- /wp:freeform -->';
+		$control = '<!-- wp:gatherpress/add-to-calendar --><div class="wp-block-gatherpress-add-to-calendar"><a href="#">Add to calendar</a></div><!-- /wp:gatherpress/add-to-calendar -->';
+
+		return array(
+			'saved bare, at the top level' => array(
+				$intro . "\n\n<p>Written in the <strong>classic</strong> editor.</p>\n\n" . $outro,
+			),
+			'saved between delimiters'     => array(
+				$intro . $classic . $outro,
+			),
+			'inside a group'               => array(
+				'<!-- wp:group --><div class="wp-block-group">' . $intro . $classic . $control . '</div><!-- /wp:group -->' . $outro,
+			),
+			'inside a column'              => array(
+				'<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column">'
+					. $intro . $classic
+					. '</div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column">'
+					. $control . $outro
+					. '</div><!-- /wp:column --></div><!-- /wp:columns -->',
+			),
+		);
+	}
+
+	/**
 	 * A series' occurrence rows outlive it being trashed, drafted or made
 	 * private; only deleting it for good removes them. So the occurrence read
 	 * has to check the series itself.

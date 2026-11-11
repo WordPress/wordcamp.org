@@ -487,6 +487,14 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				),
 				'Doors at six. Bring a laptop Bring a question',
 			),
+			// A Classic block is prose too, though it isn't a block the event form edits.
+			'a Classic block'                  => array(
+				array(
+					'post_content' => '<!-- wp:paragraph --><p>Doors at six.</p><!-- /wp:paragraph -->'
+						. '<!-- wp:freeform --><p>Parking is behind the hall.</p><!-- /wp:freeform -->',
+				),
+				'Doors at six. Parking is behind the hall.',
+			),
 			'no more than thirty words'        => array(
 				array( 'post_content' => implode( ' ', array_fill( 0, 40, 'word' ) ) ),
 				implode( ' ', array_fill( 0, 30, 'word' ) ) . '&hellip;',

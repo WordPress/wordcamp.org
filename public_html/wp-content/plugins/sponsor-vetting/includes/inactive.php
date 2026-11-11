@@ -2,8 +2,8 @@
 /**
  * The Inactive status: a vetting request dropped without a decision, so nothing is left pending on it.
  *
- * A daily job moves companies out of Compliance Requested once no sponsorship waiting on the request has an event
- * still to come. Going Inactive cancels what was pending, and requesting vetting again for one of those camp
+ * A daily job moves companies out of Compliance Requested once the sponsor hasn't replied in COMPLIANCE_REPLY_DAYS,
+ * or no sponsorship waiting on the request has an event still to come. Going Inactive cancels what was pending, and requesting vetting again for one of those camp
  * sponsors reopens it, which puts the company back in the queue (see queue_company()).
  *
  * @package WordCamp\Sponsor_Vetting
@@ -30,8 +30,8 @@ function schedule_inactive_check(): void {
 add_action( 'admin_init', __NAMESPACE__ . '\schedule_inactive_check' );
 
 /**
- * Moves each company in Compliance Requested to Inactive once none of its pending sponsorships has an event still
- * to come, or it has none.
+ * Moves each company in Compliance Requested to Inactive once its sponsor hasn't replied in COMPLIANCE_REPLY_DAYS,
+ * or none of its pending sponsorships has an event still to come, or it has none.
  *
  * A company whose sponsor replied is waiting on a reviewer, and one approved in Good Faith still owes its changes,
  * so both stay. A reply the hourly check hasn't flagged yet is read from FreeScout before the company moves.
@@ -57,8 +57,9 @@ function deactivate_stalled_companies(): void {
 		}
 
 		$pending = get_pending_sponsorships( $company_id );
+		$overdue = get_compliance_requested_at( $company_id ) < time() - COMPLIANCE_REPLY_DAYS * DAY_IN_SECONDS;
 
-		foreach ( $pending as $sponsorship_id ) {
+		foreach ( $overdue ? array() : $pending as $sponsorship_id ) {
 			if ( ! event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
 				continue 2;
 			}
@@ -83,18 +84,40 @@ function deactivate_stalled_companies(): void {
 				continue;
 			}
 
-			add_note(
-				$company_id,
-				$pending
-					? __( 'Moved to Inactive automatically: the events it was being vetted for are over.', 'wordcamporg' )
-					: __( 'Moved to Inactive automatically: no sponsorship is waiting on its compliance request.', 'wordcamporg' )
-			);
+			if ( ! $pending ) {
+				$note = __( 'Moved to Inactive automatically: no sponsorship is waiting on its compliance request.', 'wordcamporg' );
+			} elseif ( $overdue ) {
+				/* translators: %d: The number of days. */
+				$note = sprintf( _n( 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d day.', 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d days.', COMPLIANCE_REPLY_DAYS, 'wordcamporg' ), COMPLIANCE_REPLY_DAYS );
+			} else {
+				$note = __( 'Moved to Inactive automatically: the events it was being vetted for are over.', 'wordcamporg' );
+			}
+
+			add_note( $company_id, $note );
 		} finally {
 			acting_as_system( $was_system );
 		}
 	}
 }
 add_action( 'sv_check_inactive', __NAMESPACE__ . '\deactivate_stalled_companies' );
+
+/**
+ * When a company was last asked for its changes: its latest compliance request, or its last move into Compliance
+ * Requested if that's newer. Runs on Central.
+ *
+ * The newer of the two, as imported requests carry the Airtable row's last change rather than when they were sent.
+ *
+ * @param int $company_id The company.
+ * @return int A timestamp, or 0 if neither was recorded.
+ */
+function get_compliance_requested_at( int $company_id ): int {
+	$times = array_merge(
+		wp_list_pluck( get_conversations( $company_id, 'compliance' ), 'time' ),
+		wp_list_pluck( wp_list_filter( get_post_meta( $company_id, '_sv_status_change', false ), array( 'to' => 'sv-compliance-req' ) ), 'time' )
+	);
+
+	return $times ? (int) max( $times ) : 0;
+}
 
 /**
  * Whether the sponsor wrote last in the company's latest compliance conversation, flagging the reply if so.

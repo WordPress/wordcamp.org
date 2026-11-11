@@ -45,6 +45,11 @@ const REVETTING_MONTHS = 3;
 const GOOD_FAITH_DAYS = 15;
 
 /**
+ * How many days a sponsor has to reply to a compliance request before the company goes Inactive.
+ */
+const COMPLIANCE_REPLY_DAYS = 30;
+
+/**
  * The FreeScout mailbox emails are sent from, named as in its `FREESCOUT_COMMUNITY_MAILBOX_ID` constant.
  */
 const MAILBOX = 'community';

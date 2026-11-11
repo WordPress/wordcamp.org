@@ -58,16 +58,18 @@ class Test_Inactive extends Database_TestCase {
 	}
 
 	/**
-	 * A compliance request with nothing left waiting on it goes Inactive and cancels its pending sponsorships, as the
-	 * system; one with an event to come, a sponsor reply to read, or Good Faith changes owed stays.
+	 * A compliance request unanswered for 30 days, or with nothing left waiting on it, goes Inactive and cancels its
+	 * pending sponsorships, as the system; a recent one with an event to come, a sponsor reply to read, or Good Faith
+	 * changes owed stays.
 	 *
 	 * @dataProvider data_stalled_requests
 	 *
 	 * @param string[] $events   The events of its pending sponsorships: `ended`, `upcoming` or `canceled`.
 	 * @param array    $meta     The company's meta.
 	 * @param bool     $inactive Whether it goes Inactive.
+	 * @param int      $asked    How many days ago it moved into Compliance Requested.
 	 */
-	public function test_stalled_compliance_requests_go_inactive( array $events, array $meta, bool $inactive ): void {
+	public function test_stalled_compliance_requests_go_inactive( array $events, array $meta, bool $inactive, int $asked = 0 ): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$company_id = self::factory()->post->create(
@@ -77,6 +79,20 @@ class Test_Inactive extends Database_TestCase {
 				'meta_input'  => $meta,
 			)
 		);
+
+		if ( $asked ) {
+			delete_post_meta( $company_id, '_sv_status_change' );
+			add_post_meta(
+				$company_id,
+				'_sv_status_change',
+				array(
+					'user_id' => 0,
+					'time'    => strtotime( "-{$asked} days" ),
+					'from'    => 'sv-in-progress',
+					'to'      => 'sv-compliance-req',
+				)
+			);
+		}
 
 		$sponsorship_ids = array();
 		foreach ( $events as $event ) {
@@ -123,6 +139,7 @@ class Test_Inactive extends Database_TestCase {
 			'no pending sponsorship'         => array( array(), array(), true ),
 			'every event has ended'          => array( array( 'ended', 'ended' ), array(), true ),
 			'one event is still to come'     => array( array( 'ended', 'upcoming' ), array(), false ),
+			'no reply in 31 days'            => array( array( 'upcoming' ), array(), true, 31 ),
 			'the event to come was canceled' => array( array( 'ended', 'canceled' ), array(), true ),
 			'the sponsor replied'            => array( array( 'ended' ), array( '_sv_sponsor_replied' => time() ), false ),
 			'approved in Good Faith, no sponsorship pending' => array( array(), array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '+5 days' ) ) ), false ),

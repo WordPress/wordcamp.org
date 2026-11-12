@@ -146,3 +146,7 @@
 		gap: 6px;
 	}
 }
+
+.sv-flag-overdue {
+	color: #d63638;
+}

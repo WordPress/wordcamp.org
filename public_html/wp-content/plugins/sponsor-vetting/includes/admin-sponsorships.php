@@ -21,6 +21,7 @@ function get_sponsorship_columns( array $columns ): array {
 	return array(
 		'cb'          => $columns['cb'],
 		'title'       => __( 'Sponsorship', 'wordcamporg' ),
+		'sv_event'    => __( 'Event date', 'wordcamporg' ),
 		'sv_company'  => __( 'Company', 'wordcamporg' ),
 		'sv_status'   => __( 'Status', 'wordcamporg' ),
 		'sv_approved' => __( 'Approved', 'wordcamporg' ),
@@ -53,6 +54,11 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 			}
 			break;
 
+		case 'sv_event':
+			$start = get_listed_event_date( $sponsorship_id );
+			echo esc_html( $start ? format_event_date( $start ) : '—' );
+			break;
+
 		case 'sv_status':
 			echo esc_html( get_sponsorship_statuses()[ get_post_status( $sponsorship_id ) ] ?? '' );
 			break;
@@ -63,6 +69,46 @@ function render_sponsorship_column( string $column, int $sponsorship_id ): void 
 	}
 }
 add_action( 'manage_' . SPONSORSHIP_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_sponsorship_column', 10, 2 );
+
+/**
+ * Lets the sponsorship list be sorted by event date.
+ *
+ * @param array $columns The sortable columns.
+ * @return array
+ */
+function get_sortable_sponsorship_columns( array $columns ): array {
+	$columns['sv_event'] = array( 'sv_event', false );
+
+	return $columns;
+}
+add_filter( 'manage_edit-' . SPONSORSHIP_POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_sponsorship_columns' );
+
+/**
+ * Sorts the sponsorship list by event date, when the reviewer picks that column.
+ *
+ * @param string[]  $clauses The list's query clauses.
+ * @param \WP_Query $query   The list's query.
+ * @return string[]
+ */
+function sort_sponsorships( array $clauses, \WP_Query $query ): array {
+	global $wpdb;
+
+	if ( ! $query->is_main_query() || 'sv_event' !== $query->get( 'orderby' ) ) {
+		return $clauses;
+	}
+
+	$blog_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- The camp sites of every sponsorship, once per sorted list screen.
+		$wpdb->prepare(
+			"SELECT DISTINCT sv_blog.meta_value FROM {$wpdb->postmeta} sv_blog INNER JOIN {$wpdb->posts} sv_sponsorship ON sv_sponsorship.ID = sv_blog.post_id AND sv_sponsorship.post_type = %s WHERE sv_blog.meta_key = '_sv_blog_id'",
+			SPONSORSHIP_POST_TYPE
+		)
+	);
+	$dates    = get_event_dates( $blog_ids );
+
+	asort( $dates );
+
+	return sort_by_ids( $clauses, $query, "( SELECT CAST( sv_blog.meta_value AS UNSIGNED ) FROM {$wpdb->postmeta} sv_blog WHERE sv_blog.post_id = {$wpdb->posts}.ID AND sv_blog.meta_key = '_sv_blog_id' LIMIT 1 )", array_keys( $dates ) );
+}
 
 /**
  * Loads the companies and approvers of the sponsorships on the list screen at once, instead of one row at a time.
@@ -79,6 +125,30 @@ function prime_listed_sponsorships(): void {
 
 	_prime_post_caches( array_filter( array_map( 'intval', wp_list_pluck( $sponsorships, 'post_parent' ) ) ), false, false );
 	cache_users( array_filter( array_map( static fn( \WP_Post $sponsorship ): int => (int) get_post_meta( $sponsorship->ID, '_sv_approved_by', true ), $sponsorships ) ) );
+}
+
+/**
+ * Gets when a sponsorship's event starts on the list screen, looking up the sponsorships listed with it at once.
+ *
+ * Quick Edit redraws one row without the list's query, so a sponsorship that wasn't listed is looked up on its own.
+ *
+ * @param int $sponsorship_id The sponsorship.
+ * @return int The start date, as get_event_dates() returns it, or 0 for none.
+ */
+function get_listed_event_date( int $sponsorship_id ): int {
+	static $starts = array();
+
+	if ( ! array_key_exists( $sponsorship_id, $starts ) ) {
+		$listed   = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
+		$blog_ids = get_sponsorship_blog_ids( array_diff( array_merge( $listed, array( $sponsorship_id ) ), array_keys( $starts ) ) );
+		$dates    = get_event_dates( $blog_ids );
+
+		foreach ( $blog_ids as $id => $blog_id ) {
+			$starts[ $id ] = $dates[ $blog_id ] ?? 0;
+		}
+	}
+
+	return $starts[ $sponsorship_id ];
 }
 
 /**
@@ -144,7 +214,7 @@ add_filter( 'views_edit-' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\add_unlinke
  * @param \WP_Query $query The list's query.
  */
 function filter_sponsorships( \WP_Query $query ): void {
-	if ( ! is_admin() || ! $query->is_main_query() || SPONSORSHIP_POST_TYPE !== $query->get( 'post_type' ) ) {
+	if ( ! $query->is_main_query() ) {
 		return;
 	}
 
@@ -156,7 +226,17 @@ function filter_sponsorships( \WP_Query $query ): void {
 	}
 	// phpcs:enable
 }
-add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
+
+/**
+ * Filters the queries of the sponsorship list screen only.
+ */
+function load_sponsorship_list(): void {
+	if ( SPONSORSHIP_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsorships' );
+		add_filter( 'posts_clauses', __NAMESPACE__ . '\sort_sponsorships', 10, 2 );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_sponsorship_list' );
 
 /**
  * Replaces core's Publish box with the review boxes.
@@ -323,9 +403,11 @@ function render_camp_sponsor_box( \WP_Post $post ): void {
 		return;
 	}
 
-	$rows = array(
-		__( 'Event', 'wordcamporg' ) => get_event_name( $blog_id ),
-		__( 'Name', 'wordcamporg' )  => $sponsor['name'],
+	$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? 0;
+	$rows  = array(
+		__( 'Event', 'wordcamporg' )      => get_event_name( $blog_id ),
+		__( 'Event date', 'wordcamporg' ) => $start ? format_event_date( $start ) : '—',
+		__( 'Name', 'wordcamporg' )       => $sponsor['name'],
 	);
 	?>
 	<table class="form-table" role="presentation">

@@ -3591,6 +3591,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$this->assertStringContainsString( 'id="wporg-meetup-import-loop"', $page );
 		$this->assertStringContainsString( Meetup_Import\STEP_ACTION, $page );
 		$this->assertStringContainsString( 'Fetching the group from Meetup', $page );
+		$this->assertStringContainsString( 'id="wporg-meetup-import-eta"', $page );
+		$this->assertStringContainsString( 'data-eta-minutes="About %d minutes left."', $page );
 	}
 
 	/**

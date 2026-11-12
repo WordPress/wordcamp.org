@@ -152,11 +152,7 @@ function clear_location(): void {
 }
 
 /**
- * Get a country's name, remembering it for the rest of the request.
- *
- * `wcorg_get_country_name_from_code()` rebuilds and sorts the whole country list
- * on every call, which adds up when the list of groups labels every group.
- * Names are localized, so they're remembered per locale.
+ * A country's name, remembered per locale: the lookup rebuilds the whole country list on every call.
  */
 function get_country_name( string $country_code ): string {
 	static $names = array();

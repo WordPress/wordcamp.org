@@ -2,9 +2,6 @@
 /**
  * Server-side rendering for the wporg/groups-directory block.
  *
- * The search is a plain GET form, so a search is a link that can be shared
- * and the page works without JavaScript.
- *
  * @package WordCamp\Groups\Frontend
  */
 

@@ -12,32 +12,23 @@ require_once dirname( __DIR__, 3 ) . '/sunrise-groups.php';
 /**
  * Coverage for the list of every group, at `/group/`.
  *
- * The fixture's "root" site is the one `Groups_TestCase` builds with
- * `GROUPS_ROOT_BLOG_ID`. The groups listed are created here, because the
- * list never includes the root.
- *
  * @group groups
  */
 class Test_Groups_Directory extends Groups_TestCase {
 	/**
-	 * Group site IDs, keyed by a short name.
-	 *
-	 * @var int[]
+	 * @var int[] Group site IDs, keyed by a short name.
 	 */
 	protected static $groups = array();
 
 	/**
-	 * `$_SERVER` and `$_GET` before the test, which the request helpers overwrite.
-	 *
-	 * @var array
+	 * @var array `$_SERVER` and `$_GET` before the test.
 	 */
 	protected $superglobals = array();
 
 	/**
-	 * Create the groups once: a site takes long enough to build that doing it
-	 * per test would dominate the suite.
+	 * Create the groups once; the list never includes the fixture's root site.
 	 *
-	 * @param \WP_UnitTest_Factory $factory Shared fixture factory.
+	 * @param \WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		parent::wpSetUpBeforeClass( $factory );
@@ -60,7 +51,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 				)
 			);
 
-			// Through the option, so the name is stored escaped as it is on a real site.
+			// Through the option, so the name is stored escaped as on a real site.
 			update_blog_option( $site_id, 'blogname', $name );
 
 			if ( $type ) {
@@ -92,7 +83,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * Start each test with no cached list and the request as it was.
+	 * Start each test with no cached list.
 	 */
 	protected function setUp(): void {
 		parent::setUp();
@@ -115,9 +106,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 
 	/**
 	 * Make the current request look like one for the given address.
-	 *
-	 * @param string $uri    Request URI.
-	 * @param string $method Request method.
 	 */
 	protected function set_request( string $uri, string $method = 'GET' ): void {
 		$_SERVER['REQUEST_METHOD'] = $method;
@@ -130,9 +118,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 
 	/**
 	 * The names on the list, in order.
-	 *
-	 * @param array[] $groups Groups, as `get_groups()` returns them.
-	 * @return string[]
 	 */
 	protected function names( array $groups ): array {
 		return wp_list_pluck( $groups, 'name' );
@@ -159,8 +144,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 			array( 'GET', '/group/?q=s%C3%A3o+paulo%2C+brazil' ),
 		);
 
-		// Each of these is something else the root's front page would answer
-		// if it were let through, or a request that could carry one.
 		$redirected = array(
 			array( 'POST', '/group/' ),
 			array( 'POST', '/group/?q=berlin' ),
@@ -197,8 +180,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 
 	/**
 	 * The query var the redirect allows is the one the search field submits.
-	 * They are spelled out in two files, because the redirect runs before
-	 * this plugin loads.
 	 *
 	 * @covers \WordCamp\Sunrise\Groups\is_directory_request
 	 */
@@ -226,7 +207,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 		$this->set_request( '/group/' );
 		$this->assertTrue( Groups_Directory\is_directory_request() );
 
-		// The same address, while a group's site is the current one.
 		switch_to_blog( self::$groups['berlin'] );
 		$this->assertFalse( Groups_Directory\is_directory_request() );
 		restore_current_blog();
@@ -236,7 +216,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * The list is drawn with the group sites' theme, whatever the root has.
+	 * The list is drawn with the group sites' theme, and only the list.
 	 */
 	public function test_the_list_uses_the_group_theme() {
 		$stylesheet = get_option( 'stylesheet' );
@@ -249,7 +229,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 		$this->assertSame( Groups_Directory\THEME, get_option( 'stylesheet' ) );
 		$this->assertSame( Groups_Directory\PARENT_THEME, get_option( 'template' ) );
 
-		// The root's login, cron and admin keep whatever theme it has.
 		$this->set_request( '/group/wp-login.php' );
 
 		$this->assertSame( $stylesheet, get_option( 'stylesheet' ) );
@@ -269,8 +248,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * A root site with no character set still serves the list as UTF-8, and
-	 * one that has a setting keeps it.
+	 * A missing setting gets a default on the list; an existing one is kept.
 	 */
 	public function test_missing_settings_get_a_default_on_the_list() {
 		delete_option( 'blog_charset' );
@@ -296,7 +274,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 	public function test_lists_active_groups_alphabetically() {
 		$groups = Groups_Directory\get_groups();
 
-		// Case and accents don't decide the order.
 		$this->assertSame(
 			array( 'ankara wordpress', 'GatherPress Huddle', "Tom & Jerry's Club", 'WordPress Berlin', 'WP Meetup İstanbul' ),
 			$this->names( $groups )
@@ -325,7 +302,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * A group whose name was never set would be a row with nothing to click.
+	 * A group with no name is left out.
 	 */
 	public function test_unnamed_group_is_left_out() {
 		update_blog_option( self::$groups['berlin'], 'blogname', '' );
@@ -352,9 +329,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 	 * A search looks in the name, the city and the country.
 	 *
 	 * @dataProvider data_searches
-	 *
-	 * @param string   $term     What was searched for.
-	 * @param string[] $expected The names that should match, in order.
 	 */
 	public function test_search( string $term, array $expected ) {
 		$this->assertSame(
@@ -364,7 +338,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * Searches and the groups they should find.
+	 * Searches and the names they should find.
 	 */
 	public function data_searches(): array {
 		$everything = array( 'ankara wordpress', 'GatherPress Huddle', "Tom & Jerry's Club", 'WordPress Berlin', 'WP Meetup İstanbul' );
@@ -425,12 +399,11 @@ class Test_Groups_Directory extends Groups_TestCase {
 		$this->assertSame( 'q', $tags->get_attribute( 'name' ) );
 		$this->assertSame( 'São "Paulo"', $tags->get_attribute( 'value' ) );
 
-		// Nothing is left that would search the root site's posts.
 		$this->assertStringNotContainsString( 'name="s"', $form );
 	}
 
 	/**
-	 * The block is registered even though the root site may not run GatherPress.
+	 * The block is registered without depending on GatherPress.
 	 */
 	public function test_block_is_registered() {
 		$this->assertTrue( \WP_Block_Type_Registry::get_instance()->is_registered( 'wporg/groups-directory' ) );
@@ -465,7 +438,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 		);
 		$this->assertStringContainsString( 'Berlin, Germany', $html );
 
-		// Escaped once: the name is stored escaped and decoded before it's printed.
+		// Escaped once, although the name is stored escaped.
 		$this->assertStringContainsString( '>Tom &amp; Jerry&#039;s Club</a>', $html );
 
 		$this->assertStringNotContainsString( 'Archived Hamburg', $html );
@@ -541,7 +514,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * With no groups at all, the page says so rather than showing an empty list.
+	 * With no groups at all, the page says so.
 	 */
 	public function test_block_shows_an_empty_network() {
 		wp_cache_set( Groups_Directory\CACHE_KEY, array(), Groups_Directory\CACHE_GROUP );
@@ -555,7 +528,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * The list doesn't advertise the root's feeds and APIs, which redirect.
+	 * The list drops the head links to the root's feeds and APIs; a group's page keeps them.
 	 */
 	public function test_list_does_not_advertise_the_roots_feeds() {
 		$hooks = array(
@@ -564,17 +537,10 @@ class Test_Groups_Directory extends Groups_TestCase {
 			array( 'template_redirect', 'rest_output_link_header', 11 ),
 		);
 
-		// Put back whatever an earlier test, or this one, takes away.
-		$restore = array();
-
 		foreach ( $hooks as list( $hook, $callback, $priority ) ) {
-			if ( false === has_action( $hook, $callback ) ) {
-				add_action( $hook, $callback, $priority );
-				$restore[] = array( $hook, $callback, $priority );
-			}
+			add_action( $hook, $callback, $priority );
 		}
 
-		// A group's page keeps them: its feeds and APIs are real.
 		$this->set_request( '/group/directory-berlin/' );
 		Groups_Directory\remove_discovery_links();
 
@@ -585,14 +551,8 @@ class Test_Groups_Directory extends Groups_TestCase {
 		$this->set_request( '/group/' );
 		Groups_Directory\remove_discovery_links();
 
-		foreach ( $hooks as list( $hook, $callback, $priority ) ) {
+		foreach ( $hooks as list( $hook, $callback ) ) {
 			$this->assertFalse( has_action( $hook, $callback ), "$hook: $callback" );
-
-			add_action( $hook, $callback, $priority );
-		}
-
-		foreach ( $restore as list( $hook, $callback, $priority ) ) {
-			remove_action( $hook, $callback, $priority );
 		}
 	}
 }

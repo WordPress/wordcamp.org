@@ -52,12 +52,6 @@ function register_blocks(): void {
 
 /**
  * Register one of this mu-plugin's blocks from its build directory.
- *
- * Separate from `register_blocks()` for the list of groups
- * (`inc/groups-directory.php`), which is drawn on the network root, where
- * GatherPress and so the rest of these blocks may not load.
- *
- * @param string $block The block's directory name under `build/blocks/`.
  */
 function register_block( string $block ): void {
 	$block_dir  = dirname( __DIR__ ) . '/build/blocks/' . $block;

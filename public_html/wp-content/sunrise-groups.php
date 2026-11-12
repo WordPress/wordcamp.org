@@ -174,26 +174,12 @@ function is_reachable_root_endpoint() {
 }
 
 /**
- * Whether the current request is for the list of groups at `/group/`.
+ * Whether the current request is for the list of groups at `/group/` (#2036).
  *
- * The network root has no content of its own, but it is the one URL on the
- * network that isn't a group, so it's where the list of every group lives
- * (#2036). `wporg-groups-frontend/inc/groups-directory.php` renders it.
- *
- * Like `is_reachable_root_endpoint()`, this is exact on purpose. The root is
- * a WordPress site with plain permalinks, so its front page answers every
- * public query var: `?rest_route=/wp/v2/users` is the REST API, `?feed=rss2`
- * a feed, `?p=1` a post, and so on. Only a request that can't be anything but
- * the list gets through:
- *
- * - `GET` or `HEAD`. WordPress reads its query vars from the body of a `POST`
- *   before the query string, so a `POST` could ask for any of the above while
- *   its URL looked like the list's.
- * - The path is exactly `/group/`.
- * - The only query var is the list's search, `q`, and it's a string.
- *
- * Anything else falls through to the redirect to the events root, as before.
- * That includes a link to the list with a tracking parameter added to it.
+ * Exact on purpose: the root's front page answers any public query var
+ * (`?rest_route=`, `?feed=`, `?p=`), and WordPress reads those from a `POST`
+ * body first. So only a `GET` or `HEAD` for `/group/` with nothing but the
+ * list's search, `q`, gets through.
  *
  * @return bool
  */

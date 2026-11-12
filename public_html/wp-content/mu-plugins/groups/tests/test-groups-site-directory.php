@@ -10,10 +10,6 @@ require_once dirname( __DIR__, 3 ) . '/sunrise-groups.php';
 /**
  * Coverage for how the `groups-site` theme draws the list of every group.
  *
- * The list is served from the network root with this theme, so the parts of
- * the theme that describe a group have to describe the list there instead,
- * and stay as they are everywhere else.
- *
  * @group groups
  */
 class Test_Groups_Site_Directory extends Groups_TestCase {
@@ -21,16 +17,14 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 	const THEME_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/';
 
 	/**
-	 * `$_SERVER` and `$_GET` before the test, which the request helpers overwrite.
-	 *
-	 * @var array
+	 * @var array `$_SERVER` and `$_GET` before the test.
 	 */
 	protected $superglobals = array();
 
 	/**
 	 * Load the theme's functions; `groups-site` isn't the active theme here.
 	 *
-	 * @param \WP_UnitTest_Factory $factory Shared fixture factory.
+	 * @param \WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		parent::wpSetUpBeforeClass( $factory );
@@ -57,12 +51,7 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * Make the current request the one for the list, or for a group's page.
-	 *
-	 * The fixture's current site is the one with `GROUPS_ROOT_BLOG_ID`, so the
-	 * address is what tells the two apart.
-	 *
-	 * @param string $uri Request URI.
+	 * Make the current request look like one for the given address.
 	 */
 	protected function set_request( string $uri ): void {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -89,9 +78,6 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 
 	/**
 	 * The list gets its own template, and a group's pages keep theirs.
-	 *
-	 * Called directly, like the rest of this class: the theme hooks itself in
-	 * when its file loads, and the test framework resets hooks between tests.
 	 */
 	public function test_list_has_its_own_template() {
 		$templates = array( 'front-page.php', 'home.php', 'index.php' );
@@ -105,7 +91,6 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 			\WordCamp\Groups\Site\directory_template_hierarchy( $templates )
 		);
 	}
-
 
 	/**
 	 * That template is the theme's header and footer around the list block.
@@ -131,7 +116,6 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 		$this->assertSame( array( 'header', 'footer' ), $parts );
 		$this->assertContains( 'wporg/groups-directory', $names );
 
-		// One `h1`, in the same header band as the theme's other inner pages.
 		$html = file_get_contents( self::THEME_DIR . 'templates/groups-directory.html' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template from disk.
 
 		$this->assertSame( 1, substr_count( $html, '<h1' ) );
@@ -139,8 +123,7 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * The list's navigation has no group to offer events, members or a login
-	 * for: it only leads to the events site.
+	 * The list's navigation only leads to the events site.
 	 */
 	public function test_list_navigation_leads_to_events() {
 		$this->set_request( '/group/' );
@@ -220,7 +203,7 @@ class Test_Groups_Site_Directory extends Groups_TestCase {
 	}
 
 	/**
-	 * Every group's footer links to the list, wherever the site is running.
+	 * Every group's footer links to the list.
 	 */
 	public function test_footer_links_to_the_list() {
 		$footer = file_get_contents( self::THEME_DIR . 'parts/footer.html' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template part from disk.

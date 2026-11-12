@@ -59,8 +59,7 @@ function bootstrap(): void {
 	// doesn't run GatherPress either.
 	Member_Joined\bootstrap();
 
-	// The list of groups is also served from the network root, and needs
-	// nothing from GatherPress.
+	// The list of groups is served from the network root, which may not run GatherPress.
 	Groups_Directory\bootstrap();
 
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {

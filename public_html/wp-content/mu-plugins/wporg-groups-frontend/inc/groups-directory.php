@@ -45,7 +45,6 @@ function bootstrap(): void {
 	add_filter( 'pre_option_stylesheet', __NAMESPACE__ . '\filter_stylesheet' );
 	add_filter( 'pre_option_template', __NAMESPACE__ . '\filter_template' );
 	add_action( 'init', __NAMESPACE__ . '\register_directory_block' );
-	add_action( 'wp', __NAMESPACE__ . '\remove_discovery_links' );
 
 	foreach ( array_keys( DEFAULT_OPTIONS ) as $option ) {
 		add_filter( "default_option_{$option}", __NAMESPACE__ . '\filter_default_option', 10, 2 );
@@ -92,25 +91,6 @@ function filter_template( $template ) {
  */
 function filter_default_option( $default_value, $option ) {
 	return is_directory_request() ? DEFAULT_OPTIONS[ $option ] : $default_value;
-}
-
-/**
- * Drop the head links to the root's feeds and APIs, which all redirect.
- */
-function remove_discovery_links(): void {
-	if ( ! is_directory_request() ) {
-		return;
-	}
-
-	remove_action( 'wp_head', 'feed_links', 2 );
-	remove_action( 'wp_head', 'feed_links_extra', 3 );
-	remove_action( 'wp_head', 'rsd_link' );
-	remove_action( 'wp_head', 'rest_output_link_wp_head' );
-	remove_action( 'template_redirect', 'rest_output_link_header', 11 );
-
-	if ( class_exists( '\GatherPress\Core\Calendar\Setup' ) ) {
-		remove_action( 'wp_head', array( \GatherPress\Core\Calendar\Setup::get_instance(), 'alternate_links' ) );
-	}
 }
 
 /**

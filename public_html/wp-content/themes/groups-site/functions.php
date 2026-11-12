@@ -724,21 +724,6 @@ add_filter( 'frontpage_template_hierarchy', __NAMESPACE__ . '\directory_template
 add_filter( 'home_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
 add_filter( 'index_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
 
-/**
- * Title the list of groups, not the placeholder root site.
- *
- * @param array $title
- * @return array
- */
-function directory_document_title( $title ) {
-	if ( ! is_groups_directory() ) {
-		return $title;
-	}
-
-	return array( 'title' => __( 'WordPress Groups', 'wordcamporg' ) );
-}
-add_filter( 'document_title_parts', __NAMESPACE__ . '\directory_document_title' );
-
 
 /**
  * GatherPress blocks the single-event template already renders itself.

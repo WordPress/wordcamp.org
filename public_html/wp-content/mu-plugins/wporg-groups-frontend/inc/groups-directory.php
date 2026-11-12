@@ -44,6 +44,7 @@ const DEFAULT_OPTIONS = array(
 function bootstrap(): void {
 	add_filter( 'pre_option_stylesheet', __NAMESPACE__ . '\filter_stylesheet' );
 	add_filter( 'pre_option_template', __NAMESPACE__ . '\filter_template' );
+	add_filter( 'request', __NAMESPACE__ . '\filter_request' );
 	add_action( 'init', __NAMESPACE__ . '\register_directory_block' );
 
 	foreach ( array_keys( DEFAULT_OPTIONS ) as $option ) {
@@ -94,6 +95,18 @@ function filter_default_option( $default_value, $option ) {
 }
 
 /**
+ * Make the list the root site's front page, whatever its permalinks make of the address.
+ *
+ * On production the root's home is the events site, so WordPress reads `/group/` as a page named "group" and answers 404.
+ *
+ * @param array $query_vars
+ * @return array
+ */
+function filter_request( $query_vars ) {
+	return is_directory_request() ? array() : $query_vars;
+}
+
+/**
  * Register the block that draws the list.
  */
 function register_directory_block(): void {
@@ -101,10 +114,10 @@ function register_directory_block(): void {
 }
 
 /**
- * The address of the list.
+ * The address of the list: where the root site lives, which on production isn't its home address.
  */
 function get_directory_url(): string {
-	return get_home_url( GROUPS_ROOT_BLOG_ID, '/' );
+	return get_site_url( GROUPS_ROOT_BLOG_ID, '/' );
 }
 
 /**

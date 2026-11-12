@@ -183,6 +183,26 @@ class Test_Groups_Directory extends Groups_TestCase {
 	}
 
 	/**
+	 * The list still loads, at its own address, when the root site's home is another site.
+	 */
+	public function test_list_survives_a_root_home_elsewhere() {
+		$url = Groups_Directory\get_directory_url();
+
+		update_option( 'home', 'https://events.wordpress.test' );
+
+		$this->assertSame( $url, Groups_Directory\get_directory_url() );
+
+		// What WordPress makes of `/group/` once the home address has no `/group/` in it.
+		$page_named_group = array( 'pagename' => 'group' );
+
+		$this->set_request( '/group/wp-login.php' );
+		$this->assertSame( $page_named_group, Groups_Directory\filter_request( $page_named_group ) );
+
+		$this->set_request( '/group/' );
+		$this->assertSame( array(), Groups_Directory\filter_request( $page_named_group ) );
+	}
+
+	/**
 	 * The list links to every active group, by name, with its location.
 	 */
 	public function test_list_shows_active_groups_by_name() {

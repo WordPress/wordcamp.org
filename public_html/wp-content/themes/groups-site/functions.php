@@ -619,6 +619,18 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
 function add_local_navigation_menus( $menus ) {
 	global $wp;
 
+	// The list of groups isn't a group: it has no events, members or login to offer.
+	if ( is_groups_directory() ) {
+		$menus['local-navigation'] = array(
+			array(
+				'label' => __( 'Upcoming events', 'wordcamporg' ),
+				'url'   => \WordCamp\Groups\Frontend\Groups_Directory\get_events_site_url( '/upcoming-events/' ),
+			),
+		);
+
+		return $menus;
+	}
+
 	// Return the visitor to the page they logged in or out from.
 	// `$wp->request` is the current path relative to the site's home, so
 	// this stays correct on path-based multisite; it's empty in the admin,
@@ -698,6 +710,16 @@ add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigati
  * @return array
  */
 function filter_site_breadcrumbs( $breadcrumbs ) {
+	// The network root is a placeholder whose own name isn't meant to be read.
+	if ( is_groups_directory() ) {
+		return array(
+			array(
+				'url'   => false,
+				'title' => __( 'WordPress Groups', 'wordcamporg' ),
+			),
+		);
+	}
+
 	if ( is_front_page() ) {
 		return array(
 			array(
@@ -762,6 +784,33 @@ function single_template_hierarchy( $templates ) {
 	return $templates;
 }
 add_filter( 'single_template_hierarchy', __NAMESPACE__ . '\single_template_hierarchy' );
+
+/**
+ * Whether this request is for the list of every group, at `/group/`.
+ */
+function is_groups_directory(): bool {
+	return function_exists( '\WordCamp\Groups\Frontend\Groups_Directory\is_directory_request' )
+		&& \WordCamp\Groups\Frontend\Groups_Directory\is_directory_request();
+}
+
+/**
+ * Render the list of groups with its own template.
+ *
+ * Hooked to three hierarchies: the root site's missing settings decide which one WordPress uses.
+ *
+ * @param string[] $templates
+ * @return string[]
+ */
+function directory_template_hierarchy( $templates ) {
+	if ( is_groups_directory() ) {
+		array_unshift( $templates, 'groups-directory' );
+	}
+
+	return $templates;
+}
+add_filter( 'frontpage_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'home_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'index_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
 
 
 /**

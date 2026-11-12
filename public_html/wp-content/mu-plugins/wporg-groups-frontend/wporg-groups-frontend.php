@@ -17,6 +17,7 @@ const VERSION = '0.2.0';
 require_once __DIR__ . '/inc/capabilities.php';
 require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/group-location.php';
+require_once __DIR__ . '/inc/groups-directory.php';
 require_once __DIR__ . '/inc/event-date-format.php';
 require_once __DIR__ . '/inc/event-timezone.php';
 require_once __DIR__ . '/inc/event-language.php';
@@ -57,6 +58,9 @@ function bootstrap(): void {
 	// The Meetup import adds members from the network root site, which
 	// doesn't run GatherPress either.
 	Member_Joined\bootstrap();
+
+	// The list of groups is served from the network root, which may not run GatherPress.
+	Groups_Directory\bootstrap();
 
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;

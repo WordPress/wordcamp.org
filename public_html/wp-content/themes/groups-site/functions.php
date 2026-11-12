@@ -73,6 +73,56 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
+ * Keep Jetpack's sharing styles off the members page, which never shows the buttons.
+ *
+ * @param bool $enqueue
+ * @return bool
+ */
+function skip_sharing_assets_on_members_page( $enqueue ) {
+	return is_page( 'members' ) ? false : $enqueue;
+}
+add_filter( 'sharing_enqueue_scripts', __NAMESPACE__ . '\skip_sharing_assets_on_members_page' );
+
+/**
+ * The current page's description: a public post's own words, the group's tagline otherwise.
+ */
+function get_meta_description(): string {
+	$text = '';
+	$post = is_singular() && ! is_front_page() ? get_queried_object() : null;
+
+	if (
+		$post instanceof \WP_Post &&
+		! post_password_required( $post ) &&
+		function_exists( '\WordCamp\Groups\Events_Feed\get_description' )
+	) {
+		$text = \WordCamp\Groups\Events_Feed\get_description( $post );
+	}
+
+	if ( '' === $text ) {
+		$text = get_bloginfo( 'description', 'display' );
+	}
+
+	// Escaped first, or trimming strips a tag written out as text: "the <button> element".
+	return wp_trim_words( esc_html( $text ), 30, '&hellip;' );
+}
+
+/**
+ * Print the page's meta description.
+ */
+function print_meta_description(): void {
+	if ( is_404() ) {
+		return;
+	}
+
+	$description = get_meta_description();
+
+	if ( '' !== $description ) {
+		printf( '<meta name="description" content="%s" />' . "\n", esc_attr( $description ) );
+	}
+}
+add_action( 'wp_head', __NAMESPACE__ . '\print_meta_description', 1 );
+
+/**
  * Give the post editor canvas a side gutter. See #1967.
  *
  * Not `styles.spacing.padding` in `theme.json`: root padding also hits
@@ -198,6 +248,44 @@ add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_archive_event
 function archive_event_card_image_sizes(): string {
 	return '(max-width: 480px) 90vw, (max-width: 781px) 46vw, (max-width: 1376px) 30vw, 414px';
 }
+
+/**
+ * `sizes` for each hero image, keyed by its block's class.
+ *
+ * Measured from the templates' layouts, so they change when a hero's layout does.
+ */
+const HERO_IMAGE_SIZES = array(
+	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
+	'groups-site-home-hero-image'  => '(max-width: 781px) calc(100vw - 140px), (max-width: 1428px) 35vw, 500px',
+);
+
+/**
+ * Give a hero image its real `sizes`. Core's default says it fills the viewport.
+ *
+ * Matched by the block's class, because the event flyer draws the same image
+ * at another size.
+ *
+ * @param string $sizes
+ * @return string
+ */
+function hero_image_sizes( $sizes ) {
+	$block = \WP_Block_Supports::$block_to_render;
+
+	if ( 'core/post-featured-image' !== ( $block['blockName'] ?? '' ) ) {
+		return $sizes;
+	}
+
+	$classes = explode( ' ', $block['attrs']['className'] ?? '' );
+
+	foreach ( HERO_IMAGE_SIZES as $class => $hero_sizes ) {
+		if ( in_array( $class, $classes, true ) ) {
+			return $hero_sizes;
+		}
+	}
+
+	return $sizes;
+}
+add_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\hero_image_sizes' );
 
 /**
  * Prime the featured-image cache for the theme's event card grids.
@@ -951,6 +1039,39 @@ function label_the_online_event_link( $block_content, $parsed_block ) {
 	return $tags->get_updated_html();
 }
 add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
+
+/**
+ * Hold a venue's interactive map back until it scrolls into view.
+ *
+ * Points the block's `data-wp-init` at `assets/js/venue-map.js`. A static map
+ * has none and is left alone.
+ *
+ * @param string $block_content
+ * @return string
+ */
+function defer_venue_map( $block_content ) {
+	$tags = new \WP_HTML_Tag_Processor( (string) $block_content );
+
+	if ( ! $tags->next_tag() || 'callbacks.init' !== $tags->get_attribute( 'data-wp-init' ) ) {
+		return $block_content;
+	}
+
+	wp_enqueue_script_module(
+		'groups-site-venue-map',
+		get_theme_file_uri( 'assets/js/venue-map.js' ),
+		array( '@wordpress/interactivity' ),
+		filemtime( get_theme_file_path( 'assets/js/venue-map.js' ) ),
+		array(
+			'in_footer'     => true,
+			'fetchpriority' => 'low',
+		)
+	);
+
+	$tags->set_attribute( 'data-wp-init', 'groups-site/venue-map::callbacks.init' );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/venue-map', __NAMESPACE__ . '\defer_venue_map' );
 
 /**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.

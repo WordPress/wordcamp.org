@@ -921,7 +921,10 @@ function get_description( \WP_Post $post ): string {
 			: '';
 	}
 
-	$text = preg_replace( '/<!--.*?-->/s', '', $text );
+	// Leave a space where a block or a block-level element ends, or blocks
+	// saved back to back run together: "…a charger.Your questions…".
+	$text = preg_replace( '/<!--.*?-->/s', ' ', $text );
+	$text = preg_replace( '#</(?:p|li|h[1-6]|blockquote|pre|div|figcaption|t[dh]|d[dt])>|<[bh]r\b[^>]*>#i', '$0 ', (string) $text );
 	$text = wp_strip_all_tags( strip_shortcodes( (string) $text ), true );
 
 	return decode( wp_trim_words( $text, DESCRIPTION_WORDS, '…' ) );

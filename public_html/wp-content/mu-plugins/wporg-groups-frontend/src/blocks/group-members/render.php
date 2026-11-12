@@ -18,9 +18,9 @@ use function WordCamp\Groups\Frontend\Member_Joined\describe_join;
 if ( ! is_user_logged_in() ) :
 	?>
 	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'wporg-group-members' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-		<h2 class="wporg-section-heading wporg-group-members__heading">
+		<h1 class="wporg-section-heading wporg-group-members__heading">
 			<?php esc_html_e( 'Members', 'wordcamporg' ); ?>
-		</h2>
+		</h1>
 		<p class="wporg-group-members__login">
 			<?php
 			printf(
@@ -133,7 +133,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<h2 class="wporg-section-heading wporg-group-members__heading">
+	<h1 class="wporg-section-heading wporg-group-members__heading">
 		<?php
 		echo esc_html(
 			sprintf(
@@ -142,7 +142,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			)
 		);
 		?>
-	</h2>
+	</h1>
 
 	<?php if ( $renders_role_switcher ) : ?>
 		<div

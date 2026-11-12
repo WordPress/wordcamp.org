@@ -476,6 +476,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
 
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
 		$this->assertStringContainsString( 'wporg-group-members__login', $output );
 		$this->assertStringContainsString( wp_login_url(), html_entity_decode( $output ) );
 		$this->assertStringNotContainsString( 'Hidden Member Name', $output );
@@ -498,6 +499,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
 
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
 		$this->assertStringContainsString( 'Listed Member Name', $output );
 		$this->assertStringNotContainsString( 'wporg-group-members__login', $output );
 	}

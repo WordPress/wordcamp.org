@@ -152,6 +152,19 @@ function clear_location(): void {
 }
 
 /**
+ * Get a country's name, remembering it for the rest of the request.
+ *
+ * `wcorg_get_country_name_from_code()` rebuilds and sorts the whole country list
+ * on every call, which adds up when the list of groups labels every group.
+ * Names are localized, so they're remembered per locale.
+ */
+function get_country_name( string $country_code ): string {
+	static $names = array();
+
+	return $names[ get_locale() ][ $country_code ] ??= (string) wcorg_get_country_name_from_code( $country_code );
+}
+
+/**
  * Build the public location label, or an empty string when unspecified.
  *
  * A stored country code that no longer resolves is dropped from the label rather
@@ -169,7 +182,7 @@ function get_location_label(): string {
 	}
 
 	$city         = $location['city'];
-	$country_name = (string) wcorg_get_country_name_from_code( $location['countryCode'] );
+	$country_name = get_country_name( $location['countryCode'] );
 
 	if ( '' === $city || '' === $country_name ) {
 		return $city . $country_name;

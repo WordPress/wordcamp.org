@@ -1,0 +1,116 @@
+/**
+ * Groups Directory block styles.
+ *
+ * The list of every group, on the network root. It follows a group's events
+ * page: the same search field, then a count, then the list. The list is rows
+ * in one card rather than a grid of cards, because a group here is a name and
+ * a place, with no image to carry a card.
+ */
+
+/* An informational callout, on the same surface as the theme's other
+   callouts. The text says what the colour does, so nothing rests on the
+   colour alone. */
+.wporg-groups-directory__notice {
+	margin: 0 0 var(--wp--preset--spacing--30);
+	padding: var(--wp--preset--spacing--20);
+	border-radius: 4px;
+	background: var(--wp--preset--color--blueberry-4);
+	color: var(--wp--preset--color--charcoal-1);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+}
+
+/* Wide enough for its placeholder, and never wider than a narrow screen. */
+.wporg-groups-directory__search {
+	max-width: 360px;
+	margin-bottom: var(--wp--preset--spacing--30);
+}
+
+.wporg-groups-directory__count {
+	margin: 0 0 var(--wp--preset--spacing--10);
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+}
+
+/* The way back from a search: the field is required, so it can't be
+   submitted empty to clear it. */
+.wporg-groups-directory__reset {
+	margin-left: var(--wp--preset--spacing--10);
+}
+
+.wporg-groups-directory__list {
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	list-style: none;
+}
+
+/* The name and the place sit at either end of a row, and the place drops
+   under the name when the two don't fit side by side. */
+.wporg-groups-directory__group {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 4px var(--wp--preset--spacing--20);
+	padding: var(--wp--preset--spacing--20);
+}
+
+.wporg-groups-directory__group + .wporg-groups-directory__group {
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+/* On a narrow screen only the shortest rows would fit on one line, so every
+   place goes under its name and the rows read alike. */
+@media (max-width: 600px) {
+
+	.wporg-groups-directory__group {
+		flex-direction: column;
+	}
+}
+
+/* Two classes, because the parent theme's `:root a` resets a link's weight
+   and outranks one. */
+.wporg-groups-directory__group .wporg-groups-directory__name {
+	min-width: 0;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.wporg-groups-directory__location {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.wporg-groups-directory__location-icon {
+	flex: 0 0 auto;
+	width: 1em;
+	height: 1em;
+	fill: currentcolor;
+}
+
+.wporg-groups-directory__empty {
+	max-width: 52ch;
+	padding: var(--wp--preset--spacing--20) 0;
+}
+
+.wporg-groups-directory__empty p {
+	margin: 0;
+}
+
+.wporg-groups-directory__empty-title {
+	color: var(--wp--preset--color--charcoal-1);
+	font-weight: 600;
+}
+
+.wporg-groups-directory__empty-hint {
+	color: var(--wp--preset--color--charcoal-3);
+}

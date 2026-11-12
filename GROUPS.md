@@ -52,8 +52,8 @@ WordCamp-authored network-level glue code for the groups network (`events.wordpr
 
 WordCamp-authored front-end management UI for group sites on `events.wordpress.org`. Lets organizers create/edit GatherPress events without touching wp-admin, via a React modal talking to a REST API. Loaded only on the groups network via the `mu-plugins/groups/wporg-groups-frontend.php` stub above.
 
-- `inc/` — PHP: `rest.php` (REST API), `capabilities.php`, `defaults.php`, `rsvp-questions.php`, `modal.php`, `blocks.php`, `sponsors.php`, `my-events.php`, `notifications.php`, `class-members-controller.php`
-- `src/blocks/` — editor blocks (`group-settings`, `event-manage`, `event-rsvp`, `event-speakers`, `my-events`, `sponsors`, `group-members`, `group-membership`, `page-content`)
+- `inc/` — PHP: `rest.php` (REST API), `capabilities.php`, `defaults.php`, `rsvp-questions.php`, `modal.php`, `blocks.php`, `sponsors.php`, `my-events.php`, `notifications.php`, `class-members-controller.php`, `groups-directory.php` (the public list of every group at `events.wordpress.org/group/`, the one page the network root serves)
+- `src/blocks/` — editor blocks (`group-settings`, `event-manage`, `event-rsvp`, `event-speakers`, `my-events`, `sponsors`, `group-members`, `group-membership`, `page-content`, `groups-directory`)
 - `src/components/` — shared React components (e.g. recurrence controls)
 - `build/` — compiled JS/CSS output (built via `npm run build`, not committed to run)
 - `tests/`, `tests-js/` — PHPUnit and JS (Jest) tests
@@ -78,7 +78,7 @@ WordCamp-authored experimental GatherPress extension that stores recurring event
 
 Block theme (FSE) for group sites — the public-facing side of `events.wordpress.org` group sites (event pages, archives, venue pages, member pages).
 
-- `templates/` — page templates: `front-page.html`, `single-event.html`, `single-venue.html`, `archive-gatherpress_event.html`, `page-members.html`, `search.html`, `404.html`, etc.
+- `templates/` — page templates: `front-page.html`, `single-event.html`, `single-venue.html`, `archive-gatherpress_event.html`, `page-members.html`, `search.html`, `404.html`, etc. `groups-directory.html` is the list of every group; it's the only template rendered on the network root rather than on a group site.
 - `parts/` — `header.html`, `footer.html`
 - `patterns/` — reusable block patterns (`event-card.php`, `group-back-link.php`, `manage-event-cta.php`, etc.)
 - `assets/`, `theme.json`, `style.css`, `functions.php`

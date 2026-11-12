@@ -531,6 +531,22 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
 function add_local_navigation_menus( $menus ) {
 	global $wp;
 
+	/*
+	 * The list of groups isn't a group: it has no events, no members and
+	 * nothing to log in for. Its one route out is to the events site, for a
+	 * visitor whose group isn't on the list yet.
+	 */
+	if ( is_groups_directory() ) {
+		$menus['local-navigation'] = array(
+			array(
+				'label' => __( 'Upcoming events', 'wordcamporg' ),
+				'url'   => \WordCamp\Groups\Frontend\Groups_Directory\get_events_site_url( '/upcoming-events/' ),
+			),
+		);
+
+		return $menus;
+	}
+
 	// Return the visitor to the page they logged in or out from.
 	// `$wp->request` is the current path relative to the site's home, so
 	// this stays correct on path-based multisite; it's empty in the admin,
@@ -610,6 +626,17 @@ add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigati
  * @return array
  */
 function filter_site_breadcrumbs( $breadcrumbs ) {
+	// Named here rather than after the network root, a placeholder site whose
+	// own name was never meant to be read.
+	if ( is_groups_directory() ) {
+		return array(
+			array(
+				'url'   => false,
+				'title' => __( 'WordPress Groups', 'wordcamporg' ),
+			),
+		);
+	}
+
 	if ( is_front_page() ) {
 		return array(
 			array(
@@ -674,6 +701,60 @@ function single_template_hierarchy( $templates ) {
 	return $templates;
 }
 add_filter( 'single_template_hierarchy', __NAMESPACE__ . '\single_template_hierarchy' );
+
+/**
+ * Whether this request is for the list of every group, at `/group/`.
+ *
+ * `wporg-groups-frontend` decides: the list is served from the network root,
+ * which it renders with this theme for that one page. Everything in this file
+ * that describes a group, like its navigation and its breadcrumbs, has to
+ * step aside there.
+ */
+function is_groups_directory(): bool {
+	return function_exists( '\WordCamp\Groups\Frontend\Groups_Directory\is_directory_request' )
+		&& \WordCamp\Groups\Frontend\Groups_Directory\is_directory_request();
+}
+
+/**
+ * Render the list of groups with its own template.
+ *
+ * The network root is a placeholder with next to no settings, so which of
+ * WordPress's front page, blog home or index it counts as depends on options
+ * nobody set. The same filter is on all three, so the answer doesn't matter.
+ *
+ * @param string[] $templates Template file names, most specific first.
+ *
+ * @return string[] The templates to look for.
+ */
+function directory_template_hierarchy( $templates ) {
+	if ( is_groups_directory() ) {
+		array_unshift( $templates, 'groups-directory' );
+	}
+
+	return $templates;
+}
+add_filter( 'frontpage_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'home_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'index_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+
+/**
+ * Title the list of groups, in the browser tab and in search results.
+ *
+ * For the same reason as its breadcrumb: the title would otherwise be the
+ * placeholder site's name, with whatever the first post there is called.
+ *
+ * @param array $title The parts of the document title.
+ *
+ * @return array The parts to use.
+ */
+function directory_document_title( $title ) {
+	if ( ! is_groups_directory() ) {
+		return $title;
+	}
+
+	return array( 'title' => __( 'WordPress Groups', 'wordcamporg' ) );
+}
+add_filter( 'document_title_parts', __NAMESPACE__ . '\directory_document_title' );
 
 
 /**

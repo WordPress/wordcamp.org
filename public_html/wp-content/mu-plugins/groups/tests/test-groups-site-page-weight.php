@@ -7,13 +7,7 @@ defined( 'WPINC' ) || die();
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
 
 /**
- * Coverage for what keeps a group site's pages light.
- *
- * Each of these came out of a Lighthouse pass over a live group: a hero
- * image downloaded at several times its size, a map library loaded for a map
- * below the fold, sharing styles on a page with nothing to share, and no
- * description for search engines. All but the image size live in the
- * `groups-site` theme.
+ * What keeps a group site's pages light, from a Lighthouse pass.
  *
  * @group groups
  */
@@ -21,16 +15,12 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 	const THEME_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/';
 
-	/**
-	 * The tagline of the group these tests describe.
-	 */
 	const TAGLINE = 'Monthly meetups for people who build with WordPress';
 
 	/**
-	 * Load the theme's hooks. `groups-site` isn't the active theme in this
-	 * suite, so its `functions.php` isn't picked up on its own.
+	 * Load the theme's hooks: it isn't the active theme in this suite.
 	 *
-	 * @param \WP_UnitTest_Factory $factory Shared fixture factory.
+	 * @param \WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		parent::wpSetUpBeforeClass( $factory );
@@ -50,10 +40,6 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 	/**
 	 * Create a published event.
-	 *
-	 * @param array $args Post fields that differ from the defaults.
-	 *
-	 * @return int The event's post ID.
 	 */
 	private function create_event( array $args = array() ): int {
 		return self::factory()->post->create(
@@ -73,20 +59,13 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 	/**
 	 * Make an event the page being viewed.
-	 *
-	 * @param int $event_id The event's post ID.
 	 */
 	private function view_event( int $event_id ): void {
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 	}
 
 	/**
-	 * Render the featured image of a new event, in a block carrying a class,
-	 * and return its `<img>`.
-	 *
-	 * @param string $class_name The class the template gives the block.
-	 *
-	 * @return \WP_HTML_Tag_Processor A processor stopped on the image.
+	 * Render a new event's featured image in a block with this class, stopped on its `<img>`.
 	 */
 	private function render_featured_image( string $class_name ): \WP_HTML_Tag_Processor {
 		$event_id      = $this->create_event();
@@ -137,11 +116,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * The classes on every featured-image block in one of the theme's templates.
-	 *
-	 * @param string $template The template's file name.
-	 *
-	 * @return string[] One `className` per featured-image block.
+	 * The class on each featured-image block in a template.
 	 */
 	private function featured_image_classes( string $template ): array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk.
@@ -156,21 +131,17 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * A hero image tells the browser the width of the column it sits in.
-	 * Core's default says the viewport, and a desktop browser then downloads
-	 * a file several times too wide.
+	 * A hero image gets the `sizes` measured for its column.
 	 */
 	public function test_hero_images_describe_their_columns() {
 		foreach ( \WordCamp\Groups\Site\HERO_IMAGE_SIZES as $class_name => $sizes ) {
-			// Rendered outside a page's main loop the image is lazy, and core
-			// puts `auto` ahead of the width. A real hero is the page's first image.
+			// Outside the main loop the image is lazy, so core prefixes `auto`.
 			$this->assertSame( 'auto, ' . $sizes, $this->render_featured_image( $class_name )->get_attribute( 'sizes' ), $class_name );
 		}
 	}
 
 	/**
-	 * A hero's width is only true in the hero. The flyer draws the same
-	 * image across a printed page.
+	 * The flyer draws the same image at another size.
 	 */
 	public function test_other_featured_images_keep_cores_sizes() {
 		$image = $this->render_featured_image( 'groups-site-flyer__image' );
@@ -179,8 +150,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * Each template marks its hero image, and only that one, with the class
-	 * the theme sizes it by.
+	 * Each template marks only its hero image.
 	 */
 	public function test_templates_mark_their_hero_images() {
 		$this->assertSame( array( 'groups-site-event-hero-image' ), $this->featured_image_classes( 'single-event.html' ) );
@@ -189,10 +159,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * The network registers a size between `medium` and `medium_large`,
-	 * scaled and never cropped, so core offers it in the `srcset` of any
-	 * image. It's registered for every request on the network, not by the
-	 * theme, so a photo a Meetup import sideloads gets the file too.
+	 * Registered network-wide, not by the theme, so Meetup imports get it too.
 	 */
 	public function test_network_registers_a_card_sized_image() {
 		$this->assertSame( 10, has_action( 'after_setup_theme', 'WordCamp\\Groups\\GatherPress_Tweaks\\register_event_card_image_size' ) );
@@ -210,12 +177,10 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * An interactive map hands its start-up to the theme's script, which
-	 * waits for the map to be on screen.
+	 * An interactive map hands its start-up to the theme's script.
 	 */
 	public function test_interactive_venue_map_waits_until_it_is_on_screen() {
-		// The suite's active theme isn't `groups-site`, so point the lookup
-		// for the script's file at it.
+		// `groups-site` isn't the suite's active theme.
 		add_filter(
 			'theme_file_path',
 			static function ( $path, $file ) {
@@ -236,8 +201,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * A static map has nothing to start, so it's left alone and the script
-	 * stays off the page.
+	 * A static map has nothing to start.
 	 */
 	public function test_static_venue_map_is_left_alone() {
 		$map = '<div class="wp-block-gatherpress-venue-map" data-render-mode="static"><img src="map.png" alt="" /></div>';
@@ -248,10 +212,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * The deferral leans on two names inside GatherPress: the store its map
-	 * registers, and the callback that mounts the map. If a GatherPress
-	 * update renames either, the map stays a static image for good, and
-	 * nothing else would say so.
+	 * If GatherPress renames its store or callback, the map silently stays static.
 	 */
 	public function test_gatherpress_still_starts_its_map_from_the_callback_the_theme_defers() {
 		$block_dir = GATHERPRESS_CORE_PATH . '/build/blocks/venue-map/';
@@ -268,9 +229,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * The members page draws a member list in place of content, so Jetpack
-	 * has nowhere to put sharing buttons and no reason to load their styles.
-	 * Any other page still gets them.
+	 * Only the members page drops the sharing styles.
 	 */
 	public function test_members_page_loads_no_sharing_assets() {
 		add_filter( 'sharing_enqueue_scripts', 'WordCamp\\Groups\\Site\\skip_sharing_assets_on_members_page' );
@@ -299,9 +258,6 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	 * An event is described in its own words.
 	 *
 	 * @dataProvider provide_event_descriptions
-	 *
-	 * @param array  $post_fields The event's fields that differ from the defaults.
-	 * @param string $expected    The description of that event.
 	 */
 	public function test_event_is_described_in_its_own_words( array $post_fields, string $expected ) {
 		$this->view_event( $this->create_event( $post_fields ) );
@@ -311,8 +267,6 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 	/**
 	 * Events, and the description each should get.
-	 *
-	 * @return array[]
 	 */
 	public function provide_event_descriptions(): array {
 		return array(
@@ -320,12 +274,10 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				array(),
 				'An evening of talks, demos and questions about the web.',
 			),
-			// An excerpt someone wrote says it better than the first lines of the content.
 			'its excerpt, ahead of the content' => array(
 				array( 'post_excerpt' => 'Three talks and a <em>lot</em> of questions.' ),
 				'Three talks and a lot of questions.',
 			),
-			// A block that draws a control would leave its labels in the middle of the sentence.
 			'only the blocks that are prose'   => array(
 				array(
 					'post_content' => '<!-- wp:gatherpress/add-to-calendar --><div class="wp-block-gatherpress-add-to-calendar"><a href="#">Add to calendar</a></div><!-- /wp:gatherpress/add-to-calendar -->'
@@ -333,7 +285,6 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				),
 				'Bring a laptop.',
 			),
-			// The event form saves blocks with nothing between them.
 			'blocks saved back to back'        => array(
 				array(
 					'post_content' => '<!-- wp:paragraph --><p>Doors at six.</p><!-- /wp:paragraph -->'
@@ -350,8 +301,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * What's written on an event behind a password isn't public, so its
-	 * description is the group's.
+	 * A protected event's words aren't public.
 	 */
 	public function test_protected_event_is_described_by_the_group() {
 		update_option( 'blogdescription', self::TAGLINE );
@@ -369,8 +319,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * A page that isn't a single post, like the front page, is described by
-	 * the group's tagline.
+	 * Anything that isn't a single post gets the tagline.
 	 */
 	public function test_front_page_is_described_by_the_tagline() {
 		update_option( 'blogdescription', self::TAGLINE );
@@ -394,8 +343,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * With nothing to say, nothing is printed: a group with no tagline, or a
-	 * page that doesn't exist.
+	 * Nothing is printed for a group with no tagline, or on a 404.
 	 */
 	public function test_no_meta_tag_without_a_description() {
 		update_option( 'blogdescription', '' );
@@ -405,8 +353,7 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 		update_option( 'blogdescription', self::TAGLINE );
 
-		// This bootstrap defines `WP_ADMIN`, where a request for a missing
-		// post is never turned into a 404, so the query is told directly.
+		// The bootstrap defines `WP_ADMIN`, where a missing post never becomes a 404.
 		$GLOBALS['wp_query']->set_404();
 
 		$this->assertSame( '', get_echo( 'WordCamp\\Groups\\Site\\print_meta_description' ) );

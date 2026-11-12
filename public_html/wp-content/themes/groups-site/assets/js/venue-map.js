@@ -1,38 +1,16 @@
 /**
- * Mounts a venue's interactive map when it scrolls into view.
+ * Mounts a venue's interactive map when it scrolls into view, not at page load.
  *
- * GatherPress renders the map as a static image and swaps it for a live map
- * as soon as the page loads. On an event page the map sits below the fold on
- * most screens, so every visitor downloaded the map library and its tiles —
- * about 440KB with Google Maps — whether or not they scrolled that far.
- *
- * `defer_venue_map()` in functions.php points the map's `data-wp-init` at
- * this store instead of GatherPress's. This store waits until the map is on
- * screen, then runs GatherPress's own `init` with the element and context it
- * would have had at page load. The image stays in place until then, and stays
- * for good if GatherPress ever renames that callback.
+ * `defer_venue_map()` in functions.php points the map block at this store,
+ * which runs GatherPress's own `init` once the map is on screen.
  */
 // eslint-disable-next-line import/no-extraneous-dependencies -- WordPress serves this through its import map.
 import { getElement, store, withScope } from '@wordpress/interactivity';
 
 /**
- * Hands keyboard focus to the live map when the swap removes the element
- * that had it.
- *
- * The static map ends in attribution links, and tabbing to one is what
- * scrolls the map into view for someone using a keyboard. The live map then
- * replaces the link they have just reached. A browser doesn't say when it
- * removes a focused element: focus falls back to the page, and a screen
- * reader starts again from the top.
- *
- * So this remembers what is focused inside the map. When the map's contents
- * are replaced and that element is gone, focus moves to the live map:
- * Leaflet's container, which is named after the venue, or the embedded map's
- * frame, or failing those the wrapper itself.
- *
- * Someone who has left the map keeps their place. That includes clicking on
- * an empty part of the page, which puts focus nowhere in particular: still a
- * choice, and not one to undo by pulling them back when the map arrives.
+ * Moves keyboard focus to the live map when the swap removes the focused
+ * element. Tabbing to the static map's link is what scrolls it into view, and
+ * focus would otherwise fall back to the top of the page.
  *
  * @param {HTMLElement} map The venue map's wrapper.
  */
@@ -43,12 +21,8 @@ function keepFocusThroughSwap( map ) {
 		focused = event.target;
 	} );
 
-	// An element that loses focus is forgotten, unless it lost it by being
-	// removed. Chrome reports a removal here before it happens, so the two
-	// look the same until the script doing the removing has finished. An
-	// element that was only left behind is by then still in the page, and no
-	// longer the focused one. One that is still focused belongs to a window
-	// its visitor has switched away from, and will come back to.
+	// Forget an element the visitor left. Chrome also fires this for a removal,
+	// before it happens, so the check waits for the removing script to finish.
 	map.addEventListener( 'focusout', ( { target } ) => {
 		window.queueMicrotask( () => {
 			const { activeElement } = map.ownerDocument;
@@ -68,8 +42,7 @@ function keepFocusThroughSwap( map ) {
 
 		const { activeElement, body } = map.ownerDocument;
 
-		// Anywhere but the page itself means focus has already been put
-		// somewhere on purpose.
+		// Focus was already put somewhere else on purpose.
 		if ( activeElement !== body ) {
 			return;
 		}
@@ -89,8 +62,7 @@ store( 'groups-site/venue-map', {
 		init() {
 			const { ref } = getElement();
 
-			// `withScope` keeps this element and its context for later, so
-			// GatherPress's callback finds them when it finally runs.
+			// Keeps this element and context for GatherPress's callback to find later.
 			const mount = withScope( () => {
 				store( 'gatherpress/venue-map' ).callbacks?.init?.();
 			} );

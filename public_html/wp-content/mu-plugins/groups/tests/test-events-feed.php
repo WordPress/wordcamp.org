@@ -832,15 +832,11 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
-	 * Words in neighbouring blocks stay apart. The event form saves blocks
-	 * back to back, with no line break between them, and taking the markup
-	 * away used to run them together: "Short intro.What to bringA laptop".
+	 * Words in neighbouring blocks stay apart: not "Short intro.What to bringA laptop".
 	 *
 	 * @covers \WordCamp\Groups\Events_Feed\get_description
 	 *
 	 * @dataProvider provide_content_without_line_breaks
-	 *
-	 * @param string $content Event content with nothing between its blocks or elements.
 	 */
 	public function test_description_keeps_neighbouring_blocks_apart( string $content ) {
 		$post = new \WP_Post(
@@ -854,10 +850,7 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
-	 * The same four lines, saved in each shape that leaves no white space
-	 * between them.
-	 *
-	 * @return array[]
+	 * The same four lines, in each shape saved with no white space between them.
 	 */
 	public function provide_content_without_line_breaks(): array {
 		return array(

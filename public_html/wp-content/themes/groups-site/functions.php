@@ -73,16 +73,10 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
- * Keep Jetpack's sharing styles off the members page.
+ * Keep Jetpack's sharing styles off the members page, which never shows the buttons.
  *
- * Jetpack loads them on every page it could add sharing buttons to. It adds
- * the buttons to a page's content, and `templates/page-members.html` draws
- * the member list in place of any content, so that page loaded two
- * render-blocking stylesheets for buttons it never shows.
- *
- * @param bool $enqueue Whether Jetpack is about to load its sharing assets.
- *
- * @return bool Whether it should.
+ * @param bool $enqueue
+ * @return bool
  */
 function skip_sharing_assets_on_members_page( $enqueue ) {
 	return is_page( 'members' ) ? false : $enqueue;
@@ -90,19 +84,7 @@ function skip_sharing_assets_on_members_page( $enqueue ) {
 add_filter( 'sharing_enqueue_scripts', __NAMESPACE__ . '\skip_sharing_assets_on_members_page' );
 
 /**
- * The current page's description, for search results.
- *
- * An event, a post or a page is described in its own words, by the helper
- * that describes events in the network's feed: its excerpt, or failing that
- * the prose written on it. Blocks that draw something, like an RSVP button or
- * a calendar menu, are left out, or their labels would land in the middle of
- * the sentence.
- *
- * Everything else falls back to the group's tagline: the front page, the
- * events archive, the members list, and a page with nothing written on it.
- * So does an event behind a password, whose words aren't public.
- *
- * @return string The description, as plain text. Empty when there is nothing to say.
+ * The current page's description: a public post's own words, the group's tagline otherwise.
  */
 function get_meta_description(): string {
 	$text = '';
@@ -124,10 +106,7 @@ function get_meta_description(): string {
 }
 
 /**
- * Print the page's description for search engines.
- *
- * Group sites had none, so a search result showed whatever text the search
- * engine found first on the page.
+ * Print the page's meta description.
  */
 function print_meta_description(): void {
 	if ( is_404() ) {
@@ -270,22 +249,9 @@ function archive_event_card_image_sizes(): string {
 }
 
 /**
- * How wide each hero image is drawn, for its `sizes`.
+ * `sizes` for each hero image, keyed by its block's class.
  *
- * Keyed by the class the template gives the image's block. Each value is
- * never smaller than the image at any viewport width, so the browser can't
- * pick a file that's too small, and close enough that it doesn't pick one
- * that's far too big.
- *
- * An event's image fills the page between its two 20px gutters while the
- * hero's columns are stacked, up to 781px. Above that it takes 38% of the
- * content width, which is narrower than the viewport and stops growing at
- * 1160px.
- *
- * The front page's image sits inside a card inside a mat, which take 140px
- * off the stacked column between them. Side by side, the column is half of a
- * content width that stops growing at 1280px, and the image never passes 35%
- * of the viewport or 500px.
+ * Measured from the templates' layouts, so they change when a hero's layout does.
  */
 const HERO_IMAGE_SIZES = array(
 	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
@@ -293,23 +259,13 @@ const HERO_IMAGE_SIZES = array(
 );
 
 /**
- * Tell the browser how wide a hero image really is.
+ * Give a hero image its real `sizes`. Core's default says it fills the viewport.
  *
- * A hero image sits in one of the hero's two columns, but core's default
- * `sizes` says it fills the viewport. It's the first image on the page, so it
- * isn't lazy and core doesn't add `auto` either. Desktop browsers downloaded
- * a file three or four times wider than the space it was drawn in.
+ * Matched by the block's class, because the event flyer draws the same image
+ * at another size.
  *
- * The widths belong to one place in one template, so `single-event.html` and
- * `front-page.html` each mark that block with a class and only those blocks
- * are changed. An event's flyer draws the same image at another size. Core
- * keeps the block it is rendering in `WP_Block_Supports::$block_to_render`,
- * which is how a filter on an image's `sizes` can tell which block the image
- * is for.
- *
- * @param string $sizes The `sizes` core worked out for the image.
- *
- * @return string The hero's `sizes` for a hero image, core's for any other.
+ * @param string $sizes
+ * @return string
  */
 function hero_image_sizes( $sizes ) {
 	$block = \WP_Block_Supports::$block_to_render;
@@ -1086,19 +1042,11 @@ add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\labe
 /**
  * Hold a venue's interactive map back until it scrolls into view.
  *
- * GatherPress renders the map as a static image, then replaces it with a
- * live map as soon as the page loads. That downloads the map library and its
- * tiles, about 440KB with Google Maps, for a map most visitors never scroll
- * to.
+ * Points the block's `data-wp-init` at `assets/js/venue-map.js`. A static map
+ * has none and is left alone.
  *
- * The block starts the live map from its `data-wp-init`. This points that at
- * `assets/js/venue-map.js`, which waits for the map to be on screen and then
- * runs GatherPress's own callback. A static map has no `data-wp-init` and is
- * left alone.
- *
- * @param string $block_content The rendered block.
- *
- * @return string The block, with its live map deferred.
+ * @param string $block_content
+ * @return string
  */
 function defer_venue_map( $block_content ) {
 	$tags = new \WP_HTML_Tag_Processor( (string) $block_content );

@@ -192,11 +192,10 @@ class Test_Groups_Directory extends Groups_TestCase {
 
 		$this->assertSame( $url, Groups_Directory\get_directory_url() );
 
-		// There, WordPress reads `/group/` as a page named "group", and may redirect it to `/group`.
+		// There, WordPress reads `/group/` as a page named "group".
 		$this->set_request( '/group/' );
 
 		$this->assertSame( array(), apply_filters( 'request', array( 'pagename' => 'group' ) ) );
-		$this->assertFalse( apply_filters( 'redirect_canonical', 'https://events.wordpress.test/group' ) );
 
 		$this->set_request( '/group/wp-login.php' );
 

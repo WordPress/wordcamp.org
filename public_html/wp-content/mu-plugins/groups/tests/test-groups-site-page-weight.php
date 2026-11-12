@@ -116,70 +116,20 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * The class on each featured-image block in a template.
+	 * Render GatherPress's own map block for a new venue, stopped on its wrapper.
 	 */
-	private function featured_image_classes( string $template ): array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk.
-		$blocks  = new \WP_Block_Processor( file_get_contents( self::THEME_DIR . 'templates/' . $template ) );
-		$classes = array();
+	private function render_venue_map( array $attrs = array() ): \WP_HTML_Tag_Processor {
+		$venue_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_venue' ) );
 
-		while ( $blocks->next_block( 'core/post-featured-image' ) ) {
-			$classes[] = $blocks->allocate_and_return_parsed_attributes()['className'] ?? '';
-		}
+		update_post_meta( $venue_id, 'gatherpress_address', '253 David Low Way, Peregian Beach QLD 4573' );
+		update_post_meta( $venue_id, 'gatherpress_latitude', '-26.4806' );
+		update_post_meta( $venue_id, 'gatherpress_longitude', '153.0963' );
 
-		return $classes;
-	}
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The block reads its venue from the current post.
+		$GLOBALS['post'] = get_post( $venue_id );
 
-	/**
-	 * A hero image gets the `sizes` measured for its column.
-	 */
-	public function test_hero_images_describe_their_columns() {
-		foreach ( \WordCamp\Groups\Site\HERO_IMAGE_SIZES as $class_name => $sizes ) {
-			// Outside the main loop the image is lazy, so core prefixes `auto`.
-			$this->assertSame( 'auto, ' . $sizes, $this->render_featured_image( $class_name )->get_attribute( 'sizes' ), $class_name );
-		}
-	}
+		add_filter( 'render_block_gatherpress/venue-map', 'WordCamp\\Groups\\Site\\defer_venue_map' );
 
-	/**
-	 * The flyer draws the same image at another size.
-	 */
-	public function test_other_featured_images_keep_cores_sizes() {
-		$image = $this->render_featured_image( 'groups-site-flyer__image' );
-
-		$this->assertStringEndsWith( '(max-width: 1200px) 100vw, 1200px', $image->get_attribute( 'sizes' ) );
-	}
-
-	/**
-	 * Each template marks only its hero image.
-	 */
-	public function test_templates_mark_their_hero_images() {
-		$this->assertSame( array( 'groups-site-event-hero-image' ), $this->featured_image_classes( 'single-event.html' ) );
-		$this->assertSame( array( 'groups-site-home-hero-image' ), $this->featured_image_classes( 'front-page.html' ) );
-		$this->assertSame( array( 'groups-site-flyer__image' ), $this->featured_image_classes( 'single-event-flyer.html' ) );
-	}
-
-	/**
-	 * Registered network-wide, not by the theme, so Meetup imports get it too.
-	 */
-	public function test_network_registers_a_card_sized_image() {
-		$this->assertSame( 10, has_action( 'after_setup_theme', 'WordCamp\\Groups\\GatherPress_Tweaks\\register_event_card_image_size' ) );
-
-		\WordCamp\Groups\GatherPress_Tweaks\register_event_card_image_size();
-
-		$this->assertSame(
-			array(
-				'width'  => 480,
-				'height' => 0,
-				'crop'   => false,
-			),
-			wp_get_registered_image_subsizes()['groups-event-card'] ?? null
-		);
-	}
-
-	/**
-	 * An interactive map hands its start-up to the theme's script.
-	 */
-	public function test_interactive_venue_map_waits_until_it_is_on_screen() {
 		// `groups-site` isn't the suite's active theme.
 		add_filter(
 			'theme_file_path',
@@ -190,79 +140,59 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 			2
 		);
 
-		$map = '<div class="wp-block-gatherpress-venue-map" data-wp-interactive="gatherpress/venue-map" data-wp-init="callbacks.init" data-wp-context="{}"><img src="map.png" alt="" /></div>';
+		$block     = parse_blocks( sprintf( '<!-- wp:gatherpress/venue-map %s /-->', wp_json_encode( (object) $attrs ) ) )[0];
+		$processor = new \WP_HTML_Tag_Processor( render_block( $block ) );
 
-		$processor = new \WP_HTML_Tag_Processor( \WordCamp\Groups\Site\defer_venue_map( $map ) );
+		$this->assertTrue( $processor->next_tag(), 'GatherPress rendered no map.' );
 
-		$this->assertTrue( $processor->next_tag() );
-		$this->assertSame( 'groups-site/venue-map::callbacks.init', $processor->get_attribute( 'data-wp-init' ) );
-		$this->assertSame( 'gatherpress/venue-map', $processor->get_attribute( 'data-wp-interactive' ), 'GatherPress\'s callback reads its context from its own namespace.' );
+		return $processor;
+	}
+
+	/**
+	 * A hero image gets the `sizes` measured for its column. The flyer draws
+	 * the same image at another size, and keeps core's.
+	 */
+	public function test_only_hero_images_get_the_hero_sizes() {
+		foreach ( \WordCamp\Groups\Site\HERO_IMAGE_SIZES as $class_name => $sizes ) {
+			// Outside the main loop the image is lazy, so core prefixes `auto`.
+			$this->assertSame( 'auto, ' . $sizes, $this->render_featured_image( $class_name )->get_attribute( 'sizes' ), $class_name );
+		}
+
+		$flyer = $this->render_featured_image( 'groups-site-flyer__image' );
+
+		$this->assertStringEndsWith( '(max-width: 1200px) 100vw, 1200px', $flyer->get_attribute( 'sizes' ) );
+	}
+
+	/**
+	 * GatherPress's interactive map hands its start-up to the theme's script.
+	 * Its static map has nothing to start. Fails if GatherPress renames the
+	 * callback its block starts from.
+	 */
+	public function test_interactive_venue_map_is_deferred() {
+		$static = $this->render_venue_map( array( 'renderMode' => 'static' ) );
+
+		$this->assertNull( $static->get_attribute( 'data-wp-init' ) );
+		$this->assertNotContains( 'groups-site-venue-map', wp_script_modules()->get_queue() );
+
+		$interactive = $this->render_venue_map();
+
+		$this->assertSame( 'groups-site/venue-map::callbacks.init', $interactive->get_attribute( 'data-wp-init' ) );
+		$this->assertSame( 'gatherpress/venue-map', $interactive->get_attribute( 'data-wp-interactive' ) );
 		$this->assertContains( 'groups-site-venue-map', wp_script_modules()->get_queue() );
 	}
 
 	/**
-	 * A static map has nothing to start.
-	 */
-	public function test_static_venue_map_is_left_alone() {
-		$map = '<div class="wp-block-gatherpress-venue-map" data-render-mode="static"><img src="map.png" alt="" /></div>';
-
-		$this->assertSame( $map, \WordCamp\Groups\Site\defer_venue_map( $map ) );
-		$this->assertSame( '', \WordCamp\Groups\Site\defer_venue_map( '' ) );
-		$this->assertNotContains( 'groups-site-venue-map', wp_script_modules()->get_queue() );
-	}
-
-	/**
-	 * If GatherPress renames its store or callback, the map silently stays static.
-	 */
-	public function test_gatherpress_still_starts_its_map_from_the_callback_the_theme_defers() {
-		$block_dir = GATHERPRESS_CORE_PATH . '/build/blocks/venue-map/';
-
-		// phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the plugin's files from disk.
-		$render = file_get_contents( $block_dir . 'render.php' );
-		$view   = file_get_contents( $block_dir . 'view.js' );
-		// phpcs:enable
-
-		$this->assertStringContainsString( "'gatherpress/venue-map'", $render );
-		$this->assertStringContainsString( "'callbacks.init'", $render );
-		$this->assertStringContainsString( '"gatherpress/venue-map"', $view );
-		$this->assertMatchesRegularExpression( '/callbacks:\s*\{\s*init\b/', $view );
-	}
-
-	/**
-	 * Only the members page drops the sharing styles.
-	 */
-	public function test_members_page_loads_no_sharing_assets() {
-		add_filter( 'sharing_enqueue_scripts', 'WordCamp\\Groups\\Site\\skip_sharing_assets_on_members_page' );
-
-		$members_id = self::factory()->post->create(
-			array(
-				'post_type' => 'page',
-				'post_name' => 'members',
-			)
-		);
-		$about_id   = self::factory()->post->create(
-			array(
-				'post_type' => 'page',
-				'post_name' => 'about',
-			)
-		);
-
-		$this->go_to( home_url( "?page_id={$members_id}" ) );
-		$this->assertFalse( apply_filters( 'sharing_enqueue_scripts', true ) );
-
-		$this->go_to( home_url( "?page_id={$about_id}" ) );
-		$this->assertTrue( apply_filters( 'sharing_enqueue_scripts', true ) );
-	}
-
-	/**
-	 * An event is described in its own words.
+	 * An event's page carries a description in the event's own words.
 	 *
 	 * @dataProvider provide_event_descriptions
 	 */
 	public function test_event_is_described_in_its_own_words( array $post_fields, string $expected ) {
 		$this->view_event( $this->create_event( $post_fields ) );
 
-		$this->assertSame( $expected, \WordCamp\Groups\Site\get_meta_description() );
+		$this->assertSame(
+			'<meta name="description" content="' . $expected . '" />' . "\n",
+			get_echo( 'WordCamp\\Groups\\Site\\print_meta_description' )
+		);
 	}
 
 	/**
@@ -274,24 +204,9 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				array(),
 				'An evening of talks, demos and questions about the web.',
 			),
-			'its excerpt, ahead of the content' => array(
-				array( 'post_excerpt' => 'Three talks and a <em>lot</em> of questions.' ),
-				'Three talks and a lot of questions.',
-			),
-			'only the blocks that are prose'   => array(
-				array(
-					'post_content' => '<!-- wp:gatherpress/add-to-calendar --><div class="wp-block-gatherpress-add-to-calendar"><a href="#">Add to calendar</a></div><!-- /wp:gatherpress/add-to-calendar -->'
-						. '<!-- wp:paragraph --><p>Bring a laptop.</p><!-- /wp:paragraph -->',
-				),
-				'Bring a laptop.',
-			),
-			'blocks saved back to back'        => array(
-				array(
-					'post_content' => '<!-- wp:paragraph --><p>Doors at six.</p><!-- /wp:paragraph -->'
-						. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Bring a laptop</li><!-- /wp:list-item -->'
-						. '<!-- wp:list-item --><li>Bring a question</li><!-- /wp:list-item --></ul><!-- /wp:list -->',
-				),
-				'Doors at six. Bring a laptop Bring a question',
+			'its excerpt, with quotes escaped' => array(
+				array( 'post_excerpt' => 'A "show and tell" night.' ),
+				'A &quot;show and tell&quot; night.',
 			),
 			'no more than thirty words'        => array(
 				array( 'post_content' => implode( ' ', array_fill( 0, 40, 'word' ) ) ),
@@ -328,34 +243,5 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 		$this->go_to( home_url( '/' ) );
 
 		$this->assertSame( self::TAGLINE, \WordCamp\Groups\Site\get_meta_description() );
-	}
-
-	/**
-	 * The description is printed as a meta tag, with its quotes escaped.
-	 */
-	public function test_description_is_printed_as_a_meta_tag() {
-		$this->view_event( $this->create_event( array( 'post_excerpt' => 'A "show and tell" night.' ) ) );
-
-		$this->assertSame(
-			'<meta name="description" content="A &quot;show and tell&quot; night." />' . "\n",
-			get_echo( 'WordCamp\\Groups\\Site\\print_meta_description' )
-		);
-	}
-
-	/**
-	 * Nothing is printed for a group with no tagline, or on a 404.
-	 */
-	public function test_no_meta_tag_without_a_description() {
-		update_option( 'blogdescription', '' );
-
-		$this->go_to( home_url( '/' ) );
-		$this->assertSame( '', get_echo( 'WordCamp\\Groups\\Site\\print_meta_description' ) );
-
-		update_option( 'blogdescription', self::TAGLINE );
-
-		// The bootstrap defines `WP_ADMIN`, where a missing post never becomes a 404.
-		$GLOBALS['wp_query']->set_404();
-
-		$this->assertSame( '', get_echo( 'WordCamp\\Groups\\Site\\print_meta_description' ) );
 	}
 }

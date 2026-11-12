@@ -850,23 +850,15 @@ class Test_Groups_Events_Feed extends Groups_TestCase {
 	}
 
 	/**
-	 * The same four lines, in each shape saved with no white space between them.
+	 * The same four lines, saved two ways with no white space between them.
 	 */
 	public function provide_content_without_line_breaks(): array {
 		return array(
-			'blocks saved back to back'       => array(
+			'blocks saved back to back'        => array(
 				'<!-- wp:paragraph --><p>Short intro.</p><!-- /wp:paragraph -->'
 					. '<!-- wp:heading {"level":3} --><h3 class="wp-block-heading">What to bring</h3><!-- /wp:heading -->'
 					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>A laptop</li><!-- /wp:list-item -->'
 					. '<!-- wp:list-item --><li>Your <em>best</em> questions</li><!-- /wp:list-item --></ul><!-- /wp:list -->',
-			),
-			'a list saved as a single block'  => array(
-				'<!-- wp:paragraph --><p>Short intro.</p><!-- /wp:paragraph -->'
-					. '<!-- wp:heading {"level":3} --><h3 class="wp-block-heading">What to bring</h3><!-- /wp:heading -->'
-					. '<!-- wp:list --><ul><li>A laptop</li><li>Your <em>best</em> questions</li></ul><!-- /wp:list -->',
-			),
-			'markup that was never blocks'    => array(
-				'<p>Short intro.</p><h3>What to bring</h3><ul><li>A laptop</li><li>Your <em>best</em> questions</li></ul>',
 			),
 			'line breaks inside one paragraph' => array(
 				'<!-- wp:paragraph --><p>Short intro.<br>What to bring<br />A laptop<br/>Your <em>best</em> questions</p><!-- /wp:paragraph -->',

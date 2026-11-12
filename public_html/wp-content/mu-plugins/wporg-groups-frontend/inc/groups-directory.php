@@ -45,6 +45,7 @@ function bootstrap(): void {
 	add_filter( 'pre_option_stylesheet', __NAMESPACE__ . '\filter_stylesheet' );
 	add_filter( 'pre_option_template', __NAMESPACE__ . '\filter_template' );
 	add_filter( 'request', __NAMESPACE__ . '\filter_request' );
+	add_filter( 'redirect_canonical', __NAMESPACE__ . '\filter_canonical_redirect' );
 	add_action( 'init', __NAMESPACE__ . '\register_directory_block' );
 
 	foreach ( array_keys( DEFAULT_OPTIONS ) as $option ) {
@@ -104,6 +105,16 @@ function filter_default_option( $default_value, $option ) {
  */
 function filter_request( $query_vars ) {
 	return is_directory_request() ? array() : $query_vars;
+}
+
+/**
+ * Leave the list's address alone: permalinks without a trailing slash would redirect it to `/group`, which is a 404.
+ *
+ * @param string $redirect_url
+ * @return string|false
+ */
+function filter_canonical_redirect( $redirect_url ) {
+	return is_directory_request() ? false : $redirect_url;
 }
 
 /**

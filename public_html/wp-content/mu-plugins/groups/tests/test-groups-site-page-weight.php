@@ -9,8 +9,7 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
 /**
  * Coverage for what keeps a group site's pages light.
  *
- * Each of these came out of a Lighthouse pass over a live group: a font
- * stylesheet that blocked rendering for fonts the page never used, a hero
+ * Each of these came out of a Lighthouse pass over a live group: a hero
  * image downloaded at several times its size, a map library loaded for a map
  * below the fold, sharing styles on a page with nothing to share, and no
  * description for search engines. All but the image size live in the
@@ -21,33 +20,6 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
 class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 
 	const THEME_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/';
-
-	/**
-	 * Where the stand-in for the wporg fonts stylesheet lives, under the
-	 * content directory.
-	 */
-	const FONTS_DIR = '/uploads/groups-site-test-fonts';
-
-	/**
-	 * A stand-in for the wporg fonts stylesheet: imports first, then the font
-	 * faces, with the comments and relative URLs the real one has.
-	 */
-	const FONTS_CSS = '@import "./NotoSerif/NotoSerifJP/style.css";
-@import "./NotoSerif/NotoSerifKR/style.css";
-@import "./NotoSerif/NotoSerifSC/style.css";
-
-/*---------*
- *  Inter  *
- *---------*/
-
-/* latin */
-@font-face {
-	font-family: Inter;
-	font-weight: 100 900;
-	src: url(./Inter/Inter-latin.woff2) format("woff2");
-	unicode-range: U+0000-00FF, U+0131;
-}
-';
 
 	/**
 	 * The tagline of the group these tests describe.
@@ -67,43 +39,13 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 	}
 
 	/**
-	 * Put back everything a test registered or wrote.
+	 * Put back what a test enqueued.
 	 */
 	protected function tearDown(): void {
-		wp_deregister_style( 'wporg-global-fonts' );
-
-		$fonts_file = WP_CONTENT_DIR . self::FONTS_DIR . '/style.css';
-
-		if ( file_exists( $fonts_file ) ) {
-			unlink( $fonts_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removing this test's own fixture.
-			rmdir( WP_CONTENT_DIR . self::FONTS_DIR ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Removing this test's own fixture.
-		}
-
 		wp_dequeue_script_module( 'groups-site-venue-map' );
 		wp_deregister_script_module( 'groups-site-venue-map' );
 
 		parent::tearDown();
-	}
-
-	/**
-	 * Register a `wporg-global-fonts` stylesheet the way `wporg-mu-plugins`
-	 * does, backed by a real file under the content directory.
-	 *
-	 * @param string $css The stylesheet's contents.
-	 *
-	 * @return string The stylesheet's URL.
-	 */
-	private function register_fonts_stylesheet( string $css = self::FONTS_CSS ): string {
-		wp_mkdir_p( WP_CONTENT_DIR . self::FONTS_DIR );
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing this test's own fixture.
-		file_put_contents( WP_CONTENT_DIR . self::FONTS_DIR . '/style.css', $css );
-
-		$url = content_url( self::FONTS_DIR . '/style.css' );
-
-		wp_register_style( 'wporg-global-fonts', $url, array(), '1' );
-
-		return $url;
 	}
 
 	/**
@@ -211,93 +153,6 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 		}
 
 		return $classes;
-	}
-
-	/**
-	 * A group that isn't Japanese, Korean or Chinese gets the font faces in
-	 * the page and no request for the stylesheet, so nothing can import the
-	 * three Noto Serif stylesheets that held up rendering.
-	 */
-	public function test_fonts_are_printed_inline_without_the_noto_serif_imports() {
-		$url = $this->register_fonts_stylesheet();
-
-		\WordCamp\Groups\Site\inline_global_fonts_without_noto_serif();
-
-		$printed = get_echo( array( wp_styles(), 'do_item' ), array( 'wporg-global-fonts' ) );
-
-		$this->assertStringNotContainsString( '<link', $printed, 'The stylesheet is still requested, and it imports the Noto Serif stylesheets.' );
-		$this->assertStringNotContainsString( '@import', $printed );
-		$this->assertStringNotContainsString( '/* latin */', $printed, 'The stylesheet\'s comments ride along on every page.' );
-		$this->assertStringContainsString( '@font-face { font-family: Inter;', $printed );
-		$this->assertStringContainsString(
-			'url(' . dirname( $url ) . '/Inter/Inter-latin.woff2)',
-			$printed,
-			'A font URL relative to the stylesheet no longer resolves once the rule is in the page.'
-		);
-		$this->assertTrue( wp_style_is( 'wporg-global-fonts', 'registered' ), 'The parent theme and the font preloads depend on the handle.' );
-	}
-
-	/**
-	 * The three locales the parent theme sets in Noto Serif keep the
-	 * stylesheet, imports and all.
-	 *
-	 * @dataProvider provide_noto_serif_locales
-	 *
-	 * @param string $locale A locale whose headings are set in Noto Serif.
-	 */
-	public function test_fonts_keep_their_stylesheet_where_noto_serif_is_used( string $locale ) {
-		$url = $this->register_fonts_stylesheet();
-
-		add_filter(
-			'locale',
-			static function () use ( $locale ) {
-				return $locale;
-			}
-		);
-
-		\WordCamp\Groups\Site\inline_global_fonts_without_noto_serif();
-
-		$this->assertSame( $url, wp_styles()->query( 'wporg-global-fonts', 'registered' )->src );
-	}
-
-	/**
-	 * The locales `wporg-parent-2021` gives a Noto Serif heading font.
-	 *
-	 * @return array[]
-	 */
-	public function provide_noto_serif_locales(): array {
-		return array(
-			'Japanese' => array( 'ja' ),
-			'Korean'   => array( 'ko_KR' ),
-			'Chinese'  => array( 'zh_CN' ),
-		);
-	}
-
-	/**
-	 * Only the Noto Serif imports are known to be unused. A stylesheet that
-	 * imports anything else stays a stylesheet, so that import still loads.
-	 */
-	public function test_fonts_keep_a_stylesheet_with_an_import_nobody_vetted() {
-		$url = $this->register_fonts_stylesheet( '@import "./Everyone/style.css";' . "\n" . self::FONTS_CSS );
-
-		\WordCamp\Groups\Site\inline_global_fonts_without_noto_serif();
-
-		$this->assertSame( $url, wp_styles()->query( 'wporg-global-fonts', 'registered' )->src );
-	}
-
-	/**
-	 * A stylesheet that can't be read from disk stays a stylesheet. Fonts
-	 * loaded the slow way beat no fonts.
-	 */
-	public function test_fonts_keep_a_stylesheet_that_cannot_be_read() {
-		foreach ( array( 'https://s.w.org/fonts/style.css', content_url( self::FONTS_DIR . '/missing.css' ) ) as $url ) {
-			wp_deregister_style( 'wporg-global-fonts' );
-			wp_register_style( 'wporg-global-fonts', $url, array(), '1' );
-
-			\WordCamp\Groups\Site\inline_global_fonts_without_noto_serif();
-
-			$this->assertSame( $url, wp_styles()->query( 'wporg-global-fonts', 'registered' )->src );
-		}
 	}
 
 	/**

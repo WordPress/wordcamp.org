@@ -73,58 +73,6 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
- * Print the wporg fonts in the page, without their Noto Serif stylesheets.
- *
- * `wporg-global-fonts` starts by importing three more stylesheets, one each
- * for Japanese, Korean and Chinese. They are about 110KB compressed, the
- * browser only finds them once it has the stylesheet that imports them, and
- * the page stays blank until all three arrive. The parent theme only uses
- * those fonts on `ja`, `ko_KR` and `zh_CN` sites (`inc/rosetta-styles.php`),
- * so every other group waited for them and used none.
- *
- * Those three locales keep the stylesheet as it is. Everywhere else its
- * `@font-face` rules are printed inline and the Noto Serif imports are left
- * out. A stylesheet that imports anything else is left alone too, because
- * nothing here knows who needs that. The rules are read from the stylesheet
- * on each request rather than copied into this theme, so they can't drift
- * from the fonts `wporg-mu-plugins` ships. The handle stays registered, which
- * keeps its dependants and its font preloads working.
- */
-function inline_global_fonts_without_noto_serif(): void {
-	if ( in_array( get_locale(), array( 'ja', 'ko_KR', 'zh_CN' ), true ) ) {
-		return;
-	}
-
-	$style = wp_styles()->query( 'wporg-global-fonts', 'registered' );
-
-	if ( ! $style || ! is_string( $style->src ) || ! str_starts_with( $style->src, content_url() ) ) {
-		return;
-	}
-
-	$url  = strtok( $style->src, '?' );
-	$path = WP_CONTENT_DIR . substr( $url, strlen( content_url() ) );
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a stylesheet from disk.
-	$css = is_readable( $path ) ? file_get_contents( $path ) : '';
-
-	$css = preg_replace( '/@import[^;]*NotoSerif[^;]*;/', '', (string) $css );
-
-	if ( '' === $css || str_contains( $css, '@import' ) ) {
-		return;
-	}
-
-	// The font files are relative to the stylesheet, not to the page.
-	$css = str_replace( 'url(./', 'url(' . dirname( $url ) . '/', $css );
-
-	// It's on every page now, so drop the comments and the indentation.
-	$css = preg_replace( '~/\*.*?\*/~s', '', $css );
-	$css = trim( preg_replace( '/\s+/', ' ', $css ) );
-
-	$style->src = false;
-	wp_add_inline_style( 'wporg-global-fonts', $css );
-}
-add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inline_global_fonts_without_noto_serif' );
-
-/**
  * Keep Jetpack's sharing styles off the members page.
  *
  * Jetpack loads them on every page it could add sharing buttons to. It adds

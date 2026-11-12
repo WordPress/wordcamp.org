@@ -205,6 +205,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-bind--aria-busy="context.loading"
 				><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
 			</div>
+			<p class="wporg-group-membership__note">
+				<?php esc_html_e( 'Get an email when this group announces a new event.', 'wordcamporg' ); ?>
+			</p>
 		<?php endif; ?>
 	<?php endif; ?>
 

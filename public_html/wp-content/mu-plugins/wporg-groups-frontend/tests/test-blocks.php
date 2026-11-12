@@ -640,6 +640,18 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * A visitor sees what joining gets them under the Join button.
+	 */
+	public function test_group_membership_block_tells_visitor_what_joining_does() {
+		wp_set_current_user( 0 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'actions.join', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__note', $output );
+	}
+
+	/**
 	 * Force `count_users()` to a known result and record how often it runs.
 	 *
 	 * Returns the call counter; the filter is removed in `tear_down()` via

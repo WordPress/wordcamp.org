@@ -102,7 +102,8 @@ function get_meta_description(): string {
 		$text = get_bloginfo( 'description', 'display' );
 	}
 
-	return wp_trim_words( $text, 30, '&hellip;' );
+	// Escaped first, or trimming strips a tag written out as text: "the <button> element".
+	return wp_trim_words( esc_html( $text ), 30, '&hellip;' );
 }
 
 /**

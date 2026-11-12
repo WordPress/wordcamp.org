@@ -15,7 +15,9 @@ import { getElement, store, withScope } from '@wordpress/interactivity';
  * @param {HTMLElement} map The venue map's wrapper.
  */
 function keepFocusThroughSwap( map ) {
-	let focused = null;
+	// This script loads late, so focus can be inside the map already.
+	const current = map.ownerDocument.activeElement;
+	let focused = map.contains( current ) ? current : null;
 
 	map.addEventListener( 'focusin', ( event ) => {
 		focused = event.target;

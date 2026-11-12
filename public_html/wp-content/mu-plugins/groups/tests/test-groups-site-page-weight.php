@@ -208,6 +208,10 @@ class Test_Groups_Site_Page_Weight extends Groups_TestCase {
 				array( 'post_excerpt' => 'A "show and tell" night.' ),
 				'A &quot;show and tell&quot; night.',
 			),
+			'a tag written out as text'        => array(
+				array( 'post_content' => '<!-- wp:paragraph --><p>Learn how the <code>&lt;button&gt;</code> element works.</p><!-- /wp:paragraph -->' ),
+				'Learn how the &lt;button&gt; element works.',
+			),
 			'no more than thirty words'        => array(
 				array( 'post_content' => implode( ' ', array_fill( 0, 40, 'word' ) ) ),
 				implode( ' ', array_fill( 0, 30, 'word' ) ) . '&hellip;',

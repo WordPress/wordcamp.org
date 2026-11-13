@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Modal\get_upload_space_config;
+use function WordCamp\Groups\Frontend\Modal\localize_block_script;
 use function WordCamp\Groups\Frontend\Upload_Space\get_upload_space;
 
 use const WordCamp\Groups\Frontend\Upload_Space\MORE_SPACE_URL;
@@ -170,6 +171,32 @@ class Test_Groups_Upload_Space extends Groups_TestCase {
 			),
 			get_upload_space_config()
 		);
+	}
+
+	/**
+	 * Once the space is used up, the picker's help leaves the file size out,
+	 * which core would give as 0 B, and the notice says why instead.
+	 */
+	public function test_config_leaves_the_file_size_out_when_full(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->space_used = 1100;
+
+		$handle = 'wporg-group-settings-view-script';
+
+		if ( ! wp_script_is( $handle, 'registered' ) ) {
+			wp_register_script( $handle, 'https://example.org/view.js', array(), '1', true );
+		}
+
+		localize_block_script( '', array( 'blockName' => 'wporg/group-settings' ) );
+
+		$data = (string) wp_scripts()->get_data( $handle, 'data' );
+
+		$this->assertMatchesRegularExpression( '/var wporgGroupsEventModal = (\{.*\});/', $data );
+		preg_match( '/var wporgGroupsEventModal = (\{.*\});/', $data, $matches );
+		$config = json_decode( $matches[1], true );
+
+		$this->assertSame( '', $config['maxUploadSize'] );
+		$this->assertSame( 'full', $config['uploadSpace']['status'] );
 	}
 
 	/**

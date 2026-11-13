@@ -174,8 +174,9 @@ class Test_Inactive extends Database_TestCase {
 
 	/**
 	 * A sponsor's reply to a compliance request that was dropped brings its company back to Compliance Requested,
-	 * flagged for a reviewer, and reopens the sponsorship that going Inactive canceled, as the system. A reply the
-	 * reviewer had when dropping the request, or to a company that wasn't waiting on one, changes nothing.
+	 * flagged for a reviewer, and reopens the sponsorship that going Inactive canceled, as the system, unless its
+	 * event is over. A reply the reviewer had when dropping the request, or to a company that wasn't waiting on
+	 * one, changes nothing.
 	 *
 	 * Fakes FreeScout's API through `pre_http_request`: see fake_conversation().
 	 *
@@ -184,8 +185,9 @@ class Test_Inactive extends Database_TestCase {
 	 * @param string $from    The status the company went Inactive from.
 	 * @param string $replied When the sponsor replied, as strtotime() reads it.
 	 * @param bool   $returns Whether the company goes back to Compliance Requested.
+	 * @param bool   $ended   Optional. Whether its sponsorship's event is over.
 	 */
-	public function test_a_sponsors_reply_brings_an_inactive_company_back( string $from, string $replied, bool $returns ): void {
+	public function test_a_sponsors_reply_brings_an_inactive_company_back( string $from, string $replied, bool $returns, bool $ended = false ): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$company_id = $this->create_company( $from, 40 );
@@ -196,7 +198,7 @@ class Test_Inactive extends Database_TestCase {
 				'post_type'   => SPONSORSHIP_POST_TYPE,
 				'post_status' => 'svs-pending',
 				'post_parent' => $company_id,
-				'meta_input'  => array( '_sv_blog_id' => self::$year_dot_2019_site_id ),
+				'meta_input'  => array( '_sv_blog_id' => $ended ? self::$year_dot_2018_site_id : self::$year_dot_2019_site_id ),
 			)
 		);
 
@@ -227,7 +229,7 @@ class Test_Inactive extends Database_TestCase {
 		$this->assertSame(
 			array(
 				'company'     => $returns ? 'sv-compliance-req' : 'sv-inactive',
-				'sponsorship' => $returns ? 'svs-pending' : 'svs-canceled',
+				'sponsorship' => $returns && ! $ended ? 'svs-pending' : 'svs-canceled',
 				'flagged'     => $returns,
 				'moved_by'    => $returns ? 0 : $reviewer_id,
 			),
@@ -243,6 +245,7 @@ class Test_Inactive extends Database_TestCase {
 	public function data_late_replies(): array {
 		return array(
 			'replied after it went Inactive'              => array( 'sv-compliance-req', '+1 hour', true ),
+			'replied after its event was over'            => array( 'sv-compliance-req', '+1 hour', true, true ),
 			'replied before it went Inactive'             => array( 'sv-compliance-req', '-1 day', false ),
 			'went Inactive before changes were requested' => array( 'sv-needs-vetting', '+1 hour', false ),
 		);

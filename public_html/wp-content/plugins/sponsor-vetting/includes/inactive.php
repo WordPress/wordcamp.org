@@ -163,7 +163,8 @@ function is_conversation_active( int $company_id, int $cutoff ): bool {
  * flagged for a reviewer, and reopens the sponsorships that going Inactive canceled.
  *
  * Only a company that went Inactive from Compliance Requested, and only for a reply written since: a reviewer who
- * dropped the request had the earlier ones to read.
+ * dropped the request had the earlier ones to read. A sponsorship whose event is over stays canceled, as the
+ * company turning Compliant would approve it and email an event that has already happened.
  */
 function reactivate_replied_companies(): void {
 	if ( ! is_central() ) {
@@ -226,7 +227,9 @@ function reactivate_replied_companies(): void {
 			);
 
 			foreach ( $canceled as $sponsorship_id ) {
-				reopen_for_inactive( $sponsorship_id, __( 'Reopened: the sponsor replied to the compliance request.', 'wordcamporg' ) );
+				if ( ! event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
+					reopen_for_inactive( $sponsorship_id, __( 'Reopened: the sponsor replied to the compliance request.', 'wordcamporg' ) );
+				}
 			}
 		} finally {
 			returning_from_inactive( 0 );

@@ -62,7 +62,7 @@ function request_vetting( int $blog_id, int $sponsor_id ): int|\WP_Error {
 
 	if ( ! is_wp_error( $sponsorship_id ) ) {
 		// Its company may have been vetted since, for another camp's request.
-		if ( reopen_for_inactive( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) ) ) {
+		if ( reopen_for_inactive( $sponsorship_id ) ) {
 			auto_approve( $sponsorship_id );
 		}
 

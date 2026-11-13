@@ -233,7 +233,7 @@ function reactivate_replied_companies(): void {
 
 			foreach ( $canceled as $sponsorship_id ) {
 				if ( ! event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
-					reopen_for_inactive( $sponsorship_id, __( 'Reopened: the sponsor replied to the compliance request.', 'wordcamporg' ) );
+					reopen_for_inactive( $sponsorship_id );
 				}
 			}
 		} finally {
@@ -328,11 +328,10 @@ function is_canceled_for_inactive( int $sponsorship_id ): bool {
  *
  * Runs on Central.
  *
- * @param int    $sponsorship_id The sponsorship.
- * @param string $note           Why it's reopened, for its history.
+ * @param int $sponsorship_id The sponsorship.
  * @return bool Whether it was reopened.
  */
-function reopen_for_inactive( int $sponsorship_id, string $note ): bool {
+function reopen_for_inactive( int $sponsorship_id ): bool {
 	if ( ! is_canceled_for_inactive( $sponsorship_id ) ) {
 		return false;
 	}
@@ -343,8 +342,6 @@ function reopen_for_inactive( int $sponsorship_id, string $note ): bool {
 			'post_status' => 'svs-pending',
 		)
 	);
-
-	add_note( $sponsorship_id, $note );
 
 	return 'svs-pending' === get_post_status( $sponsorship_id );
 }

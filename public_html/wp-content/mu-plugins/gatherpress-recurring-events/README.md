@@ -14,7 +14,7 @@ GatherPress's calendar feeds (site-wide, event archive, venue, and taxonomy) and
 
 Calendar links for an individual occurrence still use that occurrence's date and URL.
 
-GatherPress has no filter on a feed's body, so a feed that holds a series is served by `Ical::serve_feed()`, ahead of GatherPress's own template.
+GatherPress has no filter on a feed's body, so `Ical::intercept_feed()` hands it the feed through the cache it reads the body from. GatherPress still sends the response.
 
 ## Known limitations
 

@@ -65,10 +65,9 @@ final class Query {
 						{$nearest}(gpre_occ.datetime_start_gmt) AS datetime_start_gmt,
 						{$nearest}(gpre_occ.datetime_end_gmt) AS datetime_end_gmt
 					FROM %i gpre_occ
-					INNER JOIN {$wpdb->posts} gpre_series ON gpre_series.ID = gpre_occ.series_post_id AND gpre_series.post_password = ''
 					WHERE gpre_occ.status <> 'cancelled' AND gpre_occ.{$compared[1]} {$compare} %s
 					GROUP BY gpre_occ.series_post_id
-				) gpre_occ_query ON {$wpdb->posts}.ID = gpre_occ_query.series_post_id",
+				) gpre_occ_query ON {$wpdb->posts}.ID = gpre_occ_query.series_post_id AND {$wpdb->posts}.post_password = ''",
 				$occurrence_table,
 				current_time( 'mysql', true )
 			);

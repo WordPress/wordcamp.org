@@ -10,11 +10,9 @@ namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Calendar\Cache;
-use GatherPress\Core\Calendar\Endpoint;
 use GatherPress\Core\Calendar\Setup;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Event\Query as Event_Query;
-use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Ical;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
@@ -41,15 +39,6 @@ final class Test_Ical extends WP_UnitTestCase {
 		parent::set_up();
 
 		set_current_screen( 'front' );
-		add_filter( 'gatherpress_calendar_max_age', '__return_zero' );
-	}
-
-	/** Leaves the globals as they were. */
-	public function tear_down() {
-		unset( $GLOBALS['current_screen'] );
-		Context::set( null );
-
-		parent::tear_down();
 	}
 
 	/** A series stays in the feed, as one event that recurs, while it has dates to come (#1872). */
@@ -102,8 +91,10 @@ final class Test_Ical extends WP_UnitTestCase {
 		update_option( Cache::LAST_MODIFIED_OPTION, '2000-01-01 00:00:00' );
 		Occurrences::set_status( $series, $cancelled->recurrence_id, 'cancelled' );
 
-		$this->assertSame( 1, substr_count( $this->feed(), 'EXDATE' ) );
-		$this->assertStringContainsString( $prefix . $cancelled->recurrence_id . $suffix . "\r\nEND:VEVENT", $this->feed() );
+		$feed = $this->feed();
+
+		$this->assertSame( 1, substr_count( $feed, 'EXDATE' ) );
+		$this->assertStringContainsString( $prefix . $cancelled->recurrence_id . $suffix . "\r\nEND:VEVENT", $feed );
 		$this->assertNotSame( '2000-01-01 00:00:00', Cache::get_instance()->get_last_modified(), 'Cancelling a date left cached calendars in place.' );
 
 		Occurrences::set_status( $series, $cancelled->recurrence_id, 'scheduled' );
@@ -144,52 +135,14 @@ final class Test_Ical extends WP_UnitTestCase {
 		$this->assertSame( array( $one_off ), $query->get_events_list( 'upcoming', -1 )->posts );
 	}
 
-	/** Output printed while the feed is built is dropped: a notice ahead of the calendar cut its end off. */
-	public function test_output_while_building_the_feed_is_dropped(): void {
+	/** GatherPress reads a feed's body from its cache, which is where it is handed one with its series recurring. */
+	public function test_gatherpress_serves_the_feed_with_its_series_recurring(): void {
 		$this->create_series();
 		$this->request_feed();
 
-		$print = static function (): void {
-			echo 'Notice: something went wrong.';
-		};
-		add_action( 'loop_start', $print );
+		Ical::intercept_feed();
 
-		$this->expectOutputString( '' );
-
-		try {
-			$this->assertStringStartsWith( 'BEGIN:VCALENDAR', Ical::feed_body() );
-		} finally {
-			remove_action( 'loop_start', $print );
-		}
-	}
-
-	/** The feed is served ahead of GatherPress's template, going by what GatherPress itself hooks. */
-	public function test_feed_is_intercepted_ahead_of_gatherpress(): void {
-		global $wp_filter;
-
-		$hook = 'do_feed_' . Setup::ICAL_SLUG;
-
-		$this->request_feed();
-		set_query_var( Setup::QUERY_VAR, Setup::ICAL_SLUG );
-
-		$this->assertSame( 20, has_action( 'template_redirect', array( Ical::class, 'intercept_feed' ) ) );
-
-		try {
-			foreach ( $wp_filter['template_redirect']->callbacks[10] as $callback ) {
-				if ( is_array( $callback['function'] ) && $callback['function'][0] instanceof Endpoint ) {
-					call_user_func( $callback['function'] );
-				}
-			}
-
-			$this->assertTrue( has_action( $hook ), 'Precondition: GatherPress hooked its feed template.' );
-
-			Ical::intercept_feed();
-
-			$this->assertSame( array( 5, 10 ), array_keys( $wp_filter[ $hook ]->callbacks ) );
-		} finally {
-			remove_all_actions( $hook );
-			set_query_var( Setup::QUERY_VAR, '' );
-		}
+		$this->assertStringContainsString( 'RRULE:', Setup::get_instance()->get_ics_body() );
 	}
 
 	/** Makes this a site-wide feed request. `go_to()` would run lookups on sites the suite doesn't create. */
@@ -256,7 +209,6 @@ final class Test_Ical extends WP_UnitTestCase {
 			array(
 				'frequency' => 'weekly',
 				'interval'  => 1,
-				'weekdays'  => array( $this->weekday( $this->start( '-7 days', $timezone ) ) ),
 				'end_type'  => 'never',
 				'until'     => '',
 			)

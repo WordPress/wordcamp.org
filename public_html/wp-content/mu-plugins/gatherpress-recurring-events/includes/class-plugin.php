@@ -160,7 +160,7 @@ final class Plugin {
 		add_filter( 'query_vars', array( Context::class, 'query_vars' ) );
 		add_action( 'template_redirect', array( Context::class, 'resolve' ), 1 );
 		add_action( 'template_redirect', array( $this, 'series_ical' ), 5 );
-		add_action( 'template_redirect', array( Ical::class, 'intercept_feed' ), 20 );
+		add_action( 'template_redirect', array( Ical::class, 'intercept_feed' ) );
 		add_action( 'gpre_occurrence_status_changed', array( Ical::class, 'mark_changed' ), 10, 0 );
 		add_action( 'gpre_series_ended', array( Ical::class, 'mark_changed' ), 10, 0 );
 		add_filter( 'get_post_metadata', array( Context::class, 'metadata' ), 10, 4 );

@@ -505,6 +505,18 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The role panel heading sits under the page's h1, so it's an h2.
+	 */
+	public function test_group_members_block_role_switcher_heading_follows_h1() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-members__role-switcher-heading"', $output );
+	}
+
+	/**
 	 * The default combined variant preserves the original unheaded output.
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {

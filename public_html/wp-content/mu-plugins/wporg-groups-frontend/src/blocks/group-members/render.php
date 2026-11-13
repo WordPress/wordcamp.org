@@ -150,9 +150,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wp-interactive="wporg/group-members"
 			data-wp-context="<?php echo esc_attr( wp_json_encode( $switcher_context ) ); ?>"
 		>
-			<h3 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
+			<h2 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
 				<?php esc_html_e( 'Your role in this group', 'wordcamporg' ); ?>
-			</h3>
+			</h2>
 			<p class="wporg-group-members__role-switcher-help">
 				<?php esc_html_e( 'This is a testing group, so you can switch your own role to try out the organizer tools. Pick a role below, then switch back whenever you like.', 'wordcamporg' ); ?>
 			</p>

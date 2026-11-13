@@ -127,7 +127,10 @@ function enforce_status_transition( array $data, array $postarr ): array {
 	// Restoring an approved sponsorship from the trash isn't a new approval.
 	$is_restoring = 'trash' === $post->post_status && restoring_approval() === $post->ID;
 
-	if ( $is_stale || ! is_allowed_transition( $post->post_type, $post->post_status, $to ) ) {
+	// Only a sponsor's reply takes an Inactive company straight back to Compliance Requested.
+	$is_returning = 'sv-inactive' === $post->post_status && 'sv-compliance-req' === $to && returning_from_inactive() === $post->ID;
+
+	if ( $is_stale || ! ( $is_returning || is_allowed_transition( $post->post_type, $post->post_status, $to ) ) ) {
 		$data['post_status'] = $post->post_status;
 	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && ! $is_restoring && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
 		$data['post_status'] = $post->post_status;

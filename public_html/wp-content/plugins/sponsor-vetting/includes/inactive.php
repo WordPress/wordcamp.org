@@ -2,9 +2,10 @@
 /**
  * The Inactive status: a vetting request dropped without a decision, so nothing is left pending on it.
  *
- * A daily job moves companies out of Compliance Requested once the sponsor hasn't replied in COMPLIANCE_REPLY_DAYS,
- * or no sponsorship waiting on the request has an event still to come. Going Inactive cancels what was pending, and requesting vetting again for one of those camp
- * sponsors reopens it, which puts the company back in the queue (see queue_company()).
+ * A daily job moves companies out of Compliance Requested once the sponsor hasn't replied in COMPLIANCE_REPLY_DAYS
+ * and no sponsorship waiting on the request has an event still to come. Going Inactive cancels what was pending.
+ * Requesting vetting again for one of those camp sponsors reopens it, which puts the company back in the queue (see
+ * queue_company()), and a reply from the sponsor puts the company back in Compliance Requested.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -30,11 +31,12 @@ function schedule_inactive_check(): void {
 add_action( 'admin_init', __NAMESPACE__ . '\schedule_inactive_check' );
 
 /**
- * Moves each company in Compliance Requested to Inactive once its sponsor hasn't replied in COMPLIANCE_REPLY_DAYS,
- * or none of its pending sponsorships has an event still to come, or it has none.
+ * Moves each company in Compliance Requested to Inactive once its sponsor hasn't replied in COMPLIANCE_REPLY_DAYS
+ * and none of its pending sponsorships has an event still to come.
  *
  * A company whose sponsor replied is waiting on a reviewer, and one approved in Good Faith still owes its changes,
- * so both stay. A reply the hourly check hasn't flagged yet is read from FreeScout before the company moves.
+ * so both stay. The conversation is read from FreeScout before the company moves, for a reply the hourly check
+ * hasn't flagged yet and for a reviewer's message that restarted the wait.
  */
 function deactivate_stalled_companies(): void {
 	if ( ! is_central() ) {
@@ -56,16 +58,21 @@ function deactivate_stalled_companies(): void {
 			continue;
 		}
 
-		$pending = get_pending_sponsorships( $company_id );
-		$overdue = get_compliance_requested_at( $company_id ) < time() - COMPLIANCE_REPLY_DAYS * DAY_IN_SECONDS;
+		$cutoff = time() - COMPLIANCE_REPLY_DAYS * DAY_IN_SECONDS;
 
-		foreach ( $overdue ? array() : $pending as $sponsorship_id ) {
+		if ( get_compliance_requested_at( $company_id ) >= $cutoff ) {
+			continue;
+		}
+
+		$pending = get_pending_sponsorships( $company_id );
+
+		foreach ( $pending as $sponsorship_id ) {
 			if ( ! event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
 				continue 2;
 			}
 		}
 
-		if ( sponsor_replied_since_check( $company_id ) ) {
+		if ( is_conversation_active( $company_id, $cutoff ) ) {
 			continue;
 		}
 
@@ -84,16 +91,15 @@ function deactivate_stalled_companies(): void {
 				continue;
 			}
 
-			if ( ! $pending ) {
-				$note = __( 'Moved to Inactive automatically: no sponsorship is waiting on its compliance request.', 'wordcamporg' );
-			} elseif ( $overdue ) {
+			if ( $pending ) {
 				/* translators: %d: The number of days. */
-				$note = sprintf( _n( 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d day.', 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d days.', COMPLIANCE_REPLY_DAYS, 'wordcamporg' ), COMPLIANCE_REPLY_DAYS );
+				$note = _n( 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d day, and the events it was being vetted for are over.', 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d days, and the events it was being vetted for are over.', COMPLIANCE_REPLY_DAYS, 'wordcamporg' );
 			} else {
-				$note = __( 'Moved to Inactive automatically: the events it was being vetted for are over.', 'wordcamporg' );
+				/* translators: %d: The number of days. */
+				$note = _n( 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d day, and no sponsorship is waiting on it.', 'Moved to Inactive automatically: the sponsor hasn’t replied to its compliance request in %d days, and no sponsorship is waiting on it.', COMPLIANCE_REPLY_DAYS, 'wordcamporg' );
 			}
 
-			add_note( $company_id, $note );
+			add_note( $company_id, sprintf( $note, COMPLIANCE_REPLY_DAYS ) );
 		} finally {
 			acting_as_system( $was_system );
 		}
@@ -106,6 +112,7 @@ add_action( 'sv_check_inactive', __NAMESPACE__ . '\deactivate_stalled_companies'
  * Requested if that's newer. Runs on Central.
  *
  * The newer of the two, as imported requests carry the Airtable row's last change rather than when they were sent.
+ * A reviewer's later message in the conversation counts too, which is_conversation_active() reads from FreeScout.
  *
  * @param int $company_id The company.
  * @return int A timestamp, or 0 if neither was recorded.
@@ -120,14 +127,16 @@ function get_compliance_requested_at( int $company_id ): int {
 }
 
 /**
- * Whether the sponsor wrote last in the company's latest compliance conversation, flagging the reply if so.
+ * Whether the company's latest compliance conversation is still going: the sponsor wrote last, which flags the
+ * reply, or a reviewer wrote since the cutoff, which restarts the sponsor's wait.
  *
- * Counts FreeScout being unreachable as a reply, so a company isn't moved on without its conversation being read.
+ * Counts FreeScout being unreachable too, so a company isn't moved on without its conversation being read.
  *
  * @param int $company_id The company.
+ * @param int $cutoff     The time a reviewer's message has to be newer than.
  * @return bool
  */
-function sponsor_replied_since_check( int $company_id ): bool {
+function is_conversation_active( int $company_id, int $cutoff ): bool {
 	$latest = get_latest_conversation( $company_id, 'compliance' );
 
 	if ( ! $latest ) {
@@ -140,13 +149,128 @@ function sponsor_replied_since_check( int $company_id ): bool {
 		return true;
 	}
 
-	if ( ! sponsor_wrote_last( $conversation ) ) {
-		return false;
+	if ( sponsor_wrote_last( $conversation ) ) {
+		update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+
+		return true;
 	}
 
-	update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+	return get_last_message_time( $conversation, 'message' ) >= $cutoff;
+}
 
-	return true;
+/**
+ * Moves each Inactive company whose sponsor has replied to its compliance request back to Compliance Requested,
+ * flagged for a reviewer, and reopens the sponsorships that going Inactive canceled.
+ *
+ * Only a company that went Inactive from Compliance Requested, and only for a reply written since: a reviewer who
+ * dropped the request had the earlier ones to read.
+ */
+function reactivate_replied_companies(): void {
+	if ( ! is_central() ) {
+		return;
+	}
+
+	$company_ids = get_posts(
+		array(
+			'post_type'      => COMPANY_POST_TYPE,
+			'post_status'    => 'sv-inactive',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		)
+	);
+
+	foreach ( $company_ids as $company_id ) {
+		$dropped_at = get_compliance_dropped_at( $company_id );
+		$latest     = $dropped_at ? get_latest_conversation( $company_id, 'compliance' ) : array();
+
+		if ( ! $latest ) {
+			continue;
+		}
+
+		$conversation = FreeScout::get( (int) $latest['id'] );
+
+		if ( is_wp_error( $conversation ) || ! sponsor_wrote_last( $conversation ) || get_last_message_time( $conversation, 'customer' ) <= $dropped_at ) {
+			continue;
+		}
+
+		$was_system = acting_as_system();
+		acting_as_system( true );
+
+		try {
+			returning_from_inactive( $company_id );
+
+			wp_update_post(
+				array(
+					'ID'          => $company_id,
+					'post_status' => 'sv-compliance-req',
+				)
+			);
+
+			if ( 'sv-compliance-req' !== get_post_status( $company_id ) ) {
+				continue;
+			}
+
+			update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+			add_note( $company_id, __( 'Back in Compliance Requested automatically: the sponsor replied to its compliance request.', 'wordcamporg' ) );
+
+			$canceled = get_posts(
+				array(
+					'post_type'      => SPONSORSHIP_POST_TYPE,
+					'post_status'    => 'svs-canceled',
+					'post_parent'    => $company_id,
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				)
+			);
+
+			foreach ( $canceled as $sponsorship_id ) {
+				reopen_for_inactive( $sponsorship_id, __( 'Reopened: the sponsor replied to the compliance request.', 'wordcamporg' ) );
+			}
+		} finally {
+			returning_from_inactive( 0 );
+			acting_as_system( $was_system );
+		}
+	}
+}
+add_action( 'sv_check_inactive', __NAMESPACE__ . '\reactivate_replied_companies' );
+
+/**
+ * When a company went Inactive, if that was from Compliance Requested. Runs on Central.
+ *
+ * Restoring it from the trash isn't taken for the move.
+ *
+ * @param int $company_id The company.
+ * @return int A timestamp, or 0 if it went Inactive from another status.
+ */
+function get_compliance_dropped_at( int $company_id ): int {
+	$moves = array_filter(
+		get_post_meta( $company_id, '_sv_status_change', false ),
+		static fn( array $change ): bool => 'sv-inactive' === $change['to'] && 'trash' !== $change['from']
+	);
+	$move  = $moves ? end( $moves ) : array();
+
+	return 'sv-compliance-req' === ( $move['from'] ?? '' ) ? (int) $move['time'] : 0;
+}
+
+/**
+ * Tracks the company a sponsor's reply is bringing back from Inactive, so only reactivate_replied_companies() can
+ * move one straight to Compliance Requested.
+ *
+ * Kept in memory, not in the request or the database, so no form field or meta value can unlock it.
+ *
+ * @param int|null $company_id The company coming back, 0 when done, or null to read.
+ * @return int The company coming back, or 0.
+ */
+function returning_from_inactive( ?int $company_id = null ): int {
+	static $current = 0;
+
+	if ( null !== $company_id ) {
+		$current = $company_id;
+	}
+
+	return $current;
 }
 
 /**
@@ -191,13 +315,15 @@ function is_canceled_for_inactive( int $sponsorship_id ): bool {
 }
 
 /**
- * Reopens a sponsorship canceled because its company went Inactive, when vetting is requested for it again.
+ * Reopens a sponsorship canceled because its company went Inactive, when vetting is requested for it again or the
+ * sponsor replies.
  *
  * Runs on Central.
  *
- * @param int $sponsorship_id The sponsorship.
+ * @param int    $sponsorship_id The sponsorship.
+ * @param string $note           Why it's reopened, for its history.
  */
-function reopen_for_inactive( int $sponsorship_id ): void {
+function reopen_for_inactive( int $sponsorship_id, string $note ): void {
 	if ( ! is_canceled_for_inactive( $sponsorship_id ) ) {
 		return;
 	}
@@ -209,7 +335,7 @@ function reopen_for_inactive( int $sponsorship_id ): void {
 		)
 	);
 
-	add_note( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) );
+	add_note( $sponsorship_id, $note );
 }
 
 /**

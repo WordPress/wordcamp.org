@@ -61,7 +61,7 @@ function request_vetting( int $blog_id, int $sponsor_id ): int|\WP_Error {
 	}
 
 	if ( ! is_wp_error( $sponsorship_id ) ) {
-		reopen_for_inactive( $sponsorship_id );
+		reopen_for_inactive( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) );
 
 		if ( ! get_post_field( 'post_parent', $sponsorship_id ) ) {
 			resolve_company( $sponsorship_id, $sponsor );

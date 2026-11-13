@@ -13,6 +13,7 @@ use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\deactivate_stalled_companies;
 use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
+use function WordCamp\Sponsor_Vetting\reactivate_replied_companies;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
@@ -58,9 +59,9 @@ class Test_Inactive extends Database_TestCase {
 	}
 
 	/**
-	 * A compliance request unanswered for 30 days, or with nothing left waiting on it, goes Inactive and cancels its
-	 * pending sponsorships, as the system; a recent one with an event to come, a sponsor reply to read, or Good Faith
-	 * changes owed stays.
+	 * A compliance request unanswered for 30 days, with no event still to come waiting on it, goes Inactive and
+	 * cancels its pending sponsorships, as the system; one with an event to come, a recent one, one with a sponsor
+	 * reply to read, or one with Good Faith changes owed stays.
 	 *
 	 * @dataProvider data_stalled_requests
 	 *
@@ -69,30 +70,10 @@ class Test_Inactive extends Database_TestCase {
 	 * @param bool     $inactive Whether it goes Inactive.
 	 * @param int      $asked    How many days ago it moved into Compliance Requested.
 	 */
-	public function test_stalled_compliance_requests_go_inactive( array $events, array $meta, bool $inactive, int $asked = 0 ): void {
+	public function test_stalled_compliance_requests_go_inactive( array $events, array $meta, bool $inactive, int $asked ): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
-		$company_id = self::factory()->post->create(
-			array(
-				'post_type'   => COMPANY_POST_TYPE,
-				'post_status' => 'sv-compliance-req',
-				'meta_input'  => $meta,
-			)
-		);
-
-		if ( $asked ) {
-			delete_post_meta( $company_id, '_sv_status_change' );
-			add_post_meta(
-				$company_id,
-				'_sv_status_change',
-				array(
-					'user_id' => 0,
-					'time'    => strtotime( "-{$asked} days" ),
-					'from'    => 'sv-in-progress',
-					'to'      => 'sv-compliance-req',
-				)
-			);
-		}
+		$company_id = $this->create_company( 'sv-compliance-req', $asked, $meta );
 
 		$sponsorship_ids = array();
 		foreach ( $events as $event ) {
@@ -130,20 +111,254 @@ class Test_Inactive extends Database_TestCase {
 	}
 
 	/**
-	 * Compliance requests, and whether the daily job moves them to Inactive.
+	 * Compliance requests, and whether the daily job moves them to Inactive. All but one went unanswered for 31 days.
 	 *
 	 * @return array[]
 	 */
 	public function data_stalled_requests(): array {
 		return array(
-			'no pending sponsorship'         => array( array(), array(), true ),
-			'every event has ended'          => array( array( 'ended', 'ended' ), array(), true ),
-			'one event is still to come'     => array( array( 'ended', 'upcoming' ), array(), false ),
-			'no reply in 31 days'            => array( array( 'upcoming' ), array(), true, 31 ),
-			'the event to come was canceled' => array( array( 'ended', 'canceled' ), array(), true ),
-			'the sponsor replied'            => array( array( 'ended' ), array( '_sv_sponsor_replied' => time() ), false ),
-			'approved in Good Faith, no sponsorship pending' => array( array(), array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '+5 days' ) ) ), false ),
+			'no pending sponsorship'         => array( array(), array(), true, 31 ),
+			'every event has ended'          => array( array( 'ended', 'ended' ), array(), true, 31 ),
+			'the event to come was canceled' => array( array( 'ended', 'canceled' ), array(), true, 31 ),
+			'one event is still to come'     => array( array( 'ended', 'upcoming' ), array(), false, 31 ),
+			'asked 5 days ago'               => array( array( 'ended' ), array(), false, 5 ),
+			'the sponsor replied'            => array( array( 'ended' ), array( '_sv_sponsor_replied' => time() ), false, 31 ),
+			'approved in Good Faith, no sponsorship pending' => array( array(), array( '_sv_good_faith_due' => gmdate( 'Y-m-d', strtotime( '+5 days' ) ) ), false, 31 ),
 		);
+	}
+
+	/**
+	 * The daily job reads a company's compliance conversation before moving it: a reviewer's message restarts the
+	 * sponsor's 30 days, and a reply the hourly check hasn't seen yet is flagged instead.
+	 *
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_conversation().
+	 *
+	 * @dataProvider data_conversations
+	 *
+	 * @param array[] $threads The conversation's messages: who wrote each and when.
+	 * @param string  $status  The company's status after the job.
+	 * @param bool    $flagged Whether the company is flagged as replied to.
+	 */
+	public function test_the_conversation_is_read_before_a_company_goes_inactive( array $threads, string $status, bool $flagged ): void {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		$company_id = $this->create_company( 'sv-compliance-req', 31 );
+		$this->add_conversation( $company_id, 31 );
+
+		$fake = $this->fake_conversation( $threads );
+		add_filter( 'pre_http_request', $fake, 10, 3 );
+		deactivate_stalled_companies();
+		remove_filter( 'pre_http_request', $fake, 10 );
+
+		$actual = array( get_post_status( $company_id ), (bool) get_post_meta( $company_id, '_sv_sponsor_replied', true ) );
+
+		restore_current_blog();
+
+		$this->assertSame( array( $status, $flagged ), $actual );
+	}
+
+	/**
+	 * Conversations for a request sent 31 days ago, and what the daily job does with its company.
+	 *
+	 * @return array[]
+	 */
+	public function data_conversations(): array {
+		$request = array( 'message', '-31 days' );
+
+		return array(
+			'no one wrote since the request'  => array( array( $request ), 'sv-inactive', false ),
+			'a reviewer wrote 5 days ago'     => array( array( $request, array( 'customer', '-20 days' ), array( 'message', '-5 days' ) ), 'sv-compliance-req', false ),
+			'the sponsor replied an hour ago' => array( array( $request, array( 'customer', '-1 hour' ) ), 'sv-compliance-req', true ),
+		);
+	}
+
+	/**
+	 * A sponsor's reply to a compliance request that was dropped brings its company back to Compliance Requested,
+	 * flagged for a reviewer, and reopens the sponsorship that going Inactive canceled, as the system. A reply the
+	 * reviewer had when dropping the request, or to a company that wasn't waiting on one, changes nothing.
+	 *
+	 * Fakes FreeScout's API through `pre_http_request`: see fake_conversation().
+	 *
+	 * @dataProvider data_late_replies
+	 *
+	 * @param string $from    The status the company went Inactive from.
+	 * @param string $replied When the sponsor replied, as strtotime() reads it.
+	 * @param bool   $returns Whether the company goes back to Compliance Requested.
+	 */
+	public function test_a_sponsors_reply_brings_an_inactive_company_back( string $from, string $replied, bool $returns ): void {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		$company_id = $this->create_company( $from, 40 );
+		$this->add_conversation( $company_id, 40 );
+
+		$sponsorship_id = self::factory()->post->create(
+			array(
+				'post_type'   => SPONSORSHIP_POST_TYPE,
+				'post_status' => 'svs-pending',
+				'post_parent' => $company_id,
+				'meta_input'  => array( '_sv_blog_id' => self::$year_dot_2019_site_id ),
+			)
+		);
+
+		$reviewer_id = self::factory()->user->create();
+		wp_set_current_user( $reviewer_id );
+		wp_update_post(
+			array(
+				'ID'          => $company_id,
+				'post_status' => 'sv-inactive',
+			)
+		);
+
+		$fake = $this->fake_conversation( array( array( 'message', '-40 days' ), array( 'customer', $replied ) ) );
+		add_filter( 'pre_http_request', $fake, 10, 3 );
+		reactivate_replied_companies();
+		remove_filter( 'pre_http_request', $fake, 10 );
+
+		$changes = get_post_meta( $company_id, '_sv_status_change', false );
+		$actual  = array(
+			'company'     => get_post_status( $company_id ),
+			'sponsorship' => get_post_status( $sponsorship_id ),
+			'flagged'     => (bool) get_post_meta( $company_id, '_sv_sponsor_replied', true ),
+			'moved_by'    => (int) end( $changes )['user_id'],
+		);
+
+		restore_current_blog();
+
+		$this->assertSame(
+			array(
+				'company'     => $returns ? 'sv-compliance-req' : 'sv-inactive',
+				'sponsorship' => $returns ? 'svs-pending' : 'svs-canceled',
+				'flagged'     => $returns,
+				'moved_by'    => $returns ? 0 : $reviewer_id,
+			),
+			$actual
+		);
+	}
+
+	/**
+	 * Inactive companies, when their sponsor replied, and whether that brings them back.
+	 *
+	 * @return array[]
+	 */
+	public function data_late_replies(): array {
+		return array(
+			'replied after it went Inactive'              => array( 'sv-compliance-req', '+1 hour', true ),
+			'replied before it went Inactive'             => array( 'sv-compliance-req', '-1 day', false ),
+			'went Inactive before changes were requested' => array( 'sv-needs-vetting', '+1 hour', false ),
+		);
+	}
+
+	/**
+	 * Creates a company that entered its status some days ago.
+	 *
+	 * @param string $status The company's status.
+	 * @param int    $days   How many days ago.
+	 * @param array  $meta   Optional. More meta.
+	 * @return int The company.
+	 */
+	protected function create_company( string $status, int $days, array $meta = array() ): int {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => $status,
+				'meta_input'  => $meta,
+			)
+		);
+
+		delete_post_meta( $company_id, '_sv_status_change' );
+		add_post_meta(
+			$company_id,
+			'_sv_status_change',
+			array(
+				'user_id' => 0,
+				'time'    => strtotime( "-{$days} days" ),
+				'from'    => 'sv-in-progress',
+				'to'      => $status,
+			)
+		);
+
+		return $company_id;
+	}
+
+	/**
+	 * Records the compliance request a company was sent some days ago, as conversation 501.
+	 *
+	 * @param int $company_id The company.
+	 * @param int $days       How many days ago.
+	 */
+	protected function add_conversation( int $company_id, int $days ): void {
+		add_post_meta(
+			$company_id,
+			'_sv_conversation',
+			array(
+				'id'             => 501,
+				'url'            => 'https://freescout.wordpress.net/conversation/501',
+				'type'           => 'compliance',
+				'sponsorship_id' => 0,
+				'user_id'        => 0,
+				'time'           => strtotime( "-{$days} days" ),
+			)
+		);
+	}
+
+	/**
+	 * Fakes the FreeScout API call the daily job makes to read a compliance conversation
+	 * (`GET /api/conversations/501`), so the tests make no external request. The response follows the API's shape.
+	 *
+	 * @param array[] $threads The conversation's messages: each a thread type (`message` for an agent, `customer`
+	 *                         for the sponsor) and when it was written, as strtotime() reads it.
+	 * @return \Closure A `pre_http_request` callback.
+	 */
+	protected function fake_conversation( array $threads ): \Closure {
+		return static function ( mixed $response, array $args, string $url ) use ( $threads ): mixed {
+			$api = 'https://freescout.wordpress.net/api/';
+
+			if ( ! str_starts_with( $url, $api ) ) {
+				return $response;
+			}
+
+			$found = 'GET conversations/501?embed=threads,tags' === $args['method'] . ' ' . substr( $url, strlen( $api ) );
+			$body  = array( 'message' => 'Not found' );
+
+			if ( $found ) {
+				$body = array(
+					'id'           => 501,
+					'number'       => 6789,
+					'type'         => 'email',
+					'status'       => 'active',
+					'state'        => 'published',
+					'subject'      => 'Action Required: Compliance for WordPress Event Sponsorship',
+					'mailboxId'    => 7,
+					'threadsCount' => count( $threads ),
+					'createdAt'    => gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $threads[0][1] ) ),
+					'_embedded'    => array(
+						'threads' => array_map(
+							static fn( int $index, array $thread ): array => array(
+								'id'        => $index + 1,
+								'type'      => $thread[0],
+								'status'    => 'active',
+								'state'     => 'published',
+								'createdAt' => gmdate( 'Y-m-d\TH:i:s\Z', strtotime( $thread[1] ) ),
+							),
+							array_keys( $threads ),
+							$threads
+						),
+						'tags'    => array(),
+					),
+				);
+			}
+
+			return array(
+				'headers'  => array(),
+				'body'     => wp_json_encode( $body ),
+				'response' => array(
+					'code'    => $found ? 200 : 404,
+					'message' => '',
+				),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
 	}
 
 	/**

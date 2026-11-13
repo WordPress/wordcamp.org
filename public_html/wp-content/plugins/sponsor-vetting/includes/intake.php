@@ -17,9 +17,9 @@ defined( 'WPINC' ) || die();
  * Requests vetting for a camp's sponsor.
  *
  * Finds or creates the sponsorship, reopening one canceled because its company went Inactive, links it to a company
- * where that's certain, which approves it if the company is vetted, queues the company if its vetting has lapsed or
- * it's Inactive, and points the camp's sponsor at the sponsorship. Safe to call again: each camp sponsor has one
- * sponsorship.
+ * where that's certain, which approves it if the company is vetted, as reopening it does, queues the company if its
+ * vetting has lapsed or it's Inactive, and points the camp's sponsor at the sponsorship. Safe to call again: each
+ * camp sponsor has one sponsorship.
  *
  * Callers check capabilities first.
  *
@@ -61,7 +61,10 @@ function request_vetting( int $blog_id, int $sponsor_id ): int|\WP_Error {
 	}
 
 	if ( ! is_wp_error( $sponsorship_id ) ) {
-		reopen_for_inactive( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) );
+		// Its company may have been vetted since, for another camp's request.
+		if ( reopen_for_inactive( $sponsorship_id, __( 'Reopened: vetting was requested again.', 'wordcamporg' ) ) ) {
+			auto_approve( $sponsorship_id );
+		}
 
 		if ( ! get_post_field( 'post_parent', $sponsorship_id ) ) {
 			resolve_company( $sponsorship_id, $sponsor );

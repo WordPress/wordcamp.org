@@ -113,7 +113,11 @@ function get_company_label( int $company_id ): string {
 		return __( 'Vetted', 'wordcamporg' );
 	}
 
-	return 'sv-compliance-req' === $state['status'] ? __( 'Waiting on the sponsor', 'wordcamporg' ) : __( 'In review', 'wordcamporg' );
+	return match ( $state['status'] ) {
+		'sv-compliance-req' => __( 'Waiting on the sponsor', 'wordcamporg' ),
+		'sv-inactive'       => __( 'Vetting stopped', 'wordcamporg' ),
+		default             => __( 'In review', 'wordcamporg' ),
+	};
 }
 
 /**

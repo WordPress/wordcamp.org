@@ -5,7 +5,8 @@
  * A daily job moves companies out of Compliance Requested once the sponsor hasn't replied in COMPLIANCE_REPLY_DAYS
  * and no sponsorship waiting on the request has an event still to come. Going Inactive cancels what was pending.
  * Requesting vetting again for one of those camp sponsors reopens it, which puts the company back in the queue (see
- * queue_company()), and a reply from the sponsor puts the company back in Compliance Requested.
+ * queue_company()) or approves it if the company has been vetted since, and a reply from the sponsor puts the
+ * company back in Compliance Requested.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -53,12 +54,12 @@ function deactivate_stalled_companies(): void {
 		)
 	);
 
+	$cutoff = time() - COMPLIANCE_REPLY_DAYS * DAY_IN_SECONDS;
+
 	foreach ( $company_ids as $company_id ) {
 		if ( get_post_meta( $company_id, '_sv_sponsor_replied', true ) || get_post_meta( $company_id, '_sv_good_faith_due', true ) ) {
 			continue;
 		}
-
-		$cutoff = time() - COMPLIANCE_REPLY_DAYS * DAY_IN_SECONDS;
 
 		if ( get_compliance_requested_at( $company_id ) >= $cutoff ) {
 			continue;
@@ -159,12 +160,13 @@ function is_conversation_active( int $company_id, int $cutoff ): bool {
 }
 
 /**
- * Moves each Inactive company whose sponsor has replied to its compliance request back to Compliance Requested,
- * flagged for a reviewer, and reopens the sponsorships that going Inactive canceled.
+ * Moves each Inactive company whose sponsor has replied to its compliance request back to Compliance Requested
+ * and reopens the sponsorships that going Inactive canceled.
  *
  * Only a company that went Inactive from Compliance Requested, and only for a reply written since: a reviewer who
- * dropped the request had the earlier ones to read. A sponsorship whose event is over stays canceled, as the
- * company turning Compliant would approve it and email an event that has already happened.
+ * dropped the request had the earlier ones to read. The company is flagged for a reviewer unless one has answered
+ * the reply in FreeScout already. A sponsorship whose event is over stays canceled, as the company turning
+ * Compliant would approve it and email an event that has already happened.
  */
 function reactivate_replied_companies(): void {
 	if ( ! is_central() ) {
@@ -191,7 +193,7 @@ function reactivate_replied_companies(): void {
 
 		$conversation = FreeScout::get( (int) $latest['id'] );
 
-		if ( is_wp_error( $conversation ) || ! sponsor_wrote_last( $conversation ) || get_last_message_time( $conversation, 'customer' ) <= $dropped_at ) {
+		if ( is_wp_error( $conversation ) || get_last_message_time( $conversation, 'customer' ) <= $dropped_at ) {
 			continue;
 		}
 
@@ -212,7 +214,10 @@ function reactivate_replied_companies(): void {
 				continue;
 			}
 
-			update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+			if ( sponsor_wrote_last( $conversation ) ) {
+				update_post_meta( $company_id, '_sv_sponsor_replied', time() );
+			}
+
 			add_note( $company_id, __( 'Back in Compliance Requested automatically: the sponsor replied to its compliance request.', 'wordcamporg' ) );
 
 			$canceled = get_posts(
@@ -325,10 +330,11 @@ function is_canceled_for_inactive( int $sponsorship_id ): bool {
  *
  * @param int    $sponsorship_id The sponsorship.
  * @param string $note           Why it's reopened, for its history.
+ * @return bool Whether it was reopened.
  */
-function reopen_for_inactive( int $sponsorship_id, string $note ): void {
+function reopen_for_inactive( int $sponsorship_id, string $note ): bool {
 	if ( ! is_canceled_for_inactive( $sponsorship_id ) ) {
-		return;
+		return false;
 	}
 
 	wp_update_post(
@@ -339,6 +345,8 @@ function reopen_for_inactive( int $sponsorship_id, string $note ): void {
 	);
 
 	add_note( $sponsorship_id, $note );
+
+	return 'svs-pending' === get_post_status( $sponsorship_id );
 }
 
 /**

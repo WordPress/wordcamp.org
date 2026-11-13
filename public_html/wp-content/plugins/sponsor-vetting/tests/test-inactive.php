@@ -129,13 +129,14 @@ class Test_Inactive extends Database_TestCase {
 
 	/**
 	 * The daily job reads a company's compliance conversation before moving it: a reviewer's message restarts the
-	 * sponsor's 30 days, and a reply the hourly check hasn't seen yet is flagged instead.
+	 * sponsor's 30 days, a reply the hourly check hasn't seen yet is flagged instead, and a conversation FreeScout
+	 * doesn't return keeps the company where it is.
 	 *
 	 * Fakes FreeScout's API through `pre_http_request`: see fake_conversation().
 	 *
 	 * @dataProvider data_conversations
 	 *
-	 * @param array[] $threads The conversation's messages: who wrote each and when.
+	 * @param array[] $threads The conversation's messages: who wrote each and when. None if FreeScout has no answer.
 	 * @param string  $status  The company's status after the job.
 	 * @param bool    $flagged Whether the company is flagged as replied to.
 	 */
@@ -169,25 +170,27 @@ class Test_Inactive extends Database_TestCase {
 			'no one wrote since the request'  => array( array( $request ), 'sv-inactive', false ),
 			'a reviewer wrote 5 days ago'     => array( array( $request, array( 'customer', '-20 days' ), array( 'message', '-5 days' ) ), 'sv-compliance-req', false ),
 			'the sponsor replied an hour ago' => array( array( $request, array( 'customer', '-1 hour' ) ), 'sv-compliance-req', true ),
+			'FreeScout doesn’t return it'     => array( array(), 'sv-compliance-req', false ),
 		);
 	}
 
 	/**
 	 * A sponsor's reply to a compliance request that was dropped brings its company back to Compliance Requested,
-	 * flagged for a reviewer, and reopens the sponsorship that going Inactive canceled, as the system, unless its
-	 * event is over. A reply the reviewer had when dropping the request, or to a company that wasn't waiting on
-	 * one, changes nothing.
+	 * flagged for a reviewer unless one has answered already, and reopens the sponsorship that going Inactive
+	 * canceled, as the system, unless its event is over. A reply the reviewer had when dropping the request, or to a
+	 * company that wasn't waiting on one, changes nothing.
 	 *
 	 * Fakes FreeScout's API through `pre_http_request`: see fake_conversation().
 	 *
 	 * @dataProvider data_late_replies
 	 *
-	 * @param string $from    The status the company went Inactive from.
-	 * @param string $replied When the sponsor replied, as strtotime() reads it.
-	 * @param bool   $returns Whether the company goes back to Compliance Requested.
-	 * @param bool   $ended   Optional. Whether its sponsorship's event is over.
+	 * @param string $from     The status the company went Inactive from.
+	 * @param string $replied  When the sponsor replied, as strtotime() reads it.
+	 * @param bool   $returns  Whether the company goes back to Compliance Requested.
+	 * @param bool   $ended    Optional. Whether its sponsorship's event is over.
+	 * @param bool   $answered Optional. Whether a reviewer has answered the reply in FreeScout.
 	 */
-	public function test_a_sponsors_reply_brings_an_inactive_company_back( string $from, string $replied, bool $returns, bool $ended = false ): void {
+	public function test_a_sponsors_reply_brings_an_inactive_company_back( string $from, string $replied, bool $returns, bool $ended = false, bool $answered = false ): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$company_id = $this->create_company( $from, 40 );
@@ -211,7 +214,13 @@ class Test_Inactive extends Database_TestCase {
 			)
 		);
 
-		$fake = $this->fake_conversation( array( array( 'message', '-40 days' ), array( 'customer', $replied ) ) );
+		$threads = array( array( 'message', '-40 days' ), array( 'customer', $replied ) );
+
+		if ( $answered ) {
+			$threads[] = array( 'message', '+2 hours' );
+		}
+
+		$fake = $this->fake_conversation( $threads );
 		add_filter( 'pre_http_request', $fake, 10, 3 );
 		reactivate_replied_companies();
 		remove_filter( 'pre_http_request', $fake, 10 );
@@ -230,7 +239,7 @@ class Test_Inactive extends Database_TestCase {
 			array(
 				'company'     => $returns ? 'sv-compliance-req' : 'sv-inactive',
 				'sponsorship' => $returns && ! $ended ? 'svs-pending' : 'svs-canceled',
-				'flagged'     => $returns,
+				'flagged'     => $returns && ! $answered,
 				'moved_by'    => $returns ? 0 : $reviewer_id,
 			),
 			$actual
@@ -246,6 +255,7 @@ class Test_Inactive extends Database_TestCase {
 		return array(
 			'replied after it went Inactive'              => array( 'sv-compliance-req', '+1 hour', true ),
 			'replied after its event was over'            => array( 'sv-compliance-req', '+1 hour', true, true ),
+			'a reviewer has answered the reply'           => array( 'sv-compliance-req', '+1 hour', true, false, true ),
 			'replied before it went Inactive'             => array( 'sv-compliance-req', '-1 day', false ),
 			'went Inactive before changes were requested' => array( 'sv-needs-vetting', '+1 hour', false ),
 		);
@@ -309,7 +319,8 @@ class Test_Inactive extends Database_TestCase {
 	 * (`GET /api/conversations/501`), so the tests make no external request. The response follows the API's shape.
 	 *
 	 * @param array[] $threads The conversation's messages: each a thread type (`message` for an agent, `customer`
-	 *                         for the sponsor) and when it was written, as strtotime() reads it.
+	 *                         for the sponsor) and when it was written, as strtotime() reads it. Without any, the
+	 *                         API has no such conversation.
 	 * @return \Closure A `pre_http_request` callback.
 	 */
 	protected function fake_conversation( array $threads ): \Closure {
@@ -320,7 +331,7 @@ class Test_Inactive extends Database_TestCase {
 				return $response;
 			}
 
-			$found = 'GET conversations/501?embed=threads,tags' === $args['method'] . ' ' . substr( $url, strlen( $api ) );
+			$found = $threads && 'GET conversations/501?embed=threads,tags' === $args['method'] . ' ' . substr( $url, strlen( $api ) );
 			$body  = array( 'message' => 'Not found' );
 
 			if ( $found ) {
@@ -366,9 +377,16 @@ class Test_Inactive extends Database_TestCase {
 
 	/**
 	 * A reviewer making a company Inactive stops the vetting its camps asked for, which organizers can ask for
-	 * again: that reopens the sponsorship and puts the company back in the queue.
+	 * again: that reopens the sponsorship and puts the company back in the queue, or approves the sponsorship if
+	 * the company has been vetted since.
+	 *
+	 * @dataProvider data_requests_after_inactive
+	 *
+	 * @param string[] $moves       The statuses the company moves through before vetting is requested again.
+	 * @param string   $sponsorship The sponsorship's status after the request.
+	 * @param string   $company     The company's status after the request.
 	 */
-	public function test_requesting_vetting_again_reopens_an_inactive_companys_sponsorship(): void {
+	public function test_requesting_vetting_again_reopens_an_inactive_companys_sponsorship( array $moves, string $sponsorship, string $company ): void {
 		switch_to_blog( self::$year_dot_2019_site_id );
 		$sponsor_id = self::factory()->post->create(
 			array(
@@ -391,6 +409,15 @@ class Test_Inactive extends Database_TestCase {
 			)
 		);
 		$canceled = get_post_status( $sponsorship_id );
+
+		foreach ( $moves as $status ) {
+			wp_update_post(
+				array(
+					'ID'          => $company_id,
+					'post_status' => $status,
+				)
+			);
+		}
 		restore_current_blog();
 
 		switch_to_blog( self::$year_dot_2019_site_id );
@@ -400,8 +427,7 @@ class Test_Inactive extends Database_TestCase {
 		request_vetting( self::$year_dot_2019_site_id, $sponsor_id );
 
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
-		$reopened = get_post_status( $sponsorship_id );
-		$company  = get_post_status( $company_id );
+		$actual = array( get_post_status( $sponsorship_id ), get_post_status( $company_id ) );
 		restore_current_blog();
 
 		$this->assertSame( 'svs-canceled', $canceled );
@@ -412,7 +438,18 @@ class Test_Inactive extends Database_TestCase {
 			),
 			$organizer
 		);
-		$this->assertSame( 'svs-pending', $reopened );
-		$this->assertSame( 'sv-needs-vetting', $company );
+		$this->assertSame( array( $sponsorship, $company ), $actual );
+	}
+
+	/**
+	 * What became of an Inactive company before vetting was requested again, and what the request does.
+	 *
+	 * @return array[]
+	 */
+	public function data_requests_after_inactive(): array {
+		return array(
+			'the company is still Inactive' => array( array(), 'svs-pending', 'sv-needs-vetting' ),
+			'the company was vetted since'  => array( array( 'sv-needs-vetting', 'sv-compliant' ), 'svs-approved', 'sv-compliant' ),
+		);
 	}
 }

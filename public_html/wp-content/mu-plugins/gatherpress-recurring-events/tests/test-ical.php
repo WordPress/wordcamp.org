@@ -131,6 +131,9 @@ final class Test_Ical extends WP_UnitTestCase {
 			Occurrences::set_status( $series, $occurrence->recurrence_id, 'cancelled' );
 		}
 
+		// From 19:00 to 20:00 UTC today's date is under way: not a later date, but not over, so it keeps the series listed.
+		Occurrences::set_status( $series, Occurrences::select_for_series( $series )->recurrence_id, 'cancelled' );
+
 		$this->assertStringNotContainsString( "UID:gatherpress_{$series}\r\n", $this->feed() );
 	}
 

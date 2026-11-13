@@ -25,6 +25,8 @@ use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/trait-submits-invoices.php';
+// The plugin loads its notices only in the admin.
+require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 /**
  * Extends `Database_TestCase` for its Central and camp sites.
@@ -415,6 +417,43 @@ class Test_Intake extends Database_TestCase {
 			),
 			$statuses
 		);
+	}
+
+	/**
+	 * Requesting vetting from the sponsor's edit screen saves what the organizer entered with it first, so a website
+	 * typed just before the request still gets its company.
+	 */
+	public function test_request_from_edit_screen_carries_unsaved_sponsor_info(): void {
+		$sponsor_id = $this->create_camp_sponsor( '' );
+		$user_id    = self::factory()->user->create();
+
+		add_user_to_blog( self::$year_dot_2018_site_id, $user_id, 'editor' );
+		wp_set_current_user( $user_id );
+
+		$sponsorship_id = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static function () use ( $sponsor_id ): int {
+				$_POST = array(
+					'wcpt-meta-sponsor-info'   => wp_create_nonce( 'edit-sponsor-info' ),
+					'_wcpt_sponsor_website'    => 'https://typed.example',
+					'sv_request_vetting'       => '1',
+					'sv_request_vetting_nonce' => wp_create_nonce( 'sv_request_vetting_' . $sponsor_id ),
+				);
+
+				wp_update_post( array( 'ID' => $sponsor_id ) );
+
+				$_POST = array();
+
+				return (int) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
+			}
+		);
+
+		$domains = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static fn(): array => get_company_domains( (int) get_post_field( 'post_parent', $sponsorship_id ) )
+		);
+
+		$this->assertSame( array( 'typed.example' ), $domains );
 	}
 
 	/**

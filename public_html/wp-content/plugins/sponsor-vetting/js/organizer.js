@@ -1,5 +1,5 @@
 /**
- * Redraws the Sponsor Vetting box after the block editor saves the sponsor.
+ * Redraws the Sponsor Vetting box after the block editor saves the sponsor, and saves it to request vetting.
  *
  * The block editor saves without reloading the page, so the box would otherwise keep showing what it said on load.
  */
@@ -38,6 +38,34 @@
 			} )
 			.catch( () => {} );
 	}
+
+	/**
+	 * Saves the sponsor with the request, as the button does by itself in the classic editor.
+	 *
+	 * @param {MouseEvent} event The click.
+	 */
+	function requestVetting( event ) {
+		const button = event.target.closest( '#sv-vetting button[type="submit"]' );
+
+		if ( ! button ) {
+			return;
+		}
+
+		event.preventDefault();
+
+		// The editor posts the meta boxes' fields but not their buttons. The redraw clears the field again.
+		button.after(
+			Object.assign( document.createElement( 'input' ), {
+				type: 'hidden',
+				name: 'sv_request_vetting',
+				value: '1',
+			} )
+		);
+
+		window.wp.data.dispatch( 'core/editor' ).savePost();
+	}
+
+	document.addEventListener( 'click', requestVetting );
 
 	// After core saves the meta boxes, at the default priority, since the website is in one.
 	window.wp.hooks.addAction(

@@ -82,7 +82,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 					h(
 						Notice,
 						{ status: 'success', isDismissible: false },
-						__( 'Your message has been scheduled for delivery.', 'wordcamporg' )
+						__( 'Your message will be emailed shortly.', 'wordcamporg' )
 					),
 					h( Button, { variant: 'primary', onClick: onClose }, __( 'Close', 'wordcamporg' ) )
 			  )
@@ -99,7 +99,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 									'wordcamporg'
 							  )
 							: __(
-									'Choose which RSVP groups should receive this message.',
+									'This message will be emailed to the opted-in attendees in the RSVP groups you choose.',
 									'wordcamporg'
 							  )
 					),

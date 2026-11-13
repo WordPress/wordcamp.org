@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTimeline, sortByEvent } from '../timeline';
-import type { Sponsorship } from '../types';
+import type { CompanySponsorship } from '../types';
 
 /**
  * Builds a sponsorship for an event.
@@ -10,7 +10,7 @@ import type { Sponsorship } from '../types';
  * @param log  The times of the sponsorship's own log entries.
  * @return The sponsorship.
  */
-function sponsorship( name: string, date: string, log: string[] = [] ): Sponsorship {
+function sponsorship( name: string, date: string, log: string[] = [] ): CompanySponsorship {
 	return {
 		id: name.length,
 		title: { raw: name, rendered: name },

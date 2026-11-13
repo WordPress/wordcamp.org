@@ -3,14 +3,13 @@
 	white-space: nowrap;
 }
 
-// The panel beside the list.
-// The switch is shorter than the toolbar buttons it sits beside.
-.sponsor-vetting__group-by {
+// The switches are shorter than the toolbar buttons they sit beside.
+.sponsor-vetting__view-switch {
 	align-self: center;
 	margin-inline-start: var(--wpds-dimension-gap-sm);
 }
 
-// The panel scrolls as a whole, so its controls stick to the top.
+// The panel beside the list scrolls as a whole, so its controls stick to the top.
 .sponsor-vetting__panel-header {
 	background-color: inherit;
 	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
@@ -43,10 +42,15 @@
 	text-align: end;
 }
 
-// Findings are Markdown, shown as written.
-.sponsor-vetting__long-text {
-	overflow-wrap: anywhere;
-	white-space: pre-wrap;
+// A record's name that opens it reads as a link.
+.sponsor-vetting__open {
+	color: var(--wpds-color-foreground-interactive-brand);
+	cursor: pointer;
+	text-align: start;
+
+	&:hover {
+		text-decoration: underline;
+	}
 }
 
 .sponsor-vetting__overdue {

@@ -69,10 +69,31 @@ require_once __DIR__ . '/includes/rest.php';
 
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
-	require_once __DIR__ . '/includes/admin-companies.php';
-	require_once __DIR__ . '/includes/admin-sponsorships.php';
 	require_once __DIR__ . '/includes/admin-import.php';
 	require_once __DIR__ . '/includes/admin-app.php';
+}
+
+/**
+ * The vetting screen's menu slug: its page in `package.json`, in the mode that keeps wp-admin's menu and toolbar.
+ */
+const APP_PAGE = 'sponsor-vetting-wp-admin';
+
+/**
+ * Builds the address of the vetting screen on Central, with a company or a sponsorship open.
+ *
+ * @param string $record Optional. What to open: `company` or `sponsorship`.
+ * @param int    $id     Optional. Its ID.
+ * @return string
+ */
+function get_app_url( string $record = '', int $id = 0 ): string {
+	$url = get_admin_url( WORDCAMP_ROOT_BLOG_ID, 'admin.php?page=' . APP_PAGE );
+
+	if ( ! $id ) {
+		return $url;
+	}
+
+	// The screen has its own address inside the page's: sponsorships open on the Events tab.
+	return add_query_arg( 'p', rawurlencode( 'sponsorship' === $record ? "/?tab=events&sponsorship={$id}" : "/?company={$id}" ), $url );
 }
 
 /**

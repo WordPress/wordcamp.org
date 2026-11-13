@@ -175,7 +175,7 @@ function get_invoice_statuses( array $statuses, array $rows ): array {
 		$sponsorship = $sponsorships[ $keys[ $row_key ] ?? '' ] ?? null;
 
 		$statuses[ $row_key ] = $sponsorship
-			? sprintf( '<a href="%s">%s</a>', esc_url( admin_url( 'post.php?post=' . $sponsorship->ID . '&action=edit' ) ), esc_html( get_invoice_vetting_label( $sponsorship ) ) )
+			? sprintf( '<a href="%s">%s</a>', esc_url( get_app_url( 'sponsorship', $sponsorship->ID ) ), esc_html( get_invoice_vetting_label( $sponsorship ) ) )
 			: esc_html__( 'Not requested', 'wordcamporg' );
 	}
 

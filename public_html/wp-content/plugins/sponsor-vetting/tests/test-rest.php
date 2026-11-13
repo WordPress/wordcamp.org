@@ -1,6 +1,7 @@
 <?php
 /**
- * Tests for companies and sponsorships over core's REST endpoints, which the vetting screen reads.
+ * Tests for companies and sponsorships over core's REST endpoints, which the vetting screen reads and edits through,
+ * and for the routes that send their emails.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -10,6 +11,7 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
+use function WordCamp\Sponsor_Vetting\approve_sponsorship;
 use function WordCamp\Sponsor_Vetting\register_company_meta;
 use function WordCamp\Sponsor_Vetting\register_post_types;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -54,6 +56,8 @@ class Test_Rest extends Database_TestCase {
 	public function tear_down(): void {
 		$GLOBALS['wcorg_subroles'] = array();
 		$GLOBALS['wp_rest_server'] = null;
+
+		unregister_post_type( 'mes' );
 
 		restore_current_blog();
 
@@ -268,28 +272,28 @@ class Test_Rest extends Database_TestCase {
 					array(
 						'id'       => $events['past'],
 						'status'   => 'svs-canceled',
+						'log'      => array(),
 						'event'    => $event( 'Camp Past', '-10 days' ),
 						'approved' => '',
-						'log'      => array(),
 					),
 					array(
 						'id'       => $events['later'],
 						'status'   => 'svs-pending',
+						'log'      => array(),
 						'event'    => $event( 'Camp Later', '+20 days' ),
 						'approved' => '',
-						'log'      => array(),
 					),
 					array(
 						'id'       => $events['soon'],
 						'status'   => 'svs-pending',
-						'event'    => $event( 'Camp Soon', '+10 days' ),
-						'approved' => '',
 						'log'      => array(
 							array(
 								'time' => gmdate( 'c', 1790000200 ),
 								'html' => sprintf( $note, 'Asked the camp' ),
 							),
 						),
+						'event'    => $event( 'Camp Soon', '+10 days' ),
+						'approved' => '',
 					),
 				),
 			),
@@ -304,17 +308,283 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
-	 * A change the workflow refuses is answered with an error and leaves the record as it was, and vetters can't
-	 * write a company's meta yet.
+	 * A status change the workflow refuses is answered with an error and leaves the company as it was.
 	 *
-	 * @dataProvider data_writes
+	 * @dataProvider data_status_changes
 	 *
-	 * @param string $record The record written to: `company` or `sponsorship`.
-	 * @param array  $params What's written.
+	 * @param string $to     The status asked for.
 	 * @param int    $status The response's status.
-	 * @param string $stored The record's status afterwards.
+	 * @param string $stored The company's status afterwards.
 	 */
-	public function test_refused_changes_are_errors( string $record, array $params, int $status, string $stored ): void {
+	public function test_refused_status_changes_are_errors( string $to, int $status, string $stored ): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+
+		$response = $this->request( 'POST', '/sv-companies/' . $company_id, array( 'status' => $to ) );
+
+		$this->assertSame( array( $status, $stored ), array( $response->get_status(), get_post_status( $company_id ) ) );
+	}
+
+	/**
+	 * The statuses a vetter asks for, and what becomes of them.
+	 *
+	 * @return array[]
+	 */
+	public function data_status_changes(): array {
+		return array(
+			'a status the company can move to'   => array( 'sv-compliance-req', 200, 'sv-compliance-req' ),
+			'a status the company can’t move to' => array( 'sv-needs-vetting', 400, 'sv-in-progress' ),
+		);
+	}
+
+	/**
+	 * A vetter edits a company's name, websites, contact, findings and dates and adds a note in one request, each
+	 * cleaned as it's stored and an emptied value removed. Making the company Compliant then clears its Good Faith
+	 * date, even one sent with that request.
+	 */
+	public function test_vetter_edits_a_company(): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliance-req',
+				'meta_input'  => array( '_sv_contact_first_name' => 'Dana' ),
+			)
+		);
+
+		$edited = $this->request(
+			'POST',
+			'/sv-companies/' . $company_id,
+			array(
+				'title'          => 'Acme Hosting',
+				'domains'        => array( 'https://www.Acme.test/plans', 'acme-two.test' ),
+				'meta'           => array(
+					'_sv_contact_first_name' => '',
+					'_sv_contact_email'      => 'Dana@Acme.TEST',
+					'_sv_gpl_findings'       => '- Bundles a **non-GPL** theme.',
+					'_sv_not_eligible_until' => 'soon',
+				),
+				'good_faith_due' => '2027-01-15',
+				'note'           => 'Asked <b>Dana</b>',
+			)
+		);
+		$stored = array(
+			$edited->get_status(),
+			get_the_title( $company_id ),
+			$edited->get_data()['domains'],
+			get_post_meta( $company_id, '_sv_contact_email', true ),
+			get_post_meta( $company_id, '_sv_gpl_findings', true ),
+			metadata_exists( 'post', $company_id, '_sv_contact_first_name' ),
+			metadata_exists( 'post', $company_id, '_sv_not_eligible_until' ),
+			get_post_meta( $company_id, '_sv_good_faith_due', true ),
+			wp_list_pluck( get_post_meta( $company_id, '_sv_note', false ), 'text' ),
+		);
+
+		// The panel sends the date along when the vetter changed it before picking Compliant.
+		$compliant = $this->request(
+			'POST',
+			'/sv-companies/' . $company_id,
+			array(
+				'status'         => 'sv-compliant',
+				'good_faith_due' => '2027-02-01',
+			)
+		);
+
+		$this->assertSame(
+			array( 200, 'Acme Hosting', array( 'acme.test', 'acme-two.test' ), 'dana@acme.test', '- Bundles a **non-GPL** theme.', false, false, '2027-01-15', array( 'Asked Dana' ) ),
+			$stored
+		);
+		$this->assertSame( array( 200, false ), array( $compliant->get_status(), metadata_exists( 'post', $company_id, '_sv_good_faith_due' ) ) );
+	}
+
+	/**
+	 * A company offers the Multi-Event Sponsors no other company is linked to, and links to one of those only.
+	 */
+	public function test_company_links_a_free_multi_event_sponsor(): void {
+		register_post_type( 'mes' );
+
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+		$other_id   = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+		$free       = self::factory()->post->create(
+			array(
+				'post_type'  => 'mes',
+				'post_title' => 'Free',
+			)
+		);
+		$taken      = self::factory()->post->create(
+			array(
+				'post_type'  => 'mes',
+				'post_title' => 'Taken',
+				'meta_input' => array( '_sv_company_id' => $other_id ),
+			)
+		);
+
+		$offered = $this->request( 'GET', '/sv-companies/' . $company_id )->get_data()['mes_options'];
+		$linked  = $this->request( 'POST', '/sv-companies/' . $company_id, array( 'mes' => $free ) );
+		$refused = $this->request( 'POST', '/sv-companies/' . $company_id, array( 'mes' => $taken ) );
+
+		$this->assertSame(
+			array(
+				array(
+					array(
+						'id'   => $free,
+						'name' => 'Free',
+					),
+				),
+				$free,
+				400,
+				$other_id,
+			),
+			array( $offered, $linked->get_data()['mes'], $refused->get_status(), (int) get_post_meta( $taken, '_sv_company_id', true ) )
+		);
+	}
+
+	/**
+	 * Setting a sponsorship's status to Approved approves it only as the workflow allows: for a vetted company, or
+	 * in good faith for one asked for changes, which then has a date to finish by, and for the website the vetter
+	 * was shown.
+	 *
+	 * @dataProvider data_approvals
+	 *
+	 * @param string $company_status The company's status.
+	 * @param array  $params         What's sent with the status.
+	 * @param int    $status         The response's status.
+	 * @param string $stored         The sponsorship's status afterwards.
+	 * @param bool   $has_due_date   Whether the company has a Good Faith date afterwards.
+	 */
+	public function test_vetter_approves_a_sponsorship( string $company_status, array $params, int $status, string $stored, bool $has_due_date ): void {
+		$company_id     = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => $company_status,
+			)
+		);
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', $company_id );
+
+		// The event was told some other way, so approving sends it no email.
+		update_post_meta( $sponsorship_id, '_sv_approval_notified', 1 );
+
+		$response = $this->request( 'POST', '/sv-sponsorships/' . $sponsorship_id, array( 'status' => 'svs-approved' ) + $params );
+
+		$this->assertSame(
+			array( $status, $stored, $has_due_date ),
+			array( $response->get_status(), get_post_status( $sponsorship_id ), metadata_exists( 'post', $company_id, '_sv_good_faith_due' ) )
+		);
+	}
+
+	/**
+	 * Approvals a vetter asks for, and what becomes of them.
+	 *
+	 * @return array[]
+	 */
+	public function data_approvals(): array {
+		return array(
+			'a vetted company'                         => array( 'sv-compliant', array(), 200, 'svs-approved', false ),
+			'a company that isn’t vetted'              => array( 'sv-in-progress', array(), 400, 'svs-pending', false ),
+			'in good faith, a company asked to change' => array( 'sv-compliance-req', array( 'good_faith' => true ), 200, 'svs-approved', true ),
+			'in good faith, a company not asked yet'   => array( 'sv-in-progress', array( 'good_faith' => true ), 400, 'svs-pending', false ),
+			'another website than the vetter saw'      => array( 'sv-compliant', array( 'shown_domain' => 'other.test' ), 400, 'svs-pending', false ),
+		);
+	}
+
+	/**
+	 * A sponsorship waiting for a company names the one suggested for it, and is linked by writing its company. Only
+	 * a company will do.
+	 *
+	 * @dataProvider data_links
+	 *
+	 * @param string $post_type The post type of the post it's linked to.
+	 * @param int    $status    The response's status.
+	 * @param bool   $is_linked Whether it's linked afterwards.
+	 */
+	public function test_vetter_links_a_sponsorship( string $post_type, int $status, bool $is_linked ): void {
+		$suggested_id   = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+		$target_id      = COMPANY_POST_TYPE === $post_type ? $suggested_id : self::factory()->post->create( array( 'post_type' => $post_type ) );
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', 0 );
+
+		update_post_meta( $sponsorship_id, '_sv_suggested_company', $suggested_id );
+
+		$suggestion = $this->request( 'GET', '/sv-sponsorships/' . $sponsorship_id )->get_data()['suggestion'];
+		$response   = $this->request( 'POST', '/sv-sponsorships/' . $sponsorship_id, array( 'company' => $target_id ) );
+
+		$this->assertSame(
+			array( $suggested_id, $status, $is_linked ? $suggested_id : 0 ),
+			array( $suggestion['id'], $response->get_status(), (int) get_post_field( 'post_parent', $sponsorship_id ) )
+		);
+	}
+
+	/**
+	 * What a sponsorship is linked to, and what becomes of it.
+	 *
+	 * @return array[]
+	 */
+	public function data_links(): array {
+		return array(
+			'the suggested company'      => array( COMPANY_POST_TYPE, 200, true ),
+			'a post that isn’t a company' => array( 'post', 400, false ),
+		);
+	}
+
+	/**
+	 * A trashed sponsorship says which status it had, and writing that status restores it: an approved one comes
+	 * back approved, without its company being checked again.
+	 */
+	public function test_restoring_from_the_trash_returns_the_status(): void {
+		$company_id     = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', $company_id );
+
+		approve_sponsorship( $sponsorship_id );
+		wp_update_post(
+			array(
+				'ID'          => $company_id,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+
+		$trashed  = $this->request( 'DELETE', '/sv-sponsorships/' . $sponsorship_id );
+		$had      = $this->request( 'GET', '/sv-sponsorships/' . $sponsorship_id )->get_data()['trashed_status'];
+		$restored = $this->request( 'POST', '/sv-sponsorships/' . $sponsorship_id, array( 'status' => $had ) );
+
+		$this->assertSame(
+			array( 'trash', 'svs-approved', 200, 'svs-approved' ),
+			array( $trashed->get_data()['status'], $had, $restored->get_status(), get_post_status( $sponsorship_id ) )
+		);
+	}
+
+	/**
+	 * Only sponsor vetters reach the routes that send the emails, and only for a record of the route's kind. The
+	 * company here has no contact to email and the sponsorship isn't approved, so nothing is sent.
+	 *
+	 * @dataProvider data_senders
+	 *
+	 * @param string $subrole The user's subrole.
+	 * @param string $route   The route, with `%1$d` for the company's ID and `%2$d` for the sponsorship's.
+	 * @param int    $status  The response's status.
+	 */
+	public function test_only_vetters_send_the_emails( string $subrole, string $route, int $status ): void {
 		$company_id     = self::factory()->post->create(
 			array(
 				'post_type'   => COMPANY_POST_TYPE,
@@ -322,34 +592,25 @@ class Test_Rest extends Database_TestCase {
 			)
 		);
 		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', $company_id );
-		$routes         = array(
-			'company'     => '/sv-companies/' . $company_id,
-			'sponsorship' => '/sv-sponsorships/' . $sponsorship_id,
-		);
 
-		$response = $this->request( 'POST', $routes[ $record ], $params );
+		$response = $this->request( 'POST', sprintf( '/sponsor-vetting/v1' . $route, $company_id, $sponsorship_id ), array( 'sponsorship' => $sponsorship_id ), $subrole );
 
-		$this->assertSame(
-			array( $status, $stored, '' ),
-			array(
-				$response->get_status(),
-				get_post_status( 'company' === $record ? $company_id : $sponsorship_id ),
-				get_post_meta( $company_id, '_sv_gpl_findings', true ),
-			)
-		);
+		$this->assertSame( $status, $response->get_status() );
 	}
 
 	/**
-	 * What a vetter writes, and what becomes of it.
+	 * Who asks for which email, and how the routes answer.
 	 *
 	 * @return array[]
 	 */
-	public function data_writes(): array {
+	public function data_senders(): array {
 		return array(
-			'a status the company can move to'         => array( 'company', array( 'status' => 'sv-compliance-req' ), 200, 'sv-compliance-req' ),
-			'a status the company can’t move to'       => array( 'company', array( 'status' => 'sv-needs-vetting' ), 400, 'sv-in-progress' ),
-			'approval while the company isn’t vetted'  => array( 'sponsorship', array( 'status' => 'svs-approved' ), 400, 'svs-pending' ),
-			'findings, which aren’t writable yet'      => array( 'company', array( 'meta' => array( '_sv_gpl_findings' => 'All good.' ) ), 403, 'sv-in-progress' ),
+			// Let through, then refused for the missing contact.
+			'a vetter, a compliance request'          => array( 'sponsor_vetter', '/companies/%1$d/compliance-request', 400 ),
+			'a wrangler, a compliance request'        => array( 'wordcamp_wrangler', '/companies/%1$d/compliance-request', 403 ),
+			'a vetter, a sponsorship as the company'  => array( 'sponsor_vetter', '/companies/%2$d/compliance-request', 403 ),
+			'a vetter, an approval email'             => array( 'sponsor_vetter', '/sponsorships/%2$d/approval-email', 200 ),
+			'a wrangler, an approval email'           => array( 'wordcamp_wrangler', '/sponsorships/%2$d/approval-email', 403 ),
 		);
 	}
 
@@ -405,10 +666,10 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
-	 * Asks one of core's endpoints on Central, in the context the screen reads in, as a user with a subrole.
+	 * Asks an endpoint on Central, in the context the screen reads in, as a user with a subrole.
 	 *
 	 * @param string $method  The request's method.
-	 * @param string $route   The route, after `wp/v2`.
+	 * @param string $route   The route: one of core's, after `wp/v2`, or one of the plugin's in full.
 	 * @param array  $params  Optional. The request's parameters.
 	 * @param string $subrole Optional. The user's subrole.
 	 * @return \WP_REST_Response
@@ -421,7 +682,7 @@ class Test_Rest extends Database_TestCase {
 		$GLOBALS['wp_rest_server'] = new \WP_REST_Server();
 		do_action( 'rest_api_init', $GLOBALS['wp_rest_server'] );
 
-		$request = new \WP_REST_Request( $method, '/wp/v2' . $route );
+		$request = new \WP_REST_Request( $method, str_starts_with( $route, '/sponsor-vetting/' ) ? $route : '/wp/v2' . $route );
 		$request->set_param( 'context', 'edit' );
 
 		foreach ( $params as $name => $value ) {

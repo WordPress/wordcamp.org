@@ -23,6 +23,15 @@ export function formatTime( time: string ): string {
 }
 
 /**
+ * Gets today as a day (`Y-m-d`), in UTC like the days events start on.
+ *
+ * @return Today.
+ */
+export function getToday(): string {
+	return new Date().toISOString().slice( 0, 10 );
+}
+
+/**
  * Compares two days (`Y-m-d`) for sorting, with missing days last in either direction.
  *
  * @param a         A day, or an empty string.
@@ -36,4 +45,29 @@ export function compareDays( a: string, b: string, direction: 'asc' | 'desc' ): 
 	}
 
 	return direction === 'asc' ? a.localeCompare( b ) : b.localeCompare( a );
+}
+
+/**
+ * Compares the days two events start on the way a vetter needs them: events still to come soonest first, then
+ * undated ones, then past ones, latest first.
+ *
+ * @param a     A day, or an empty string.
+ * @param b     Another day, or an empty string.
+ * @param today Today, as `Y-m-d`.
+ * @return A negative number, zero, or a positive number.
+ */
+export function compareEventDays( a: string, b: string, today: string ): number {
+	const rank = ( day: string ): number => {
+		if ( ! day ) {
+			return 1;
+		}
+
+		return day >= today ? 0 : 2;
+	};
+
+	if ( rank( a ) !== rank( b ) ) {
+		return rank( a ) - rank( b );
+	}
+
+	return rank( a ) === 2 ? b.localeCompare( a ) : a.localeCompare( b );
 }

@@ -341,7 +341,8 @@ function auto_approve( int $sponsorship_id ): bool {
 }
 
 /**
- * Approves a company's pending sponsorships once it's Compliant, and tells a vetter on the screen how that went.
+ * Approves a company's pending sponsorships once it's Compliant. Each approval, and an email that failed, is noted
+ * in the sponsorship's history.
  *
  * After the save, so the domains saved with the status count. Restoring a company from the trash isn't a new vetting.
  *
@@ -366,21 +367,7 @@ function auto_approve_on_compliant( int $post_id, \WP_Post $post, bool $update, 
 		)
 	);
 
-	$approved = array_filter( $sponsorship_ids, __NAMESPACE__ . '\auto_approve' );
-	$unsent   = array_filter( $approved, __NAMESPACE__ . '\needs_approval_email' );
-
-	// Outside wp-admin, the history is where vetters find it.
-	if ( ! $approved || ! function_exists( __NAMESPACE__ . '\add_notice' ) ) {
-		return;
-	}
-
-	/* translators: %d: Number of sponsorships. */
-	add_notice( 'success', sprintf( _n( '%d pending sponsorship was approved automatically.', '%d pending sponsorships were approved automatically.', count( $approved ), 'wordcamporg' ), count( $approved ) ) );
-
-	if ( $unsent ) {
-		/* translators: %d: Number of sponsorships. */
-		add_notice( 'error', sprintf( _n( '%d approval email wasn’t sent (see the log in its history).', '%d approval emails weren’t sent (see logs in their history).', count( $unsent ), 'wordcamporg' ), count( $unsent ) ) );
-	}
+	array_map( __NAMESPACE__ . '\auto_approve', $sponsorship_ids );
 }
 add_action( 'wp_after_insert_post', __NAMESPACE__ . '\auto_approve_on_compliant', 10, 4 );
 

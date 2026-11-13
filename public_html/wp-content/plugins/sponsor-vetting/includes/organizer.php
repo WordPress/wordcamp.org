@@ -153,29 +153,31 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 		echo '<p class="description">' . esc_html__( 'Add the sponsor’s website, so the vetting team can find their company.', 'wordcamporg' ) . '</p>';
 	}
 
-	$url = wp_nonce_url( admin_url( 'admin-post.php?action=sv_request_vetting&sponsor_id=' . $post->ID ), 'sv_request_vetting_' . $post->ID );
+	wp_nonce_field( 'sv_request_vetting_' . $post->ID, 'sv_request_vetting_nonce', false );
 	?>
-	<p><a class="button" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?></a></p>
+	<p><button type="button" class="button"><?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?></button></p>
 	<p class="description"><?php esc_html_e( 'The Community Team checks every sponsor follows the WordPress trademark policy and the GPL. You don’t need an invoice to ask.', 'wordcamporg' ); ?></p>
 	<?php
 }
 
 /**
- * Loads the script that redraws the vetting box after the block editor saves, since that doesn't reload the page.
+ * Loads the script that saves the sponsor when vetting is requested, and that redraws the vetting box after the
+ * block editor saves, since that doesn't reload the page.
  *
- * Without it, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit screens' own
- * script hooks, which run just before scripts are printed.
+ * Without the redraw, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit
+ * screens' own script hooks, which run just before scripts are printed.
  */
 function enqueue_organizer_script(): void {
 	$screen = get_current_screen();
 
-	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
+	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type ) {
 		return;
 	}
 
 	$plugin_dir = dirname( __DIR__ );
+	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks' ) : array();
 
-	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), array( 'wp-api-fetch', 'wp-hooks' ), (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
+	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), $deps, (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
 }
 add_action( 'admin_print_scripts-post.php', __NAMESPACE__ . '\enqueue_organizer_script' );
 add_action( 'admin_print_scripts-post-new.php', __NAMESPACE__ . '\enqueue_organizer_script' );
@@ -252,18 +254,27 @@ function render_organizer_column( string $column, int $sponsor_id ): void {
 add_action( 'manage_wcb_sponsor_posts_custom_column', __NAMESPACE__ . '\render_organizer_column', 10, 2 );
 
 /**
- * Requests vetting for a camp's sponsor, from its edit screen.
+ * Requests vetting when a camp's sponsor is saved with the vetting box's button.
+ *
+ * Part of the save, so the request carries what the organizer entered with it. Runs after `save_post`, where the
+ * sponsor's meta is saved.
+ *
+ * @param int      $post_id The post ID.
+ * @param \WP_Post $post    The post.
  */
-function handle_vetting_request(): void {
-	$sponsor_id = absint( $_GET['sponsor_id'] ?? 0 );
-
-	check_admin_referer( 'sv_request_vetting_' . $sponsor_id );
-
-	if ( is_central() || 'wcb_sponsor' !== get_post_type( $sponsor_id ) || ! current_user_can( 'edit_post', $sponsor_id ) ) {
-		wp_die( esc_html__( 'You can’t request vetting for this sponsor.', 'wordcamporg' ), '', array( 'response' => 403 ) );
+function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
+	if (
+		'wcb_sponsor' !== $post->post_type
+		|| is_central()
+		|| ! is_admin()
+		|| ! isset( $_POST['sv_request_vetting'], $_POST['sv_request_vetting_nonce'] )
+		|| ! wp_verify_nonce( sanitize_key( $_POST['sv_request_vetting_nonce'] ), 'sv_request_vetting_' . $post_id )
+		|| ! current_user_can( 'edit_post', $post_id )
+	) {
+		return;
 	}
 
-	$result = request_vetting( get_current_blog_id(), $sponsor_id );
+	$result = request_vetting( get_current_blog_id(), $post_id );
 
 	if ( is_wp_error( $result ) ) {
 		add_notice( 'error', $result->get_error_message() );
@@ -279,8 +290,5 @@ function handle_vetting_request(): void {
 				: __( 'Vetting requested. The Community Team will be in touch with the sponsor if anything needs changing.', 'wordcamporg' )
 		);
 	}
-
-	wp_safe_redirect( admin_url( 'post.php?post=' . $sponsor_id . '&action=edit' ) );
-	exit;
 }
-add_action( 'admin_post_sv_request_vetting', __NAMESPACE__ . '\handle_vetting_request' );
+add_action( 'wp_after_insert_post', __NAMESPACE__ . '\request_vetting_on_save', 10, 2 );

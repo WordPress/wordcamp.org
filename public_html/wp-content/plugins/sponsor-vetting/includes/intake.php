@@ -16,9 +16,10 @@ defined( 'WPINC' ) || die();
 /**
  * Requests vetting for a camp's sponsor.
  *
- * Finds or creates the sponsorship, links it to a company where that's certain, which approves it if the company is
- * vetted, queues the company if its vetting has lapsed, and points the camp's sponsor at the sponsorship. Safe to
- * call again: each camp sponsor has one sponsorship.
+ * Finds or creates the sponsorship, reopening one canceled because its company went Inactive, links it to a company
+ * where that's certain, which approves it if the company is vetted, as reopening it does, queues the company if its
+ * vetting has lapsed or it's Inactive, and points the camp's sponsor at the sponsorship. Safe to call again: each
+ * camp sponsor has one sponsorship.
  *
  * Callers check capabilities first.
  *
@@ -60,6 +61,11 @@ function request_vetting( int $blog_id, int $sponsor_id ): int|\WP_Error {
 	}
 
 	if ( ! is_wp_error( $sponsorship_id ) ) {
+		// Its company may have been vetted since, for another camp's request.
+		if ( reopen_for_inactive( $sponsorship_id ) ) {
+			auto_approve( $sponsorship_id );
+		}
+
 		if ( ! get_post_field( 'post_parent', $sponsorship_id ) ) {
 			resolve_company( $sponsorship_id, $sponsor );
 		}
@@ -321,7 +327,7 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 }
 
 /**
- * Puts a pending sponsorship's company back in the queue when its vetting has lapsed.
+ * Puts a pending sponsorship's company back in the queue when its vetting has lapsed or it's Inactive.
  *
  * A company still in the pipeline, or Not Eligible until a date still to come, stays where it is. Runs on Central.
  *
@@ -330,9 +336,13 @@ function link_sponsorship( int $sponsorship_id, int $company_id ): true|\WP_Erro
 function queue_company( int $sponsorship_id ): void {
 	$company_id = (int) get_post_field( 'post_parent', $sponsorship_id );
 
-	if ( ! $company_id || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! get_vetting_state( $company_id )['needs_requeue'] ) {
+	$state = $company_id ? get_vetting_state( $company_id ) : array();
+
+	if ( ! $state || 'svs-pending' !== get_post_status( $sponsorship_id ) || ! $state['needs_requeue'] ) {
 		return;
 	}
+
+	$was_inactive = 'sv-inactive' === $state['status'];
 
 	wp_update_post(
 		array(
@@ -342,5 +352,7 @@ function queue_company( int $sponsorship_id ): void {
 	);
 
 	/* translators: %s: Sponsorship title. */
-	add_note( $company_id, sprintf( __( 'Back in the queue: “%s” needs vetting, and the last vetting has lapsed.', 'wordcamporg' ), get_the_title( $sponsorship_id ) ) );
+	$note = $was_inactive ? __( 'Back in the queue: “%s” needs vetting.', 'wordcamporg' ) : __( 'Back in the queue: “%s” needs vetting, and the last vetting has lapsed.', 'wordcamporg' );
+
+	add_note( $company_id, sprintf( $note, get_the_title( $sponsorship_id ) ) );
 }

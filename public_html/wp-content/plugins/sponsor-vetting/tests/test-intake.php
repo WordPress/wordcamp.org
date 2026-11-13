@@ -299,14 +299,32 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * A company whose Compliant vetting has lapsed goes back in the queue when a new sponsorship comes in.
+	 * A company whose Compliant vetting has lapsed, or that's Inactive, goes back in the queue when a new
+	 * sponsorship comes in.
+	 *
+	 * @dataProvider data_requeued_companies
+	 *
+	 * @param string   $status      The company's status.
+	 * @param int|null $last_vetted When it was last vetted, if not when it got its status.
 	 */
-	public function test_request_vetting_requeues_a_stale_company(): void {
-		list( $company_id, $mes_id ) = $this->create_mes_company( 'sv-compliant', (int) strtotime( '-13 months' ) );
+	public function test_request_vetting_requeues_a_company( string $status, ?int $last_vetted ): void {
+		list( $company_id, $mes_id ) = $this->create_mes_company( $status, $last_vetted );
 
 		request_vetting( self::$year_dot_2018_site_id, $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) ) );
 
 		$this->assertSame( 'sv-needs-vetting', $this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn(): string => (string) get_post_status( $company_id ) ) );
+	}
+
+	/**
+	 * Companies a new sponsorship puts back in the queue.
+	 *
+	 * @return array[]
+	 */
+	public function data_requeued_companies(): array {
+		return array(
+			'compliant, vetted 13 months ago' => array( 'sv-compliant', (int) strtotime( '-13 months' ) ),
+			'inactive'                        => array( 'sv-inactive', null ),
+		);
 	}
 
 	/**

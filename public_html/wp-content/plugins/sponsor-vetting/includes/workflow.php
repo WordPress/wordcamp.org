@@ -25,11 +25,12 @@ defined( 'WPINC' ) || die();
 function get_allowed_transitions( string $post_type ): array {
 	if ( COMPANY_POST_TYPE === $post_type ) {
 		return array(
-			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible' ),
-			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible' ),
-			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible' ),
+			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
 			'sv-compliant'      => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
 			'sv-not-eligible'   => array( 'sv-needs-vetting', 'sv-in-progress' ),
+			'sv-inactive'       => array( 'sv-needs-vetting', 'sv-in-progress' ),
 		);
 	}
 
@@ -126,7 +127,10 @@ function enforce_status_transition( array $data, array $postarr ): array {
 	// Restoring an approved sponsorship from the trash isn't a new approval.
 	$is_restoring = 'trash' === $post->post_status && restoring_approval() === $post->ID;
 
-	if ( $is_stale || ! is_allowed_transition( $post->post_type, $post->post_status, $to ) ) {
+	// Only a sponsor's reply takes an Inactive company straight back to Compliance Requested.
+	$is_returning = 'sv-inactive' === $post->post_status && 'sv-compliance-req' === $to && returning_from_inactive() === $post->ID;
+
+	if ( $is_stale || ! ( $is_returning || is_allowed_transition( $post->post_type, $post->post_status, $to ) ) ) {
 		$data['post_status'] = $post->post_status;
 	} elseif ( 'svs-approved' === $to && 'svs-approved' !== $post->post_status && ! $is_restoring && ! may_approve( $post->ID, (int) $data['post_parent'] ) ) {
 		$data['post_status'] = $post->post_status;
@@ -392,7 +396,8 @@ add_action( 'wp_after_insert_post', __NAMESPACE__ . '\auto_approve_on_compliant'
  *     @type bool   $expired             Compliant, but vetted before the threshold.
  *     @type bool   $not_eligible_active Not Eligible, with no end date or one still to come.
  *     @type bool   $good_faith_overdue  A Good Faith due date has passed and the company still isn't Compliant.
- *     @type bool   $needs_requeue       A new sponsorship should put the company back in the queue.
+ *     @type bool   $needs_requeue       A new sponsorship should put the company back in the queue: its vetting has
+ *                                        lapsed, its Not Eligible period has ended, or it's Inactive.
  * }
  */
 function get_vetting_state( int $company_id ): array {
@@ -411,7 +416,7 @@ function get_vetting_state( int $company_id ): array {
 		'good_faith_overdue'  => '' !== $due && $due < $today && 'sv-compliant' !== $status,
 	);
 
-	$state['needs_requeue'] = $state['expired'] || ( 'sv-not-eligible' === $status && ! $state['not_eligible_active'] );
+	$state['needs_requeue'] = $state['expired'] || 'sv-inactive' === $status || ( 'sv-not-eligible' === $status && ! $state['not_eligible_active'] );
 
 	return $state;
 }

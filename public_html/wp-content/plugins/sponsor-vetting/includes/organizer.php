@@ -75,7 +75,8 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 
 		$statuses[ $sponsor_id ] = array(
 			'label'     => $label,
-			'requested' => null !== $sponsorship,
+			// Vetting that stopped because the company went Inactive can be asked for again.
+			'requested' => null !== $sponsorship && ! is_canceled_for_inactive( $sponsorship->ID ),
 		);
 	}
 
@@ -94,7 +95,7 @@ function get_sponsorship_label( \WP_Post $sponsorship ): string {
 	return match ( $sponsorship->post_status ) {
 		'svs-approved'     => __( 'Approved', 'wordcamporg' ),
 		'svs-not-approved' => __( 'Not approved', 'wordcamporg' ),
-		'svs-canceled'     => __( 'Canceled', 'wordcamporg' ),
+		'svs-canceled'     => is_canceled_for_inactive( $sponsorship->ID ) ? __( 'Vetting stopped', 'wordcamporg' ) : __( 'Canceled', 'wordcamporg' ),
 		default            => $sponsorship->post_parent ? get_company_label( (int) $sponsorship->post_parent ) : __( 'In review', 'wordcamporg' ),
 	};
 }
@@ -112,7 +113,11 @@ function get_company_label( int $company_id ): string {
 		return __( 'Vetted', 'wordcamporg' );
 	}
 
-	return 'sv-compliance-req' === $state['status'] ? __( 'Waiting on the sponsor', 'wordcamporg' ) : __( 'In review', 'wordcamporg' );
+	return match ( $state['status'] ) {
+		'sv-compliance-req' => __( 'Waiting on the sponsor', 'wordcamporg' ),
+		'sv-inactive'       => __( 'Vetting stopped', 'wordcamporg' ),
+		default             => __( 'In review', 'wordcamporg' ),
+	};
 }
 
 /**

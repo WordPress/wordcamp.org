@@ -29,7 +29,7 @@ const PAST_EVENTS_LIMIT = 5;
  *
  * "Mine" means either of two things, and an organizer is usually both:
  *
- * - dates the member has RSVP'd to as attending,
+ * - dates the member has RSVP'd to, as attending or on the waiting list,
  * - events the member authored, which on a group site means the ones they
  *   organize.
  *
@@ -47,10 +47,11 @@ const PAST_EVENTS_LIMIT = 5;
  *
  * @param int $user_id Member to resolve dates for.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string, status: string}>
  *         Upcoming dates ordered by start time ascending. `start` is local to
  *         the event, matching what GatherPress stores, and `timezone` is the
- *         zone it is local to.
+ *         zone it is local to. `status` is the RSVP status, or empty for an
+ *         authored event with no RSVP.
  */
 function get_upcoming_events( int $user_id ): array {
 	if ( ! $user_id ) {
@@ -58,7 +59,7 @@ function get_upcoming_events( int $user_id ): array {
 	}
 
 	$candidates = array_merge(
-		get_attending_candidates( $user_id ),
+		get_attending_candidates( $user_id, array( 'attending', 'waiting_list' ) ),
 		get_authored_candidates( $user_id )
 	);
 
@@ -380,15 +381,18 @@ function get_comment_recurrence_ids( array $comment_ids ): array {
  * live there rather than in post meta that `WP_Query` could order by, and a
  * query per table beats instantiating an event per candidate.
  *
- * @param array<int, array{event_id: int, recurrence_id: string}> $candidates Candidate dates.
+ * @param array<int, array{event_id: int, recurrence_id: string, status?: string}> $candidates Candidate dates.
  *
- * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string}>
+ * @return array<int, array{event_id: int, recurrence_id: string, start: string, timezone: string, status: string}>
  *         Upcoming dates ordered by start time ascending.
  */
 function filter_to_upcoming( array $candidates ): array {
 	$unique = array();
 	foreach ( $candidates as $candidate ) {
-		$unique[ $candidate['event_id'] . '|' . $candidate['recurrence_id'] ] = $candidate;
+		$key = $candidate['event_id'] . '|' . $candidate['recurrence_id'];
+
+		// An organizer's own event is both authored and RSVP'd; keep the RSVP's status.
+		$unique[ $key ] = $candidate + ( $unique[ $key ] ?? array() );
 	}
 
 	$event_ids   = array_values( array_unique( array_column( $unique, 'event_id' ) ) );
@@ -417,6 +421,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'start'         => $occurrence->datetime_start,
 				'start_gmt'     => $occurrence->datetime_start_gmt,
 				'timezone'      => (string) $occurrence->timezone,
+				'status'        => (string) ( $candidate['status'] ?? '' ),
 			);
 		}
 	}
@@ -439,6 +444,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'start'         => $row->datetime_start,
 				'start_gmt'     => $row->datetime_start_gmt,
 				'timezone'      => (string) $row->timezone,
+				'status'        => (string) ( $candidate['status'] ?? '' ),
 			);
 			continue;
 		}
@@ -459,6 +465,7 @@ function filter_to_upcoming( array $candidates ): array {
 				'start'         => $next->datetime_start,
 				'start_gmt'     => $next->datetime_start_gmt,
 				'timezone'      => (string) $next->timezone,
+				'status'        => (string) ( $candidate['status'] ?? '' ),
 			);
 		}
 	}

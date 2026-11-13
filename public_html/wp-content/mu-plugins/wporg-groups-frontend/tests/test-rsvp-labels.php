@@ -7,8 +7,11 @@ use WP_UnitTestCase;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_formats;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_label;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_parts;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_waiting_formats;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_waiting_label;
 
 use const WordCamp\Groups\Frontend\RSVP_Labels\COUNT_FORMAT_KEYS;
+use const WordCamp\Groups\Frontend\RSVP_Labels\WAITING_FORMAT_KEYS;
 
 defined( 'WPINC' ) || die();
 
@@ -109,5 +112,43 @@ class Test_Groups_RSVP_Labels extends WP_UnitTestCase {
 	public function test_parts_pass_the_real_count_to_the_translator(): void {
 		$this->assertSame( array( '%s going', 9 ), get_count_parts( 9, false ) );
 		$this->assertSame( array( 'You and %s others', 8 ), get_count_parts( 9, true ) );
+	}
+
+	/**
+	 * Every waiting/full combination; shares its cases with `tests-js/event-rsvp.test.js`.
+	 *
+	 * @return array<string, array{0: int, 1: bool, 2: string}>
+	 */
+	public function data_waiting_labels(): array {
+		return array(
+			'room left'           => array( 0, false, '' ),
+			'just filled up'      => array( 0, true, 'Full' ),
+			'one waiting'         => array( 1, true, 'Full · 1 on the waiting list' ),
+			'several waiting'     => array( 47, true, 'Full · 47 on the waiting list' ),
+			// The limit was raised but promotion hasn't run yet.
+			'waiting despite room' => array( 2, false, 'Full · 2 on the waiting list' ),
+		);
+	}
+
+	/**
+	 * @dataProvider data_waiting_labels
+	 *
+	 * @param int    $waiting  Number on the waiting list.
+	 * @param bool   $is_full  Whether the limit is reached.
+	 * @param string $expected The finished line.
+	 */
+	public function test_get_waiting_label( int $waiting, bool $is_full, string $expected ): void {
+		$this->assertSame( $expected, get_waiting_label( $waiting, $is_full ) );
+	}
+
+	/**
+	 * The view module indexes `context.labels` by these keys, as with the count formats.
+	 */
+	public function test_waiting_formats_cover_the_documented_keys(): void {
+		$formats = get_waiting_formats();
+
+		$this->assertSame( WAITING_FORMAT_KEYS, array_keys( $formats ) );
+		$this->assertNotContains( '', $formats );
+		$this->assertStringContainsString( '%s', $formats['waitingPlural'] );
 	}
 }

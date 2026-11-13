@@ -347,8 +347,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	/**
 	 * Somebody who isn't attending has nothing to cancel, so the control ships
 	 * hidden rather than absent: the RSVP button changes status without a
-	 * reload, and `state.isNotAttending` can only reveal an element that is
-	 * already in the DOM.
+	 * reload, and `state.hasNoResponse` can only reveal an element that is
+	 * already in the DOM. "No response" rather than "not attending", because
+	 * the same control is how someone leaves the waiting list.
 	 */
 	public function test_event_rsvp_cancel_ships_hidden_for_a_non_attendee() {
 		$event_id = self::factory()->post->create(
@@ -365,7 +366,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
 
 		$this->assertStringContainsString( 'class="wporg-event-rsvp__cancel is-hidden"', $output );
-		$this->assertStringContainsString( 'data-wp-class--is-hidden="state.isNotAttending"', $output );
+		$this->assertStringContainsString( 'data-wp-class--is-hidden="state.hasNoResponse"', $output );
 	}
 
 	/**

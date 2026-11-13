@@ -10,14 +10,15 @@
  * - Past events (opt-in) land published, as the group's history, with
  *   Meetup's RSVP and attendance counts kept as meta. Individual RSVPs aren't
  *   imported.
- * - People (opt-in) are only ever matched to existing WordPress.org accounts
- *   by email: Meetup organizers get the matching role, hosts are credited,
- *   and RSVPs are kept. No account is created for anyone else.
- * - The rest of the group's members (opt-in, per import) join the group as
- *   Members with event emails off when they match an account. Only for a
+ * - People are only ever matched to existing WordPress.org accounts by
+ *   email. No account is created for anyone.
+ * - Organizers (opt-in) get the matching Organizer role. That's all a
+ *   group's first import brings over (#2360).
+ * - Members (opt-in, per import) join the group as Members with event emails
+ *   off, hosts are credited on their events, and RSVPs are kept. Only for a
  *   group whose members were told on Meetup first that they'd be added, and
- *   that they can leave: someone who leaves isn't added back by a later
- *   import (#2305).
+ *   that they can leave, so it's the import after that wait. Someone who
+ *   leaves isn't added back by a later import (#2305).
  *
  * Nothing here sends an email: events are published with the new-event
  * notification marked as already handled, and
@@ -498,9 +499,10 @@ function delete_job( array $job ): void {
  * @param string $urlname       Meetup group urlname.
  * @param int    $site_id       Target group site.
  * @param bool   $include_past  Whether to import past events.
- * @param bool   $match_people  Whether to match people to WordPress.org accounts by email.
- * @param bool   $match_members Whether matched members join the group too. Only
- *                              with `$match_people`.
+ * @param bool   $match_people  Whether Meetup organizers get their role, matched to
+ *                              WordPress.org accounts by email.
+ * @param bool   $match_members Whether matched members join the group too, with
+ *                              hosts and RSVPs. Implies `$match_people`.
  * @return array|WP_Error The queued job.
  */
 function start_job( string $urlname, int $site_id, bool $include_past, bool $match_people, bool $match_members = false ) {
@@ -524,8 +526,10 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
 		'urlname'      => $urlname,
 		'site_id'      => $site_id,
 		'include_past' => $include_past,
-		'match_people' => $match_people,
-		'match_members' => $match_people && $match_members,
+		// Members come with the organizers' roles, which a rerun leaves as
+		// they are, so ticking only the members box can't quietly do nothing.
+		'match_people' => $match_people || $match_members,
+		'match_members' => $match_members,
 		'user_id'      => get_current_user_id(),
 		'created'      => time(),
 		'updated'      => time(),
@@ -870,7 +874,7 @@ function run_import_batch( array $job ): void {
 				'offset' => 0,
 			);
 	} elseif ( 'events' === $step ) {
-		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), $job['match_people'] );
+		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), matches_event_people( $job ) );
 
 		if ( is_wp_error( $results ) ) {
 			fail_job( $job, $results );
@@ -904,6 +908,23 @@ function run_import_batch( array $job ): void {
 	$job['attempts'] = 0;
 
 	save_job( $job );
+}
+
+/**
+ * Whether a job credits hosts and carries RSVPs over.
+ *
+ * Only along with the members (#2360). A host has to be in the group, so
+ * crediting one adds them to it, and a group's first import should only bring
+ * its organizers in, before its members are told. Events imported without
+ * them are marked as never matched (`PEOPLE_NEVER_MATCHED`), so the import
+ * after the wait gives them every host and RSVP (see `backfill_people()`).
+ * That import is also when the group's RSVPs are fetched, one Meetup request
+ * per event, so the first import doesn't make them.
+ *
+ * @param array $job Import job.
+ */
+function matches_event_people( array $job ): bool {
+	return ! empty( $job['match_people'] ) && ! empty( $job['match_members'] );
 }
 
 /**
@@ -1301,15 +1322,22 @@ function render_start_form( array $job ): void {
 						<br />
 						<label>
 							<input name="match_people" type="checkbox" value="1" <?php checked( ! empty( $job['match_people'] ) ); ?> />
-							<?php esc_html_e( 'Match people to WordPress.org accounts by email: Meetup organizers get the matching Organizer role, hosts are credited on their events, and RSVPs are kept. Nobody gets a new account.', 'wordcamporg' ); ?>
+							<?php esc_html_e( 'Organizers: Meetup organizers get the matching Organizer role, matched to WordPress.org accounts by email. Nobody gets a new account.', 'wordcamporg' ); ?>
 						</label>
-						<br />
+					</fieldset>
+				</td>
+			</tr>
+			<?php // A row of its own, so it doesn't read as part of the first import (#2360). ?>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Second import', 'wordcamporg' ); ?></th>
+				<td>
+					<fieldset>
 						<label>
 							<input name="match_members" type="checkbox" value="1" <?php checked( ! empty( $job['match_members'] ) ); ?> />
-							<?php esc_html_e( 'Also add the group\'s members who match an account, with event emails off. Needs "Match people".', 'wordcamporg' ); ?>
+							<?php esc_html_e( 'Members, hosts, and RSVPs: the group\'s members who match an account join with event emails off, hosts are credited on their events, and RSVPs are kept. Includes the organizers.', 'wordcamporg' ); ?>
 						</label>
 						<p class="description">
-							<?php esc_html_e( 'Only tick this once the group\'s members were told on Meetup that they\'ll be added, and that they can leave the group anytime. Someone who leaves isn\'t added back by a later import.', 'wordcamporg' ); ?>
+							<?php esc_html_e( 'Leave this off on a group\'s first import. Tick it on the import two weeks after the group\'s members were told on Meetup that they\'ll be added, and that they can leave the group anytime. Someone who leaves isn\'t added back by a later import.', 'wordcamporg' ); ?>
 						</p>
 					</fieldset>
 				</td>
@@ -1391,17 +1419,21 @@ function render_job( array $job ): void {
 			<?php if ( ! empty( $job['match_members'] ) ) : ?>
 				<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview ) ); ?></li>
 			<?php endif; ?>
-			<li>
-				<?php
-				echo esc_html(
-					$is_preview
-						? __( 'RSVPs are fetched per event, so they are matched during the import rather than previewed. Published events get RSVPs and hosts for people who have made an account since they were imported.', 'wordcamporg' )
-						: describe_rsvp_counts( sum_rsvp_counts( $rows ) )
-				);
-				?>
-			</li>
-			<?php if ( ! $is_preview ) : ?>
-				<li><?php echo esc_html( describe_backfill_counts( sum_backfill_counts( $rows ) ) ); ?></li>
+			<?php if ( ! matches_event_people( $job ) ) : ?>
+				<li><?php esc_html_e( 'Hosts and RSVPs come over with the members, on the second import.', 'wordcamporg' ); ?></li>
+			<?php else : ?>
+				<li>
+					<?php
+					echo esc_html(
+						$is_preview
+							? __( 'RSVPs are fetched per event, so they are matched during the import rather than previewed. Published events get RSVPs and hosts for people who have made an account since they were last matched, or all of them if they never were.', 'wordcamporg' )
+							: describe_rsvp_counts( sum_rsvp_counts( $rows ) )
+					);
+					?>
+				</li>
+				<?php if ( ! $is_preview ) : ?>
+					<li><?php echo esc_html( describe_backfill_counts( sum_backfill_counts( $rows ) ) ); ?></li>
+				<?php endif; ?>
 			<?php endif; ?>
 		</ul>
 	<?php endif; ?>
@@ -1708,7 +1740,7 @@ function describe_status( string $status, bool $is_past = false, string $message
 		'skip'        => __( 'Skipped: already published or trashed', 'wordcamporg' ),
 		'photo'       => __( 'Already published: Meetup\'s photo will be added', 'wordcamporg' ),
 		'photo_added' => __( 'Already published: Meetup\'s photo added', 'wordcamporg' ),
-		'backfilled'  => __( 'Already published: RSVPs and hosts added for people who signed up since', 'wordcamporg' ),
+		'backfilled'  => __( 'Already published: RSVPs and hosts added', 'wordcamporg' ),
 		'reformat'    => __( 'Already published: its description\'s formatting will be fixed', 'wordcamporg' ),
 		'reformatted' => __( 'Already published: its description\'s formatting fixed', 'wordcamporg' ),
 		'keep'        => __( 'Skipped: edited on the site since it was imported', 'wordcamporg' ),
@@ -1841,7 +1873,7 @@ function describe_rsvp_counts( array $counts ): string {
 function describe_backfill_counts( array $counts ): string {
 	return sprintf(
 		/* translators: 1: RSVPs added, 2: Of which checked in, 3: Hosts added, 4: Published events they were added to. */
-		__( 'People who signed up since: %1$d RSVPs (%2$d checked in as attended) and %3$d hosts added to %4$d published events.', 'wordcamporg' ),
+		__( 'Added to %4$d published events: %1$d RSVPs (%2$d checked in as attended) and %3$d hosts.', 'wordcamporg' ),
 		$counts['rsvps'],
 		$counts['checked_in'],
 		$counts['hosts'],

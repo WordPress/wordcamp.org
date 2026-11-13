@@ -548,24 +548,30 @@ function start_job( string $urlname, int $site_id, bool $include_past, bool $mat
  *
  * Callers MUST verify the `manage_sites` capability before calling this.
  *
- * @param int    $site_id Group site the job imports into.
- * @param string $job_id  The job the person confirming was looking at, so a
- *                        stale screen can't confirm a different job.
+ * @param int    $site_id  Group site the job imports into.
+ * @param string $job_id   The job the person confirming was looking at, so a
+ *                         stale screen can't confirm a different job.
+ * @param string $language Language subtag for the events it creates, from the
+ *                         preview (#2365). Anything unknown, or nothing, takes
+ *                         the preview's suggestion.
  * @return array|WP_Error The confirmed job.
  */
-function confirm_job( int $site_id, string $job_id ) {
+function confirm_job( int $site_id, string $job_id, string $language = '' ) {
 	$job = get_job( $site_id );
 
 	if ( 'ready' !== ( $job['status'] ?? '' ) || is_job_expired( $job ) || $job_id !== $job['id'] ) {
 		return new WP_Error( 'job_not_ready', __( 'That preview is no longer current. Please preview again.', 'wordcamporg' ) );
 	}
 
-	$job['status']  = 'importing';
-	$job['cursor']  = array(
+	$language = Event_Language\sanitize_code( $language );
+
+	$job['language'] = '' !== $language ? $language : (string) ( $job['plan']['language']['code'] ?? '' );
+	$job['status']   = 'importing';
+	$job['cursor']   = array(
 		'step'   => 'group',
 		'offset' => 0,
 	);
-	$job['results'] = array(
+	$job['results']  = array(
 		'group_results'    => array(),
 		'organizer_counts' => array(),
 		'member_counts'    => array(),
@@ -804,6 +810,12 @@ function run_fetch( array $job ): void {
 		'events'           => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
 		'organizer_counts' => $job['match_people'] ? plan_organizers( $job['site_id'], $job['data']['organizers'] ) : null,
 		'member_counts'    => ! empty( $job['match_members'] ) ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
+		'language'         => with_site(
+			$job['site_id'],
+			static function () use ( $job ) {
+				return suggest_event_language( $job['data']['group'] );
+			}
+		),
 	);
 
 	$job['status']   = 'ready';
@@ -874,7 +886,7 @@ function run_import_batch( array $job ): void {
 				'offset' => 0,
 			);
 	} elseif ( 'events' === $step ) {
-		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), matches_event_people( $job ), ! empty( $job['match_people'] ) );
+		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), matches_event_people( $job ), ! empty( $job['match_people'] ), (string) ( $job['language'] ?? '' ) );
 
 		if ( is_wp_error( $results ) ) {
 			fail_job( $job, $results );
@@ -1111,7 +1123,11 @@ function handle_confirm(): void {
 	check_admin_referer( CONFIRM_ACTION );
 
 	$site_id = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
-	$job     = confirm_job( $site_id, isset( $_POST['job_id'] ) ? sanitize_text_field( wp_unslash( $_POST['job_id'] ) ) : '' );
+	$job     = confirm_job(
+		$site_id,
+		isset( $_POST['job_id'] ) ? sanitize_text_field( wp_unslash( $_POST['job_id'] ) ) : '',
+		isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : ''
+	);
 
 	redirect_with_notice( is_wp_error( $job ) ? $job->get_error_code() : 'confirmed', $site_id );
 }
@@ -1353,6 +1369,68 @@ function render_start_form( array $job ): void {
 }
 
 /**
+ * The preview's choice of language for the events the import creates (#2365).
+ *
+ * Prefilled with `suggest_event_language()`. A preview made before that
+ * existed gets what the event form would prefill. Above the Import and Cancel
+ * forms, so they stay side by side, and sent with Import (`form` attribute).
+ *
+ * @param array $job Import job, `ready`.
+ */
+function render_language_field( array $job ): void {
+	$suggestion = (array) ( $job['plan']['language'] ?? array() );
+	$selected   = (string) ( $suggestion['code'] ?? '' );
+
+	if ( '' === $selected ) {
+		$selected = (string) with_site( $job['site_id'], __NAMESPACE__ . '\default_event_language' );
+	}
+	?>
+	<p>
+		<label for="wporg-meetup-import-language"><?php esc_html_e( 'Language of new events:', 'wordcamporg' ); ?></label>
+		<select id="wporg-meetup-import-language" name="language" form="wporg-meetup-import-confirm" aria-describedby="wporg-meetup-import-language-hint">
+			<?php if ( '' === $selected ) : ?>
+				<option value="" selected="selected"><?php esc_html_e( 'Same as the site', 'wordcamporg' ); ?></option>
+			<?php endif; ?>
+			<?php foreach ( Event_Language\get_options() as $code => $name ) : ?>
+				<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $code, $selected ); ?>><?php echo esc_html( $name ); ?></option>
+			<?php endforeach; ?>
+		</select>
+	</p>
+	<p class="description" id="wporg-meetup-import-language-hint">
+		<?php echo esc_html( describe_language_source( (string) ( $suggestion['source'] ?? '' ), (string) ( $job['data']['group']['country_code'] ?? '' ) ) ); ?>
+	</p>
+	<?php
+}
+
+/**
+ * Say where the preview's language came from.
+ *
+ * @param string $source       From `suggest_event_language()`.
+ * @param string $country_code The Meetup group's country.
+ */
+function describe_language_source( string $source, string $country_code ): string {
+	switch ( $source ) {
+		case 'events':
+			$from = __( 'From the group\'s last published event.', 'wordcamporg' );
+			break;
+		case 'site':
+			$from = __( 'From the site\'s language.', 'wordcamporg' );
+			break;
+		case 'country':
+			$from = sprintf(
+				/* translators: %s: Country name. */
+				__( 'Guessed from the group\'s country (%s), since Meetup doesn\'t say which language a group uses.', 'wordcamporg' ),
+				wcorg_get_country_name_from_code( $country_code )
+			);
+			break;
+		default:
+			$from = __( 'Meetup doesn\'t say which language a group uses.', 'wordcamporg' );
+	}
+
+	return $from . ' ' . __( 'Events already on the site keep theirs.', 'wordcamporg' );
+}
+
+/**
  * Show a job: waiting on Meetup, its preview, its progress, or how it went.
  *
  * @param array $job Import job.
@@ -1384,7 +1462,8 @@ function render_job( array $job ): void {
 	<?php endif; ?>
 
 	<?php if ( 'ready' === $status ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:8px;">
+		<?php render_language_field( $job ); ?>
+		<form id="wporg-meetup-import-confirm" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:8px;">
 			<input type="hidden" name="action" value="<?php echo esc_attr( CONFIRM_ACTION ); ?>" />
 			<input type="hidden" name="site_id" value="<?php echo esc_attr( $job['site_id'] ); ?>" />
 			<input type="hidden" name="job_id" value="<?php echo esc_attr( $job['id'] ); ?>" />
@@ -2897,15 +2976,17 @@ function plan_events( int $site_id, array $events ): array {
  * Callers MUST verify the `manage_sites` capability before calling this -- it
  * performs no capability check of its own, matching `create_group_site()`.
  *
- * @param int   $site_id          Target group site.
- * @param array $events           Normalized events, from `normalize_event()`.
- * @param bool  $match_people     Whether to credit hosts and carry RSVPs over, matching people by email.
- * @param bool  $match_organizers Whether the organizers were matched, so a host already
- *                                in the group can own an event. Implied by `$match_people`.
+ * @param int    $site_id          Target group site.
+ * @param array  $events           Normalized events, from `normalize_event()`.
+ * @param bool   $match_people     Whether to credit hosts and carry RSVPs over, matching people by email.
+ * @param bool   $match_organizers Whether the organizers were matched, so a host already
+ *                                 in the group can own an event. Implied by `$match_people`.
+ * @param string $language         Language subtag for new events, or '' for what the
+ *                                 event form would prefill (`default_event_language()`).
  * @return array[]|WP_Error One `{ event, status, post_id, message, rsvps }` per event,
  *                          status `created`, `updated`, `skipped`, or `failed`.
  */
-function import_events( int $site_id, array $events, bool $match_people = false, bool $match_organizers = false ) {
+function import_events( int $site_id, array $events, bool $match_people = false, bool $match_organizers = false, string $language = '' ) {
 	$is_valid = validate_target_site( $site_id );
 
 	if ( is_wp_error( $is_valid ) ) {
@@ -2918,7 +2999,7 @@ function import_events( int $site_id, array $events, bool $match_people = false,
 
 	$results = with_site(
 		$site_id,
-		function () use ( $events, $match_people, $match_organizers ) {
+		function () use ( $events, $match_people, $match_organizers, $language ) {
 			/*
 			 * The recurring-events tables are per-site and created lazily, from
 			 * hooks that don't fire for a `switch_to_blog()`. See the same call
@@ -2929,7 +3010,7 @@ function import_events( int $site_id, array $events, bool $match_people = false,
 			}
 
 			return array_map(
-				static function ( $event ) use ( $match_people, $match_organizers ) {
+				static function ( $event ) use ( $match_people, $match_organizers, $language ) {
 					// An event can mean a photo download and several pages of
 					// RSVPs, so a batch can run long. A batch renews its lock
 					// before each one, and stops if another request has taken
@@ -2938,7 +3019,7 @@ function import_events( int $site_id, array $events, bool $match_people = false,
 						throw new \RuntimeException( 'Lost the Meetup import lock to another run.' );
 					}
 
-					return import_event( $event, $match_people, $match_organizers );
+					return import_event( $event, $match_people, $match_organizers, $language );
 				},
 				$events
 			);
@@ -2965,14 +3046,16 @@ function import_events( int $site_id, array $events, bool $match_people = false,
  * action fires, and events are published with their notification already
  * marked handled, so no emails go out.
  *
- * @param array $event            Normalized event.
- * @param bool  $match_people     Whether to credit hosts and carry RSVPs over.
- * @param bool  $match_organizers Whether the organizers were matched, so a host
- *                                already in the group can own it. Implied by
- *                                `$match_people`.
+ * @param array  $event            Normalized event.
+ * @param bool   $match_people     Whether to credit hosts and carry RSVPs over.
+ * @param bool   $match_organizers Whether the organizers were matched, so a host
+ *                                 already in the group can own it. Implied by
+ *                                 `$match_people`.
+ * @param string $language         Language subtag if it's new, or '' for
+ *                                 `default_event_language()`.
  * @return array
  */
-function import_event( array $event, bool $match_people = false, bool $match_organizers = false ): array {
+function import_event( array $event, bool $match_people = false, bool $match_organizers = false, string $language = '' ): array {
 	$existing = find_existing_event( $event );
 
 	// A date of a Meetup series this import already made a recurring event of.
@@ -3094,10 +3177,11 @@ function import_event( array $event, bool $match_people = false, bool $match_org
 
 	$post_id = (int) $post_id;
 
-	// Meetup has no event language. A new event gets the one the form would
-	// prefill; a refreshed draft keeps its own.
+	// Meetup has no event language. A new event gets the one picked on the
+	// preview (#2365), else the one the form would prefill; a refreshed draft
+	// keeps its own.
 	if ( ! $existing ) {
-		Event_Language\set_event_language( $post_id, default_event_language() );
+		Event_Language\set_event_language( $post_id, '' !== $language ? $language : default_event_language() );
 	}
 
 	update_post_meta( $post_id, EVENT_URL_META, esc_url_raw( $event['meetup_url'] ) );
@@ -3646,6 +3730,74 @@ function default_event_language(): string {
 	$locale = (string) get_option( 'WPLANG' );
 
 	return Event_Language\sanitize_code( strtok( '' !== $locale ? $locale : 'en_US', '_-' ) );
+}
+
+/**
+ * The language the preview suggests for the events an import creates (#2365).
+ *
+ * Meetup has no language for a group or its events, so it's a guess, shown on
+ * the preview to change before importing. The site's own language comes first,
+ * as in `default_event_language()`: its last published event's, else its
+ * `WPLANG`. A group site starts without a `WPLANG`, which reads as English
+ * whatever the group speaks, so a site with neither takes the most spoken
+ * language of the Meetup group's country (Costa Rica gives Spanish), else
+ * English.
+ *
+ * Runs on the group's site.
+ *
+ * @param array $group Normalized group, from `normalize_group()`.
+ * @return array{code: string, source: string} Language subtag, and where it came
+ *                                              from: `events`, `site`, `country`, or `default`.
+ */
+function suggest_event_language( array $group ): array {
+	$code = Event_Language\get_event_language( Defaults\get_most_recent_event_id() );
+
+	if ( '' !== $code ) {
+		return array(
+			'code'   => $code,
+			'source' => 'events',
+		);
+	}
+
+	$locale = (string) get_option( 'WPLANG' );
+	$code   = '' !== $locale ? Event_Language\sanitize_code( strtok( $locale, '_-' ) ) : '';
+
+	if ( '' !== $code ) {
+		return array(
+			'code'   => $code,
+			'source' => 'site',
+		);
+	}
+
+	$code = country_language( (string) ( $group['country_code'] ?? '' ) );
+
+	if ( '' !== $code ) {
+		return array(
+			'code'   => $code,
+			'source' => 'country',
+		);
+	}
+
+	return array(
+		'code'   => 'en',
+		'source' => 'default',
+	);
+}
+
+/**
+ * The most spoken language of a country, if events can be in it.
+ *
+ * @param string $country_code ISO 3166-1 alpha-2 code, e.g. `CR`.
+ * @return string Language subtag, or '' for none.
+ */
+function country_language( string $country_code ): string {
+	if ( ! preg_match( '/^[A-Z]{2}$/', $country_code ) ) {
+		return '';
+	}
+
+	require_once WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php';
+
+	return Event_Language\sanitize_code( ( new \WP_CLDR() )->get_most_spoken_language( $country_code ) );
 }
 
 /**

@@ -874,7 +874,7 @@ function run_import_batch( array $job ): void {
 				'offset' => 0,
 			);
 	} elseif ( 'events' === $step ) {
-		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), matches_event_people( $job ) );
+		$results = import_events( $site_id, array_slice( $data['events'], $offset, EVENTS_PER_BATCH ), matches_event_people( $job ), ! empty( $job['match_people'] ) );
 
 		if ( is_wp_error( $results ) ) {
 			fail_job( $job, $results );
@@ -920,6 +920,9 @@ function run_import_batch( array $job ): void {
  * after the wait gives them every host and RSVP (see `backfill_people()`).
  * That import is also when the group's RSVPs are fetched, one Meetup request
  * per event, so the first import doesn't make them.
+ *
+ * Authorship doesn't wait: an organizer hosting an event owns it from the
+ * first import (see `event_author()`).
  *
  * @param array $job Import job.
  */
@@ -2894,13 +2897,15 @@ function plan_events( int $site_id, array $events ): array {
  * Callers MUST verify the `manage_sites` capability before calling this -- it
  * performs no capability check of its own, matching `create_group_site()`.
  *
- * @param int   $site_id      Target group site.
- * @param array $events       Normalized events, from `normalize_event()`.
- * @param bool  $match_people Whether to credit hosts and carry RSVPs over, matching people by email.
+ * @param int   $site_id          Target group site.
+ * @param array $events           Normalized events, from `normalize_event()`.
+ * @param bool  $match_people     Whether to credit hosts and carry RSVPs over, matching people by email.
+ * @param bool  $match_organizers Whether the organizers were matched, so a host already
+ *                                in the group can own an event. Implied by `$match_people`.
  * @return array[]|WP_Error One `{ event, status, post_id, message, rsvps }` per event,
  *                          status `created`, `updated`, `skipped`, or `failed`.
  */
-function import_events( int $site_id, array $events, bool $match_people = false ) {
+function import_events( int $site_id, array $events, bool $match_people = false, bool $match_organizers = false ) {
 	$is_valid = validate_target_site( $site_id );
 
 	if ( is_wp_error( $is_valid ) ) {
@@ -2913,7 +2918,7 @@ function import_events( int $site_id, array $events, bool $match_people = false 
 
 	$results = with_site(
 		$site_id,
-		function () use ( $events, $match_people ) {
+		function () use ( $events, $match_people, $match_organizers ) {
 			/*
 			 * The recurring-events tables are per-site and created lazily, from
 			 * hooks that don't fire for a `switch_to_blog()`. See the same call
@@ -2924,7 +2929,7 @@ function import_events( int $site_id, array $events, bool $match_people = false 
 			}
 
 			return array_map(
-				static function ( $event ) use ( $match_people ) {
+				static function ( $event ) use ( $match_people, $match_organizers ) {
 					// An event can mean a photo download and several pages of
 					// RSVPs, so a batch can run long. A batch renews its lock
 					// before each one, and stops if another request has taken
@@ -2933,7 +2938,7 @@ function import_events( int $site_id, array $events, bool $match_people = false 
 						throw new \RuntimeException( 'Lost the Meetup import lock to another run.' );
 					}
 
-					return import_event( $event, $match_people );
+					return import_event( $event, $match_people, $match_organizers );
 				},
 				$events
 			);
@@ -2960,11 +2965,14 @@ function import_events( int $site_id, array $events, bool $match_people = false 
  * action fires, and events are published with their notification already
  * marked handled, so no emails go out.
  *
- * @param array $event        Normalized event.
- * @param bool  $match_people Whether to credit hosts and carry RSVPs over.
+ * @param array $event            Normalized event.
+ * @param bool  $match_people     Whether to credit hosts and carry RSVPs over.
+ * @param bool  $match_organizers Whether the organizers were matched, so a host
+ *                                already in the group can own it. Implied by
+ *                                `$match_people`.
  * @return array
  */
-function import_event( array $event, bool $match_people = false ): array {
+function import_event( array $event, bool $match_people = false, bool $match_organizers = false ): array {
 	$existing = find_existing_event( $event );
 
 	// A date of a Meetup series this import already made a recurring event of.
@@ -3043,7 +3051,7 @@ function import_event( array $event, bool $match_people = false ): array {
 	// the import, who isn't in the group, and no Event Organizer could edit
 	// it. Existing events keep theirs, unless an earlier import left it unset.
 	if ( ! $existing || ! (int) $existing->post_author ) {
-		$post_args['post_author'] = event_author( $event, $match_people );
+		$post_args['post_author'] = event_author( $event, $match_people, $match_organizers );
 	}
 
 	if ( $existing ) {
@@ -3571,16 +3579,33 @@ function describe_recurrence( array $event ): string {
  * added to the group if need be, as `import_hosts()` would -- so an Event
  * Organizer hosting it can edit it. Otherwise the site's lead organizer.
  *
- * @param array $event        Normalized event.
- * @param bool  $match_people Whether people are being matched by email.
+ * With only the organizers matched (a group's first import, #2360), its first
+ * host who is already in the group. The organizers step runs before the
+ * events, so that's an organizer hosting it, and nobody else is added before
+ * the members are told. A published event keeps its author on later imports,
+ * so this is the only chance to give it to them.
+ *
+ * @param array $event            Normalized event.
+ * @param bool  $match_people     Whether people are being matched by email.
+ * @param bool  $match_organizers Whether the organizers were.
  * @return int User ID, or 0 if there's nobody suitable.
  */
-function event_author( array $event, bool $match_people ): int {
-	if ( $match_people ) {
+function event_author( array $event, bool $match_people, bool $match_organizers = false ): int {
+	if ( $match_people || $match_organizers ) {
+		$site_id = get_current_blog_id();
+
 		foreach ( $event['hosts'] as $email ) {
 			$user = get_user_by( 'email', $email );
 
-			if ( $user && ensure_member( get_current_blog_id(), (int) $user->ID ) ) {
+			if ( ! $user ) {
+				continue;
+			}
+
+			$in_group = $match_people
+				? ensure_member( $site_id, (int) $user->ID )
+				: is_user_member_of_blog( (int) $user->ID, $site_id );
+
+			if ( $in_group ) {
 				return (int) $user->ID;
 			}
 		}

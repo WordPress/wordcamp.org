@@ -3,7 +3,7 @@ import { __ } from '@wordpress/i18n';
 import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, formatDay } from './dates';
 import { COMPANY_STATUSES, COMPANY_STATUS_ORDER } from './statuses';
-import type { Company, CompanyStatus, Flag } from './types';
+import type { Company, Flag } from './types';
 
 /* What each layout shows beside the company's name and website. A list row has no column headers, so it keeps to
    the fields that explain themselves. */
@@ -11,6 +11,15 @@ export const DEFAULT_LAYOUTS = {
 	table: { fields: [ 'status', 'follow_up', 'next_event', 'sponsorships', 'last_vetted' ] },
 	list: { fields: [ 'status', 'follow_up', 'next_event' ] },
 };
+
+/* Lists the companies under a heading per status, in the order of the pipeline. */
+export const GROUP_BY_STATUS: NonNullable< View[ 'groupBy' ] > = {
+	field: 'status',
+	direction: 'asc',
+	showLabel: false,
+};
+
+const STATUS_LABELS = COMPANY_STATUS_ORDER.map( ( status ) => COMPANY_STATUSES[ status ].label );
 
 export const DEFAULT_VIEW: View = {
 	type: 'table',
@@ -85,7 +94,9 @@ export const fields: Field< Company >[] = [
 	{
 		id: 'status',
 		label: __( 'Status', 'wordcamporg' ),
-		elements: COMPANY_STATUS_ORDER.map( ( value ) => ( { value, label: COMPANY_STATUSES[ value ].label } ) ),
+		// A group is headed by its field's value, so the value is the status's label, not its slug.
+		getValue: ( { item } ) => COMPANY_STATUSES[ item.status ].label,
+		elements: STATUS_LABELS.map( ( label ) => ( { value: label, label } ) ),
 		filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
 		render: ( { item } ) => (
 			<Badge className="sponsor-vetting__status" intent={ COMPANY_STATUSES[ item.status ].intent }>
@@ -93,8 +104,8 @@ export const fields: Field< Company >[] = [
 			</Badge>
 		),
 		// In the order of the pipeline, not of the alphabet.
-		sort: ( a: CompanyStatus, b: CompanyStatus, direction ) => {
-			const delta = COMPANY_STATUS_ORDER.indexOf( a ) - COMPANY_STATUS_ORDER.indexOf( b );
+		sort: ( a: string, b: string, direction ) => {
+			const delta = STATUS_LABELS.indexOf( a ) - STATUS_LABELS.indexOf( b );
 
 			return direction === 'asc' ? delta : -delta;
 		},

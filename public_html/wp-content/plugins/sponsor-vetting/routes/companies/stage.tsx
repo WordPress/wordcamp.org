@@ -1,8 +1,8 @@
 import { Page } from '@wordpress/admin-ui';
 import { DataViews } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
-import { ButtonLink, Notice } from '@wordpress/ui';
-import { DEFAULT_LAYOUTS, fields } from './fields';
+import { ButtonLink, Notice, SwitchControl } from '@wordpress/ui';
+import { DEFAULT_LAYOUTS, GROUP_BY_STATUS, fields } from './fields';
 import { useCompanyList, useOpenCompany } from './hooks';
 import './style.scss';
 import type { Company } from './types';
@@ -43,6 +43,22 @@ function Stage() {
 					defaultLayouts={ DEFAULT_LAYOUTS }
 					getItemId={ ( item ) => String( item.id ) }
 					searchLabel={ __( 'Search companies', 'wordcamporg' ) }
+					// DataViews groups rows, but has no control of its own to turn that on.
+					header={
+						<div className="sponsor-vetting__group-by">
+							<SwitchControl
+								label={ __( 'Group by status', 'wordcamporg' ) }
+								checked={ view.groupBy?.field === 'status' }
+								onCheckedChange={ ( checked ) =>
+									setView( {
+										...view,
+										page: 1,
+										groupBy: checked ? GROUP_BY_STATUS : undefined,
+									} )
+								}
+							/>
+						</div>
+					}
 					onClickItem={ ( item ) => open( item.id ) }
 					// The list layout opens a company by selecting its row.
 					selection={ openId ? [ String( openId ) ] : [] }

@@ -4,6 +4,12 @@
 }
 
 // The panel beside the list.
+// The switch is shorter than the toolbar buttons it sits beside.
+.sponsor-vetting__group-by {
+	align-self: center;
+	margin-inline-start: var(--wpds-dimension-gap-sm);
+}
+
 // The panel scrolls as a whole, so its controls stick to the top.
 .sponsor-vetting__panel-header {
 	background-color: inherit;

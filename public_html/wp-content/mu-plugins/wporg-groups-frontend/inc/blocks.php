@@ -46,13 +46,20 @@ function register_blocks(): void {
 	);
 
 	foreach ( $blocks as $block ) {
-		$block_dir  = dirname( __DIR__ ) . '/build/blocks/' . $block;
-		$block_type = register_block_type_from_metadata( $block_dir );
+		register_block( $block );
+	}
+}
 
-		if ( $block_type instanceof \WP_Block_Type ) {
-			set_script_translations( $block_type );
-			version_styles( $block_type, $block_dir );
-		}
+/**
+ * Register one of this mu-plugin's blocks from its build directory.
+ */
+function register_block( string $block ): void {
+	$block_dir  = dirname( __DIR__ ) . '/build/blocks/' . $block;
+	$block_type = register_block_type_from_metadata( $block_dir );
+
+	if ( $block_type instanceof \WP_Block_Type ) {
+		set_script_translations( $block_type );
+		version_styles( $block_type, $block_dir );
 	}
 }
 

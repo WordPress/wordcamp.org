@@ -77,7 +77,9 @@ test.describe( 'event publish notification', () => {
 		await page.goto( `wp-admin/post.php?post=${ postId }&action=edit` );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 
-		await page.getByRole( 'button', { name: 'Add an excerpt' } ).click();
+		// Gutenberg 24.4 lists the excerpt with the other post fields, behind
+		// an "Edit Excerpt" button. Before that it was "Add an excerpt…".
+		await page.getByRole( 'button', { name: /^(Add an excerpt|Edit Excerpt)/ } ).click();
 		await page.getByRole( 'textbox', { name: 'Excerpt' } ).fill( 'Edited without changing publish state.' );
 		await page.keyboard.press( 'Tab' );
 

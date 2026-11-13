@@ -32,7 +32,7 @@ function main() {
  *
  * URL structure:
  *   - `events.wordpress.org/group/{slug}/` → an individual group subsite
- *   - `events.wordpress.org/group/`        → the network root (placeholder)
+ *   - `events.wordpress.org/group/`        → the network root (the list of groups)
  *
  * phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- WP is designed in a way that requires this.
  * That's the whole point of `sunrise.php`.
@@ -58,8 +58,9 @@ function set_network_and_site() {
 		// for the groups network is `/group/` (the network root). Treat that
 		// as "no group matched" so the not-found chain (renamed-url →
 		// NOBLOGREDIRECT) can handle unknown `/group/<slug>/` paths. Bare
-		// `/group/` requests are intentionally left on the root blog so
-		// `do_redirects()` can send them to the events root below.
+		// `/group/` requests are intentionally left on the root blog, where
+		// `do_redirects()` below either serves the list of groups or sends
+		// them to the events root.
 		$is_bare_group_request = '/group/' === $path || '/group' === rtrim( $path, '/' );
 		if ( $current_blog && '/group/' === $current_blog->path && ! $is_bare_group_request ) {
 			$current_blog = false;
@@ -173,15 +174,46 @@ function is_reachable_root_endpoint() {
 }
 
 /**
+ * Whether the current request is for the list of groups at `/group/` (#2036).
+ *
+ * Exact on purpose: the root's front page answers any public query var
+ * (`?rest_route=`, `?feed=`, `?p=`), and WordPress reads those from a `POST`
+ * body first. So only a `GET` or `HEAD` for `/group/` with nothing but the
+ * list's search, `q`, gets through.
+ *
+ * @return bool
+ */
+function is_directory_request() {
+	if ( ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', array( 'GET', 'HEAD' ), true ) ) {
+		return false;
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- `wp_parse_url()` isn't available this early.
+	if ( '/group/' !== parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ) ) {
+		return false;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only inspected, never used.
+	foreach ( $_GET as $name => $value ) {
+		if ( 'q' !== $name || ! is_string( $value ) ) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
  * Handle any redirects needed on the Groups network.
  */
 function do_redirects() {
 	global $blog_id, $site_id;
 
 	/*
-	 * The groups network root (`events.wordpress.org/group/`) is a placeholder
-	 * that exists only because WordPress multisite requires every network to
-	 * have a root site. Front-end requests bounce to the events root.
+	 * The groups network root (`events.wordpress.org/group/`) exists because
+	 * WordPress multisite requires every network to have a root site. The
+	 * only page it serves is the list of groups; see `is_directory_request()`.
+	 * Every other front-end request bounces to the events root.
 	 *
 	 * `REACHABLE_ROOT_ENDPOINTS` are exempt: `is_admin()` is false for them,
 	 * so bouncing `wp-login.php` left every Network Admin screen here
@@ -189,7 +221,13 @@ function do_redirects() {
 	 * sets an admin cookie scoped to `/wp-admin`, never `/group/wp-admin` —
 	 * and bouncing `wp-cron.php` silently dropped this blog's scheduled work.
 	 */
-	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() && ! is_reachable_root_endpoint() ) {
+	if (
+		GROUPS_ROOT_BLOG_ID === $blog_id &&
+		! is_admin() &&
+		! is_network_admin() &&
+		! is_reachable_root_endpoint() &&
+		! is_directory_request()
+	) {
 		header( 'X-Redirect-By: Groups/Sunrise::do_redirects' );
 		header( 'Location: https://events.wordpress.' . get_top_level_domain() . get_url_port() . '/', true, 302 );
 		exit;

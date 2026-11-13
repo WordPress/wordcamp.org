@@ -245,6 +245,17 @@ function register_event_speakers_meta(): void {
 add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 
 /**
+ * Register a 480px image size for event cards and hero images.
+ *
+ * Here and not in the theme, because Meetup imports sideload photos from the
+ * network admin, where no group's theme is loaded.
+ */
+function register_event_card_image_size(): void {
+	add_image_size( 'groups-event-card', 480, 0 );
+}
+add_action( 'after_setup_theme', __NAMESPACE__ . '\register_event_card_image_size' );
+
+/**
  * Rewrite the search block form action on the events archive to submit
  * to the archive URL instead of the default search URL, so search results
  * stay scoped to events. Also remove the required attribute and handle clearing

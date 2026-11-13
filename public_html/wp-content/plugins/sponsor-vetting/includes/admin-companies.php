@@ -23,6 +23,7 @@ function get_company_columns( array $columns ): array {
 		'title'           => __( 'Company', 'wordcamporg' ),
 		'sv_domains'      => __( 'Domains', 'wordcamporg' ),
 		'sv_status'       => __( 'Status', 'wordcamporg' ),
+		'sv_next_event'   => __( 'Next event', 'wordcamporg' ),
 		'sv_last_vetted'  => __( 'Last vetted', 'wordcamporg' ),
 		'sv_sponsorships' => __( 'Sponsorships', 'wordcamporg' ),
 	);
@@ -48,7 +49,17 @@ function render_company_column( string $column, int $company_id ): void {
 			echo esc_html( get_company_statuses()[ get_post_status( $company_id ) ] ?? '' );
 
 			foreach ( get_company_flags( $company_id ) as $flag ) {
-				echo '<br><em>' . esc_html( $flag ) . '</em>';
+				echo '<br><em>' . $flag . '</em>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by get_company_flags().
+			}
+			break;
+
+		case 'sv_next_event':
+			$next = get_listed_next_event( $company_id );
+
+			if ( $next ) {
+				printf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $next['sponsorship_id'] ) ), esc_html( format_event_date( $next['start'] ) ) );
+			} else {
+				echo '—';
 			}
 			break;
 
@@ -68,6 +79,182 @@ function render_company_column( string $column, int $company_id ): void {
 	}
 }
 add_action( 'manage_' . COMPANY_POST_TYPE . '_posts_custom_column', __NAMESPACE__ . '\render_company_column', 10, 2 );
+
+/**
+ * Lets the company list be sorted by next event.
+ *
+ * @param array $columns The sortable columns.
+ * @return array
+ */
+function get_sortable_company_columns( array $columns ): array {
+	$columns['sv_next_event'] = array( 'sv_next_event', false );
+
+	return $columns;
+}
+add_filter( 'manage_edit-' . COMPANY_POST_TYPE . '_sortable_columns', __NAMESPACE__ . '\get_sortable_company_columns' );
+
+/**
+ * The company list's own filters, for the companies a reviewer should pick up first.
+ *
+ * @return array[] Each filter's label, the statuses it's limited to, and its query arguments, keyed by its value.
+ */
+function get_company_filters(): array {
+	// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+	return array(
+		'replied'    => array(
+			'label'    => __( 'Sponsor replied', 'wordcamporg' ),
+			'statuses' => array( 'sv-compliance-req' ),
+			'query'    => array(
+				'meta_key' => '_sv_sponsor_replied',
+				'orderby'  => 'meta_value_num',
+				'order'    => 'ASC',
+			),
+		),
+		'good_faith' => array(
+			'label'    => __( 'Good Faith', 'wordcamporg' ),
+			'statuses' => array_keys( get_company_statuses() ),
+			'query'    => array(
+				'meta_key' => '_sv_good_faith_due',
+				'orderby'  => 'meta_value',
+				'order'    => 'ASC',
+			),
+		),
+	);
+	// phpcs:enable
+}
+
+/**
+ * Gets the company list filter the reviewer picked.
+ *
+ * @return string The filter's key, or an empty string for none.
+ */
+function get_current_company_filter(): string {
+	$filter = $_GET['sv_filter'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the filters' keys.
+
+	return is_string( $filter ) && isset( get_company_filters()[ $filter ] ) ? $filter : '';
+}
+
+/**
+ * Gets the status the reviewer picked from the list's status links.
+ *
+ * @return string The status, or an empty string for all.
+ */
+function get_picked_company_status(): string {
+	$status = $_GET['post_status'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the statuses.
+
+	return is_string( $status ) && isset( get_company_statuses()[ $status ] ) ? $status : '';
+}
+
+/**
+ * Gets the statuses a filter lists within the status the reviewer picked.
+ *
+ * @param array $filter A filter, as get_company_filters() returns it.
+ * @return string[] None when the picked status is outside the filter's.
+ */
+function get_filtered_statuses( array $filter ): array {
+	$status = get_picked_company_status();
+
+	return '' === $status ? $filter['statuses'] : array_values( array_intersect( $filter['statuses'], array( $status ) ) );
+}
+
+/**
+ * Renders the filter dropdown above the company list, with each filter's count within the status picked.
+ *
+ * @param string $post_type The listed post type.
+ * @param string $which     Where the filters are shown, above or below the list.
+ */
+function render_company_filter( string $post_type, string $which ): void {
+	if ( 'top' !== $which ) {
+		return;
+	}
+
+	$current = get_current_company_filter();
+	?>
+	<label for="sv-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by follow-up', 'wordcamporg' ); ?></label>
+	<select name="sv_filter" id="sv-filter">
+		<option value=""><?php esc_html_e( 'All companies', 'wordcamporg' ); ?></option>
+		<?php
+		foreach ( get_company_filters() as $key => $filter ) :
+			$statuses = get_filtered_statuses( $filter );
+			$count    = $statuses ? ( new \WP_Query(
+				array(
+					'post_type'      => COMPANY_POST_TYPE,
+					'post_status'    => $statuses,
+					'meta_key'       => $filter['query']['meta_key'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- A filter on the reviewers' list.
+					'orderby'        => 'none',
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+				)
+			) )->found_posts : 0;
+			?>
+			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $current, $key ); ?>>
+				<?php
+				/* translators: 1: Filter name, 2: Number of companies. */
+				echo esc_html( sprintf( __( '%1$s (%2$s)', 'wordcamporg' ), $filter['label'], number_format_i18n( $count ) ) );
+				?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+	<?php
+}
+
+/**
+ * Limits the company list to the picked filter's companies, within the status picked, longest waiting first
+ * unless the reviewer sorts by a column.
+ *
+ * @param \WP_Query $query The list's query.
+ */
+function filter_companies( \WP_Query $query ): void {
+	$current = get_current_company_filter();
+
+	if ( ! $query->is_main_query() || '' === $current ) {
+		return;
+	}
+
+	$filter   = get_company_filters()[ $current ];
+	$statuses = get_filtered_statuses( $filter );
+	$args     = isset( $_GET['orderby'] ) ? array_diff_key( $filter['query'], array_flip( array( 'orderby', 'order' ) ) ) : $filter['query']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A list sort.
+
+	foreach ( $args as $key => $value ) {
+		$query->set( $key, $value );
+	}
+
+	$query->set( 'post_status', $statuses );
+
+	// The picked status is outside the filter's, and an empty status list would list every status.
+	if ( ! $statuses ) {
+		$query->set( 'post__in', array( 0 ) );
+	}
+}
+
+/**
+ * Sorts the company list by next event, as get_next_events() finds it, when the reviewer picks that column.
+ *
+ * @param string[]  $clauses The list's query clauses.
+ * @param \WP_Query $query   The list's query.
+ * @return string[]
+ */
+function sort_companies( array $clauses, \WP_Query $query ): array {
+	global $wpdb;
+
+	if ( ! $query->is_main_query() || 'sv_next_event' !== $query->get( 'orderby' ) ) {
+		return $clauses;
+	}
+
+	return sort_by_ids( $clauses, $query, "{$wpdb->posts}.ID", array_keys( get_next_events() ) );
+}
+
+/**
+ * Filters the company list screen only.
+ */
+function load_company_list(): void {
+	if ( COMPANY_POST_TYPE === get_current_screen()?->post_type ) {
+		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_company_filter', 10, 2 );
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_companies' );
+		add_filter( 'posts_clauses', __NAMESPACE__ . '\sort_companies', 10, 2 );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_company_list' );
 
 /**
  * Counts the sponsorships of the companies on the list screen, in one query for the page.
@@ -109,10 +296,74 @@ function get_listed_sponsorship_counts(): array {
 }
 
 /**
- * Describes what a reviewer should know about a company beyond its status.
+ * Gets the soonest event still to come for companies, among the events their pending sponsorships are for.
+ *
+ * @param int[]|null $company_ids The companies, or null for all of them.
+ * @return array[] The event's start date, as get_event_dates() returns it, and the sponsorship it's for, keyed by
+ *                 company, soonest first; only companies with one.
+ */
+function get_next_events( ?array $company_ids = null ): array {
+	$next = array();
+
+	if ( array() === $company_ids ) {
+		return $next;
+	}
+
+	$sponsorships = get_posts(
+		array(
+			'post_type'      => SPONSORSHIP_POST_TYPE,
+			'post_status'    => 'svs-pending',
+			'posts_per_page' => -1,
+			'no_found_rows'  => true,
+		) + ( null === $company_ids ? array( 'post_parent__not_in' => array( 0 ) ) : array( 'post_parent__in' => $company_ids ) )
+	);
+	$blog_ids     = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
+	$dates        = get_event_dates( $blog_ids );
+	$today        = strtotime( gmdate( 'Y-m-d' ) . ' UTC' );
+
+	foreach ( $sponsorships as $sponsorship ) {
+		$start = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? 0;
+
+		if ( $start >= $today && $start < ( $next[ $sponsorship->post_parent ]['start'] ?? PHP_INT_MAX ) ) {
+			$next[ $sponsorship->post_parent ] = array(
+				'start'          => $start,
+				'sponsorship_id' => $sponsorship->ID,
+			);
+		}
+	}
+
+	uasort( $next, static fn( array $a, array $b ): int => $a['start'] <=> $b['start'] );
+
+	return $next;
+}
+
+/**
+ * Gets a company's next event on the list screen, looking up the companies listed with it at once.
+ *
+ * Quick Edit redraws one row without the list's query, so a company that wasn't listed is looked up on its own.
  *
  * @param int $company_id The company.
- * @return string[]
+ * @return array|null As get_next_events() returns it, or null for none.
+ */
+function get_listed_next_event( int $company_id ): ?array {
+	static $next = array();
+
+	if ( ! array_key_exists( $company_id, $next ) ) {
+		$listed = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
+		$ids    = array_values( array_diff( array_merge( $listed, array( $company_id ) ), array_keys( $next ) ) );
+		$next   = array_replace( $next, array_fill_keys( $ids, null ), get_next_events( $ids ) );
+	}
+
+	return $next[ $company_id ];
+}
+
+/**
+ * Describes what a reviewer should know about a company beyond its status.
+ *
+ * A sponsor's reply links to the conversation the reply check read.
+ *
+ * @param int $company_id The company.
+ * @return string[] HTML, escaped.
  */
 function get_company_flags( int $company_id ): array {
 	$state = get_vetting_state( $company_id );
@@ -131,16 +382,50 @@ function get_company_flags( int $company_id ): array {
 		$flags[] = __( 'Not Eligible period has ended', 'wordcamporg' );
 	}
 
+	$links   = array();
+	$classes = array();
+	$titles  = array();
+
+	$due = (string) get_post_meta( $company_id, '_sv_good_faith_due', true );
+
 	if ( $state['good_faith_overdue'] ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith overdue since %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
-	} elseif ( get_post_meta( $company_id, '_sv_good_faith_due', true ) ) {
-		/* translators: %s: Date. */
-		$flags[] = sprintf( __( 'Good Faith due %s', 'wordcamporg' ), get_post_meta( $company_id, '_sv_good_faith_due', true ) );
+		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( $due ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[]                             = sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days );
+		$classes[ array_key_last( $flags ) ] = 'sv-flag-overdue';
+	} elseif ( '' !== $due ) {
+		$days = (int) ( ( strtotime( $due ) - strtotime( gmdate( 'Y-m-d' ) ) ) / DAY_IN_SECONDS );
+
+		/* translators: %d: Number of days. */
+		$flags[] = $days ? sprintf( _n( 'Good Faith due in %d day', 'Good Faith due in %d days', $days, 'wordcamporg' ), $days ) : __( 'Good Faith due today', 'wordcamporg' );
+	}
+
+	if ( '' !== $due ) {
+		$titles[ array_key_last( $flags ) ] = $due;
 	}
 
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
-		$flags[] = __( 'Sponsor replied', 'wordcamporg' );
+		$flags[]                           = __( 'Sponsor replied', 'wordcamporg' );
+		$links[ array_key_last( $flags ) ] = (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' );
+	}
+
+	foreach ( $flags as $index => $flag ) {
+		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
+
+		$attributes = '';
+
+		if ( isset( $classes[ $index ] ) ) {
+			$attributes .= sprintf( ' class="%s"', esc_attr( $classes[ $index ] ) );
+		}
+
+		if ( isset( $titles[ $index ] ) ) {
+			$attributes .= sprintf( ' title="%s"', esc_attr( $titles[ $index ] ) );
+		}
+
+		if ( '' !== $attributes ) {
+			$flags[ $index ] = "<span{$attributes}>{$flags[ $index ]}</span>";
+		}
 	}
 
 	return $flags;
@@ -190,7 +475,7 @@ function render_company_status_box( \WP_Post $post ): void {
 	render_status_select( $post );
 
 	foreach ( get_company_flags( $post->ID ) as $flag ) {
-		echo '<p><em>' . esc_html( $flag ) . '</em></p>';
+		echo '<p><em>' . $flag . '</em></p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by get_company_flags().
 	}
 	?>
 	<p>
@@ -346,11 +631,14 @@ function render_company_sponsorships_box( \WP_Post $post ): void {
 		echo '<p>' . esc_html__( 'No sponsorships yet.', 'wordcamporg' ) . '</p>';
 		return;
 	}
+
+	$blog_ids = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
+	$dates    = get_event_dates( $blog_ids );
 	?>
 	<ul>
 		<?php foreach ( $sponsorships as $sponsorship ) : ?>
 			<li>
-				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a>:
+				<a href="<?php echo esc_url( (string) get_edit_post_link( $sponsorship->ID ) ); ?>"><?php echo esc_html( $sponsorship->post_title ); ?></a><?php echo isset( $dates[ $blog_ids[ $sponsorship->ID ] ] ) ? esc_html( ' (' . format_event_date( $dates[ $blog_ids[ $sponsorship->ID ] ] ) . ')' ) : ''; ?>:
 				<?php echo esc_html( get_sponsorship_statuses()[ $sponsorship->post_status ] ?? '' ); ?>
 			</li>
 		<?php endforeach; ?>

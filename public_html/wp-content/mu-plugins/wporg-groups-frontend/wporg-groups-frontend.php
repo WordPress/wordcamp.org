@@ -17,6 +17,7 @@ const VERSION = '0.2.0';
 require_once __DIR__ . '/inc/capabilities.php';
 require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/group-location.php';
+require_once __DIR__ . '/inc/groups-directory.php';
 require_once __DIR__ . '/inc/event-date-format.php';
 require_once __DIR__ . '/inc/event-timezone.php';
 require_once __DIR__ . '/inc/event-language.php';
@@ -41,6 +42,7 @@ require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
 require_once __DIR__ . '/inc/sponsors.php';
+require_once __DIR__ . '/inc/upload-space.php';
 
 /**
  * Bootstrap the plugin.
@@ -57,6 +59,12 @@ function bootstrap(): void {
 	// The Meetup import adds members from the network root site, which
 	// doesn't run GatherPress either.
 	Member_Joined\bootstrap();
+
+	// The list of groups is served from the network root, which may not run GatherPress.
+	Groups_Directory\bootstrap();
+
+	// Every group site's media library, in wp-admin too.
+	Upload_Space\bootstrap();
 
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;

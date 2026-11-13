@@ -27,13 +27,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/group-location',
 		'wporg/group-settings',
 		'wporg/group-news',
+		'wporg/groups-directory',
 		'wporg/my-events',
 		'wporg/page-content',
 		'wporg/sponsors',
 	);
 
 	/**
-	 * Exactly these 18 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 19 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -475,6 +476,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
 
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
 		$this->assertStringContainsString( 'wporg-group-members__login', $output );
 		$this->assertStringContainsString( wp_login_url(), html_entity_decode( $output ) );
 		$this->assertStringNotContainsString( 'Hidden Member Name', $output );
@@ -497,8 +499,21 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
 
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
 		$this->assertStringContainsString( 'Listed Member Name', $output );
 		$this->assertStringNotContainsString( 'wporg-group-members__login', $output );
+	}
+
+	/**
+	 * The role panel heading sits under the page's h1, so it's an h2.
+	 */
+	public function test_group_members_block_role_switcher_heading_follows_h1() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-members__role-switcher-heading"', $output );
 	}
 
 	/**
@@ -636,6 +651,18 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'actions.stepDown', $output );
 		$this->assertStringNotContainsString( 'actions.leave', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__note', $output );
+	}
+
+	/**
+	 * A visitor sees what joining gets them under the Join button.
+	 */
+	public function test_group_membership_block_tells_visitor_what_joining_does() {
+		wp_set_current_user( 0 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'actions.join', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__note', $output );
 	}
 
 	/**

@@ -109,13 +109,15 @@
 }
 
 /* `!important` for the same reason `.wporg-section-heading` needs it: the
-   parent theme's `.wp-site-blocks h3:not([class*="-font-size"], ...)` rule
+   parent theme's `.wp-site-blocks h2:not([class*="-font-size"], ...)` rule
    outranks any plain class selector and would open a spacing-40 gap between
-   the panel's own padding and its heading. */
+   the panel's own padding and its heading. The line height is pinned because
+   an h2 gets a tighter one than the h3 this used to be. */
 .wporg-group-members__role-switcher-heading {
 	margin: 0 !important;
 	font-size: var(--wp--preset--font-size--normal);
 	font-weight: 600;
+	line-height: 1.3;
 	color: var(--wp--preset--color--charcoal-0);
 }
 

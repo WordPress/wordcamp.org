@@ -75,7 +75,7 @@ jobs:
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version: 26.x
         cache: npm
 
     - name: Cache node_modules
@@ -90,7 +90,7 @@ jobs:
         # must invalidate the cache too, so `npm ci` runs and rejects the
         # mismatch instead of a stale cache hit silently skipping install
         # (and any changed lifecycle scripts) entirely.
-        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+        key: node-modules-${{ runner.os }}-node26-${{ hashFiles('package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: Install dependencies
       run: |

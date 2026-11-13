@@ -42,6 +42,7 @@ require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
 require_once __DIR__ . '/inc/sponsors.php';
+require_once __DIR__ . '/inc/upload-space.php';
 
 /**
  * Bootstrap the plugin.
@@ -61,6 +62,9 @@ function bootstrap(): void {
 
 	// The list of groups is served from the network root, which may not run GatherPress.
 	Groups_Directory\bootstrap();
+
+	// Every group site's media library, in wp-admin too.
+	Upload_Space\bootstrap();
 
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;

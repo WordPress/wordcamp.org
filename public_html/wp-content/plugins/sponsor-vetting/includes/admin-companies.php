@@ -262,22 +262,32 @@ add_action( 'load-edit.php', __NAMESPACE__ . '\load_company_list' );
  * @return int[] Counts, keyed by company ID.
  */
 function get_listed_sponsorship_counts(): array {
-	global $wpdb;
 	static $counts = null;
 
-	if ( null !== $counts ) {
-		return $counts;
+	if ( null === $counts ) {
+		$counts = get_sponsorship_counts( array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) ) );
 	}
 
-	$counts      = array();
-	$company_ids = array_map( 'intval', wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
-	$statuses    = array_keys( get_sponsorship_statuses() );
+	return $counts;
+}
+
+/**
+ * Counts the sponsorships of companies, in one query for them all.
+ *
+ * @param int[] $company_ids The companies.
+ * @return int[] Counts, keyed by company ID; only companies with one.
+ */
+function get_sponsorship_counts( array $company_ids ): array {
+	global $wpdb;
+
+	$counts   = array();
+	$statuses = array_keys( get_sponsorship_statuses() );
 
 	if ( ! $company_ids ) {
 		return $counts;
 	}
 
-	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- One grouped count per list screen; nothing to cache across requests.
+	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- One grouped count per screen; nothing to cache across requests.
 		$wpdb->prepare(
 			sprintf(
 				"SELECT post_parent, COUNT(*) AS total FROM {$wpdb->posts} WHERE post_type = %%s AND post_parent IN (%s) AND post_status IN (%s) GROUP BY post_parent",
@@ -358,77 +368,98 @@ function get_listed_next_event( int $company_id ): ?array {
 }
 
 /**
- * Describes what a reviewer should know about a company beyond its status.
+ * Lists what a reviewer should know about a company beyond its status.
  *
  * A sponsor's reply links to the conversation the reply check read.
  *
  * @param int $company_id The company.
- * @return string[] HTML, escaped.
+ * @return array[] Each flag's `type` and `text`, and where it has them the `url` it links to, the `date` it's
+ *                 about, and whether it's `overdue`.
  */
-function get_company_flags( int $company_id ): array {
+function get_company_flag_items( int $company_id ): array {
 	$state = get_vetting_state( $company_id );
-	$flags = array();
+	$items = array();
 
 	if ( $state['expired'] ) {
-		$flags[] = __( 'Vetting has lapsed', 'wordcamporg' );
+		$items[] = array(
+			'type' => 'lapsed',
+			'text' => __( 'Vetting has lapsed', 'wordcamporg' ),
+		);
 	}
 
 	if ( $state['not_eligible_active'] ) {
 		$until = (string) get_post_meta( $company_id, '_sv_not_eligible_until', true );
 
-		/* translators: %s: Date. */
-		$flags[] = '' === $until ? __( 'Indefinitely', 'wordcamporg' ) : sprintf( __( 'Until %s', 'wordcamporg' ), $until );
+		$items[] = array(
+			'type' => 'not_eligible',
+			/* translators: %s: Date. */
+			'text' => '' === $until ? __( 'Indefinitely', 'wordcamporg' ) : sprintf( __( 'Until %s', 'wordcamporg' ), $until ),
+		);
 	} elseif ( 'sv-not-eligible' === $state['status'] ) {
-		$flags[] = __( 'Not Eligible period has ended', 'wordcamporg' );
+		$items[] = array(
+			'type' => 'not_eligible_ended',
+			'text' => __( 'Not Eligible period has ended', 'wordcamporg' ),
+		);
 	}
-
-	$links   = array();
-	$classes = array();
-	$titles  = array();
 
 	$due = (string) get_post_meta( $company_id, '_sv_good_faith_due', true );
 
 	if ( $state['good_faith_overdue'] ) {
 		$days = (int) ( ( strtotime( gmdate( 'Y-m-d' ) ) - strtotime( $due ) ) / DAY_IN_SECONDS );
 
-		/* translators: %d: Number of days. */
-		$flags[]                             = sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days );
-		$classes[ array_key_last( $flags ) ] = 'sv-flag-overdue';
+		$items[] = array(
+			'type'    => 'good_faith',
+			/* translators: %d: Number of days. */
+			'text'    => sprintf( _n( 'Good Faith overdue for %d day', 'Good Faith overdue for %d days', $days, 'wordcamporg' ), $days ),
+			'date'    => $due,
+			'overdue' => true,
+		);
 	} elseif ( '' !== $due ) {
 		$days = (int) ( ( strtotime( $due ) - strtotime( gmdate( 'Y-m-d' ) ) ) / DAY_IN_SECONDS );
 
-		/* translators: %d: Number of days. */
-		$flags[] = $days ? sprintf( _n( 'Good Faith due in %d day', 'Good Faith due in %d days', $days, 'wordcamporg' ), $days ) : __( 'Good Faith due today', 'wordcamporg' );
-	}
-
-	if ( '' !== $due ) {
-		$titles[ array_key_last( $flags ) ] = $due;
+		$items[] = array(
+			'type' => 'good_faith',
+			/* translators: %d: Number of days. */
+			'text' => $days ? sprintf( _n( 'Good Faith due in %d day', 'Good Faith due in %d days', $days, 'wordcamporg' ), $days ) : __( 'Good Faith due today', 'wordcamporg' ),
+			'date' => $due,
+		);
 	}
 
 	if ( 'sv-compliance-req' === $state['status'] && get_post_meta( $company_id, '_sv_sponsor_replied', true ) ) {
-		$flags[]                           = __( 'Sponsor replied', 'wordcamporg' );
-		$links[ array_key_last( $flags ) ] = (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' );
+		$items[] = array(
+			'type' => 'replied',
+			'text' => __( 'Sponsor replied', 'wordcamporg' ),
+			'url'  => (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' ),
+		);
 	}
 
-	foreach ( $flags as $index => $flag ) {
-		$flags[ $index ] = empty( $links[ $index ] ) ? esc_html( $flag ) : sprintf( '<a href="%s">%s</a>', esc_url( $links[ $index ] ), esc_html( $flag ) );
+	return $items;
+}
 
-		$attributes = '';
+/**
+ * Describes what a reviewer should know about a company beyond its status.
+ *
+ * @param int $company_id The company.
+ * @return string[] HTML, escaped.
+ */
+function get_company_flags( int $company_id ): array {
+	return array_map(
+		static function ( array $item ): string {
+			$flag       = empty( $item['url'] ) ? esc_html( $item['text'] ) : sprintf( '<a href="%s">%s</a>', esc_url( $item['url'] ), esc_html( $item['text'] ) );
+			$attributes = '';
 
-		if ( isset( $classes[ $index ] ) ) {
-			$attributes .= sprintf( ' class="%s"', esc_attr( $classes[ $index ] ) );
-		}
+			if ( ! empty( $item['overdue'] ) ) {
+				$attributes .= ' class="sv-flag-overdue"';
+			}
 
-		if ( isset( $titles[ $index ] ) ) {
-			$attributes .= sprintf( ' title="%s"', esc_attr( $titles[ $index ] ) );
-		}
+			if ( isset( $item['date'] ) ) {
+				$attributes .= sprintf( ' title="%s"', esc_attr( $item['date'] ) );
+			}
 
-		if ( '' !== $attributes ) {
-			$flags[ $index ] = "<span{$attributes}>{$flags[ $index ]}</span>";
-		}
-	}
-
-	return $flags;
+			return '' === $attributes ? $flag : "<span{$attributes}>{$flag}</span>";
+		},
+		get_company_flag_items( $company_id )
+	);
 }
 
 /**

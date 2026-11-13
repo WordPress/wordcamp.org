@@ -1,0 +1,84 @@
+// A status reads as one label, however narrow its column.
+.sponsor-vetting__status {
+	white-space: nowrap;
+}
+
+// The panel beside the list.
+// The panel scrolls as a whole, so its controls stick to the top.
+.sponsor-vetting__panel-header {
+	background-color: inherit;
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+
+.sponsor-vetting__panel-body {
+	padding: var(--wpds-dimension-padding-2xl);
+}
+
+.sponsor-vetting__loading {
+	min-height: 240px;
+}
+
+// The card's own padding is too generous for a 400px column.
+.sponsor-vetting__section {
+	--wp-ui-card-padding: var(--wpds-dimension-padding-lg);
+}
+
+.sponsor-vetting__label {
+	color: var(--wpds-color-foreground-content-neutral-weak);
+	flex-shrink: 0;
+}
+
+.sponsor-vetting__value {
+	overflow-wrap: anywhere;
+	text-align: end;
+}
+
+// Findings are Markdown, shown as written.
+.sponsor-vetting__long-text {
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+.sponsor-vetting__overdue {
+	font-weight: 600;
+}
+
+.sponsor-vetting__notice {
+	margin: var(--wpds-dimension-padding-2xl);
+}
+
+// History entries arrive as HTML, built by get_log_entry_html().
+.sponsor-vetting__entry {
+	overflow-wrap: anywhere;
+
+	p,
+	table {
+		margin: 0;
+	}
+
+	.sv-log-text {
+		margin-top: var(--wpds-dimension-gap-xs);
+		white-space: pre-wrap;
+	}
+
+	.sv-log-status {
+		font-weight: 600;
+	}
+
+	.sv-log-fields th {
+		font-weight: 400;
+		padding: 0 var(--wpds-dimension-gap-md) var(--wpds-dimension-gap-xs) 0;
+		text-align: start;
+		vertical-align: top;
+	}
+}
+
+.sponsor-vetting__event + .sponsor-vetting__event,
+.sponsor-vetting__entry + .sponsor-vetting__entry {
+	border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
+	padding-top: var(--wpds-dimension-padding-md);
+}

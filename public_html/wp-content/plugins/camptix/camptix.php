@@ -7857,9 +7857,25 @@ class CampTix_Plugin {
 			$refund_transaction_details = $data['refund_transaction_details'];
 		}
 
+		// Part of the order was refunded, so its payment was settled before that refund.
+		$partly_refunded = in_array( 'refund', wp_list_pluck( $attendees, 'post_status' ), true );
+
 		foreach ( $attendees as $attendee ) {
 
 			$old_post_status = $attendee->post_status;
+
+			// A pending or failed result can't be about a payment that was already settled and then
+			// partly refunded, so it leaves the tickets still paid for as they are. PayPal reports
+			// the original payment's status after a partial refund, and a status it has no mapping
+			// for arrives here as pending, which used to move the rest of the order to pending.
+			if (
+				$partly_refunded &&
+				'publish' === $attendee->post_status &&
+				in_array( $result, array( self::PAYMENT_STATUS_PENDING, self::PAYMENT_STATUS_FAILED ), true )
+			) {
+				$this->log( 'Refusing to downgrade a paid attendee of a partly refunded order.', $attendee->ID, $data );
+				continue;
+			}
 
 			// A refund reverses the charge, so a later completed, pending or failed result for
 			// the same order leaves the attendee and its transaction record untouched. Gateways

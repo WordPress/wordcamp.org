@@ -16,6 +16,7 @@ import {
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
+import { decodeEntities } from '@wordpress/html-entities';
 
 /**
  * Internal dependencies
@@ -100,10 +101,10 @@ export default function ( { attributes, setAttributes, context: { postId } } ) {
 						<p>
 							{ isLink ? (
 								<a href={ session.link }>
-									{ session.title.rendered }
+									{ decodeEntities( session.title.rendered ) }
 								</a>
 							) : (
-								session.title.rendered
+								decodeEntities( session.title.rendered )
 							) }
 						</p>
 						{ hasSessionDetails && (

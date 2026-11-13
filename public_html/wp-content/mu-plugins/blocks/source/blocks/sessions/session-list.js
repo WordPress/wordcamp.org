@@ -8,6 +8,7 @@ import { get } from 'lodash';
  */
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 
 /**
  * Internal dependencies
@@ -50,7 +51,9 @@ function SessionSpeakers( { session } ) {
 		const { link } = speaker;
 		let { title = {} } = speaker;
 
-		title = title.rendered.trim() || __( 'Unnamed', 'wordcamporg' );
+		title =
+			decodeEntities( title.rendered.trim() ) ||
+			__( 'Unnamed', 'wordcamporg' );
 
 		if ( ! link ) {
 			return title;

@@ -56,4 +56,13 @@ describe( 'ItemTitle', () => {
 		);
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
+
+	test( 'should show HTML entities in the title as characters.', () => {
+		const component = renderer.create(
+			<ItemTitle title={ 'Tom &amp; Jerry&#8217;s talk' } />
+		);
+		expect( component.toJSON().children ).toEqual( [
+			'Tom & Jerry’s talk',
+		] );
+	} );
 } );

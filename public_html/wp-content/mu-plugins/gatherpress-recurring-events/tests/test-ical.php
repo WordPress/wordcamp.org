@@ -10,6 +10,7 @@ namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Calendar\Cache;
+use GatherPress\Core\Calendar\Endpoint;
 use GatherPress\Core\Calendar\Setup;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Event\Query as Event_Query;
@@ -77,6 +78,17 @@ final class Test_Ical extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '/BEGIN:DAYLIGHT\r\nDTSTART:\d{8}T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400\r\nEND:DAYLIGHT/', $feed );
 	}
 
+	/** A manual offset is a timezone too: on a UTC start the rule's weekday can be the day before or after. */
+	public function test_series_on_a_manual_offset_keeps_its_local_start(): void {
+		$this->create_series( '-10:00' );
+		$start = $this->start( '-7 days', '-10:00' );
+		$feed  = $this->feed();
+
+		$this->assertStringContainsString( 'DTSTART;TZID=GMT-1000:' . $start->format( 'Ymd\T190000' ) . "\r\n", $feed );
+		$this->assertStringContainsString( 'BYDAY=' . $this->weekday( $start ), $feed );
+		$this->assertStringContainsString( "BEGIN:VTIMEZONE\r\nTZID:GMT-1000\r\nBEGIN:STANDARD\r\nDTSTART:19700101T000000\r\nTZOFFSETFROM:-1000\r\nTZOFFSETTO:-1000\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n", $feed );
+	}
+
 	/**
 	 * A cancelled date is an exception written the way the start is, or calendars ignore it.
 	 *
@@ -107,6 +119,7 @@ final class Test_Ical extends WP_UnitTestCase {
 		return array(
 			'UTC'    => array( 'UTC', 'EXDATE:', 'Z' ),
 			'region' => array( 'America/New_York', 'EXDATE;TZID=America/New_York:', '' ),
+			'offset' => array( '-10:00', 'EXDATE;TZID=GMT-1000:', '' ),
 		);
 	}
 
@@ -135,14 +148,54 @@ final class Test_Ical extends WP_UnitTestCase {
 		$this->assertSame( array( $one_off ), $query->get_events_list( 'upcoming', -1 )->posts );
 	}
 
-	/** GatherPress reads a feed's body from its cache, which is where it is handed one with its series recurring. */
-	public function test_gatherpress_serves_the_feed_with_its_series_recurring(): void {
+	/** Output printed while the feed is built is dropped: a notice ahead of the calendar cut its end off. */
+	public function test_output_while_building_the_feed_is_dropped(): void {
 		$this->create_series();
 		$this->request_feed();
 
+		add_action(
+			'loop_start',
+			static function (): void {
+				echo 'Notice: something went wrong.';
+			}
+		);
+
+		$this->expectOutputString( '' );
+		$this->assertStringStartsWith( 'BEGIN:VCALENDAR', Ical::feed_body() );
+	}
+
+	/** A site can turn calendar caching off, and its feeds still recur. */
+	public function test_feed_recurs_with_caching_off(): void {
+		$this->create_series();
+		$this->request_feed();
+
+		add_filter( 'gatherpress_calendar_max_age', '__return_zero' );
+
+		$this->assertStringContainsString( 'RRULE:', Ical::feed_body() );
+	}
+
+	/** The feed is served ahead of GatherPress's template, going by what GatherPress itself hooks. */
+	public function test_feed_is_intercepted_ahead_of_gatherpress(): void {
+		global $wp_filter;
+
+		$hook = 'do_feed_' . Setup::ICAL_SLUG;
+
+		$this->request_feed();
+		set_query_var( Setup::QUERY_VAR, Setup::ICAL_SLUG );
+
+		$this->assertSame( 20, has_action( 'template_redirect', array( Ical::class, 'intercept_feed' ) ) );
+
+		foreach ( $wp_filter['template_redirect']->callbacks[10] as $callback ) {
+			if ( is_array( $callback['function'] ) && $callback['function'][0] instanceof Endpoint ) {
+				call_user_func( $callback['function'] );
+			}
+		}
+
+		$this->assertTrue( has_action( $hook ), 'Precondition: GatherPress hooked its feed template.' );
+
 		Ical::intercept_feed();
 
-		$this->assertStringContainsString( 'RRULE:', Setup::get_instance()->get_ics_body() );
+		$this->assertSame( array( 5, 10 ), array_keys( $wp_filter[ $hook ]->callbacks ) );
 	}
 
 	/** Makes this a site-wide feed request. `go_to()` would run lookups on sites the suite doesn't create. */

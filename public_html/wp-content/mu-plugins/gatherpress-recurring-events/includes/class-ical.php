@@ -9,6 +9,7 @@
 
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
+use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Calendar\Cache;
 use GatherPress\Core\Calendar\Setup;
@@ -39,23 +40,60 @@ final class Ical {
 		return (string) preg_replace( '/^BEGIN:VEVENT\r\n/m', $definitions . '$0', $calendar, 1 );
 	}
 
-	/** Hands GatherPress the feed through its cache, the one place it reads a feed's body from: it has no filter on it. */
-	public static function intercept_feed(): void {
-		if ( is_feed( Setup::ICAL_SLUG ) ) {
-			$key = Cache::get_instance()->get_versioned_key( Setup::get_instance()->get_ics_cache_key() );
-
-			add_filter( 'pre_transient_' . $key, array( self::class, 'feed_body' ), 10, 0 );
-		}
-	}
-
-	/** Builds the requested feed with its series recurring, cached the way GatherPress caches its own. */
+	/** Builds the requested feed, or an empty string when it holds no series and GatherPress can serve it. */
 	public static function feed_body(): string {
 		$setup = Setup::get_instance();
 
-		return Cache::get_instance()->remember(
-			'gpre:' . $setup->get_ics_cache_key(),
-			static fn(): string => self::recur( $setup->get_ical_feed() )
-		);
+		// A notice printed while the events are looped over would go out ahead of the calendar.
+		ob_start();
+
+		try {
+			return Cache::get_instance()->remember(
+				'gpre:' . $setup->get_ics_cache_key(),
+				static function () use ( $setup ): string {
+					$body      = $setup->get_ics_body();
+					$recurring = self::recur( $body );
+
+					return $recurring === $body ? '' : $recurring;
+				}
+			);
+		} finally {
+			ob_end_clean();
+		}
+	}
+
+	/** Hooks ahead of GatherPress's feed template, once it is hooked: WordPress refuses a feed nothing is hooked to. */
+	public static function intercept_feed(): void {
+		$hook = 'do_feed_' . Setup::ICAL_SLUG;
+
+		if ( is_feed( Setup::ICAL_SLUG ) && has_action( $hook ) ) {
+			add_action( $hook, array( self::class, 'serve_feed' ), 5 );
+		}
+	}
+
+	/** Serves a feed that holds a series, since GatherPress has no filter on a feed's body. */
+	public static function serve_feed(): void {
+		$body = self::feed_body();
+
+		if ( '' === $body ) {
+			return;
+		}
+
+		$setup         = Setup::get_instance();
+		$filename      = $setup->generate_ics_filename();
+		$etag          = $setup->get_etag( $body );
+		$last_modified = Cache::get_instance()->get_last_modified();
+
+		$setup->send_ics_headers( $filename, $etag, $last_modified );
+
+		if ( $setup->is_not_modified( $etag, $last_modified ) ) {
+			status_header( 304 );
+			exit;
+		}
+
+		header( 'Content-Length: ' . strlen( $body ) );
+		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- RFC 5545 payload from GatherPress.
+		exit;
 	}
 
 	/** Drops GatherPress's cached calendars: cancelling a date or ending a series changes no post for it to notice. */
@@ -73,11 +111,13 @@ final class Ical {
 
 		$lines  = array( 'RRULE:' . $rrule );
 		$master = Occurrences::master_datetime( $post_id );
-		$tzid   = $master ? $master['timezone']->getName() : 'UTC';
+		$name   = $master ? $master['timezone']->getName() : 'UTC';
 
-		// GatherPress writes UTC, where a weekly rule drifts across clock changes and can name the wrong weekday.
-		// Only a named zone has clock changes to define, so UTC and manual offsets stay as they are.
-		$local = str_contains( $tzid, '/' );
+		// GatherPress writes UTC, where a rule drifts across clock changes and can name the day before or after.
+		$local = 'UTC' !== $name;
+
+		// A manual offset is spelled `+05:30`, and a colon would end the parameter.
+		$tzid = preg_replace( '/^([+-]\d\d):/', 'GMT$1', $name );
 
 		if ( $local ) {
 			$start = $master['start'];
@@ -106,7 +146,15 @@ final class Ical {
 
 	/** Defines a timezone, as a calendar must for each `TZID`, by its clock changes from a date to five years out. */
 	private static function timezone_component( string $tzid, int $from ): string {
-		$changes = ( new DateTimeZone( $tzid ) )->getTransitions( $from, time() + 5 * YEAR_IN_SECONDS );
+		$zone = new DateTimeZone( $tzid );
+
+		// A manual offset has no clock changes to list, only the offset it always has.
+		$changes = $zone->getTransitions( $from, time() + 5 * YEAR_IN_SECONDS ) ?: array(
+			array(
+				'offset' => $zone->getOffset( new DateTimeImmutable() ),
+				'isdst'  => false,
+			),
+		);
 		$lines   = array( 'BEGIN:VTIMEZONE', 'TZID:' . $tzid );
 		$offset  = $changes[0]['offset'];
 

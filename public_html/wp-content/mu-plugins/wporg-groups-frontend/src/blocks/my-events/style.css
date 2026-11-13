@@ -134,3 +134,20 @@
 	color: var(--wp--preset--color--blueberry-1);
 	text-decoration: none;
 }
+
+/* Same badge as the event card's format tag
+   (`.groups-site-event-format__badge`). */
+.wporg-my-events__status {
+	align-self: flex-start;
+	margin: 0;
+	padding: 2px 8px;
+	border-radius: 2px;
+	background-color: var(--wp--preset--color--light-grey-2);
+	color: var(--wp--preset--color--charcoal-1);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	line-height: 1.4;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}

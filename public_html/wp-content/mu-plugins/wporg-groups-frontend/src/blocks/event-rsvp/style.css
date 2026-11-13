@@ -132,6 +132,17 @@
 	text-decoration: underline;
 }
 
+/* === Waiting-list line === "Full · 12 on the waiting list" under the count. */
+.wporg-event-rsvp__waiting {
+	margin: 4px 0 0;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	color: var(--wp--preset--color--charcoal-4, #656a71);
+}
+
+.wporg-event-rsvp__waiting.is-hidden {
+	display: none;
+}
+
 /* === RSVP button === */
 .wp-block-wporg-event-rsvp .wp-block-button {
 	width: 100%;
@@ -150,11 +161,10 @@
  * Set as an override of the parent theme's outline tokens rather than as a
  * competing rule — the same idiom the parent uses for its own
  * `is-style-fill-on-dark` variant. The wrapper carries `is-style-outline`
- * exactly when the link carries `is-attending` (both are bound to
- * `state.isAttending`), so scoping to the wrapper needs no extra weight and
- * nothing here has to outrank anything.
+ * while the viewer is attending or waiting (`state.hasResponse`). Waiting
+ * isn't done yet, so `is-waiting` keeps the theme's plain outline instead.
  */
-.wp-block-wporg-event-rsvp .wp-block-button.is-style-outline {
+.wp-block-wporg-event-rsvp .wp-block-button.is-style-outline:not(.is-waiting) {
 	--wp--custom--button--outline--color--background: var(--wp--preset--color--acid-green-3, #e2ffed);
 	--wp--custom--button--outline--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
 	--wp--custom--button--outline--border--color: var(--wp--preset--color--acid-green-1, #33f078);
@@ -456,6 +466,16 @@
 .wporg-event-rsvp__attendee-answer {
 	font-size: 13px;
 	color: #40464d;
+	line-height: 1.4;
+}
+
+.wporg-event-rsvp__waiting-heading {
+	margin: 16px 0 0;
+	padding: 16px 24px 6px;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal, 16px);
+	font-weight: 600;
 	line-height: 1.4;
 }
 

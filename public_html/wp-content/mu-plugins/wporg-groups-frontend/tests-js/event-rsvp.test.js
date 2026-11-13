@@ -762,3 +762,151 @@ describe( 'event RSVP announces the change to the rest of the page', () => {
 		expect( events ).toEqual( [] );
 	} );
 } );
+
+/**
+ * The waiting list as a third state next to attending and not attending. The
+ * label cases match `data_waiting_labels()` in `tests/test-rsvp-labels.php`.
+ */
+describe( 'event RSVP waiting list', () => {
+	const waitingFormats = {
+		waitingFull: 'Full',
+		waitingSingular: 'Full · %s on the waiting list',
+		waitingPlural: 'Full · %s on the waiting list',
+	};
+
+	function mockRsvp( body ) {
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => body,
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: false } ),
+			} );
+	}
+
+	beforeEach( () => {
+		mockContext = createContext();
+		mockContext.labels = {
+			...mockContext.labels,
+			...waitingFormats,
+			rsvp: 'RSVP',
+			waitingListed: 'On the waiting list',
+			joinWaitingList: 'Join waiting list',
+			leaveWaitingList: 'Leave waiting list',
+			cancelRsvp: 'Cancel RSVP',
+			rsvpSuccessWaitingList: 'You have joined the event waiting list.',
+			rsvpSuccessLeftWaitingList: 'You left the waiting list.',
+		};
+		mockContext.capacity = 1;
+		mockContext.attendingCount = 1;
+		mockContext.waitingCount = 0;
+		mockElement = null;
+		mockStoreConfig = null;
+		global.fetch = jest.fn();
+		window.requestAnimationFrame = jest.fn( ( callback ) => {
+			callback();
+			return 1;
+		} );
+	} );
+
+	afterEach( () => {
+		document.body.innerHTML = '';
+		jest.restoreAllMocks();
+	} );
+
+	test.each( [
+		[ 'room left', 0, 5, '' ],
+		[ 'just filled up', 0, 1, 'Full' ],
+		[ 'one waiting', 1, 1, 'Full · 1 on the waiting list' ],
+		[ 'several waiting', 47, 1, 'Full · 47 on the waiting list' ],
+		[ 'waiting despite room', 2, 5, 'Full · 2 on the waiting list' ],
+	] )( 'describes %s', ( _name, waitingCount, capacity, expected ) => {
+		const { state } = loadStore();
+		mockContext.waitingCount = waitingCount;
+		mockContext.capacity = capacity;
+
+		expect( state.waitingLabel ).toBe( expected );
+		expect( state.hasNoWaitingLabel ).toBe( '' === expected );
+	} );
+
+	test( 'labels the controls for someone on the waiting list', () => {
+		const { state } = loadStore();
+		mockContext.currentUserStatus = 'waiting_list';
+
+		expect( state.rsvpButtonLabel ).toBe( 'On the waiting list' );
+		expect( state.cancelLabel ).toBe( 'Leave waiting list' );
+		expect( state.hasResponse ).toBe( true );
+		expect( state.isAttending ).toBe( false );
+	} );
+
+	test( 'offers the waiting list when the event is full', () => {
+		const { state } = loadStore();
+
+		expect( state.rsvpButtonLabel ).toBe( 'Join waiting list' );
+
+		mockContext.capacity = 0;
+		expect( state.rsvpButtonLabel ).toBe( 'RSVP' );
+	} );
+
+	test( 'leaving the waiting list sends not_attending', async () => {
+		const { actions } = loadStore();
+		mockContext.currentUserStatus = 'waiting_list';
+		mockContext.waitingCount = 3;
+
+		mockRsvp( {
+			success: true,
+			status: 'not_attending',
+			responses: { attending: { count: 1 }, waiting_list: { count: 2 } },
+		} );
+
+		await actions.toggleRsvp();
+
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).status ).toBe( 'not_attending' );
+		expect( mockContext.currentUserStatus ).toBe( 'not_attending' );
+		expect( mockContext.attendingCount ).toBe( 1 );
+		expect( mockContext.waitingCount ).toBe( 2 );
+		expect( mockContext.rsvpNotice ).toBe( 'You left the waiting list.' );
+	} );
+
+	test( 'predicts the waiting list instead of flashing Attending', async () => {
+		const { actions, state } = loadStore();
+		let labelWhileSaving;
+
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockImplementationOnce( async () => {
+				labelWhileSaving = mockContext.currentUserStatus;
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ( {
+						success: true,
+						status: 'waiting_list',
+						responses: { attending: { count: 1 }, waiting_list: { count: 1 } },
+					} ),
+				};
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: false } ),
+			} );
+
+		await actions.handleRsvpButton();
+
+		expect( labelWhileSaving ).toBe( 'waiting_list' );
+		expect( mockContext.attendingCount ).toBe( 1 );
+		expect( mockContext.waitingCount ).toBe( 1 );
+		expect( mockContext.rsvpNotice ).toBe( 'You have joined the event waiting list.' );
+		expect( state.rsvpButtonLabel ).toBe( 'On the waiting list' );
+	} );
+} );

@@ -3108,8 +3108,9 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
-	 * Members are only brought over when the import asks for them, and only
-	 * along with "Match people" (#2305).
+	 * Members are only brought over when the import asks for them (#2305),
+	 * and bring the organizers' roles along, so ticking only the members box
+	 * doesn't quietly do nothing (#2360).
 	 */
 	public function test_members_off_unless_asked() {
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
@@ -3120,8 +3121,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 		Meetup_Import\cancel_job( $this->site_id );
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false, true );
 
-		$this->assertFalse( $job['match_people'] );
-		$this->assertFalse( $job['match_members'] );
+		$this->assertTrue( $job['match_people'] );
+		$this->assertTrue( $job['match_members'] );
 
 		Meetup_Import\cancel_job( $this->site_id );
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true, true );
@@ -3183,6 +3184,182 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * A group's first import only brings its organizers in: hosts aren't
+	 * credited, RSVPs aren't fetched, and nobody else joins the group before
+	 * its members are told. The import after the wait, with the members, gives
+	 * the events it published every host and RSVP (#2360).
+	 */
+	public function test_hosts_and_rsvps_wait_for_the_members() {
+		list( $raw_organizers, $users ) = $this->setup_organizers();
+
+		$host          = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		$rsvper        = self::factory()->user->create( array( 'user_email' => 'rsvper@example.org' ) );
+		$fetched_rsvps = 0;
+
+		$this->fake_events(
+			array(
+				$this->raw_event(
+					array(
+						'eventHosts' => array(
+							array(
+								'member' => array(
+									'id'    => 'h1',
+									'email' => 'host@example.org',
+								),
+							),
+						),
+					)
+				),
+			)
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_organizers',
+			static function () use ( $raw_organizers ) {
+				return $raw_organizers;
+			}
+		);
+		add_filter( 'wcorg_meetup_import_pre_fetch_members', '__return_empty_array' );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_rsvps',
+			static function () use ( &$fetched_rsvps ) {
+				++$fetched_rsvps;
+
+				return array(
+					array(
+						'status'      => 'YES',
+						'guestsCount' => 0,
+						'member'      => array( 'email' => 'rsvper@example.org' ),
+					),
+				);
+			}
+		);
+
+		// First import: "Organizers" only.
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'publish', $post->post_status );
+		$this->assertSame( array( 'editor' ), ( new \WP_User( $users['organizer'], '', $this->site_id ) )->roles );
+		$this->assertFalse( is_user_member_of_blog( $host, $this->site_id ) );
+		$this->assertEmpty( $this->on_site( fn() => get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) ) );
+		$this->assertSame( 0, $fetched_rsvps );
+		$this->assertNull( $this->rsvp_status( $post->ID, $rsvper ) );
+		$this->assertSame( Meetup_Import\PEOPLE_NEVER_MATCHED, $this->on_site( fn() => get_post_meta( $post->ID, Meetup_Import\PEOPLE_MATCHED_META, true ) ) );
+
+		// Second import, after the wait: members, which brings hosts and RSVPs.
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$this->assertSame( 'done', Meetup_Import\get_job( $this->site_id )['status'] );
+		$this->assertTrue( is_user_member_of_blog( $host, $this->site_id ) );
+		$this->assertSame( array( $host ), array_map( 'intval', (array) $this->on_site( fn() => get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) ) ) );
+		$this->assertSame( 1, $fetched_rsvps );
+		$this->assertSame( 'attending', $this->rsvp_status( $post->ID, $rsvper ) );
+		$this->assertFalse( is_user_member_of_blog( $rsvper, $this->site_id ), 'RSVPing does not add anyone to the group.' );
+	}
+
+	/**
+	 * An organizer hosting an event owns it from the group's first import, so
+	 * an Event Organizer can edit it, as they could when the first import
+	 * credited hosts. A later import never changes a published event's author
+	 * (#2360).
+	 */
+	public function test_an_organizer_hosting_owns_the_event_from_the_first_import() {
+		list( $raw_organizers, $users ) = $this->setup_organizers();
+
+		$host = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+
+		$this->fake_events(
+			array(
+				$this->raw_event(
+					array(
+						'eventHosts' => array(
+							// Not an organizer, so not in the group yet: skipped, and not added.
+							array(
+								'member' => array(
+									'id'    => 'h1',
+									'email' => 'host@example.org',
+								),
+							),
+							array(
+								'member' => array(
+									'id'    => 'h2',
+									'email' => 'asst@example.org',
+								),
+							),
+						),
+					)
+				),
+			)
+		);
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_organizers',
+			static function () use ( $raw_organizers ) {
+				return $raw_organizers;
+			}
+		);
+		add_filter( 'wcorg_meetup_import_pre_fetch_members', '__return_empty_array' );
+		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array' );
+
+		$can_edit = function ( int $user_id, int $post_id ): bool {
+			return $this->on_site(
+				static function () use ( $user_id, $post_id ) {
+					wp_set_current_user( $user_id );
+					$can = current_user_can( 'edit_post', $post_id );
+					wp_set_current_user( 0 );
+
+					return $can;
+				}
+			);
+		};
+
+		// First import: "Organizers" only.
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( array( 'author' ), ( new \WP_User( $users['asst'], '', $this->site_id ) )->roles );
+		$this->assertSame( $users['asst'], (int) $post->post_author );
+		$this->assertTrue( $can_edit( $users['asst'], $post->ID ) );
+		$this->assertFalse( is_user_member_of_blog( $host, $this->site_id ) );
+
+		// Second import, after the wait: the author stays, the hosts come in.
+		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false, true );
+		Meetup_Import\process_batch( $this->site_id );
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( $users['asst'], (int) $post->post_author );
+		$this->assertTrue( $can_edit( $users['asst'], $post->ID ) );
+		$this->assertSame( array( $host, $users['asst'] ), array_map( 'intval', (array) $this->on_site( fn() => get_post_meta( $post->ID, \WordCamp\Groups\Frontend\Event_Hosts\META_KEY, true ) ) ) );
+	}
+
+	/**
+	 * Without the organizers, nobody is matched by email, not even a host
+	 * already in the group: the event goes to the lead organizer.
+	 */
+	public function test_no_host_owns_the_event_without_the_organizers() {
+		$host = self::factory()->user->create( array( 'user_email' => 'host@example.org' ) );
+		add_user_to_blog( $this->site_id, $host, 'author' );
+
+		$event = $this->raw_event( array( 'eventHosts' => array( array( 'member' => array( 'email' => 'host@example.org' ) ) ) ) );
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $event ) ) );
+
+		$this->assertNotSame( $host, (int) $this->find_event( '315889305' )->post_author );
+	}
+
+	/**
 	 * A job left paused on its members step from before `match_members` goes
 	 * on to the events without adding anyone.
 	 */
@@ -3238,6 +3415,10 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'name="match_people"', $fresh );
 		$this->assertMatchesRegularExpression( '/name="match_members" type="checkbox" value="1"\s*\/>/', $fresh );
+
+		// In a row of its own, after the first import's options (#2360).
+		$this->assertMatchesRegularExpression( '/name="match_people".*<\/tr>.*Second import.*name="match_members"/s', $fresh );
+		$this->assertStringContainsString( 'Leave this off on a group&#039;s first import', $fresh );
 		$this->assertStringContainsString( 'told on Meetup that they&#039;ll be added', $fresh );
 		$this->assertMatchesRegularExpression( '/name="match_members" type="checkbox" value="1"\s*checked=\'checked\'/', $again );
 	}

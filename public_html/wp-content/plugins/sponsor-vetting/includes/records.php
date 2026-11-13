@@ -76,7 +76,7 @@ function get_company_flag_items( int $company_id ): array {
 		$items[] = array(
 			'type' => 'replied',
 			'text' => __( 'Sponsor replied', 'wordcamporg' ),
-			'url'  => (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' ),
+			'url'  => esc_url_raw( (string) ( get_latest_conversation( $company_id, 'compliance' )['url'] ?? '' ), array( 'http', 'https' ) ),
 		);
 	}
 

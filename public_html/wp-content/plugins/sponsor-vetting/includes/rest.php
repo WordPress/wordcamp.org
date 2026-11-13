@@ -302,12 +302,13 @@ function get_rest_fields(): array {
 				'schema' => array(
 					'type'       => array( 'object', 'null' ),
 					'properties' => array(
-						'name'       => $string,
-						'website'    => $string,
-						'first_name' => $string,
-						'last_name'  => $string,
-						'email'      => $string,
-						'edit_url'   => $string,
+						'name'        => $string,
+						'website'     => $string,
+						'website_url' => $string,
+						'first_name'  => $string,
+						'last_name'   => $string,
+						'email'       => $string,
+						'edit_url'    => $string,
 					),
 				),
 			),
@@ -504,7 +505,7 @@ function get_rest_conversations( int $post_id ): array {
 	return array_map(
 		static fn( array $conversation ): array => array(
 			'type' => (string) $conversation['type'],
-			'url'  => (string) $conversation['url'],
+			'url'  => esc_url_raw( (string) $conversation['url'], array( 'http', 'https' ) ),
 			'time' => gmdate( 'c', (int) $conversation['time'] ),
 		),
 		array_reverse( get_conversations( $post_id ) )
@@ -571,8 +572,9 @@ function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array
  * Gets what the camp entered for a sponsorship's sponsor.
  *
  * @param int $sponsorship_id The sponsorship.
- * @return string[]|null The sponsor's `name`, `website`, `first_name`, `last_name` and `email`, and where it's
- *                       edited on the event's site, as `edit_url`, or null if the camp deleted it.
+ * @return string[]|null The sponsor's `name`, `website`, `first_name`, `last_name` and `email`, where it's edited
+ *                       on the event's site, as `edit_url`, and its website as an address that's safe to link to,
+ *                       as `website_url`, or null if the camp deleted it.
  */
 function get_rest_sponsor( int $sponsorship_id ): ?array {
 	$blog_id    = (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true );
@@ -583,13 +585,17 @@ function get_rest_sponsor( int $sponsorship_id ): ?array {
 		return null;
 	}
 
+	// Organizers enter the website, so it's only linked when it's a web address.
+	$url = esc_url_raw( $sponsor['website'], array( 'http', 'https' ) );
+
 	return array(
-		'name'       => $sponsor['name'],
-		'website'    => $sponsor['website'],
-		'first_name' => $sponsor['first_name'],
-		'last_name'  => $sponsor['last_name'],
-		'email'      => $sponsor['email'],
-		'edit_url'   => get_admin_url( $blog_id, 'post.php?post=' . $sponsor_id . '&action=edit' ),
+		'name'        => $sponsor['name'],
+		'website'     => $sponsor['website'],
+		'website_url' => '' === normalize_domain( $url ) ? '' : $url,
+		'first_name'  => $sponsor['first_name'],
+		'last_name'   => $sponsor['last_name'],
+		'email'       => $sponsor['email'],
+		'edit_url'    => get_admin_url( $blog_id, 'post.php?post=' . $sponsor_id . '&action=edit' ),
 	);
 }
 

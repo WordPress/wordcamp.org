@@ -544,6 +544,45 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
+	 * A sponsorship shows the website the camp entered for its sponsor, and links it only when it's a web address:
+	 * organizers enter it, and vetters click it.
+	 *
+	 * @dataProvider data_websites
+	 *
+	 * @param string $website What the camp entered.
+	 * @param string $url     The address the screen links to.
+	 */
+	public function test_sponsor_website_links_only_to_the_web( string $website, string $url ): void {
+		switch_to_blog( self::$year_dot_2018_site_id );
+		$sponsor_id = self::factory()->post->create(
+			array(
+				'post_type'  => 'wcb_sponsor',
+				'meta_input' => array( '_wcpt_sponsor_website' => $website ),
+			)
+		);
+		restore_current_blog();
+
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', 0 );
+		update_post_meta( $sponsorship_id, '_sv_sponsor_id', $sponsor_id );
+
+		$sponsor = $this->request( 'GET', '/sv-sponsorships/' . $sponsorship_id )->get_data()['sponsor'];
+
+		$this->assertSame( array( $website, $url ), array( $sponsor['website'], $sponsor['website_url'] ) );
+	}
+
+	/**
+	 * Websites a camp enters, and where each leads.
+	 *
+	 * @return array[]
+	 */
+	public function data_websites(): array {
+		return array(
+			'a web address' => array( 'https://acme.test/hosting', 'https://acme.test/hosting' ),
+			'a script'      => array( 'javascript:alert(document.domain)', '' ),
+		);
+	}
+
+	/**
 	 * A trashed sponsorship says which status it had, and writing that status restores it: an approved one comes
 	 * back approved, without its company being checked again.
 	 */

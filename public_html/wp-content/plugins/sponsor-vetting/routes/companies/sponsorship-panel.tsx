@@ -322,10 +322,12 @@ function Editor( { sponsorship, edited, hasEdits, edit, save, companies, nav }: 
 								<Row label={ __( 'Event date', 'wordcamporg' ) }>{ formatDay( event.date ) }</Row>
 								<Row label={ __( 'Name', 'wordcamporg' ) }>{ sponsor.name }</Row>
 								<Row label={ __( 'Website', 'wordcamporg' ) }>
-									{ sponsor.website && (
-										<Link href={ sponsor.website } openInNewTab>
+									{ sponsor.website_url ? (
+										<Link href={ sponsor.website_url } openInNewTab>
 											{ sponsor.website }
 										</Link>
+									) : (
+										sponsor.website
 									) }
 								</Row>
 								<Row label={ __( 'Contact', 'wordcamporg' ) }>

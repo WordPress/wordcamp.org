@@ -91,6 +91,8 @@ export type SponsorshipDetails = Sponsorship &
 		sponsor: {
 			name: string;
 			website: string;
+			/* The website as an address that's safe to link to, or an empty string. */
+			website_url: string;
 			first_name: string;
 			last_name: string;
 			email: string;

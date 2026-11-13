@@ -1,5 +1,5 @@
 /**
- * Redraws the Sponsor Vetting box after the block editor saves the sponsor, and saves it to request vetting.
+ * Saves the sponsor when vetting is requested, and redraws the Sponsor Vetting box after the block editor saves.
  *
  * The block editor saves without reloading the page, so the box would otherwise keep showing what it said on load.
  */
@@ -40,35 +40,49 @@
 	}
 
 	/**
-	 * Saves the sponsor with the request, as the button does by itself in the classic editor.
+	 * Saves the sponsor with the request, so the request carries what was just entered.
+	 *
+	 * A field stands in for a submit button, which pressing Enter in any other field could trigger.
 	 *
 	 * @param {MouseEvent} event The click.
 	 */
 	function requestVetting( event ) {
-		const button = event.target.closest( '#sv-vetting button[type="submit"]' );
+		const button = event.target.closest( '#sv-vetting .inside button' );
 
 		if ( ! button ) {
 			return;
 		}
 
-		event.preventDefault();
+		const field = Object.assign( document.createElement( 'input' ), {
+			type: 'hidden',
+			name: 'sv_request_vetting',
+			value: '1',
+		} );
 
-		// The editor posts the meta boxes' fields but not their buttons. The redraw clears the field again.
-		button.after(
-			Object.assign( document.createElement( 'input' ), {
-				type: 'hidden',
-				name: 'sv_request_vetting',
-				value: '1',
-			} )
-		);
+		button.after( field );
+		button.disabled = true;
 
-		window.wp.data.dispatch( 'core/editor' ).savePost();
+		if ( ! document.body.classList.contains( 'block-editor-page' ) ) {
+			// Vetting can be requested before the details an invoice needs are known.
+			button.form.noValidate = true;
+			button.form.requestSubmit();
+			return;
+		}
+
+		// A field left behind by a failed save would request vetting on the next one.
+		window.wp.data
+			.dispatch( 'core/editor' )
+			.savePost()
+			.finally( () => {
+				field.remove();
+				button.disabled = false;
+			} );
 	}
 
 	document.addEventListener( 'click', requestVetting );
 
 	// After core saves the meta boxes, at the default priority, since the website is in one.
-	window.wp.hooks.addAction(
+	window.wp.hooks?.addAction(
 		'editor.savePost',
 		'sponsor-vetting/redraw-vetting-box',
 		redrawVettingBox,

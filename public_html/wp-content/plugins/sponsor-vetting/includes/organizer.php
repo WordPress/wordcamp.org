@@ -155,28 +155,29 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 
 	wp_nonce_field( 'sv_request_vetting_' . $post->ID, 'sv_request_vetting_nonce', false );
 	?>
-	<p><button type="submit" name="sv_request_vetting" value="1" class="button"><?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?></button></p>
+	<p><button type="button" class="button"><?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?></button></p>
 	<p class="description"><?php esc_html_e( 'The Community Team checks every sponsor follows the WordPress trademark policy and the GPL. You don’t need an invoice to ask.', 'wordcamporg' ); ?></p>
 	<?php
 }
 
 /**
- * Loads the script that redraws the vetting box after the block editor saves, since that doesn't reload the page,
- * and that saves the sponsor when vetting is requested, since the box's button can't submit there.
+ * Loads the script that saves the sponsor when vetting is requested, and that redraws the vetting box after the
+ * block editor saves, since that doesn't reload the page.
  *
- * Without it, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit screens' own
- * script hooks, which run just before scripts are printed.
+ * Without the redraw, a new sponsor's box keeps asking organizers to save it after they have. Hooked to the edit
+ * screens' own script hooks, which run just before scripts are printed.
  */
 function enqueue_organizer_script(): void {
 	$screen = get_current_screen();
 
-	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type || ! $screen->is_block_editor() ) {
+	if ( is_central() || ! $screen || 'wcb_sponsor' !== $screen->post_type ) {
 		return;
 	}
 
 	$plugin_dir = dirname( __DIR__ );
+	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks' ) : array();
 
-	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), array( 'wp-api-fetch', 'wp-data', 'wp-hooks' ), (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
+	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), $deps, (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
 }
 add_action( 'admin_print_scripts-post.php', __NAMESPACE__ . '\enqueue_organizer_script' );
 add_action( 'admin_print_scripts-post-new.php', __NAMESPACE__ . '\enqueue_organizer_script' );
@@ -265,6 +266,7 @@ function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
 	if (
 		'wcb_sponsor' !== $post->post_type
 		|| is_central()
+		|| ! is_admin()
 		|| ! isset( $_POST['sv_request_vetting'], $_POST['sv_request_vetting_nonce'] )
 		|| ! wp_verify_nonce( sanitize_key( $_POST['sv_request_vetting_nonce'] ), 'sv_request_vetting_' . $post_id )
 		|| ! current_user_can( 'edit_post', $post_id )

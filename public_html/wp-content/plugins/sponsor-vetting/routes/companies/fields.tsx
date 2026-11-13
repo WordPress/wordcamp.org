@@ -1,36 +1,26 @@
-import type { Field, View } from '@wordpress/dataviews';
+import type { Field } from '@wordpress/dataviews';
+import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
 import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, formatDay } from './dates';
-import { COMPANY_STATUSES, COMPANY_STATUS_ORDER } from './statuses';
+import { COMPANY_STATUSES, STATUS_INTENTS } from './entities';
 import type { Company, Flag } from './types';
 
-/* What each layout shows beside the company's name and website. A list row has no column headers, so it keeps to
-   the fields that explain themselves. */
-export const DEFAULT_LAYOUTS = {
-	table: { fields: [ 'status', 'follow_up', 'next_event', 'sponsorships', 'last_vetted' ] },
-	list: { fields: [ 'status', 'follow_up', 'next_event' ] },
-};
-
-/* Lists the companies under a heading per status, in the order of the pipeline. */
-export const GROUP_BY_STATUS: NonNullable< View[ 'groupBy' ] > = {
-	field: 'status',
-	direction: 'asc',
-	showLabel: false,
-};
-
-const STATUS_LABELS = COMPANY_STATUS_ORDER.map( ( status ) => COMPANY_STATUSES[ status ].label );
-
-export const DEFAULT_VIEW: View = {
-	type: 'table',
-	page: 1,
-	perPage: 50,
-	search: '',
-	titleField: 'name',
-	descriptionField: 'domains',
-	sort: { field: 'next_event', direction: 'asc' },
-	...DEFAULT_LAYOUTS.table,
-};
+/**
+ * A company's or sponsorship's status.
+ *
+ * @param props        Props.
+ * @param props.status The status.
+ * @param props.label  Its label.
+ * @return The status, on one line however narrow its column.
+ */
+export function StatusBadge( { status, label }: { status: keyof typeof STATUS_INTENTS; label: string } ) {
+	return (
+		<Badge className="sponsor-vetting__status" intent={ STATUS_INTENTS[ status ] }>
+			{ label }
+		</Badge>
+	);
+}
 
 /**
  * A company's flags: what a reviewer should know beyond its status.
@@ -74,75 +64,94 @@ export function Domains( { domains }: { domains: string[] } ) {
 	);
 }
 
-export const fields: Field< Company >[] = [
-	{
-		id: 'name',
-		label: __( 'Company', 'wordcamporg' ),
-		enableGlobalSearch: true,
-		enableHiding: false,
-		filterBy: false,
-	},
-	{
-		id: 'domains',
-		label: __( 'Website', 'wordcamporg' ),
-		enableGlobalSearch: true,
-		enableSorting: false,
-		filterBy: false,
-		getValue: ( { item } ) => item.domains.join( ' ' ),
-		render: ( { item } ) => <Domains domains={ item.domains } />,
-	},
-	{
-		id: 'status',
-		label: __( 'Status', 'wordcamporg' ),
-		// A group is headed by its field's value, so the value is the status's label, not its slug.
-		getValue: ( { item } ) => COMPANY_STATUSES[ item.status ].label,
-		elements: STATUS_LABELS.map( ( label ) => ( { value: label, label } ) ),
-		filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
-		render: ( { item } ) => (
-			<Badge className="sponsor-vetting__status" intent={ COMPANY_STATUSES[ item.status ].intent }>
-				{ COMPANY_STATUSES[ item.status ].label }
-			</Badge>
-		),
-		// In the order of the pipeline, not of the alphabet.
-		sort: ( a: string, b: string, direction ) => {
-			const delta = STATUS_LABELS.indexOf( a ) - STATUS_LABELS.indexOf( b );
+/**
+ * Gets a company's name. Titles are stored escaped.
+ *
+ * @param company The company.
+ * @return The name.
+ */
+export function getCompanyName( company: Company ): string {
+	return decodeEntities( company.title.raw );
+}
 
-			return direction === 'asc' ? delta : -delta;
+/**
+ * Builds the fields of the company list.
+ *
+ * @param labels The statuses' labels, keyed by status.
+ * @return The fields.
+ */
+export function getCompanyFields( labels: Record< string, string > ): Field< Company >[] {
+	const statusLabels = COMPANY_STATUSES.map( ( status ) => labels[ status ] ?? status );
+
+	return [
+		{
+			id: 'title',
+			label: __( 'Company', 'wordcamporg' ),
+			enableGlobalSearch: true,
+			enableHiding: false,
+			filterBy: false,
+			getValue: ( { item } ) => getCompanyName( item ),
 		},
-	},
-	{
-		id: 'follow_up',
-		label: __( 'Follow-up', 'wordcamporg' ),
-		type: 'array',
-		elements: [
-			{ value: 'replied', label: __( 'Sponsor replied', 'wordcamporg' ) },
-			{ value: 'good_faith', label: __( 'Good Faith', 'wordcamporg' ) },
-			{ value: 'lapsed', label: __( 'Vetting has lapsed', 'wordcamporg' ) },
-			{ value: 'not_eligible_ended', label: __( 'Not Eligible period has ended', 'wordcamporg' ) },
-		],
-		filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
-		enableSorting: false,
-		getValue: ( { item } ) => item.flags.map( ( flag ) => flag.type ),
-		render: ( { item } ) => <Flags flags={ item.flags } />,
-	},
-	{
-		id: 'next_event',
-		label: __( 'Next event', 'wordcamporg' ),
-		type: 'date',
-		render: ( { item } ) => formatDay( item.next_event ),
-		sort: compareDays,
-	},
-	{
-		id: 'sponsorships',
-		label: __( 'Events', 'wordcamporg' ),
-		type: 'integer',
-		filterBy: false,
-	},
-	{
-		id: 'last_vetted',
-		label: __( 'Last vetted', 'wordcamporg' ),
-		type: 'date',
-		render: ( { item } ) => formatDay( item.last_vetted ),
-		sort: compareDays,
-	},
-];
+		{
+			id: 'domains',
+			label: __( 'Website', 'wordcamporg' ),
+			enableGlobalSearch: true,
+			enableSorting: false,
+			filterBy: false,
+			getValue: ( { item } ) => item.domains.join( ' ' ),
+			render: ( { item } ) => <Domains domains={ item.domains } />,
+		},
+		{
+			id: 'status',
+			label: __( 'Status', 'wordcamporg' ),
+			// A group is headed by its field's value, so the value is the status's label, not its slug.
+			getValue: ( { item } ) => labels[ item.status ] ?? item.status,
+			elements: statusLabels.map( ( label ) => ( { value: label, label } ) ),
+			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
+			render: ( { item } ) => (
+				<StatusBadge status={ item.status } label={ labels[ item.status ] ?? item.status } />
+			),
+			// In the order of the pipeline, not of the alphabet.
+			sort: ( a: string, b: string, direction ) => {
+				const delta = statusLabels.indexOf( a ) - statusLabels.indexOf( b );
+
+				return direction === 'asc' ? delta : -delta;
+			},
+		},
+		{
+			id: 'follow_up',
+			label: __( 'Follow-up', 'wordcamporg' ),
+			type: 'array',
+			elements: [
+				{ value: 'replied', label: __( 'Sponsor replied', 'wordcamporg' ) },
+				{ value: 'good_faith', label: __( 'Good Faith', 'wordcamporg' ) },
+				{ value: 'lapsed', label: __( 'Vetting has lapsed', 'wordcamporg' ) },
+				{ value: 'not_eligible_ended', label: __( 'Not Eligible period has ended', 'wordcamporg' ) },
+			],
+			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
+			enableSorting: false,
+			getValue: ( { item } ) => item.flags.map( ( flag ) => flag.type ),
+			render: ( { item } ) => <Flags flags={ item.flags } />,
+		},
+		{
+			id: 'next_event',
+			label: __( 'Next event', 'wordcamporg' ),
+			type: 'date',
+			render: ( { item } ) => formatDay( item.next_event ),
+			sort: compareDays,
+		},
+		{
+			id: 'sponsorships',
+			label: __( 'Events', 'wordcamporg' ),
+			type: 'integer',
+			filterBy: false,
+		},
+		{
+			id: 'last_vetted',
+			label: __( 'Last vetted', 'wordcamporg' ),
+			type: 'date',
+			render: ( { item } ) => formatDay( item.last_vetted ),
+			sort: compareDays,
+		},
+	];
+}

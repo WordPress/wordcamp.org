@@ -1,15 +1,27 @@
+import { store as coreStore, useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
-import { RawHTML } from '@wordpress/element';
+import { RawHTML, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { chevronDown, chevronUp, close } from '@wordpress/icons';
-import { Badge, ButtonLink, Card, IconButton, Link, Notice, Spinner, Stack, Text } from '@wordpress/ui';
+import { ButtonLink, Card, IconButton, Link, Notice, Spinner, Stack, Text } from '@wordpress/ui';
 import type { ReactNode } from 'react';
 import { formatDay, formatTime } from './dates';
-import { Domains, Flags } from './fields';
-import { useCompanyList, useOpenCompany } from './hooks';
-import { COMPANY_STATUSES, SPONSORSHIP_STATUSES } from './statuses';
-import { store } from './store';
-import type { CompanyDetails, CompanyEvent, LogEntry } from './types';
+import { COMPANY, SPONSORSHIP, getSponsorshipsQuery } from './entities';
+import { Domains, Flags, StatusBadge, getCompanyName } from './fields';
+import { useCompanyList, useOpenCompany, useStatusLabels } from './hooks';
+import { buildTimeline, sortByEvent } from './timeline';
+import type { TimelineEntry } from './timeline';
+import type { CompanyDetails, Sponsorship } from './types';
+
+/**
+ * Builds the address of a record's own screen, which is where it's edited for now.
+ *
+ * @param id The company or sponsorship.
+ * @return The address, relative to wp-admin.
+ */
+function getEditUrl( id: number ): string {
+	return `post.php?post=${ id }&action=edit`;
+}
 
 /**
  * A titled group of the panel.
@@ -75,26 +87,24 @@ function Row( { label, stacked = false, children }: { label: string; stacked?: b
 /**
  * One of the company's sponsorships, shown as the event it's for.
  *
- * @param props       Props.
- * @param props.event The sponsorship.
+ * @param props             Props.
+ * @param props.sponsorship The sponsorship.
+ * @param props.label       Its status's label.
  * @return The event.
  */
-function Event( { event }: { event: CompanyEvent } ) {
-	const status = SPONSORSHIP_STATUSES[ event.status ];
+function Event( { sponsorship, label }: { sponsorship: Sponsorship; label: string } ) {
+	const { event, approved } = sponsorship;
 
 	return (
 		<Stack direction="column" gap="xs" className="sponsor-vetting__event">
 			<Stack direction="row" justify="space-between" align="start" gap="md">
-				<Link href={ event.edit_url } tone="neutral">
+				<Link href={ getEditUrl( sponsorship.id ) } tone="neutral">
 					{ event.name }
 				</Link>
-				<Badge intent={ status.intent }>{ status.label }</Badge>
+				<StatusBadge status={ sponsorship.status } label={ label } />
 			</Stack>
 			<Text variant="body-sm" className="sponsor-vetting__label">
-				{ [
-					formatDay( event.date ),
-					event.approved && `${ __( 'Approved', 'wordcamporg' ) } ${ event.approved }`,
-				]
+				{ [ formatDay( event.date ), approved && `${ __( 'Approved', 'wordcamporg' ) } ${ approved }` ]
 					.filter( Boolean )
 					.join( ' · ' ) }
 			</Text>
@@ -109,7 +119,7 @@ function Event( { event }: { event: CompanyEvent } ) {
  * @param props.entry The entry.
  * @return The entry.
  */
-function Entry( { entry }: { entry: LogEntry } ) {
+function Entry( { entry }: { entry: TimelineEntry } ) {
 	return (
 		<Stack direction="column" gap="xs" className="sponsor-vetting__entry">
 			<RawHTML>{ entry.html }</RawHTML>
@@ -123,26 +133,34 @@ function Entry( { entry }: { entry: LogEntry } ) {
 /**
  * Everything about a company: its vetting, events, findings, contact, and history.
  *
- * @param props         Props.
- * @param props.company The company.
+ * @param props              Props.
+ * @param props.company      The company.
+ * @param props.sponsorships Its sponsorships.
  * @return The details.
  */
-function Details( { company }: { company: CompanyDetails } ) {
-	const status = COMPANY_STATUSES[ company.status ];
-	const contact = [ company.contact.first_name, company.contact.last_name ].filter( Boolean ).join( ' ' );
+function Details( { company, sponsorships }: { company: CompanyDetails; sponsorships: Sponsorship[] } ) {
+	const { labels } = useStatusLabels();
+	const { meta } = company;
+	const contact = [ meta._sv_contact_first_name, meta._sv_contact_last_name ].filter( Boolean ).join( ' ' );
+	const requests = company.conversations.filter( ( { type } ) => type === 'compliance' );
+	const events = useMemo(
+		() => sortByEvent( sponsorships, new Date().toISOString().slice( 0, 10 ) ),
+		[ sponsorships ]
+	);
+	const timeline = useMemo( () => buildTimeline( company.log, sponsorships ), [ company.log, sponsorships ] );
 
 	return (
 		<Stack direction="column" gap="lg">
 			<Stack direction="column" gap="xs">
 				<Text variant="heading-lg" render={ <h2 /> }>
-					{ company.name }
+					{ getCompanyName( company ) }
 				</Text>
 				<Domains domains={ company.domains } />
 			</Stack>
 
 			<Section title={ __( 'Vetting', 'wordcamporg' ) }>
 				<Row label={ __( 'Status', 'wordcamporg' ) }>
-					<Badge intent={ status.intent }>{ status.label }</Badge>
+					<StatusBadge status={ company.status } label={ labels[ company.status ] ?? company.status } />
 				</Row>
 				<Row label={ __( 'Follow-up', 'wordcamporg' ) }>
 					{ company.flags.length > 0 && <Flags flags={ company.flags } /> }
@@ -151,31 +169,35 @@ function Details( { company }: { company: CompanyDetails } ) {
 					{ formatDay( company.last_vetted ) || __( 'Never', 'wordcamporg' ) }
 				</Row>
 				<Row label={ __( 'Not Eligible until', 'wordcamporg' ) }>
-					{ formatDay( company.not_eligible_until ) }
+					{ formatDay( meta._sv_not_eligible_until ) }
 				</Row>
-				<Row label={ __( 'Good Faith due', 'wordcamporg' ) }>{ formatDay( company.good_faith_due ) }</Row>
+				<Row label={ __( 'Good Faith due', 'wordcamporg' ) }>{ formatDay( meta._sv_good_faith_due ) }</Row>
 			</Section>
 
 			<Section title={ __( 'Events', 'wordcamporg' ) }>
-				{ company.events.length === 0 && <Text>{ __( 'No sponsorships yet.', 'wordcamporg' ) }</Text> }
-				{ company.events.map( ( event ) => (
-					<Event key={ event.id } event={ event } />
+				{ events.length === 0 && <Text>{ __( 'No sponsorships yet.', 'wordcamporg' ) }</Text> }
+				{ events.map( ( sponsorship ) => (
+					<Event
+						key={ sponsorship.id }
+						sponsorship={ sponsorship }
+						label={ labels[ sponsorship.status ] ?? sponsorship.status }
+					/>
 				) ) }
 			</Section>
 
 			<Section title={ __( 'Findings', 'wordcamporg' ) }>
 				<Row label={ __( 'GPL', 'wordcamporg' ) } stacked>
-					{ company.gpl_findings || __( 'Not written yet.', 'wordcamporg' ) }
+					{ meta._sv_gpl_findings || __( 'Not written yet.', 'wordcamporg' ) }
 				</Row>
 				<Row label={ __( 'Trademark', 'wordcamporg' ) } stacked>
-					{ company.trademark_findings || __( 'Not written yet.', 'wordcamporg' ) }
+					{ meta._sv_trademark_findings || __( 'Not written yet.', 'wordcamporg' ) }
 				</Row>
 				<Row label={ __( 'Compliance requests', 'wordcamporg' ) } stacked>
-					{ company.conversations.length > 0 && (
+					{ requests.length > 0 && (
 						<Stack direction="column" gap="xs">
-							{ company.conversations.map( ( conversation ) => (
-								<Link key={ conversation.url } href={ conversation.url } openInNewTab>
-									{ formatTime( conversation.time ) }
+							{ requests.map( ( request ) => (
+								<Link key={ request.url } href={ request.url } openInNewTab>
+									{ formatTime( request.time ) }
 								</Link>
 							) ) }
 						</Stack>
@@ -185,20 +207,63 @@ function Details( { company }: { company: CompanyDetails } ) {
 
 			<Section title={ __( 'Company', 'wordcamporg' ) }>
 				<Row label={ __( 'Contact', 'wordcamporg' ) }>{ contact }</Row>
-				<Row label={ __( 'Email', 'wordcamporg' ) }>{ company.contact.email }</Row>
+				<Row label={ __( 'Email', 'wordcamporg' ) }>{ meta._sv_contact_email }</Row>
 				<Row label={ __( 'Multi-Event Sponsor', 'wordcamporg' ) }>{ company.mes }</Row>
-				{ ! contact && ! company.contact.email && ! company.mes && (
+				{ ! contact && ! meta._sv_contact_email && ! company.mes && (
 					<Text>{ __( 'No contact yet.', 'wordcamporg' ) }</Text>
 				) }
 			</Section>
 
 			<Section title={ __( 'Notes and history', 'wordcamporg' ) }>
-				{ company.log.map( ( entry, index ) => (
+				{ timeline.map( ( entry, index ) => (
 					<Entry key={ index } entry={ entry } />
 				) ) }
 			</Section>
 		</Stack>
 	);
+}
+
+/**
+ * The open company: its record in full, which the list only has in part, and its sponsorships.
+ *
+ * @param props    Props.
+ * @param props.id The company.
+ * @return The company's details, or how loading them is going.
+ */
+function Company( { id }: { id: number } ) {
+	const { record: company, hasResolved } = useEntityRecord< CompanyDetails >( 'postType', COMPANY, id );
+	const query = useMemo( () => getSponsorshipsQuery( id ), [ id ] );
+	const { records: sponsorships } = useEntityRecords< Sponsorship >( 'postType', SPONSORSHIP, query );
+	const error = useSelect(
+		( select ) => {
+			const { getResolutionError } = select( coreStore );
+
+			return ( getResolutionError( 'getEntityRecord', [ 'postType', COMPANY, id ] ) ??
+				getResolutionError( 'getEntityRecords', [ 'postType', SPONSORSHIP, query ] ) ) as
+				| Error
+				| undefined;
+		},
+		[ id, query ]
+	);
+
+	if ( error ) {
+		return (
+			<Notice.Root intent="error">
+				<Notice.Title>{ __( 'The company couldn’t be loaded.', 'wordcamporg' ) }</Notice.Title>
+				<Notice.Description>{ error.message }</Notice.Description>
+			</Notice.Root>
+		);
+	}
+
+	if ( ! hasResolved || ! company || ! sponsorships ) {
+		return (
+			<Stack justify="center" className="sponsor-vetting__loading">
+				<Spinner />
+			</Stack>
+		);
+	}
+
+	return <Details company={ company } sponsorships={ sponsorships } />;
 }
 
 /**
@@ -209,15 +274,6 @@ function Details( { company }: { company: CompanyDetails } ) {
 function Inspector() {
 	const [ openId, open ] = useOpenCompany();
 	const { data } = useCompanyList();
-	const { company, error } = useSelect(
-		( select ) => ( {
-			company: openId ? select( store ).getCompany( openId ) : undefined,
-			error: openId
-				? ( select( store ).getResolutionError( 'getCompany', [ openId ] ) as Error | undefined )
-				: undefined,
-		} ),
-		[ openId ]
-	);
 
 	if ( ! openId ) {
 		return null;
@@ -237,13 +293,9 @@ function Inspector() {
 				gap="xs"
 				className="sponsor-vetting__panel-header"
 			>
-				{ company ? (
-					<ButtonLink href={ company.edit_url } variant="outline" size="compact">
-						{ __( 'Edit', 'wordcamporg' ) }
-					</ButtonLink>
-				) : (
-					<span />
-				) }
+				<ButtonLink href={ getEditUrl( openId ) } variant="outline" size="compact">
+					{ __( 'Edit', 'wordcamporg' ) }
+				</ButtonLink>
 				<Stack direction="row" gap="xs">
 					<IconButton
 						icon={ chevronUp }
@@ -276,18 +328,7 @@ function Inspector() {
 				</Stack>
 			</Stack>
 			<div className="sponsor-vetting__panel-body">
-				{ error && (
-					<Notice.Root intent="error">
-						<Notice.Title>{ __( 'The company couldn’t be loaded.', 'wordcamporg' ) }</Notice.Title>
-						<Notice.Description>{ error.message }</Notice.Description>
-					</Notice.Root>
-				) }
-				{ ! error && ! company && (
-					<Stack justify="center" className="sponsor-vetting__loading">
-						<Spinner />
-					</Stack>
-				) }
-				{ company && <Details company={ company } /> }
+				<Company key={ openId } id={ openId } />
 			</div>
 		</>
 	);

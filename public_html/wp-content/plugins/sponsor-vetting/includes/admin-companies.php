@@ -274,27 +274,29 @@ function get_listed_sponsorship_counts(): array {
 /**
  * Counts the sponsorships of companies, in one query for them all.
  *
- * @param int[] $company_ids The companies.
+ * @param int[]|null $company_ids The companies, or null for all of them.
  * @return int[] Counts, keyed by company ID; only companies with one.
  */
-function get_sponsorship_counts( array $company_ids ): array {
+function get_sponsorship_counts( ?array $company_ids = null ): array {
 	global $wpdb;
 
 	$counts   = array();
 	$statuses = array_keys( get_sponsorship_statuses() );
 
-	if ( ! $company_ids ) {
+	if ( array() === $company_ids ) {
 		return $counts;
 	}
+
+	$parents = null === $company_ids ? 'post_parent <> 0' : sprintf( 'post_parent IN (%s)', implode( ',', array_fill( 0, count( $company_ids ), '%d' ) ) );
 
 	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- One grouped count per screen; nothing to cache across requests.
 		$wpdb->prepare(
 			sprintf(
-				"SELECT post_parent, COUNT(*) AS total FROM {$wpdb->posts} WHERE post_type = %%s AND post_parent IN (%s) AND post_status IN (%s) GROUP BY post_parent",
-				implode( ',', array_fill( 0, count( $company_ids ), '%d' ) ),
+				"SELECT post_parent, COUNT(*) AS total FROM {$wpdb->posts} WHERE post_type = %%s AND %s AND post_status IN (%s) GROUP BY post_parent",
+				$parents, // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholders only.
 				implode( ',', array_fill( 0, count( $statuses ), '%s' ) )
 			),
-			array_merge( array( SPONSORSHIP_POST_TYPE ), $company_ids, $statuses )
+			array_merge( array( SPONSORSHIP_POST_TYPE ), (array) $company_ids, $statuses )
 		)
 	);
 
@@ -481,10 +483,11 @@ function get_company_sponsorships( int $company_id ): array {
 }
 
 /**
- * Replaces core's Publish box with the vetting boxes.
+ * Replaces core's Publish and Custom Fields boxes with the vetting boxes.
  */
 function add_company_meta_boxes(): void {
 	remove_meta_box( 'submitdiv', COMPANY_POST_TYPE, 'side' );
+	remove_meta_box( 'postcustom', COMPANY_POST_TYPE, 'normal' );
 
 	add_meta_box( 'sv-status', __( 'Vetting', 'wordcamporg' ), __NAMESPACE__ . '\render_company_status_box', COMPANY_POST_TYPE, 'side', 'high' );
 	add_meta_box( 'sv-details', __( 'Company', 'wordcamporg' ), __NAMESPACE__ . '\render_company_details_box', COMPANY_POST_TYPE, 'normal', 'high' );

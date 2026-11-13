@@ -1,8 +1,10 @@
 <?php
 /**
- * The REST routes the vetting screen on Central reads: the companies, and one company with its events.
+ * What the built-in REST endpoints of companies and sponsorships add for the vetting screen on Central: the meta
+ * vetters read as it's stored, the values worked out for them, and a company's sponsorships.
  *
- * Only vetters can read them, and only on Central.
+ * The endpoints themselves are core's, at `wp/v2/sv-companies` and `wp/v2/sv-sponsorships`. Only vetters can use
+ * them: every capability of both post types is the vetters'.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -14,239 +16,409 @@ namespace WordCamp\Sponsor_Vetting;
 defined( 'WPINC' ) || die();
 
 /**
- * Registers the routes, on Central.
+ * Registers the company meta vetters read as it's stored.
+ *
+ * Read-only for vetters for now: the keys are protected, so without an `auth_callback` only super admins can write
+ * them over REST.
  */
-function register_app_routes(): void {
+function register_company_meta(): void {
 	if ( ! is_central() ) {
 		return;
 	}
 
-	// The routes describe companies the way the screens do, with the screens' own helpers.
+	$keys = array(
+		'_sv_contact_first_name',
+		'_sv_contact_last_name',
+		'_sv_contact_email',
+		'_sv_gpl_findings',
+		'_sv_trademark_findings',
+		'_sv_not_eligible_until',
+		'_sv_good_faith_due',
+	);
+
+	foreach ( $keys as $key ) {
+		register_post_meta(
+			COMPANY_POST_TYPE,
+			$key,
+			array(
+				'type'         => 'string',
+				'single'       => true,
+				'show_in_rest' => true,
+			)
+		);
+	}
+}
+add_action( 'init', __NAMESPACE__ . '\register_company_meta' );
+
+/**
+ * Adds the values worked out for vetters to companies and sponsorships, as read-only fields.
+ *
+ * Each is only worked out when a request asks for it, so a list that names its fields skips the rest.
+ */
+function register_rest_fields(): void {
+	if ( ! is_central() ) {
+		return;
+	}
+
+	// The fields describe the records the way the screens do, with the screens' own helpers.
 	require_once __DIR__ . '/admin.php';
 	require_once __DIR__ . '/admin-companies.php';
 	require_once __DIR__ . '/admin-sponsorships.php';
 
-	$can_vet = static fn(): bool => current_user_can( CAPABILITY );
-
-	register_rest_route(
-		'sponsor-vetting/v1',
-		'/companies',
-		array(
-			'methods'             => \WP_REST_Server::READABLE,
-			'callback'            => __NAMESPACE__ . '\get_company_summaries',
-			'permission_callback' => $can_vet,
-		)
-	);
-
-	register_rest_route(
-		'sponsor-vetting/v1',
-		'/companies/(?P<id>\d+)',
-		array(
-			'methods'             => \WP_REST_Server::READABLE,
-			'callback'            => __NAMESPACE__ . '\get_company_details',
-			'permission_callback' => $can_vet,
-		)
-	);
+	foreach ( get_rest_fields() as $post_type => $fields ) {
+		foreach ( $fields as $name => $field ) {
+			register_rest_field(
+				$post_type,
+				$name,
+				array(
+					// The controller sets up the post it's preparing, whichever fields the request named.
+					'get_callback' => static fn( array $data, string $attribute, \WP_REST_Request $request ): mixed => $field['get']( (int) get_the_ID(), $request ),
+					'schema'       => $field['schema'] + array(
+						'context'  => array( 'view', 'edit' ),
+						'readonly' => true,
+					),
+				)
+			);
+		}
+	}
 }
-add_action( 'rest_api_init', __NAMESPACE__ . '\register_app_routes' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_fields' );
 
 /**
- * Lists every company with what the list shows of it.
+ * The read-only fields of companies and sponsorships.
  *
- * All of them at once, so the screen can search, filter and sort without asking again.
- *
- * @return array[] Companies, as get_company_summary() describes them.
+ * @return array[] For each post type, each field's `get` callback, which takes the post's ID and the request, and
+ *                 its `schema`, keyed by the field's name.
  */
-function get_company_summaries(): array {
-	$companies = get_posts(
-		array(
-			'post_type'      => COMPANY_POST_TYPE,
-			'post_status'    => array_keys( get_company_statuses() ),
-			'posts_per_page' => -1,
-			'orderby'        => 'title',
-			'order'          => 'ASC',
-			'no_found_rows'  => true,
-		)
+function get_rest_fields(): array {
+	$log = array(
+		'get'    => __NAMESPACE__ . '\get_rest_log',
+		'schema' => array(
+			'description' => __( 'Notes and status changes, newest first.', 'wordcamporg' ),
+			'type'        => 'array',
+			'items'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'time' => array(
+						'type'   => 'string',
+						'format' => 'date-time',
+					),
+					'html' => array( 'type' => 'string' ),
+				),
+			),
+		),
 	);
-	$next      = get_next_events();
-	$counts    = get_sponsorship_counts( wp_list_pluck( $companies, 'ID' ) );
-
-	return array_map(
-		static fn( \WP_Post $company ): array => get_company_summary( $company, $next[ $company->ID ]['start'] ?? 0, $counts[ $company->ID ] ?? 0 ),
-		$companies
-	);
-}
-
-/**
- * Describes a company for the list.
- *
- * @param \WP_Post $company      The company.
- * @param int      $next_event   When its next event starts, as get_next_events() returns it, or 0 for none.
- * @param int      $sponsorships How many sponsorships it has.
- * @return array {
- *     @type int      $id           The company's ID.
- *     @type string   $name         Its name.
- *     @type string[] $domains      Its website domains.
- *     @type string   $status       Its status.
- *     @type array[]  $flags        What else a reviewer should know, as get_company_flag_items() returns it.
- *     @type string   $next_event   When its next event starts, as `Y-m-d`, or an empty string.
- *     @type string   $last_vetted  When it was last vetted, as `Y-m-d`, or an empty string.
- *     @type int      $sponsorships How many sponsorships it has.
- * }
- */
-function get_company_summary( \WP_Post $company, int $next_event, int $sponsorships ): array {
-	$last_vetted = (int) get_post_meta( $company->ID, '_sv_last_vetted', true );
 
 	return array(
-		'id'           => $company->ID,
-		// Stored escaped; the screen escapes what it prints.
-		'name'         => wp_specialchars_decode( $company->post_title, ENT_QUOTES ),
-		'domains'      => get_company_domains( $company->ID ),
-		'status'       => $company->post_status,
-		'flags'        => get_company_flag_items( $company->ID ),
-		'next_event'   => $next_event ? gmdate( 'Y-m-d', $next_event ) : '',
-		'last_vetted'  => $last_vetted ? (string) wp_date( 'Y-m-d', $last_vetted ) : '',
-		'sponsorships' => $sponsorships,
+		COMPANY_POST_TYPE     => array(
+			'domains'       => array(
+				'get'    => __NAMESPACE__ . '\get_company_domains',
+				'schema' => array(
+					'description' => __( 'The company’s website domains.', 'wordcamporg' ),
+					'type'        => 'array',
+					'items'       => array( 'type' => 'string' ),
+				),
+			),
+			'flags'         => array(
+				'get'    => __NAMESPACE__ . '\get_company_flag_items',
+				'schema' => array(
+					'description' => __( 'What a reviewer should know beyond the status.', 'wordcamporg' ),
+					'type'        => 'array',
+					'items'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'type'    => array( 'type' => 'string' ),
+							'text'    => array( 'type' => 'string' ),
+							'url'     => array( 'type' => 'string' ),
+							'date'    => array( 'type' => 'string' ),
+							'overdue' => array( 'type' => 'boolean' ),
+						),
+					),
+				),
+			),
+			'next_event'    => array(
+				'get'    => __NAMESPACE__ . '\get_rest_next_event',
+				'schema' => array(
+					'description' => __( 'When the soonest event among the pending sponsorships starts, as Y-m-d.', 'wordcamporg' ),
+					'type'        => 'string',
+				),
+			),
+			'sponsorships'  => array(
+				'get'    => __NAMESPACE__ . '\get_rest_sponsorship_count',
+				'schema' => array(
+					'description' => __( 'How many sponsorships the company has.', 'wordcamporg' ),
+					'type'        => 'integer',
+				),
+			),
+			'last_vetted'   => array(
+				'get'    => __NAMESPACE__ . '\get_rest_last_vetted',
+				'schema' => array(
+					'description' => __( 'When the company was last vetted, as Y-m-d.', 'wordcamporg' ),
+					'type'        => 'string',
+				),
+			),
+			'mes'           => array(
+				'get'    => __NAMESPACE__ . '\get_rest_mes',
+				'schema' => array(
+					'description' => __( 'The name of the company’s Multi-Event Sponsor.', 'wordcamporg' ),
+					'type'        => 'string',
+				),
+			),
+			'conversations' => array(
+				'get'    => __NAMESPACE__ . '\get_rest_conversations',
+				'schema' => array(
+					'description' => __( 'The emails sent about the company, newest first.', 'wordcamporg' ),
+					'type'        => 'array',
+					'items'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'type' => array( 'type' => 'string' ),
+							'url'  => array(
+								'type'   => 'string',
+								'format' => 'uri',
+							),
+							'time' => array(
+								'type'   => 'string',
+								'format' => 'date-time',
+							),
+						),
+					),
+				),
+			),
+			'log'           => $log,
+		),
+		SPONSORSHIP_POST_TYPE => array(
+			'event'    => array(
+				'get'    => __NAMESPACE__ . '\get_rest_event',
+				'schema' => array(
+					'description' => __( 'The event the sponsorship is for.', 'wordcamporg' ),
+					'type'        => 'object',
+					'properties'  => array(
+						'name' => array( 'type' => 'string' ),
+						'date' => array( 'type' => 'string' ),
+					),
+				),
+			),
+			'approved' => array(
+				'get'    => __NAMESPACE__ . '\get_rest_approval',
+				'schema' => array(
+					'description' => __( 'Who approved the sponsorship, and when.', 'wordcamporg' ),
+					'type'        => 'string',
+				),
+			),
+			'log'      => $log,
+		),
 	);
 }
 
 /**
- * Describes one company in full: what the list shows, and everything its own screens do.
+ * Works a value out once per request, however many records the request lists.
  *
- * @param \WP_REST_Request $request The request, naming the company.
- * @return array|\WP_Error {
- *     The company as get_company_summary() describes it, and:
- *
- *     @type string[] $contact            The contact's `first_name`, `last_name` and `email`.
- *     @type string   $gpl_findings       The GPL findings, as Markdown.
- *     @type string   $trademark_findings The trademark findings, as Markdown.
- *     @type string   $not_eligible_until When Not Eligible ends, as `Y-m-d`, or an empty string.
- *     @type string   $good_faith_due     When Good Faith changes are due, as `Y-m-d`, or an empty string.
- *     @type string   $mes                The name of its Multi-Event Sponsor, or an empty string.
- *     @type array[]  $events             Its sponsorships, as get_company_events() returns them.
- *     @type array[]  $conversations      Its compliance requests: each one's `url` and `time`.
- *     @type array[]  $log                Its notes and history, as get_company_log() returns them.
- *     @type string   $edit_url           Where it's edited.
- * }
+ * @param \WP_REST_Request $request The request.
+ * @param string           $key     What the value is.
+ * @param callable         $compute Works the value out.
+ * @return mixed
  */
-function get_company_details( \WP_REST_Request $request ): array|\WP_Error {
-	$company = get_post( (int) $request['id'] );
+function remember( \WP_REST_Request $request, string $key, callable $compute ): mixed {
+	static $memo = null;
 
-	if ( ! $company || COMPANY_POST_TYPE !== $company->post_type || ! isset( get_company_statuses()[ $company->post_status ] ) ) {
-		return new \WP_Error( 'sv_no_company', __( 'That company doesn’t exist.', 'wordcamporg' ), array( 'status' => 404 ) );
+	$memo ??= new \WeakMap();
+	$values = $memo[ $request ] ?? array();
+
+	if ( ! array_key_exists( $key, $values ) ) {
+		$values[ $key ]   = $compute();
+		$memo[ $request ] = $values;
 	}
 
-	$sponsorships = get_company_sponsorships( $company->ID );
-	$events       = get_company_events( $sponsorships );
-	$next         = get_next_events( array( $company->ID ) )[ $company->ID ]['start'] ?? 0;
-	$mes          = get_posts(
+	return $values[ $key ];
+}
+
+/**
+ * Gets when a company's next event starts.
+ *
+ * @param int              $company_id The company.
+ * @param \WP_REST_Request $request    The request.
+ * @return string The date, as `Y-m-d`, or an empty string for none.
+ */
+function get_rest_next_event( int $company_id, \WP_REST_Request $request ): string {
+	$next = remember( $request, 'next_events', __NAMESPACE__ . '\get_next_events' );
+
+	return isset( $next[ $company_id ] ) ? gmdate( 'Y-m-d', $next[ $company_id ]['start'] ) : '';
+}
+
+/**
+ * Gets how many sponsorships a company has.
+ *
+ * @param int              $company_id The company.
+ * @param \WP_REST_Request $request    The request.
+ * @return int
+ */
+function get_rest_sponsorship_count( int $company_id, \WP_REST_Request $request ): int {
+	return remember( $request, 'sponsorship_counts', __NAMESPACE__ . '\get_sponsorship_counts' )[ $company_id ] ?? 0;
+}
+
+/**
+ * Gets when a company was last vetted.
+ *
+ * @param int $company_id The company.
+ * @return string The date, as `Y-m-d`, or an empty string for never.
+ */
+function get_rest_last_vetted( int $company_id ): string {
+	$last_vetted = (int) get_post_meta( $company_id, '_sv_last_vetted', true );
+
+	return $last_vetted ? (string) wp_date( 'Y-m-d', $last_vetted ) : '';
+}
+
+/**
+ * Gets the name of the Multi-Event Sponsor a company is linked to.
+ *
+ * @param int $company_id The company.
+ * @return string The name, or an empty string for none.
+ */
+function get_rest_mes( int $company_id ): string {
+	$mes = get_posts(
 		array(
 			'post_type'      => 'mes',
 			'post_status'    => 'any',
 			'posts_per_page' => 1,
 			'no_found_rows'  => true,
 			'meta_key'       => '_sv_company_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One company's link.
-			'meta_value'     => $company->ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- One company's link.
+			'meta_value'     => $company_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- One company's link.
 		)
 	);
 
-	return array_merge(
-		get_company_summary( $company, $next, count( $sponsorships ) ),
-		array(
-			'contact'            => array(
-				'first_name' => (string) get_post_meta( $company->ID, '_sv_contact_first_name', true ),
-				'last_name'  => (string) get_post_meta( $company->ID, '_sv_contact_last_name', true ),
-				'email'      => (string) get_post_meta( $company->ID, '_sv_contact_email', true ),
-			),
-			'gpl_findings'       => (string) get_post_meta( $company->ID, '_sv_gpl_findings', true ),
-			'trademark_findings' => (string) get_post_meta( $company->ID, '_sv_trademark_findings', true ),
-			'not_eligible_until' => (string) get_post_meta( $company->ID, '_sv_not_eligible_until', true ),
-			'good_faith_due'     => (string) get_post_meta( $company->ID, '_sv_good_faith_due', true ),
-			'mes'                => $mes ? wp_specialchars_decode( $mes[0]->post_title, ENT_QUOTES ) : '',
-			'events'             => $events,
-			'conversations'      => array_map(
-				static fn( array $conversation ): array => array(
-					'url'  => (string) $conversation['url'],
-					'time' => gmdate( 'c', (int) $conversation['time'] ),
-				),
-				array_reverse( get_conversations( $company->ID, 'compliance' ) )
-			),
-			'log'                => get_company_log( $company->ID, $events ),
-			'edit_url'           => (string) get_edit_post_link( $company->ID, 'raw' ),
-		)
+	return $mes ? wp_specialchars_decode( $mes[0]->post_title, ENT_QUOTES ) : '';
+}
+
+/**
+ * Gets the emails sent about a company, newest first.
+ *
+ * @param int $company_id The company.
+ * @return array[] Each conversation's `type`, `url` and `time`.
+ */
+function get_rest_conversations( int $company_id ): array {
+	return array_map(
+		static fn( array $conversation ): array => array(
+			'type' => (string) $conversation['type'],
+			'url'  => (string) $conversation['url'],
+			'time' => gmdate( 'c', (int) $conversation['time'] ),
+		),
+		array_reverse( get_conversations( $company_id ) )
 	);
 }
 
 /**
- * Describes a company's sponsorships as the events they're for, the next one first and past ones last.
+ * Gets a record's notes and status changes, newest first, as the screens word them.
  *
- * @param \WP_Post[] $sponsorships The sponsorships.
- * @return array[] Each sponsorship's `id`, its event's `name` and `date` (as `Y-m-d`, or an empty string), its
- *                 `status`, who `approved` it and when (or an empty string), and its `edit_url`.
+ * @param int $post_id The company or sponsorship.
+ * @return array[] Each entry's `time` and what it says, as `html`.
  */
-function get_company_events( array $sponsorships ): array {
-	$blog_ids = get_sponsorship_blog_ids( wp_list_pluck( $sponsorships, 'ID' ) );
-	$dates    = get_event_dates( $blog_ids );
-
-	$events = array_map(
-		static function ( \WP_Post $sponsorship ) use ( $blog_ids, $dates ): array {
-			$start = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? 0;
-
-			return array(
-				'id'       => $sponsorship->ID,
-				'name'     => get_event_name( $blog_ids[ $sponsorship->ID ] ),
-				'date'     => $start ? gmdate( 'Y-m-d', $start ) : '',
-				'status'   => $sponsorship->post_status,
-				'approved' => get_post_meta( $sponsorship->ID, '_sv_approved_at', true ) ? get_approval_summary( $sponsorship->ID ) : '',
-				'edit_url' => (string) get_edit_post_link( $sponsorship->ID, 'raw' ),
-			);
-		},
-		$sponsorships
-	);
-
-	// Events to come soonest first, then undated ones, then past ones, latest first.
-	$today = gmdate( 'Y-m-d' );
-	$order = static function ( array $event ) use ( $today ): array {
-		if ( '' === $event['date'] ) {
-			return array( 1, 0 );
-		}
-
-		return $event['date'] >= $today ? array( 0, strtotime( $event['date'] ) ) : array( 2, -strtotime( $event['date'] ) );
-	};
-
-	usort( $events, static fn( array $a, array $b ): int => $order( $a ) <=> $order( $b ) );
-
-	return $events;
-}
-
-/**
- * Gets the notes and history of a company and its sponsorships as one timeline, newest first.
- *
- * @param int     $company_id The company.
- * @param array[] $events     Its sponsorships, as get_company_events() returns them.
- * @return array[] Each entry's `time`, the `event` it's about (or an empty string for the company), and what it says,
- *                 as `html`.
- */
-function get_company_log( int $company_id, array $events ): array {
-	$records = array( $company_id => '' ) + array_column( $events, 'name', 'id' );
-	$log     = array();
-
-	foreach ( $records as $post_id => $event ) {
-		$post_type = $company_id === $post_id ? COMPANY_POST_TYPE : SPONSORSHIP_POST_TYPE;
-
-		foreach ( get_log( $post_id ) as $entry ) {
-			$log[] = array(
-				'time'  => (int) $entry['time'],
-				'event' => $event,
-				'html'  => wp_kses_post( get_log_entry_html( $entry, $post_type ) ),
-			);
-		}
-	}
-
-	usort( $log, static fn( array $a, array $b ): int => $b['time'] <=> $a['time'] );
+function get_rest_log( int $post_id ): array {
+	$post_type = (string) get_post_type( $post_id );
 
 	return array_map(
-		static fn( array $entry ): array => array_merge( $entry, array( 'time' => gmdate( 'c', $entry['time'] ) ) ),
-		$log
+		static fn( array $entry ): array => array(
+			'time' => gmdate( 'c', (int) $entry['time'] ),
+			'html' => wp_kses_post( get_log_entry_html( $entry, $post_type ) ),
+		),
+		get_log( $post_id )
 	);
 }
+
+/**
+ * Gets the event a sponsorship is for.
+ *
+ * @param int              $sponsorship_id The sponsorship.
+ * @param \WP_REST_Request $request        The request.
+ * @return string[] The event's `name`, and its `date` as `Y-m-d` or an empty string.
+ */
+function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array {
+	$blog_id = (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true );
+
+	return remember(
+		$request,
+		'event_' . $blog_id,
+		static function () use ( $blog_id ): array {
+			$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? 0;
+
+			return array(
+				'name' => get_event_name( $blog_id ),
+				'date' => $start ? gmdate( 'Y-m-d', $start ) : '',
+			);
+		}
+	);
+}
+
+/**
+ * Describes who approved a sponsorship and when.
+ *
+ * @param int $sponsorship_id The sponsorship.
+ * @return string The summary, or an empty string if it isn't approved.
+ */
+function get_rest_approval( int $sponsorship_id ): string {
+	return get_post_meta( $sponsorship_id, '_sv_approved_at', true ) ? get_approval_summary( $sponsorship_id ) : '';
+}
+
+/**
+ * Lets sponsorships be listed by company.
+ *
+ * Core only offers `parent` for hierarchical post types, but maps it to the query wherever it's registered.
+ *
+ * @param array $params The collection's parameters.
+ * @return array
+ */
+function add_parent_param( array $params ): array {
+	$params['parent'] = array(
+		'description' => __( 'Limit the sponsorships to those of these companies.', 'wordcamporg' ),
+		'type'        => 'array',
+		'items'       => array( 'type' => 'integer' ),
+		'default'     => array(),
+	);
+
+	return $params;
+}
+add_filter( 'rest_' . SPONSORSHIP_POST_TYPE . '_collection_params', __NAMESPACE__ . '\add_parent_param' );
+
+/**
+ * Refuses a status change over REST that the workflow doesn't allow.
+ *
+ * Otherwise enforce_status_transition() quietly keeps the old status, and the request looks like it worked.
+ *
+ * @param \stdClass|\WP_Error $prepared The post about to be saved.
+ * @return \stdClass|\WP_Error
+ */
+function check_rest_status( \stdClass|\WP_Error $prepared ): \stdClass|\WP_Error {
+	$post = is_wp_error( $prepared ) || empty( $prepared->ID ) ? null : get_post( (int) $prepared->ID );
+
+	if ( ! $post || ! isset( $prepared->post_status ) || $prepared->post_status === $post->post_status ) {
+		return $prepared;
+	}
+
+	$statuses = get_statuses( $post->post_type );
+	$to       = (string) $prepared->post_status;
+
+	if ( ! is_allowed_transition( $post->post_type, $post->post_status, $to ) ) {
+		return new \WP_Error(
+			'sv_status_not_allowed',
+			sprintf(
+				/* translators: 1: Current status. 2: Requested status. */
+				__( 'The status can’t change from %1$s to %2$s.', 'wordcamporg' ),
+				$statuses[ $post->post_status ] ?? $post->post_status,
+				$statuses[ $to ] ?? $to
+			),
+			array( 'status' => 400 )
+		);
+	}
+
+	if ( 'svs-approved' === $to && ! may_approve( $post->ID, (int) $post->post_parent ) ) {
+		return new \WP_Error(
+			'sv_not_approvable',
+			__( 'The company must be Compliant, and vetted within the re-vetting period, before its sponsorships can be approved.', 'wordcamporg' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return $prepared;
+}
+add_filter( 'rest_pre_insert_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\check_rest_status' );
+add_filter( 'rest_pre_insert_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\check_rest_status' );

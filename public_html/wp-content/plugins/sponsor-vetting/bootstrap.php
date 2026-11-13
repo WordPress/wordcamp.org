@@ -8,7 +8,7 @@
  *
  * Network-activated. Companies and sponsorships live on central.wordcamp.org, where reviewers with
  * `wordcamp_vet_sponsors` vet them; camp sites only keep a pointer on their `wcb_sponsor` posts, request vetting,
- * and show organizers where it stands. Nothing here is public, in REST, or in search.
+ * and show organizers where it stands. Nothing here is public or in search, and over REST only vetters can read it.
  *
  * @package WordCamp\Sponsor_Vetting
  */

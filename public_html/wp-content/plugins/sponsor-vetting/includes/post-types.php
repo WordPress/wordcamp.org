@@ -3,7 +3,8 @@
  * The company and sponsorship post types and their statuses.
  *
  * Registered on Central, where the records live, and on a camp site only when a request there reads or writes them
- * after `switch_to_blog()`. Every other request across the network skips them.
+ * after `switch_to_blog()`. Every other request across the network skips them. On Central they're in REST, for the
+ * vetting screen, where only vetters can read or change them.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -96,7 +97,8 @@ function register_post_types(): void {
 	$shared = array(
 		'public'              => false,
 		'show_ui'             => is_central(),
-		'show_in_rest'        => false,
+		// Only vetters can read the records; see get_capabilities().
+		'show_in_rest'        => is_central(),
 		'show_in_nav_menus'   => false,
 		'show_in_admin_bar'   => false,
 		'exclude_from_search' => true,
@@ -105,7 +107,8 @@ function register_post_types(): void {
 		'query_var'           => false,
 		'can_export'          => false,
 		'delete_with_user'    => false,
-		'supports'            => array( 'title' ),
+		// `custom-fields` is what lets REST show registered meta; the Custom Fields box itself is removed.
+		'supports'            => array( 'title', 'custom-fields' ),
 		'map_meta_cap'        => true,
 	);
 
@@ -125,6 +128,7 @@ function register_post_types(): void {
 					'not_found_in_trash' => __( 'No companies found in Trash.', 'wordcamporg' ),
 				),
 				'menu_icon'       => 'dashicons-shield',
+				'rest_base'       => 'sv-companies',
 				'capability_type' => COMPANY_POST_TYPE,
 				// Every capability, creating included, belongs to reviewers alone.
 				'capabilities'    => get_capabilities( CAPABILITY ),
@@ -147,6 +151,7 @@ function register_post_types(): void {
 					'not_found_in_trash' => __( 'No sponsorships found in Trash.', 'wordcamporg' ),
 				),
 				'show_in_menu'    => 'edit.php?post_type=' . COMPANY_POST_TYPE,
+				'rest_base'       => 'sv-sponsorships',
 				'capability_type' => SPONSORSHIP_POST_TYPE,
 				// Sponsorships come from request_vetting() only, so each has a camp sponsor behind it.
 				'capabilities'    => array_merge( get_capabilities( CAPABILITY ), array( 'create_posts' => 'do_not_allow' ) ),

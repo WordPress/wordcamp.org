@@ -239,10 +239,11 @@ function load_sponsorship_list(): void {
 add_action( 'load-edit.php', __NAMESPACE__ . '\load_sponsorship_list' );
 
 /**
- * Replaces core's Publish box with the review boxes.
+ * Replaces core's Publish and Custom Fields boxes with the review boxes.
  */
 function add_sponsorship_meta_boxes(): void {
 	remove_meta_box( 'submitdiv', SPONSORSHIP_POST_TYPE, 'side' );
+	remove_meta_box( 'postcustom', SPONSORSHIP_POST_TYPE, 'normal' );
 
 	add_meta_box( 'sv-status', __( 'Approval', 'wordcamporg' ), __NAMESPACE__ . '\render_sponsorship_status_box', SPONSORSHIP_POST_TYPE, 'side', 'high' );
 	add_meta_box( 'sv-company', __( 'Company', 'wordcamporg' ), __NAMESPACE__ . '\render_sponsorship_company_box', SPONSORSHIP_POST_TYPE, 'normal', 'high' );

@@ -2,10 +2,11 @@ import { Page } from '@wordpress/admin-ui';
 import { DataViews } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { ButtonLink, Notice, SwitchControl } from '@wordpress/ui';
-import { DEFAULT_LAYOUTS, GROUP_BY_STATUS, fields } from './fields';
+import { COMPANY } from './entities';
 import { useCompanyList, useOpenCompany } from './hooks';
 import './style.scss';
 import type { Company } from './types';
+import { DEFAULT_LAYOUTS, GROUP_BY_STATUS } from './view';
 
 /**
  * The list of companies. Clicking one opens it in the panel beside the list.
@@ -13,7 +14,7 @@ import type { Company } from './types';
  * @return The stage.
  */
 function Stage() {
-	const { data, paginationInfo, view, setView, error, isLoading } = useCompanyList();
+	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } = useCompanyList();
 	const [ openId, open ] = useOpenCompany();
 
 	return (
@@ -21,7 +22,7 @@ function Stage() {
 			title={ __( 'Sponsor Vetting', 'wordcamporg' ) }
 			subTitle={ __( 'Vet each company once, then approve it for the events it sponsors.', 'wordcamporg' ) }
 			actions={
-				<ButtonLink href="post-new.php?post_type=sv_company" size="compact">
+				<ButtonLink href={ `post-new.php?post_type=${ COMPANY }` } size="compact">
 					{ __( 'Add company', 'wordcamporg' ) }
 				</ButtonLink>
 			}
@@ -37,7 +38,8 @@ function Stage() {
 					data={ data }
 					fields={ fields }
 					view={ view }
-					onChangeView={ setView }
+					onChangeView={ updateView }
+					onReset={ resetToDefault ?? false }
 					isLoading={ isLoading }
 					paginationInfo={ paginationInfo }
 					defaultLayouts={ DEFAULT_LAYOUTS }
@@ -50,7 +52,7 @@ function Stage() {
 								label={ __( 'Group by status', 'wordcamporg' ) }
 								checked={ view.groupBy?.field === 'status' }
 								onCheckedChange={ ( checked ) =>
-									setView( {
+									updateView( {
 										...view,
 										page: 1,
 										groupBy: checked ? GROUP_BY_STATUS : undefined,

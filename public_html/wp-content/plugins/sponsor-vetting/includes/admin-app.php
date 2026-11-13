@@ -68,16 +68,3 @@ function render_app_page(): void {
 	);
 	echo '</div>';
 }
-
-/**
- * Sends the company list with the page, so the screen doesn't open on a spinner.
- *
- * @param array $paths REST paths the page preloads.
- * @return array
- */
-function preload_companies( array $paths ): array {
-	$paths[] = '/sponsor-vetting/v1/companies';
-
-	return $paths;
-}
-add_filter( 'sponsor_vetting_sponsor_vetting_wp_admin_preload_paths', __NAMESPACE__ . '\preload_companies' );

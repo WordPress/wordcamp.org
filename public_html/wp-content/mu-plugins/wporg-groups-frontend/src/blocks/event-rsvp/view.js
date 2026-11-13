@@ -334,13 +334,14 @@ async function doToggleRsvp( ctx, actionElement ) {
  * Re-sending `attending` is idempotent in `Rsvp::save()`, so this updates the
  * answers on the existing RSVP rather than requiring a cancel/re-RSVP round
  * trip — which would delete the answers and, on a capped event, surrender the
- * seat to the waiting list.
+ * seat to the waiting list. On the waiting list it keeps their place, since
+ * the existing RSVP is updated rather than recreated.
  */
 async function doSaveAnswers( ctx, actionElement ) {
-	return submitRsvp( ctx, actionElement, 'attending' );
+	return submitRsvp( ctx, actionElement, 'attending', true );
 }
 
-async function submitRsvp( ctx, actionElement, newStatus ) {
+async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
 		return;
@@ -405,8 +406,10 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
 	const oldWaiting = ctx.waitingCount;
-	const statusChanged = newStatus !== oldStatus;
-	applyOptimisticStatus( ctx, newStatus );
+	const statusChanged = ! answersOnly && newStatus !== oldStatus;
+	if ( ! answersOnly ) {
+		applyOptimisticStatus( ctx, newStatus );
+	}
 	ctx.rsvpLoading = true;
 
 	try {
@@ -424,7 +427,7 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		// Organizers see answers and the waiting list inline in the attendee
 		// list, which the client-side refresh can't rebuild — reload so their
 		// view stays complete.
-		if ( ctx.canViewAnswers || ctx.listsWaiting ) {
+		if ( ctx.canViewAnswers || ctx.listsWaiting || ( ctx.canViewWaiting && ctx.waitingCount > 0 ) ) {
 			window.location.reload();
 			return;
 		}

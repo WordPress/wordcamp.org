@@ -5,6 +5,8 @@ namespace WordCamp\Groups\Tests;
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
+
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/class-groups-testcase.php';
@@ -95,6 +97,28 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__cancel"[^>]*>\s*Leave waiting list\s*</', $output );
 		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__modal-status"[^>]*>\s*You&#039;re on the waiting list\./', $output );
 		$this->assertMatchesRegularExpression( '/class="wp-block-button is-style-outline is-waiting"/', $output );
+	}
+
+	/**
+	 * Someone waiting can still correct their answers without leaving the list.
+	 */
+	public function test_waitlisted_member_can_edit_answers() {
+		$event_id = $this->create_full_event();
+		save_questions(
+			$event_id,
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+			)
+		);
+		$this->rsvp_as( $event_id, $this->create_member( 'Waiting Member' ) );
+
+		$output = $this->render_rsvp_block( $event_id );
+
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__save-answers wp-element-button"', $output );
+		$this->assertStringContainsString( 'data-wp-class--is-hidden="state.hasNoResponse"', $output );
 	}
 
 	/**

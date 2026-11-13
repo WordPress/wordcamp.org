@@ -875,6 +875,47 @@ describe( 'event RSVP waiting list', () => {
 		expect( mockContext.rsvpNotice ).toBe( 'You left the waiting list.' );
 	} );
 
+	test( 'saves answers from the waiting list without leaving it', async () => {
+		const { actions } = loadStore();
+		mockContext.currentUserStatus = 'waiting_list';
+		mockContext.waitingCount = 3;
+		mockContext.hasQuestions = true;
+		mockContext.labels.answersSaved = 'Your answers have been saved.';
+
+		mockRsvp( {
+			success: true,
+			status: 'waiting_list',
+			responses: { attending: { count: 1 }, waiting_list: { count: 3 } },
+		} );
+
+		await actions.saveAnswers();
+
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).status ).toBe( 'attending' );
+		expect( mockContext.currentUserStatus ).toBe( 'waiting_list' );
+		expect( mockContext.waitingCount ).toBe( 3 );
+		expect( mockContext.rsvpNotice ).toBe( 'Your answers have been saved.' );
+	} );
+
+	test( 'reloads for an organizer once the waiting list has someone on it', async () => {
+		const { actions } = loadStore();
+		const originalLocation = window.location;
+		delete window.location;
+		window.location = { reload: jest.fn() };
+		mockContext.canViewWaiting = true;
+		mockContext.listsWaiting = false;
+
+		mockRsvp( {
+			success: true,
+			status: 'waiting_list',
+			responses: { attending: { count: 1 }, waiting_list: { count: 1 } },
+		} );
+
+		await actions.handleRsvpButton();
+
+		expect( window.location.reload ).toHaveBeenCalled();
+		window.location = originalLocation;
+	} );
+
 	test( 'predicts the waiting list instead of flashing Attending', async () => {
 		const { actions, state } = loadStore();
 		let labelWhileSaving;

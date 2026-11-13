@@ -228,6 +228,7 @@ $context = array(
 	'hasQuestions'      => ! empty( $questions ),
 	'canViewAnswers'    => $can_view_answers,
 	'listsWaiting'      => ! empty( $waiting_records ),
+	'canViewWaiting'    => $is_login && current_user_can_view_answers( $event_post_id ),
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
@@ -485,9 +486,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<?php if ( $questions ) : ?>
 								<button
 									type="button"
-									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $is_attending ? '' : ' is-hidden'; ?>"
+									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $has_response ? '' : ' is-hidden'; ?>"
 									data-wp-on--click="actions.saveAnswers"
-									data-wp-class--is-hidden="state.isNotAttending"
+									data-wp-class--is-hidden="state.hasNoResponse"
 									data-wp-bind--disabled="context.rsvpLoading"
 									data-wp-bind--aria-busy="context.rsvpLoading"
 								>

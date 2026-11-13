@@ -91,6 +91,12 @@ test.describe( 'event manage — message attendees', () => {
 		const notAttending = modal.getByRole( 'checkbox', { name: 'Not attending' } );
 		const sendButton = modal.getByRole( 'button', { name: 'Send message' } );
 
+		await expect(
+			modal.getByText(
+				'This message will be emailed to the opted-in attendees in the RSVP groups you choose.'
+			)
+		).toBeVisible();
+
 		// "Attending" is checked by default; the others are not.
 		await expect( attending ).toBeChecked();
 		await expect( waitingList ).not.toBeChecked();
@@ -123,7 +129,7 @@ test.describe( 'event manage — message attendees', () => {
 		await expect( sendButton ).toBeEnabled();
 		await sendButton.click();
 
-		await expect( modal.getByText( 'Your message has been scheduled for delivery.' ) ).toBeVisible();
+		await expect( modal.getByText( 'Your message will be emailed shortly.' ) ).toBeVisible();
 	} );
 
 	test( 'Message all members has no recipient checkboxes', async ( { page } ) => {

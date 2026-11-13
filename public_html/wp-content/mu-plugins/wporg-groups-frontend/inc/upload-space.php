@@ -70,7 +70,7 @@ function filter_space_allowed( $space_allowed ) {
  *                                                         `near` (`NEAR_FULL`), or `full`.
  */
 function get_upload_space(): array {
-	$allowed = (int) round( max( 0, (float) get_space_allowed() ) * MB_IN_BYTES );
+	$allowed = get_space_allowed_bytes();
 	$used    = (int) round( get_space_used() * MB_IN_BYTES );
 	$status  = 'ok';
 
@@ -86,6 +86,28 @@ function get_upload_space(): array {
 }
 
 /**
+ * The current site's upload space, in bytes.
+ */
+function get_space_allowed_bytes(): int {
+	return (int) round( max( 0, (float) get_space_allowed() ) * MB_IN_BYTES );
+}
+
+/**
+ * Upload space as organizers read it: "950 MB", "1 GB", "1.5 GB".
+ *
+ * Whole megabytes, so nothing says "950.0 MB", and gigabytes to one decimal
+ * unless they're whole, so 1.5 GB isn't rounded up to "2 GB".
+ *
+ * @param int $bytes Upload space.
+ */
+function format_space( int $bytes ): string {
+	$tenths   = (int) round( $bytes / GB_IN_BYTES * 10 );
+	$decimals = $bytes >= GB_IN_BYTES && 0 !== $tenths % 10 ? 1 : 0;
+
+	return (string) size_format( $bytes, $decimals );
+}
+
+/**
  * Say the site is out of upload space, and where to ask for more.
  *
  * Shown in place of the media library's upload area, on `upload_ui_over_quota`.
@@ -97,7 +119,7 @@ function render_full_message(): void {
 			sprintf(
 				/* translators: 1: Upload space, e.g. "1 GB". 2: URL of the #meetups channel on Make WordPress Slack. */
 				__( 'This group has used all %1$s of its upload space. You can still choose an image that is already in the media library. For more space, ask in <a href="%2$s">#meetups</a> on Make WordPress Slack.', 'wordcamporg' ),
-				esc_html( size_format( (float) get_space_allowed() * MB_IN_BYTES ) ),
+				esc_html( format_space( get_space_allowed_bytes() ) ),
 				esc_url( MORE_SPACE_URL )
 			),
 			array( 'a' => array( 'href' => true ) )

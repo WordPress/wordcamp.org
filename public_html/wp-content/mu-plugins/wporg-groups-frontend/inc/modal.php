@@ -141,8 +141,8 @@ function get_upload_space_config(): array {
 
 	return array(
 		'status'       => $space['status'],
-		'used'         => size_format( $space['used'], 1 ),
-		'allowed'      => size_format( $space['allowed'] ),
+		'used'         => Upload_Space\format_space( $space['used'] ),
+		'allowed'      => Upload_Space\format_space( $space['allowed'] ),
 		'moreSpaceUrl' => Upload_Space\MORE_SPACE_URL,
 	);
 }

@@ -4,6 +4,7 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Modal\get_upload_space_config;
 use function WordCamp\Groups\Frontend\Modal\localize_block_script;
+use function WordCamp\Groups\Frontend\Upload_Space\format_space;
 use function WordCamp\Groups\Frontend\Upload_Space\get_upload_space;
 
 use const WordCamp\Groups\Frontend\Upload_Space\MORE_SPACE_URL;
@@ -141,6 +142,9 @@ class Test_Groups_Upload_Space extends Groups_TestCase {
 	/**
 	 * Regression: the media library's templates rendered on a group's front
 	 * end fataled for organizers once the site was over its space.
+	 *
+	 * Core's `multisite_over_quota_message()` is defined under PHPUnit, so
+	 * leaving it hooked prints its message here instead of fataling.
 	 */
 	public function test_media_templates_render_when_the_space_is_used_up(): void {
 		require_once ABSPATH . WPINC . '/media-template.php';
@@ -153,6 +157,32 @@ class Test_Groups_Upload_Space extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'Upload Limit Exceeded', $output );
 		$this->assertStringContainsString( 'all 1 GB of its upload space', $output );
+		$this->assertStringNotContainsString( 'Sorry, you have used your space allocation', $output );
+	}
+
+	/**
+	 * Data provider for test_format_space().
+	 */
+	public function data_format_space(): array {
+		return array(
+			'megabytes'             => array( 950 * MB_IN_BYTES, '950 MB' ),
+			'a whole gigabyte'      => array( GB_IN_BYTES, '1 GB' ),
+			'a gigabyte and a half' => array( 1536 * MB_IN_BYTES, '1.5 GB' ),
+			'just over a gigabyte'  => array( 1040 * MB_IN_BYTES, '1 GB' ),
+			'nearly two gigabytes'  => array( 1900 * MB_IN_BYTES, '1.9 GB' ),
+		);
+	}
+
+	/**
+	 * Space reads without a stray ".0", and isn't rounded to whole gigabytes.
+	 *
+	 * @dataProvider data_format_space
+	 *
+	 * @param int    $bytes    Space.
+	 * @param string $expected As shown.
+	 */
+	public function test_format_space( int $bytes, string $expected ): void {
+		$this->assertSame( $expected, format_space( $bytes ) );
 	}
 
 	/**
@@ -165,7 +195,7 @@ class Test_Groups_Upload_Space extends Groups_TestCase {
 		$this->assertSame(
 			array(
 				'status'       => 'near',
-				'used'         => '950.0 MB',
+				'used'         => '950 MB',
 				'allowed'      => '1 GB',
 				'moreSpaceUrl' => MORE_SPACE_URL,
 			),

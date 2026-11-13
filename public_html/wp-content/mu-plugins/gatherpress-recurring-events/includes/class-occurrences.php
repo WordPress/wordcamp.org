@@ -290,12 +290,7 @@ final class Occurrences {
 		return $wpdb->get_results( $query );
 	}
 
-	/**
-	 * Gets every cancelled date of a series, oldest first.
-	 *
-	 * @param int $post_id Series post ID.
-	 * @return object[] Occurrence rows.
-	 */
+	/** Gets every cancelled date of a series, oldest first. */
 	public static function cancelled( int $post_id ): array {
 		global $wpdb;
 

@@ -65,8 +65,7 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 		'GatherPress\Core\Calendar\Calendar'    => array(
 			'methods' => array( 'get_ical_event_string' ),
 		),
-		// `Ical::serve_feed()` sends a feed's response the way GatherPress's own
-		// `send_ics_file()` does, out of the same parts.
+		// `Ical::serve_feed()` sends a feed's response out of these, the way `send_ics_file()` does.
 		'GatherPress\Core\Calendar\Setup'       => array(
 			'methods'   => array( 'get_ics_body', 'get_ics_cache_key', 'generate_ics_filename', 'get_etag', 'is_not_modified', 'send_ics_headers' ),
 			'constants' => array( 'ICAL_SLUG' ),

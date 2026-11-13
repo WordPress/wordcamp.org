@@ -7,10 +7,10 @@ An experimental GatherPress extension that stores recurring events as one editab
 GatherPress's calendar feeds (site-wide, event archive, venue, and taxonomy) and a series' own download write a series as one recurring `VEVENT`, the shape GatherPress plans for recurrence in [GatherPress/gatherpress#1684](https://github.com/GatherPress/gatherpress/issues/1684):
 
 - It keeps the series' `UID` (`gatherpress_{post ID}`) and URL, so a calendar holds one entry for the series however its dates change.
-- `DTSTART` is the first date, in the series' own timezone, with a `VTIMEZONE` defining it. A rule on a UTC start would drift by an hour across clock changes.
+- `DTSTART` is the first date, in the series' own timezone, with a `VTIMEZONE` defining it. A rule on a UTC start would drift by an hour across clock changes. A series in UTC or on a manual offset keeps its UTC start.
 - `RRULE` is the series' rule, and each cancelled date is an `EXDATE`.
 - A series stays in a feed while it has a date to come that isn't cancelled.
-- A password-protected series keeps its schedule out of feeds. It is listed on its first date only, as an event that doesn't recur.
+- GatherPress leaves password-protected events out of feeds, a protected series included.
 
 Calendar links for an individual occurrence still use that occurrence's date and URL.
 

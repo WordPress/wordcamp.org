@@ -421,7 +421,6 @@ final class Plugin {
 		Context::set( null );
 		$event = ( new Calendar( $post_id ) )->get_ical_event_string();
 
-		// The visitor is past the password check above, so the schedule is theirs to see.
-		return Ical::recur( "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n", true );
+		return Ical::recur( "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n" );
 	}
 }

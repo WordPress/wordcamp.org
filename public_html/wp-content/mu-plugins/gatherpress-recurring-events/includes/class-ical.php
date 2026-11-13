@@ -2,83 +2,53 @@
 /**
  * Recurring series in iCalendar feeds and downloads.
  *
+ * A series is one `VEVENT` with an `RRULE`, the shape GatherPress plans (GatherPress/gatherpress#1684).
+ *
  * @package WordPressdotorg\GatherPress_Recurring_Events
  */
 
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
-use DateTimeImmutable;
 use DateTimeZone;
 use GatherPress\Core\Calendar\Cache;
 use GatherPress\Core\Calendar\Setup;
 
 defined( 'WPINC' ) || die();
 
-/**
- * A series is one `VEVENT` that recurs, in a feed and in its own download
- * alike: the series' `UID` and URL, its first date as `DTSTART`, its rule as
- * `RRULE`, and an `EXDATE` for each cancelled date. That is the shape
- * GatherPress plans for recurrence (GatherPress/gatherpress#1684), and it
- * keeps a feed the same size however far ahead the dates are projected.
- */
 final class Ical {
 
-	/**
-	 * Makes every recurring series in a calendar recur.
-	 *
-	 * GatherPress writes a series as a single event on its first date. This
-	 * rewrites each of those in place and leaves every other event alone.
-	 *
-	 * @param string $calendar A `VCALENDAR` as GatherPress renders it.
-	 * @param bool   $unlocked Whether the reader may see a protected series' schedule.
-	 * @return string The calendar, unchanged when it holds no series.
-	 */
-	public static function recur( string $calendar, bool $unlocked = false ): string {
+	/** Makes each series in a calendar GatherPress rendered an event that recurs. */
+	public static function recur( string $calendar ): string {
 		$zones    = array();
 		$calendar = (string) preg_replace_callback(
 			'/^BEGIN:VEVENT\r\n.*?\r\nEND:VEVENT/ms',
-			static function ( array $matches ) use ( &$zones, $unlocked ): string {
-				if ( ! preg_match( '/^UID:gatherpress_(\d+)\r?$/m', $matches[0], $uid ) ) {
-					return $matches[0];
-				}
+			static function ( array $matches ) use ( &$zones ): string {
+				$is_series = preg_match( '/^UID:gatherpress_(\d+)\r?$/m', $matches[0], $uid ) && Rule::is_recurring( (int) $uid[1] );
 
-				$post_id = (int) $uid[1];
-
-				// A feed is shared by every reader, so it gives away no schedule a password guards.
-				if ( ! Rule::is_recurring( $post_id ) || ( ! $unlocked && '' !== get_post_field( 'post_password', $post_id ) ) ) {
-					return $matches[0];
-				}
-
-				return self::series_event( $post_id, $matches[0], $zones );
+				return $is_series ? self::series_event( (int) $uid[1], $matches[0], $zones ) : $matches[0];
 			},
 			$calendar
 		);
 
-		if ( ! $zones || ! preg_match( '/^BEGIN:VEVENT\r\n/m', $calendar, $first, PREG_OFFSET_CAPTURE ) ) {
-			return $calendar;
+		$definitions = '';
+		foreach ( $zones as $zone ) {
+			$definitions .= self::timezone_component( $zone['timezone'], $zone['from'] ) . "\r\n";
 		}
 
-		$components = '';
-		foreach ( $zones as $tzid => $zone ) {
-			$components .= self::timezone_component( $tzid, $zone['timezone'], $zone['from'] ) . "\r\n";
-		}
-
-		return substr_replace( $calendar, $components, $first[0][1], 0 );
+		// A timezone is defined ahead of the events that use it.
+		return (string) preg_replace_callback(
+			'/^BEGIN:VEVENT\r\n/m',
+			static fn( array $matches ): string => $definitions . $matches[0],
+			$calendar,
+			1
+		);
 	}
 
-	/**
-	 * Builds the body of the calendar feed being requested.
-	 *
-	 * Whatever gets printed along the way is dropped, as GatherPress drops it
-	 * for its own feeds. A notice raised while the events are looped over
-	 * would otherwise go out ahead of the calendar, and push its end past the
-	 * length the response declares.
-	 *
-	 * @return string The feed, or an empty string when it holds no series and GatherPress can serve it as is.
-	 */
+	/** Builds the requested feed, or an empty string when it holds no series and GatherPress can serve it. */
 	public static function feed_body(): string {
 		$setup = Setup::get_instance();
 
+		// A notice printed while the events are looped over would go out ahead of the calendar.
 		ob_start();
 
 		try {
@@ -96,13 +66,7 @@ final class Ical {
 		}
 	}
 
-	/**
-	 * Gets ahead of GatherPress on a calendar feed it is about to serve.
-	 *
-	 * GatherPress hooks its feed template while `template_redirect` runs, and
-	 * WordPress refuses a feed nothing is hooked to. Hooking only once
-	 * GatherPress has keeps that refusal for every other `/feed/ical/` URL.
-	 */
+	/** Hooks ahead of GatherPress's feed template, once it is hooked: WordPress refuses a feed nothing is hooked to. */
 	public static function intercept_feed(): void {
 		$hook = 'do_feed_' . Setup::ICAL_SLUG;
 
@@ -111,12 +75,7 @@ final class Ical {
 		}
 	}
 
-	/**
-	 * Serves a calendar feed that holds a recurring series.
-	 *
-	 * GatherPress has no filter on a feed's body, so the response is sent from
-	 * here, with the headers and validators GatherPress would have sent.
-	 */
+	/** Serves a feed that holds a series, since GatherPress has no filter on a feed's body. */
 	public static function serve_feed(): void {
 		$body = self::feed_body();
 
@@ -141,29 +100,12 @@ final class Ical {
 		exit;
 	}
 
-	/**
-	 * Drops cached calendars when a date is cancelled or restored, or a series ends.
-	 *
-	 * Neither touches the post or its GatherPress meta, which is what
-	 * GatherPress watches to know a calendar changed.
-	 */
+	/** Drops GatherPress's cached calendars: cancelling a date or ending a series changes no post for it to notice. */
 	public static function mark_changed(): void {
 		Cache::get_instance()->mark_changed();
 	}
 
-	/**
-	 * Turns a series' first-date event into one that recurs.
-	 *
-	 * GatherPress writes times in UTC, where a rule would repeat at one UTC
-	 * time all year: an hour off for half of it wherever clocks change, and
-	 * on the wrong weekday where the local day isn't the UTC day. The dates
-	 * are written in the series' own timezone instead.
-	 *
-	 * @param int    $post_id Series post ID.
-	 * @param string $event   The series' `VEVENT` as GatherPress renders it.
-	 * @param array  $zones   Timezones the calendar has to define, added to as needed.
-	 * @return string The recurring `VEVENT`.
-	 */
+	/** Adds a series' rule and cancelled dates to its event, with the dates in the series' timezone. */
 	private static function series_event( int $post_id, string $event, array &$zones ): string {
 		$rrule = (string) get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true );
 
@@ -171,11 +113,15 @@ final class Ical {
 			return $event;
 		}
 
-		$master  = Occurrences::master_datetime( $post_id );
-		$all_day = str_contains( $event, "\r\nDTSTART;VALUE=DATE:" );
-		$tzid    = $master && ! $all_day ? self::tzid( $master['timezone'] ) : '';
+		$lines  = array( 'RRULE:' . $rrule );
+		$master = Occurrences::master_datetime( $post_id );
+		$tzid   = $master ? $master['timezone']->getName() : 'UTC';
 
-		if ( '' !== $tzid ) {
+		// GatherPress writes UTC, where a weekly rule drifts across clock changes and can name the wrong weekday.
+		// Only a named zone has clock changes to define, so UTC and manual offsets stay as they are.
+		$local = str_contains( $tzid, '/' );
+
+		if ( $local ) {
 			$start = $master['start'];
 			$event = preg_replace(
 				array( '/^DTSTART:[^\r\n]*/m', '/^DTEND:[^\r\n]*/m' ),
@@ -193,69 +139,21 @@ final class Ical {
 			);
 		}
 
-		$lines = array( 'RRULE:' . $rrule );
-		$rule  = Rule::from_post( $post_id );
-		$until = 'until' === $rule['end_type'] ? $rule['until'] : '';
-
+		// An exception only matches a date written the way `DTSTART` is.
 		foreach ( Occurrences::cancelled( $post_id ) as $occurrence ) {
-			// Ending a series cancels the dates after its last one, and the rule already stops short of those.
-			if ( $until && substr( $occurrence->datetime_start, 0, 10 ) > $until ) {
-				continue;
-			}
-
-			// An exception has to be written the way `DTSTART` is to match one of its dates.
-			if ( $all_day ) {
-				$lines[] = 'EXDATE;VALUE=DATE:' . gmdate( 'Ymd', strtotime( $occurrence->datetime_start . ' UTC' ) );
-			} elseif ( '' !== $tzid ) {
-				$lines[] = "EXDATE;TZID={$tzid}:" . gmdate( 'Ymd\THis', strtotime( $occurrence->datetime_start . ' UTC' ) );
-			} else {
-				$lines[] = 'EXDATE:' . gmdate( 'Ymd\THis\Z', strtotime( $occurrence->datetime_start_gmt . ' UTC' ) );
-			}
+			$lines[] = $local
+				? "EXDATE;TZID={$tzid}:" . gmdate( 'Ymd\THis', strtotime( $occurrence->datetime_start . ' UTC' ) )
+				: 'EXDATE:' . gmdate( 'Ymd\THis\Z', strtotime( $occurrence->datetime_start_gmt . ' UTC' ) );
 		}
 
 		return substr( $event, 0, -strlen( 'END:VEVENT' ) ) . implode( "\r\n", $lines ) . "\r\nEND:VEVENT";
 	}
 
-	/**
-	 * Names a timezone for a `TZID`.
-	 *
-	 * @param DateTimeZone $timezone A series' timezone.
-	 * @return string The name, or an empty string for UTC, which needs none.
-	 */
-	private static function tzid( DateTimeZone $timezone ): string {
-		$name = $timezone->getName();
-
-		if ( 'UTC' === $name ) {
-			return '';
-		}
-
-		// A manual offset is spelled `+05:30`, and a colon would end the parameter.
-		return preg_match( '/^[+-]\d\d:\d\d$/', $name ) ? 'UTC' . str_replace( ':', '', $name ) : $name;
-	}
-
-	/**
-	 * Defines a timezone, which a calendar must do for each `TZID` it uses.
-	 *
-	 * Every clock change is listed on its own date, from the series' first
-	 * date to five years out, rather than as a rule of the zone's own.
-	 *
-	 * @param string       $tzid     Name the events refer to the zone by.
-	 * @param DateTimeZone $timezone The zone.
-	 * @param int          $from     Timestamp of the earliest date in the zone.
-	 * @return string The `VTIMEZONE` component.
-	 */
-	private static function timezone_component( string $tzid, DateTimeZone $timezone, int $from ): string {
-		// A manual offset has no clock changes to list, only the offset it always has.
-		$changes = $timezone->getTransitions( $from, time() + 5 * YEAR_IN_SECONDS ) ?: array(
-			array(
-				'ts'     => $from,
-				'offset' => $timezone->getOffset( new DateTimeImmutable( '@' . $from ) ),
-				'isdst'  => false,
-			),
-		);
-
-		$lines  = array( 'BEGIN:VTIMEZONE', 'TZID:' . $tzid );
-		$offset = $changes[0]['offset'];
+	/** Defines a timezone, as a calendar must for each `TZID`, by its clock changes from a date to five years out. */
+	private static function timezone_component( DateTimeZone $timezone, int $from ): string {
+		$changes = $timezone->getTransitions( $from, time() + 5 * YEAR_IN_SECONDS );
+		$lines   = array( 'BEGIN:VTIMEZONE', 'TZID:' . $timezone->getName() );
+		$offset  = $changes[0]['offset'];
 
 		foreach ( $changes as $index => $change ) {
 			$type = $change['isdst'] ? 'DAYLIGHT' : 'STANDARD';
@@ -278,12 +176,7 @@ final class Ical {
 		return implode( "\r\n", $lines );
 	}
 
-	/**
-	 * Formats a UTC offset the way a `VTIMEZONE` spells it.
-	 *
-	 * @param int $seconds Offset from UTC in seconds.
-	 * @return string The offset, e.g. `-0500`.
-	 */
+	/** Formats a UTC offset as `-0500`. */
 	private static function utc_offset( int $seconds ): string {
 		return sprintf( '%s%02d%02d', $seconds < 0 ? '-' : '+', intdiv( abs( $seconds ), HOUR_IN_SECONDS ), intdiv( abs( $seconds ) % HOUR_IN_SECONDS, MINUTE_IN_SECONDS ) );
 	}

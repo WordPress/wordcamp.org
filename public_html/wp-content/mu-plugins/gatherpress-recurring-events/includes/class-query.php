@@ -46,14 +46,8 @@ final class Query {
 		$pattern = '/(?<!\w)`?' . preg_quote( $core_table, '/' ) . '`?\.`?(datetime_(?:start|end)_gmt)`?(?!\w)/';
 		$replace = static fn( array $matches ): string => "COALESCE(gpre_occ_query.{$matches[1]}, {$core_table}.{$matches[1]})";
 
-		/*
-		 * A list of IDs can't say which date each one stands for, so a series
-		 * is listed once, on its next date or its latest past one. Without
-		 * this it was listed on its first date alone, and left GatherPress's
-		 * calendar feeds once that had passed. Cancelled dates don't keep a
-		 * series listed, and a protected one is placed by the only date it
-		 * shows without its password, its first.
-		 */
+		// A list of IDs can't say which date each stands for, so a series is listed once, by its nearest date that
+		// isn't cancelled. A protected series is placed by its first date, the only one it shows without its password.
 		if ( 'ids' === $query->get( 'fields' ) ) {
 			if ( str_contains( $clauses['join'], 'gpre_occ_query' ) || ! preg_match( $pattern, $clauses['where'], $compared ) ) {
 				return $clauses;

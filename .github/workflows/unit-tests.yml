@@ -58,6 +58,7 @@ jobs:
       run: |
         npm run test --workspace=wordcamp-blocks
         npm run test --workspace=wporg-groups-frontend
+        npm run test --workspace=sponsor-vetting
 
   unit-php:
     name: PHP Tests (${{ matrix.php-version }}, ${{ matrix.shard }})

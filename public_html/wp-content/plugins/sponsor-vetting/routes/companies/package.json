@@ -1,0 +1,32 @@
+{
+	"name": "sponsor-vetting-companies-route",
+	"version": "0.1.0",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"route": {
+		"path": "/",
+		"page": "sponsor-vetting"
+	},
+	"dependencies": {
+		"@wordpress/admin-ui": "3.1.0",
+		"@wordpress/api-fetch": "8.1.0",
+		"@wordpress/components": "44.0.0",
+		"@wordpress/core-data": "9.1.0",
+		"@wordpress/data": "11.1.0",
+		"@wordpress/dataviews": "22.0.0",
+		"@wordpress/date": "6.1.0",
+		"@wordpress/element": "10.1.0",
+		"@wordpress/html-entities": "5.1.0",
+		"@wordpress/i18n": "7.1.0",
+		"@wordpress/icons": "20.0.0",
+		"@wordpress/notices": "6.1.0",
+		"@wordpress/route": "0.25.0",
+		"@wordpress/ui": "0.26.0",
+		"@wordpress/views": "3.1.0"
+	},
+	"devDependencies": {
+		"@types/react": "18.3.31",
+		"@types/react-dom": "18.3.7",
+		"vitest": "5.1.0"
+	}
+}

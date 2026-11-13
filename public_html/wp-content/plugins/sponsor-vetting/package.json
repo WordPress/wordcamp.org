@@ -1,0 +1,32 @@
+{
+	"name": "sponsor-vetting",
+	"version": "0.1.0",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"scripts": {
+		"build": "wp-build",
+		"start": "wp-build --watch",
+		"lint:js": "eslint --config=../../../../eslint.config.cjs routes && tsc --noEmit",
+		"format:js": "eslint --config=../../../../eslint.config.cjs --fix routes",
+		"test": "vitest run"
+	},
+	"wpPlugin": {
+		"name": "sponsor_vetting",
+		"scriptGlobal": false,
+		"packageNamespace": "sponsor-vetting",
+		"pages": [
+			{
+				"id": "sponsor-vetting",
+				"capability": "wordcamp_vet_sponsors"
+			}
+		]
+	},
+	"devDependencies": {
+		"@wordpress/build": "0.27.0",
+		"@wordpress/theme": "4.0.0",
+		"jsdom": "26.1.0",
+		"typescript": "5.9.3",
+		"vite": "8.3.8",
+		"vitest": "5.1.0"
+	}
+}

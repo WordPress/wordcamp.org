@@ -100,9 +100,15 @@ class Test_Groups_Site_Become_Organizer extends Groups_TestCase {
 	 * The footer's organizer link goes to the same handbook.
 	 */
 	public function test_footer_links_to_the_organizer_handbook() {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template part from disk, as test-groups-site-event-info-card.php does.
-		$markup = file_get_contents( self::THEME_DIR . 'parts/footer.html' );
+		ob_start();
+		include self::THEME_DIR . 'patterns/footer-callout.php';
+		$markup = ob_get_clean();
 
 		$this->assertStringContainsString( 'href="' . self::HANDBOOK_URL . '">Become an organizer', $markup );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template part from disk, as test-groups-site-event-info-card.php does.
+		$footer = file_get_contents( self::THEME_DIR . 'parts/footer.html' );
+
+		$this->assertStringContainsString( '<!-- wp:pattern {"slug":"groups-site/footer-callout"} /-->', $footer );
 	}
 }

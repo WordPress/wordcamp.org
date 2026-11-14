@@ -33,5 +33,5 @@ if ( ! current_user_can_manage_events() ) {
 	class="wp-block-button__link wp-element-button has-white-color has-blueberry-1-background-color has-text-color has-background groups-site-header-cta"
 	data-wporg-groups-modal="create"
 	style="padding:10px 18px;font-size:14px;font-weight:600;border-radius:2px;border:none;cursor:pointer;"
->+ Create event</button>
+>+ <?php esc_html_e( 'Create event', 'wordcamporg' ); ?></button>
 <!-- /wp:html -->

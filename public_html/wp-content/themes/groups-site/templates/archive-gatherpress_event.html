@@ -6,17 +6,7 @@
 	<!-- wp:group {"align":"full","className":"groups-site-page-header","layout":{"type":"constrained","contentSize":"1280px"}} -->
 	<div class="wp-block-group alignfull groups-site-page-header">
 
-		<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|10"}},"layout":{"type":"constrained","justifyContent":"left"}} -->
-		<div class="wp-block-group">
-			<!-- wp:heading {"level":1} -->
-			<h1 class="wp-block-heading">Events</h1>
-			<!-- /wp:heading -->
-
-			<!-- wp:paragraph {"fontSize":"small","textColor":"charcoal-3","className":"groups-site-events-intro"} -->
-			<p class="groups-site-events-intro has-charcoal-3-color has-text-color has-small-font-size">Meetups, workshops, and socials — see what&rsquo;s coming up, or browse everything the group has hosted.</p>
-			<!-- /wp:paragraph -->
-		</div>
-		<!-- /wp:group -->
+		<!-- wp:pattern {"slug":"groups-site/archive-events-header"} /-->
 
 	</div>
 	<!-- /wp:group -->
@@ -28,7 +18,7 @@
 		<div class="wp-block-group alignwide" style="margin-bottom:var(--wp--preset--spacing--40)">
 			<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
 			<div class="wp-block-group">
-				<!-- wp:search {"showLabel":false,"placeholder":"Search events…","width":100,"widthUnit":"%","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"is-style-secondary-search-control"} /-->
+				<!-- wp:pattern {"slug":"groups-site/archive-events-search"} /-->
 			</div>
 			<!-- /wp:group -->
 
@@ -46,9 +36,7 @@
 		<!-- wp:query {"query":{"postType":"gatherpress_event","inherit":true},"className":"gatherpress-event-query","align":"wide"} -->
 		<div class="wp-block-query alignwide gatherpress-event-query">
 
-			<!-- wp:heading {"className":"screen-reader-text"} -->
-			<h2 class="wp-block-heading screen-reader-text">Event list</h2>
-			<!-- /wp:heading -->
+			<!-- wp:pattern {"slug":"groups-site/archive-events-list-heading"} /-->
 
 			<!-- wp:wporg/query-total /-->
 

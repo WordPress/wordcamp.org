@@ -35,5 +35,5 @@ if ( ! $current_post || 'gatherpress_event' !== $current_post->post_type ) {
 	data-wporg-groups-modal="edit"
 	data-wporg-groups-event-id="<?php echo (int) $current_post->ID; ?>"
 	style="background:none;border:none;padding:0;color:var(--wp--preset--color--blueberry-1);font:inherit;font-size:14px;cursor:pointer;text-decoration:underline;"
->&#9998; Edit this event</button>
+>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
 <!-- /wp:html -->

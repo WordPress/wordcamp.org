@@ -7,6 +7,7 @@ use GatherPress\Core\Event\Event;
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
+require_once __DIR__ . '/trait-groups-site-patterns.php';
 
 /**
  * Regression coverage for the `groups-site` theme's shared event card.
@@ -21,6 +22,8 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  * @group groups
  */
 class Test_Groups_Site_Event_Cards extends Groups_TestCase {
+	use Groups_Site_Patterns;
+
 
 	const THEME_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/';
 
@@ -80,6 +83,7 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	 */
 	public static function wpTearDownAfterClass() {
 		unregister_block_pattern( 'groups-site/event-card' );
+		self::unregister_groups_site_patterns();
 
 		parent::wpTearDownAfterClass();
 	}
@@ -580,15 +584,12 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	 * archive has only its `h1`, so it carries a visually hidden one.
 	 */
 	public function test_card_grids_sit_under_an_h2() {
+		self::register_groups_site_patterns();
+
 		foreach ( self::CARD_GRID_TEMPLATES as $template ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as test-groups-site-event-info-card.php does.
-			$markup = file_get_contents( self::THEME_DIR . 'templates/' . $template );
-
-			$this->assertNotFalse( $markup, "Could not read {$template}." );
-
 			$last_heading_level = null;
 
-			foreach ( $this->flatten_blocks( parse_blocks( $markup ) ) as $block ) {
+			foreach ( $this->flatten_blocks( $this->parse_groups_site_template( 'templates/' . $template ) ) as $block ) {
 				if ( 'core/post-template' === $block['blockName'] ) {
 					break;
 				}

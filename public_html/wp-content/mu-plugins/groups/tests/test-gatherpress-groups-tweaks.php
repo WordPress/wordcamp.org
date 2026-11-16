@@ -2111,7 +2111,10 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 * A group site that ends up on another theme anyway is switched back.
 	 *
 	 * Core fires `after_switch_theme` from `check_theme_switched()` on the
-	 * load after a switch, so that's what runs the backstop here.
+	 * load after a switch, so that's what runs the backstop here. That load is
+	 * Appearance > Themes with `?activated=true` after a switch made there,
+	 * and its "New theme activated." notice is dropped, since the theme it
+	 * would be about is gone again.
 	 */
 	public function test_group_site_switched_back_to_groups_site() {
 		$site_id = self::factory()->blog->create(
@@ -2126,10 +2129,13 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		try {
 			switch_theme( 'twentytwentyfour' );
+			$_GET['activated'] = 'true';
 			check_theme_switched();
 
 			$this->assertSame( 'groups-site', get_stylesheet() );
+			$this->assertArrayNotHasKey( 'activated', $_GET );
 		} finally {
+			unset( $_GET['activated'] );
 			restore_current_blog();
 		}
 	}

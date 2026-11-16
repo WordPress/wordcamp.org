@@ -241,6 +241,10 @@ function revert_group_site_theme(): void {
 
 	switch_theme( GROUP_SITE_THEME );
 
+	// Appearance > Themes would otherwise also say "New theme activated."
+	// under the notice below, about the theme this just switched away from.
+	unset( $_GET['activated'] );
+
 	add_action(
 		'admin_notices',
 		static function () {

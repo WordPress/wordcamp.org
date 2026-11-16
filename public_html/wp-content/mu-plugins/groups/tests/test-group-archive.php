@@ -6,6 +6,7 @@ use function WordCamp\Groups\Archive\current_user_can_archive_groups;
 use function WordCamp\Groups\Archive\get_group_sites;
 use function WordCamp\Groups\Archive\get_group_site_count;
 use function WordCamp\Groups\Archive\update_group_archive_status;
+use function WordCamp\Groups\Meetup_Import\screen_url;
 
 defined( 'WPINC' ) || die();
 
@@ -193,5 +194,37 @@ class Test_Group_Archive extends Groups_TestCase {
 		$this->assertTrue( current_user_can_archive_groups() );
 
 		update_site_option( 'site_admins', $original );
+	}
+
+	/**
+	 * Each active group links to its Meetup import; archived ones don't, since
+	 * the import refuses them (#2375).
+	 */
+	public function test_groups_screen_links_active_groups_to_their_import() {
+		$archived_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/archived-import/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+		update_group_archive_status( $archived_id, true );
+
+		// See `test_network_admins_can_archive_groups()`.
+		$user_id  = self::factory()->user->create();
+		$original = get_site_option( 'site_admins' );
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+		wp_set_current_user( $user_id );
+
+		try {
+			ob_start();
+			\WordCamp\Groups\Archive\render_page();
+			$page = ob_get_clean();
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+
+		$this->assertStringContainsString( 'href="' . esc_url( screen_url( $this->group_site_id ) ) . '"', $page );
+		$this->assertStringNotContainsString( 'href="' . esc_url( screen_url( $archived_id ) ) . '"', $page );
 	}
 }

@@ -1,0 +1,69 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"meta": {
+		"title": "Sponsor Vetting preview (PR #2372)",
+		"description": "The vetting screen from WordPress/wordcamp.org#2372 on a small made-up network. Nothing is sent or saved outside this browser tab.",
+		"author": "WordCamp.org"
+	},
+	"landingPage": "/wp-admin/admin.php?page=sponsor-vetting-wp-admin",
+	"preferredVersions": {
+		"php": "8.3",
+		"wp": "latest"
+	},
+	"login": true,
+	"steps": [
+		{
+			"step": "enableMultisite"
+		},
+		{
+			"step": "mkdir",
+			"path": "/wordpress/wp-content/mu-plugins/sv-preview"
+		},
+		{
+			"step": "writeFile",
+			"path": "/wordpress/wp-content/mu-plugins/sv-preview/class-freescout.php",
+			"data": {
+				"resource": "url",
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview/class-freescout.php"
+			}
+		},
+		{
+			"step": "writeFile",
+			"path": "/wordpress/wp-content/mu-plugins/sv-preview/sunrise.php",
+			"data": {
+				"resource": "url",
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview/sunrise.php"
+			}
+		},
+		{
+			"step": "writeFile",
+			"path": "/wordpress/wp-content/mu-plugins/sv-preview.php",
+			"data": {
+				"resource": "url",
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview.php"
+			}
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "url",
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/sponsor-vetting.zip"
+			},
+			"options": {
+				"activate": false
+			}
+		},
+		{
+			"step": "writeFile",
+			"path": "/tmp/sv-seed.php",
+			"data": {
+				"resource": "url",
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/seed.php"
+			}
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php require '/tmp/sv-seed.php';"
+		}
+	]
+}

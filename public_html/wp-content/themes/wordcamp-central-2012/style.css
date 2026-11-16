@@ -1120,6 +1120,19 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	margin: 0
 }
 
+#wc-content-blocks .sd-sharing h3::before {
+    position: absolute;
+    border-top: none;
+}
+#wc-content-blocks .sharedaddy .sd-sharing {
+    border-top: 1px #ececec solid !important;
+    padding-top: 15px;
+}
+#wc-content-blocks .sd-sharing h3 {
+    position: relative;
+    font-weight: 600;
+}
+
 #wc-content-blocks .more {
 	text-transform: uppercase;
 	display: block;

@@ -88,6 +88,21 @@ function tidy_company_meta( \WP_Post $company ): void {
 add_action( 'rest_after_insert_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\tidy_company_meta' );
 
 /**
+ * Keeps real-time collaboration off for companies and sponsorships.
+ *
+ * It's made for documents edited together. Here it would show a vetter's unsaved edits to the others, and leave a
+ * saved company looking unsaved: the copy of the document it stores in the company's meta changes with every save.
+ *
+ * @param bool   $is_disabled Whether collaboration is off for the post type.
+ * @param string $post_type   The post type.
+ * @return bool Whether it's off.
+ */
+function disable_collaboration( bool $is_disabled, string $post_type ): bool {
+	return $is_disabled || in_array( $post_type, array( COMPANY_POST_TYPE, SPONSORSHIP_POST_TYPE ), true );
+}
+add_filter( 'wp_is_post_type_collaboration_disabled', __NAMESPACE__ . '\disable_collaboration', 10, 2 );
+
+/**
  * Adds the fields of companies and sponsorships, and the routes for the two emails.
  */
 function register_rest_additions(): void {

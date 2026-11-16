@@ -108,6 +108,15 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
+	 * Real-time collaboration is off for companies and sponsorships, and left alone for the rest.
+	 */
+	public function test_collaboration_is_off_for_the_records(): void {
+		$this->assertTrue( apply_filters( 'wp_is_post_type_collaboration_disabled', false, COMPANY_POST_TYPE ) );
+		$this->assertTrue( apply_filters( 'wp_is_post_type_collaboration_disabled', false, SPONSORSHIP_POST_TYPE ) );
+		$this->assertFalse( apply_filters( 'wp_is_post_type_collaboration_disabled', false, 'post' ) );
+	}
+
+	/**
 	 * A list that names its fields gets, for each company, its name, websites, status and flags, its last vetting,
 	 * the soonest event still to come among its pending sponsorships, and how many sponsorships it has.
 	 */

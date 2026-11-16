@@ -1,8 +1,8 @@
 {
 	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
 	"meta": {
-		"title": "Sponsor Vetting preview (PR #2372)",
-		"description": "The vetting screen from WordPress/wordcamp.org#2372 on a small made-up network. Nothing is sent or saved outside this browser tab.",
+		"title": "Sponsor Vetting preview (PR #2387)",
+		"description": "The vetting screen from WordPress/wordcamp.org#2387 on a small made-up network. Nothing is sent or saved outside this browser tab.",
 		"author": "WordCamp.org"
 	},
 	"landingPage": "/wp-admin/admin.php?page=sponsor-vetting-wp-admin",
@@ -24,7 +24,7 @@
 			"path": "/wordpress/wp-content/mu-plugins/sv-preview/class-freescout.php",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview/class-freescout.php"
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/mu-plugins/sv-preview/class-freescout.php"
 			}
 		},
 		{
@@ -32,7 +32,7 @@
 			"path": "/wordpress/wp-content/mu-plugins/sv-preview/sunrise.php",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview/sunrise.php"
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/mu-plugins/sv-preview/sunrise.php"
 			}
 		},
 		{
@@ -40,14 +40,14 @@
 			"path": "/wordpress/wp-content/mu-plugins/sv-preview.php",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/mu-plugins/sv-preview.php"
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/mu-plugins/sv-preview.php"
 			}
 		},
 		{
 			"step": "installPlugin",
 			"pluginData": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/sponsor-vetting.zip"
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/sponsor-vetting.zip"
 			},
 			"options": {
 				"activate": false
@@ -58,7 +58,7 @@
 			"path": "/tmp/sv-seed.php",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/seed.php"
+				"url": "https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/seed.php"
 			}
 		},
 		{

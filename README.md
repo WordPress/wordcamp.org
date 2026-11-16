@@ -1,10 +1,11 @@
-# Sponsor Vetting preview for #2372
+# Sponsor Vetting preview for #2387
 
 A one-off [WordPress Playground](https://wordpress.org/playground/) preview of the vetting screen in
+[#2387](https://github.com/WordPress/wordcamp.org/pull/2387), which builds on
 [#2372](https://github.com/WordPress/wordcamp.org/pull/2372). It is not part of the pull request and nothing on this
 branch ships. Delete the branch once the pull request is merged or closed.
 
-**[Open the preview](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2372/blueprint.json)**
+**[Open the preview](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/WordPress/wordcamp.org/preview/2387/blueprint.json)**
 
 It runs entirely in your browser tab: nothing is sent anywhere, and closing the tab throws it away.
 
@@ -25,7 +26,7 @@ with their sponsorships, findings, notes and history. You're logged in as a vett
 
 | File | What it is |
 |---|---|
-| `sponsor-vetting.zip` | The plugin, built from the pull request at `607e7735`. |
+| `sponsor-vetting.zip` | The plugin, built from the pull request at `9d6a21c3`. |
 | `mu-plugins/` | Stand-ins for what the plugin needs from the rest of WordCamp.org. |
 | `seed.php` | Creates the camps and records, through the plugin's own intake and workflow. |
 | `blueprint.json` | Puts the three together in Playground. |

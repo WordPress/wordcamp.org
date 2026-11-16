@@ -179,8 +179,8 @@ function sv_preview_add_toolbar_note( \WP_Admin_Bar $admin_bar ): void {
 	$admin_bar->add_node(
 		array(
 			'id'    => 'sv-preview',
-			'title' => 'Preview of PR #2372 · made-up data',
-			'href'  => 'https://github.com/WordPress/wordcamp.org/pull/2372',
+			'title' => 'Preview of PR #2387 · made-up data',
+			'href'  => 'https://github.com/WordPress/wordcamp.org/pull/2387',
 		)
 	);
 }

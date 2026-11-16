@@ -55,15 +55,21 @@ function toId( param: unknown ): number | undefined {
  * The panel shows the sponsorship, if the address names one, and otherwise the company. Naming both opens a
  * sponsorship over its company, which closing the sponsorship goes back to.
  *
- * @return The list shown, the open company and sponsorship, if any, and a function that opens the records it's
- *         given and closes the rest.
+ * @return The list shown, the open company and sponsorship, if any, a function that opens the records it's given
+ *         and closes the rest, and one that shows the other list.
  */
 export function useOpenRecord() {
 	const [ search, update ] = useParams();
+	const navigate = useNavigate() as Navigate;
 	const open = useCallback(
 		( { company, sponsorship }: { company?: number; sponsorship?: number } = {} ) =>
 			update( { company, sponsorship } ),
 		[ update ]
+	);
+	// The other list starts from a clean address: nothing open, and none of this list's params.
+	const openTab = useCallback(
+		( tab: 'companies' | 'events' ) => navigate( { search: () => ( tab === 'events' ? { tab } : {} ) } ),
+		[ navigate ]
 	);
 
 	return {
@@ -71,6 +77,7 @@ export function useOpenRecord() {
 		companyId: toId( search.company ),
 		sponsorshipId: toId( search.sponsorship ),
 		open,
+		openTab,
 	};
 }
 

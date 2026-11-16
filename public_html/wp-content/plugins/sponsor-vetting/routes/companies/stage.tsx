@@ -3,14 +3,14 @@ import { DataViews } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
 import { useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import { Link } from '@wordpress/route';
-import { Button, Notice, Stack, SwitchControl } from '@wordpress/ui';
-import type { AnchorHTMLAttributes, ComponentType, ReactNode } from 'react';
+import { Button, Notice, SwitchControl } from '@wordpress/ui';
+import type { ReactNode } from 'react';
 import { useRecordActions } from './actions';
 import { AddCompany } from './add-company';
 import { COMPANY, SPONSORSHIP } from './entities';
 import { getErrorMessage, useCompanyList, useOpenRecord, useSponsorshipList } from './hooks';
 import { LayoutMenu } from './layout-menu';
+import { ListHeader, ListTabs } from './list-header';
 import './style.scss';
 import type { Company, Sponsorship } from './types';
 import {
@@ -21,38 +21,8 @@ import {
 	toggleNeedsCompany,
 } from './view';
 
-/* The two lists, by the addresses the page header knows them by. The router gives each its real address. */
-const COMPANIES = '#companies';
-const EVENTS = '#events';
-
-type AnchorProps = AnchorHTMLAttributes< HTMLAnchorElement >;
-
-/* The route tree is assembled at runtime, so the router's link can't check where it leads. */
-const RouterLink = Link as unknown as ComponentType<
-	AnchorProps & { to: string; search: Record< string, string >; activeOptions: { exact: boolean } }
->;
-
 /**
- * A link of the page header that changes the list without loading the page, and closes whatever is open.
- *
- * @param props      Props.
- * @param props.href Which list it leads to.
- * @return The link.
- */
-function TabLink( { href, ...props }: AnchorProps ) {
-	// Both lists are the same route, so the router would mark both links as the current page.
-	return (
-		<RouterLink
-			{ ...props }
-			to="/"
-			search={ href === EVENTS ? { tab: 'events' } : {} }
-			activeOptions={ { exact: true } }
-		/>
-	);
-}
-
-/**
- * Says that a list couldn't be loaded.
+ * Says that a list couldn't be loaded, under the tabs, so the other list can still be reached.
  *
  * @param props       Props.
  * @param props.title What couldn't be.
@@ -61,10 +31,15 @@ function TabLink( { href, ...props }: AnchorProps ) {
  */
 function LoadError( { title, error }: { title: string; error: unknown } ) {
 	return (
-		<Notice.Root intent="error" className="sponsor-vetting__notice">
-			<Notice.Title>{ title }</Notice.Title>
-			<Notice.Description>{ getErrorMessage( error ) }</Notice.Description>
-		</Notice.Root>
+		<>
+			<div className="sponsor-vetting__list-header">
+				<ListTabs />
+			</div>
+			<Notice.Root intent="error" className="sponsor-vetting__notice">
+				<Notice.Title>{ title }</Notice.Title>
+				<Notice.Description>{ getErrorMessage( error ) }</Notice.Description>
+			</Notice.Root>
+		</>
 	);
 }
 
@@ -148,24 +123,12 @@ function Companies() {
 			onClickItem={ ( item ) => openCompany( item.id ) }
 			{ ...selection }
 		>
-			{ /* DataViews' own toolbar and parts, but with the Layout menu that knows the grouping. */ }
-			<Stack
-				direction="row"
-				align="top"
-				justify="space-between"
-				gap="xs"
-				className="dataviews__view-actions"
-			>
-				<Stack direction="row" justify="start" gap="sm" className="dataviews__search">
-					<DataViews.Search label={ __( 'Search companies', 'wordcamporg' ) } />
-					<DataViews.FiltersToggle />
-				</Stack>
-				<Stack direction="row" gap="xs" style={ { flexShrink: 0 } }>
+			<ListHeader
+				searchLabel={ __( 'Search companies', 'wordcamporg' ) }
+				layoutMenu={
 					<LayoutMenu view={ view } onChangeView={ updateView } choices={ COMPANY_LAYOUT_CHOICES } />
-					<DataViews.ViewConfig />
-				</Stack>
-			</Stack>
-			<DataViews.FiltersToggled className="dataviews-filters__container" />
+				}
+			/>
 			<DataViews.Layout />
 			<DataViews.Footer />
 		</DataViews>
@@ -202,18 +165,23 @@ function Events() {
 			paginationInfo={ paginationInfo }
 			defaultLayouts={ SPONSORSHIP_LAYOUTS }
 			getItemId={ ( item ) => String( item.id ) }
-			searchLabel={ __( 'Search sponsorships', 'wordcamporg' ) }
-			header={
+			onClickItem={ ( item ) => openSponsorship( item.id ) }
+			{ ...selection }
+		>
+			<ListHeader
+				searchLabel={ __( 'Search sponsorships', 'wordcamporg' ) }
+				layoutMenu={ <DataViews.LayoutSwitcher /> }
+			>
 				<ViewSwitch
 					/* translators: %d: Number of sponsorships. */
 					label={ sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), unlinked ) }
 					checked={ needsCompanyOnly( view ) }
 					onChange={ ( isOn ) => updateView( toggleNeedsCompany( view, isOn ) ) }
 				/>
-			}
-			onClickItem={ ( item ) => openSponsorship( item.id ) }
-			{ ...selection }
-		/>
+			</ListHeader>
+			<DataViews.Layout />
+			<DataViews.Footer />
+		</DataViews>
 	);
 }
 
@@ -230,21 +198,11 @@ function Stage() {
 	return (
 		<Page
 			title={ __( 'Sponsor Vetting', 'wordcamporg' ) }
-			subTitle={ __( 'Vet each company once, then approve it for the events it sponsors.', 'wordcamporg' ) }
 			actions={
 				<Button size="compact" onClick={ () => setIsAdding( true ) }>
 					{ __( 'Add company', 'wordcamporg' ) }
 				</Button>
 			}
-			navigation={ {
-				items: [
-					{ label: __( 'Companies', 'wordcamporg' ), href: COMPANIES },
-					{ label: __( 'Events', 'wordcamporg' ), href: EVENTS },
-				],
-				currentHref: tab === 'events' ? EVENTS : COMPANIES,
-				ariaLabel: __( 'Lists', 'wordcamporg' ),
-			} }
-			components={ { link: TabLink } }
 			hasPadding={ false }
 		>
 			{ lists[ tab ] }

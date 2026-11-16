@@ -1,6 +1,40 @@
+// The screen bundles its own DataViews, so it brings the styles of that version: the page's are whichever WordPress
+// or Gutenberg ships, and an older set leaves newer parts, like the bar for selected rows, unstyled.
+@use "@wordpress/dataviews/build-style/style.css" as dataviews;
+
 // A status reads as one label, however narrow its column.
 .sponsor-vetting__status {
 	white-space: nowrap;
+}
+
+// The bar above a list: the tabs reach down to its rule, the controls sit in its middle.
+.sponsor-vetting__list-header {
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	box-sizing: border-box;
+	flex-shrink: 0;
+	padding-inline: var(--wpds-dimension-padding-2xl);
+
+	> * {
+		min-height: 48px;
+	}
+}
+
+// DataViews' filters follow its toolbar's padding. Here they follow the bar's rule.
+.sponsor-vetting__list-header + .dataviews-filters__container {
+	padding-top: var(--wpds-dimension-padding-lg);
+}
+
+// A group's heading is a band across the table, with room above it, so the groups read apart from their rows.
+.dataviews-view-table__group-header-row .dataviews-view-table__group-header-cell {
+	background-color: var(--wpds-color-background-surface-neutral-weak);
+	border-block: 1px solid var(--wpds-color-stroke-surface-neutral);
+	padding-block: var(--wpds-dimension-padding-sm);
+}
+
+.dataviews-view-table tbody + tbody::before {
+	content: "";
+	display: table-row;
+	height: var(--wpds-dimension-gap-xl);
 }
 
 // The switches are shorter than the toolbar buttons they sit beside.

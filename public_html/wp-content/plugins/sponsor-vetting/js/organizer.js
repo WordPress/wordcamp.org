@@ -134,6 +134,10 @@
 			return;
 		}
 
+		window.wp.data
+			.dispatch( 'core/notices' )
+			.removeNotice( 'sv-missing-contact-info' );
+
 		// A field left behind by a failed save would request vetting on the next one.
 		window.wp.data
 			.dispatch( 'core/editor' )

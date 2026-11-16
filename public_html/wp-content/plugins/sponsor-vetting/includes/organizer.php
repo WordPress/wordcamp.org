@@ -303,14 +303,29 @@ function get_sortable_organizer_columns( array $columns ): array {
 add_filter( 'manage_edit-wcb_sponsor_sortable_columns', __NAMESPACE__ . '\get_sortable_organizer_columns' );
 
 /**
+ * The vetting statuses a camp's sponsor list can be filtered by, each standing for the statuses that call for the
+ * same from organizers: nothing yet, waiting on the vetting, done, or not going ahead.
+ *
+ * @return array[] The statuses each takes in, keyed by the status it's named after.
+ */
+function get_vetting_filter_groups(): array {
+	return array(
+		'not-requested' => array( 'not-requested' ),
+		'in-review'     => array( 'in-review', 'waiting', 'vetted' ),
+		'approved'      => array( 'approved' ),
+		'not-approved'  => array( 'not-approved', 'stopped', 'canceled' ),
+	);
+}
+
+/**
  * Gets the vetting status the organizer filtered the sponsor list by.
  *
- * @return string A key of get_vetting_status_labels(), or an empty string for all.
+ * @return string A key of get_vetting_filter_groups(), or an empty string for all.
  */
 function get_picked_vetting_status(): string {
-	$status = $_GET['sv_vetting'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the statuses.
+	$status = $_GET['sv_vetting'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the filter's statuses.
 
-	return is_string( $status ) && isset( get_vetting_status_labels()[ $status ] ) ? $status : '';
+	return is_string( $status ) && isset( get_vetting_filter_groups()[ $status ] ) ? $status : '';
 }
 
 /**
@@ -325,19 +340,20 @@ function render_vetting_filter( string $post_type, string $which ): void {
 	}
 
 	$current = get_picked_vetting_status();
+	$labels  = get_vetting_status_labels();
 	?>
 	<label for="sv-vetting-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by vetting status', 'wordcamporg' ); ?></label>
 	<select name="sv_vetting" id="sv-vetting-filter">
 		<option value=""><?php esc_html_e( 'All vetting statuses', 'wordcamporg' ); ?></option>
-		<?php foreach ( get_vetting_status_labels() as $status => $label ) : ?>
-			<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $current, $status ); ?>><?php echo esc_html( $label ); ?></option>
+		<?php foreach ( array_keys( get_vetting_filter_groups() ) as $status ) : ?>
+			<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $current, $status ); ?>><?php echo esc_html( $labels[ $status ] ); ?></option>
 		<?php endforeach; ?>
 	</select>
 	<?php
 }
 
 /**
- * Limits a camp's sponsor list to the vetting status picked, and sorts it by vetting status when the organizer
+ * Limits a camp's sponsor list to the vetting statuses picked, and sorts it by vetting status when the organizer
  * picks that column.
  *
  * The statuses live on Central, so they're looked up for every sponsor the list would show, then handed back to
@@ -368,7 +384,8 @@ function filter_sponsors_by_vetting( \WP_Query $query ): void {
 	$statuses    = get_organizer_statuses( $sponsor_ids );
 
 	if ( '' !== $picked ) {
-		$sponsor_ids = array_values( array_filter( $sponsor_ids, static fn( int $id ): bool => $picked === $statuses[ $id ]['status'] ) );
+		$group       = get_vetting_filter_groups()[ $picked ];
+		$sponsor_ids = array_values( array_filter( $sponsor_ids, static fn( int $id ): bool => in_array( $statuses[ $id ]['status'], $group, true ) ) );
 	}
 
 	if ( $sorting ) {

@@ -140,8 +140,12 @@
 					name="_wcpt_sponsor_company_name"
 					value="<?php echo esc_attr( $company_name ); ?>"
 					maxlength="50"
+					aria-describedby="_wcpt_sponsor_company_name-description"
 					required
 				/>
+				<p class="description" id="_wcpt_sponsor_company_name-description">
+					<?php esc_html_e( 'The company’s actual name, as it appears on its website. Not a product name, a person’s name, or a nickname.', 'wordcamporg' ); ?>
+				</p>
 			</td>
 		</tr>
 		<tr>

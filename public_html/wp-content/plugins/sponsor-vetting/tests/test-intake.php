@@ -421,17 +421,17 @@ class Test_Intake extends Database_TestCase {
 
 	/**
 	 * Requesting vetting from the sponsor's edit screen saves what the organizer entered with it first, so a website
-	 * typed just before the request still gets its company. A save without the request, with a forged one, or with
-	 * Contact Information missing asks for nothing.
+	 * typed just before the request still gets its company. A save without the request, with a forged one, or with an
+	 * email address the vetting team can't write to asks for nothing. No phone number is needed.
 	 *
 	 * @dataProvider data_request_from_edit_screen
 	 *
-	 * @param bool $clicked     Whether the save carries the request.
-	 * @param bool $valid_nonce Whether the request's nonce is the box's.
-	 * @param bool $has_phone   Whether the save carries the last Contact Information field.
-	 * @param bool $requested   Whether vetting is requested.
+	 * @param bool   $clicked     Whether the save carries the request.
+	 * @param bool   $valid_nonce Whether the request's nonce is the box's.
+	 * @param string $email       The contact's email address.
+	 * @param bool   $requested   Whether vetting is requested.
 	 */
-	public function test_request_from_edit_screen( bool $clicked, bool $valid_nonce, bool $has_phone, bool $requested ): void {
+	public function test_request_from_edit_screen( bool $clicked, bool $valid_nonce, string $email, bool $requested ): void {
 		$sponsor_id = $this->create_camp_sponsor( '' );
 		$user_id    = self::factory()->user->create();
 
@@ -441,15 +441,14 @@ class Test_Intake extends Database_TestCase {
 
 		$sponsorship_id = $this->on_site(
 			self::$year_dot_2018_site_id,
-			static function () use ( $sponsor_id, $clicked, $valid_nonce, $has_phone ): int {
+			static function () use ( $sponsor_id, $clicked, $valid_nonce, $email ): int {
 				$_POST = array(
 					'wcpt-meta-sponsor-info'      => wp_create_nonce( 'edit-sponsor-info' ),
 					'_wcpt_sponsor_company_name'  => 'Acme Inc.',
 					'_wcpt_sponsor_website'       => 'https://typed.example',
 					'_wcpt_sponsor_first_name'    => 'Pat',
 					'_wcpt_sponsor_last_name'     => 'Doe',
-					'_wcpt_sponsor_email_address' => 'pat@acme.example',
-					'_wcpt_sponsor_phone_number'  => $has_phone ? '555-0100' : '',
+					'_wcpt_sponsor_email_address' => $email,
 					'sv_request_vetting_nonce'    => $valid_nonce ? wp_create_nonce( 'sv_request_vetting_' . $sponsor_id ) : 'forged',
 				);
 
@@ -480,10 +479,10 @@ class Test_Intake extends Database_TestCase {
 	 */
 	public function data_request_from_edit_screen(): array {
 		return array(
-			'saved with the request'    => array( true, true, true, true ),
-			'a plain save'              => array( false, true, true, false ),
-			'a forged request'          => array( true, false, true, false ),
-			'contact information short' => array( true, true, false, false ),
+			'saved with the request' => array( true, true, 'pat@acme.example', true ),
+			'a plain save'           => array( false, true, 'pat@acme.example', false ),
+			'a forged request'       => array( true, false, 'pat@acme.example', false ),
+			'an email placeholder'   => array( true, true, 'TBD', false ),
 		);
 	}
 

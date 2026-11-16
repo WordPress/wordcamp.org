@@ -48,18 +48,24 @@
 	}
 
 	/**
-	 * Finds the first Contact Information field vetting needs that's empty on the page.
+	 * Finds the first Contact Information field vetting needs that's empty on the page, or holds a malformed email
+	 * address.
 	 *
-	 * A field that isn't on the page is left to the server, which checks what's saved.
+	 * Websites are left to the server, which accepts the bare domains the browser's URL check rejects. So is a field
+	 * that isn't on the page, since the server checks what's saved.
 	 *
 	 * @param {HTMLButtonElement} button The Request vetting button, naming the fields.
-	 * @return {HTMLInputElement|undefined} The empty field, if there is one.
+	 * @return {HTMLInputElement|undefined} The field, if there is one.
 	 */
 	function findEmptyContactField( button ) {
 		return button.dataset.requiredFields
 			.split( ' ' )
 			.map( ( name ) => document.getElementsByName( name )[ 0 ] )
-			.find( ( input ) => input && '' === input.value.trim() );
+			.find(
+				( input ) =>
+					input &&
+					( '' === input.value.trim() || input.validity.typeMismatch && 'email' === input.type )
+			);
 	}
 
 	/**

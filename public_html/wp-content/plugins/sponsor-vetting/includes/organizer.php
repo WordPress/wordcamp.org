@@ -123,7 +123,8 @@ function get_company_label( int $company_id ): string {
 /**
  * The Contact Information fields a camp's sponsor needs before vetting can be requested.
  *
- * The vetting team writes to this contact, and finds the company by its website.
+ * The vetting team writes to this contact, and finds the company by its website. Not the phone number, which never
+ * reaches them.
  *
  * @return string[] Their meta keys, which the Sponsor Info box also names its fields by.
  */
@@ -134,14 +135,13 @@ function get_required_contact_fields(): array {
 		'_wcpt_sponsor_first_name',
 		'_wcpt_sponsor_last_name',
 		'_wcpt_sponsor_email_address',
-		'_wcpt_sponsor_phone_number',
 	);
 }
 
 /**
  * Whether a camp's sponsor is missing Contact Information that vetting needs.
  *
- * A website the vetting team can't get a domain from counts as missing.
+ * A website the vetting team can't get a domain from, or an email address they can't write to, counts as missing.
  *
  * @param int $sponsor_id The camp's sponsor.
  * @return bool
@@ -149,7 +149,11 @@ function get_required_contact_fields(): array {
 function is_missing_contact_info( int $sponsor_id ): bool {
 	foreach ( get_required_contact_fields() as $meta_key ) {
 		$value = trim( (string) get_post_meta( $sponsor_id, $meta_key, true ) );
-		$valid = '_wcpt_sponsor_website' === $meta_key ? (bool) normalize_domain( $value ) : '' !== $value;
+		$valid = match ( $meta_key ) {
+			'_wcpt_sponsor_website'       => (bool) normalize_domain( $value ),
+			'_wcpt_sponsor_email_address' => (bool) is_email( $value ),
+			default                       => '' !== $value,
+		};
 
 		if ( ! $valid ) {
 			return true;

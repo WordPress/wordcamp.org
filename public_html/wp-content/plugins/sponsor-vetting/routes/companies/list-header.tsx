@@ -23,8 +23,11 @@ export function ListTabs() {
 }
 
 /**
- * The bar above a list, inside its DataViews: the tabs, then DataViews' own search, filters and view controls,
- * and the filters that are set.
+ * The bar above a list, inside its DataViews: the tabs, then DataViews' own search and view controls, and under
+ * them its filters.
+ *
+ * DataViews' button that shows and hides the filters is left out: both lists pin a filter, which keeps the filters
+ * shown and that button disabled.
  *
  * @param props             Props.
  * @param props.searchLabel What the search field is for.
@@ -47,7 +50,6 @@ export function ListHeader( {
 				<ListTabs />
 				<Stack direction="row" align="center" gap="xs">
 					<DataViews.Search label={ searchLabel } />
-					<DataViews.FiltersToggle />
 					{ layoutMenu }
 					<DataViews.ViewConfig />
 					{ children }

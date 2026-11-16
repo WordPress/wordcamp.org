@@ -788,6 +788,24 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * A draft keeps its language when a rerun refreshes it, whatever language
+	 * the rerun picked, as the preview says (#2365).
+	 */
+	public function test_rerun_keeps_a_drafts_language() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+
+		Meetup_Import\import_events( $this->site_id, $events, false, false, 'es' );
+		$results = Meetup_Import\import_events( $this->site_id, $events, false, false, 'pt' );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( array( 'updated' ), wp_list_pluck( $results, 'status' ) );
+		$this->assertSame( 'es', $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
+	}
+
+	/**
 	 * Once published or trashed, the organizer owns the event: reruns leave it alone.
 	 *
 	 * @dataProvider data_owned_statuses

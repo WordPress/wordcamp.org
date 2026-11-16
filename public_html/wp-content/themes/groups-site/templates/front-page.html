@@ -55,15 +55,13 @@
 			<div class="wp-block-group groups-site-main-column">
 				<!-- wp:wporg/my-events {"lock":{"move":true,"remove":true}} /-->
 
-				<!-- wp:wporg/page-content {"slug":"about","heading":"About this group","headingLevel":2,"excerpt":true,"className":"groups-site-about","lock":{"move":true,"remove":true}} /-->
+				<!-- wp:pattern {"slug":"groups-site/front-page-about"} /-->
 
 				<!-- wp:group {"className":"groups-site-section","anchor":"upcoming","layout":{"type":"constrained","justifyContent":"left"}} -->
 				<div id="upcoming" class="wp-block-group groups-site-section">
 					<!-- wp:group {"style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}}},"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
 					<div class="wp-block-group" style="margin-bottom:var(--wp--preset--spacing--30)">
-						<!-- wp:heading {"level":2,"fontSize":"heading-3","style":{"spacing":{"margin":{"bottom":"0"}}}} -->
-						<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:0">Upcoming events</h2>
-						<!-- /wp:heading -->
+						<!-- wp:pattern {"slug":"groups-site/upcoming-events-heading"} /-->
 
 						<!-- wp:pattern {"slug":"groups-site/view-all-events-link"} /-->
 					</div>
@@ -76,9 +74,7 @@
 						<!-- /wp:post-template -->
 
 						<!-- wp:query-no-results -->
-							<!-- wp:paragraph {"textColor":"charcoal-4"} -->
-							<p class="has-charcoal-4-color has-text-color">No upcoming events yet. Check back soon.</p>
-							<!-- /wp:paragraph -->
+							<!-- wp:pattern {"slug":"groups-site/upcoming-events-empty"} /-->
 						<!-- /wp:query-no-results -->
 					</div>
 					<!-- /wp:query -->

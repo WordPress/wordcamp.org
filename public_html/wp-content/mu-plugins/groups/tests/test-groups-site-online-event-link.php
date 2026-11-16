@@ -8,6 +8,7 @@ use GatherPress\Core\Rsvp\Rsvp;
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
+require_once __DIR__ . '/trait-groups-site-patterns.php';
 
 /**
  * The online-event line in the single-event details card.
@@ -25,6 +26,8 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  * @group groups
  */
 class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
+	use Groups_Site_Patterns;
+
 
 	const THEME_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/';
 
@@ -40,6 +43,17 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 		parent::wpSetUpBeforeClass( $factory );
 
 		require_once self::THEME_DIR . 'functions.php';
+
+		self::register_groups_site_patterns();
+	}
+
+	/**
+	 * Drops the theme patterns registered above.
+	 */
+	public static function wpTearDownAfterClass() {
+		self::unregister_groups_site_patterns();
+
+		parent::wpTearDownAfterClass();
 	}
 
 	/**
@@ -141,12 +155,7 @@ class Test_Groups_Site_Online_Event_Link extends Groups_TestCase {
 	 * @return string The rendered zone.
 	 */
 	private function render_online_event_zone( int $event_id ): string {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as the other groups-site tests do.
-		$markup = file_get_contents( self::THEME_DIR . 'templates/single-event.html' );
-
-		$this->assertNotFalse( $markup, 'Could not read single-event.html.' );
-
-		$zone = $this->find_block( parse_blocks( $markup ), 'gatherpress/online-event' );
+		$zone = $this->find_block( $this->parse_groups_site_template( 'templates/single-event.html' ), 'gatherpress/online-event' );
 
 		$this->assertNotNull( $zone, 'single-event.html no longer holds a gatherpress/online-event block.' );
 

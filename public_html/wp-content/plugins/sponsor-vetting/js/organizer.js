@@ -4,7 +4,23 @@
  * The block editor saves without reloading the page, so the box would otherwise keep showing what it said on load.
  */
 ( function () {
+	// One for every notice about the request, so a new one replaces the last instead of piling up.
+	const NOTICE_ID = 'sv-vetting-request';
+
 	let latestRedraw = 0;
+
+	/**
+	 * Shows a notice about the vetting request, as a snackbar like the editor's own "Draft saved."
+	 *
+	 * @param {string} status  `success`, `warning` or `error`.
+	 * @param {string} message The message.
+	 */
+	function showNotice( status, message ) {
+		window.wp.data.dispatch( 'core/notices' ).createNotice( status, message, {
+			id: NOTICE_ID,
+			type: 'snackbar',
+		} );
+	}
 
 	/**
 	 * Fetches what the box says now and swaps it in, and shows the notices the save queued, like whether vetting
@@ -30,11 +46,7 @@
 			} )
 			.then( ( response ) => {
 				// Shown whichever answer arrives last: each save's notices come back only once.
-				response.notices.forEach( ( notice ) => {
-					window.wp.data
-						.dispatch( 'core/notices' )
-						.createNotice( notice.type, notice.message );
-				} );
+				response.notices.forEach( ( notice ) => showNotice( notice.type, notice.message ) );
 
 				// Looked up now: the editor moves the meta boxes after this script loads.
 				const box = document.querySelector( '#sv-vetting .inside' );
@@ -48,30 +60,77 @@
 	}
 
 	/**
-	 * Finds the first Contact Information field vetting needs that's empty on the page, or holds a malformed email
-	 * address.
+	 * Whether a website has a domain the vetting team can find the company by, as the server's normalize_domain()
+	 * decides it.
 	 *
-	 * Websites are left to the server, which accepts the bare domains the browser's URL check rejects. So is a field
-	 * that isn't on the page, since the server checks what's saved.
-	 *
-	 * @param {HTMLButtonElement} button The Request vetting button, naming the fields.
-	 * @return {HTMLInputElement|undefined} The field, if there is one.
+	 * @param {string} value The website.
+	 * @return {boolean} Whether it has one.
 	 */
-	function findEmptyContactField( button ) {
-		return button.dataset.requiredFields
-			.split( ' ' )
-			.map( ( name ) => document.getElementsByName( name )[ 0 ] )
-			.find(
-				( input ) =>
-					input &&
-					( '' === input.value.trim() || input.validity.typeMismatch && 'email' === input.type )
-			);
+	function hasDomain( value ) {
+		let url = value.trim().toLowerCase();
+
+		if ( ! /^[a-z][a-z0-9+.-]*:\/\//.test( url ) ) {
+			url = `http://${ url }`;
+		}
+
+		try {
+			const host = new URL( url ).hostname.replace( /\.$/, '' ).replace( /^www\./, '' );
+
+			return /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*[a-z0-9]$/.test( host );
+		} catch {
+			return false;
+		}
 	}
 
 	/**
-	 * Opens the block editor's meta box pane and the Sponsor Info box, and puts the cursor in the empty field.
+	 * Whether an email address is one the server's is_email() accepts, which unlike the browser wants a dot in the
+	 * domain.
 	 *
-	 * @param {HTMLInputElement} input The empty field.
+	 * @param {string} value The email address.
+	 * @return {boolean} Whether it's valid.
+	 */
+	function isEmail( value ) {
+		return /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]*[a-z0-9]$/i.test(
+			value.trim()
+		);
+	}
+
+	/**
+	 * Finds what in the Contact Information on the page keeps vetting from being requested, checked as the server
+	 * checks it: an empty field first, then the website, then the email address.
+	 *
+	 * A field that isn't on the page is left to the server, which checks what's saved.
+	 *
+	 * @param {HTMLButtonElement} button The Request vetting button, naming the fields and the messages.
+	 * @return {{input: HTMLInputElement, message: string}|undefined} The field and what to tell organizers, if any.
+	 */
+	function findContactProblem( button ) {
+		const messages = JSON.parse( button.dataset.messages );
+		const field = ( name ) => document.getElementsByName( name )[ 0 ];
+		const empty = button.dataset.requiredFields
+			.split( ' ' )
+			.map( field )
+			.find( ( input ) => input && '' === input.value.trim() );
+		const website = field( '_wcpt_sponsor_website' );
+		const email = field( '_wcpt_sponsor_email_address' );
+
+		if ( empty ) {
+			return { input: empty, message: messages.missing };
+		}
+
+		if ( website && ! hasDomain( website.value ) ) {
+			return { input: website, message: messages.website };
+		}
+
+		if ( email && ! isEmail( email.value ) ) {
+			return { input: email, message: messages.email };
+		}
+	}
+
+	/**
+	 * Opens the block editor's meta box pane and the Sponsor Info box, and puts the cursor in the field to fix.
+	 *
+	 * @param {HTMLInputElement} input The field.
 	 */
 	function showContactField( input ) {
 		window.wp.data
@@ -92,8 +151,8 @@
 	/**
 	 * Saves the sponsor with the request, so the request carries what was just entered.
 	 *
-	 * In the block editor, missing Contact Information is caught before saving, so the organizer hears about it as
-	 * they click. A field stands in for a submit button, which pressing Enter in any other field could trigger.
+	 * In the block editor, Contact Information that keeps vetting from being requested is caught before saving, so
+	 * the organizer hears about it as they click. A field stands in for a submit button, which pressing Enter in any other field could trigger.
 	 *
 	 * @param {MouseEvent} event The click.
 	 */
@@ -105,16 +164,11 @@
 			return;
 		}
 
-		const emptyField = isBlockEditor && findEmptyContactField( button );
+		const problem = isBlockEditor && findContactProblem( button );
 
-		if ( emptyField ) {
-			// One ID, so clicking again doesn't stack copies.
-			window.wp.data
-				.dispatch( 'core/notices' )
-				.createErrorNotice( button.dataset.missingMessage, {
-					id: 'sv-missing-contact-info',
-				} );
-			showContactField( emptyField );
+		if ( problem ) {
+			showNotice( 'error', problem.message );
+			showContactField( problem.input );
 			return;
 		}
 
@@ -134,9 +188,7 @@
 			return;
 		}
 
-		window.wp.data
-			.dispatch( 'core/notices' )
-			.removeNotice( 'sv-missing-contact-info' );
+		window.wp.data.dispatch( 'core/notices' ).removeNotice( NOTICE_ID );
 
 		// A field left behind by a failed save would request vetting on the next one.
 		window.wp.data

@@ -13,6 +13,8 @@ use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\add_notice;
 use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_company_domains;
+use function WordCamp\Sponsor_Vetting\get_contact_info_messages;
+use function WordCamp\Sponsor_Vetting\get_contact_info_problem;
 use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\import_row;
@@ -483,6 +485,46 @@ class Test_Intake extends Database_TestCase {
 			'a plain save'           => array( false, true, 'pat@acme.example', false ),
 			'a forged request'       => array( true, false, 'pat@acme.example', false ),
 			'an email placeholder'   => array( true, true, 'TBD', false ),
+		);
+	}
+
+	/**
+	 * Organizers are told what in the Contact Information keeps vetting from being requested: an empty field, a
+	 * website without a domain, or an email address the vetting team can't write to, even one the browser accepts.
+	 *
+	 * @dataProvider data_contact_info_problem
+	 *
+	 * @param string $website   The sponsor's website.
+	 * @param string $email     The contact's email address.
+	 * @param string $last_name The contact's last name.
+	 * @param string $problem   The problem organizers are told about, or an empty string for none.
+	 */
+	public function test_contact_info_problem( string $website, string $email, string $last_name, string $problem ): void {
+		$sponsor_id = $this->create_camp_sponsor(
+			$website,
+			array(
+				'_wcpt_sponsor_email_address' => $email,
+				'_wcpt_sponsor_first_name'    => 'Frank',
+				'_wcpt_sponsor_last_name'     => $last_name,
+			)
+		);
+
+		$message = $this->on_site( self::$year_dot_2018_site_id, static fn(): string => get_contact_info_problem( $sponsor_id ) );
+
+		$this->assertSame( '' === $problem ? '' : get_contact_info_messages()[ $problem ], $message );
+	}
+
+	/**
+	 * Contact Information, and what organizers are told about it.
+	 *
+	 * @return array[]
+	 */
+	public function data_contact_info_problem(): array {
+		return array(
+			'complete'                       => array( 'hybrid.example', 'frank@hybrid.example', 'Lloyd', '' ),
+			'a name missing'                 => array( 'hybrid.example', 'frank@hybrid.example', '', 'missing' ),
+			'a website without a domain'     => array( 'hybrid', 'frank@hybrid.example', 'Lloyd', 'website' ),
+			'an email with no dot in domain' => array( 'hybrid.example', 'frank@gmail', 'Lloyd', 'email' ),
 		);
 	}
 

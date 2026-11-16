@@ -139,37 +139,42 @@ function get_required_contact_fields(): array {
 }
 
 /**
- * Whether a camp's sponsor is missing Contact Information that vetting needs.
+ * What organizers are told when Contact Information keeps vetting from being requested.
  *
- * A website the vetting team can't get a domain from, or an email address they can't write to, counts as missing.
- *
- * @param int $sponsor_id The camp's sponsor.
- * @return bool
+ * @return string[] Messages, keyed by problem: `missing`, `website` or `email`.
  */
-function is_missing_contact_info( int $sponsor_id ): bool {
-	foreach ( get_required_contact_fields() as $meta_key ) {
-		$value = trim( (string) get_post_meta( $sponsor_id, $meta_key, true ) );
-		$valid = match ( $meta_key ) {
-			'_wcpt_sponsor_website'       => (bool) normalize_domain( $value ),
-			'_wcpt_sponsor_email_address' => (bool) is_email( $value ),
-			default                       => '' !== $value,
-		};
-
-		if ( ! $valid ) {
-			return true;
-		}
-	}
-
-	return false;
+function get_contact_info_messages(): array {
+	return array(
+		'missing' => __( 'Fill in the sponsor’s contact information before requesting vetting.', 'wordcamporg' ),
+		'website' => __( 'Enter the sponsor’s full website address, like example.com, before requesting vetting.', 'wordcamporg' ),
+		'email'   => __( 'Enter a valid email address for the sponsor’s contact before requesting vetting.', 'wordcamporg' ),
+	);
 }
 
 /**
- * Tells organizers to fill in the Contact Information before requesting vetting.
+ * Gets what in a camp's sponsor's Contact Information keeps vetting from being requested.
  *
- * @return string
+ * An empty field comes first, then a website the vetting team can't get a domain from, then an email address they
+ * can't write to.
+ *
+ * @param int $sponsor_id The camp's sponsor.
+ * @return string The message for organizers, or an empty string when vetting can be requested.
  */
-function get_missing_contact_message(): string {
-	return __( 'Fill in the sponsor’s contact information before requesting vetting.', 'wordcamporg' );
+function get_contact_info_problem( int $sponsor_id ): string {
+	$values = array();
+
+	foreach ( get_required_contact_fields() as $meta_key ) {
+		$values[ $meta_key ] = trim( (string) get_post_meta( $sponsor_id, $meta_key, true ) );
+	}
+
+	$problem = match ( true ) {
+		in_array( '', $values, true )                          => 'missing',
+		! normalize_domain( $values['_wcpt_sponsor_website'] ) => 'website',
+		! is_email( $values['_wcpt_sponsor_email_address'] )   => 'email',
+		default                                                => '',
+	};
+
+	return '' === $problem ? '' : get_contact_info_messages()[ $problem ];
 }
 
 /**
@@ -201,8 +206,10 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 		return;
 	}
 
-	if ( is_missing_contact_info( $post->ID ) ) {
-		echo '<p class="description">' . esc_html( get_missing_contact_message() ) . '</p>';
+	$problem = get_contact_info_problem( $post->ID );
+
+	if ( $problem ) {
+		echo '<p class="description">' . esc_html( $problem ) . '</p>';
 	}
 
 	wp_nonce_field( 'sv_request_vetting_' . $post->ID, 'sv_request_vetting_nonce', false );
@@ -212,7 +219,7 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 			type="button"
 			class="button"
 			data-required-fields="<?php echo esc_attr( implode( ' ', get_required_contact_fields() ) ); ?>"
-			data-missing-message="<?php echo esc_attr( get_missing_contact_message() ); ?>"
+			data-messages="<?php echo esc_attr( (string) wp_json_encode( get_contact_info_messages() ) ); ?>"
 		>
 			<?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?>
 		</button>
@@ -341,8 +348,10 @@ function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
 		return;
 	}
 
-	if ( is_missing_contact_info( $post_id ) ) {
-		add_notice( 'error', get_missing_contact_message() );
+	$problem = get_contact_info_problem( $post_id );
+
+	if ( $problem ) {
+		add_notice( 'error', $problem );
 		return;
 	}
 

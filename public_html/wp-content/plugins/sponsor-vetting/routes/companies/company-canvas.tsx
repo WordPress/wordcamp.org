@@ -4,7 +4,7 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { DataForm, useFormValidity } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { Button, Card, Notice, Stack, Text, VisuallyHidden } from '@wordpress/ui';
+import { Button, Card, Notice, Stack, Text } from '@wordpress/ui';
 import { CanvasHeader, CanvasPlaceholder, Emails, Hint, History, Part, Row, Section } from './canvas-parts';
 import { formatDay, getToday } from './dates';
 import { COMPANY, SPONSORSHIP, TRASH, getSponsorshipsQuery } from './entities';
@@ -191,30 +191,20 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 						<Text>{ __( 'No events yet.', 'wordcamporg' ) }</Text>
 					) : (
 						<Card.Root className="sponsor-vetting__events">
-							<table>
-								<VisuallyHidden render={ <thead /> }>
-									<tr>
-										<th scope="col">{ __( 'Event', 'wordcamporg' ) }</th>
-										<th scope="col">{ __( 'Date', 'wordcamporg' ) }</th>
-										<th scope="col">{ __( 'Approval', 'wordcamporg' ) }</th>
-										<th scope="col">{ __( 'Actions', 'wordcamporg' ) }</th>
-									</tr>
-								</VisuallyHidden>
-								<tbody>
-									{ events.map( ( sponsorship ) => (
-										<EventRow
-											key={ sponsorship.id }
-											sponsorship={ sponsorship }
-											isMarked={ sponsorship.id === sponsorshipId }
-											labels={ labels }
-											today={ today }
-											running={ running }
-											changes={ changes }
-											onMove={ () => setMoving( sponsorship ) }
-										/>
-									) ) }
-								</tbody>
-							</table>
+							<ul>
+								{ events.map( ( sponsorship ) => (
+									<EventRow
+										key={ sponsorship.id }
+										sponsorship={ sponsorship }
+										isMarked={ sponsorship.id === sponsorshipId }
+										labels={ labels }
+										today={ today }
+										running={ running }
+										changes={ changes }
+										onMove={ () => setMoving( sponsorship ) }
+									/>
+								) ) }
+							</ul>
 						</Card.Root>
 					) }
 					{ goodFaithHint && <Hint>{ goodFaithHint }</Hint> }

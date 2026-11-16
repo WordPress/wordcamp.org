@@ -31,6 +31,14 @@
 	padding-block: var(--wpds-dimension-padding-sm);
 }
 
+// The narrow list's groups get the same band.
+.dataviews-view-list__group-header {
+	background-color: var(--wpds-color-background-surface-neutral-weak);
+	border-block: 1px solid var(--wpds-color-stroke-surface-neutral);
+	margin: 0;
+	padding-block: var(--wpds-dimension-padding-sm);
+}
+
 .dataviews-view-table tbody + tbody::before {
 	content: "";
 	display: table-row;
@@ -77,42 +85,59 @@
 	min-height: 240px;
 }
 
-// A company's events: one row each, with no headings to read past.
+// A company's events: one row each, in columns that line up, with no headings to read past.
 .sponsor-vetting__events {
-	overflow-x: auto;
+	container-type: inline-size;
 
-	table {
-		border-collapse: collapse;
-		width: 100%;
+	ul {
+		display: grid;
+		grid-template-columns: minmax(120px, 1fr) repeat(3, max-content);
+		list-style: none;
+		margin: 0;
+		padding: 0;
 	}
+}
 
-	th,
-	td {
-		padding: var(--wpds-dimension-padding-md) var(--wpds-dimension-padding-lg);
-		text-align: start;
-		vertical-align: top;
-	}
+.sponsor-vetting__event {
+	align-items: start;
+	column-gap: var(--wpds-dimension-gap-xl);
+	display: grid;
+	grid-column: 1 / -1;
+	grid-template-columns: subgrid;
+	margin: 0;
+	padding: var(--wpds-dimension-padding-md) var(--wpds-dimension-padding-lg);
+	row-gap: var(--wpds-dimension-gap-sm);
 
-	th {
-		font-weight: 500;
-	}
-
-	.sponsor-vetting__event + .sponsor-vetting__event {
+	& + & {
 		border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
 	}
 
 	// The event the company was opened from.
-	.sponsor-vetting__event.is-marked {
+	&.is-marked {
 		background-color: var(--wpds-color-background-surface-brand);
 	}
+}
 
-	// The row under an event that says its website changed belongs to it.
-	.sponsor-vetting__event:has(> td[colspan]) {
-		border-top: 0;
+.sponsor-vetting__event-name {
+	font-weight: 500;
+}
 
-		td {
-			padding-top: 0;
-		}
+.sponsor-vetting__event-date {
+	white-space: nowrap;
+}
+
+.sponsor-vetting__event-notice {
+	grid-column: 1 / -1;
+}
+
+// Where the canvas is too narrow for a row, what's done about an event goes under it.
+@container (max-width: 720px) {
+	.sponsor-vetting__events ul {
+		grid-template-columns: minmax(120px, 1fr) repeat(2, max-content);
+	}
+
+	.sponsor-vetting__event-actions {
+		grid-column: 1 / -1;
 	}
 }
 
@@ -130,7 +155,7 @@
 	}
 
 	> :last-child {
-		flex: 1 1 280px;
+		flex: 1 1 320px;
 		min-width: 0;
 	}
 }

@@ -236,7 +236,8 @@ export function needsCompany( { company, status }: Pick< Sponsorship, 'company' 
 
 /**
  * Gets the one status the list of events shows for a sponsorship: its own once that's decided, and until then what
- * it waits for, which is its company's vetting or, before that, a company.
+ * it waits for, which is its company's vetting or, before that, a company. One that waits for neither is Pending:
+ * its company is vetted, and a vetter has yet to approve it.
  *
  * @param sponsorship The sponsorship.
  * @param company     Its company, if it has one.
@@ -252,7 +253,7 @@ export function getSponsorStatus(
 		return { label: __( 'Needs a company', 'wordcamporg' ), intent: 'informational' };
 	}
 
-	if ( sponsorship.status === 'svs-pending' && company ) {
+	if ( sponsorship.status === 'svs-pending' && company && company.status !== 'sv-compliant' ) {
 		return { label: labels[ company.status ] ?? company.status, intent: STATUS_INTENTS[ company.status ] };
 	}
 
@@ -302,10 +303,13 @@ export function getSponsorshipFields(
 	const days = new Map( sponsorships.map( ( { event } ) => [ getEventHeading( event ), event.date ] ) );
 	const compareEvents = ( a: string, b: string ) =>
 		compareEventDays( days.get( a ) ?? '', days.get( b ) ?? '', today ) || a.localeCompare( b );
-	// What still takes a vetter comes first: a company, then its vetting, then what's decided.
+	// What still takes a vetter comes first: a company, an approval, its company's vetting. Then what's decided.
 	const order = [
 		__( 'Needs a company', 'wordcamporg' ),
-		...COMPANY_STATUSES.map( ( status ) => labels[ status ] ?? status ),
+		labels[ 'svs-pending' ] ?? 'svs-pending',
+		...COMPANY_STATUSES.filter( ( status ) => status !== 'sv-compliant' ).map(
+			( status ) => labels[ status ] ?? status
+		),
 		labels[ 'svs-approved' ] ?? 'svs-approved',
 		__( 'Approved in Good Faith', 'wordcamporg' ),
 		labels[ 'svs-not-approved' ] ?? 'svs-not-approved',

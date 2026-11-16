@@ -224,8 +224,15 @@ describe( 'the list of events', () => {
 				...sponsorship( 7, 'Maple at Soon', 2, 'Camp Soon', '2026-11-23', 'svs-approved' ),
 				good_faith: true,
 			},
+			sponsorship( 8, 'Vetted at Soon', 5, 'Camp Soon', '2026-11-23' ),
 		];
-		const fields = getSponsorshipFields( LABELS, COMPANIES, rows, '2026-11-13' );
+		const vetted: Company = {
+			...COMPANIES[ 0 ],
+			id: 5,
+			title: { raw: 'Vetted', rendered: 'Vetted' },
+			status: 'sv-compliant',
+		};
+		const fields = getSponsorshipFields( LABELS, [ ...COMPANIES, vetted ], rows, '2026-11-13' );
 		const read = ( id: string, item: Sponsorship ) =>
 			fields.find( ( field ) => field.id === id )?.getValue?.( { item } );
 
@@ -237,6 +244,7 @@ describe( 'the list of events', () => {
 			[ 'Harbor & Sons', 'Needs Vetting' ],
 			[ 'Stranger', 'Canceled' ],
 			[ 'Maple Digital', 'Approved in Good Faith' ],
+			[ 'Vetted', 'Pending' ],
 		] );
 	} );
 

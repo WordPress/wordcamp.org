@@ -11,7 +11,7 @@ import { StatusBadge, getName, getSponsorName, needsCompany } from './fields';
 import { COMPANY_PICK_FORM, getCompanyPickField } from './forms';
 import type { CompanyPick } from './forms';
 import { useOpenRecord, useRecords, useStatusLabels, useTask } from './hooks';
-import { useSponsorshipChanges } from './sponsorships';
+import { getStatusChangeLabel, useSponsorshipChanges } from './sponsorships';
 import type { Company, CompanyDetails, SponsorshipDetails } from './types';
 
 /**
@@ -76,7 +76,7 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 	return (
 		<>
 			<CanvasHeader
-				title={ sponsor?.name ?? getSponsorName( sponsorship ) }
+				title={ getSponsorName( sponsorship ) }
 				badge={
 					needsCompany( sponsorship ) ? (
 						<Badge className="sponsor-vetting__status" intent="informational">
@@ -195,11 +195,7 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 							loading={ running === `status-${ id }` }
 							onClick={ () => changes.setStatus( sponsorship, next, labels[ next ] ?? next ) }
 						>
-							{ sprintf(
-								/* translators: %s: Status, like "Canceled". */
-								__( 'Mark as %s', 'wordcamporg' ),
-								labels[ next ] ?? next
-							) }
+							{ getStatusChangeLabel( next, labels ) }
 						</Button>
 					) ) }
 					<Button

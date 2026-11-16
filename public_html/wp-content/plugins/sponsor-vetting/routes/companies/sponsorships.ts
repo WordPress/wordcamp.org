@@ -10,6 +10,38 @@ import type { SponsorshipDetails } from './types';
 type Target = Pick< SponsorshipDetails, 'id' | 'status' | 'approvable' | 'domain' >;
 
 /**
+ * Names the change of a sponsorship to a status, for the control that makes it.
+ *
+ * @param status The status it changes to.
+ * @param labels The statuses' labels, keyed by status.
+ * @return What the change is called.
+ */
+export function getStatusChangeLabel( status: string, labels: Record< string, string > ): string {
+	if ( status === 'svs-canceled' ) {
+		return __( 'Cancel sponsorship', 'wordcamporg' );
+	}
+
+	if ( status === 'svs-pending' ) {
+		return __( 'Reopen sponsorship', 'wordcamporg' );
+	}
+
+	/* translators: %s: Status, like "Not Approved". */
+	return sprintf( __( 'Mark as %s', 'wordcamporg' ), labels[ status ] ?? status );
+}
+
+/**
+ * Says what a change of a sponsorship to a status comes to, where its name doesn't.
+ *
+ * @param status The status it changes to.
+ * @return What it does, if there's something to say.
+ */
+export function getStatusChangeInfo( status: string ): string | undefined {
+	return status === 'svs-canceled'
+		? __( 'The event sees it as Canceled, and its invoices can’t be approved.', 'wordcamporg' )
+		: undefined;
+}
+
+/**
  * Gives what a vetter does to a sponsorship, wherever it's shown.
  *
  * Each change runs as a task of the caller's, named after the change and the sponsorship, so the control that

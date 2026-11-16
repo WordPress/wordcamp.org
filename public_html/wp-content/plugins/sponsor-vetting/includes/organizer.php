@@ -228,7 +228,7 @@ function enqueue_organizer_script(): void {
 	}
 
 	$plugin_dir = dirname( __DIR__ );
-	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks' ) : array();
+	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-notices' ) : array();
 
 	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), $deps, (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
 }
@@ -256,18 +256,24 @@ function register_organizer_routes(): void {
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_organizer_routes' );
 
 /**
- * Renders the vetting box's current contents, for the script that redraws it.
+ * Renders the vetting box's current contents, for the script that redraws it, with the notices the save queued.
+ *
+ * The block editor saves without loading a new screen, so the notices would otherwise wait for the next one.
  *
  * @param \WP_REST_Request $request The request, naming the camp's sponsor.
  * @return array {
- *     @type string $html The box's contents.
+ *     @type string  $html    The box's contents.
+ *     @type array[] $notices The current user's queued notices, as take_notices() returns them.
  * }
  */
 function get_organizer_meta_box( \WP_REST_Request $request ): array {
 	ob_start();
 	render_organizer_meta_box( get_post( (int) $request['id'] ) );
 
-	return array( 'html' => (string) ob_get_clean() );
+	return array(
+		'html'    => (string) ob_get_clean(),
+		'notices' => take_notices(),
+	);
 }
 
 /**

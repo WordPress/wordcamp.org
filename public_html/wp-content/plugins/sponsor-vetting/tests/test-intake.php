@@ -10,6 +10,7 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
+use function WordCamp\Sponsor_Vetting\add_notice;
 use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_company_domains;
 use function WordCamp\Sponsor_Vetting\get_log;
@@ -19,14 +20,13 @@ use function WordCamp\Sponsor_Vetting\normalize_domain;
 use function WordCamp\Sponsor_Vetting\parse_csv;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\set_company_domains;
+use function WordCamp\Sponsor_Vetting\take_notices;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/trait-submits-invoices.php';
-// The plugin loads its notices only in the admin.
-require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 /**
  * Extends `Database_TestCase` for its Central and camp sites.
@@ -488,7 +488,8 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * The route the block editor redraws the vetting box from serves only people who can edit the camp's sponsor.
+	 * The route the block editor redraws the vetting box from serves only people who can edit the camp's sponsor, and
+	 * hands them the notices their save queued, once, since the block editor doesn't load a screen to show them on.
 	 *
 	 * @dataProvider data_vetting_box_route_access
 	 *
@@ -505,7 +506,9 @@ class Test_Intake extends Database_TestCase {
 
 		$response = $this->on_site(
 			self::$year_dot_2018_site_id,
-			static function () use ( $sponsor_id ): \WP_REST_Response {
+			static function () use ( $sponsor_id ): array {
+				add_notice( 'error', 'Vetting wasn’t requested.' );
+
 				$GLOBALS['wp_rest_server'] = new \WP_REST_Server();
 				do_action( 'rest_api_init', $GLOBALS['wp_rest_server'] );
 
@@ -513,12 +516,21 @@ class Test_Intake extends Database_TestCase {
 
 				$GLOBALS['wp_rest_server'] = null;
 
-				return $response;
+				return array( $response, take_notices() );
 			}
+		);
+
+		list( $response, $still_queued ) = $response;
+
+		$notice = array(
+			'type'    => 'error',
+			'message' => 'Vetting wasn’t requested.',
 		);
 
 		$this->assertSame( $status, $response->get_status() );
 		$this->assertSame( $serves_box, str_contains( (string) ( $response->get_data()['html'] ?? '' ), 'Request vetting' ) );
+		$this->assertSame( $serves_box ? array( $notice ) : array(), $response->get_data()['notices'] ?? array() );
+		$this->assertSame( $serves_box ? array() : array( $notice ), $still_queued );
 	}
 
 	/**

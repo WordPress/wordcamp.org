@@ -55,6 +55,7 @@ const COMPLIANCE_REPLY_DAYS = 30;
 const MAILBOX = 'community';
 
 require_once __DIR__ . '/includes/post-types.php';
+require_once __DIR__ . '/includes/notices.php';
 require_once __DIR__ . '/includes/workflow.php';
 require_once __DIR__ . '/includes/domains.php';
 require_once __DIR__ . '/includes/intake.php';

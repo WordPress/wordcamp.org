@@ -7,7 +7,8 @@
 	let latestRedraw = 0;
 
 	/**
-	 * Fetches what the box says now and swaps it in.
+	 * Fetches what the box says now and swaps it in, and shows the notices the save queued, like whether vetting
+	 * was requested.
 	 *
 	 * Not returned to the hook, so the save doesn't wait on it. A failed fetch leaves the box as it was.
 	 *
@@ -28,6 +29,13 @@
 				path: `/sponsor-vetting/v1/vetting-box/${ post.id }`,
 			} )
 			.then( ( response ) => {
+				// Shown whichever answer arrives last: each save's notices come back only once.
+				response.notices.forEach( ( notice ) => {
+					window.wp.data
+						.dispatch( 'core/notices' )
+						.createNotice( notice.type, notice.message );
+				} );
+
 				// Looked up now: the editor moves the meta boxes after this script loads.
 				const box = document.querySelector( '#sv-vetting .inside' );
 

@@ -83,7 +83,7 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 			$mes_id
 			&& 'mes' === get_post_type( $mes_id )
 			&& 'trash' !== get_post_status( $mes_id )
-			&& $domains[ $sponsor_id ] === normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) )
+			&& normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) ) === $domains[ $sponsor_id ]
 		) {
 			$status = 'multi-event';
 		}

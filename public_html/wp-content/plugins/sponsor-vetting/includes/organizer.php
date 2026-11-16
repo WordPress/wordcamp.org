@@ -125,50 +125,47 @@ function get_company_label( int $company_id ): string {
  *
  * The vetting team writes to this contact, and finds the company by its website.
  *
- * @return string[] Labels, as the Sponsor Info box shows them, keyed by meta key.
+ * @return string[] Their meta keys, which the Sponsor Info box also names its fields by.
  */
 function get_required_contact_fields(): array {
 	return array(
-		'_wcpt_sponsor_company_name'  => __( 'Company Name', 'wordcamporg' ),
-		'_wcpt_sponsor_website'       => __( 'Website', 'wordcamporg' ),
-		'_wcpt_sponsor_first_name'    => __( 'First Name', 'wordcamporg' ),
-		'_wcpt_sponsor_last_name'     => __( 'Last Name', 'wordcamporg' ),
-		'_wcpt_sponsor_email_address' => __( 'Email Address', 'wordcamporg' ),
-		'_wcpt_sponsor_phone_number'  => __( 'Phone Number', 'wordcamporg' ),
+		'_wcpt_sponsor_company_name',
+		'_wcpt_sponsor_website',
+		'_wcpt_sponsor_first_name',
+		'_wcpt_sponsor_last_name',
+		'_wcpt_sponsor_email_address',
+		'_wcpt_sponsor_phone_number',
 	);
 }
 
 /**
- * Gets the Contact Information fields a camp's sponsor is missing before vetting can be requested.
+ * Whether a camp's sponsor is missing Contact Information that vetting needs.
  *
  * A website the vetting team can't get a domain from counts as missing.
  *
  * @param int $sponsor_id The camp's sponsor.
- * @return string[] The missing fields' labels.
+ * @return bool
  */
-function get_missing_contact_fields( int $sponsor_id ): array {
-	$missing = array();
-
-	foreach ( get_required_contact_fields() as $meta_key => $label ) {
+function is_missing_contact_info( int $sponsor_id ): bool {
+	foreach ( get_required_contact_fields() as $meta_key ) {
 		$value = trim( (string) get_post_meta( $sponsor_id, $meta_key, true ) );
+		$valid = '_wcpt_sponsor_website' === $meta_key ? (bool) normalize_domain( $value ) : '' !== $value;
 
-		if ( '_wcpt_sponsor_website' === $meta_key ? ! normalize_domain( $value ) : '' === $value ) {
-			$missing[] = $label;
+		if ( ! $valid ) {
+			return true;
 		}
 	}
 
-	return $missing;
+	return false;
 }
 
 /**
- * Tells organizers which Contact Information fields to fill in before requesting vetting.
+ * Tells organizers to fill in the Contact Information before requesting vetting.
  *
- * @param string[] $missing The missing fields' labels.
  * @return string
  */
-function get_missing_contact_message( array $missing ): string {
-	/* translators: %l: List of field names. */
-	return wp_sprintf( __( 'Fill in the sponsor’s %l under Contact Information before requesting vetting.', 'wordcamporg' ), $missing );
+function get_missing_contact_message(): string {
+	return __( 'Fill in the sponsor’s contact information before requesting vetting.', 'wordcamporg' );
 }
 
 /**
@@ -200,15 +197,22 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 		return;
 	}
 
-	$missing = get_missing_contact_fields( $post->ID );
-
-	if ( $missing ) {
-		echo '<p class="description">' . esc_html( get_missing_contact_message( $missing ) ) . '</p>';
+	if ( is_missing_contact_info( $post->ID ) ) {
+		echo '<p class="description">' . esc_html( get_missing_contact_message() ) . '</p>';
 	}
 
 	wp_nonce_field( 'sv_request_vetting_' . $post->ID, 'sv_request_vetting_nonce', false );
 	?>
-	<p><button type="button" class="button"><?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?></button></p>
+	<p>
+		<button
+			type="button"
+			class="button"
+			data-required-fields="<?php echo esc_attr( implode( ' ', get_required_contact_fields() ) ); ?>"
+			data-missing-message="<?php echo esc_attr( get_missing_contact_message() ); ?>"
+		>
+			<?php esc_html_e( 'Request vetting', 'wordcamporg' ); ?>
+		</button>
+	</p>
 	<p class="description"><?php esc_html_e( 'The Community Team checks every sponsor follows the WordPress trademark policy and the GPL. You don’t need an invoice to ask.', 'wordcamporg' ); ?></p>
 	<?php
 }
@@ -333,10 +337,8 @@ function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
 		return;
 	}
 
-	$missing = get_missing_contact_fields( $post_id );
-
-	if ( $missing ) {
-		add_notice( 'error', get_missing_contact_message( $missing ) );
+	if ( is_missing_contact_info( $post_id ) ) {
+		add_notice( 'error', get_missing_contact_message() );
 		return;
 	}
 

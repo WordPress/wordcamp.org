@@ -48,16 +48,44 @@
 	}
 
 	/**
+	 * Whether a Contact Information field vetting needs is empty on the page.
+	 *
+	 * A field that isn't on the page is left to the server, which checks what's saved.
+	 *
+	 * @param {HTMLButtonElement} button The Request vetting button, naming the fields.
+	 * @return {boolean} Whether one is empty.
+	 */
+	function isMissingContactInfo( button ) {
+		return button.dataset.requiredFields.split( ' ' ).some( ( name ) => {
+			const input = document.getElementsByName( name )[ 0 ];
+
+			return input && '' === input.value.trim();
+		} );
+	}
+
+	/**
 	 * Saves the sponsor with the request, so the request carries what was just entered.
 	 *
-	 * A field stands in for a submit button, which pressing Enter in any other field could trigger.
+	 * In the block editor, missing Contact Information is caught before saving, so the organizer hears about it as
+	 * they click. A field stands in for a submit button, which pressing Enter in any other field could trigger.
 	 *
 	 * @param {MouseEvent} event The click.
 	 */
 	function requestVetting( event ) {
 		const button = event.target.closest( '#sv-vetting .inside button' );
+		const isBlockEditor = document.body.classList.contains( 'block-editor-page' );
 
 		if ( ! button ) {
+			return;
+		}
+
+		if ( isBlockEditor && isMissingContactInfo( button ) ) {
+			// One ID, so clicking again doesn't stack copies.
+			window.wp.data
+				.dispatch( 'core/notices' )
+				.createErrorNotice( button.dataset.missingMessage, {
+					id: 'sv-missing-contact-info',
+				} );
 			return;
 		}
 
@@ -70,7 +98,7 @@
 		button.after( field );
 		button.disabled = true;
 
-		if ( ! document.body.classList.contains( 'block-editor-page' ) ) {
+		if ( ! isBlockEditor ) {
 			// Vetting can be requested before the details an invoice needs are known.
 			button.form.noValidate = true;
 			button.form.requestSubmit();

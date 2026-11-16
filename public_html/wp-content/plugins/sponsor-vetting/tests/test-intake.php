@@ -333,23 +333,45 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * Submitting a sponsor invoice requests vetting for its sponsor.
+	 * Submitting a sponsor invoice requests vetting for its sponsor. Without a website, or with an email address the
+	 * vetting team can't write to, the invoice stays a draft and asks for nothing, as it does for other missing info.
+	 *
+	 * @dataProvider data_submitting_an_invoice_requests_vetting
+	 *
+	 * @param string $website   The sponsor's website.
+	 * @param string $email     The contact's email address.
+	 * @param bool   $submitted Whether the invoice is submitted, requesting vetting.
 	 */
-	public function test_submitting_an_invoice_requests_vetting(): void {
-		$sponsor_id = $this->create_camp_sponsor( 'https://acme.example', $this->get_invoiceable_sponsor_meta() );
+	public function test_submitting_an_invoice_requests_vetting( string $website, string $email, bool $submitted ): void {
+		$sponsor_id = $this->create_camp_sponsor(
+			$website,
+			array( '_wcpt_sponsor_email_address' => $email ) + $this->get_invoiceable_sponsor_meta()
+		);
 
-		$pointer = $this->on_site(
+		list( $status, $pointer ) = $this->on_site(
 			self::$year_dot_2018_site_id,
-			function () use ( $sponsor_id ): string {
+			function () use ( $sponsor_id ): array {
 				$invoice_id = $this->invoice_sponsor( $sponsor_id, 'wcbsi_submitted' );
 
-				$this->assertSame( 'wcbsi_submitted', get_post_status( $invoice_id ) );
-
-				return (string) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
+				return array( get_post_status( $invoice_id ), (string) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true ) );
 			}
 		);
 
-		$this->assertNotSame( '', $pointer );
+		$this->assertSame( $submitted ? 'wcbsi_submitted' : 'draft', $status );
+		$this->assertSame( $submitted, '' !== $pointer );
+	}
+
+	/**
+	 * Sponsors' websites and email addresses, and whether their invoice is submitted.
+	 *
+	 * @return array[]
+	 */
+	public function data_submitting_an_invoice_requests_vetting(): array {
+		return array(
+			'complete'                       => array( 'https://acme.example', 'pat@acme.example', true ),
+			'no website'                     => array( '', 'pat@acme.example', false ),
+			'an email with no dot in domain' => array( 'https://acme.example', 'pat@acme', false ),
+		);
 	}
 
 	/**

@@ -206,13 +206,16 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 	$data = array();
 
 	$field_names = array(
-		'company_name', 'first_name', 'last_name', 'email_address', 'phone_number',
+		'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
 		'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 	);
 
-	// These use dashes instead of underscores because the loop below converts to dashes.
+	/*
+	 * These use dashes instead of underscores because the loop below converts to dashes. The website is here because
+	 * submitting the invoice requests vetting, which finds the sponsor's company by it.
+	 */
 	$required_fields = array(
-		'company-name', 'first-name', 'last-name', 'email-address', 'phone-number',
+		'company-name', 'website', 'first-name', 'last-name', 'email-address', 'phone-number',
 		'street-address1', 'city', 'state', 'zip-code', 'country',
 	);
 
@@ -247,7 +250,9 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 		$data[ $sponsor->ID ]['data_attributes']['amount']   = $meta_values['_wcb_sponsor_amount'][0] ?? '';
 		$data[ $sponsor->ID ]['data_attributes']['currency'] = $meta_values['_wcb_sponsor_currency'][0] ?? '';
 
-		$complete = required_fields_complete( $data[ $sponsor->ID ]['data_attributes'], $required_fields );
+		// The vetting team and the invoice both need an email address that can be written to.
+		$complete = required_fields_complete( $data[ $sponsor->ID ]['data_attributes'], $required_fields )
+			&& is_email( $data[ $sponsor->ID ]['data_attributes']['email-address'] );
 		$data[ $sponsor->ID ]['data_attributes']['required-fields-complete'] = $complete ? 'true' : 'false';
 	}
 

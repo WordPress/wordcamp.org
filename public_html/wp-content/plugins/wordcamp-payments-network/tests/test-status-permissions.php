@@ -338,6 +338,7 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 
 		$fields = array(
 			'company_name'    => 'ACME Corp',
+			'website'         => 'https://acme.example',
 			'first_name'      => 'Jane',
 			'last_name'       => 'Doe',
 			'email_address'   => 'jane@example.org',

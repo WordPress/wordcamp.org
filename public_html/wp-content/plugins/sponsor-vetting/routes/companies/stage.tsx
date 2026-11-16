@@ -4,18 +4,18 @@ import type { View } from '@wordpress/dataviews';
 import { useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { Link } from '@wordpress/route';
-import { Button, Notice, SwitchControl } from '@wordpress/ui';
+import { Button, Notice, Stack, SwitchControl } from '@wordpress/ui';
 import type { AnchorHTMLAttributes, ComponentType, ReactNode } from 'react';
 import { useRecordActions } from './actions';
 import { AddCompany } from './add-company';
 import { COMPANY, SPONSORSHIP } from './entities';
 import { getErrorMessage, useCompanyList, useOpenRecord, useSponsorshipList } from './hooks';
+import { LayoutMenu } from './layout-menu';
 import './style.scss';
 import type { Company, Sponsorship } from './types';
 import {
 	COMPANY_LAYOUTS,
-	GROUP_BY_EVENT,
-	GROUP_BY_STATUS,
+	COMPANY_LAYOUT_CHOICES,
 	SPONSORSHIP_LAYOUTS,
 	needsCompanyOnly,
 	toggleNeedsCompany,
@@ -69,7 +69,7 @@ function LoadError( { title, error }: { title: string; error: unknown } ) {
 }
 
 /**
- * A switch beside a list's search. DataViews groups and filters rows, but has no control this plain for either.
+ * A switch beside a list's search. DataViews filters rows, but has no control this plain for it.
  *
  * @param props          Props.
  * @param props.label    What it turns on.
@@ -145,19 +145,30 @@ function Companies() {
 			paginationInfo={ paginationInfo }
 			defaultLayouts={ COMPANY_LAYOUTS }
 			getItemId={ ( item ) => String( item.id ) }
-			searchLabel={ __( 'Search companies', 'wordcamporg' ) }
-			header={
-				<ViewSwitch
-					label={ __( 'Group by status', 'wordcamporg' ) }
-					checked={ view.groupBy?.field === GROUP_BY_STATUS.field }
-					onChange={ ( isOn ) =>
-						updateView( { ...view, page: 1, groupBy: isOn ? GROUP_BY_STATUS : undefined } )
-					}
-				/>
-			}
 			onClickItem={ ( item ) => openCompany( item.id ) }
 			{ ...selection }
-		/>
+		>
+			{ /* DataViews' own toolbar and parts, but with the Layout menu that knows the grouping. */ }
+			<Stack
+				direction="row"
+				align="top"
+				justify="space-between"
+				gap="xs"
+				className="dataviews__view-actions"
+			>
+				<Stack direction="row" justify="start" gap="sm" className="dataviews__search">
+					<DataViews.Search label={ __( 'Search companies', 'wordcamporg' ) } />
+					<DataViews.FiltersToggle />
+				</Stack>
+				<Stack direction="row" gap="xs" style={ { flexShrink: 0 } }>
+					<LayoutMenu view={ view } onChangeView={ updateView } choices={ COMPANY_LAYOUT_CHOICES } />
+					<DataViews.ViewConfig />
+				</Stack>
+			</Stack>
+			<DataViews.FiltersToggled className="dataviews-filters__container" />
+			<DataViews.Layout />
+			<DataViews.Footer />
+		</DataViews>
 	);
 }
 
@@ -193,21 +204,12 @@ function Events() {
 			getItemId={ ( item ) => String( item.id ) }
 			searchLabel={ __( 'Search sponsorships', 'wordcamporg' ) }
 			header={
-				<>
-					<ViewSwitch
-						/* translators: %d: Number of sponsorships. */
-						label={ sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), unlinked ) }
-						checked={ needsCompanyOnly( view ) }
-						onChange={ ( isOn ) => updateView( toggleNeedsCompany( view, isOn ) ) }
-					/>
-					<ViewSwitch
-						label={ __( 'Group by event', 'wordcamporg' ) }
-						checked={ view.groupBy?.field === GROUP_BY_EVENT.field }
-						onChange={ ( isOn ) =>
-							updateView( { ...view, page: 1, groupBy: isOn ? GROUP_BY_EVENT : undefined } )
-						}
-					/>
-				</>
+				<ViewSwitch
+					/* translators: %d: Number of sponsorships. */
+					label={ sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), unlinked ) }
+					checked={ needsCompanyOnly( view ) }
+					onChange={ ( isOn ) => updateView( toggleNeedsCompany( view, isOn ) ) }
+				/>
 			}
 			onClickItem={ ( item ) => openSponsorship( item.id ) }
 			{ ...selection }

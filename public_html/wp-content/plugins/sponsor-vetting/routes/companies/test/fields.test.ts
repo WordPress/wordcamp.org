@@ -3,7 +3,16 @@ import { filterSortAndPaginate } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
 import { getCompanyFields, getSponsorshipFields } from '../fields';
 import type { Company, Sponsorship } from '../types';
-import { COMPANY_VIEW, GROUP_BY_STATUS, SPONSORSHIP_VIEW, toggleNeedsCompany, withoutTrash } from '../view';
+import {
+	COMPANY_LAYOUT_CHOICES,
+	COMPANY_VIEW,
+	GROUP_BY_STATUS,
+	SPONSORSHIP_VIEW,
+	applyLayoutChoice,
+	getLayoutChoice,
+	toggleNeedsCompany,
+	withoutTrash,
+} from '../view';
 
 const LABELS = {
 	'sv-needs-vetting': 'Needs Vetting',
@@ -144,6 +153,27 @@ describe( 'the company list', () => {
 			'Acme Hosting',
 			'Harbor & Sons',
 		] );
+	} );
+
+	it( 'changes layout from the menu: grouping keeps the table’s columns, the list starts from its own', () => {
+		const [ table, grouped, list ] = COMPANY_LAYOUT_CHOICES;
+		const narrowed: View = { ...COMPANY_VIEW, fields: [ 'status' ], page: 3 };
+		const byStatus = applyLayoutChoice( narrowed, grouped );
+
+		expect( getLayoutChoice( COMPANY_VIEW, COMPANY_LAYOUT_CHOICES ) ).toBe( table );
+		expect( byStatus ).toMatchObject( {
+			type: 'table',
+			fields: [ 'status' ],
+			groupBy: GROUP_BY_STATUS,
+			page: 1,
+		} );
+		expect( getLayoutChoice( byStatus, COMPANY_LAYOUT_CHOICES ) ).toBe( grouped );
+
+		const asList = applyLayoutChoice( byStatus, list );
+
+		expect( asList ).toMatchObject( { type: 'list', fields: list.fields } );
+		expect( asList.groupBy ).toBeUndefined();
+		expect( getLayoutChoice( asList, COMPANY_LAYOUT_CHOICES ) ).toBe( list );
 	} );
 
 	it( 'heads a group with the status’s label', () => {

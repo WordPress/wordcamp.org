@@ -8,6 +8,29 @@ export const COMPANY_LAYOUTS = {
 	list: { fields: [ 'status', 'follow_up', 'next_event' ] },
 };
 
+/* Lists the companies under a heading per status, in the order of the pipeline. */
+export const GROUP_BY_STATUS: NonNullable< View[ 'groupBy' ] > = {
+	field: 'status',
+	direction: 'asc',
+	showLabel: false,
+};
+
+/* A choice of the Layout menu. DataViews' own menu has one choice per layout, and the companies have two
+   tables. */
+export type LayoutChoice = {
+	id: 'table' | 'grouped' | 'list';
+	type: 'table' | 'list';
+	fields: string[];
+	groupBy?: NonNullable< View[ 'groupBy' ] >;
+};
+
+/* The layouts of the list of companies, in the order of the menu. */
+export const COMPANY_LAYOUT_CHOICES: LayoutChoice[] = [
+	{ id: 'table', type: 'table', ...COMPANY_LAYOUTS.table },
+	{ id: 'grouped', type: 'table', ...COMPANY_LAYOUTS.table, groupBy: GROUP_BY_STATUS },
+	{ id: 'list', type: 'list', ...COMPANY_LAYOUTS.list },
+];
+
 /* How the list of companies looks until a vetter changes it. Their changes are kept with their preferences. */
 export const COMPANY_VIEW: View = {
 	type: 'table',
@@ -19,13 +42,6 @@ export const COMPANY_VIEW: View = {
 	descriptionField: 'domains',
 	sort: { field: 'next_event', direction: 'asc' },
 	...COMPANY_LAYOUTS.table,
-};
-
-/* Lists the companies under a heading per status, in the order of the pipeline. */
-export const GROUP_BY_STATUS: NonNullable< View[ 'groupBy' ] > = {
-	field: 'status',
-	direction: 'asc',
-	showLabel: false,
 };
 
 /* Lists the sponsorships under a heading per event: the events still to come first, soonest first. */
@@ -53,6 +69,42 @@ export const SPONSORSHIP_VIEW: View = {
 	groupBy: GROUP_BY_EVENT,
 	...SPONSORSHIP_LAYOUTS.table,
 };
+
+/**
+ * Tells which choice of the Layout menu a view shows.
+ *
+ * @param view    The view.
+ * @param choices The menu's choices.
+ * @return The choice with the view's layout and grouping, or the plain one of that layout.
+ */
+export function getLayoutChoice( view: View, choices: LayoutChoice[] ): LayoutChoice | undefined {
+	const sameLayout = choices.filter( ( { type } ) => type === view.type );
+
+	return sameLayout.find( ( { groupBy } ) => groupBy?.field === view.groupBy?.field ) ?? sameLayout[ 0 ];
+}
+
+/**
+ * Changes a view to a choice of the Layout menu.
+ *
+ * Within a layout only the grouping changes, so the vetter's columns stay. Another layout starts from its own
+ * fields and settings, as DataViews' own menu has it.
+ *
+ * @param view   The view.
+ * @param choice The choice.
+ * @return The changed view, on its first page.
+ */
+export function applyLayoutChoice( view: View, choice: LayoutChoice ): View {
+	const { type, fields, groupBy } = choice;
+
+	if ( type === view.type ) {
+		return { ...view, page: 1, groupBy };
+	}
+
+	const next: Partial< View > = { ...view };
+	delete next.layout;
+
+	return { ...next, type, fields, groupBy, page: 1 } as View;
+}
 
 /* The filter that leaves only the sponsorships waiting for a company. */
 export const NEEDS_COMPANY = { field: 'linked', operator: 'is', value: 'no' } as const;

@@ -212,11 +212,13 @@ function get_contact_info_problem( int $sponsor_id ): string {
 }
 
 /**
- * Adds the vetting box to a camp's sponsor.
+ * Adds the vetting box to a camp's sponsor, first among the sidebar's boxes so organizers see it.
+ *
+ * Organizers who rearranged the boxes keep their order.
  */
 function add_organizer_meta_box(): void {
 	if ( ! is_central() ) {
-		add_meta_box( 'sv-vetting', __( 'Sponsor Vetting', 'wordcamporg' ), __NAMESPACE__ . '\render_organizer_meta_box', 'wcb_sponsor', 'side' );
+		add_meta_box( 'sv-vetting', __( 'Sponsor Vetting', 'wordcamporg' ), __NAMESPACE__ . '\render_organizer_meta_box', 'wcb_sponsor', 'side', 'high' );
 	}
 }
 add_action( 'add_meta_boxes_wcb_sponsor', __NAMESPACE__ . '\add_organizer_meta_box' );

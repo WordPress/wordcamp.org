@@ -48,19 +48,39 @@
 	}
 
 	/**
-	 * Whether a Contact Information field vetting needs is empty on the page.
+	 * Finds the first Contact Information field vetting needs that's empty on the page.
 	 *
 	 * A field that isn't on the page is left to the server, which checks what's saved.
 	 *
 	 * @param {HTMLButtonElement} button The Request vetting button, naming the fields.
-	 * @return {boolean} Whether one is empty.
+	 * @return {HTMLInputElement|undefined} The empty field, if there is one.
 	 */
-	function isMissingContactInfo( button ) {
-		return button.dataset.requiredFields.split( ' ' ).some( ( name ) => {
-			const input = document.getElementsByName( name )[ 0 ];
+	function findEmptyContactField( button ) {
+		return button.dataset.requiredFields
+			.split( ' ' )
+			.map( ( name ) => document.getElementsByName( name )[ 0 ] )
+			.find( ( input ) => input && '' === input.value.trim() );
+	}
 
-			return input && '' === input.value.trim();
-		} );
+	/**
+	 * Opens the block editor's meta box pane and the Sponsor Info box, and puts the cursor in the empty field.
+	 *
+	 * @param {HTMLInputElement} input The empty field.
+	 */
+	function showContactField( input ) {
+		window.wp.data
+			.dispatch( 'core/preferences' )
+			.set( 'core/edit-post', 'metaBoxesMainIsOpen', true );
+
+		const box = input.closest( '.postbox' );
+
+		// Core's own toggle, so the box's open state is saved as when organizers click it.
+		if ( box?.classList.contains( 'closed' ) ) {
+			box.querySelector( '.handlediv' )?.click();
+		}
+
+		// After the pane has rendered open.
+		window.requestAnimationFrame( () => input.focus() );
 	}
 
 	/**
@@ -79,13 +99,16 @@
 			return;
 		}
 
-		if ( isBlockEditor && isMissingContactInfo( button ) ) {
+		const emptyField = isBlockEditor && findEmptyContactField( button );
+
+		if ( emptyField ) {
 			// One ID, so clicking again doesn't stack copies.
 			window.wp.data
 				.dispatch( 'core/notices' )
 				.createErrorNotice( button.dataset.missingMessage, {
 					id: 'sv-missing-contact-info',
 				} );
+			showContactField( emptyField );
 			return;
 		}
 

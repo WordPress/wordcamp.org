@@ -232,7 +232,7 @@ function enqueue_organizer_script(): void {
 	}
 
 	$plugin_dir = dirname( __DIR__ );
-	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-notices' ) : array();
+	$deps       = $screen->is_block_editor() ? array( 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-notices', 'wp-preferences' ) : array();
 
 	wp_enqueue_script( 'sv-organizer', plugins_url( 'js/organizer.js', $plugin_dir . '/bootstrap.php' ), $deps, (string) filemtime( $plugin_dir . '/js/organizer.js' ), true );
 }

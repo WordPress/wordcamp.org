@@ -596,8 +596,9 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * The sponsor list reminds organizers to request vetting while a sponsor hasn't been submitted, counting only
-	 * those, and says nothing once every sponsor has been.
+	 * The sponsor list reminds organizers to request vetting while a published sponsor hasn't been submitted,
+	 * counting only those, and says nothing once every one has been. Drafts, like the ones the Call for Sponsors form
+	 * makes of every application, don't count.
 	 *
 	 * @dataProvider data_vetting_reminder
 	 *
@@ -607,7 +608,17 @@ class Test_Intake extends Database_TestCase {
 	public function test_vetting_reminder( bool $all_requested, string $expected ): void {
 		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
 		$other_id     = $this->create_camp_sponsor( 'https://other.example' );
+		$applicant_id = $this->create_camp_sponsor( 'https://applicant.example' );
 
+		$this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): int => wp_update_post(
+				array(
+					'ID'          => $applicant_id,
+					'post_status' => 'draft',
+				)
+			)
+		);
 		request_vetting( self::$year_dot_2018_site_id, $requested_id );
 
 		if ( $all_requested ) {

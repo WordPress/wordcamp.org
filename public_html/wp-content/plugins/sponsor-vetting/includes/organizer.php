@@ -479,14 +479,15 @@ function filter_sponsors_by_vetting( \WP_Query $query ): void {
 /**
  * Reminds organizers to request vetting for the camp's sponsors that haven't been submitted yet.
  *
- * Counts every sponsor but those in the trash, drafts included, since vetting can be requested before a sponsor is
- * published. Links to them through the vetting filter, unless the list already shows only them.
+ * Counts only published and scheduled sponsors, the ones the camp has taken on: the Call for Sponsors form makes a
+ * draft of every application, accepted or not. Links to the sponsors not submitted through the vetting filter,
+ * unless the list already shows only them.
  */
 function render_vetting_reminder(): void {
 	$sponsor_ids = get_posts(
 		array(
 			'post_type'      => 'wcb_sponsor',
-			'post_status'    => 'any',
+			'post_status'    => array( 'publish', 'future' ),
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,

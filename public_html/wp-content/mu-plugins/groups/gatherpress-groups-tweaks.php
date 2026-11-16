@@ -274,6 +274,28 @@ function restrict_block_locking( array $settings ): array {
 add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\restrict_block_locking' );
 
 /**
+ * Keep the theme's locked blocks visible on the site.
+ *
+ * The block "Hide" menu ignores the lock, and its "Omit from published
+ * content" leaves a locked block, such as the shared header, out of the page
+ * just as removing it would (#2368). Gutenberg offers it to anyone who can
+ * edit the block, with no setting to turn it off, so a locked block's
+ * visibility is dropped where it renders instead. This also covers a template
+ * saved hidden before this, or through the REST API.
+ *
+ * @param array $parsed_block Block about to be rendered.
+ * @return array
+ */
+function keep_locked_blocks_visible( array $parsed_block ): array {
+	if ( ! empty( $parsed_block['attrs']['lock']['remove'] ) ) {
+		unset( $parsed_block['attrs']['metadata']['blockVisibility'] );
+	}
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', __NAMESPACE__ . '\keep_locked_blocks_visible' );
+
+/**
  * Reject saves to the shared header and footer parts from anyone but network
  * admins.
  *
@@ -289,8 +311,9 @@ function protect_locked_template_parts( $changes, $request ) {
 		return $changes;
 	}
 
-	// A new part only gets its slug from the request, after this filter.
-	$slug = $changes->post_name ?? $request['slug'] ?? '';
+	// A new part only gets its slug from the request, after this filter, and
+	// `wp_insert_post()` sanitizes it then, so `HEADER` would save as `header`.
+	$slug = sanitize_title( $changes->post_name ?? $request['slug'] ?? '' );
 
 	if ( in_array( $slug, LOCKED_TEMPLATE_PARTS, true ) ) {
 		return new \WP_Error(

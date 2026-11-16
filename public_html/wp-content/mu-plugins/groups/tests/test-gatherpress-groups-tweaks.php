@@ -2109,6 +2109,9 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
 	 * A group site that ends up on another theme anyway is switched back.
+	 *
+	 * Core fires `after_switch_theme` from `check_theme_switched()` on the
+	 * load after a switch, so that's what runs the backstop here.
 	 */
 	public function test_group_site_switched_back_to_groups_site() {
 		$site_id = self::factory()->blog->create(
@@ -2123,7 +2126,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		try {
 			switch_theme( 'twentytwentyfour' );
-			\WordCamp\Groups\GatherPress_Tweaks\revert_group_site_theme();
+			check_theme_switched();
 
 			$this->assertSame( 'groups-site', get_stylesheet() );
 		} finally {
@@ -2139,7 +2142,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		try {
 			switch_theme( 'twentytwentyfour' );
-			\WordCamp\Groups\GatherPress_Tweaks\revert_group_site_theme();
+			check_theme_switched();
 
 			$this->assertSame( 'twentytwentyfour', get_stylesheet() );
 		} finally {
@@ -2170,6 +2173,23 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->assertTrue( $filtered['canLockBlocks'] );
 		$this->assertTrue( $filtered['codeEditingEnabled'] );
+	}
+
+	/**
+	 * A locked block hidden with "Omit from published content" still renders,
+	 * at the top of a template or inside another block; an unlocked one stays
+	 * hidden.
+	 */
+	public function test_locked_blocks_ignore_hide() {
+		$locked   = '<!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Locked</p><!-- /wp:paragraph -->';
+		$nested   = '<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Nested</p><!-- /wp:paragraph --></div><!-- /wp:group -->';
+		$unlocked = '<!-- wp:paragraph {"metadata":{"blockVisibility":false}} --><p>Unlocked</p><!-- /wp:paragraph -->';
+
+		$html = do_blocks( $locked . $nested . $unlocked );
+
+		$this->assertStringContainsString( 'Locked', $html );
+		$this->assertStringContainsString( 'Nested', $html );
+		$this->assertStringNotContainsString( 'Unlocked', $html );
 	}
 
 	/**
@@ -2231,11 +2251,17 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$this->assertSame( 'groups_locked_template_part', $response->get_data()['code'], $slug );
 		}
 
-		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
-		$request->set_param( 'slug', 'header' );
-		$request->set_param( 'content', '<!-- wp:site-title /-->' );
+		// Core sanitizes a new part's slug when it saves it, so `HEADER` and
+		// `Footer` would replace the shared parts too.
+		foreach ( array( 'header', 'HEADER', 'Footer' ) as $slug ) {
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
+			$request->set_param( 'slug', $slug );
+			$request->set_param( 'content', '<!-- wp:site-title /-->' );
 
-		$this->assertSame( 403, rest_do_request( $request )->get_status(), 'new header' );
+			$this->assertSame( 403, rest_do_request( $request )->get_status(), "new $slug" );
+		}
+
+		$this->assertSame( 'theme', get_block_template( 'groups-site//footer', 'wp_template_part' )->source );
 
 		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
 		$request->set_param( 'slug', 'sidebar' );

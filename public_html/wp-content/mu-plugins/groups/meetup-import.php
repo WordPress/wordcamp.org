@@ -201,6 +201,16 @@ const PENDING_PUBLISH_META = '_wporg_meetup_pending_publish';
 const MEMBERS_OPTION = 'wporg_meetup_imported_member_ids';
 
 /**
+ * The Meetup membership statuses that count as being in a group.
+ *
+ * These add up to the member count on the group's Meetup page. Asked with no
+ * status, Meetup also lists memberships it doesn't count there, such as
+ * unfinished sign-ups, so the import's total came out higher (#2375). See
+ * https://www.meetup.com/api/schema/#MembershipStatus.
+ */
+const MEMBER_STATUSES = array( 'ACTIVE', 'LEADER' );
+
+/**
  * Site option listing the users an import has added to the group, or found
  * already in it, whichever way it got to them: as a member, an organizer, or
  * an event host.
@@ -2085,7 +2095,7 @@ function fetch_group_members( string $urlname ) {
 			return $client;
 		}
 
-		$members = $client->get_group_members( $urlname );
+		$members = $client->get_group_members( $urlname, member_query_args() );
 	}
 
 	if ( is_wp_error( $members ) ) {
@@ -2105,6 +2115,22 @@ function fetch_group_members( string $urlname ) {
 	);
 
 	return $members;
+}
+
+/**
+ * The arguments `fetch_group_members()` passes to `Meetup_Client::get_group_members()`.
+ *
+ * The client copies each filter into the `memberships` query as `key: value`,
+ * and `status` takes a list.
+ *
+ * @return array
+ */
+function member_query_args(): array {
+	return array(
+		'filters' => array(
+			'status' => '[' . implode( ', ', MEMBER_STATUSES ) . ']',
+		),
+	);
 }
 
 /**

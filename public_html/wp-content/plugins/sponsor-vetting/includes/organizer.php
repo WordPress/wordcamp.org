@@ -121,6 +121,57 @@ function get_company_label( int $company_id ): string {
 }
 
 /**
+ * The Contact Information fields a camp's sponsor needs before vetting can be requested.
+ *
+ * The vetting team writes to this contact, and finds the company by its website.
+ *
+ * @return string[] Labels, as the Sponsor Info box shows them, keyed by meta key.
+ */
+function get_required_contact_fields(): array {
+	return array(
+		'_wcpt_sponsor_company_name'  => __( 'Company Name', 'wordcamporg' ),
+		'_wcpt_sponsor_website'       => __( 'Website', 'wordcamporg' ),
+		'_wcpt_sponsor_first_name'    => __( 'First Name', 'wordcamporg' ),
+		'_wcpt_sponsor_last_name'     => __( 'Last Name', 'wordcamporg' ),
+		'_wcpt_sponsor_email_address' => __( 'Email Address', 'wordcamporg' ),
+		'_wcpt_sponsor_phone_number'  => __( 'Phone Number', 'wordcamporg' ),
+	);
+}
+
+/**
+ * Gets the Contact Information fields a camp's sponsor is missing before vetting can be requested.
+ *
+ * A website the vetting team can't get a domain from counts as missing.
+ *
+ * @param int $sponsor_id The camp's sponsor.
+ * @return string[] The missing fields' labels.
+ */
+function get_missing_contact_fields( int $sponsor_id ): array {
+	$missing = array();
+
+	foreach ( get_required_contact_fields() as $meta_key => $label ) {
+		$value = trim( (string) get_post_meta( $sponsor_id, $meta_key, true ) );
+
+		if ( '_wcpt_sponsor_website' === $meta_key ? ! normalize_domain( $value ) : '' === $value ) {
+			$missing[] = $label;
+		}
+	}
+
+	return $missing;
+}
+
+/**
+ * Tells organizers which Contact Information fields to fill in before requesting vetting.
+ *
+ * @param string[] $missing The missing fields' labels.
+ * @return string
+ */
+function get_missing_contact_message( array $missing ): string {
+	/* translators: %l: List of field names. */
+	return wp_sprintf( __( 'Fill in the sponsor’s %l under Contact Information before requesting vetting.', 'wordcamporg' ), $missing );
+}
+
+/**
  * Adds the vetting box to a camp's sponsor.
  */
 function add_organizer_meta_box(): void {
@@ -149,8 +200,10 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 		return;
 	}
 
-	if ( ! normalize_domain( (string) get_post_meta( $post->ID, '_wcpt_sponsor_website', true ) ) ) {
-		echo '<p class="description">' . esc_html__( 'Add the sponsor’s website, so the vetting team can find their company.', 'wordcamporg' ) . '</p>';
+	$missing = get_missing_contact_fields( $post->ID );
+
+	if ( $missing ) {
+		echo '<p class="description">' . esc_html( get_missing_contact_message( $missing ) ) . '</p>';
 	}
 
 	wp_nonce_field( 'sv_request_vetting_' . $post->ID, 'sv_request_vetting_nonce', false );
@@ -271,6 +324,13 @@ function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
 		|| ! wp_verify_nonce( sanitize_key( $_POST['sv_request_vetting_nonce'] ), 'sv_request_vetting_' . $post_id )
 		|| ! current_user_can( 'edit_post', $post_id )
 	) {
+		return;
+	}
+
+	$missing = get_missing_contact_fields( $post_id );
+
+	if ( $missing ) {
+		add_notice( 'error', get_missing_contact_message( $missing ) );
 		return;
 	}
 

@@ -48,40 +48,43 @@ $tumblr_query = $wporg_query(
 // Networks that take no separate URL field want it inside the text.
 $text_including_url = $wporg_query( array( 'text' => $share_text . ' ' . $share_url ) );
 
+/* translators: %s: Name of a social network, e.g. Bluesky. */
+$share_label = __( 'Share on %s', 'wordcamporg' );
+
 $share_links = array(
 	array(
 		'service' => 'x',
-		'label'   => 'Share on X',
+		'label'   => sprintf( $share_label, 'X' ),
 		'url'     => 'https://x.com/intent/post?' . $text_and_url,
 	),
 	array(
 		'service' => 'bluesky',
-		'label'   => 'Share on Bluesky',
+		'label'   => sprintf( $share_label, 'Bluesky' ),
 		'url'     => 'https://bsky.app/intent/compose?' . $text_including_url,
 	),
 	array(
 		'service' => 'mastodon',
-		'label'   => 'Share on Mastodon',
+		'label'   => sprintf( $share_label, 'Mastodon' ),
 		'url'     => 'https://mastodonshare.com/?' . $text_and_url,
 	),
 	array(
 		'service' => 'threads',
-		'label'   => 'Share on Threads',
+		'label'   => sprintf( $share_label, 'Threads' ),
 		'url'     => 'https://www.threads.net/intent/post?' . $text_including_url,
 	),
 	array(
 		'service' => 'facebook',
-		'label'   => 'Share on Facebook',
+		'label'   => sprintf( $share_label, 'Facebook' ),
 		'url'     => 'https://www.facebook.com/sharer/sharer.php?' . $wporg_query( array( 'u' => $share_url ) ),
 	),
 	array(
 		'service' => 'linkedin',
-		'label'   => 'Share on LinkedIn',
+		'label'   => sprintf( $share_label, 'LinkedIn' ),
 		'url'     => 'https://www.linkedin.com/sharing/share-offsite/?' . $wporg_query( array( 'url' => $share_url ) ),
 	),
 	array(
 		'service' => 'tumblr',
-		'label'   => 'Share on Tumblr',
+		'label'   => sprintf( $share_label, 'Tumblr' ),
 		'url'     => 'https://www.tumblr.com/widgets/share/tool?' . $tumblr_query,
 	),
 );
@@ -90,7 +93,7 @@ $share_links = array(
 <!-- wp:group {"className":"groups-site-hero-share","layout":{"type":"flex","flexWrap":"wrap","verticalAlignment":"center","justifyContent":"space-between"}} -->
 <div class="wp-block-group groups-site-hero-share">
 	<!-- wp:paragraph {"fontSize":"small","textColor":"charcoal-3"} -->
-	<p class="has-charcoal-3-color has-text-color has-small-font-size">Share</p>
+	<p class="has-charcoal-3-color has-text-color has-small-font-size"><?php esc_html_e( 'Share', 'wordcamporg' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:social-links {"iconColor":"charcoal-1","iconColorValue":"#1e1e1e","openInNewTab":true,"className":"is-style-logos-only"} -->

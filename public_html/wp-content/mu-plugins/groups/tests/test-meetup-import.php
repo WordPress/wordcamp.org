@@ -3363,7 +3363,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 	/**
 	 * With members off, "Match people" still gives Meetup organizers their
-	 * role, but nobody else is fetched, previewed, or added to the group.
+	 * role, and counts the members for the preview, but adds nobody else to
+	 * the group (#2375).
 	 */
 	public function test_members_off_still_matches_organizers() {
 		$organizer = self::factory()->user->create( array( 'user_email' => 'organizer@example.org' ) );
@@ -3402,8 +3403,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
 		Meetup_Import\process_batch( $this->site_id );
 
-		$this->assertFalse( $fetched, 'Members should not be fetched from Meetup at all.' );
-		$this->assertNull( Meetup_Import\get_job( $this->site_id )['plan']['member_counts'] );
+		$ready = Meetup_Import\get_job( $this->site_id );
+
+		$this->assertTrue( $fetched, 'Members are fetched to be counted.' );
+		$this->assertSame( 1, $ready['plan']['member_counts']['join'] );
+		$this->assertSame( array(), $ready['data']['members'], 'Only the counts are kept.' );
+
+		ob_start();
+		Meetup_Import\render_job( $ready );
+		$preview = ob_get_clean();
+
+		$this->assertStringContainsString( '1 would join the group on the second import', $preview );
+		$this->assertStringContainsString( 'This import doesn&#039;t add them.', $preview );
 
 		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
 		$this->run_batches();
@@ -5247,5 +5258,85 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertSame( array( 'created', 'in_series', 'skipped' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
 		$this->assertSame( 2, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * Without "Match people", members aren't fetched or counted.
+	 */
+	public function test_members_not_fetched_without_match_people() {
+		$fetched = false;
+
+		$this->fake_events( array( $this->raw_event() ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( &$fetched ) {
+				$fetched = true;
+
+				return array();
+			}
+		);
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch( $this->site_id );
+
+		$this->assertFalse( $fetched );
+		$this->assertNull( Meetup_Import\get_job( $this->site_id )['plan']['member_counts'] );
+	}
+
+	/**
+	 * Members are asked for as active members and leaders only, which is what
+	 * the group's Meetup page counts. With no status, Meetup also lists other
+	 * memberships, and the import's total came out higher (#2375).
+	 */
+	public function test_members_fetched_by_counted_statuses() {
+		$this->assertSame(
+			array( 'filters' => array( 'status' => '[ACTIVE, LEADER]' ) ),
+			Meetup_Import\member_query_args()
+		);
+	}
+
+	/**
+	 * The newest group is first in "Import into", since it's usually the one
+	 * just created for the import (#2375).
+	 */
+	public function test_start_form_lists_newest_group_first() {
+		$newer_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/newer/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		ob_start();
+		Meetup_Import\render_start_form( array() );
+		$form = ob_get_clean();
+
+		$this->assertLessThan(
+			strpos( $form, 'value="' . $this->site_id . '"' ),
+			strpos( $form, 'value="' . $newer_id . '"' )
+		);
+	}
+
+	/**
+	 * A site's import page with no import yet starts with the site picked, and
+	 * the Meetup group an earlier import saved (#2375).
+	 */
+	public function test_site_page_prefills_start_form() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+		update_blog_option( $this->site_id, Meetup_Import\GROUP_URLNAME_OPTION, 'wma-wordpress-meetup' );
+		$_GET['site_id'] = (string) $this->site_id;
+
+		try {
+			ob_start();
+			Meetup_Import\render_admin_page();
+			$page = ob_get_clean();
+		} finally {
+			unset( $GLOBALS['super_admins'], $_GET['site_id'] );
+		}
+
+		$this->assertMatchesRegularExpression( '/id="meetup_group"[^>]*value="wma-wordpress-meetup"/', $page );
+		$this->assertMatchesRegularExpression( '/value="' . $this->site_id . '"\s*selected=\'selected\'/', $page );
 	}
 }

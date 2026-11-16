@@ -201,6 +201,16 @@ const PENDING_PUBLISH_META = '_wporg_meetup_pending_publish';
 const MEMBERS_OPTION = 'wporg_meetup_imported_member_ids';
 
 /**
+ * The Meetup membership statuses that count as being in a group.
+ *
+ * These add up to the member count on the group's Meetup page. Asked with no
+ * status, Meetup also lists memberships it doesn't count there, such as
+ * unfinished sign-ups, so the import's total came out higher (#2375). See
+ * https://www.meetup.com/api/schema/#MembershipStatus.
+ */
+const MEMBER_STATUSES = array( 'ACTIVE', 'LEADER' );
+
+/**
  * Site option listing the users an import has added to the group, or found
  * already in it, whichever way it got to them: as a member, an organizer, or
  * an event host.
@@ -784,7 +794,9 @@ function run_fetch( array $job ): void {
 	$raw = array(
 		'group'      => fetch_group( $job['urlname'] ),
 		'events'     => fetch_group_events( $job['urlname'], $job['include_past'] ),
-		'members'    => ! empty( $job['match_members'] ) ? fetch_group_members( $job['urlname'] ) : array(),
+		// Counted whenever people are matched, so the preview shows how many
+		// would join before the import that adds them (#2375).
+		'members'    => $job['match_people'] ? fetch_group_members( $job['urlname'] ) : array(),
 		'organizers' => $job['match_people'] ? fetch_group_organizers( $job['urlname'] ) : array(),
 		'connection' => $job['match_people'] ? fetch_connection_member_id() : '',
 	);
@@ -809,7 +821,7 @@ function run_fetch( array $job ): void {
 		'group_results'    => plan_group( $job['site_id'], $job['data']['group'] ),
 		'events'           => array_map( __NAMESPACE__ . '\summarize_event_row', plan_events( $job['site_id'], $job['data']['events'] ) ),
 		'organizer_counts' => $job['match_people'] ? plan_organizers( $job['site_id'], $job['data']['organizers'] ) : null,
-		'member_counts'    => ! empty( $job['match_members'] ) ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
+		'member_counts'    => $job['match_people'] ? plan_members( $job['site_id'], $job['data']['members'], $job['data']['organizers'] ) : null,
 		'language'         => with_site(
 			$job['site_id'],
 			static function () use ( $job ) {
@@ -817,6 +829,11 @@ function run_fetch( array $job ): void {
 			}
 		),
 	);
+
+	// Only the counts are needed unless the import adds the members.
+	if ( empty( $job['match_members'] ) ) {
+		$job['data']['members'] = array();
+	}
 
 	$job['status']   = 'ready';
 	$job['attempts'] = 0;
@@ -1210,6 +1227,10 @@ function render_admin_page() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display only.
 	$site_id = isset( $_GET['site_id'] ) ? absint( wp_unslash( $_GET['site_id'] ) ) : 0;
 	$job     = $site_id ? get_job( $site_id ) : array();
+	$form    = $job ? $job : array(
+		'site_id' => $site_id,
+		'urlname' => $site_id ? (string) get_blog_option( $site_id, GROUP_URLNAME_OPTION, '' ) : '',
+	);
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Import from Meetup', 'wordcamporg' ); ?></h1>
@@ -1236,7 +1257,7 @@ function render_admin_page() {
 			<p><a href="<?php echo esc_url( screen_url() ); ?>"><?php esc_html_e( 'All imports', 'wordcamporg' ); ?></a></p>
 
 			<?php if ( ! is_job_active( $job ) ) : ?>
-				<?php render_start_form( $job ); ?>
+				<?php render_start_form( $form ); ?>
 			<?php endif; ?>
 
 			<?php if ( $job ) : ?>
@@ -1322,7 +1343,8 @@ function render_start_form( array $job ): void {
 				<td>
 					<select name="site_id" id="site_id" required="required">
 						<option value=""><?php esc_html_e( 'Select a group site', 'wordcamporg' ); ?></option>
-						<?php foreach ( \WordCamp\Groups\Archive\get_group_sites() as $group ) : ?>
+						<?php // Newest first, so a group created for this import is at the top. ?>
+						<?php foreach ( array_reverse( \WordCamp\Groups\Archive\get_group_sites() ) as $group ) : ?>
 							<option value="<?php echo esc_attr( $group->blog_id ); ?>" <?php selected( (int) $group->blog_id, (int) ( $job['site_id'] ?? 0 ) ); ?>>
 								<?php echo esc_html( get_blog_option( $group->blog_id, 'blogname' ) ?: $group->domain . $group->path ); ?>
 							</option>
@@ -1498,8 +1520,8 @@ function render_job( array $job ): void {
 		<h3><?php esc_html_e( 'People', 'wordcamporg' ); ?></h3>
 		<ul class="ul-disc">
 			<li><?php echo esc_html( describe_organizer_counts( (array) ( $section['organizer_counts'] ?? array() ), $is_preview ) ); ?></li>
-			<?php if ( ! empty( $job['match_members'] ) ) : ?>
-				<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview ) ); ?></li>
+			<?php if ( ! empty( $job['match_members'] ) || ( $is_preview && isset( $section['member_counts'] ) ) ) : ?>
+				<li><?php echo esc_html( describe_member_counts( array_merge( array_fill_keys( array( 'join', 'already_member', 'previously_imported', 'unmatched', 'no_email' ), 0 ), (array) ( $section['member_counts'] ?? array() ) ), $is_preview, ! empty( $job['match_members'] ) ) ); ?></li>
 			<?php endif; ?>
 			<?php if ( ! matches_event_people( $job ) ) : ?>
 				<li><?php esc_html_e( 'Hosts and RSVPs come over with the members, on the second import.', 'wordcamporg' ); ?></li>
@@ -1841,15 +1863,25 @@ function describe_status( string $status, bool $is_past = false, string $message
 /**
  * One-line summary of what happened, or would happen, to the group's members.
  *
- * @param array $counts    From `plan_members()` or `import_members()`.
- * @param bool  $is_preview Whether this is a preview.
+ * @param array $counts       From `plan_members()` or `import_members()`.
+ * @param bool  $is_preview   Whether this is a preview.
+ * @param bool  $adds_members Whether the import adds the members, rather than
+ *                            only counting them for the preview (#2375).
  */
-function describe_member_counts( array $counts, bool $is_preview ): string {
-	return sprintf(
+function describe_member_counts( array $counts, bool $is_preview, bool $adds_members = true ): string {
+	if ( $is_preview && ! $adds_members ) {
+		/* translators: 1: Total members, 2: Members who would join, 3: Already members, 4: Considered by an earlier import, 5: No matching account, 6: No email shared. */
+		$format = __( '%1$d Meetup members: %2$d would join the group on the second import, %3$d are already members, %4$d were handled by an earlier import, %5$d have no matching WordPress.org account, %6$d have not shared an email. This import doesn\'t add them.', 'wordcamporg' );
+	} elseif ( $is_preview ) {
 		/* translators: 1: Total members, 2: Members joining, 3: Already members, 4: Considered by an earlier import, 5: No matching account, 6: No email shared. */
-		$is_preview
-			? __( '%1$d Meetup members: %2$d will join the group, %3$d are already members, %4$d were handled by an earlier import, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' )
-			: __( '%1$d Meetup members: %2$d joined the group, %3$d were already members, %4$d were handled by an earlier import, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' ),
+		$format = __( '%1$d Meetup members: %2$d will join the group, %3$d are already members, %4$d were handled by an earlier import, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' );
+	} else {
+		/* translators: 1: Total members, 2: Members who joined, 3: Already members, 4: Considered by an earlier import, 5: No matching account, 6: No email shared. */
+		$format = __( '%1$d Meetup members: %2$d joined the group, %3$d were already members, %4$d were handled by an earlier import, %5$d have no matching WordPress.org account, %6$d have not shared an email.', 'wordcamporg' );
+	}
+
+	return sprintf(
+		$format,
 		array_sum( $counts ),
 		$counts['join'],
 		$counts['already_member'],
@@ -2142,7 +2174,7 @@ function fetch_group_members( string $urlname ) {
 			return $client;
 		}
 
-		$members = $client->get_group_members( $urlname );
+		$members = $client->get_group_members( $urlname, member_query_args() );
 	}
 
 	if ( is_wp_error( $members ) ) {
@@ -2162,6 +2194,22 @@ function fetch_group_members( string $urlname ) {
 	);
 
 	return $members;
+}
+
+/**
+ * The arguments `fetch_group_members()` passes to `Meetup_Client::get_group_members()`.
+ *
+ * The client copies each filter into the `memberships` query as `key: value`,
+ * and `status` takes a list.
+ *
+ * @return array
+ */
+function member_query_args(): array {
+	return array(
+		'filters' => array(
+			'status' => '[' . implode( ', ', MEMBER_STATUSES ) . ']',
+		),
+	);
 }
 
 /**

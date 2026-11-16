@@ -30,20 +30,13 @@ final class Query {
 	 */
 	public static function clauses( array $clauses, WP_Query $query ): array {
 		$type = self::type( $query );
-		if ( ! $type || 'ids' === $query->get( 'fields' ) || is_admin() ) {
+		if ( ! $type || is_admin() ) {
 			return $clauses;
 		}
 
 		global $wpdb;
 		$core_table       = $wpdb->prefix . 'gatherpress_events';
 		$occurrence_table = Database::occurrences_table();
-
-		if ( ! str_contains( $clauses['join'], $occurrence_table ) ) {
-			$clauses['join'] .= $wpdb->prepare(
-				' LEFT JOIN %i gpre_occ_query ON ' . $wpdb->posts . ".ID = gpre_occ_query.series_post_id AND {$wpdb->posts}.post_type = 'gatherpress_event'",
-				$occurrence_table
-			);
-		}
 
 		/**
 		 * GatherPress writes the WHERE comparison through `$wpdb->prepare( '%i.%i' )`, which backtick-quotes both
@@ -52,6 +45,46 @@ final class Query {
 		 */
 		$pattern = '/(?<!\w)`?' . preg_quote( $core_table, '/' ) . '`?\.`?(datetime_(?:start|end)_gmt)`?(?!\w)/';
 		$replace = static fn( array $matches ): string => "COALESCE(gpre_occ_query.{$matches[1]}, {$core_table}.{$matches[1]})";
+
+		// A list of IDs can't say which date each stands for, so a series is listed once, by its nearest date that
+		// isn't cancelled. A protected series is placed by its first date, the only one it shows without its password.
+		if ( 'ids' === $query->get( 'fields' ) ) {
+			if ( str_contains( $clauses['join'], 'gpre_occ_query' ) || ! preg_match( $pattern, $clauses['where'], $compared ) ) {
+				return $clauses;
+			}
+
+			$upcoming = 'upcoming' === $type;
+			$nearest  = $upcoming ? 'MIN' : 'MAX';
+			$compare  = $upcoming ? '>=' : '<';
+
+			// The column, function, and operator are fixed strings chosen above, not request input.
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$clauses['join'] .= $wpdb->prepare(
+				" LEFT JOIN (
+					SELECT gpre_occ.series_post_id,
+						{$nearest}(gpre_occ.datetime_start_gmt) AS datetime_start_gmt,
+						{$nearest}(gpre_occ.datetime_end_gmt) AS datetime_end_gmt
+					FROM %i gpre_occ
+					WHERE gpre_occ.status <> 'cancelled' AND gpre_occ.{$compared[1]} {$compare} %s
+					GROUP BY gpre_occ.series_post_id
+				) gpre_occ_query ON {$wpdb->posts}.ID = gpre_occ_query.series_post_id AND {$wpdb->posts}.post_password = ''",
+				$occurrence_table,
+				current_time( 'mysql', true )
+			);
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+			$clauses['where']   = preg_replace_callback( $pattern, $replace, $clauses['where'] );
+			$clauses['orderby'] = preg_replace_callback( $pattern, $replace, $clauses['orderby'] );
+
+			return $clauses;
+		}
+
+		if ( ! str_contains( $clauses['join'], $occurrence_table ) ) {
+			$clauses['join'] .= $wpdb->prepare(
+				' LEFT JOIN %i gpre_occ_query ON ' . $wpdb->posts . ".ID = gpre_occ_query.series_post_id AND {$wpdb->posts}.post_type = 'gatherpress_event'",
+				$occurrence_table
+			);
+		}
 
 		$clauses['where']   = preg_replace_callback( $pattern, $replace, $clauses['where'] );
 		$clauses['orderby'] = preg_replace_callback( $pattern, $replace, $clauses['orderby'] );

@@ -10,7 +10,7 @@
 		"@wordpress/escape-html": "3.48.0",
 		"@wordpress/scripts": "^32.4.0",
 		"@wordpress/server-side-render": "6.24.0",
-		"@wordpress/env": "11.8.0",
+		"@wordpress/env": "12.1.0",
 		"cssnano": "^7.1.2",
 		"postcss": "^8.5.3",
 		"postcss-cli": "^11.0.1",

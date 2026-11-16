@@ -28,6 +28,7 @@ function get_company_statuses(): array {
 		'sv-compliance-req' => __( 'Compliance Requested', 'wordcamporg' ),
 		'sv-compliant'      => __( 'Compliant', 'wordcamporg' ),
 		'sv-not-eligible'   => __( 'Not Eligible', 'wordcamporg' ),
+		'sv-inactive'       => __( 'Inactive', 'wordcamporg' ),
 	);
 }
 
@@ -188,6 +189,7 @@ function register_statuses(): void {
 		'sv-compliance-req' => _n_noop( 'Compliance Requested <span class="count">(%s)</span>', 'Compliance Requested <span class="count">(%s)</span>', 'wordcamporg' ),
 		'sv-compliant'      => _n_noop( 'Compliant <span class="count">(%s)</span>', 'Compliant <span class="count">(%s)</span>', 'wordcamporg' ),
 		'sv-not-eligible'   => _n_noop( 'Not Eligible <span class="count">(%s)</span>', 'Not Eligible <span class="count">(%s)</span>', 'wordcamporg' ),
+		'sv-inactive'       => _n_noop( 'Inactive <span class="count">(%s)</span>', 'Inactive <span class="count">(%s)</span>', 'wordcamporg' ),
 		'svs-pending'       => _n_noop( 'Pending <span class="count">(%s)</span>', 'Pending <span class="count">(%s)</span>', 'wordcamporg' ),
 		'svs-approved'      => _n_noop( 'Approved <span class="count">(%s)</span>', 'Approved <span class="count">(%s)</span>', 'wordcamporg' ),
 		'svs-not-approved'  => _n_noop( 'Not Approved <span class="count">(%s)</span>', 'Not Approved <span class="count">(%s)</span>', 'wordcamporg' ),

@@ -25,6 +25,8 @@ use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/trait-submits-invoices.php';
+// The plugin loads its notices only in the admin.
+require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 /**
  * Extends `Database_TestCase` for its Central and camp sites.
@@ -299,14 +301,32 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * A company whose Compliant vetting has lapsed goes back in the queue when a new sponsorship comes in.
+	 * A company whose Compliant vetting has lapsed, or that's Inactive, goes back in the queue when a new
+	 * sponsorship comes in.
+	 *
+	 * @dataProvider data_requeued_companies
+	 *
+	 * @param string   $status      The company's status.
+	 * @param int|null $last_vetted When it was last vetted, if not when it got its status.
 	 */
-	public function test_request_vetting_requeues_a_stale_company(): void {
-		list( $company_id, $mes_id ) = $this->create_mes_company( 'sv-compliant', (int) strtotime( '-13 months' ) );
+	public function test_request_vetting_requeues_a_company( string $status, ?int $last_vetted ): void {
+		list( $company_id, $mes_id ) = $this->create_mes_company( $status, $last_vetted );
 
 		request_vetting( self::$year_dot_2018_site_id, $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) ) );
 
 		$this->assertSame( 'sv-needs-vetting', $this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn(): string => (string) get_post_status( $company_id ) ) );
+	}
+
+	/**
+	 * Companies a new sponsorship puts back in the queue.
+	 *
+	 * @return array[]
+	 */
+	public function data_requeued_companies(): array {
+		return array(
+			'compliant, vetted 13 months ago' => array( 'sv-compliant', (int) strtotime( '-13 months' ) ),
+			'inactive'                        => array( 'sv-inactive', null ),
+		);
 	}
 
 	/**
@@ -396,6 +416,67 @@ class Test_Intake extends Database_TestCase {
 				),
 			),
 			$statuses
+		);
+	}
+
+	/**
+	 * Requesting vetting from the sponsor's edit screen saves what the organizer entered with it first, so a website
+	 * typed just before the request still gets its company. A save without the request, or with a forged one, asks
+	 * for nothing.
+	 *
+	 * @dataProvider data_request_from_edit_screen
+	 *
+	 * @param bool $clicked     Whether the save carries the request.
+	 * @param bool $valid_nonce Whether the request's nonce is the box's.
+	 * @param bool $requested   Whether vetting is requested.
+	 */
+	public function test_request_from_edit_screen( bool $clicked, bool $valid_nonce, bool $requested ): void {
+		$sponsor_id = $this->create_camp_sponsor( '' );
+		$user_id    = self::factory()->user->create();
+
+		add_user_to_blog( self::$year_dot_2018_site_id, $user_id, 'editor' );
+		wp_set_current_user( $user_id );
+		set_current_screen( 'post' );
+
+		$sponsorship_id = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static function () use ( $sponsor_id, $clicked, $valid_nonce ): int {
+				$_POST = array(
+					'wcpt-meta-sponsor-info'   => wp_create_nonce( 'edit-sponsor-info' ),
+					'_wcpt_sponsor_website'    => 'https://typed.example',
+					'sv_request_vetting_nonce' => $valid_nonce ? wp_create_nonce( 'sv_request_vetting_' . $sponsor_id ) : 'forged',
+				);
+
+				if ( $clicked ) {
+					$_POST['sv_request_vetting'] = '1';
+				}
+
+				wp_update_post( array( 'ID' => $sponsor_id ) );
+
+				$_POST = array();
+
+				return (int) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
+			}
+		);
+
+		$domains = $sponsorship_id ? $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static fn(): array => get_company_domains( (int) get_post_field( 'post_parent', $sponsorship_id ) )
+		) : null;
+
+		$this->assertSame( $requested ? array( 'typed.example' ) : null, $domains );
+	}
+
+	/**
+	 * Saves of a camp's sponsor, and whether they request vetting.
+	 *
+	 * @return array[]
+	 */
+	public function data_request_from_edit_screen(): array {
+		return array(
+			'saved with the request' => array( true, true, true ),
+			'a plain save'           => array( false, true, false ),
+			'a forged request'       => array( true, false, false ),
 		);
 	}
 

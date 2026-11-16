@@ -2078,4 +2078,228 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$should_exclude_general = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_general );
 		$this->assertTrue( $should_exclude_general );
 	}
+
+	/**
+	 * Make a user a network admin.
+	 *
+	 * `grant_super_admin()` reads `site_admins` off whichever network is
+	 * current, which in this fixture isn't the groups network, so set the
+	 * option `get_super_admins()` actually consults, as the other Groups
+	 * tests do.
+	 *
+	 * @param int $user_id User.
+	 */
+	protected function make_network_admin( int $user_id ): void {
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+	}
+
+	/**
+	 * Organizers can't switch the theme, since they couldn't switch back to
+	 * `groups-site` afterwards (#2368). Network admins still can.
+	 */
+	public function test_only_network_admins_can_switch_themes() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+
+		$this->assertFalse( user_can( $admin_id, 'switch_themes' ) );
+		$this->assertTrue( user_can( $admin_id, 'edit_theme_options' ) );
+		$this->assertTrue( user_can( $super_id, 'switch_themes' ) );
+	}
+
+	/**
+	 * A group site that ends up on another theme anyway is switched back.
+	 *
+	 * Core fires `after_switch_theme` from `check_theme_switched()` on the
+	 * load after a switch, so that's what runs the backstop here. That load is
+	 * Appearance > Themes with `?activated=true` after a switch made there,
+	 * and its "New theme activated." notice is dropped, since the theme it
+	 * would be about is gone again.
+	 */
+	public function test_group_site_switched_back_to_groups_site() {
+		$site_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/theme-backstop/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		switch_to_blog( $site_id );
+
+		try {
+			switch_theme( 'twentytwentyfour' );
+			$_GET['activated'] = 'true';
+			check_theme_switched();
+
+			$this->assertSame( 'groups-site', get_stylesheet() );
+			$this->assertArrayNotHasKey( 'activated', $_GET );
+		} finally {
+			unset( $_GET['activated'] );
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * The network's root site isn't a group, so it keeps its theme.
+	 */
+	public function test_groups_root_site_theme_left_alone() {
+		switch_to_blog( GROUPS_ROOT_BLOG_ID );
+
+		try {
+			switch_theme( 'twentytwentyfour' );
+			check_theme_switched();
+
+			$this->assertSame( 'twentytwentyfour', get_stylesheet() );
+		} finally {
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * Organizers can't unlock the theme's locked blocks or edit the markup
+	 * around them; network admins can.
+	 */
+	public function test_block_locking_and_code_editing_off_for_organizers() {
+		$settings = array(
+			'canLockBlocks'      => true,
+			'codeEditingEnabled' => true,
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$filtered = apply_filters( 'block_editor_settings_all', $settings, new \WP_Block_Editor_Context() );
+
+		$this->assertFalse( $filtered['canLockBlocks'] );
+		$this->assertFalse( $filtered['codeEditingEnabled'] );
+
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+		wp_set_current_user( $super_id );
+		$filtered = apply_filters( 'block_editor_settings_all', $settings, new \WP_Block_Editor_Context() );
+
+		$this->assertTrue( $filtered['canLockBlocks'] );
+		$this->assertTrue( $filtered['codeEditingEnabled'] );
+	}
+
+	/**
+	 * A locked block hidden with "Omit from published content" still renders,
+	 * at the top of a template or inside another block; an unlocked one stays
+	 * hidden.
+	 */
+	public function test_locked_blocks_ignore_hide() {
+		$locked   = '<!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Locked</p><!-- /wp:paragraph -->';
+		$nested   = '<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Nested</p><!-- /wp:paragraph --></div><!-- /wp:group -->';
+		$unlocked = '<!-- wp:paragraph {"metadata":{"blockVisibility":false}} --><p>Unlocked</p><!-- /wp:paragraph -->';
+
+		$html = do_blocks( $locked . $nested . $unlocked );
+
+		$this->assertStringContainsString( 'Locked', $html );
+		$this->assertStringContainsString( 'Nested', $html );
+		$this->assertStringNotContainsString( 'Unlocked', $html );
+	}
+
+	/**
+	 * Run a callback with `groups-site` active from this repo's themes, so
+	 * its template parts resolve.
+	 *
+	 * @param callable $callback What to run.
+	 */
+	protected function with_groups_site_theme( callable $callback ): void {
+		global $wp_theme_directories;
+
+		$directories = $wp_theme_directories;
+		register_theme_directory( SUT_WP_CONTENT_DIR . 'themes' );
+		wp_clean_themes_cache();
+		switch_theme( 'groups-site' );
+
+		try {
+			$callback();
+		} finally {
+			$wp_theme_directories = $directories; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the list this changed.
+			wp_clean_themes_cache();
+		}
+	}
+
+	/**
+	 * Organizers can't save the shared header or footer, but can save other
+	 * template parts and reset the header to the theme's.
+	 */
+	public function test_header_and_footer_parts_locked_for_organizers() {
+		$this->with_groups_site_theme( array( $this, 'assert_header_and_footer_parts_locked' ) );
+	}
+
+	/**
+	 * The assertions for `test_header_and_footer_parts_locked_for_organizers()`.
+	 */
+	public function assert_header_and_footer_parts_locked(): void {
+		// A header customized before the lock, which the organizer can reset.
+		$custom_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_name'    => 'header',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:site-title /-->',
+			)
+		);
+		wp_set_object_terms( $custom_id, 'groups-site', 'wp_theme' );
+		wp_set_object_terms( $custom_id, 'header', 'wp_template_part_area' );
+		$this->assertSame( 'custom', get_block_template( 'groups-site//header', 'wp_template_part' )->source );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		foreach ( array( 'header', 'footer' ) as $slug ) {
+			$request = new \WP_REST_Request( 'POST', "/wp/v2/template-parts/groups-site//$slug" );
+			$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+			$response = rest_do_request( $request );
+
+			$this->assertSame( 403, $response->get_status(), $slug );
+			$this->assertSame( 'groups_locked_template_part', $response->get_data()['code'], $slug );
+		}
+
+		// Core sanitizes a new part's slug when it saves it, so `HEADER` and
+		// `Footer` would replace the shared parts too.
+		foreach ( array( 'header', 'HEADER', 'Footer' ) as $slug ) {
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
+			$request->set_param( 'slug', $slug );
+			$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+			$this->assertSame( 403, rest_do_request( $request )->get_status(), "new $slug" );
+		}
+
+		$this->assertSame( 'theme', get_block_template( 'groups-site//footer', 'wp_template_part' )->source );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
+		$request->set_param( 'slug', 'sidebar' );
+		$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+		$this->assertSame( 201, rest_do_request( $request )->get_status(), 'other part' );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts/groups-site//header' );
+		$request->set_param( 'source', 'theme' );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status(), 'reset' );
+		$this->assertSame( 'theme', get_block_template( 'groups-site//header', 'wp_template_part' )->source );
+	}
+
+	/**
+	 * Network admins can still change the shared header.
+	 */
+	public function test_header_part_editable_by_network_admins() {
+		$this->with_groups_site_theme( array( $this, 'assert_header_part_editable' ) );
+	}
+
+	/**
+	 * The assertions for `test_header_part_editable_by_network_admins()`.
+	 */
+	public function assert_header_part_editable(): void {
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+		wp_set_current_user( $super_id );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts/groups-site//header' );
+		$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+	}
 }

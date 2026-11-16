@@ -313,6 +313,11 @@ function render_page(): void {
 										<?php echo esc_html( $is_archived ? __( 'Reactivate', 'wordcamporg' ) : __( 'Archive', 'wordcamporg' ) ); ?>
 									</button>
 								</form>
+								<?php if ( ! $is_archived && function_exists( 'WordCamp\\Groups\\Meetup_Import\\screen_url' ) && current_user_can( 'manage_sites' ) ) : ?>
+									<a class="button button-secondary" href="<?php echo esc_url( \WordCamp\Groups\Meetup_Import\screen_url( $group_id ) ); ?>">
+										<?php esc_html_e( 'Import from Meetup', 'wordcamporg' ); ?>
+									</a>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>

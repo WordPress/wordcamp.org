@@ -164,8 +164,8 @@ export function useCompanyList() {
  *
  * Each is shown with its company, which comes from the companies the screen has already loaded.
  *
- * @return The page of sponsorships, its pagination and fields, the view and how to change it, how many
- *         sponsorships wait for a company, and how loading went.
+ * @return The page of sponsorships, its pagination and fields, the view and how to change it, and how loading
+ *         went.
  */
 export function useSponsorshipList() {
 	const [ search, update ] = useParams();
@@ -189,10 +189,6 @@ export function useSponsorshipList() {
 		() => filterSortAndPaginate( withoutTrash( records ?? [], view, labels[ TRASH ] ), view, fields ),
 		[ records, view, fields, labels ]
 	);
-	const unlinked = useMemo(
-		() => ( records ?? [] ).filter( ( { company, status } ) => ! company && status !== TRASH ).length,
-		[ records ]
-	);
 
 	return {
 		data,
@@ -201,7 +197,6 @@ export function useSponsorshipList() {
 		view,
 		updateView,
 		resetToDefault: isModified ? resetToDefault : undefined,
-		unlinked,
 		error: error ?? companiesError,
 		isLoading: ! ( error ?? companiesError ) && ! ( records && companies && hasLabels ),
 	};

@@ -37,12 +37,6 @@
 	height: var(--wpds-dimension-gap-xl);
 }
 
-// The switches are shorter than the toolbar buttons they sit beside.
-.sponsor-vetting__view-switch {
-	align-self: center;
-	margin-inline-start: var(--wpds-dimension-gap-sm);
-}
-
 // The panel beside the list scrolls as a whole, so its controls stick to the top.
 .sponsor-vetting__panel-header {
 	background-color: inherit;

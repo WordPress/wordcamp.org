@@ -10,7 +10,6 @@ import {
 	SPONSORSHIP_VIEW,
 	applyLayoutChoice,
 	getLayoutChoice,
-	toggleNeedsCompany,
 	withoutTrash,
 } from '../view';
 
@@ -215,10 +214,16 @@ describe( 'the list of events', () => {
 		] );
 	} );
 
-	it( 'narrows to the sponsorships waiting for a company, and back', () => {
-		const narrowed = toggleNeedsCompany( SPONSORSHIP_VIEW, true );
+	it( 'counts the sponsorships waiting for a company in the filter that narrows to them', () => {
+		const waiting = getSponsorshipFields( LABELS, COMPANIES, SPONSORSHIPS, '2026-11-13' ).find(
+			( { id } ) => id === 'needs_company'
+		);
+		const narrowed: View = {
+			...SPONSORSHIP_VIEW,
+			filters: [ { field: 'needs_company', operator: 'is', value: 'yes' } ],
+		};
 
+		expect( waiting?.label ).toBe( 'Needs a company (1)' );
 		expect( listSponsorships( narrowed ) ).toEqual( [ 'Stranger at Soon' ] );
-		expect( listSponsorships( toggleNeedsCompany( narrowed, false ) ) ).toHaveLength( SPONSORSHIPS.length );
 	} );
 } );

@@ -32,18 +32,9 @@ export function ListTabs() {
  * @param props             Props.
  * @param props.searchLabel What the search field is for.
  * @param props.layoutMenu  The list's Layout menu.
- * @param props.children    Controls of the list's own, after DataViews'.
  * @return The bar.
  */
-export function ListHeader( {
-	searchLabel,
-	layoutMenu,
-	children,
-}: {
-	searchLabel: string;
-	layoutMenu: ReactNode;
-	children?: ReactNode;
-} ) {
+export function ListHeader( { searchLabel, layoutMenu }: { searchLabel: string; layoutMenu: ReactNode } ) {
 	return (
 		<>
 			<Stack direction="row" justify="space-between" gap="lg" className="sponsor-vetting__list-header">
@@ -52,7 +43,6 @@ export function ListHeader( {
 					<DataViews.Search label={ searchLabel } />
 					{ layoutMenu }
 					<DataViews.ViewConfig />
-					{ children }
 				</Stack>
 			</Stack>
 			<DataViews.FiltersToggled className="dataviews-filters__container" />

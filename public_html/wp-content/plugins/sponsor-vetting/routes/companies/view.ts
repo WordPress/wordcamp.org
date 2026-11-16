@@ -106,9 +106,6 @@ export function applyLayoutChoice( view: View, choice: LayoutChoice ): View {
 	return { ...next, type, fields, groupBy, page: 1 } as View;
 }
 
-/* The filter that leaves only the sponsorships waiting for a company. */
-export const NEEDS_COMPANY = { field: 'linked', operator: 'is', value: 'no' } as const;
-
 /**
  * Leaves the trashed records out of a list, unless the view asks for them by filtering for the Trash.
  *
@@ -128,34 +125,4 @@ export function withoutTrash< Item extends { status: string } >(
 	);
 
 	return wantsTrash ? records : records.filter( ( { status } ) => status !== TRASH );
-}
-
-/**
- * Tells whether a view lists only the sponsorships waiting for a company.
- *
- * @param view The view.
- * @return Whether it does.
- */
-export function needsCompanyOnly( view: View ): boolean {
-	return Boolean(
-		view.filters?.some(
-			( { field, operator, value } ) =>
-				field === NEEDS_COMPANY.field &&
-				operator === NEEDS_COMPANY.operator &&
-				value === NEEDS_COMPANY.value
-		)
-	);
-}
-
-/**
- * Turns the filter for sponsorships waiting for a company on or off, keeping the view's other filters.
- *
- * @param view The view.
- * @param isOn Whether to list only those.
- * @return The changed view, on its first page.
- */
-export function toggleNeedsCompany( view: View, isOn: boolean ): View {
-	const others = ( view.filters ?? [] ).filter( ( { field } ) => field !== NEEDS_COMPANY.field );
-
-	return { ...view, page: 1, filters: isOn ? [ ...others, { ...NEEDS_COMPANY } ] : others };
 }

@@ -1,12 +1,11 @@
 import type { Field } from '@wordpress/dataviews';
 import { decodeEntities } from '@wordpress/html-entities';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, compareEventDays, formatDay } from './dates';
 import { COMPANY_STATUSES, SPONSORSHIP_STATUSES, STATUS_INTENTS, TRASH } from './entities';
 import type { AnyStatus } from './entities';
 import type { Company, Event, Flag, Sponsorship } from './types';
-import { NEEDS_COMPANY } from './view';
 
 /**
  * A company's or sponsorship's status.
@@ -197,7 +196,7 @@ export function getEventHeading( { name, date }: Event ): string {
  *
  * @param labels       The statuses' labels, keyed by status.
  * @param companies    The companies, for their names and statuses.
- * @param sponsorships The sponsorships, for when their events are.
+ * @param sponsorships The sponsorships, for when their events are and how many wait for a company.
  * @param today        Today, as `Y-m-d`.
  * @return The fields.
  */
@@ -213,6 +212,7 @@ export function getSponsorshipFields(
 	const days = new Map( sponsorships.map( ( { event } ) => [ getEventHeading( event ), event.date ] ) );
 	const compareEvents = ( a: string, b: string ) =>
 		compareEventDays( days.get( a ) ?? '', days.get( b ) ?? '', today ) || a.localeCompare( b );
+	const waiting = sponsorships.filter( ( { company, status } ) => ! company && status !== TRASH ).length;
 
 	return [
 		{
@@ -262,18 +262,20 @@ export function getSponsorshipFields(
 				return `${ getName( company ) } (${ labels[ company.status ] ?? company.status })`;
 			},
 		},
+		getStatusField< Sponsorship >( SPONSORSHIP_STATUSES, labels ),
 		{
-			id: NEEDS_COMPANY.field,
-			label: __( 'Linked to a company', 'wordcamporg' ),
+			id: 'needs_company',
+			/* translators: %d: Number of sponsorships. */
+			label: sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), waiting ),
 			elements: [
 				{ value: 'yes', label: __( 'Yes', 'wordcamporg' ) },
-				{ value: NEEDS_COMPANY.value, label: __( 'No', 'wordcamporg' ) },
+				{ value: 'no', label: __( 'No', 'wordcamporg' ) },
 			],
-			filterBy: { operators: [ 'is' ] },
+			// Pinned, so the count of what's waiting is always in the row of filters.
+			filterBy: { operators: [ 'is' ], isPrimary: true },
 			enableSorting: false,
-			getValue: ( { item } ) => ( item.company ? 'yes' : NEEDS_COMPANY.value ),
+			getValue: ( { item } ) => ( item.company ? 'no' : 'yes' ),
 		},
-		getStatusField< Sponsorship >( SPONSORSHIP_STATUSES, labels ),
 		{
 			id: 'approved',
 			label: __( 'Approved', 'wordcamporg' ),

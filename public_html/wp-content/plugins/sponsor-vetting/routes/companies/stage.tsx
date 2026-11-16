@@ -2,8 +2,8 @@ import { Page } from '@wordpress/admin-ui';
 import { DataViews } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
 import { useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
-import { Button, Notice, SwitchControl } from '@wordpress/ui';
+import { __ } from '@wordpress/i18n';
+import { Button, Notice } from '@wordpress/ui';
 import type { ReactNode } from 'react';
 import { useRecordActions } from './actions';
 import { AddCompany } from './add-company';
@@ -13,13 +13,7 @@ import { LayoutMenu } from './layout-menu';
 import { ListHeader, ListTabs } from './list-header';
 import './style.scss';
 import type { Company, Sponsorship } from './types';
-import {
-	COMPANY_LAYOUTS,
-	COMPANY_LAYOUT_CHOICES,
-	SPONSORSHIP_LAYOUTS,
-	needsCompanyOnly,
-	toggleNeedsCompany,
-} from './view';
+import { COMPANY_LAYOUTS, COMPANY_LAYOUT_CHOICES, SPONSORSHIP_LAYOUTS } from './view';
 
 /**
  * Says that a list couldn't be loaded, under the tabs, so the other list can still be reached.
@@ -40,31 +34,6 @@ function LoadError( { title, error }: { title: string; error: unknown } ) {
 				<Notice.Description>{ getErrorMessage( error ) }</Notice.Description>
 			</Notice.Root>
 		</>
-	);
-}
-
-/**
- * A switch beside a list's search. DataViews filters rows, but has no control this plain for it.
- *
- * @param props          Props.
- * @param props.label    What it turns on.
- * @param props.checked  Whether it's on.
- * @param props.onChange Turns it on or off.
- * @return The switch.
- */
-function ViewSwitch( {
-	label,
-	checked,
-	onChange,
-}: {
-	label: string;
-	checked: boolean;
-	onChange: ( isOn: boolean ) => void;
-} ) {
-	return (
-		<div className="sponsor-vetting__view-switch">
-			<SwitchControl label={ label } checked={ checked } onCheckedChange={ onChange } />
-		</div>
 	);
 }
 
@@ -142,7 +111,7 @@ function Companies() {
  * @return The list.
  */
 function Events() {
-	const { data, paginationInfo, fields, view, updateView, resetToDefault, unlinked, error, isLoading } =
+	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } =
 		useSponsorshipList();
 	const { sponsorshipId, open } = useOpenRecord();
 	const openSponsorship = ( sponsorship?: number ) => open( { sponsorship } );
@@ -171,14 +140,7 @@ function Events() {
 			<ListHeader
 				searchLabel={ __( 'Search sponsorships', 'wordcamporg' ) }
 				layoutMenu={ <DataViews.LayoutSwitcher /> }
-			>
-				<ViewSwitch
-					/* translators: %d: Number of sponsorships. */
-					label={ sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), unlinked ) }
-					checked={ needsCompanyOnly( view ) }
-					onChange={ ( isOn ) => updateView( toggleNeedsCompany( view, isOn ) ) }
-				/>
-			</ListHeader>
+			/>
 			<DataViews.Layout />
 			<DataViews.Footer />
 		</DataViews>

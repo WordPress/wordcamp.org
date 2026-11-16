@@ -5053,6 +5053,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Members are asked for as active members and leaders only, which is what
+	 * the group's Meetup page counts. With no status, Meetup also lists other
+	 * memberships, and the import's total came out higher (#2375).
+	 */
+	public function test_members_fetched_by_counted_statuses() {
+		$this->assertSame(
+			array( 'filters' => array( 'status' => '[ACTIVE, LEADER]' ) ),
+			Meetup_Import\member_query_args()
+		);
+	}
+
+	/**
 	 * The newest group is first in "Import into", since it's usually the one
 	 * just created for the import (#2375).
 	 */

@@ -77,12 +77,8 @@ export type Sponsorship = {
 	company: number;
 	event: Event;
 	approved: string;
+	good_faith: boolean;
 	trashed_status: string;
-};
-
-/* A sponsorship as its company's panel lists it. */
-export type CompanySponsorship = Pick< Sponsorship, 'id' | 'title' | 'status' | 'event' | 'approved' > & {
-	log: LogEntry[];
 };
 
 export type SponsorshipDetails = Sponsorship &
@@ -100,12 +96,32 @@ export type SponsorshipDetails = Sponsorship &
 		} | null;
 		approvable: 'approve' | 'good_faith' | '';
 		approval_hint: string;
-		good_faith: boolean;
 		domain: string;
 		approved_domain: string;
 		website_changed: boolean;
 		needs_approval_email: boolean;
 	};
+
+/* A sponsorship as its company's view lists it: an event, with what a vetter does about it there. */
+export type CompanySponsorship = Pick<
+	SponsorshipDetails,
+	| 'id'
+	| 'title'
+	| 'status'
+	| 'event'
+	| 'approved'
+	| 'good_faith'
+	| 'log'
+	| 'allowed_statuses'
+	| 'approvable'
+	| 'approval_hint'
+	| 'domain'
+	| 'approved_domain'
+	| 'website_changed'
+	| 'needs_approval_email'
+	| 'conversations'
+	| 'sponsor'
+>;
 
 /* A record while it's edited: core-data hands its title over as the text itself. */
 export type Edited< Record extends { title: Title } > = Omit< Record, 'title' > & { title: string };

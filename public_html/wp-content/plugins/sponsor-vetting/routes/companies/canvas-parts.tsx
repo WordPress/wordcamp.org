@@ -8,60 +8,85 @@ import { getErrorMessage } from './hooks';
 import type { Conversation } from './types';
 
 /**
- * The panel's controls, which stay at its top: what its record offers on one side, and on the other the way to
- * the records before and after it and the way out.
+ * The button that closes the open record, which gives the list its full width back.
+ *
+ * @param props         Props.
+ * @param props.onClose Closes the record.
+ * @return The button.
+ */
+function CloseButton( { onClose }: { onClose: () => void } ) {
+	return (
+		<IconButton
+			icon={ close }
+			label={ __( 'Close', 'wordcamporg' ) }
+			variant="minimal"
+			tone="neutral"
+			size="compact"
+			onClick={ onClose }
+		/>
+	);
+}
+
+/**
+ * The top of the open record, which stays in place while the rest scrolls: what it is on one side, and on the
+ * other what can be done with it and the way out.
  *
  * @param props          Props.
- * @param props.children What the record offers, like its Save button.
- * @param props.nav      The way to the records before and after it.
- * @param props.onClose  Closes the panel.
+ * @param props.title    The record's name.
+ * @param props.badge    Its status.
+ * @param props.children What else identifies it, under its name.
+ * @param props.actions  What the record offers, like its Save button.
+ * @param props.onClose  Closes the record.
  * @return The header.
  */
-export function PanelHeader( {
+export function CanvasHeader( {
+	title,
+	badge,
 	children,
-	nav,
+	actions,
 	onClose,
 }: {
+	title: string;
+	badge?: ReactNode;
 	children?: ReactNode;
-	nav?: ReactNode;
+	actions?: ReactNode;
 	onClose: () => void;
 } ) {
 	return (
 		<Stack
 			direction="row"
-			align="center"
+			align="start"
 			justify="space-between"
-			gap="xs"
-			className="sponsor-vetting__panel-header"
+			gap="lg"
+			className="sponsor-vetting__canvas-header"
 		>
-			<Stack direction="row" gap="sm" align="center">
+			<Stack direction="column" gap="xs">
+				<Stack direction="row" align="center" gap="sm" wrap="wrap">
+					<Text variant="heading-lg" render={ <h2 /> }>
+						{ title }
+					</Text>
+					{ badge }
+				</Stack>
 				{ children }
 			</Stack>
-			<Stack direction="row" gap="xs">
-				{ nav }
-				<IconButton
-					icon={ close }
-					label={ __( 'Close', 'wordcamporg' ) }
-					variant="minimal"
-					tone="neutral"
-					size="compact"
-					onClick={ onClose }
-				/>
+			<Stack direction="row" align="center" gap="sm">
+				{ actions }
+				<CloseButton onClose={ onClose } />
 			</Stack>
 		</Stack>
 	);
 }
 
 /**
- * What the panel shows instead of a record that hasn't loaded, or couldn't be.
+ * What the canvas shows instead of a record that hasn't loaded, or couldn't be.
  *
  * @param props         Props.
  * @param props.error   What loading it threw, if it failed.
  * @param props.title   What to say when it failed.
- * @param props.onClose Closes the panel.
+ * @param props.onClose Closes the record.
  * @return The placeholder.
  */
-export function PanelPlaceholder( {
+export function CanvasPlaceholder( {
 	error,
 	title,
 	onClose,
@@ -72,8 +97,10 @@ export function PanelPlaceholder( {
 } ) {
 	return (
 		<>
-			<PanelHeader onClose={ onClose } />
-			<div className="sponsor-vetting__panel-body">
+			<Stack direction="row" justify="end" className="sponsor-vetting__canvas-header">
+				<CloseButton onClose={ onClose } />
+			</Stack>
+			<div className="sponsor-vetting__canvas-body">
 				{ error ? (
 					<Notice.Root intent="error">
 						<Notice.Title>{ title }</Notice.Title>
@@ -90,19 +117,45 @@ export function PanelPlaceholder( {
 }
 
 /**
- * A titled group of the panel.
+ * One of the two parts of an open company: its events, or the company itself.
+ *
+ * @param props          Props.
+ * @param props.title    The part's title.
+ * @param props.hint     What to know about it, under its title.
+ * @param props.children Its contents.
+ * @return The part.
+ */
+export function Part( { title, hint, children }: { title: string; hint?: string; children: ReactNode } ) {
+	return (
+		<Stack direction="column" gap="md" render={ <section /> }>
+			<Stack direction="column" gap="xs">
+				<Text variant="heading-md" render={ <h3 /> }>
+					{ title }
+				</Text>
+				{ hint && <Hint>{ hint }</Hint> }
+			</Stack>
+			{ children }
+		</Stack>
+	);
+}
+
+/**
+ * A titled group of an open record.
  *
  * @param props          Props.
  * @param props.title    The group's title.
+ * @param props.level    The level of its heading: 4 inside a part, which has the heading above it.
  * @param props.children Its contents.
  * @return The group.
  */
-export function Section( { title, children }: { title: string; children: ReactNode } ) {
+export function Section( { title, level = 3, children }: { title: string; level?: 3 | 4; children: ReactNode } ) {
+	const Heading = `h${ level }` as const;
+
 	return (
 		<Card.Root className="sponsor-vetting__section">
 			<Card.Header>
 				<Card.Title>
-					<Text variant="heading-sm" render={ <h3 /> }>
+					<Text variant="heading-sm" render={ <Heading /> }>
 						{ title }
 					</Text>
 				</Card.Title>

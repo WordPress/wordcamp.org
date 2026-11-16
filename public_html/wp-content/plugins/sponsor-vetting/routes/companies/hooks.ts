@@ -52,10 +52,10 @@ function toId( param: unknown ): number | undefined {
 /**
  * Reads what the address has open, and changes what's open by changing the address.
  *
- * The panel shows the sponsorship, if the address names one, and otherwise the company. Naming both opens a
- * sponsorship over its company, which closing the sponsorship goes back to.
+ * A sponsorship opens its company, with its event marked, or what links it to one. The events are the list the
+ * screen opens on, so the address names the list only for the companies.
  *
- * @return The list shown, the open company and sponsorship, if any, a function that opens the records it's given
+ * @return The list shown, the open company and sponsorship, if any, a function that opens the record it's given
  *         and closes the rest, and one that shows the other list.
  */
 export function useOpenRecord() {
@@ -68,12 +68,12 @@ export function useOpenRecord() {
 	);
 	// The other list starts from a clean address: nothing open, and none of this list's params.
 	const openTab = useCallback(
-		( tab: 'companies' | 'events' ) => navigate( { search: () => ( tab === 'events' ? { tab } : {} ) } ),
+		( tab: 'companies' | 'events' ) => navigate( { search: () => ( tab === 'companies' ? { tab } : {} ) } ),
 		[ navigate ]
 	);
 
 	return {
-		tab: search.tab === 'events' ? ( 'events' as const ) : ( 'companies' as const ),
+		tab: search.tab === 'companies' ? ( 'companies' as const ) : ( 'events' as const ),
 		companyId: toId( search.company ),
 		sponsorshipId: toId( search.sponsorship ),
 		open,
@@ -106,7 +106,7 @@ export function useStatusLabels(): { labels: Record< string, string >; hasResolv
  * @param query The query. One object per list, since core-data caches by query.
  * @return The records, once they've loaded, and the error if they couldn't be.
  */
-function useRecords< Item >( name: string, query: Record< string, unknown > ) {
+export function useRecords< Item >( name: string, query: Record< string, unknown > ) {
 	const { records } = useEntityRecords< Item >( 'postType', name, query );
 	const error = useSelect(
 		( select ) =>
@@ -214,21 +214,24 @@ export function getErrorMessage( error: unknown ): string {
 		: __( 'Something went wrong. Try again.', 'wordcamporg' );
 }
 
+/* Runs one change: takes its name and the work, which resolves to the message to show, and resolves to whether the
+   work succeeded. */
+export type Run = ( name: string, work: () => Promise< string | undefined > ) => Promise< boolean >;
+
 /**
  * Runs the changes a vetter makes: one at a time, with what came of each shown as a notice.
  *
  * A change to a company can change its sponsorships and the other way around, which core-data can't know, so every
  * record is read again afterwards.
  *
- * @return The name of the change that's running, if any, and a function that runs one. It takes the change's name
- *         and the work, which resolves to the message to show, and resolves to whether the work succeeded.
+ * @return The name of the change that's running, if any, and the function that runs one.
  */
-export function useTask() {
+export function useTask(): { running: string | undefined; run: Run } {
 	const { invalidateResolutionForStoreSelector } = useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 	const [ running, setRunning ] = useState< string >();
-	const run = useCallback(
-		async ( name: string, work: () => Promise< string | undefined > ): Promise< boolean > => {
+	const run = useCallback< Run >(
+		async ( name, work ) => {
 			setRunning( name );
 
 			try {

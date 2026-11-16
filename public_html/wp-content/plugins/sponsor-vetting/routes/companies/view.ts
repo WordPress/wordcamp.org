@@ -51,10 +51,10 @@ export const GROUP_BY_EVENT: NonNullable< View[ 'groupBy' ] > = {
 	showLabel: false,
 };
 
-/* What each layout shows beside the sponsorship's name. The event heads the group. */
+/* What each layout shows beside the sponsor's name. The event heads the group. */
 export const SPONSORSHIP_LAYOUTS = {
-	table: { fields: [ 'company', 'status', 'approved' ] },
-	list: { fields: [ 'company', 'status' ] },
+	table: { fields: [ 'status', 'follow_up', 'approved' ] },
+	list: { fields: [ 'status', 'follow_up' ] },
 };
 
 /* How the list of events looks until a vetter changes it: by event, with what's still pending first. */
@@ -104,6 +104,20 @@ export function applyLayoutChoice( view: View, choice: LayoutChoice ): View {
 	delete next.layout;
 
 	return { ...next, type, fields, groupBy, page: 1 } as View;
+}
+
+/**
+ * Shows a view as a narrow list, which is how a list fits beside an open record.
+ *
+ * @param view   The view.
+ * @param fields What a row of the list shows.
+ * @return The view in the list layout. Its search, filters, sorting and grouping stay.
+ */
+export function asNarrowList( view: View, fields: string[] ): View {
+	const next: Partial< View > = { ...view };
+	delete next.layout;
+
+	return { ...next, type: 'list', fields } as View;
 }
 
 /**

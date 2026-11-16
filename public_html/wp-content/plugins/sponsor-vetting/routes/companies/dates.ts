@@ -1,4 +1,5 @@
-import { dateI18n, getSettings } from '@wordpress/date';
+import { dateI18n, getSettings, humanTimeDiff } from '@wordpress/date';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Formats a day (`Y-m-d`) in the site's date format.
@@ -20,6 +21,23 @@ export function formatDay( day: string ): string {
  */
 export function formatTime( time: string ): string {
 	return dateI18n( getSettings().formats.datetime, time );
+}
+
+/**
+ * Says how far a day (`Y-m-d`) is from today, like "in 3 weeks".
+ *
+ * @param day   The day, or an empty string.
+ * @param today Today, as `Y-m-d`.
+ * @return The distance, or an empty string.
+ */
+export function formatDistance( day: string, today: string ): string {
+	if ( ! day ) {
+		return '';
+	}
+
+	return day === today
+		? __( 'Today', 'wordcamporg' )
+		: humanTimeDiff( `${ day }T00:00:00Z`, `${ today }T00:00:00Z` );
 }
 
 /**

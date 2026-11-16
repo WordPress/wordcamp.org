@@ -1,0 +1,104 @@
+import apiFetch from '@wordpress/api-fetch';
+import { store as coreStore } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
+import { __, sprintf } from '@wordpress/i18n';
+import { SPONSORSHIP } from './entities';
+import type { Run } from './hooks';
+import type { SponsorshipDetails } from './types';
+
+/* What these changes need of a sponsorship, which both its company's list of events and its own record have. */
+type Target = Pick< SponsorshipDetails, 'id' | 'status' | 'approvable' | 'domain' >;
+
+/**
+ * Gives what a vetter does to a sponsorship, wherever it's shown.
+ *
+ * Each change runs as a task of the caller's, named after the change and the sponsorship, so the control that
+ * started it can show that it's busy.
+ *
+ * @param run Runs a change.
+ * @return The changes. Each resolves to whether it succeeded.
+ */
+export function useSponsorshipChanges( run: Run ) {
+	const { deleteEntityRecord, saveEntityRecord } = useDispatch( coreStore );
+	const write = ( id: number, values: Record< string, unknown > ) =>
+		saveEntityRecord(
+			'postType',
+			SPONSORSHIP,
+			{ id, ...values },
+			{ throwOnError: true }
+		) as Promise< SponsorshipDetails >;
+
+	return {
+		approve: ( { id, approvable, domain }: Target ) =>
+			run( `approve-${ id }`, async () => {
+				// The approval is for the website the vetter was shown, so the server refuses another.
+				const approved = await write( id, {
+					status: 'svs-approved',
+					good_faith: approvable === 'good_faith',
+					shown_domain: domain,
+				} );
+
+				if ( approved.needs_approval_email ) {
+					throw new Error(
+						__(
+							'The sponsorship was approved, but the approval email wasn’t sent (see history). Send it again from here.',
+							'wordcamporg'
+						)
+					);
+				}
+
+				return __( 'The sponsorship was approved.', 'wordcamporg' );
+			} ),
+
+		setStatus: ( { id }: Target, status: string, label: string ) =>
+			run( `status-${ id }`, async () => {
+				await write( id, { status } );
+
+				/* translators: %s: Status, like "Canceled". */
+				return sprintf( __( 'The sponsorship is now %s.', 'wordcamporg' ), label );
+			} ),
+
+		confirmWebsite: ( { id, domain }: Target ) =>
+			run( `confirm-${ id }`, async () => {
+				await write( id, { approved_domain: domain } );
+
+				return __( 'The new website was confirmed.', 'wordcamporg' );
+			} ),
+
+		sendApprovalEmail: ( { id }: Target ) =>
+			run( `send-${ id }`, async () => {
+				const { message } = await apiFetch< { message: string } >( {
+					path: `/sponsor-vetting/v1/sponsorships/${ id }/approval-email`,
+					method: 'POST',
+				} );
+
+				return message;
+			} ),
+
+		link: ( { id, status }: Target, company: number ) =>
+			run( `link-${ id }`, async () => {
+				const linked = await write( id, { company } );
+
+				// A pending sponsorship is approved as soon as it belongs to a vetted company.
+				if ( status !== 'svs-pending' || linked.status !== 'svs-approved' ) {
+					return __( 'The sponsorship was linked to the company.', 'wordcamporg' );
+				}
+
+				return linked.needs_approval_email
+					? __(
+							'The sponsorship was approved automatically: its company is vetted. The approval email wasn’t sent (see history); send it again from here.',
+							'wordcamporg'
+					  )
+					: __( 'The sponsorship was approved automatically: its company is vetted.', 'wordcamporg' );
+			} ),
+
+		trash: ( { id }: Target ) =>
+			run( `trash-${ id }`, async () => {
+				await deleteEntityRecord( 'postType', SPONSORSHIP, id, {}, { throwOnError: true } );
+
+				return __( 'Sponsorship moved to the Trash.', 'wordcamporg' );
+			} ),
+	};
+}
+
+export type SponsorshipChanges = ReturnType< typeof useSponsorshipChanges >;

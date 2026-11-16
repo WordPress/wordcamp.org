@@ -13,7 +13,7 @@ import { LayoutMenu } from './layout-menu';
 import { ListHeader, ListTabs } from './list-header';
 import './style.scss';
 import type { Company, Sponsorship } from './types';
-import { COMPANY_LAYOUTS, COMPANY_LAYOUT_CHOICES, SPONSORSHIP_LAYOUTS } from './view';
+import { COMPANY_LAYOUTS, COMPANY_LAYOUT_CHOICES, SPONSORSHIP_LAYOUTS, asNarrowList } from './view';
 
 /**
  * Says that a list couldn't be loaded, under the tabs, so the other list can still be reached.
@@ -62,16 +62,40 @@ function useSelection( view: View, openId: number | undefined, open: ( id?: numb
 }
 
 /**
- * The list of companies. Clicking one opens it in the panel beside the list.
+ * Fits a list beside an open record: as a narrow list, whatever layout the vetter chose, which comes back when the
+ * record closes.
+ *
+ * @param view       The vetter's view.
+ * @param updateView Changes it.
+ * @param fields     What a row of the narrow list shows.
+ * @param isNarrow   Whether a record is open.
+ * @return The view to show, and the function that changes it.
+ */
+function fitView( view: View, updateView: ( view: View ) => void, fields: string[], isNarrow: boolean ) {
+	if ( ! isNarrow ) {
+		return { view, onChangeView: updateView };
+	}
+
+	return {
+		view: asNarrowList( view, fields ),
+		// The narrow list is only searched, filtered and paged, so the layout stays the vetter's.
+		onChangeView: ( { search, filters, page }: View ) => updateView( { ...view, search, filters, page } ),
+	};
+}
+
+/**
+ * The list of companies. Clicking one opens it beside the list.
  *
  * @return The list.
  */
 function Companies() {
 	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } = useCompanyList();
-	const { companyId, open } = useOpenRecord();
+	const { companyId, sponsorshipId, open } = useOpenRecord();
 	const openCompany = ( company?: number ) => open( { company } );
 	const actions = useRecordActions< Company >( COMPANY );
-	const selection = useSelection( view, companyId, openCompany );
+	const isNarrow = Boolean( companyId || sponsorshipId );
+	const fitted = fitView( view, updateView, COMPANY_LAYOUTS.list.fields, isNarrow );
+	const selection = useSelection( fitted.view, companyId, openCompany );
 
 	if ( error ) {
 		return <LoadError title={ __( 'The companies couldn’t be loaded.', 'wordcamporg' ) } error={ error } />;
@@ -82,8 +106,7 @@ function Companies() {
 			data={ data }
 			fields={ fields }
 			actions={ actions }
-			view={ view }
-			onChangeView={ updateView }
+			{ ...fitted }
 			onReset={ resetToDefault ?? false }
 			isLoading={ isLoading }
 			paginationInfo={ paginationInfo }
@@ -95,7 +118,9 @@ function Companies() {
 			<ListHeader
 				searchLabel={ __( 'Search companies', 'wordcamporg' ) }
 				layoutMenu={
-					<LayoutMenu view={ view } onChangeView={ updateView } choices={ COMPANY_LAYOUT_CHOICES } />
+					! isNarrow && (
+						<LayoutMenu view={ view } onChangeView={ updateView } choices={ COMPANY_LAYOUT_CHOICES } />
+					)
 				}
 			/>
 			<DataViews.Layout />
@@ -105,18 +130,20 @@ function Companies() {
 }
 
 /**
- * The list of events: every sponsorship, under the event it's for. Clicking one opens it in the panel beside the
- * list.
+ * The list of events: every sponsorship, as its sponsor under the event it's for. Clicking one opens its company
+ * beside the list.
  *
  * @return The list.
  */
 function Events() {
 	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } =
 		useSponsorshipList();
-	const { sponsorshipId, open } = useOpenRecord();
+	const { companyId, sponsorshipId, open } = useOpenRecord();
 	const openSponsorship = ( sponsorship?: number ) => open( { sponsorship } );
 	const actions = useRecordActions< Sponsorship >( SPONSORSHIP );
-	const selection = useSelection( view, sponsorshipId, openSponsorship );
+	const isNarrow = Boolean( companyId || sponsorshipId );
+	const fitted = fitView( view, updateView, SPONSORSHIP_LAYOUTS.list.fields, isNarrow );
+	const selection = useSelection( fitted.view, sponsorshipId, openSponsorship );
 
 	if ( error ) {
 		return <LoadError title={ __( 'The sponsorships couldn’t be loaded.', 'wordcamporg' ) } error={ error } />;
@@ -127,8 +154,7 @@ function Events() {
 			data={ data }
 			fields={ fields }
 			actions={ actions }
-			view={ view }
-			onChangeView={ updateView }
+			{ ...fitted }
 			onReset={ resetToDefault ?? false }
 			isLoading={ isLoading }
 			paginationInfo={ paginationInfo }
@@ -138,8 +164,8 @@ function Events() {
 			{ ...selection }
 		>
 			<ListHeader
-				searchLabel={ __( 'Search sponsorships', 'wordcamporg' ) }
-				layoutMenu={ <DataViews.LayoutSwitcher /> }
+				searchLabel={ __( 'Search events and sponsors', 'wordcamporg' ) }
+				layoutMenu={ ! isNarrow && <DataViews.LayoutSwitcher /> }
 			/>
 			<DataViews.Layout />
 			<DataViews.Footer />
@@ -148,14 +174,14 @@ function Events() {
 }
 
 /**
- * The screen: the companies or, on its other tab, their sponsorships by event.
+ * The screen: the sponsors of each event or, on its other tab, the companies.
  *
  * @return The stage.
  */
 function Stage() {
 	const { tab } = useOpenRecord();
 	const [ isAdding, setIsAdding ] = useState( false );
-	const lists: Record< typeof tab, ReactNode > = { companies: <Companies />, events: <Events /> };
+	const lists: Record< typeof tab, ReactNode > = { events: <Events />, companies: <Companies /> };
 
 	return (
 		<Page

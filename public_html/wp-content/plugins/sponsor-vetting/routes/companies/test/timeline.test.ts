@@ -10,7 +10,11 @@ import type { CompanySponsorship } from '../types';
  * @param log  The times of the sponsorship's own log entries.
  * @return The sponsorship.
  */
-function sponsorship( name: string, date: string, log: string[] = [] ): CompanySponsorship {
+function sponsorship(
+	name: string,
+	date: string,
+	log: string[] = []
+): Pick< CompanySponsorship, 'id' | 'title' | 'status' | 'event' | 'approved' | 'log' > {
 	return {
 		id: name.length,
 		title: { raw: name, rendered: name },

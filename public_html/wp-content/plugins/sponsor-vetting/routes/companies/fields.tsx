@@ -3,8 +3,8 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { __, sprintf } from '@wordpress/i18n';
 import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, compareEventDays, formatDay } from './dates';
-import { COMPANY_STATUSES, SPONSORSHIP_STATUSES, STATUS_INTENTS, TRASH } from './entities';
-import type { AnyStatus } from './entities';
+import { COMPANY_STATUSES, STATUS_INTENTS, TRASH } from './entities';
+import type { AnyStatus, Intent } from './entities';
 import type { Company, Event, Flag, Sponsorship } from './types';
 
 /**
@@ -116,6 +116,30 @@ function getStatusField< Item extends { status: AnyStatus } >(
 }
 
 /**
+ * Builds the Follow-up field of a list: what a reviewer should know about a company beyond its status.
+ *
+ * @param getFlags Gets the flags of the company a row is about.
+ * @return The field.
+ */
+function getFollowUpField< Item >( getFlags: ( item: Item ) => Flag[] ): Field< Item > {
+	return {
+		id: 'follow_up',
+		label: __( 'Follow-up', 'wordcamporg' ),
+		type: 'array',
+		elements: [
+			{ value: 'replied', label: __( 'Sponsor replied', 'wordcamporg' ) },
+			{ value: 'good_faith', label: __( 'Good Faith', 'wordcamporg' ) },
+			{ value: 'lapsed', label: __( 'Vetting has lapsed', 'wordcamporg' ) },
+			{ value: 'not_eligible_ended', label: __( 'Not Eligible period has ended', 'wordcamporg' ) },
+		],
+		filterBy: { operators: [ 'isAny', 'isNone' ] },
+		enableSorting: false,
+		getValue: ( { item } ) => getFlags( item ).map( ( flag ) => flag.type ),
+		render: ( { item } ) => <Flags flags={ getFlags( item ) } />,
+	};
+}
+
+/**
  * Builds the fields of the company list.
  *
  * @param labels The statuses' labels, keyed by status.
@@ -142,19 +166,8 @@ export function getCompanyFields( labels: Record< string, string > ): Field< Com
 		},
 		getStatusField< Company >( COMPANY_STATUSES, labels ),
 		{
-			id: 'follow_up',
-			label: __( 'Follow-up', 'wordcamporg' ),
-			type: 'array',
-			elements: [
-				{ value: 'replied', label: __( 'Sponsor replied', 'wordcamporg' ) },
-				{ value: 'good_faith', label: __( 'Good Faith', 'wordcamporg' ) },
-				{ value: 'lapsed', label: __( 'Vetting has lapsed', 'wordcamporg' ) },
-				{ value: 'not_eligible_ended', label: __( 'Not Eligible period has ended', 'wordcamporg' ) },
-			],
+			...getFollowUpField< Company >( ( { flags } ) => flags ),
 			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
-			enableSorting: false,
-			getValue: ( { item } ) => item.flags.map( ( flag ) => flag.type ),
-			render: ( { item } ) => <Flags flags={ item.flags } />,
 		},
 		{
 			id: 'next_event',
@@ -192,10 +205,86 @@ export function getEventHeading( { name, date }: Event ): string {
 }
 
 /**
- * Builds the fields of the list of events, which shows each sponsorship with its event and its company.
+ * Says how a sponsorship's approval stands, telling one given in good faith from the rest.
+ *
+ * @param sponsorship            The sponsorship.
+ * @param sponsorship.status     Its status.
+ * @param sponsorship.good_faith Whether it was approved in good faith.
+ * @param labels                 The statuses' labels, keyed by status.
+ * @return The label.
+ */
+export function getApprovalLabel(
+	{ status, good_faith: goodFaith }: Pick< Sponsorship, 'status' | 'good_faith' >,
+	labels: Record< string, string >
+): string {
+	return status === 'svs-approved' && goodFaith
+		? __( 'Approved in Good Faith', 'wordcamporg' )
+		: labels[ status ] ?? status;
+}
+
+/**
+ * Tells whether a sponsorship waits for a vetter to link it to a company.
+ *
+ * @param sponsorship         The sponsorship.
+ * @param sponsorship.company Its company, or 0.
+ * @param sponsorship.status  Its status.
+ * @return Whether it does.
+ */
+export function needsCompany( { company, status }: Pick< Sponsorship, 'company' | 'status' > ): boolean {
+	return ! company && status === 'svs-pending';
+}
+
+/**
+ * Gets the one status the list of events shows for a sponsorship: its own once that's decided, and until then what
+ * it waits for, which is its company's vetting or, before that, a company.
+ *
+ * @param sponsorship The sponsorship.
+ * @param company     Its company, if it has one.
+ * @param labels      The statuses' labels, keyed by status.
+ * @return The status's label, and the intent of its badge.
+ */
+export function getSponsorStatus(
+	sponsorship: Sponsorship,
+	company: Company | undefined,
+	labels: Record< string, string >
+): { label: string; intent: Intent } {
+	if ( needsCompany( sponsorship ) ) {
+		return { label: __( 'Needs a company', 'wordcamporg' ), intent: 'informational' };
+	}
+
+	if ( sponsorship.status === 'svs-pending' && company ) {
+		return { label: labels[ company.status ] ?? company.status, intent: STATUS_INTENTS[ company.status ] };
+	}
+
+	return {
+		label: getApprovalLabel( sponsorship, labels ),
+		intent: STATUS_INTENTS[ sponsorship.status ] ?? 'none',
+	};
+}
+
+/**
+ * Gets who a sponsorship is from: its company or, before it has one, the sponsor as its event named it.
+ *
+ * @param sponsorship The sponsorship, whose own name is the sponsor's followed by the event's.
+ * @param company     Its company, if it has one.
+ * @return The name.
+ */
+export function getSponsorName( sponsorship: Pick< Sponsorship, 'title' | 'event' >, company?: Company ): string {
+	if ( company ) {
+		return getName( company );
+	}
+
+	const name = getName( sponsorship );
+	const suffix = ` — ${ sponsorship.event.name }`;
+
+	return name.endsWith( suffix ) ? name.slice( 0, -suffix.length ) : name;
+}
+
+/**
+ * Builds the fields of the list of events, which shows each sponsorship as its sponsor at an event.
  *
  * @param labels       The statuses' labels, keyed by status.
- * @param companies    The companies, for their names and statuses.
+ * @param companies    The companies, for their names, statuses and flags.
  * @param sponsorships The sponsorships, for when their events are and how many wait for a company.
  * @param today        Today, as `Y-m-d`.
  * @return The fields.
@@ -208,20 +297,30 @@ export function getSponsorshipFields(
 ): Field< Sponsorship >[] {
 	const byId = new Map( companies.map( ( company ) => [ company.id, company ] ) );
 	const getCompany = ( { company }: Sponsorship ) => byId.get( company );
+	const getStatus = ( item: Sponsorship ) => getSponsorStatus( item, getCompany( item ), labels );
 	// A group is headed by its field's value, and sorted by it: so the heading says when, and this knows when.
 	const days = new Map( sponsorships.map( ( { event } ) => [ getEventHeading( event ), event.date ] ) );
 	const compareEvents = ( a: string, b: string ) =>
 		compareEventDays( days.get( a ) ?? '', days.get( b ) ?? '', today ) || a.localeCompare( b );
-	const waiting = sponsorships.filter( ( { company, status } ) => ! company && status !== TRASH ).length;
+	// What still takes a vetter comes first: a company, then its vetting, then what's decided.
+	const order = [
+		__( 'Needs a company', 'wordcamporg' ),
+		...COMPANY_STATUSES.map( ( status ) => labels[ status ] ?? status ),
+		labels[ 'svs-approved' ] ?? 'svs-approved',
+		__( 'Approved in Good Faith', 'wordcamporg' ),
+		labels[ 'svs-not-approved' ] ?? 'svs-not-approved',
+		labels[ 'svs-canceled' ] ?? 'svs-canceled',
+		labels[ TRASH ] ?? TRASH,
+	];
 
 	return [
 		{
 			id: 'title',
-			label: __( 'Sponsorship', 'wordcamporg' ),
+			label: __( 'Sponsor', 'wordcamporg' ),
 			enableGlobalSearch: true,
 			enableHiding: false,
 			filterBy: false,
-			getValue: ( { item } ) => getName( item ),
+			getValue: ( { item } ) => getSponsorName( item, getCompany( item ) ),
 		},
 		{
 			id: 'event',
@@ -243,30 +342,34 @@ export function getSponsorshipFields(
 				direction === 'asc' ? compareEventDays( a, b, today ) : compareEventDays( b, a, today ),
 		},
 		{
-			id: 'company',
-			label: __( 'Company', 'wordcamporg' ),
-			enableGlobalSearch: true,
-			filterBy: false,
-			getValue: ( { item } ) => {
-				const company = getCompany( item );
-
-				return company ? getName( company ) : '';
-			},
+			id: 'status',
+			label: __( 'Status', 'wordcamporg' ),
+			getValue: ( { item } ) => getStatus( item ).label,
+			elements: order.map( ( label ) => ( { value: label, label } ) ),
+			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
 			render: ( { item } ) => {
-				const company = getCompany( item );
+				const { label, intent } = getStatus( item );
 
-				if ( ! company ) {
-					return item.company ? '' : __( 'Needs a company', 'wordcamporg' );
-				}
+				return (
+					<Badge className="sponsor-vetting__status" intent={ intent }>
+						{ label }
+					</Badge>
+				);
+			},
+			sort: ( a: string, b: string, direction ) => {
+				const delta = order.indexOf( a ) - order.indexOf( b );
 
-				return `${ getName( company ) } (${ labels[ company.status ] ?? company.status })`;
+				return direction === 'asc' ? delta : -delta;
 			},
 		},
-		getStatusField< Sponsorship >( SPONSORSHIP_STATUSES, labels ),
+		getFollowUpField< Sponsorship >( ( item ) => getCompany( item )?.flags ?? [] ),
 		{
 			id: 'needs_company',
-			/* translators: %d: Number of sponsorships. */
-			label: sprintf( __( 'Needs a company (%d)', 'wordcamporg' ), waiting ),
+			label: sprintf(
+				/* translators: %d: Number of sponsorships. */
+				__( 'Needs a company (%d)', 'wordcamporg' ),
+				sponsorships.filter( needsCompany ).length
+			),
 			elements: [
 				{ value: 'yes', label: __( 'Yes', 'wordcamporg' ) },
 				{ value: 'no', label: __( 'No', 'wordcamporg' ) },
@@ -274,7 +377,7 @@ export function getSponsorshipFields(
 			// Pinned, so the count of what's waiting is always in the row of filters.
 			filterBy: { operators: [ 'is' ], isPrimary: true },
 			enableSorting: false,
-			getValue: ( { item } ) => ( item.company ? 'no' : 'yes' ),
+			getValue: ( { item } ) => ( needsCompany( item ) ? 'yes' : 'no' ),
 		},
 		{
 			id: 'approved',

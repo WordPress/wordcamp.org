@@ -37,25 +37,110 @@
 	height: var(--wpds-dimension-gap-xl);
 }
 
-// The panel beside the list scrolls as a whole, so its controls stick to the top.
-.sponsor-vetting__panel-header {
-	background-color: inherit;
+// The narrow list beside an open record has the search on a line of its own, as wide as the list.
+.sponsor-vetting__list-search {
+	padding: var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-2xl) 0;
+
+	.dataviews-search {
+		max-width: none;
+		width: 100%;
+	}
+}
+
+// The open record scrolls as a whole, so its name and controls stick to the top.
+.sponsor-vetting__canvas-header {
+	background-color: var(--wpds-color-background-surface-neutral);
 	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
-	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	padding: var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-2xl);
 	position: sticky;
 	top: 0;
 	z-index: 1;
 }
 
-.sponsor-vetting__panel-body {
+.sponsor-vetting__canvas-body {
 	padding: var(--wpds-dimension-padding-2xl);
+
+	// A record with little to show doesn't spread across the canvas.
+	&.is-narrow {
+		max-width: 720px;
+	}
+}
+
+// On a small screen the surfaces are stacked, the list above the canvas: the open record goes on top.
+@media (max-width: 782px) {
+	div:has(> .sponsor-vetting__canvas) {
+		z-index: 4;
+	}
 }
 
 .sponsor-vetting__loading {
 	min-height: 240px;
 }
 
-// The card's own padding is too generous for a 400px column.
+// A company's events: one row each, with no headings to read past.
+.sponsor-vetting__events {
+	overflow-x: auto;
+
+	table {
+		border-collapse: collapse;
+		width: 100%;
+	}
+
+	th,
+	td {
+		padding: var(--wpds-dimension-padding-md) var(--wpds-dimension-padding-lg);
+		text-align: start;
+		vertical-align: top;
+	}
+
+	th {
+		font-weight: 500;
+	}
+
+	.sponsor-vetting__event + .sponsor-vetting__event {
+		border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
+	}
+
+	// The event the company was opened from.
+	.sponsor-vetting__event.is-marked {
+		background-color: var(--wpds-color-background-surface-brand);
+	}
+
+	// The row under an event that says its website changed belongs to it.
+	.sponsor-vetting__event:has(> td[colspan]) {
+		border-top: 0;
+
+		td {
+			padding-top: 0;
+		}
+	}
+}
+
+// What's vetted once: the work on one side, the company's state and details on the other, or under it where the
+// canvas is too narrow for both.
+.sponsor-vetting__columns {
+	align-items: flex-start;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wpds-dimension-gap-lg);
+
+	> :first-child {
+		flex: 999 1 440px;
+		min-width: 0;
+	}
+
+	> :last-child {
+		flex: 1 1 280px;
+		min-width: 0;
+	}
+}
+
+// The control that picks a company takes the room its button leaves.
+.sponsor-vetting__pick {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
 .sponsor-vetting__section {
 	--wp-ui-card-padding: var(--wpds-dimension-padding-lg);
 }
@@ -68,17 +153,6 @@
 .sponsor-vetting__value {
 	overflow-wrap: anywhere;
 	text-align: end;
-}
-
-// A record's name that opens it reads as a link.
-.sponsor-vetting__open {
-	color: var(--wpds-color-foreground-interactive-brand);
-	cursor: pointer;
-	text-align: start;
-
-	&:hover {
-		text-decoration: underline;
-	}
 }
 
 .sponsor-vetting__overdue {
@@ -115,7 +189,6 @@
 	}
 }
 
-.sponsor-vetting__event + .sponsor-vetting__event,
 .sponsor-vetting__entry + .sponsor-vetting__entry {
 	border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
 	padding-top: var(--wpds-dimension-padding-md);

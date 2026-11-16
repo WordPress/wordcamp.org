@@ -26,7 +26,7 @@ export type CompanyStatus = ( typeof COMPANY_STATUSES )[ number ];
 export type SponsorshipStatus = ( typeof SPONSORSHIP_STATUSES )[ number ];
 export type AnyStatus = CompanyStatus | SponsorshipStatus | typeof TRASH;
 
-type Intent = NonNullable< ComponentProps< typeof Badge >[ 'intent' ] >;
+export type Intent = NonNullable< ComponentProps< typeof Badge >[ 'intent' ] >;
 
 export const STATUS_INTENTS: Record< AnyStatus, Intent > = {
 	'sv-needs-vetting': 'informational',
@@ -66,11 +66,11 @@ export const COMPANIES_QUERY = {
 export const SPONSORSHIPS_QUERY = {
 	status: [ ...SPONSORSHIP_STATUSES, TRASH ],
 	per_page: -1,
-	_fields: [ 'id', 'title', 'status', 'company', 'event', 'approved', 'trashed_status' ],
+	_fields: [ 'id', 'title', 'status', 'company', 'event', 'approved', 'good_faith', 'trashed_status' ],
 };
 
 /**
- * Builds the query for one company's sponsorships, with what its panel shows of them.
+ * Builds the query for one company's sponsorships, with what its view shows of them and does about them.
  *
  * @param companyId The company.
  * @return The query.
@@ -80,6 +80,23 @@ export function getSponsorshipsQuery( companyId: number ) {
 		parent: [ companyId ],
 		status: SPONSORSHIP_STATUSES,
 		per_page: -1,
-		_fields: [ 'id', 'title', 'status', 'event', 'approved', 'log' ],
+		_fields: [
+			'id',
+			'title',
+			'status',
+			'event',
+			'approved',
+			'good_faith',
+			'log',
+			'allowed_statuses',
+			'approvable',
+			'approval_hint',
+			'domain',
+			'approved_domain',
+			'website_changed',
+			'needs_approval_email',
+			'conversations',
+			'sponsor',
+		],
 	};
 }

@@ -12,7 +12,10 @@ export const route = {
 		void resolveSelect( coreStore ).getEntityRecords( 'root', 'status', {} );
 	},
 
-	/* The panel opens beside the list while the address names a company or a sponsorship. */
-	inspector: ( { search }: { search: { company?: unknown; sponsorship?: unknown } } ) =>
-		Boolean( search.company || search.sponsorship ),
+	/*
+	 * The record the address names fills the canvas, which narrows the list beside it. Null asks for this route's
+	 * own canvas; undefined for none.
+	 */
+	canvas: ( { search }: { search: { company?: unknown; sponsorship?: unknown } } ) =>
+		search.company || search.sponsorship ? null : undefined,
 };

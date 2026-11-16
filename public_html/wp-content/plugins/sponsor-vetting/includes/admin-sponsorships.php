@@ -405,9 +405,9 @@ function render_camp_sponsor_box( \WP_Post $post ): void {
 
 	$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? 0;
 	$rows  = array(
-		__( 'Event', 'wordcamporg' )      => get_event_name( $blog_id ),
-		__( 'Event date', 'wordcamporg' ) => $start ? format_event_date( $start ) : '—',
-		__( 'Name', 'wordcamporg' )       => $sponsor['name'],
+		__( 'Event', 'wordcamporg' )        => get_event_name( $blog_id ),
+		__( 'Event date', 'wordcamporg' )   => $start ? format_event_date( $start ) : '—',
+		__( 'Sponsor Name', 'wordcamporg' ) => $sponsor['name'],
 	);
 	?>
 	<table class="form-table" role="presentation">

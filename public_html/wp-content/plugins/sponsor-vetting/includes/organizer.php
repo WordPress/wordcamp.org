@@ -20,7 +20,8 @@ defined( 'WPINC' ) || die();
  * pointer copied along with a sponsor to another site reads as not requested.
  *
  * @param int[] $sponsor_ids The camp's `wcb_sponsor` posts.
- * @return array[] Keyed by sponsor ID: `label`, and `requested`, whether the sponsor has a sponsorship.
+ * @return array[] Keyed by sponsor ID: `status`, a key of get_vetting_status_labels(), `label`, and `requested`,
+ *                 whether the sponsor has a sponsorship.
  */
 function get_organizer_statuses( array $sponsor_ids ): array {
 	$blog_id     = get_current_blog_id();
@@ -57,23 +58,28 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 		_prime_post_caches( array_filter( wp_list_pluck( $sponsorships, 'post_parent' ) ), false, true );
 	}
 
+	$labels   = get_vetting_status_labels();
 	$statuses = array();
 	foreach ( $sponsor_ids as $sponsor_id ) {
 		$sponsorship = $sponsorships[ $pointers[ $sponsor_id ] ] ?? null;
 		$company_id  = get_mes_company( $mes_ids[ $sponsor_id ] );
-		$label       = __( 'Not requested', 'wordcamporg' );
+		$status      = 'not-requested';
+		$label       = $labels[ $status ];
 
 		if ( $sponsorship && get_sponsorship_key( $blog_id, $sponsor_id ) === get_post_meta( $sponsorship->ID, '_sv_key', true ) ) {
-			$label = get_sponsorship_label( $sponsorship );
+			$status = get_sponsorship_vetting_status( $sponsorship );
+			$label  = $labels[ $status ];
 		} elseif ( $company_id ) {
+			$status = get_company_vetting_status( $company_id );
 			/* translators: %s: Vetting status. */
-			$label       = sprintf( __( 'Multi-event sponsor: %s', 'wordcamporg' ), get_company_label( $company_id ) );
+			$label       = sprintf( __( 'Multi-event sponsor: %s', 'wordcamporg' ), $labels[ $status ] );
 			$sponsorship = null;
 		} else {
 			$sponsorship = null;
 		}
 
 		$statuses[ $sponsor_id ] = array(
+			'status'    => $status,
 			'label'     => $label,
 			// Vetting that stopped because the company went Inactive can be asked for again.
 			'requested' => null !== $sponsorship && ! is_canceled_for_inactive( $sponsorship->ID ),
@@ -86,17 +92,55 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 }
 
 /**
- * Words a sponsorship's status for organizers. Runs on Central.
+ * The vetting statuses organizers see, in the order the vetting goes through them.
+ *
+ * @return string[] Labels, keyed by status.
+ */
+function get_vetting_status_labels(): array {
+	return array(
+		'not-requested' => __( 'Not requested', 'wordcamporg' ),
+		'in-review'     => __( 'In review', 'wordcamporg' ),
+		'waiting'       => __( 'Waiting on the sponsor', 'wordcamporg' ),
+		'vetted'        => __( 'Vetted', 'wordcamporg' ),
+		'approved'      => __( 'Approved', 'wordcamporg' ),
+		'not-approved'  => __( 'Not approved', 'wordcamporg' ),
+		'stopped'       => __( 'Vetting stopped', 'wordcamporg' ),
+		'canceled'      => __( 'Canceled', 'wordcamporg' ),
+	);
+}
+
+/**
+ * Gets where a sponsorship stands, as organizers may see it. Runs on Central.
  *
  * @param \WP_Post $sponsorship The sponsorship.
- * @return string
+ * @return string A key of get_vetting_status_labels().
  */
-function get_sponsorship_label( \WP_Post $sponsorship ): string {
+function get_sponsorship_vetting_status( \WP_Post $sponsorship ): string {
 	return match ( $sponsorship->post_status ) {
-		'svs-approved'     => __( 'Approved', 'wordcamporg' ),
-		'svs-not-approved' => __( 'Not approved', 'wordcamporg' ),
-		'svs-canceled'     => is_canceled_for_inactive( $sponsorship->ID ) ? __( 'Vetting stopped', 'wordcamporg' ) : __( 'Canceled', 'wordcamporg' ),
-		default            => $sponsorship->post_parent ? get_company_label( (int) $sponsorship->post_parent ) : __( 'In review', 'wordcamporg' ),
+		'svs-approved'     => 'approved',
+		'svs-not-approved' => 'not-approved',
+		'svs-canceled'     => is_canceled_for_inactive( $sponsorship->ID ) ? 'stopped' : 'canceled',
+		default            => $sponsorship->post_parent ? get_company_vetting_status( (int) $sponsorship->post_parent ) : 'in-review',
+	};
+}
+
+/**
+ * Gets where a company's vetting stands, as organizers may see it, without its details. Runs on Central.
+ *
+ * @param int $company_id The company.
+ * @return string A key of get_vetting_status_labels().
+ */
+function get_company_vetting_status( int $company_id ): string {
+	$state = get_vetting_state( $company_id );
+
+	if ( $state['approvable'] ) {
+		return 'vetted';
+	}
+
+	return match ( $state['status'] ) {
+		'sv-compliance-req' => 'waiting',
+		'sv-inactive'       => 'stopped',
+		default             => 'in-review',
 	};
 }
 
@@ -107,17 +151,7 @@ function get_sponsorship_label( \WP_Post $sponsorship ): string {
  * @return string
  */
 function get_company_label( int $company_id ): string {
-	$state = get_vetting_state( $company_id );
-
-	if ( $state['approvable'] ) {
-		return __( 'Vetted', 'wordcamporg' );
-	}
-
-	return match ( $state['status'] ) {
-		'sv-compliance-req' => __( 'Waiting on the sponsor', 'wordcamporg' ),
-		'sv-inactive'       => __( 'Vetting stopped', 'wordcamporg' ),
-		default             => __( 'In review', 'wordcamporg' ),
-	};
+	return get_vetting_status_labels()[ get_company_vetting_status( $company_id ) ];
 }
 
 /**
@@ -252,6 +286,115 @@ function render_organizer_column( string $column, int $sponsor_id ): void {
 	echo esc_html( $statuses[ $sponsor_id ]['label'] ?? '' );
 }
 add_action( 'manage_wcb_sponsor_posts_custom_column', __NAMESPACE__ . '\render_organizer_column', 10, 2 );
+
+/**
+ * Lets a camp's sponsor list be sorted by vetting status.
+ *
+ * @param array $columns The sortable columns.
+ * @return array
+ */
+function get_sortable_organizer_columns( array $columns ): array {
+	if ( ! is_central() ) {
+		$columns['sv_vetting'] = array( 'sv_vetting', false );
+	}
+
+	return $columns;
+}
+add_filter( 'manage_edit-wcb_sponsor_sortable_columns', __NAMESPACE__ . '\get_sortable_organizer_columns' );
+
+/**
+ * Gets the vetting status the organizer filtered the sponsor list by.
+ *
+ * @return string A key of get_vetting_status_labels(), or an empty string for all.
+ */
+function get_picked_vetting_status(): string {
+	$status = $_GET['sv_vetting'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A list filter, checked against the statuses.
+
+	return is_string( $status ) && isset( get_vetting_status_labels()[ $status ] ) ? $status : '';
+}
+
+/**
+ * Renders the vetting status dropdown above a camp's sponsor list.
+ *
+ * @param string $post_type The listed post type.
+ * @param string $which     Where the filters are shown, above or below the list.
+ */
+function render_vetting_filter( string $post_type, string $which ): void {
+	if ( 'top' !== $which ) {
+		return;
+	}
+
+	$current = get_picked_vetting_status();
+	?>
+	<label for="sv-vetting-filter" class="screen-reader-text"><?php esc_html_e( 'Filter by vetting status', 'wordcamporg' ); ?></label>
+	<select name="sv_vetting" id="sv-vetting-filter">
+		<option value=""><?php esc_html_e( 'All vetting statuses', 'wordcamporg' ); ?></option>
+		<?php foreach ( get_vetting_status_labels() as $status => $label ) : ?>
+			<option value="<?php echo esc_attr( $status ); ?>" <?php selected( $current, $status ); ?>><?php echo esc_html( $label ); ?></option>
+		<?php endforeach; ?>
+	</select>
+	<?php
+}
+
+/**
+ * Limits a camp's sponsor list to the vetting status picked, and sorts it by vetting status when the organizer
+ * picks that column.
+ *
+ * The statuses live on Central, so they're looked up for every sponsor the list would show, then handed back to
+ * the list as the IDs to show in order. A Multi-Event Sponsor's copy counts as its company's status.
+ *
+ * @param \WP_Query $query The list's query.
+ */
+function filter_sponsors_by_vetting( \WP_Query $query ): void {
+	$picked  = get_picked_vetting_status();
+	$sorting = 'sv_vetting' === $query->get( 'orderby' );
+
+	if ( ! $query->is_main_query() || ( '' === $picked && ! $sorting ) ) {
+		return;
+	}
+
+	$sponsor_ids = ( new \WP_Query(
+		array_merge(
+			$query->query,
+			array(
+				'fields'         => 'ids',
+				'posts_per_page' => -1,
+				'no_found_rows'  => true,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			)
+		)
+	) )->posts;
+	$statuses    = get_organizer_statuses( $sponsor_ids );
+
+	if ( '' !== $picked ) {
+		$sponsor_ids = array_values( array_filter( $sponsor_ids, static fn( int $id ): bool => $picked === $statuses[ $id ]['status'] ) );
+	}
+
+	if ( $sorting ) {
+		$rank = array_flip( array_keys( get_vetting_status_labels() ) );
+		$desc = 'DESC' === strtoupper( (string) $query->get( 'order' ) );
+
+		// Stable, so sponsors with the same status stay in title order.
+		usort( $sponsor_ids, static fn( int $a, int $b ): int => ( $rank[ $statuses[ $a ]['status'] ] <=> $rank[ $statuses[ $b ]['status'] ] ) * ( $desc ? -1 : 1 ) );
+
+		$query->set( 'orderby', 'post__in' );
+	}
+
+	// An empty list would list every sponsor.
+	$query->set( 'post__in', $sponsor_ids ?: array( 0 ) );
+}
+
+/**
+ * Adds the vetting filter and sort to a camp's sponsor list screen only.
+ */
+function load_organizer_list(): void {
+	if ( ! is_central() && 'wcb_sponsor' === get_current_screen()?->post_type ) {
+		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_vetting_filter', 10, 2 );
+		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsors_by_vetting' );
+	}
+}
+add_action( 'load-edit.php', __NAMESPACE__ . '\load_organizer_list' );
 
 /**
  * Requests vetting when a camp's sponsor is saved with the vetting box's button.

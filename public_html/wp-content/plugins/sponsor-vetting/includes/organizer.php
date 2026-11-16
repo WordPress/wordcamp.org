@@ -19,15 +19,20 @@ defined( 'WPINC' ) || die();
  * Switches to Central once for all of them. A sponsorship only counts if it belongs to this camp's sponsor, so a
  * pointer copied along with a sponsor to another site reads as not requested.
  *
+ * A Multi-Event Sponsor's copy is the Community Team's to vet, and they invoice it, so organizers have nothing to
+ * request for it. Only while its website is still the Multi-Event Sponsor's, though: organizers can repurpose a copy
+ * as a different sponsor, which then needs vetting like any other.
+ *
  * @param int[] $sponsor_ids The camp's `wcb_sponsor` posts.
- * @return array[] Keyed by sponsor ID: `status`, a key of get_vetting_status_labels(), `label`, and `requested`,
- *                 whether the sponsor has a sponsorship.
+ * @return array[] Keyed by sponsor ID: `status`, a key of get_vetting_status_labels(), `label`, and `can_request`,
+ *                 whether organizers can request vetting for it.
  */
 function get_organizer_statuses( array $sponsor_ids ): array {
 	$blog_id     = get_current_blog_id();
 	$sponsor_ids = array_map( 'intval', $sponsor_ids );
 	$pointers    = array();
 	$mes_ids     = array();
+	$domains     = array();
 
 	update_meta_cache( 'post', $sponsor_ids );
 	register_types();
@@ -35,9 +40,12 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 	foreach ( $sponsor_ids as $sponsor_id ) {
 		$pointers[ $sponsor_id ] = (int) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
 		$mes_ids[ $sponsor_id ]  = (int) get_post_meta( $sponsor_id, '_mes_id', true );
+		$domains[ $sponsor_id ]  = normalize_domain( (string) get_post_meta( $sponsor_id, '_wcpt_sponsor_website', true ) );
 	}
 
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	_prime_post_caches( array_values( array_unique( array_filter( $mes_ids ) ) ), false, true );
 
 	$sponsorships = array();
 	if ( array_filter( $pointers ) ) {
@@ -62,27 +70,29 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 	$statuses = array();
 	foreach ( $sponsor_ids as $sponsor_id ) {
 		$sponsorship = $sponsorships[ $pointers[ $sponsor_id ] ] ?? null;
-		$company_id  = get_mes_company( $mes_ids[ $sponsor_id ] );
+		$mes_id      = $mes_ids[ $sponsor_id ];
 		$status      = 'not-requested';
-		$label       = $labels[ $status ];
 
-		if ( $sponsorship && get_sponsorship_key( $blog_id, $sponsor_id ) === get_post_meta( $sponsorship->ID, '_sv_key', true ) ) {
-			$status = get_sponsorship_vetting_status( $sponsorship );
-			$label  = $labels[ $status ];
-		} elseif ( $company_id ) {
-			$status = get_company_vetting_status( $company_id );
-			/* translators: %s: Vetting status. */
-			$label       = sprintf( __( 'Multi-event sponsor: %s', 'wordcamporg' ), $labels[ $status ] );
-			$sponsorship = null;
-		} else {
+		if ( $sponsorship && get_sponsorship_key( $blog_id, $sponsor_id ) !== get_post_meta( $sponsorship->ID, '_sv_key', true ) ) {
 			$sponsorship = null;
 		}
 
+		if ( $sponsorship ) {
+			$status = get_sponsorship_vetting_status( $sponsorship );
+		} elseif (
+			$mes_id
+			&& 'mes' === get_post_type( $mes_id )
+			&& 'trash' !== get_post_status( $mes_id )
+			&& $domains[ $sponsor_id ] === normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) )
+		) {
+			$status = 'multi-event';
+		}
+
 		$statuses[ $sponsor_id ] = array(
-			'status'    => $status,
-			'label'     => $label,
+			'status'      => $status,
+			'label'       => $labels[ $status ],
 			// Vetting that stopped because the company went Inactive can be asked for again.
-			'requested' => null !== $sponsorship && ! is_canceled_for_inactive( $sponsorship->ID ),
+			'can_request' => 'multi-event' !== $status && ( ! $sponsorship || is_canceled_for_inactive( $sponsorship->ID ) ),
 		);
 	}
 
@@ -103,6 +113,7 @@ function get_vetting_status_labels(): array {
 		'waiting'       => __( 'Waiting on the sponsor', 'wordcamporg' ),
 		'vetted'        => __( 'Vetted', 'wordcamporg' ),
 		'approved'      => __( 'Approved', 'wordcamporg' ),
+		'multi-event'   => __( 'Multi-event sponsor', 'wordcamporg' ),
 		'not-approved'  => __( 'Not approved', 'wordcamporg' ),
 		'stopped'       => __( 'Vetting stopped', 'wordcamporg' ),
 		'canceled'      => __( 'Canceled', 'wordcamporg' ),
@@ -238,7 +249,11 @@ function render_organizer_meta_box( \WP_Post $post ): void {
 
 	echo '<p><strong>' . esc_html( $status['label'] ) . '</strong></p>';
 
-	if ( $status['requested'] ) {
+	if ( 'multi-event' === $status['status'] ) {
+		echo '<p class="description">' . esc_html__( 'The Community Team vets and invoices multi-event sponsors, so there’s nothing to request here.', 'wordcamporg' ) . '</p>';
+	}
+
+	if ( ! $status['can_request'] ) {
 		return;
 	}
 
@@ -388,7 +403,7 @@ function get_vetting_filter_groups(): array {
 	return array(
 		'not-requested' => array( 'not-requested' ),
 		'in-review'     => array( 'in-review', 'waiting', 'vetted' ),
-		'approved'      => array( 'approved' ),
+		'approved'      => array( 'approved', 'multi-event' ),
 		'not-approved'  => array( 'not-approved', 'stopped', 'canceled' ),
 	);
 }

@@ -115,11 +115,14 @@ function get_mes_domains( array $mes_ids ): array {
 			continue;
 		}
 
+		// The vetting team may not have linked a company yet.
+		$company_id = get_mes_company( $mes_id );
+
 		$domains[ $mes_id ] = array_values(
 			array_filter(
 				array_merge(
 					array( normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) ) ),
-					get_company_domains( get_mes_company( $mes_id ) )
+					$company_id ? get_company_domains( $company_id ) : array()
 				)
 			)
 		);
@@ -631,6 +634,11 @@ function request_vetting_on_save( int $post_id, \WP_Post $post ): void {
 		|| ! wp_verify_nonce( sanitize_key( $_POST['sv_request_vetting_nonce'] ), 'sv_request_vetting_' . $post_id )
 		|| ! current_user_can( 'edit_post', $post_id )
 	) {
+		return;
+	}
+
+	// A tab opened before the sponsor was requested, or became a multi-event sponsor's copy, still has the button.
+	if ( ! get_organizer_statuses( array( $post_id ) )[ $post_id ]['can_request'] ) {
 		return;
 	}
 

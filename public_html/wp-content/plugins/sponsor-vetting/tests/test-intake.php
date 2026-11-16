@@ -464,12 +464,25 @@ class Test_Intake extends Database_TestCase {
 	/**
 	 * Organizers see their own sponsors' vetting: a pointer copied along with a sponsor from another site reads as
 	 * not requested. A Multi-Event Sponsor's copy is the Community Team's, with nothing to request, under any of its
-	 * company's domains, until organizers repurpose it with another website or none.
+	 * company's domains or before the vetting team links a company, until organizers repurpose it with another
+	 * website or none.
 	 */
 	public function test_organizer_statuses(): void {
 		list( $company_id, $mes_id ) = $this->create_mes_company( 'sv-compliant' );
 
-		$this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn() => set_company_domains( $company_id, array( 'acme.example', 'acme-labs.example' ) ) );
+		$unlinked_mes_id = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			function () use ( $company_id ): int {
+				set_company_domains( $company_id, array( 'acme.example', 'acme-labs.example' ) );
+
+				return self::factory()->post->create(
+					array(
+						'post_type'  => 'mes',
+						'meta_input' => array( 'mes_website' => 'https://unlinked.example' ),
+					)
+				);
+			}
+		);
 
 		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
 		$sponsorship  = request_vetting( self::$year_dot_2018_site_id, $requested_id );
@@ -478,10 +491,11 @@ class Test_Intake extends Database_TestCase {
 		$alias_id     = $this->create_camp_sponsor( 'https://acme-labs.example', array( '_mes_id' => $mes_id ) );
 		$reused_id    = $this->create_camp_sponsor( 'https://other.example', array( '_mes_id' => $mes_id ) );
 		$cleared_id   = $this->create_camp_sponsor( '', array( '_mes_id' => $mes_id ) );
+		$unlinked_id  = $this->create_camp_sponsor( 'https://unlinked.example', array( '_mes_id' => $unlinked_mes_id ) );
 
 		$statuses = $this->on_site(
 			self::$year_dot_2018_site_id,
-			static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id, $alias_id, $reused_id, $cleared_id ) )
+			static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id, $alias_id, $reused_id, $cleared_id, $unlinked_id ) )
 		);
 
 		$this->assertSame(
@@ -515,6 +529,11 @@ class Test_Intake extends Database_TestCase {
 					'status'      => 'not-requested',
 					'label'       => 'Not requested',
 					'can_request' => true,
+				),
+				$unlinked_id  => array(
+					'status'      => 'multi-event',
+					'label'       => 'Multi-event sponsor',
+					'can_request' => false,
 				),
 			),
 			$statuses

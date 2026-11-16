@@ -74,7 +74,7 @@
 		}
 
 		try {
-			const host = new URL( url ).hostname.replace( /\.$/, '' ).replace( /^www\./, '' );
+			const host = new URL( url ).hostname.replace( /\.+$/, '' ).replace( /^www\./, '' );
 
 			return /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*[a-z0-9]$/.test( host );
 		} catch {
@@ -90,8 +90,14 @@
 	 * @return {boolean} Whether it's valid.
 	 */
 	function isEmail( value ) {
-		return /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]*[a-z0-9]$/i.test(
-			value.trim()
+		const email = value.trim();
+
+		// is_email() wants at least 6 characters, and no label starting or ending with a hyphen.
+		return (
+			email.length >= 6 &&
+			/^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(
+				email
+			)
 		);
 	}
 
@@ -152,7 +158,9 @@
 	 * Saves the sponsor with the request, so the request carries what was just entered.
 	 *
 	 * In the block editor, Contact Information that keeps vetting from being requested is caught before saving, so
-	 * the organizer hears about it as they click. A field stands in for a submit button, which pressing Enter in any other field could trigger.
+	 * the organizer hears about it as they click.
+	 *
+	 * A field stands in for a submit button, which pressing Enter in any other field could trigger.
 	 *
 	 * @param {MouseEvent} event The click.
 	 */

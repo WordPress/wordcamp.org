@@ -433,9 +433,9 @@ class Test_Inactive extends Database_TestCase {
 		$this->assertSame( 'svs-canceled', $canceled );
 		$this->assertSame(
 			array(
-				'status'    => 'stopped',
-				'label'     => 'Vetting stopped',
-				'requested' => false,
+				'status'      => 'stopped',
+				'label'       => 'Vetting stopped',
+				'can_request' => true,
 			),
 			$organizer
 		);

@@ -51,7 +51,14 @@ jQuery( document ).ready( function( $ ) {
 					$( '#_wcbsi_currency' ).val( info.currency ).trigger( 'change' );
 				}
 
-				if ( info.requiredFieldsComplete ) {
+				/*
+				 * Sending needs more than the contact fields, but an invoice already sent only needs those to be
+				 * saved, so don't ask for the rest once it's out.
+				 */
+				var isSent     = -1 === [ 'auto-draft', 'draft' ].indexOf( $( '#original_post_status' ).val() ),
+				    isComplete = isSent ? info.contactFieldsComplete : info.requiredFieldsComplete;
+
+				if ( isComplete ) {
 					// todo add info.hasOwnProperty() check
 					infoTemplate = wp.template( 'wcbsi-sponsor-information' );
 

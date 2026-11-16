@@ -403,19 +403,86 @@ class Test_Intake extends Database_TestCase {
 		$this->assertSame(
 			array(
 				$requested_id => array(
+					'status'    => 'in-review',
 					'label'     => 'In review',
 					'requested' => true,
 				),
 				$copied_id    => array(
+					'status'    => 'not-requested',
 					'label'     => 'Not requested',
 					'requested' => false,
 				),
 				$mes_copy_id  => array(
+					'status'    => 'vetted',
 					'label'     => 'Multi-event sponsor: Vetted',
 					'requested' => false,
 				),
 			),
 			$statuses
+		);
+	}
+
+	/**
+	 * Organizers can narrow their sponsor list to one vetting status, where a Multi-Event Sponsor's copy counts as
+	 * its company's, and sort it in the order vetting goes through the statuses.
+	 *
+	 * @dataProvider data_filter_sponsors_by_vetting
+	 *
+	 * @param string $picked   The status picked from the filter.
+	 * @param string $orderby  The column sorted by.
+	 * @param string $order    The sort direction.
+	 * @param array  $expected The sponsors listed, in order: `unrequested`, `in_review`, or `mes_copy`.
+	 */
+	public function test_filter_sponsors_by_vetting( string $picked, string $orderby, string $order, array $expected ): void {
+		list( , $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+
+		$sponsors = array(
+			'unrequested' => $this->create_camp_sponsor( 'https://unrequested.example' ),
+			'in_review'   => $this->create_camp_sponsor( 'https://in-review.example' ),
+			'mes_copy'    => $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) ),
+		);
+		request_vetting( self::$year_dot_2018_site_id, $sponsors['in_review'] );
+
+		$main_query = $GLOBALS['wp_the_query'];
+		$list_query = new \WP_Query();
+		$get        = $_GET;
+		$hook       = 'WordCamp\Sponsor_Vetting\filter_sponsors_by_vetting';
+
+		$_GET['sv_vetting']      = $picked;
+		$GLOBALS['wp_the_query'] = $list_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The list's query is the main query.
+		add_action( 'pre_get_posts', $hook );
+
+		$listed = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): array => $list_query->query(
+				array(
+					'post_type' => 'wcb_sponsor',
+					'orderby'   => $orderby,
+					'order'     => $order,
+					'fields'    => 'ids',
+				)
+			)
+		);
+
+		remove_action( 'pre_get_posts', $hook );
+		$GLOBALS['wp_the_query'] = $main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the main query.
+		$_GET                    = $get;
+
+		$this->assertSame( array_map( static fn( string $key ): int => $sponsors[ $key ], $expected ), $listed );
+	}
+
+	/**
+	 * Data provider for test_filter_sponsors_by_vetting().
+	 *
+	 * @return array[]
+	 */
+	public function data_filter_sponsors_by_vetting(): array {
+		return array(
+			'one status'              => array( 'in-review', '', '', array( 'in_review' ) ),
+			'copy as its company'     => array( 'vetted', '', '', array( 'mes_copy' ) ),
+			'status no sponsor has'   => array( 'approved', '', '', array() ),
+			'sorted in vetting order' => array( '', 'sv_vetting', 'ASC', array( 'unrequested', 'in_review', 'mes_copy' ) ),
+			'sorted in reverse'       => array( '', 'sv_vetting', 'DESC', array( 'mes_copy', 'in_review', 'unrequested' ) ),
 		);
 	}
 

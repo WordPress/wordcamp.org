@@ -425,9 +425,8 @@ class Test_Intake extends Database_TestCase {
 		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example' );
 		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
 
-		if ( $in_admin ) {
-			set_current_screen( 'edit' );
-		}
+		// Explicit both ways: another plugin's test bootstrap defines WP_ADMIN for the whole run.
+		set_current_screen( $in_admin ? 'edit' : 'front' );
 
 		$messages = $this->on_site(
 			WORDCAMP_ROOT_BLOG_ID,
@@ -443,8 +442,8 @@ class Test_Intake extends Database_TestCase {
 			}
 		);
 
-		// Back out of wp-admin, so later tests don't run in it.
-		set_current_screen( 'front' );
+		// Back to the run's default for the tests after this one.
+		$GLOBALS['current_screen'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Undoes set_current_screen().
 
 		$this->assertSame( 'svs-approved', $messages[0] );
 		$this->assertSame( $in_admin, in_array( '1 pending sponsorship was approved automatically.', $messages[1], true ) );

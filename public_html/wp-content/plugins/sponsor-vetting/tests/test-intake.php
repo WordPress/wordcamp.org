@@ -20,6 +20,7 @@ use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\import_row;
 use function WordCamp\Sponsor_Vetting\normalize_domain;
 use function WordCamp\Sponsor_Vetting\parse_csv;
+use function WordCamp\Sponsor_Vetting\render_vetting_reminder;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\set_company_domains;
 use function WordCamp\Sponsor_Vetting\take_notices;
@@ -591,6 +592,50 @@ class Test_Intake extends Database_TestCase {
 			'a name missing'                 => array( 'hybrid.example', 'frank@hybrid.example', '', 'missing' ),
 			'a website without a domain'     => array( 'hybrid', 'frank@hybrid.example', 'Lloyd', 'website' ),
 			'an email with no dot in domain' => array( 'hybrid.example', 'frank@gmail', 'Lloyd', 'email' ),
+		);
+	}
+
+	/**
+	 * The sponsor list reminds organizers to request vetting while a sponsor hasn't been submitted, counting only
+	 * those, and says nothing once every sponsor has been.
+	 *
+	 * @dataProvider data_vetting_reminder
+	 *
+	 * @param bool   $all_requested Whether vetting was requested for every sponsor.
+	 * @param string $expected      The reminder's text, or an empty string for none.
+	 */
+	public function test_vetting_reminder( bool $all_requested, string $expected ): void {
+		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
+		$other_id     = $this->create_camp_sponsor( 'https://other.example' );
+
+		request_vetting( self::$year_dot_2018_site_id, $requested_id );
+
+		if ( $all_requested ) {
+			request_vetting( self::$year_dot_2018_site_id, $other_id );
+		}
+
+		$reminder = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static function (): string {
+				ob_start();
+				render_vetting_reminder();
+
+				return wp_strip_all_tags( (string) ob_get_clean() );
+			}
+		);
+
+		$this->assertSame( $expected, trim( $reminder ) );
+	}
+
+	/**
+	 * Whether every sponsor was submitted, and the reminder the list shows.
+	 *
+	 * @return array[]
+	 */
+	public function data_vetting_reminder(): array {
+		return array(
+			'one not submitted' => array( false, '1 sponsor hasn’t been submitted for vetting yet. Open it and click “Request vetting” in its Sponsor Vetting box. Show it' ),
+			'all submitted'     => array( true, '' ),
 		);
 	}
 

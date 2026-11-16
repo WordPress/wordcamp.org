@@ -477,10 +477,62 @@ function filter_sponsors_by_vetting( \WP_Query $query ): void {
 }
 
 /**
- * Adds the vetting filter and sort to a camp's sponsor list screen only.
+ * Reminds organizers to request vetting for the camp's sponsors that haven't been submitted yet.
+ *
+ * Counts every sponsor but those in the trash, drafts included, since vetting can be requested before a sponsor is
+ * published. Links to them through the vetting filter, unless the list already shows only them.
+ */
+function render_vetting_reminder(): void {
+	$sponsor_ids = get_posts(
+		array(
+			'post_type'      => 'wcb_sponsor',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		)
+	);
+	$count       = count(
+		array_filter(
+			get_organizer_statuses( $sponsor_ids ),
+			static fn( array $status ): bool => 'not-requested' === $status['status']
+		)
+	);
+
+	if ( ! $count ) {
+		return;
+	}
+
+	$message = esc_html(
+		sprintf(
+			/* translators: %s: Number of sponsors. */
+			_n(
+				'%s sponsor hasn’t been submitted for vetting yet. Open it and click “Request vetting” in its Sponsor Vetting box.',
+				'%s sponsors haven’t been submitted for vetting yet. Open each one and click “Request vetting” in its Sponsor Vetting box.',
+				$count,
+				'wordcamporg'
+			),
+			number_format_i18n( $count )
+		)
+	);
+
+	if ( 'not-requested' !== get_picked_vetting_status() ) {
+		$message .= sprintf(
+			' <a href="%s">%s</a>',
+			esc_url( add_query_arg( 'sv_vetting', 'not-requested', admin_url( 'edit.php?post_type=wcb_sponsor' ) ) ),
+			esc_html( _n( 'Show it', 'Show them', $count, 'wordcamporg' ) )
+		);
+	}
+
+	wp_admin_notice( $message, array( 'type' => 'info' ) );
+}
+
+/**
+ * Adds the vetting reminder, filter and sort to a camp's sponsor list screen only.
  */
 function load_organizer_list(): void {
 	if ( ! is_central() && 'wcb_sponsor' === get_current_screen()?->post_type ) {
+		add_action( 'admin_notices', __NAMESPACE__ . '\render_vetting_reminder' );
 		add_action( 'restrict_manage_posts', __NAMESPACE__ . '\render_vetting_filter', 10, 2 );
 		add_action( 'pre_get_posts', __NAMESPACE__ . '\filter_sponsors_by_vetting' );
 	}

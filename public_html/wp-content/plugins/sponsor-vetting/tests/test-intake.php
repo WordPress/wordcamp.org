@@ -423,12 +423,12 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * Organizers can narrow their sponsor list to one vetting status, where a Multi-Event Sponsor's copy counts as
-	 * its company's, and sort it in the order vetting goes through the statuses.
+	 * Organizers can narrow their sponsor list to a group of vetting statuses, where a Multi-Event Sponsor's copy
+	 * counts as its company's, and sort it in the order vetting goes through the statuses.
 	 *
 	 * @dataProvider data_filter_sponsors_by_vetting
 	 *
-	 * @param string $picked   The status picked from the filter.
+	 * @param string $picked   The status group picked from the filter.
 	 * @param string $orderby  The column sorted by.
 	 * @param string $order    The sort direction.
 	 * @param array  $expected The sponsors listed, in order: `unrequested`, `in_review`, or `mes_copy`.
@@ -478,11 +478,10 @@ class Test_Intake extends Database_TestCase {
 	 */
 	public function data_filter_sponsors_by_vetting(): array {
 		return array(
-			'one status'              => array( 'in-review', '', '', array( 'in_review' ) ),
-			'copy as its company'     => array( 'vetted', '', '', array( 'mes_copy' ) ),
-			'status no sponsor has'   => array( 'approved', '', '', array() ),
-			'sorted in vetting order' => array( '', 'sv_vetting', 'ASC', array( 'unrequested', 'in_review', 'mes_copy' ) ),
-			'sorted in reverse'       => array( '', 'sv_vetting', 'DESC', array( 'mes_copy', 'in_review', 'unrequested' ) ),
+			'a group, sorted'          => array( 'in-review', 'sv_vetting', 'ASC', array( 'in_review', 'mes_copy' ) ),
+			'a group no sponsor is in' => array( 'not-approved', '', '', array() ),
+			'sorted in vetting order'  => array( '', 'sv_vetting', 'ASC', array( 'unrequested', 'in_review', 'mes_copy' ) ),
+			'sorted in reverse'        => array( '', 'sv_vetting', 'DESC', array( 'mes_copy', 'in_review', 'unrequested' ) ),
 		);
 	}
 

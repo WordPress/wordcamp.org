@@ -252,9 +252,13 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 		 * company by the sponsor's website and writes to an email address that must be valid, so the send form
 		 * checks those too.
 		 */
-		$attributes = $data[ $sponsor->ID ]['data_attributes'];
-		$complete   = required_fields_complete( $attributes, $required_fields );
-		$sendable   = $complete && '' !== trim( $attributes['website'] ) && is_email( $attributes['email-address'] );
+		$attributes  = $data[ $sponsor->ID ]['data_attributes'];
+		$complete    = required_fields_complete( $attributes, $required_fields );
+		// A website vetting can find the company by, as the Request vetting button checks it.
+		$has_website = function_exists( '\WordCamp\Sponsor_Vetting\normalize_domain' )
+			? '' !== \WordCamp\Sponsor_Vetting\normalize_domain( $attributes['website'] )
+			: '' !== trim( $attributes['website'] );
+		$sendable    = $complete && $has_website && is_email( trim( $attributes['email-address'] ) );
 
 		$data[ $sponsor->ID ]['data_attributes']['contact-fields-complete']  = $complete ? 'true' : 'false';
 		$data[ $sponsor->ID ]['data_attributes']['required-fields-complete'] = $sendable ? 'true' : 'false';

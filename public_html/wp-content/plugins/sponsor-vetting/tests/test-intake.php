@@ -371,6 +371,7 @@ class Test_Intake extends Database_TestCase {
 		return array(
 			'complete'                       => array( 'https://acme.example', 'pat@acme.example', true ),
 			'no website'                     => array( '', 'pat@acme.example', false ),
+			'a website without a domain'     => array( 'TBD', 'pat@acme.example', false ),
 			'an email with no dot in domain' => array( 'https://acme.example', 'pat@acme', false ),
 		);
 	}
@@ -413,20 +414,76 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
+	 * When a company turns Compliant and its pending sponsorships are approved, a vetter in wp-admin is told so. A
+	 * change from anywhere else, like WP-CLI or cron, queues nothing: nobody would see it where it belongs.
+	 *
+	 * @dataProvider data_auto_approval_notice
+	 *
+	 * @param bool $in_admin Whether the company turns Compliant in wp-admin.
+	 */
+	public function test_auto_approval_notice( bool $in_admin ): void {
+		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example' );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		if ( $in_admin ) {
+			set_current_screen( 'edit' );
+		}
+
+		$messages = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static function () use ( $sponsorship_id ): array {
+				wp_update_post(
+					array(
+						'ID'          => (int) get_post_field( 'post_parent', $sponsorship_id ),
+						'post_status' => 'sv-compliant',
+					)
+				);
+
+				return array( get_post_status( $sponsorship_id ), array_column( take_notices(), 'message' ) );
+			}
+		);
+
+		// Back out of wp-admin, so later tests don't run in it.
+		set_current_screen( 'front' );
+
+		$this->assertSame( 'svs-approved', $messages[0] );
+		$this->assertSame( $in_admin, in_array( '1 pending sponsorship was approved automatically.', $messages[1], true ) );
+	}
+
+	/**
+	 * Where the company turns Compliant.
+	 *
+	 * @return array[]
+	 */
+	public function data_auto_approval_notice(): array {
+		return array(
+			'in wp-admin'  => array( true ),
+			'anywhere else' => array( false ),
+		);
+	}
+
+	/**
 	 * Organizers see their own sponsors' vetting: a pointer copied along with a sponsor from another site reads as
-	 * not requested. A Multi-Event Sponsor's copy is the Community Team's, with nothing to request, until organizers
-	 * repurpose it with another website.
+	 * not requested. A Multi-Event Sponsor's copy is the Community Team's, with nothing to request, under any of its
+	 * company's domains, until organizers repurpose it with another website or none.
 	 */
 	public function test_organizer_statuses(): void {
-		list( , $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+		list( $company_id, $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+
+		$this->on_site( WORDCAMP_ROOT_BLOG_ID, static fn() => set_company_domains( $company_id, array( 'acme.example', 'acme-labs.example' ) ) );
 
 		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
 		$sponsorship  = request_vetting( self::$year_dot_2018_site_id, $requested_id );
 		$copied_id    = $this->create_camp_sponsor( 'https://copied.example', array( '_sv_sponsorship_id' => $sponsorship ) );
 		$mes_copy_id  = $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) );
+		$alias_id     = $this->create_camp_sponsor( 'https://acme-labs.example', array( '_mes_id' => $mes_id ) );
 		$reused_id    = $this->create_camp_sponsor( 'https://other.example', array( '_mes_id' => $mes_id ) );
+		$cleared_id   = $this->create_camp_sponsor( '', array( '_mes_id' => $mes_id ) );
 
-		$statuses = $this->on_site( self::$year_dot_2018_site_id, static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id, $reused_id ) ) );
+		$statuses = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id, $alias_id, $reused_id, $cleared_id ) )
+		);
 
 		$this->assertSame(
 			array(
@@ -445,7 +502,17 @@ class Test_Intake extends Database_TestCase {
 					'label'       => 'Multi-event sponsor',
 					'can_request' => false,
 				),
+				$alias_id     => array(
+					'status'      => 'multi-event',
+					'label'       => 'Multi-event sponsor',
+					'can_request' => false,
+				),
 				$reused_id    => array(
+					'status'      => 'not-requested',
+					'label'       => 'Not requested',
+					'can_request' => true,
+				),
+				$cleared_id   => array(
 					'status'      => 'not-requested',
 					'label'       => 'Not requested',
 					'can_request' => true,

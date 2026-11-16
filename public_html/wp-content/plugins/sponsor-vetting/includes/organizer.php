@@ -20,8 +20,8 @@ defined( 'WPINC' ) || die();
  * pointer copied along with a sponsor to another site reads as not requested.
  *
  * A Multi-Event Sponsor's copy is the Community Team's to vet, and they invoice it, so organizers have nothing to
- * request for it. Only while its website is still the Multi-Event Sponsor's, though: organizers can repurpose a copy
- * as a different sponsor, which then needs vetting like any other.
+ * request for it. Only while its website is still one of the Multi-Event Sponsor's domains, though: organizers can
+ * repurpose a copy as a different sponsor, which then needs vetting like any other.
  *
  * @param int[] $sponsor_ids The camp's `wcb_sponsor` posts.
  * @return array[] Keyed by sponsor ID: `status`, a key of get_vetting_status_labels(), `label`, and `can_request`,
@@ -45,7 +45,7 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
-	_prime_post_caches( array_values( array_unique( array_filter( $mes_ids ) ) ), false, true );
+	$mes_domains = get_mes_domains( array_values( array_unique( array_filter( $mes_ids ) ) ) );
 
 	$sponsorships = array();
 	if ( array_filter( $pointers ) ) {
@@ -79,12 +79,7 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 
 		if ( $sponsorship ) {
 			$status = get_sponsorship_vetting_status( $sponsorship );
-		} elseif (
-			$mes_id
-			&& 'mes' === get_post_type( $mes_id )
-			&& 'trash' !== get_post_status( $mes_id )
-			&& normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) ) === $domains[ $sponsor_id ]
-		) {
+		} elseif ( $domains[ $sponsor_id ] && in_array( $domains[ $sponsor_id ], $mes_domains[ $mes_id ] ?? array(), true ) ) {
 			$status = 'multi-event';
 		}
 
@@ -99,6 +94,38 @@ function get_organizer_statuses( array $sponsor_ids ): array {
 	restore_current_blog();
 
 	return $statuses;
+}
+
+/**
+ * Gets the domains a camp's copy of each Multi-Event Sponsor can have and still be that sponsor: its website, and its
+ * company's domains. Runs on Central.
+ *
+ * Only for Multi-Event Sponsors still in the program, so published ones.
+ *
+ * @param int[] $mes_ids The `mes` posts.
+ * @return array[] Domains, keyed by `mes` post ID.
+ */
+function get_mes_domains( array $mes_ids ): array {
+	$domains = array();
+
+	_prime_post_caches( $mes_ids, false, true );
+
+	foreach ( $mes_ids as $mes_id ) {
+		if ( 'mes' !== get_post_type( $mes_id ) || 'publish' !== get_post_status( $mes_id ) ) {
+			continue;
+		}
+
+		$domains[ $mes_id ] = array_values(
+			array_filter(
+				array_merge(
+					array( normalize_domain( (string) get_post_meta( $mes_id, 'mes_website', true ) ) ),
+					get_company_domains( get_mes_company( $mes_id ) )
+				)
+			)
+		);
+	}
+
+	return $domains;
 }
 
 /**
@@ -358,21 +385,39 @@ function add_organizer_column( array $columns ): array {
 add_filter( 'manage_wcb_sponsor_posts_columns', __NAMESPACE__ . '\add_organizer_column', 20 );
 
 /**
+ * Gets where the sponsor list's sponsors stand, looking each up on Central once per request.
+ *
+ * The reminder, the filter and the column each need statuses, mostly of the same sponsors.
+ *
+ * @param int[] $sponsor_ids The camp's `wcb_sponsor` posts.
+ * @return array[] As get_organizer_statuses() returns them.
+ */
+function get_listed_statuses( array $sponsor_ids ): array {
+	static $statuses = array();
+
+	$blog_id     = get_current_blog_id();
+	$sponsor_ids = array_map( 'intval', $sponsor_ids );
+	$missing     = array_values( array_diff( $sponsor_ids, array_keys( $statuses[ $blog_id ] ?? array() ) ) );
+
+	if ( $missing ) {
+		$statuses[ $blog_id ] = ( $statuses[ $blog_id ] ?? array() ) + get_organizer_statuses( $missing );
+	}
+
+	return array_intersect_key( $statuses[ $blog_id ] ?? array(), array_flip( $sponsor_ids ) );
+}
+
+/**
  * Renders the vetting column, looking up every sponsor on the page at once.
  *
  * @param string $column     The column.
  * @param int    $sponsor_id The camp's sponsor.
  */
 function render_organizer_column( string $column, int $sponsor_id ): void {
-	static $statuses = null;
-
 	if ( 'sv_vetting' !== $column ) {
 		return;
 	}
 
-	if ( null === $statuses ) {
-		$statuses = get_organizer_statuses( wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
-	}
+	$statuses = get_listed_statuses( wp_list_pluck( $GLOBALS['wp_query']->posts ?? array(), 'ID' ) );
 
 	echo esc_html( $statuses[ $sponsor_id ]['label'] ?? '' );
 }
@@ -448,7 +493,7 @@ function render_vetting_filter( string $post_type, string $which ): void {
  * picks that column.
  *
  * The statuses live on Central, so they're looked up for every sponsor the list would show, then handed back to
- * the list as the IDs to show in order. A Multi-Event Sponsor's copy counts as its company's status.
+ * the list as the IDs to show in order. A Multi-Event Sponsor's copy counts as approved.
  *
  * @param \WP_Query $query The list's query.
  */
@@ -472,7 +517,7 @@ function filter_sponsors_by_vetting( \WP_Query $query ): void {
 			)
 		)
 	) )->posts;
-	$statuses    = get_organizer_statuses( $sponsor_ids );
+	$statuses    = get_listed_statuses( $sponsor_ids );
 
 	if ( '' !== $picked ) {
 		$group       = get_vetting_filter_groups()[ $picked ];
@@ -496,15 +541,15 @@ function filter_sponsors_by_vetting( \WP_Query $query ): void {
 /**
  * Reminds organizers to request vetting for the camp's sponsors that haven't been submitted yet.
  *
- * Counts only published and scheduled sponsors, the ones the camp has taken on: the Call for Sponsors form makes a
- * draft of every application, accepted or not. Links to the sponsors not submitted through the vetting filter,
+ * Counts only published sponsors, the ones the camp has taken on: the Call for Sponsors form makes a draft of every
+ * application, accepted or not. Links to just those sponsors, through the vetting filter and the Published view,
  * unless the list already shows only them.
  */
 function render_vetting_reminder(): void {
 	$sponsor_ids = get_posts(
 		array(
 			'post_type'      => 'wcb_sponsor',
-			'post_status'    => array( 'publish', 'future' ),
+			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
@@ -512,7 +557,7 @@ function render_vetting_reminder(): void {
 	);
 	$count       = count(
 		array_filter(
-			get_organizer_statuses( $sponsor_ids ),
+			get_listed_statuses( $sponsor_ids ),
 			static fn( array $status ): bool => 'not-requested' === $status['status']
 		)
 	);
@@ -534,10 +579,21 @@ function render_vetting_reminder(): void {
 		)
 	);
 
-	if ( 'not-requested' !== get_picked_vetting_status() ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Compared with a literal, only to hide a link.
+	$showing_them = 'not-requested' === get_picked_vetting_status() && 'publish' === ( $_GET['post_status'] ?? '' );
+
+	if ( ! $showing_them ) {
 		$message .= sprintf(
 			' <a href="%s">%s</a>',
-			esc_url( add_query_arg( 'sv_vetting', 'not-requested', admin_url( 'edit.php?post_type=wcb_sponsor' ) ) ),
+			esc_url(
+				add_query_arg(
+					array(
+						'post_status' => 'publish',
+						'sv_vetting'  => 'not-requested',
+					),
+					admin_url( 'edit.php?post_type=wcb_sponsor' )
+				)
+			),
 			esc_html( _n( 'Show it', 'Show them', $count, 'wordcamporg' ) )
 		);
 	}

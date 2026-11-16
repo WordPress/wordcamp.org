@@ -370,7 +370,7 @@ function auto_approve_on_compliant( int $post_id, \WP_Post $post, bool $update, 
 	$unsent   = array_filter( $approved, __NAMESPACE__ . '\needs_approval_email' );
 
 	// Outside wp-admin, the history is where vetters find it.
-	if ( ! $approved || ! function_exists( __NAMESPACE__ . '\add_notice' ) ) {
+	if ( ! $approved || ! is_admin() ) {
 		return;
 	}
 

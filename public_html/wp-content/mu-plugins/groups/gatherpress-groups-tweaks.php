@@ -190,6 +190,144 @@ add_filter(
 );
 
 /**
+ * The theme every group site runs.
+ */
+const GROUP_SITE_THEME = 'groups-site';
+
+/**
+ * Template parts every group shares, so each one keeps the same header, local
+ * nav, breadcrumbs, and footer (#2368).
+ */
+const LOCKED_TEMPLATE_PARTS = array( 'header', 'footer' );
+
+/**
+ * Keep theme switching to network admins.
+ *
+ * `groups-site` isn't network-enabled, so once an organizer switches away
+ * from it, it no longer shows up in Appearance > Themes and they can't switch
+ * back (#2368). Mapped rather than filtered in `user_has_cap`, which super
+ * admins skip.
+ *
+ * @param string[] $caps    Primitive caps the user needs.
+ * @param string   $cap     Capability being checked.
+ * @param int      $user_id User being checked.
+ * @return string[]
+ */
+function restrict_switch_themes( array $caps, string $cap, int $user_id ): array {
+	if ( 'switch_themes' === $cap && ! user_can( $user_id, 'manage_network' ) ) {
+		$caps[] = 'do_not_allow';
+	}
+
+	return $caps;
+}
+add_filter( 'map_meta_cap', __NAMESPACE__ . '\restrict_switch_themes', 10, 3 );
+
+/**
+ * Backstop: put a group site back on `groups-site` if it ends up on another
+ * theme anyway, e.g. through WP-CLI or code.
+ *
+ * The reverse of `revert_wrong_network_activation()` in
+ * `wcorg-network-theme-control.php`. The network's root site isn't a group
+ * and keeps whatever theme it has.
+ */
+function revert_group_site_theme(): void {
+	if (
+		GROUPS_ROOT_BLOG_ID === get_current_blog_id() ||
+		GROUPS_NETWORK_ID !== (int) get_site()->network_id ||
+		GROUP_SITE_THEME === get_stylesheet()
+	) {
+		return;
+	}
+
+	switch_theme( GROUP_SITE_THEME );
+
+	add_action(
+		'admin_notices',
+		static function () {
+			printf(
+				'<div class="notice notice-error"><p>%s</p></div>',
+				esc_html__( 'Group sites always use the Groups theme, so this site has been switched back to it.', 'wordcamporg' )
+			);
+		}
+	);
+}
+add_action( 'after_switch_theme', __NAMESPACE__ . '\revert_group_site_theme' );
+
+/**
+ * Keep the theme's locked blocks in place for everyone but network admins.
+ *
+ * The theme locks its shared blocks with `lock: { move, remove }`, but
+ * anyone in the Site Editor can unlock them, or edit the markup in the code
+ * editor, unless both are turned off (#2368).
+ *
+ * @param array $settings Block editor settings.
+ * @return array
+ */
+function restrict_block_locking( array $settings ): array {
+	if ( ! current_user_can( 'manage_network' ) ) {
+		$settings['canLockBlocks']      = false;
+		$settings['codeEditingEnabled'] = false;
+	}
+
+	return $settings;
+}
+add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\restrict_block_locking' );
+
+/**
+ * Keep the theme's locked blocks visible on the site.
+ *
+ * The block "Hide" menu ignores the lock, and its "Omit from published
+ * content" leaves a locked block, such as the shared header, out of the page
+ * just as removing it would (#2368). Gutenberg offers it to anyone who can
+ * edit the block, with no setting to turn it off, so a locked block's
+ * visibility is dropped where it renders instead. This also covers a template
+ * saved hidden before this, or through the REST API.
+ *
+ * @param array $parsed_block Block about to be rendered.
+ * @return array
+ */
+function keep_locked_blocks_visible( array $parsed_block ): array {
+	if ( ! empty( $parsed_block['attrs']['lock']['remove'] ) ) {
+		unset( $parsed_block['attrs']['metadata']['blockVisibility'] );
+	}
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', __NAMESPACE__ . '\keep_locked_blocks_visible' );
+
+/**
+ * Reject saves to the shared header and footer parts from anyone but network
+ * admins.
+ *
+ * Other templates and global styles stay editable. Resetting a part to the
+ * theme's version is still allowed, since that restores the shared one.
+ *
+ * @param \stdClass|\WP_Error $changes Template part about to be saved.
+ * @param \WP_REST_Request    $request Request saving it.
+ * @return \stdClass|\WP_Error
+ */
+function protect_locked_template_parts( $changes, $request ) {
+	if ( is_wp_error( $changes ) || current_user_can( 'manage_network' ) ) {
+		return $changes;
+	}
+
+	// A new part only gets its slug from the request, after this filter, and
+	// `wp_insert_post()` sanitizes it then, so `HEADER` would save as `header`.
+	$slug = sanitize_title( $changes->post_name ?? $request['slug'] ?? '' );
+
+	if ( in_array( $slug, LOCKED_TEMPLATE_PARTS, true ) ) {
+		return new \WP_Error(
+			'groups_locked_template_part',
+			__( 'Every group shares this header and footer, so they can\'t be changed here.', 'wordcamporg' ),
+			array( 'status' => rest_authorization_required_code() )
+		);
+	}
+
+	return $changes;
+}
+add_filter( 'rest_pre_insert_wp_template_part', __NAMESPACE__ . '\protect_locked_template_parts', 10, 2 );
+
+/**
  * When searching on the events archive, keep the archive template active
  * instead of switching to the search template. WordPress treats ?s= as a
  * search query which loads search.html — we want to stay on the archive

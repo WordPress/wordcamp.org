@@ -47,8 +47,15 @@ function take_notices(): array {
 
 /**
  * Shows the current user's queued notices.
+ *
+ * Not on block editor screens, which hide them: the meta-box save loads one as it redirects, before the vetting box's
+ * redraw can take the save's notices.
  */
 function render_notices(): void {
+	if ( get_current_screen()?->is_block_editor() ) {
+		return;
+	}
+
 	foreach ( take_notices() as $notice ) {
 		wp_admin_notice(
 			esc_html( $notice['message'] ),

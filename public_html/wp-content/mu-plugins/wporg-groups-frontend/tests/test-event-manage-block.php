@@ -199,4 +199,41 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 
 		$this->assertStringNotContainsString( 'data-wporg-groups-modal="check-in"', do_blocks( '<!-- wp:wporg/event-manage /-->' ) );
 	}
+
+	/**
+	 * The copy button (#2398) shows on any published event for whoever can
+	 * create events, including an Event Organizer on someone else's event.
+	 */
+	public function test_copy_button_on_others_event() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$event_id = $this->go_to_event_owned_by( $owner_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
+
+		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-event-id="' . $event_id . '"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-all"', $output );
+	}
+
+	/**
+	 * A draft isn't offered for copying, and the create-mode block on the
+	 * group home has nothing to copy.
+	 */
+	public function test_copy_button_absent_on_draft_and_in_create_mode() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$event_id = $this->go_to_event_owned_by( $owner_id );
+		wp_set_current_user( $owner_id );
+
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="copy"', do_blocks( '<!-- wp:wporg/event-manage {"mode":"create"} /-->' ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="copy"', do_blocks( '<!-- wp:wporg/event-manage /-->' ) );
+	}
 }

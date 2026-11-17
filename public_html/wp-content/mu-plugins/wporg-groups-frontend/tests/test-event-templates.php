@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\REST\create_event;
@@ -12,11 +13,13 @@ defined( 'WPINC' ) || die();
 require_once __DIR__ . '/class-groups-testcase.php';
 
 /**
- * Starting a new event from a past one (#1892).
+ * Starting a new event from a past one (#1892), or copying one (#2398).
  *
- * The create form can be filled from any published event in the group. It
- * copies what the event is, not when it is: the date and start time stay the
- * new-event defaults, and only the template's duration carries over.
+ * The create form can be filled from any published event in the group. A
+ * template copies what the event is, not when it is: the date and start time
+ * stay the new-event defaults, and only the template's duration carries over.
+ * A copy is the same event on another day: everything but the date carries
+ * over, and a copy of a series is a one-off.
  * Who may do this is covered by the authorization matrix in
  * `test-rest-authorization.php`.
  *
@@ -78,16 +81,20 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 	/**
 	 * Load the create form from a template, as a given user.
 	 *
-	 * @param int $template_id The event to start from.
-	 * @param int $user_id     The user loading the form.
+	 * @param int  $template_id The event to start from.
+	 * @param int  $user_id     The user loading the form.
+	 * @param bool $copy        Whether to fill it as a copy.
 	 *
 	 * @return array The response data.
 	 */
-	private function load_template( int $template_id, int $user_id ): array {
+	private function load_template( int $template_id, int $user_id, bool $copy = false ): array {
 		wp_set_current_user( $user_id );
 
 		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
 		$request->set_param( 'template_id', $template_id );
+		if ( $copy ) {
+			$request->set_param( 'copy', true );
+		}
 
 		$response = rest_do_request( $request );
 		$this->assertSame( 200, $response->get_status() );
@@ -245,5 +252,78 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 		$request->set_param( 'template_id', $event_id );
 
 		$this->assertSame( 403, rest_do_request( $request )->get_status() );
+	}
+
+	/**
+	 * A copy carries over everything but the date, including the time of day
+	 * and the hosts, for an organizer who didn't create the event too.
+	 */
+	public function test_copy_prefills_everything_but_the_date() {
+		$host_id = self::factory()->user->create( array( 'role' => 'author' ) );
+
+		$copy_id = $this->create_event(
+			array(
+				'title'             => 'WordPress Workshop',
+				'description'       => "<!-- wp:paragraph -->\n<p>Bring a laptop.</p>\n<!-- /wp:paragraph -->",
+				'time_start'        => '19:15',
+				'time_end'          => '21:45',
+				'timezone'          => 'Europe/Paris',
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.com/workshop',
+				'language'          => 'fr',
+				'topics'            => array( 'Blocks' ),
+				'hosts'             => array( $host_id ),
+				'capacity'          => 25,
+				'rsvp_questions'    => array(
+					array(
+						'label'    => 'What do you want to learn?',
+						'required' => true,
+					),
+				),
+			)
+		);
+
+		// The defaults read the time of day from the group's latest event, so
+		// make that a different one.
+		$this->create_event(
+			array(
+				'time_start' => '08:00',
+				'time_end'   => '09:00',
+			)
+		);
+
+		$data   = $this->load_template( $copy_id, $this->event_organiser_id, true );
+		$fields = $data['fields'];
+
+		$this->assertFalse( $data['is_editing'], 'A copy is a new event, not an edit of the old one.' );
+		$this->assertSame( 0, $data['event_id'] );
+		$this->assertSame( '', $fields['date'], 'The organizer picks the new date.' );
+		$this->assertSame( 'WordPress Workshop', $fields['title'] );
+		$this->assertStringContainsString( 'Bring a laptop.', $fields['description'] );
+		$this->assertSame( '19:15', $fields['time_start'] );
+		$this->assertSame( '21:45', $fields['time_end'] );
+		$this->assertSame( 'Europe/Paris', $fields['timezone'] );
+		$this->assertTrue( $fields['is_online'] );
+		$this->assertSame( 'https://meet.example.com/workshop', $fields['online_event_link'] );
+		$this->assertSame( 'fr', $fields['language'] );
+		$this->assertSame( array( 'Blocks' ), $fields['topics'] );
+		$this->assertSame( array( $host_id ), wp_list_pluck( $fields['hosts'], 'id' ) );
+		$this->assertSame( 25, $fields['capacity'] );
+		$this->assertSame( array( 'What do you want to learn?' ), wp_list_pluck( $fields['rsvp_questions'], 'label' ) );
+	}
+
+	/**
+	 * A copy of a series is a one-off event whose schedule is still open.
+	 */
+	public function test_copy_of_a_recurring_event_is_a_one_off() {
+		$copy_id = $this->create_event( array() );
+
+		update_post_meta( $copy_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $copy_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+
+		$recurrence = $this->load_template( $copy_id, $this->organiser_id, true )['fields']['recurrence'];
+
+		$this->assertSame( '', $recurrence['frequency'] );
+		$this->assertFalse( $recurrence['locked'] );
 	}
 }

@@ -120,6 +120,11 @@ function register_routes(): void {
 					'required'          => false,
 					'sanitize_callback' => 'absint',
 				),
+				// With `template_id`, fill the form as a copy (#2398).
+				'copy'        => array(
+					'type'     => 'boolean',
+					'required' => false,
+				),
 			),
 		)
 	);
@@ -1031,7 +1036,7 @@ function get_existing_event_fields( int $event_id ): array {
  * @return array Form fields.
  */
 function get_template_event_fields( int $template_id, array $defaults ): array {
-	$fields = get_existing_event_fields( $template_id );
+	$fields = get_copied_event_fields( $template_id );
 
 	$duration = get_event_duration_minutes( $template_id );
 
@@ -1044,8 +1049,26 @@ function get_template_event_fields( int $template_id, array $defaults ): array {
 		$fields['time_end'] = sprintf( '%02d:%02d', intdiv( $end_minutes, 60 ), $end_minutes % 60 );
 	}
 
-	// A template's language is a choice its organizer made, so it carries
-	// over like the venue does. With none set, the new-event default stands.
+	return $fields;
+}
+
+/**
+ * Read an event's values into the fields for a copy of it (#2398).
+ *
+ * Unlike a template, a copy is the same event on another day: the time of
+ * day and the hosts carry over too, and only the date is left for the
+ * organizer to pick. The series, if any, isn't: a copy is a one-off.
+ *
+ * @param int $copy_id The event to copy.
+ *
+ * @return array Form fields.
+ */
+function get_copied_event_fields( int $copy_id ): array {
+	$fields         = get_existing_event_fields( $copy_id );
+	$fields['date'] = '';
+
+	// The language is a choice its organizer made, so it carries over like
+	// the venue does. With none set, the new-event default stands.
 	if ( '' === $fields['language'] ) {
 		unset( $fields['language'] );
 	}
@@ -1122,6 +1145,8 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 
 	if ( $is_editing ) {
 		$fields = array_merge( $fields, get_existing_event_fields( $event_id ) );
+	} elseif ( $template_id > 0 && $request->get_param( 'copy' ) ) {
+		$fields = array_merge( $fields, get_copied_event_fields( $template_id ) );
 	} elseif ( $template_id > 0 ) {
 		$fields = array_merge( $fields, get_template_event_fields( $template_id, $fields ) );
 	} else {

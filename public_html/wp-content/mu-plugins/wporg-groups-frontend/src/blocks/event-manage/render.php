@@ -14,7 +14,9 @@ use GatherPress\Core\Rsvp\Rsvp;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Check_In\is_open as check_in_is_open;
+use function WordCamp\Groups\Frontend\REST\current_user_can_create_event;
 use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
+use function WordCamp\Groups\Frontend\REST\is_event_template;
 
 if ( ! current_user_can_manage_events() ) {
 	return;
@@ -50,6 +52,15 @@ if ( $show_edit && ( ! $event_post_id || ! current_user_can_edit_event( $event_p
 $show_edit_button = $show_edit && ! current_user_can_manage_group_settings();
 
 /*
+ * Copying (#2398) starts a new event, so it's offered on any event that
+ * could be a template, including one the user can't edit.
+ */
+$show_copy = $is_single_event
+	&& 'create' !== $block_mode
+	&& current_user_can_create_event()
+	&& is_event_template( $event_post_id );
+
+/*
  * Check-in (#2130) is offered from shortly before the start, when there's
  * someone to check in, and stays for past events so the list can be caught
  * up afterwards. On a recurring series it's for the date being viewed, which
@@ -66,7 +77,7 @@ if ( $show_edit && $is_single_event && $event_post_id ) {
 	$check_in_recurrence = (string) apply_filters( 'wporg_groups_frontend_current_recurrence_id', '', $event_post_id );
 }
 
-if ( ! $show_edit && ! $show_create ) {
+if ( ! $show_edit && ! $show_create && ! $show_copy ) {
 	return;
 }
 
@@ -83,6 +94,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				data-wporg-groups-modal="edit"
 				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
 			>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( $show_copy ) : ?>
+		<div class="wp-block-button is-style-outline">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-groups-modal="copy"
+				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+			><?php esc_html_e( 'Copy this event', 'wordcamporg' ); ?></button>
 		</div>
 	<?php endif; ?>
 

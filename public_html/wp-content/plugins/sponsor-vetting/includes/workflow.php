@@ -465,6 +465,13 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 		update_post_meta( $post->ID, '_sv_approved_by', get_acting_user_id() );
 		snapshot_approved_domain( $post->ID );
 	}
+
+	// A withdrawn approval is forgotten, or it would show on, and mark the next one as given in good faith too.
+	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-approved' === $old_status && 'trash' !== $new_status ) {
+		delete_post_meta( $post->ID, '_sv_approved_at' );
+		delete_post_meta( $post->ID, '_sv_approved_by' );
+		delete_post_meta( $post->ID, '_sv_good_faith' );
+	}
 }
 add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );
 

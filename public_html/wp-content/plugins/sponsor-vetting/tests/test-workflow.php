@@ -11,6 +11,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WP_UnitTestCase;
 use function WordCamp\Sponsor_Vetting\approve_sponsorship;
+use function WordCamp\Sponsor_Vetting\get_approval_summary;
 use function WordCamp\Sponsor_Vetting\get_vetting_state;
 use function WordCamp\Sponsor_Vetting\link_sponsorship;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -323,6 +324,44 @@ class Test_Workflow extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'trash', get_post_status( $sponsorship_id ) );
+	}
+
+	/**
+	 * Canceling an approved sponsorship forgets the approval: reopened, it doesn't read as approved, and approved
+	 * again once its company is Compliant, it isn't one given in good faith.
+	 */
+	public function test_canceling_forgets_the_approval(): void {
+		$company_id     = $this->create_company( 'sv-compliance-req', (int) strtotime( '-1 month' ) );
+		$sponsorship_id = $this->create_sponsorship( $company_id );
+
+		$this->assertTrue( approve_sponsorship( $sponsorship_id, true ) );
+
+		foreach ( array( 'svs-canceled', 'svs-pending' ) as $status ) {
+			wp_update_post(
+				array(
+					'ID'          => $sponsorship_id,
+					'post_status' => $status,
+				)
+			);
+		}
+
+		$this->assertSame( '—', get_approval_summary( $sponsorship_id ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_status' => 'svs-approved',
+			)
+		);
+
+		$this->assertSame( 'svs-approved', get_post_status( $sponsorship_id ) );
+		$this->assertSame( '', get_post_meta( $sponsorship_id, '_sv_good_faith', true ) );
 	}
 
 	/**

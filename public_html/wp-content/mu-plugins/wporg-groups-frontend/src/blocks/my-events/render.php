@@ -5,8 +5,9 @@
  * Shows the current logged-in member their own events in two lists: the ones
  * still to come, and the ones they have already been to (#2061).
  *
- * "Upcoming" means both the events they have RSVP'd to as attending and the
- * ones they authored, which on a group site are the ones they organize.
+ * "Upcoming" means both the events they have RSVP'd to (attending or on the
+ * waiting list, which gets a tag) and the ones they authored, which on a
+ * group site are the ones they organize.
  * Authorship is unioned into the query rather than written into the RSVP data,
  * so "attending" keeps meaning that the person said they are coming (#1810).
  * "Past" is RSVPs only: creating an event is not the same as going to it.
@@ -201,6 +202,9 @@ $wporg_date_format = ( get_date_format() ?: 'M j, Y' ) . ' \· ' . ( get_time_fo
 							<?php echo esc_html( get_the_title( $wporg_event_post->ID ) ); ?>
 						</a>
 					</h3>
+					<?php if ( 'waiting_list' === ( $wporg_entry['status'] ?? '' ) ) : ?>
+						<p class="wporg-my-events__status"><?php esc_html_e( 'Waiting list', 'wordcamporg' ); ?></p>
+					<?php endif; ?>
 				</div>
 			<?php endforeach; ?>
 		</div>

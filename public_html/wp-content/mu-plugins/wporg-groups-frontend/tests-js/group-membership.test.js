@@ -217,3 +217,32 @@ describe( 'group membership step down', () => {
 		expect( mockContext.loading ).toBe( false );
 	} );
 } );
+
+describe( 'group membership join', () => {
+	afterEach( () => {
+		jest.restoreAllMocks();
+	} );
+
+	test( 'tells the visitor when joining fails', async () => {
+		mockContext = {
+			isLoggedIn: true,
+			isMember: false,
+			loading: false,
+			errorMessage: '',
+			restNonce: 'rest-nonce',
+			joinApi: '/wp-json/wporg-groups/v1/members/join',
+			joinError: 'You could not join this group.',
+		};
+		global.fetch = jest.fn().mockResolvedValue( {
+			ok: false,
+			json: async () => ( {} ),
+		} );
+		jest.spyOn( console, 'error' ).mockImplementation( () => {} );
+		const { actions } = loadStore();
+
+		await actions.join();
+
+		expect( mockContext.errorMessage ).toBe( mockContext.joinError );
+		expect( mockContext.loading ).toBe( false );
+	} );
+} );

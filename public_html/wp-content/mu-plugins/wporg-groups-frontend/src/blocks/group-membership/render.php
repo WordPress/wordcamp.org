@@ -11,7 +11,7 @@ use function WordCamp\Groups\Frontend\Capabilities\is_only_organizer;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
-if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count' ), true ) ) {
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count', 'join' ), true ) ) {
 	$variant = 'combined';
 }
 
@@ -27,6 +27,10 @@ $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
 $user_role    = '';
 $role_label   = '';
+
+// `join` is a lone Join button, for visitors who haven't joined.
+$renders_lone_join = 'join' === $variant && ! $is_member;
+$offers_join       = $shows_membership || $renders_lone_join;
 
 if ( $shows_membership && $is_member ) {
 	$user       = wp_get_current_user();
@@ -50,7 +54,7 @@ $renders_role_action = $renders_leave || $renders_step_down;
 // "Step down" rather than "Leave group", and a member knows where they stand.
 $renders_role_badge = $shows_membership && $is_member;
 
-if ( ! $shows_membership && ! $renders_preference && ! $shows_count ) {
+if ( ! $offers_join && ! $renders_preference && ! $shows_count ) {
 	return;
 }
 
@@ -105,7 +109,7 @@ if ( $shows_count ) {
 	);
 }
 
-if ( $shows_membership ) {
+if ( $offers_join ) {
 	$context = array_merge(
 		$context,
 		array(
@@ -116,6 +120,7 @@ if ( $shows_membership ) {
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
 			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
+			'joinError'    => __( 'You could not join this group. Please try again.', 'wordcamporg' ),
 			'loading'      => false,
 			'errorMessage' => '',
 		)
@@ -262,14 +267,26 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				?>
 			</p>
 		<?php endif; ?>
+	<?php endif; ?>
 
-		<?php if ( $renders_step_down ) : ?>
-			<p
-				class="wporg-group-membership__status is-error"
-				role="alert"
-				data-wp-text="context.errorMessage"
-			></p>
-		<?php endif; ?>
+	<?php if ( $renders_lone_join ) : ?>
+		<div class="wp-block-button">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wp-on--click="actions.join"
+				data-wp-bind--disabled="context.loading"
+				data-wp-bind--aria-busy="context.loading"
+			><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( $offers_join ) : ?>
+		<p
+			class="wporg-group-membership__status is-error"
+			role="alert"
+			data-wp-text="context.errorMessage"
+		></p>
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>

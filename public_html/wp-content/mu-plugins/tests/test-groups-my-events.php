@@ -435,7 +435,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$event_id  = $this->make_event( $organiser, '+3 days' );
 
 		$this->assertSame(
-			array( $this->plain_entry( $event_id ) ),
+			array( $this->plain_entry( $event_id ) + array( 'status' => '' ) ),
 			get_upcoming_events( $organiser )
 		);
 	}
@@ -464,6 +464,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'recurrence_id' => $attending['recurrence_id'],
 					'start'         => $attending['start'],
 					'timezone'      => $attending['timezone'],
+					'status'        => 'attending',
 				),
 			),
 			get_upcoming_events( $member ),
@@ -514,6 +515,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'recurrence_id' => $next['recurrence_id'],
 					'start'         => $next['start'],
 					'timezone'      => $next['timezone'],
+					'status'        => '',
 				),
 			),
 			get_upcoming_events( $organiser ),
@@ -544,6 +546,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 					'recurrence_id' => $attending['recurrence_id'],
 					'start'         => $attending['start'],
 					'timezone'      => $attending['timezone'],
+					'status'        => 'attending',
 				),
 			),
 			get_upcoming_events( $organiser ),
@@ -690,7 +693,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array( $newer, $middle, $older ),
-			$this->event_ids( get_past_events( $member ) ),
+			$this->event_ids( get_past_events( $member, 3 ) ),
 			'The most recently attended event should come first.'
 		);
 	}

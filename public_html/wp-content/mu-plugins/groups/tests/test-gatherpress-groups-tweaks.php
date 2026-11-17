@@ -38,6 +38,39 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
+		$this->assertSame( 'event', $settings['events_url'] );
+	}
+
+	/**
+	 * A group running in another language keeps its events under `event/`.
+	 *
+	 * GatherPress's own default is the event label in the site language, which
+	 * the occurrence rules in `gatherpress-recurring-events` would not match.
+	 * The label filter stands in for a Japanese site, since the test suite has
+	 * no language packs installed. GatherPress builds its defaults once per
+	 * request, so the cache is dropped to have them built under that label.
+	 */
+	public function test_event_permalink_base_ignores_the_site_language() {
+		$settings       = \GatherPress\Core\Settings::get_instance();
+		$defaults_cache = new \ReflectionProperty( $settings, 'defaults_cache' );
+		$japanese_label = static function ( $labels ) {
+			$labels->singular_name = 'イベント';
+
+			return $labels;
+		};
+
+		add_filter( 'post_type_labels_gatherpress_event', $japanese_label );
+		$defaults_cache->setValue( $settings, null );
+
+		$localized  = \GatherPress\Core\Event\Setup::get_localized_post_type_slug();
+		$events_url = $settings->get( 'events_url' );
+
+		remove_filter( 'post_type_labels_gatherpress_event', $japanese_label );
+		$defaults_cache->setValue( $settings, null );
+
+		// Without the pin this is the base GatherPress would use.
+		$this->assertSame( sanitize_title( 'イベント' ), $localized );
+		$this->assertSame( 'event', $events_url );
 	}
 
 	/**
@@ -52,6 +85,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 				'guest_limit'      => 5,
 				'enable_open_rsvp' => 1,
 				'show_timezone'    => 0,
+				'events_url'       => 'evento',
 			)
 		);
 
@@ -63,6 +97,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		// Forced keys win regardless of what was stored.
 		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
+		$this->assertSame( 'event', $settings['events_url'] );
 	}
 
 	/**
@@ -1485,6 +1520,39 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->assertStringContainsString( 'An entire pub floor just for us!', $rendered );
 		$this->assertStringContainsString( 'Step-free entrance.', $rendered );
+	}
+
+	/**
+	 * On an event page, the venue shows its description once without the seeded address, and "More events" cards show none.
+	 */
+	public function test_venue_description_on_the_event_page() {
+		$event_id = $this->create_event_with_venue();
+		$card_id  = $this->create_event_with_venue( 'Peregian Digital Hub' );
+
+		// GatherPress seeds venue content with a venue block; the list is the organizer's description.
+		wp_update_post(
+			array(
+				'ID'           => get_page_by_path( 'salty-spaces', OBJECT, 'gatherpress_venue' )->ID,
+				'post_content' => '<!-- wp:gatherpress/venue --><!-- wp:gatherpress/venue-detail {"fieldType":"address"} /--><!-- /wp:gatherpress/venue -->'
+					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Use the side door.</li><!-- /wp:list-item --></ul><!-- /wp:list -->',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'           => get_page_by_path( 'peregian-digital-hub', OBJECT, 'gatherpress_venue' )->ID,
+				'post_content' => 'Park out the back.',
+			)
+		);
+
+		$this->go_to_front_end( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Could not set up the event page.' );
+
+		$venue = $this->render_venue_block( $event_id );
+		$card  = $this->render_venue_block( $card_id );
+
+		$this->assertStringContainsString( 'Use the side door.', $venue );
+		$this->assertSame( 1, substr_count( $venue, 'The Wharf Mooloolaba' ), 'The description repeats the venue address.' );
+		$this->assertStringNotContainsString( 'Park out the back.', $card, 'A "More events" card got its venue description.' );
 	}
 
 	/**

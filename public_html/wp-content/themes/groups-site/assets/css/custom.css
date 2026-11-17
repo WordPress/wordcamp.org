@@ -55,6 +55,21 @@ body.error404 .site-content-container h1 {
 	color: inherit;
 }
 
+/* The parent theme's light, underlined 404 links are meant for the message,
+   but also reach the breadcrumb and the footer callout. */
+
+body.error404 .wp-block-wporg-site-breadcrumbs a {
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+body.error404 .groups-site-callout-links a {
+	color: var(--wp--preset--color--white);
+}
+
+body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) a:not(:hover) {
+	text-decoration-line: none;
+}
+
 /* ==========================================================================
    Buttons
 
@@ -161,6 +176,13 @@ body.error404 .site-content-container h1 {
 
 .wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
 	min-width: 0;
+}
+
+/* Only the breadcrumb shrinks. A shrinking menu wraps its links into a column
+   taller than the bar. */
+
+.wp-block-wporg-local-navigation-bar .wp-block-navigation {
+	flex-shrink: 0;
 }
 
 /* The breadcrumb wrapper scrolls sideways when a long event title overflows
@@ -288,11 +310,13 @@ body.error404 .site-content-container h1 {
 }
 
 /* The rail is a card, so a visitor's lone Join button has a frame instead of
-   floating beside the main column. */
+   floating beside the main column. The cap keeps it a card once the columns
+   stack: its controls stop at 320px, so a full-width rail is mostly empty. */
 
 .groups-site-sidebar {
 	box-sizing: border-box;
 	width: 100%;
+	max-width: 400px;
 	padding: 24px;
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
@@ -496,6 +520,26 @@ body.error404 .site-content-container h1 {
 	color: var(--wp--preset--color--charcoal-5);
 }
 
+/* The hero's Join button only shows while the sidebar's is stacked under the
+   content; responsive.css reveals it there. */
+
+.groups-site-hero-content .groups-site-hero-join {
+	display: none;
+}
+
+/* Compact size, with the padding set through the parent theme's tokens as
+   the sidebar buttons' is. */
+
+.groups-site-hero-join .wp-block-button__link.wp-element-button {
+	--wp--custom--button--spacing--padding--top: 10px;
+	--wp--custom--button--spacing--padding--bottom: 10px;
+	--wp--custom--button--spacing--padding--left: 20px;
+	--wp--custom--button--spacing--padding--right: 20px;
+	padding: var(--wp--custom--button--spacing--padding--top)
+		var(--wp--custom--button--spacing--padding--right);
+	font-size: var(--wp--preset--font-size--small);
+}
+
 /* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
@@ -603,6 +647,13 @@ body.error404 .site-content-container h1 {
 .groups-site-featured-placeholder a {
 	display: block;
 	height: 100%;
+}
+
+/* The placeholder only keeps cards aligned with ones that have an image. In a
+   list with no images at all, it's just an empty block on every card. */
+
+.wp-block-post-template:not(:has(.wp-block-post-featured-image:not(.groups-site-featured-placeholder))) .groups-site-featured-placeholder {
+	display: none;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {

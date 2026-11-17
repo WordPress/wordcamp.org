@@ -693,7 +693,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array( $newer, $middle, $older ),
-			$this->event_ids( get_past_events( $member ) ),
+			$this->event_ids( get_past_events( $member, 3 ) ),
 			'The most recently attended event should come first.'
 		);
 	}

@@ -37,6 +37,13 @@ class Test_Emails extends Database_TestCase {
 	use Submits_Invoices;
 
 	/**
+	 * The camp's event, on Central.
+	 *
+	 * @var int
+	 */
+	protected int $event_id;
+
+	/**
 	 * The camp's sponsor.
 	 *
 	 * @var int
@@ -64,7 +71,7 @@ class Test_Emails extends Database_TestCase {
 		parent::set_up();
 
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
-		self::factory()->post->create(
+		$this->event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'wordcamp',
 				'post_status' => 'publish',
@@ -72,7 +79,7 @@ class Test_Emails extends Database_TestCase {
 				'meta_input'  => array(
 					'_site_id'                => self::$year_dot_2018_site_id,
 					'E-mail Address'          => 'seattle@wordcamp.test',
-					'Start Date (YYYY-mm-dd)' => strtotime( '2026-06-01' ),
+					'Start Date (YYYY-mm-dd)' => strtotime( '+1 month' ),
 				),
 			)
 		);
@@ -250,8 +257,8 @@ class Test_Emails extends Database_TestCase {
 
 	/**
 	 * Marking a company Compliant approves its pending sponsorship, as the system, and emails the event unless it has
-	 * invoiced the sponsor, since approving the invoice tells them. A sponsor whose website isn't one the company was
-	 * vetted for waits for a vetter.
+	 * invoiced the sponsor, since approving the invoice tells them, or is over, when there's nobody left to tell. A
+	 * sponsor whose website isn't one the company was vetted for waits for a vetter.
 	 *
 	 * Fakes FreeScout's API through `pre_http_request`: see fake_freescout().
 	 *
@@ -261,8 +268,11 @@ class Test_Emails extends Database_TestCase {
 	 * @param string $invoice_status The camp's invoice for the sponsor, or '' for none.
 	 * @param bool   $approved       Whether the sponsorship is approved.
 	 * @param bool   $emailed        Whether the event is emailed.
+	 * @param string $start          When the event starts, as strtotime() reads it.
 	 */
-	public function test_a_compliant_company_approves_its_sponsorships( string $website, string $invoice_status, bool $approved, bool $emailed ): void {
+	public function test_a_compliant_company_approves_its_sponsorships( string $website, string $invoice_status, bool $approved, bool $emailed, string $start = '+1 month' ): void {
+		update_post_meta( $this->event_id, 'Start Date (YYYY-mm-dd)', strtotime( $start ) );
+
 		switch_to_blog( self::$year_dot_2018_site_id );
 		update_post_meta( $this->sponsor_id, '_wcpt_sponsor_website', $website );
 
@@ -359,6 +369,7 @@ class Test_Emails extends Database_TestCase {
 			'draft invoice'     => array( 'https://acme.example', 'draft', true, true ),
 			'submitted invoice' => array( 'https://acme.example', 'wcbsi_submitted', true, false ),
 			'another website'   => array( 'https://other.example', '', false, false ),
+			'event over'        => array( 'https://acme.example', '', true, false, '-1 week' ),
 		);
 	}
 

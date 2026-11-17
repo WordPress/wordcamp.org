@@ -10,6 +10,7 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
+use function WordCamp\Sponsor_Vetting\get_company_statuses;
 use function WordCamp\Sponsor_Vetting\register_company_meta;
 use function WordCamp\Sponsor_Vetting\register_post_types;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -151,6 +152,8 @@ class Test_Abilities extends Database_TestCase {
 					'by'   => wp_get_current_user()->display_name,
 					'note' => 'Checked the site.',
 				),
+				// As the keys the abilities take, in any order: entries a second apart can share a time.
+				'statuses'     => array( 'sv-compliant', 'sv-in-progress', 'sv-needs-vetting' ),
 			),
 			array(
 				'name'         => $company['name'],
@@ -160,8 +163,95 @@ class Test_Abilities extends Database_TestCase {
 				'findings'     => array( $company['gpl_findings'], $company['trademark_findings'] ),
 				'sponsorships' => array_map( static fn( array $sponsorship ): array => array_intersect_key( $sponsorship, array_flip( array( 'id', 'status', 'domain' ) ) ), $company['sponsorships'] ),
 				'latest note'  => array_intersect_key( $company['log'][0], array_flip( array( 'by', 'note' ) ) ),
+				'statuses'     => $this->get_logged_statuses( $company['log'] ),
 			)
 		);
+	}
+
+	/**
+	 * Details an agent gets wrong are refused, rather than cleaned away to nothing, which would delete the ones the
+	 * company has.
+	 *
+	 * @dataProvider data_bad_details
+	 *
+	 * @param array  $input The details.
+	 * @param string $code  The error's code.
+	 */
+	public function test_bad_details_are_refused_and_kept( array $input, string $code ): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+				'meta_input'  => array( '_sv_contact_email' => 'dana@acme.test' ),
+			)
+		);
+
+		set_company_domains( $company_id, array( 'acme.test' ) );
+
+		$this->sign_in( 'sponsor_vetter' );
+
+		$result  = wp_get_ability( 'sponsor-vetting/update-company' )->execute( array( 'id' => $company_id ) + $input );
+		$company = $this->run_ability( 'get-company', array( 'id' => $company_id ) );
+
+		$this->assertSame(
+			array( $code, 'dana@acme.test', array( 'acme.test' ) ),
+			array( is_wp_error( $result ) ? $result->get_error_code() : '', $company['contact']['email'], $company['domains'] )
+		);
+	}
+
+	/**
+	 * Details that would be cleaned away.
+	 *
+	 * @return array[]
+	 */
+	public function data_bad_details(): array {
+		return array(
+			'an email that isn’t an address' => array( array( 'contact_email' => 'dana at acme' ), 'sv_invalid_email' ),
+			'a domain that isn’t a website'  => array( array( 'domains' => array( 'acme.test', 'acme' ) ), 'sv_invalid_domain' ),
+		);
+	}
+
+	/**
+	 * A company made for a sponsorship that can't be linked is taken back, so it doesn't sit in the queue and a
+	 * retry doesn't add another.
+	 */
+	public function test_a_failed_link_leaves_no_company(): void {
+		$company_id     = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		$sponsorship_id = $this->create_camp_sponsorship( 'https://acme.test/' );
+
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_parent' => $company_id,
+				'post_status' => 'svs-approved',
+			)
+		);
+
+		$this->sign_in( 'sponsor_vetter' );
+
+		$result = wp_get_ability( 'sponsor-vetting/create-company' )->execute(
+			array(
+				'name'        => 'Acme Again',
+				'sponsorship' => $sponsorship_id,
+			)
+		);
+
+		$left = get_posts(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				// Not `any`: it leaves out statuses excluded from search, which all of these are.
+				'post_status' => array_keys( get_company_statuses() ),
+				'title'       => 'Acme Again',
+				'fields'      => 'ids',
+			)
+		);
+
+		$this->assertSame( array( 'sv_approved', array() ), array( is_wp_error( $result ) ? $result->get_error_code() : '', $left ) );
 	}
 
 	/**
@@ -218,6 +308,7 @@ class Test_Abilities extends Database_TestCase {
 				),
 				'sv_website_changed_since_shown',
 			),
+			'a note that’s only markup'                  => array( 'add-note', array( 'note' => '<b></b>' ), 'sv_empty_note' ),
 		);
 	}
 
@@ -287,6 +378,19 @@ class Test_Abilities extends Database_TestCase {
 			'a company by its website'                  => array( 'list-companies', array( 'domain' => 'https://www.zenith.test/about' ), 'companies', array( 'Zenith' ) ),
 			'the sponsorships waiting for a company'    => array( 'list-sponsorships', array( 'company' => 0 ), 'sponsorships', array( 'Waiting' ) ),
 		);
+	}
+
+	/**
+	 * Lists the statuses a record's log says it changed to, in order of their keys.
+	 *
+	 * @param array[] $log The log.
+	 * @return string[]
+	 */
+	private function get_logged_statuses( array $log ): array {
+		$statuses = array_values( wp_list_pluck( array_filter( $log, static fn( array $entry ): bool => isset( $entry['to'] ) ), 'to' ) );
+		sort( $statuses );
+
+		return $statuses;
 	}
 
 	/**

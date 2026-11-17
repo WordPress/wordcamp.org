@@ -214,8 +214,8 @@ function get_vetting_prompt( ?array $input = null ): array {
 		'A company is vetted once. Each event that takes its sponsorship has a sponsorship under it, which can be approved once the company is Compliant and was vetted within the last %d months. Read the wordcamp://sponsor-vetting/vetting-process and wordcamp://sponsor-vetting/gpl-checklist resources first: they say what a review checks. They describe the work in Airtable; here each step is a tool.
 
 1. New sponsorships wait for a company: sponsor-vetting-list-sponsorships with company 0. Link each to the company suggested, or another one, with sponsor-vetting-link-sponsorship, or create one with sponsor-vetting-create-company. Look a website up with sponsor-vetting-list-companies and its domain before creating a company.
-2. Work through the queue from sponsor-vetting-list-companies, starting with the soonest next_event.
-3. Open the company with sponsor-vetting-get-company, and set it to In Progress with sponsor-vetting-set-company-status while you vet it, so no one else does.
+2. Work through the queue from sponsor-vetting-list-companies. It lists 20 companies a page, oldest first, so go through every page (total_pages), then start with the soonest next_event.
+3. Open the company with sponsor-vetting-get-company. If it’s Needs Vetting, set it to In Progress with sponsor-vetting-set-company-status while you vet it, so no one else does. If it’s already In Progress, someone may be vetting it: check its log, and skip it unless the person you’re working with asked you to take it on. Leave a company in Compliance Requested where it is: moving it forgets the sponsor’s reply and rules out approving in good faith.
 4. Review its websites for trademark and GPL compliance, as the handbook describes, and write what you find with sponsor-vetting-update-company: the GPL and trademark findings, in Markdown, and the contact if it’s missing. With no issues, write “All good” in both. The findings are what a compliance request emails to the sponsor, so write them to the sponsor.
 5. Decide, and confirm with the person you’re working with before any step that emails or approves:
    - No issues: set the company to Compliant. That approves its pending sponsorships, for the websites it was vetted for, and emails their events.
@@ -245,7 +245,8 @@ When unsure, add a note and leave the decision to a person.',
  * Reads a Community handbook page, as Markdown, for a resource.
  *
  * The handbook lives on make.wordpress.org, which serves a page's Markdown to a request that accepts it. Kept for
- * a while, so reading a resource doesn't ask every time.
+ * a while, so reading a resource doesn't ask every time, and a failure is kept for a few minutes, so an outage there
+ * doesn't hold up every read.
  *
  * @param string $uri The resource's URI.
  * @param string $url The page's address.
@@ -255,7 +256,7 @@ function get_handbook_page( string $uri, string $url ): array {
 	$key      = 'sv_handbook_' . md5( $url );
 	$markdown = get_transient( $key );
 
-	if ( ! is_string( $markdown ) ) {
+	if ( false === $markdown ) {
 		$response = wp_safe_remote_get(
 			$url,
 			array(
@@ -263,23 +264,26 @@ function get_handbook_page( string $uri, string $url ): array {
 				'timeout' => 10,
 			)
 		);
+		$markdown = trim( wp_remote_retrieve_body( $response ) );
 
 		if (
 			200 !== wp_remote_retrieve_response_code( $response )
 			|| ! str_starts_with( (string) wp_remote_retrieve_header( $response, 'content-type' ), 'text/markdown' )
 		) {
-			return array(
-				array(
-					'uri'      => $uri,
-					'mimeType' => 'text/plain',
-					'text'     => sprintf( 'The handbook page couldn’t be loaded. Read it at %s.', $url ),
-				),
-			);
+			$markdown = '';
 		}
 
-		$markdown = wp_remote_retrieve_body( $response );
+		set_transient( $key, $markdown, '' === $markdown ? 5 * MINUTE_IN_SECONDS : 12 * HOUR_IN_SECONDS );
+	}
 
-		set_transient( $key, $markdown, 12 * HOUR_IN_SECONDS );
+	if ( '' === $markdown ) {
+		return array(
+			array(
+				'uri'      => $uri,
+				'mimeType' => 'text/plain',
+				'text'     => sprintf( 'The handbook page couldn’t be loaded. Read it at %s.', $url ),
+			),
+		);
 	}
 
 	return array(
@@ -989,6 +993,12 @@ function get_sponsorship( array $input ): array|\WP_Error {
  * @return array|\WP_Error The company.
  */
 function create_company_for_agent( array $input ): array|\WP_Error {
+	$domains = check_domains( $input['domains'] ?? array() );
+
+	if ( is_wp_error( $domains ) ) {
+		return $domains;
+	}
+
 	$created = ask_rest(
 		'POST',
 		'/wp/v2/sv-companies',
@@ -1008,12 +1018,31 @@ function create_company_for_agent( array $input ): array|\WP_Error {
 	if ( ! empty( $input['sponsorship'] ) ) {
 		$linked = ask_rest( 'POST', '/wp/v2/sv-sponsorships/' . (int) $input['sponsorship'], array( 'company' => $company_id ) );
 
+		// A company made for a sponsorship that can't be linked would sit in the queue, and a retry would add another.
 		if ( is_wp_error( $linked ) ) {
+			wp_delete_post( $company_id, true );
+
 			return $linked;
 		}
 	}
 
 	return get_company( array( 'id' => $company_id ) );
+}
+
+/**
+ * Checks that every domain given is a website, since the ones that aren't would be dropped without a word.
+ *
+ * @param array $domains The domains.
+ * @return true|\WP_Error
+ */
+function check_domains( array $domains ): true|\WP_Error {
+	foreach ( $domains as $domain ) {
+		if ( '' === normalize_domain( (string) $domain ) ) {
+			return new \WP_Error( 'sv_invalid_domain', sprintf( '“%s” isn’t a website’s domain.', $domain ) );
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -1051,6 +1080,19 @@ function update_company( array $input ): array|\WP_Error {
 
 	if ( ! $params ) {
 		return new \WP_Error( 'sv_nothing_to_update', 'Give at least one detail to change.' );
+	}
+
+	// Saving cleans an address that isn't one away to nothing, which deletes the contact the company had.
+	$email = (string) ( $input['contact_email'] ?? '' );
+
+	if ( '' !== $email && ! is_email( $email ) ) {
+		return new \WP_Error( 'sv_invalid_email', sprintf( '“%s” isn’t an email address.', $email ) );
+	}
+
+	$domains = check_domains( $input['domains'] ?? array() );
+
+	if ( is_wp_error( $domains ) ) {
+		return $domains;
 	}
 
 	$updated = ask_rest( 'POST', '/wp/v2/sv-companies/' . (int) $input['id'], $params );
@@ -1160,6 +1202,11 @@ function add_note_for_agent( array $input ): array|\WP_Error {
 		return new \WP_Error( 'sv_no_record', 'That’s neither a company nor a sponsorship.' );
 	}
 
+	// Saving drops a note that's empty once its markup is cleaned away.
+	if ( '' === sanitize_textarea_field( (string) $input['note'] ) ) {
+		return new \WP_Error( 'sv_empty_note', 'The note is empty without its markup. Write it as plain text.' );
+	}
+
 	$added = ask_rest( 'POST', $route . $id, array( 'note' => (string) $input['note'] ) );
 
 	return is_wp_error( $added ) ? $added : array( 'log' => get_agent_log( $id ) );
@@ -1170,13 +1217,11 @@ function add_note_for_agent( array $input ): array|\WP_Error {
  *
  * @param int $post_id The company or sponsorship.
  * @return array[] Each entry's `time` and who it's `by`, and either its `note` or the status it changed `from` and
- *                 `to`.
+ *                 `to`, as the status keys the abilities take, with `new` for a record's first status.
  */
 function get_agent_log( int $post_id ): array {
-	$statuses = get_statuses( (string) get_post_type( $post_id ) );
-
 	return array_map(
-		static function ( array $entry ) use ( $statuses ): array {
+		static function ( array $entry ): array {
 			$user = get_userdata( (int) $entry['user_id'] );
 			$item = array(
 				'time' => gmdate( 'c', (int) $entry['time'] ),
@@ -1186,8 +1231,8 @@ function get_agent_log( int $post_id ): array {
 			if ( isset( $entry['text'] ) ) {
 				$item['note'] = (string) $entry['text'];
 			} else {
-				$item['from'] = 'new' === $entry['from'] ? 'new' : ( $statuses[ $entry['from'] ] ?? (string) $entry['from'] );
-				$item['to']   = $statuses[ $entry['to'] ] ?? (string) $entry['to'];
+				$item['from'] = (string) $entry['from'];
+				$item['to']   = (string) $entry['to'];
 			}
 
 			return $item;

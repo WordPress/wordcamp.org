@@ -75,8 +75,15 @@ function get_event_venue_post_id( int $event_id ): int {
 }
 
 /**
- * Enable the "Show Timezone" GatherPress setting, and disable anonymous RSVP
- * and Open RSVP, at the global setting level.
+ * Enable the "Show Timezone" GatherPress setting, disable anonymous RSVP
+ * and Open RSVP, and pin the event permalink base, at the global setting level.
+ *
+ * GatherPress derives the event permalink base from the site language, so a
+ * group switched to Japanese serves its events under `/イベント/`. The
+ * occurrence rules in `gatherpress-recurring-events` only match `event/`,
+ * which left every recurring event link on such a group a 404, and changing
+ * the language would also break every link shared before the switch. Pinning
+ * `events_url` keeps event URLs the same whatever language the group runs in.
  *
  * Timezone display used to be forced off here, because an event whose zone is
  * a bare UTC offset renders as "GMT+0000" and a group site is not required to
@@ -103,6 +110,7 @@ $force_gatherpress_settings = static function ( $value ) {
 	$value['show_timezone']         = 1;
 	$value['enable_anonymous_rsvp'] = 0;
 	$value['enable_open_rsvp']      = 0;
+	$value['events_url']            = 'event';
 
 	return $value;
 };

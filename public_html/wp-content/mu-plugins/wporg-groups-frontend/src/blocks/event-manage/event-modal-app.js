@@ -371,14 +371,19 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			};
 		}, [] );
 
-		// Open the create form when the page is reached through the toolbar
-		// link, whose fragment comes from the config. The fragment is dropped
-		// once read: a reload doesn't reopen the form, and following the link
-		// again from this page is a fresh hash change that does.
+		// Open the create or copy form when the page is reached through a
+		// toolbar link, whose fragments come from the config. The fragment is
+		// dropped once read: a reload doesn't reopen the form, and following
+		// the link again from this page is a fresh hash change that does.
 		useEffect( () => {
 			const openFromHash = () => {
-				const fragment = window.wporgGroupsEventModal?.createEventFragment;
-				if ( ! fragment || window.location.hash !== '#' + fragment ) {
+				const config = window.wporgGroupsEventModal || {};
+				let next;
+				if ( config.createEventFragment && window.location.hash === '#' + config.createEventFragment ) {
+					next = { open: true, mode: 'create', eventId: 0 };
+				} else if ( config.copyEventId && window.location.hash === '#' + config.copyEventFragment ) {
+					next = { open: true, mode: 'copy', eventId: config.copyEventId };
+				} else {
 					return;
 				}
 				window.history.replaceState(
@@ -386,7 +391,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 					'',
 					window.location.pathname + window.location.search
 				);
-				setState( { open: true, mode: 'create', eventId: 0 } );
+				setState( next );
 			};
 			openFromHash();
 			window.addEventListener( 'hashchange', openFromHash );

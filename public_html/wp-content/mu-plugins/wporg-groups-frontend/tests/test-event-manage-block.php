@@ -201,31 +201,36 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
-	 * The copy button (#2398) shows on any published event for whoever can
-	 * create events, including an Event Organizer on someone else's event.
+	 * Copying (#2398) is offered on any published event for whoever can
+	 * create events, from the toolbar beside Edit, including for an Event
+	 * Organizer on someone else's event. The page gets no button, but keeps
+	 * the modal the toolbar link opens.
 	 */
-	public function test_copy_button_on_others_event() {
+	public function test_copy_is_in_the_toolbar_on_others_event() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$event_id = $this->go_to_event_owned_by( $owner_id );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
 		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
 
-		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
-		$this->assertStringContainsString( 'data-wporg-groups-event-id="' . $event_id . '"', $output );
-		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-all"', $output );
+		$this->assertSame( '<div id="wporg-groups-event-modal-root"></div>', trim( $output ) );
+
+		$node = $this->get_copy_node();
+		$this->assertNotNull( $node );
+		$this->assertSame( 'Copy this event', $node->title );
+		$this->assertSame( get_permalink( $event_id ) . '#copy-event', $node->href );
+		$this->assertSame( $event_id, \WordCamp\Groups\Frontend\Modal\get_copyable_event_id() );
 	}
 
 	/**
-	 * A draft isn't offered for copying, and the create-mode block on the
-	 * group home has nothing to copy.
+	 * A draft isn't offered for copying, and nor is anything to a Member.
 	 */
-	public function test_copy_button_absent_on_draft_and_in_create_mode() {
+	public function test_copy_absent_on_draft_and_for_member() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$event_id = $this->go_to_event_owned_by( $owner_id );
-		wp_set_current_user( $owner_id );
 
-		$this->assertStringNotContainsString( 'data-wporg-groups-modal="copy"', do_blocks( '<!-- wp:wporg/event-manage {"mode":"create"} /-->' ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertNull( $this->get_copy_node() );
 
 		wp_update_post(
 			array(
@@ -233,7 +238,23 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 				'post_status' => 'draft',
 			)
 		);
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
-		$this->assertStringNotContainsString( 'data-wporg-groups-modal="copy"', do_blocks( '<!-- wp:wporg/event-manage /-->' ) );
+		$this->assertNull( $this->get_copy_node() );
+		$this->assertSame( '', trim( (string) do_blocks( '<!-- wp:wporg/event-manage /-->' ) ) );
+	}
+
+	/**
+	 * Build the toolbar for the current request and return its copy node.
+	 *
+	 * @return object|null The node, or null when it isn't there.
+	 */
+	private function get_copy_node() {
+		require_once ABSPATH . WPINC . '/class-wp-admin-bar.php';
+
+		$wp_admin_bar = new \WP_Admin_Bar();
+		\WordCamp\Groups\Frontend\Modal\add_copy_event_node( $wp_admin_bar );
+
+		return $wp_admin_bar->get_node( \WordCamp\Groups\Frontend\Modal\COPY_EVENT_NODE );
 	}
 }

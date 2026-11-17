@@ -502,6 +502,18 @@ function is_event_template( int $event_id ): bool {
 }
 
 /**
+ * Whether the current user can copy an event into a new one (#2398).
+ *
+ * A copy starts a new event, so it's offered on any event that could be a
+ * template, including one the user can't edit.
+ */
+function current_user_can_copy_event( int $event_id ): bool {
+	return current_user_can_manage_events()
+		&& current_user_can_create_event()
+		&& is_event_template( $event_id );
+}
+
+/**
  * Capability check for creating and immediately publishing an event.
  */
 function create_event_permissions_check(): bool {

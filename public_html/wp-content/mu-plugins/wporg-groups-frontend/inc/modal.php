@@ -22,12 +22,24 @@ use WordCamp\Groups\Frontend\Upload_Space;
 use WP_Admin_Bar;
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
+use function WordCamp\Groups\Frontend\REST\current_user_can_copy_event;
 
 /**
  * The URL fragment that opens the create-event modal on the group's home
  * page. Passed to the modal app in its config.
  */
 const CREATE_EVENT_FRAGMENT = 'create-event';
+
+/**
+ * The URL fragment that opens the copy-event modal on an event's page
+ * (#2398). Passed to the modal app in its config.
+ */
+const COPY_EVENT_FRAGMENT = 'copy-event';
+
+/**
+ * The toolbar node that links to it.
+ */
+const COPY_EVENT_NODE = 'wporg-groups-copy-event';
 
 /**
  * Bootstrap supplementary modal assets.
@@ -39,6 +51,66 @@ function bootstrap(): void {
 
 	// After core's `wp_admin_bar_new_content_menu()` (priority 70) adds the node.
 	add_action( 'admin_bar_menu', __NAMESPACE__ . '\link_new_event_to_modal', 80 );
+
+	// After core's `wp_admin_bar_edit_menu()` (priority 80), so it sits beside Edit.
+	add_action( 'admin_bar_menu', __NAMESPACE__ . '\add_copy_event_node', 85 );
+}
+
+/**
+ * The event being viewed, if the current user can copy it.
+ *
+ * @return int The event post ID, or 0.
+ */
+function get_copyable_event_id(): int {
+	if ( ! is_singular( Event::POST_TYPE ) ) {
+		return 0;
+	}
+
+	$event_id = (int) get_queried_object_id();
+
+	return current_user_can_copy_event( $event_id ) ? $event_id : 0;
+}
+
+/**
+ * Add "Copy this event" to the toolbar on an event's page (#2398).
+ *
+ * It sits with the toolbar's other actions on the page being viewed, beside
+ * Edit, and opens the create form prefilled from the event through the
+ * fragment the modal app listens for.
+ *
+ * @param WP_Admin_Bar $wp_admin_bar The toolbar.
+ */
+function add_copy_event_node( WP_Admin_Bar $wp_admin_bar ): void {
+	$event_id = get_copyable_event_id();
+
+	if ( ! $event_id ) {
+		return;
+	}
+
+	$wp_admin_bar->add_node(
+		array(
+			'id'    => COPY_EVENT_NODE,
+			'title' => __( 'Copy this event', 'wordcamporg' ),
+			'href'  => get_permalink( $event_id ) . '#' . COPY_EVENT_FRAGMENT,
+		)
+	);
+}
+
+/**
+ * Keep the toolbar's "Copy this event" on phones, as an icon.
+ *
+ * Core hides every top-level toolbar item at phone widths except its own,
+ * which it shows as icons; this does the same for the copy item. Wider, it's
+ * text only, like the Edit item beside it.
+ */
+function get_copy_event_node_css(): string {
+	$node = '#wpadminbar #wp-admin-bar-' . COPY_EVENT_NODE;
+
+	return "@media screen and (max-width: 782px) {
+	#wpadminbar li#wp-admin-bar-" . COPY_EVENT_NODE . " { display: block; position: static; }
+	{$node} > .ab-item { text-indent: 100%; white-space: nowrap; overflow: hidden; width: 52px; padding: 0; position: relative; }
+	{$node} > .ab-item:before { content: \"\\f105\"; display: block; text-indent: 0; font: normal 32px/1 dashicons; top: 7px; width: 52px; text-align: center; }
+}";
 }
 
 /**
@@ -72,6 +144,10 @@ function link_new_event_to_modal( WP_Admin_Bar $wp_admin_bar ): void {
 function enqueue_supplementary_assets(): void {
 	if ( ! current_user_can_manage_events() ) {
 		return;
+	}
+
+	if ( is_admin_bar_showing() && get_copyable_event_id() ) {
+		wp_add_inline_style( 'admin-bar', get_copy_event_node_css() );
 	}
 
 	wp_enqueue_media();
@@ -109,6 +185,8 @@ function localize_block_script( string $content, array $block ): string {
 		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
 		'minimumEventDate' => wp_date( 'Y-m-d' ),
 		'createEventFragment' => CREATE_EVENT_FRAGMENT,
+		'copyEventFragment'   => COPY_EVENT_FRAGMENT,
+		'copyEventId'         => get_copyable_event_id(),
 		// Shown under the featured image picker (#2257). The media library
 		// only says a file is too large once it's been rejected. Left out
 		// once the space is used up: core caps the size at the space left,

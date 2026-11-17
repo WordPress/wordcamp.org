@@ -19,5 +19,5 @@ defined( 'ABSPATH' ) || exit;
 $events_url = get_post_type_archive_link( 'gatherpress_event' ) ?: home_url( '/event/' );
 ?>
 <!-- wp:paragraph {"fontSize":"small"} -->
-<p class="has-small-font-size"><a href="<?php echo esc_url( $events_url ); ?>">View all events &rarr;</a></p>
+<p class="has-small-font-size"><a href="<?php echo esc_url( $events_url ); ?>"><?php esc_html_e( 'View all events', 'wordcamporg' ); ?> &rarr;</a></p>
 <!-- /wp:paragraph -->

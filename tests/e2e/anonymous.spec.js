@@ -23,6 +23,19 @@ test.describe( 'anonymous visitor', () => {
 		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveCount( 0 );
 	} );
 
+	test( 'phones get a Join button in the hero, ahead of the content', async ( { page } ) => {
+		await page.goto( '' );
+
+		const heroJoin = page.locator( '.groups-site-hero-join button' );
+
+		// On desktop the sidebar's button is already beside the hero.
+		await page.setViewportSize( { width: 1280, height: 900 } );
+		await expect( heroJoin ).toBeHidden();
+
+		await page.setViewportSize( { width: 375, height: 800 } );
+		await expect( heroJoin ).toBeVisible();
+	} );
+
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {
 		await page.goto( '' );
 

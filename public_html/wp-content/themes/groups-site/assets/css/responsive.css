@@ -29,6 +29,11 @@
 	.groups-site-home-layout > .wp-block-column {
 		flex-basis: 100% !important;
 	}
+
+	/* The sidebar's Join button is under the content now, so the hero offers one. */
+	.groups-site-hero-content .groups-site-hero-join {
+		display: flex;
+	}
 }
 
 /* ==========================================================================

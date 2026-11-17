@@ -157,7 +157,7 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 					<Row label={ __( 'Event date', 'wordcamporg' ) }>{ formatDay( event.date ) }</Row>
 					{ sponsor ? (
 						<>
-							<Row label={ __( 'Sponsor', 'wordcamporg' ) }>{ sponsor.name }</Row>
+							<Row label={ __( 'Sponsor Name', 'wordcamporg' ) }>{ sponsor.name }</Row>
 							<Row label={ __( 'Website', 'wordcamporg' ) }>
 								{ sponsor.website_url ? (
 									<Link href={ sponsor.website_url } openInNewTab>

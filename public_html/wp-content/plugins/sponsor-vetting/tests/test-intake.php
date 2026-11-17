@@ -10,23 +10,26 @@ declare( strict_types = 1 );
 namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
+use function WordCamp\Sponsor_Vetting\add_notice;
 use function WordCamp\Sponsor_Vetting\find_companies_by_domain;
 use function WordCamp\Sponsor_Vetting\get_company_domains;
+use function WordCamp\Sponsor_Vetting\get_contact_info_messages;
+use function WordCamp\Sponsor_Vetting\get_contact_info_problem;
 use function WordCamp\Sponsor_Vetting\get_log;
 use function WordCamp\Sponsor_Vetting\get_organizer_statuses;
 use function WordCamp\Sponsor_Vetting\import_row;
 use function WordCamp\Sponsor_Vetting\normalize_domain;
 use function WordCamp\Sponsor_Vetting\parse_csv;
+use function WordCamp\Sponsor_Vetting\render_vetting_reminder;
 use function WordCamp\Sponsor_Vetting\request_vetting;
 use function WordCamp\Sponsor_Vetting\set_company_domains;
+use function WordCamp\Sponsor_Vetting\take_notices;
 use const WordCamp\Sponsor_Vetting\COMPANY_POST_TYPE;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/trait-submits-invoices.php';
-// The plugin loads its notices only in the admin.
-require_once dirname( __DIR__ ) . '/includes/admin.php';
 
 /**
  * Extends `Database_TestCase` for its Central and camp sites.
@@ -84,6 +87,7 @@ class Test_Intake extends Database_TestCase {
 		$mes_id     = self::factory()->post->create( array( 'post_type' => 'mes' ) );
 
 		set_company_domains( $company_id, array( 'acme.example' ) );
+		update_post_meta( $mes_id, 'mes_website', 'https://www.acme.example/' );
 		update_post_meta( $mes_id, '_sv_company_id', $company_id );
 
 		if ( null !== $last_vetted ) {
@@ -330,23 +334,46 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
-	 * Submitting a sponsor invoice requests vetting for its sponsor.
+	 * Submitting a sponsor invoice requests vetting for its sponsor. Without a website, or with an email address the
+	 * vetting team can't write to, the invoice stays a draft and asks for nothing, as it does for other missing info.
+	 *
+	 * @dataProvider data_submitting_an_invoice_requests_vetting
+	 *
+	 * @param string $website   The sponsor's website.
+	 * @param string $email     The contact's email address.
+	 * @param bool   $submitted Whether the invoice is submitted, requesting vetting.
 	 */
-	public function test_submitting_an_invoice_requests_vetting(): void {
-		$sponsor_id = $this->create_camp_sponsor( 'https://acme.example', $this->get_invoiceable_sponsor_meta() );
+	public function test_submitting_an_invoice_requests_vetting( string $website, string $email, bool $submitted ): void {
+		$sponsor_id = $this->create_camp_sponsor(
+			$website,
+			array( '_wcpt_sponsor_email_address' => $email ) + $this->get_invoiceable_sponsor_meta()
+		);
 
-		$pointer = $this->on_site(
+		list( $status, $pointer ) = $this->on_site(
 			self::$year_dot_2018_site_id,
-			function () use ( $sponsor_id ): string {
+			function () use ( $sponsor_id ): array {
 				$invoice_id = $this->invoice_sponsor( $sponsor_id, 'wcbsi_submitted' );
 
-				$this->assertSame( 'wcbsi_submitted', get_post_status( $invoice_id ) );
-
-				return (string) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true );
+				return array( get_post_status( $invoice_id ), (string) get_post_meta( $sponsor_id, '_sv_sponsorship_id', true ) );
 			}
 		);
 
-		$this->assertNotSame( '', $pointer );
+		$this->assertSame( $submitted ? 'wcbsi_submitted' : 'draft', $status );
+		$this->assertSame( $submitted, '' !== $pointer );
+	}
+
+	/**
+	 * Sponsors' websites and email addresses, and whether their invoice is submitted.
+	 *
+	 * @return array[]
+	 */
+	public function data_submitting_an_invoice_requests_vetting(): array {
+		return array(
+			'complete'                       => array( 'https://acme.example', 'pat@acme.example', true ),
+			'no website'                     => array( '', 'pat@acme.example', false ),
+			'a website without a domain'     => array( 'TBD', 'pat@acme.example', false ),
+			'an email with no dot in domain' => array( 'https://acme.example', 'pat@acme', false ),
+		);
 	}
 
 	/**
@@ -387,32 +414,126 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
+	 * When a company turns Compliant and its pending sponsorships are approved, a vetter in wp-admin is told so. A
+	 * change from anywhere else, like WP-CLI or cron, queues nothing: nobody would see it where it belongs.
+	 *
+	 * @dataProvider data_auto_approval_notice
+	 *
+	 * @param bool $in_admin Whether the company turns Compliant in wp-admin.
+	 */
+	public function test_auto_approval_notice( bool $in_admin ): void {
+		$sponsor_id     = $this->create_camp_sponsor( 'https://acme.example' );
+		$sponsorship_id = request_vetting( self::$year_dot_2018_site_id, $sponsor_id );
+
+		// Explicit both ways: another plugin's test bootstrap defines WP_ADMIN for the whole run.
+		set_current_screen( $in_admin ? 'edit' : 'front' );
+
+		$messages = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			static function () use ( $sponsorship_id ): array {
+				wp_update_post(
+					array(
+						'ID'          => (int) get_post_field( 'post_parent', $sponsorship_id ),
+						'post_status' => 'sv-compliant',
+					)
+				);
+
+				return array( get_post_status( $sponsorship_id ), array_column( take_notices(), 'message' ) );
+			}
+		);
+
+		// Back to the run's default for the tests after this one.
+		$GLOBALS['current_screen'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Undoes set_current_screen().
+
+		$this->assertSame( 'svs-approved', $messages[0] );
+		$this->assertSame( $in_admin, in_array( '1 pending sponsorship was approved automatically.', $messages[1], true ) );
+	}
+
+	/**
+	 * Where the company turns Compliant.
+	 *
+	 * @return array[]
+	 */
+	public function data_auto_approval_notice(): array {
+		return array(
+			'in wp-admin'  => array( true ),
+			'anywhere else' => array( false ),
+		);
+	}
+
+	/**
 	 * Organizers see their own sponsors' vetting: a pointer copied along with a sponsor from another site reads as
-	 * not requested, and a Multi-Event Sponsor's copy shows its company's vetting.
+	 * not requested. A Multi-Event Sponsor's copy is the Community Team's, with nothing to request, under any of its
+	 * company's domains or before the vetting team links a company, until organizers repurpose it with another
+	 * website or none.
 	 */
 	public function test_organizer_statuses(): void {
-		list( , $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+		list( $company_id, $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+
+		$unlinked_mes_id = $this->on_site(
+			WORDCAMP_ROOT_BLOG_ID,
+			function () use ( $company_id ): int {
+				set_company_domains( $company_id, array( 'acme.example', 'acme-labs.example' ) );
+
+				return self::factory()->post->create(
+					array(
+						'post_type'  => 'mes',
+						'meta_input' => array( 'mes_website' => 'https://unlinked.example' ),
+					)
+				);
+			}
+		);
 
 		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
 		$sponsorship  = request_vetting( self::$year_dot_2018_site_id, $requested_id );
 		$copied_id    = $this->create_camp_sponsor( 'https://copied.example', array( '_sv_sponsorship_id' => $sponsorship ) );
 		$mes_copy_id  = $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) );
+		$alias_id     = $this->create_camp_sponsor( 'https://acme-labs.example', array( '_mes_id' => $mes_id ) );
+		$reused_id    = $this->create_camp_sponsor( 'https://other.example', array( '_mes_id' => $mes_id ) );
+		$cleared_id   = $this->create_camp_sponsor( '', array( '_mes_id' => $mes_id ) );
+		$unlinked_id  = $this->create_camp_sponsor( 'https://unlinked.example', array( '_mes_id' => $unlinked_mes_id ) );
 
-		$statuses = $this->on_site( self::$year_dot_2018_site_id, static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id ) ) );
+		$statuses = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): array => get_organizer_statuses( array( $requested_id, $copied_id, $mes_copy_id, $alias_id, $reused_id, $cleared_id, $unlinked_id ) )
+		);
 
 		$this->assertSame(
 			array(
 				$requested_id => array(
-					'label'     => 'In review',
-					'requested' => true,
+					'status'      => 'in-review',
+					'label'       => 'In review',
+					'can_request' => false,
 				),
 				$copied_id    => array(
-					'label'     => 'Not requested',
-					'requested' => false,
+					'status'      => 'not-requested',
+					'label'       => 'Not requested',
+					'can_request' => true,
 				),
 				$mes_copy_id  => array(
-					'label'     => 'Multi-event sponsor: Vetted',
-					'requested' => false,
+					'status'      => 'multi-event',
+					'label'       => 'Multi-event sponsor',
+					'can_request' => false,
+				),
+				$alias_id     => array(
+					'status'      => 'multi-event',
+					'label'       => 'Multi-event sponsor',
+					'can_request' => false,
+				),
+				$reused_id    => array(
+					'status'      => 'not-requested',
+					'label'       => 'Not requested',
+					'can_request' => true,
+				),
+				$cleared_id   => array(
+					'status'      => 'not-requested',
+					'label'       => 'Not requested',
+					'can_request' => true,
+				),
+				$unlinked_id  => array(
+					'status'      => 'multi-event',
+					'label'       => 'Multi-event sponsor',
+					'can_request' => false,
 				),
 			),
 			$statuses
@@ -420,17 +541,81 @@ class Test_Intake extends Database_TestCase {
 	}
 
 	/**
+	 * Organizers can narrow their sponsor list to a group of vetting statuses, where a Multi-Event Sponsor's copy
+	 * counts as approved, and sort it in the order vetting goes through the statuses.
+	 *
+	 * @dataProvider data_filter_sponsors_by_vetting
+	 *
+	 * @param string $picked   The status group picked from the filter.
+	 * @param string $orderby  The column sorted by.
+	 * @param string $order    The sort direction.
+	 * @param array  $expected The sponsors listed, in order: `unrequested`, `in_review`, or `mes_copy`.
+	 */
+	public function test_filter_sponsors_by_vetting( string $picked, string $orderby, string $order, array $expected ): void {
+		list( , $mes_id ) = $this->create_mes_company( 'sv-compliant' );
+
+		$sponsors = array(
+			'unrequested' => $this->create_camp_sponsor( 'https://unrequested.example' ),
+			'in_review'   => $this->create_camp_sponsor( 'https://in-review.example' ),
+			'mes_copy'    => $this->create_camp_sponsor( 'https://acme.example', array( '_mes_id' => $mes_id ) ),
+		);
+		request_vetting( self::$year_dot_2018_site_id, $sponsors['in_review'] );
+
+		$main_query = $GLOBALS['wp_the_query'];
+		$list_query = new \WP_Query();
+		$get        = $_GET;
+		$hook       = 'WordCamp\Sponsor_Vetting\filter_sponsors_by_vetting';
+
+		$_GET['sv_vetting']      = $picked;
+		$GLOBALS['wp_the_query'] = $list_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The list's query is the main query.
+		add_action( 'pre_get_posts', $hook );
+
+		$listed = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): array => $list_query->query(
+				array(
+					'post_type' => 'wcb_sponsor',
+					'orderby'   => $orderby,
+					'order'     => $order,
+					'fields'    => 'ids',
+				)
+			)
+		);
+
+		remove_action( 'pre_get_posts', $hook );
+		$GLOBALS['wp_the_query'] = $main_query; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the main query.
+		$_GET                    = $get;
+
+		$this->assertSame( array_map( static fn( string $key ): int => $sponsors[ $key ], $expected ), $listed );
+	}
+
+	/**
+	 * Data provider for test_filter_sponsors_by_vetting().
+	 *
+	 * @return array[]
+	 */
+	public function data_filter_sponsors_by_vetting(): array {
+		return array(
+			'a copy under approved'    => array( 'approved', '', '', array( 'mes_copy' ) ),
+			'a group no sponsor is in' => array( 'not-approved', '', '', array() ),
+			'sorted in vetting order'  => array( '', 'sv_vetting', 'ASC', array( 'unrequested', 'in_review', 'mes_copy' ) ),
+			'sorted in reverse'        => array( '', 'sv_vetting', 'DESC', array( 'mes_copy', 'in_review', 'unrequested' ) ),
+		);
+	}
+
+	/**
 	 * Requesting vetting from the sponsor's edit screen saves what the organizer entered with it first, so a website
-	 * typed just before the request still gets its company. A save without the request, or with a forged one, asks
-	 * for nothing.
+	 * typed just before the request still gets its company. A save without the request, with a forged one, or with an
+	 * email address the vetting team can't write to asks for nothing. No phone number is needed.
 	 *
 	 * @dataProvider data_request_from_edit_screen
 	 *
-	 * @param bool $clicked     Whether the save carries the request.
-	 * @param bool $valid_nonce Whether the request's nonce is the box's.
-	 * @param bool $requested   Whether vetting is requested.
+	 * @param bool   $clicked     Whether the save carries the request.
+	 * @param bool   $valid_nonce Whether the request's nonce is the box's.
+	 * @param string $email       The contact's email address.
+	 * @param bool   $requested   Whether vetting is requested.
 	 */
-	public function test_request_from_edit_screen( bool $clicked, bool $valid_nonce, bool $requested ): void {
+	public function test_request_from_edit_screen( bool $clicked, bool $valid_nonce, string $email, bool $requested ): void {
 		$sponsor_id = $this->create_camp_sponsor( '' );
 		$user_id    = self::factory()->user->create();
 
@@ -440,11 +625,15 @@ class Test_Intake extends Database_TestCase {
 
 		$sponsorship_id = $this->on_site(
 			self::$year_dot_2018_site_id,
-			static function () use ( $sponsor_id, $clicked, $valid_nonce ): int {
+			static function () use ( $sponsor_id, $clicked, $valid_nonce, $email ): int {
 				$_POST = array(
-					'wcpt-meta-sponsor-info'   => wp_create_nonce( 'edit-sponsor-info' ),
-					'_wcpt_sponsor_website'    => 'https://typed.example',
-					'sv_request_vetting_nonce' => $valid_nonce ? wp_create_nonce( 'sv_request_vetting_' . $sponsor_id ) : 'forged',
+					'wcpt-meta-sponsor-info'      => wp_create_nonce( 'edit-sponsor-info' ),
+					'_wcpt_sponsor_company_name'  => 'Acme Inc.',
+					'_wcpt_sponsor_website'       => 'https://typed.example',
+					'_wcpt_sponsor_first_name'    => 'Pat',
+					'_wcpt_sponsor_last_name'     => 'Doe',
+					'_wcpt_sponsor_email_address' => $email,
+					'sv_request_vetting_nonce'    => $valid_nonce ? wp_create_nonce( 'sv_request_vetting_' . $sponsor_id ) : 'forged',
 				);
 
 				if ( $clicked ) {
@@ -474,14 +663,111 @@ class Test_Intake extends Database_TestCase {
 	 */
 	public function data_request_from_edit_screen(): array {
 		return array(
-			'saved with the request' => array( true, true, true ),
-			'a plain save'           => array( false, true, false ),
-			'a forged request'       => array( true, false, false ),
+			'saved with the request' => array( true, true, 'pat@acme.example', true ),
+			'a plain save'           => array( false, true, 'pat@acme.example', false ),
+			'a forged request'       => array( true, false, 'pat@acme.example', false ),
+			'an email placeholder'   => array( true, true, 'TBD', false ),
 		);
 	}
 
 	/**
-	 * The route the block editor redraws the vetting box from serves only people who can edit the camp's sponsor.
+	 * Organizers are told what in the Contact Information keeps vetting from being requested: an empty field, a
+	 * website without a domain, or an email address the vetting team can't write to, even one the browser accepts.
+	 *
+	 * @dataProvider data_contact_info_problem
+	 *
+	 * @param string $website   The sponsor's website.
+	 * @param string $email     The contact's email address.
+	 * @param string $last_name The contact's last name.
+	 * @param string $problem   The problem organizers are told about, or an empty string for none.
+	 */
+	public function test_contact_info_problem( string $website, string $email, string $last_name, string $problem ): void {
+		$sponsor_id = $this->create_camp_sponsor(
+			$website,
+			array(
+				'_wcpt_sponsor_email_address' => $email,
+				'_wcpt_sponsor_first_name'    => 'Frank',
+				'_wcpt_sponsor_last_name'     => $last_name,
+			)
+		);
+
+		$message = $this->on_site( self::$year_dot_2018_site_id, static fn(): string => get_contact_info_problem( $sponsor_id ) );
+
+		$this->assertSame( '' === $problem ? '' : get_contact_info_messages()[ $problem ], $message );
+	}
+
+	/**
+	 * Contact Information, and what organizers are told about it.
+	 *
+	 * @return array[]
+	 */
+	public function data_contact_info_problem(): array {
+		return array(
+			'complete'                       => array( 'hybrid.example', 'frank@hybrid.example', 'Lloyd', '' ),
+			'a name missing'                 => array( 'hybrid.example', 'frank@hybrid.example', '', 'missing' ),
+			'a website without a domain'     => array( 'hybrid', 'frank@hybrid.example', 'Lloyd', 'website' ),
+			'an email with no dot in domain' => array( 'hybrid.example', 'frank@gmail', 'Lloyd', 'email' ),
+		);
+	}
+
+	/**
+	 * The sponsor list reminds organizers to request vetting while a published sponsor hasn't been submitted,
+	 * counting only those, and says nothing once every one has been. Drafts, like the ones the Call for Sponsors form
+	 * makes of every application, don't count.
+	 *
+	 * @dataProvider data_vetting_reminder
+	 *
+	 * @param bool   $all_requested Whether vetting was requested for every sponsor.
+	 * @param string $expected      The reminder's text, or an empty string for none.
+	 */
+	public function test_vetting_reminder( bool $all_requested, string $expected ): void {
+		$requested_id = $this->create_camp_sponsor( 'https://requested.example' );
+		$other_id     = $this->create_camp_sponsor( 'https://other.example' );
+		$applicant_id = $this->create_camp_sponsor( 'https://applicant.example' );
+
+		$this->on_site(
+			self::$year_dot_2018_site_id,
+			static fn(): int => wp_update_post(
+				array(
+					'ID'          => $applicant_id,
+					'post_status' => 'draft',
+				)
+			)
+		);
+		request_vetting( self::$year_dot_2018_site_id, $requested_id );
+
+		if ( $all_requested ) {
+			request_vetting( self::$year_dot_2018_site_id, $other_id );
+		}
+
+		$reminder = $this->on_site(
+			self::$year_dot_2018_site_id,
+			static function (): string {
+				ob_start();
+				render_vetting_reminder();
+
+				return wp_strip_all_tags( (string) ob_get_clean() );
+			}
+		);
+
+		$this->assertSame( $expected, trim( $reminder ) );
+	}
+
+	/**
+	 * Whether every sponsor was submitted, and the reminder the list shows.
+	 *
+	 * @return array[]
+	 */
+	public function data_vetting_reminder(): array {
+		return array(
+			'one not submitted' => array( false, '1 sponsor hasn’t been submitted for vetting yet. Open it and click “Request vetting” in its Sponsor Vetting box. Show it' ),
+			'all submitted'     => array( true, '' ),
+		);
+	}
+
+	/**
+	 * The route the block editor redraws the vetting box from serves only people who can edit the camp's sponsor, and
+	 * hands them the notices their save queued, once, since the block editor doesn't load a screen to show them on.
 	 *
 	 * @dataProvider data_vetting_box_route_access
 	 *
@@ -498,7 +784,9 @@ class Test_Intake extends Database_TestCase {
 
 		$response = $this->on_site(
 			self::$year_dot_2018_site_id,
-			static function () use ( $sponsor_id ): \WP_REST_Response {
+			static function () use ( $sponsor_id ): array {
+				add_notice( 'error', 'Vetting wasn’t requested.' );
+
 				$GLOBALS['wp_rest_server'] = new \WP_REST_Server();
 				do_action( 'rest_api_init', $GLOBALS['wp_rest_server'] );
 
@@ -506,12 +794,21 @@ class Test_Intake extends Database_TestCase {
 
 				$GLOBALS['wp_rest_server'] = null;
 
-				return $response;
+				return array( $response, take_notices() );
 			}
+		);
+
+		list( $response, $still_queued ) = $response;
+
+		$notice = array(
+			'type'    => 'error',
+			'message' => 'Vetting wasn’t requested.',
 		);
 
 		$this->assertSame( $status, $response->get_status() );
 		$this->assertSame( $serves_box, str_contains( (string) ( $response->get_data()['html'] ?? '' ), 'Request vetting' ) );
+		$this->assertSame( $serves_box ? array( $notice ) : array(), $response->get_data()['notices'] ?? array() );
+		$this->assertSame( $serves_box ? array() : array( $notice ), $still_queued );
 	}
 
 	/**

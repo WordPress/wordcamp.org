@@ -64,13 +64,19 @@ test.describe( 'event card clickability', () => {
 					return { ok: false, reason: 'card is missing its media region or title link' };
 				}
 
+				// In a list where no event has an image the placeholders are
+				// hidden, so the top of the card stands in for the media region.
+				const shown = media.getBoundingClientRect().height > 0;
+				const region = shown ? media : card;
+
 				// `elementFromPoint` is viewport-relative and returns null for
 				// anything scrolled out of it, so bring each card into view
 				// before asking what sits on top of its media region.
-				media.scrollIntoView( { block: 'center' } );
+				region.scrollIntoView( { block: 'center' } );
 
-				const box = media.getBoundingClientRect();
-				const hit = document.elementFromPoint( box.left + box.width / 2, box.top + box.height / 2 );
+				const box = region.getBoundingClientRect();
+				const top = shown ? box.top + box.height / 2 : box.top + 12;
+				const hit = document.elementFromPoint( box.left + box.width / 2, top );
 				const link = hit && hit.closest( 'a' );
 
 				return {

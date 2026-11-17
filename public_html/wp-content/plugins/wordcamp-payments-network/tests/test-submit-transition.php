@@ -493,6 +493,7 @@ class Test_Submit_Transition extends WP_UnitTestCase {
 
 		$fields = array(
 			'company_name'    => 'Example Sponsor',
+			'website'         => 'https://sponsor.example.org',
 			'first_name'      => 'Example',
 			'last_name'       => 'Person',
 			'email_address'   => 'sponsor@example.org',

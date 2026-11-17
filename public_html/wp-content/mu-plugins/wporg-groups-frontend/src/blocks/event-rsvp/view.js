@@ -25,8 +25,12 @@ store( 'wporg/event-rsvp', {
 			return getContext().currentUserStatus === 'attending';
 		},
 
-		get isNotAttending() {
-			return getContext().currentUserStatus !== 'attending';
+		get isWaiting() {
+			return getContext().currentUserStatus === 'waiting_list';
+		},
+
+		get hasResponse() {
+			return hasResponse( getContext() );
 		},
 
 		get hasNoAttendees() {
@@ -36,6 +40,13 @@ store( 'wporg/event-rsvp', {
 		get countLabel() {
 			const ctx = getContext();
 			const [ key, value ] = getCountParts( ctx.attendingCount, ctx.currentUserStatus === 'attending' );
+
+			return null === value ? label( key ) : formatLabel( label( key ), [ formatNumber( value ) ] );
+		},
+
+		get waitingLabel() {
+			const ctx = getContext();
+			const [ key, value ] = getWaitingParts( ctx.waitingCount, isFull( ctx ) );
 
 			return null === value ? label( key ) : formatLabel( label( key ), [ formatNumber( value ) ] );
 		},
@@ -56,6 +67,12 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.currentUserStatus === 'attending' ) {
 				return label( 'attending' );
 			}
+			if ( ctx.currentUserStatus === 'waiting_list' ) {
+				return label( 'waitingListed' );
+			}
+			if ( isFull( ctx ) ) {
+				return label( 'joinWaitingList' );
+			}
 			return ctx.isMember ? label( 'rsvp' ) : label( 'joinRsvp' );
 		},
 
@@ -68,6 +85,9 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.currentUserStatus === 'attending' ) {
 				return label( 'statusAttending' );
 			}
+			if ( ctx.currentUserStatus === 'waiting_list' ) {
+				return label( 'statusWaiting' );
+			}
 			return label( 'statusNotAttending' );
 		},
 
@@ -79,7 +99,16 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.currentUserStatus === 'attending' ) {
 				return label( 'cancelRsvp' );
 			}
-			return label( 'attend' );
+			if ( ctx.currentUserStatus === 'waiting_list' ) {
+				return label( 'leaveWaitingList' );
+			}
+			return isFull( ctx ) ? label( 'joinWaitingList' ) : label( 'attend' );
+		},
+
+		get cancelLabel() {
+			return getContext().currentUserStatus === 'waiting_list'
+				? label( 'leaveWaitingList' )
+				: label( 'cancelRsvp' );
 		},
 	},
 
@@ -144,9 +173,9 @@ store( 'wporg/event-rsvp', {
 				window.location.href = ctx.loginUrl;
 				return;
 			}
-			// Attending already, or there are questions to answer first —
-			// either way the modal is where the next step lives.
-			if ( ctx.currentUserStatus === 'attending' || ctx.hasQuestions ) {
+			// Attending or waiting already, or there are questions to answer
+			// first — either way the modal is where the next step lives.
+			if ( hasResponse( ctx ) || ctx.hasQuestions ) {
 				openRsvpModal( ctx, ref );
 				return;
 			}
@@ -275,7 +304,9 @@ function flagMissingAnswers( block, missingInputs ) {
 }
 
 async function doToggleRsvp( ctx, actionElement ) {
-	const newStatus = ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
+	// Sending `attending` from the waiting list would only queue them again,
+	// so leaving it is a withdrawal like cancelling.
+	const newStatus = hasResponse( ctx ) ? 'not_attending' : 'attending';
 
 	return submitRsvp( ctx, actionElement, newStatus );
 }
@@ -286,13 +317,14 @@ async function doToggleRsvp( ctx, actionElement ) {
  * Re-sending `attending` is idempotent in `Rsvp::save()`, so this updates the
  * answers on the existing RSVP rather than requiring a cancel/re-RSVP round
  * trip — which would delete the answers and, on a capped event, surrender the
- * seat to the waiting list.
+ * seat to the waiting list. On the waiting list it keeps their place, since
+ * the existing RSVP is updated rather than recreated.
  */
 async function doSaveAnswers( ctx, actionElement ) {
-	return submitRsvp( ctx, actionElement, 'attending' );
+	return submitRsvp( ctx, actionElement, 'attending', true );
 }
 
-async function submitRsvp( ctx, actionElement, newStatus ) {
+async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
 		return;
@@ -356,10 +388,9 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
-	const statusChanged = newStatus !== oldStatus;
-	ctx.currentUserStatus = newStatus;
-	if ( statusChanged ) {
-		ctx.attendingCount += newStatus === 'attending' ? 1 : -1;
+	const oldWaiting = ctx.waitingCount;
+	if ( ! answersOnly ) {
+		applyOptimisticStatus( ctx, newStatus );
 	}
 	ctx.rsvpLoading = true;
 
@@ -368,16 +399,17 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 
 		ctx.currentUserStatus = data.status;
 		ctx.attendingCount = data.responses.attending.count;
-		ctx.rsvpNotice = statusChanged
-			? getRsvpSuccessNotice( ctx, data.status )
-			: labelFromContext( ctx, 'answersSaved' );
+		ctx.waitingCount = data.responses.waiting_list?.count ?? ctx.waitingCount;
+		ctx.rsvpNotice = answersOnly
+			? labelFromContext( ctx, 'answersSaved' )
+			: getRsvpSuccessNotice( ctx, data.status, oldStatus );
 		ctx.rsvpNoticeSuccess = true;
 		ctx.rsvpNoticeError = false;
 
-		// Organizers see the answers inline in the attendee list, which the
-		// client-side refresh can't rebuild — reload so their view stays
-		// complete.
-		if ( ctx.canViewAnswers ) {
+		// Organizers see answers and the waiting list inline in the attendee
+		// list, which the client-side refresh can't rebuild — reload so their
+		// view stays complete.
+		if ( ctx.canViewAnswers || ( ctx.canViewWaiting && ( oldWaiting > 0 || ctx.waitingCount > 0 ) ) ) {
 			window.location.reload();
 			return;
 		}
@@ -389,6 +421,7 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 	} catch ( error ) {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
+		ctx.waitingCount = oldWaiting;
 
 		// Our own validation failures carry a message the attendee can act on
 		// ("Please answer: Dietary requirements"). Anything else - a network
@@ -481,12 +514,15 @@ async function sendRsvp( ctx, status, answers, retry = false ) {
 	return data;
 }
 
-function getRsvpSuccessNotice( ctx, status ) {
+function getRsvpSuccessNotice( ctx, status, oldStatus ) {
 	if ( status === 'attending' ) {
 		return labelFromContext( ctx, 'rsvpSuccessAttending' );
 	}
 	if ( status === 'waiting_list' ) {
 		return labelFromContext( ctx, 'rsvpSuccessWaitingList' );
+	}
+	if ( oldStatus === 'waiting_list' ) {
+		return labelFromContext( ctx, 'rsvpSuccessLeftWaitingList' );
 	}
 	return labelFromContext( ctx, 'rsvpSuccessNotAttending' );
 }
@@ -509,6 +545,7 @@ async function refreshAttendees( ctx, actionElement ) {
 
 			const records = data.data.attending.records;
 			ctx.attendingCount = data.data.attending.count;
+			ctx.waitingCount = data.data.waiting_list?.count ?? ctx.waitingCount;
 
 			list.innerHTML = records.length
 				? records
@@ -586,6 +623,49 @@ function getCountParts( count, isAttending ) {
 	}
 
 	return [ 'countZero', null ];
+}
+
+// Mirrors `get_waiting_parts()` in `inc/rsvp-labels.php`; a null key means no line.
+function getWaitingParts( waiting, full ) {
+	if ( waiting > 0 ) {
+		return [ 1 === waiting ? 'waitingSingular' : 'waitingPlural', waiting ];
+	}
+
+	if ( full ) {
+		return [ 'waitingFull', null ];
+	}
+
+	return [ null, null ];
+}
+
+function hasResponse( ctx ) {
+	return ctx.currentUserStatus === 'attending' || ctx.currentUserStatus === 'waiting_list';
+}
+
+function isFull( ctx ) {
+	return ctx.capacity > 0 && ctx.attendingCount >= ctx.capacity;
+}
+
+// A full event puts a new RSVP on the waiting list, so predict that. Leaving
+// the waiting list frees no seat.
+function applyOptimisticStatus( ctx, newStatus ) {
+	const oldStatus = ctx.currentUserStatus;
+
+	if ( newStatus === 'attending' && isFull( ctx ) ) {
+		ctx.currentUserStatus = 'waiting_list';
+		ctx.waitingCount += 1;
+		return;
+	}
+
+	ctx.currentUserStatus = newStatus;
+
+	if ( newStatus === 'attending' ) {
+		ctx.attendingCount += 1;
+	} else if ( oldStatus === 'attending' ) {
+		ctx.attendingCount -= 1;
+	} else if ( oldStatus === 'waiting_list' ) {
+		ctx.waitingCount = Math.max( 0, ctx.waitingCount - 1 );
+	}
 }
 
 function label( key ) {

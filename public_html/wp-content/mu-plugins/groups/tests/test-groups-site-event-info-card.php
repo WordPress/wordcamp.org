@@ -7,6 +7,7 @@ use GatherPress\Core\Event\Event;
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase.php';
+require_once __DIR__ . '/trait-groups-site-patterns.php';
 
 /**
  * Regression coverage for the single-event details card's zone dividers.
@@ -35,8 +36,16 @@ require_once __DIR__ . '/../../wporg-groups-frontend/tests/class-groups-testcase
  * @group groups
  */
 class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
+	use Groups_Site_Patterns;
 
-	const TEMPLATE = SUT_WP_CONTENT_DIR . 'themes/groups-site/templates/single-event.html';
+	/**
+	 * Drops the theme patterns registered by get_info_card_block().
+	 */
+	public static function wpTearDownAfterClass() {
+		self::unregister_groups_site_patterns();
+
+		parent::wpTearDownAfterClass();
+	}
 
 	/**
 	 * The block name of each optional zone, in template order.
@@ -103,11 +112,9 @@ class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
 	 * Parse `single-event.html` and return the details-card block.
 	 */
 	private function get_info_card_block(): array {
-		$template = file_get_contents( self::TEMPLATE );
+		self::register_groups_site_patterns();
 
-		$this->assertNotFalse( $template, 'Could not read single-event.html.' );
-
-		$card = $this->find_info_card( parse_blocks( $template ) );
+		$card = $this->find_info_card( $this->parse_groups_site_template( 'templates/single-event.html' ) );
 
 		$this->assertNotNull( $card, 'single-event.html no longer contains .groups-site-event-info-card.' );
 

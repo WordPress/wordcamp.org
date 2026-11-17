@@ -40,6 +40,7 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/importer-tweaks.php';
 	require_once dirname( __DIR__ ) . '/sponsor-agreements.php';
 	require_once dirname( __DIR__ ) . '/pingbacks.php';
+	require_once dirname( __DIR__ ) . '/script-translations.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );

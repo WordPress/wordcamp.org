@@ -28,4 +28,12 @@ test.describe( 'visual and source order', () => {
 		const mobileSidebarBox = await sidebar.boundingBox();
 		expect( mobileMainBox.y ).toBeLessThan( mobileSidebarBox.y );
 	} );
+
+	test( 'the stacked sidebar stays a card instead of stretching across a tablet', async ( { page } ) => {
+		await page.setViewportSize( { width: 863, height: 800 } );
+		await page.goto( '', { waitUntil: 'domcontentloaded' } );
+
+		const sidebarBox = await page.locator( '.groups-site-sidebar' ).boundingBox();
+		expect( sidebarBox.width ).toBeLessThanOrEqual( 400 );
+	} );
 } );

@@ -32,7 +32,7 @@ Keep the document outline semantic. Apply a visual token or class when a heading
 
 | Element | Specification | Preferred implementation |
 |---|---|---|
-| Page width | 1160px maximum | `contentSize` and `wideSize` in `theme.json` |
+| Page width | 1280px for page layouts (group home, event, archive, directory, members); 1160px for reading-width content | Templates set 1280px on their layout; `theme.json` holds the 1160px default |
 | Horizontal padding | `clamp(20px, 4vw, 80px)` | `var(--wp--preset--spacing--edge-space)` |
 | Section spacing | 50–80px | `var(--wp--preset--spacing--60)` |
 | Component gaps | 10px, 20px, or 30px | `var(--wp--preset--spacing--10)`, `--20`, or `--30` |
@@ -121,6 +121,7 @@ This is a provisional treatment. Ask Brand whether the placeholder should eventu
 ### Responsive behavior and accessibility
 
 - Keep visual, DOM, keyboard, and screen-reader order aligned. Do not use CSS `order` to place a sidebar after the main column visually while leaving it first in the DOM.
+- The group home repeats “Join this group” in the hero only while the sidebar is stacked under the content (up to 960px). It is hidden on wider screens, where the sidebar’s button is already beside the hero.
 - Allow long dates and translated labels to wrap without clipping or overlap.
 - Test at 320px, 375px, and 430px viewport widths.
 - Test at 200% browser zoom.

@@ -506,6 +506,237 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Preview a group from `$country` into the test site, and return the job.
+	 *
+	 * @param string $country Meetup's country code for the group, lowercase.
+	 */
+	protected function preview_from_country( string $country ): array {
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_group',
+			function () use ( $country ) {
+				return $this->raw_group( array( 'country' => $country ) );
+			}
+		);
+		$this->fake_events( array( $this->raw_event() ) );
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch( $this->site_id );
+
+		return Meetup_Import\get_job( $this->site_id );
+	}
+
+	/**
+	 * A new group site has no language of its own, so the preview suggests the
+	 * main language of the group's country (#2365). San Jose's group is in
+	 * Costa Rica and runs in Spanish, but its events all came in as English.
+	 */
+	public function test_preview_suggests_the_countrys_language() {
+		$job = $this->preview_from_country( 'cr' );
+
+		$this->assertSame( 'ready', $job['status'] );
+		$this->assertSame(
+			array(
+				'code'   => 'es',
+				'source' => 'country',
+			),
+			$job['plan']['language']
+		);
+	}
+
+	/**
+	 * The site's own language comes before the country's: its last published
+	 * event's, else its `WPLANG`.
+	 */
+	public function test_preview_suggests_the_sites_language_first() {
+		global $wpdb;
+
+		// `update_option()` drops a locale whose language pack isn't installed.
+		$wpdb->replace(
+			$wpdb->get_blog_prefix( $this->site_id ) . 'options',
+			array(
+				'option_name'  => 'WPLANG',
+				'option_value' => 'fr_FR',
+				'autoload'     => 'on',
+			)
+		);
+		$this->on_site( 'wp_cache_flush' );
+
+		$this->assertSame(
+			array(
+				'code'   => 'fr',
+				'source' => 'site',
+			),
+			$this->preview_from_country( 'cr' )['plan']['language']
+		);
+
+		Meetup_Import\cancel_job( $this->site_id );
+		$this->on_site(
+			function () {
+				$previous = self::factory()->post->create(
+					array(
+						'post_type'   => Event::POST_TYPE,
+						'post_status' => 'publish',
+					)
+				);
+
+				\WordCamp\Groups\Frontend\Event_Language\set_event_language( $previous, 'de' );
+			}
+		);
+
+		$this->assertSame(
+			array(
+				'code'   => 'de',
+				'source' => 'events',
+			),
+			$this->preview_from_country( 'cr' )['plan']['language']
+		);
+	}
+
+	/**
+	 * Without a country, or one CLDR has no language for, it's English.
+	 *
+	 * @dataProvider data_unknown_countries
+	 *
+	 * @param string $country Meetup's country code.
+	 */
+	public function test_preview_falls_back_to_english( string $country ) {
+		$this->assertSame(
+			array(
+				'code'   => 'en',
+				'source' => 'default',
+			),
+			$this->preview_from_country( $country )['plan']['language']
+		);
+	}
+
+	/**
+	 * Inputs for test_preview_falls_back_to_english().
+	 */
+	public function data_unknown_countries(): array {
+		return array(
+			'none'       => array( '' ),
+			'not a code' => array( 'c<r' ),
+			'unknown'    => array( 'zz' ),
+		);
+	}
+
+	/**
+	 * The events an import creates get the language picked on the preview;
+	 * without a valid pick, the preview's suggestion.
+	 *
+	 * @dataProvider data_picked_languages
+	 *
+	 * @param string $picked   What the preview posted.
+	 * @param string $expected The new event's language.
+	 */
+	public function test_import_uses_the_language_picked_on_the_preview( string $picked, string $expected ) {
+		$job = $this->preview_from_country( 'cr' );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'], $picked );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'done', Meetup_Import\get_job( $this->site_id )['status'] );
+		$this->assertSame( $expected, $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
+	}
+
+	/**
+	 * Inputs for test_import_uses_the_language_picked_on_the_preview().
+	 */
+	public function data_picked_languages(): array {
+		return array(
+			'picked'     => array( 'pt', 'pt' ),
+			'not picked' => array( '', 'es' ),
+			'not a code' => array( 'xx-bogus', 'es' ),
+			'markup'     => array( '<b>en</b>', 'es' ),
+		);
+	}
+
+	/**
+	 * A job previewed before the suggestion existed imports as it always did,
+	 * with what the event form would prefill.
+	 */
+	public function test_import_without_a_suggestion_uses_the_forms_default() {
+		$job = $this->preview_from_country( 'cr' );
+
+		unset( $job['plan']['language'] );
+		Meetup_Import\save_job( $job );
+
+		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
+		$this->run_batches();
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( 'en', $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
+	}
+
+	/**
+	 * The preview offers the suggestion in a select sent with the Import
+	 * button, and says where it came from.
+	 */
+	public function test_preview_shows_the_suggested_language() {
+		$job = $this->preview_from_country( 'cr' );
+
+		ob_start();
+		Meetup_Import\render_job( $job );
+		$html = ob_get_clean();
+
+		$start       = strpos( $html, '<form id="wporg-meetup-import-confirm"' );
+		$import_form = substr( $html, $start, strpos( $html, '</form>', $start ) - $start );
+
+		$this->assertNotFalse( $start );
+		$this->assertStringContainsString( 'value="Import"', $import_form );
+		$this->assertMatchesRegularExpression( '/<select [^>]*name="language" form="wporg-meetup-import-confirm"/', $html, 'The select is sent with the Import form.' );
+		$this->assertMatchesRegularExpression( '/<option value="es"\s+selected=\'selected\'>/', $html );
+		$this->assertSame( 1, preg_match_all( "/selected='selected'/", $html ) );
+		$this->assertStringContainsString( 'Guessed from the group&#039;s country (Costa Rica)', $html );
+	}
+
+	/**
+	 * The Import button sends the picked language along; a value that isn't a
+	 * string falls back to the suggestion.
+	 *
+	 * @dataProvider data_posted_languages
+	 *
+	 * @param mixed  $posted   `$_POST['language']`.
+	 * @param string $expected The job's language.
+	 */
+	public function test_handle_confirm_takes_the_language( $posted, string $expected ) {
+		$job = $this->preview_from_country( 'cr' );
+
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+
+		$_POST['site_id']     = (string) $this->site_id;
+		$_POST['job_id']      = $job['id'];
+		$_POST['language']    = $posted;
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Meetup_Import\CONFIRM_ACTION );
+
+		try {
+			$location = $this->catch_redirect( 'WordCamp\Groups\Meetup_Import\handle_confirm' );
+		} finally {
+			unset( $GLOBALS['super_admins'], $_POST['site_id'], $_POST['job_id'], $_POST['language'], $_REQUEST['_wpnonce'] );
+		}
+
+		$job = Meetup_Import\get_job( $this->site_id );
+
+		$this->assertStringContainsString( 'notice=confirmed', $location );
+		$this->assertSame( 'importing', $job['status'] );
+		$this->assertSame( $expected, $job['language'] );
+	}
+
+	/**
+	 * Inputs for test_handle_confirm_takes_the_language().
+	 */
+	public function data_posted_languages(): array {
+		return array(
+			'picked'   => array( 'pt', 'pt' ),
+			'an array' => array( array( 'pt' ), 'es' ),
+		);
+	}
+
+	/**
 	 * Running the same import twice creates nothing new.
 	 */
 	public function test_rerun_is_idempotent() {
@@ -554,6 +785,24 @@ class Test_Meetup_Import extends Groups_TestCase {
 				}
 			)
 		);
+	}
+
+	/**
+	 * A draft keeps its language when a rerun refreshes it, whatever language
+	 * the rerun picked, as the preview says (#2365).
+	 */
+	public function test_rerun_keeps_a_drafts_language() {
+		add_filter( 'wcorg_meetup_import_publish_upcoming', '__return_false' );
+
+		$events = array( Meetup_Import\normalize_event( $this->raw_event() ) );
+
+		Meetup_Import\import_events( $this->site_id, $events, false, false, 'es' );
+		$results = Meetup_Import\import_events( $this->site_id, $events, false, false, 'pt' );
+
+		$post = $this->find_event( '315889305' );
+
+		$this->assertSame( array( 'updated' ), wp_list_pluck( $results, 'status' ) );
+		$this->assertSame( 'es', $this->on_site( fn() => \WordCamp\Groups\Frontend\Event_Language\get_event_language( $post->ID ) ) );
 	}
 
 	/**
@@ -3132,7 +3381,8 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 	/**
 	 * With members off, "Match people" still gives Meetup organizers their
-	 * role, but nobody else is fetched, previewed, or added to the group.
+	 * role, and counts the members for the preview, but adds nobody else to
+	 * the group (#2375).
 	 */
 	public function test_members_off_still_matches_organizers() {
 		$organizer = self::factory()->user->create( array( 'user_email' => 'organizer@example.org' ) );
@@ -3171,8 +3421,18 @@ class Test_Meetup_Import extends Groups_TestCase {
 		$job = Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, true );
 		Meetup_Import\process_batch( $this->site_id );
 
-		$this->assertFalse( $fetched, 'Members should not be fetched from Meetup at all.' );
-		$this->assertNull( Meetup_Import\get_job( $this->site_id )['plan']['member_counts'] );
+		$ready = Meetup_Import\get_job( $this->site_id );
+
+		$this->assertTrue( $fetched, 'Members are fetched to be counted.' );
+		$this->assertSame( 1, $ready['plan']['member_counts']['join'] );
+		$this->assertSame( array(), $ready['data']['members'], 'Only the counts are kept.' );
+
+		ob_start();
+		Meetup_Import\render_job( $ready );
+		$preview = ob_get_clean();
+
+		$this->assertStringContainsString( '1 would join the group on the second import', $preview );
+		$this->assertStringContainsString( 'This import doesn&#039;t add them.', $preview );
 
 		Meetup_Import\confirm_job( $this->site_id, $job['id'] );
 		$this->run_batches();
@@ -5016,5 +5276,85 @@ class Test_Meetup_Import extends Groups_TestCase {
 
 		$this->assertSame( array( 'created', 'in_series', 'skipped' ), wp_list_pluck( Meetup_Import\import_events( $this->site_id, $events ), 'status' ) );
 		$this->assertSame( 2, $this->count_posts( Event::POST_TYPE ) );
+	}
+
+	/**
+	 * Without "Match people", members aren't fetched or counted.
+	 */
+	public function test_members_not_fetched_without_match_people() {
+		$fetched = false;
+
+		$this->fake_events( array( $this->raw_event() ) );
+		add_filter(
+			'wcorg_meetup_import_pre_fetch_members',
+			static function () use ( &$fetched ) {
+				$fetched = true;
+
+				return array();
+			}
+		);
+
+		Meetup_Import\start_job( 'wma-wordpress-meetup', $this->site_id, false, false );
+		Meetup_Import\process_batch( $this->site_id );
+
+		$this->assertFalse( $fetched );
+		$this->assertNull( Meetup_Import\get_job( $this->site_id )['plan']['member_counts'] );
+	}
+
+	/**
+	 * Members are asked for as active members and leaders only, which is what
+	 * the group's Meetup page counts. With no status, Meetup also lists other
+	 * memberships, and the import's total came out higher (#2375).
+	 */
+	public function test_members_fetched_by_counted_statuses() {
+		$this->assertSame(
+			array( 'filters' => array( 'status' => '[ACTIVE, LEADER]' ) ),
+			Meetup_Import\member_query_args()
+		);
+	}
+
+	/**
+	 * The newest group is first in "Import into", since it's usually the one
+	 * just created for the import (#2375).
+	 */
+	public function test_start_form_lists_newest_group_first() {
+		$newer_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/newer/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		ob_start();
+		Meetup_Import\render_start_form( array() );
+		$form = ob_get_clean();
+
+		$this->assertLessThan(
+			strpos( $form, 'value="' . $this->site_id . '"' ),
+			strpos( $form, 'value="' . $newer_id . '"' )
+		);
+	}
+
+	/**
+	 * A site's import page with no import yet starts with the site picked, and
+	 * the Meetup group an earlier import saved (#2375).
+	 */
+	public function test_site_page_prefills_start_form() {
+		$GLOBALS['super_admins'] = array( 'meetupimporter' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( self::factory()->user->create( array( 'user_login' => 'meetupimporter' ) ) );
+		update_blog_option( $this->site_id, Meetup_Import\GROUP_URLNAME_OPTION, 'wma-wordpress-meetup' );
+		$_GET['site_id'] = (string) $this->site_id;
+
+		try {
+			ob_start();
+			Meetup_Import\render_admin_page();
+			$page = ob_get_clean();
+		} finally {
+			unset( $GLOBALS['super_admins'], $_GET['site_id'] );
+		}
+
+		$this->assertMatchesRegularExpression( '/id="meetup_group"[^>]*value="wma-wordpress-meetup"/', $page );
+		$this->assertMatchesRegularExpression( '/value="' . $this->site_id . '"\s*selected=\'selected\'/', $page );
 	}
 }

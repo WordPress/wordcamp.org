@@ -1,6 +1,6 @@
 <?php
 /**
- * Notices for the plugin's admin screens: the organizer's vetting request and the import.
+ * Notices queued for the current user: shown on their next admin screen, or by the block editor after it saves.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -30,19 +30,33 @@ function add_notice( string $type, string $message ): void {
 }
 
 /**
+ * Takes the current user's queued notices, so each is shown once.
+ *
+ * @return array[] Each notice's `type` and `message`.
+ */
+function take_notices(): array {
+	$key     = 'sv_notices_' . get_current_user_id();
+	$notices = array_values( array_filter( (array) get_transient( $key ) ) );
+
+	if ( $notices ) {
+		delete_transient( $key );
+	}
+
+	return $notices;
+}
+
+/**
  * Shows the current user's queued notices.
+ *
+ * Not on block editor screens, which hide them: the meta-box save loads one as it redirects, before the vetting box's
+ * redraw can take the save's notices.
  */
 function render_notices(): void {
-	$key     = 'sv_notices_' . get_current_user_id();
-	$notices = array_filter( (array) get_transient( $key ) );
-
-	if ( ! $notices ) {
+	if ( get_current_screen()?->is_block_editor() ) {
 		return;
 	}
 
-	delete_transient( $key );
-
-	foreach ( $notices as $notice ) {
+	foreach ( take_notices() as $notice ) {
 		wp_admin_notice(
 			esc_html( $notice['message'] ),
 			array(

@@ -237,7 +237,8 @@ wp_set_current_user( SV_SEED_VETTER );
 update_option( 'blogname', 'WordCamp Central (preview)' );
 
 $vienna  = sv_seed_camp( 'vienna', 'Vienna', -40 );
-$lisboa  = sv_seed_camp( 'lisboa', 'Lisboa', 18 );
+// Within a week, so its sponsor that isn't approved yet is flagged as urgent.
+$lisboa  = sv_seed_camp( 'lisboa', 'Lisboa', 5 );
 $kansai  = sv_seed_camp( 'kansai', 'Kansai', 55 );
 $nairobi = sv_seed_camp( 'nairobi', 'Nairobi', 120 );
 

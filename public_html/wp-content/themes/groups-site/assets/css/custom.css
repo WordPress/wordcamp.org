@@ -163,6 +163,13 @@ body.error404 .site-content-container h1 {
 	min-width: 0;
 }
 
+/* Only the breadcrumb shrinks. A shrinking menu wraps its links into a column
+   taller than the bar. */
+
+.wp-block-wporg-local-navigation-bar .wp-block-navigation {
+	flex-shrink: 0;
+}
+
 /* The breadcrumb wrapper scrolls sideways when a long event title overflows
    the bar. The block's own fade-out mask already signals the clipped text;
    the scrollbar a classic-scrollbar OS would draw under it is just noise in

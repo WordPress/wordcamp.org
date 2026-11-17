@@ -716,6 +716,12 @@ function draft_args_schema(): array {
 	$schema['date']['required']       = false;
 	$schema['time_start']['required'] = false;
 	$schema['time_end']['required']   = false;
+
+	// A copy (#2398) has no date until the organizer picks one, and its
+	// draft is saved without one in the meantime; see `save_draft()`.
+	$validate_date                       = $schema['date']['validate_callback'];
+	$schema['date']['validate_callback'] = static fn( $param ) => '' === $param || $validate_date( $param );
+
 	return $schema;
 }
 

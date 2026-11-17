@@ -326,4 +326,27 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 		$this->assertSame( '', $recurrence['frequency'] );
 		$this->assertFalse( $recurrence['locked'] );
 	}
+
+	/**
+	 * A copy's draft autosaves before its date is chosen, keeping the date
+	 * unset.
+	 */
+	public function test_copy_autosaves_without_a_date() {
+		wp_set_current_user( $this->organiser_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$request->set_body_params(
+			array(
+				'title'      => 'Copied Meetup',
+				'date'       => '',
+				'time_start' => '19:15',
+				'time_end'   => '21:45',
+			)
+		);
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( '', get_post_meta( $response->get_data()['id'], 'gatherpress_datetime_start', true ) );
+	}
 }

@@ -26,7 +26,7 @@ with their sponsorships, findings, notes and history. You're logged in as a vett
 
 | File | What it is |
 |---|---|
-| `sponsor-vetting.zip` | The plugin, built from the pull request at `5040ae06`. |
+| `sponsor-vetting.zip` | The plugin, built from the pull request at `bca14c84`. |
 | `mu-plugins/` | Stand-ins for what the plugin needs from the rest of WordCamp.org. |
 | `seed.php` | Creates the camps and records, through the plugin's own intake and workflow. |
 | `blueprint.json` | Puts the three together in Playground. |

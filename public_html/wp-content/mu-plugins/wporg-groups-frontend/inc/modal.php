@@ -104,13 +104,15 @@ function add_copy_event_node( WP_Admin_Bar $wp_admin_bar ): void {
  * text only, like the Edit item beside it.
  */
 function get_copy_event_node_css(): string {
-	$node = '#wpadminbar #wp-admin-bar-' . COPY_EVENT_NODE;
+	$css = <<<'CSS'
+@media screen and (max-width: 782px) {
+	#wpadminbar li#wp-admin-bar-%1$s { display: block; position: static; }
+	#wpadminbar #wp-admin-bar-%1$s > .ab-item { text-indent: 100%%; white-space: nowrap; overflow: hidden; width: 52px; padding: 0; position: relative; }
+	#wpadminbar #wp-admin-bar-%1$s > .ab-item:before { content: "\f105"; display: block; text-indent: 0; font: normal 32px/1 dashicons; top: 7px; width: 52px; text-align: center; }
+}
+CSS;
 
-	return "@media screen and (max-width: 782px) {
-	#wpadminbar li#wp-admin-bar-" . COPY_EVENT_NODE . " { display: block; position: static; }
-	{$node} > .ab-item { text-indent: 100%; white-space: nowrap; overflow: hidden; width: 52px; padding: 0; position: relative; }
-	{$node} > .ab-item:before { content: \"\\f105\"; display: block; text-indent: 0; font: normal 32px/1 dashicons; top: 7px; width: 52px; text-align: center; }
-}";
+	return sprintf( $css, COPY_EVENT_NODE );
 }
 
 /**

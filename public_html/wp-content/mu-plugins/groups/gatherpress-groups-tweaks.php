@@ -1197,14 +1197,11 @@ add_action(
 add_filter(
 	'render_block_gatherpress/venue',
 	static function ( string $content ): string {
-		// Venue posts store their content with a nested `wp:gatherpress/venue`
-		// wrapper (GatherPress's default seeded content). Calling `do_blocks()`
-		// on that content re-triggers this filter → infinite recursion → OOM.
-		// Guard with a static flag so we only ever run the filter body once
-		// per outermost render.
+		// A venue block inside the venue's own content, which GatherPress seeds
+		// with one (address and map), isn't part of the description below.
 		static $rendering = false;
 		if ( $rendering ) {
-			return $content;
+			return '';
 		}
 
 		// GatherPress renders nothing when it cannot resolve a venue the
@@ -1216,12 +1213,9 @@ add_filter(
 			return $content;
 		}
 
-		if ( ! is_singular( 'gatherpress_event' ) ) {
-			return $content;
-		}
-
+		// Only the viewed event: its "More events" cards render venue blocks too.
 		$event_id = get_the_ID();
-		if ( ! $event_id ) {
+		if ( ! is_singular( 'gatherpress_event' ) || get_queried_object_id() !== $event_id ) {
 			return $content;
 		}
 
@@ -1237,9 +1231,8 @@ add_filter(
 
 		if ( $venue_desc ) {
 			$rendering = true;
-			$plain     = wp_strip_all_tags( do_blocks( $venue_desc ) );
+			$plain     = trim( wp_strip_all_tags( do_blocks( $venue_desc ) ) );
 			$rendering = false;
-			$plain     = trim( $plain );
 			if ( $plain ) {
 				$extra .= '<p class="wporg-venue-description">' . esc_html( $plain ) . '</p>';
 			}

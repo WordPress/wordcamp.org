@@ -1481,45 +1481,106 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		);
 		update_post_meta( $venue->ID, 'gatherpress_access_requirements', 'Step-free entrance.' );
 
-		// The append only runs on a singular event, so put the query there.
-		// Rewrite rules aren't flushed in this suite, so `go_to()` can't
-		// resolve the permalink - set the query up directly instead.
+		$this->assertSame(
+			'',
+			$this->filter_venue_block_on_event_page( $event_id, $event_id, '' ),
+			'The description was appended to an empty venue block, stranding it in the event card.'
+		);
+
+		// It must still append when GatherPress actually rendered the venue.
+		$rendered = $this->filter_venue_block_on_event_page( $event_id, $event_id );
+
+		$this->assertStringContainsString( 'An entire pub floor just for us!', $rendered );
+		$this->assertStringContainsString( 'Step-free entrance.', $rendered );
+	}
+
+	/**
+	 * Run the venue block filter on one event's page, for a block in another event's context.
+	 *
+	 * @param int    $page_event_id  The event whose page is being viewed.
+	 * @param int    $block_event_id The event the venue block renders for.
+	 * @param string $content        What GatherPress rendered for the block.
+	 *
+	 * @return string The filtered block.
+	 */
+	private function filter_venue_block_on_event_page( int $page_event_id, int $block_event_id, string $content = '<div class="wp-block-gatherpress-venue"></div>' ): string {
 		global $wp_query, $post;
 
+		// Rewrite rules aren't flushed in this suite, so `go_to()` can't resolve
+		// the permalink. Set the query up directly instead.
 		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
 		$original_query = $wp_query;
 		$original_post  = $post;
 
 		$wp_query = new \WP_Query(
 			array(
-				'p'         => $event_id,
+				'p'         => $page_event_id,
 				'post_type' => 'gatherpress_event',
 			)
 		);
-		$wp_query->the_post();
-		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$post     = get_post( $block_event_id );
+		setup_postdata( $post );
 
 		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Could not set up the singular event request.' );
 
-		// phpcs:disable WordPress.NamingConventions.ValidHookName.UseUnderscores -- GatherPress's block filter name.
-		$this->assertSame(
-			'',
-			apply_filters( 'render_block_gatherpress/venue', '', array(), null ),
-			'The description was appended to an empty venue block, stranding it in the event card.'
-		);
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- GatherPress's block filter name.
+		$output = apply_filters( 'render_block_gatherpress/venue', $content, array(), null );
 
-		// It must still append when GatherPress actually rendered the venue.
-		$rendered = apply_filters( 'render_block_gatherpress/venue', '<div class="wp-block-gatherpress-venue"></div>', array(), null );
-		// phpcs:enable WordPress.NamingConventions.ValidHookName.UseUnderscores
-
-		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_reset_postdata();
 		$wp_query = $original_query;
 		$post     = $original_post;
+		wp_reset_postdata();
 		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 
-		$this->assertStringContainsString( 'An entire pub floor just for us!', $rendered );
-		$this->assertStringContainsString( 'Step-free entrance.', $rendered );
+		return $output;
+	}
+
+	/**
+	 * GatherPress's seeded venue block isn't a description, so it doesn't repeat the address; the rest of the content stays.
+	 */
+	public function test_venue_description_leaves_out_the_seeded_venue_block() {
+		$event_id = $this->create_event_with_venue();
+		$venue    = get_page_by_path( 'salty-spaces', OBJECT, 'gatherpress_venue' );
+
+		wp_update_post(
+			array(
+				'ID'           => $venue->ID,
+				'post_content' => '<!-- wp:gatherpress/venue --><!-- wp:gatherpress/venue-detail {"fieldType":"address"} /--><!-- /wp:gatherpress/venue -->'
+					. '<!-- wp:group --><div class="wp-block-group">'
+					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Use the side door.</li><!-- /wp:list-item --></ul><!-- /wp:list -->'
+					. '</div><!-- /wp:group -->',
+			)
+		);
+
+		$output = $this->filter_venue_block_on_event_page( $event_id, $event_id );
+
+		$this->assertStringContainsString( 'Use the side door.', $output );
+		$this->assertStringNotContainsString( 'Mooloolaba', $output, 'The description repeats the venue address.' );
+	}
+
+	/**
+	 * The description belongs to the event being viewed, not the "More events" cards below it.
+	 */
+	public function test_venue_description_is_left_off_other_events_cards() {
+		$page_event_id = $this->create_event_with_venue();
+		$card_event_id = $this->create_event_with_venue( 'Peregian Digital Hub' );
+		$card_venue    = get_page_by_path( 'peregian-digital-hub', OBJECT, 'gatherpress_venue' );
+
+		wp_update_post(
+			array(
+				'ID'           => $card_venue->ID,
+				'post_content' => 'Use the side door.',
+			)
+		);
+
+		$this->assertStringContainsString(
+			'Use the side door.',
+			$this->filter_venue_block_on_event_page( $card_event_id, $card_event_id ),
+			'The description is missing on its own event page.'
+		);
+		$this->assertStringNotContainsString(
+			'Use the side door.',
+			$this->filter_venue_block_on_event_page( $page_event_id, $card_event_id )
+		);
 	}
 
 	/**

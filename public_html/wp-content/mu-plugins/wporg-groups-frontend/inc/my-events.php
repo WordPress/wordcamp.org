@@ -19,10 +19,11 @@ use WordCamp\Groups\Frontend\Check_In;
  *
  * The upcoming list is uncapped on purpose (#1810) — a member goes to it to
  * confirm something specific is there. Past attendance is browsing rather
- * than checking, and a member of several years would otherwise push the rest
- * of the group's front page off the screen, so this one stops at a handful.
+ * than checking, and for a member with nothing booked it's the first thing on
+ * the group's front page, ahead of About and the upcoming events. Two keeps
+ * those in view.
  */
-const PAST_EVENTS_LIMIT = 5;
+const PAST_EVENTS_LIMIT = 2;
 
 /**
  * Upcoming dates for a member, soonest first.

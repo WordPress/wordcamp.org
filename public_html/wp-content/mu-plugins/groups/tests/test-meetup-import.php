@@ -2228,6 +2228,36 @@ class Test_Meetup_Import extends Groups_TestCase {
 	}
 
 	/**
+	 * Everyone who went on Meetup is attending here too, past GatherPress's default capacity of 50.
+	 */
+	public function test_imported_rsvps_are_not_capped() {
+		$raw = array();
+
+		for ( $i = 1; $i <= 55; $i++ ) {
+			self::factory()->user->create( array( 'user_email' => "member{$i}@example.org" ) );
+			$raw[] = array(
+				'status'      => 'YES',
+				'guestsCount' => 0,
+				'member'      => array( 'email' => "member{$i}@example.org" ),
+			);
+		}
+
+		$this->fake_rsvps( $raw );
+
+		// The suite drops registered meta after its first test. A real request
+		// always has GatherPress's, with the capacity default from its settings.
+		\GatherPress\Core\Event\Meta::get_instance()->register( \GatherPress\Core\Event\Event::POST_TYPE );
+
+		Meetup_Import\import_events( $this->site_id, array( Meetup_Import\normalize_event( $this->raw_past_event() ) ), true );
+
+		$post      = $this->find_event( '300000001' );
+		$responses = $this->on_site( static fn() => ( new \GatherPress\Core\Rsvp\Rsvp( $post->ID ) )->responses() );
+
+		$this->assertSame( 55, $responses['attending']['count'] );
+		$this->assertSame( 0, $responses['waiting_list']['count'] ?? 0 );
+	}
+
+	/**
 	 * A user whose WordPress.org account was made after the import ran.
 	 *
 	 * @param string $email Their email.

@@ -4,7 +4,8 @@ import type { CompanyStatus, SponsorshipStatus, TRASH } from './entities';
  * The records as REST returns them in the `edit` context.
  */
 
-export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied';
+/* `event_soon` is the screen's own: the rest come with a company. */
+export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied' | 'event_soon';
 
 export type Flag = {
 	type: FlagType;
@@ -77,12 +78,8 @@ export type Sponsorship = {
 	company: number;
 	event: Event;
 	approved: string;
+	good_faith: boolean;
 	trashed_status: string;
-};
-
-/* A sponsorship as its company's panel lists it. */
-export type CompanySponsorship = Pick< Sponsorship, 'id' | 'title' | 'status' | 'event' | 'approved' > & {
-	log: LogEntry[];
 };
 
 export type SponsorshipDetails = Sponsorship &
@@ -99,13 +96,32 @@ export type SponsorshipDetails = Sponsorship &
 			edit_url: string;
 		} | null;
 		approvable: 'approve' | 'good_faith' | '';
-		approval_hint: string;
-		good_faith: boolean;
 		domain: string;
 		approved_domain: string;
 		website_changed: boolean;
 		needs_approval_email: boolean;
 	};
+
+/* A sponsorship as its company lists it: an event, and how its approval stands. */
+export type CompanySponsorship = Pick<
+	SponsorshipDetails,
+	'id' | 'title' | 'status' | 'event' | 'approved' | 'good_faith' | 'log'
+>;
+
+/* What a vetter does about one of a company's events. Read only for the events its list shows: most of it is
+   looked up on the event's site. */
+export type EventActions = Pick<
+	SponsorshipDetails,
+	| 'id'
+	| 'allowed_statuses'
+	| 'approvable'
+	| 'domain'
+	| 'approved_domain'
+	| 'website_changed'
+	| 'needs_approval_email'
+	| 'conversations'
+	| 'sponsor'
+>;
 
 /* A record while it's edited: core-data hands its title over as the text itself. */
 export type Edited< Record extends { title: Title } > = Omit< Record, 'title' > & { title: string };

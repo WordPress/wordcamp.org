@@ -15,8 +15,8 @@ export function ListTabs() {
 	return (
 		<Tabs.Root value={ tab } onValueChange={ openTab }>
 			<Tabs.List variant="minimal">
-				<Tabs.Tab value="companies">{ __( 'Companies', 'wordcamporg' ) }</Tabs.Tab>
 				<Tabs.Tab value="events">{ __( 'Events', 'wordcamporg' ) }</Tabs.Tab>
+				<Tabs.Tab value="companies">{ __( 'Companies', 'wordcamporg' ) }</Tabs.Tab>
 			</Tabs.List>
 		</Tabs.Root>
 	);
@@ -31,20 +31,28 @@ export function ListTabs() {
  *
  * @param props             Props.
  * @param props.searchLabel What the search field is for.
- * @param props.layoutMenu  The list's Layout menu.
+ * @param props.layoutMenu  The list's Layout menu. Without one the list is the narrow one beside an open record,
+ *                          which has no room for the view controls and puts the search on a line of its own.
  * @return The bar.
  */
-export function ListHeader( { searchLabel, layoutMenu }: { searchLabel: string; layoutMenu: ReactNode } ) {
+export function ListHeader( { searchLabel, layoutMenu }: { searchLabel: string; layoutMenu?: ReactNode } ) {
 	return (
 		<>
 			<Stack direction="row" justify="space-between" gap="lg" className="sponsor-vetting__list-header">
 				<ListTabs />
-				<Stack direction="row" align="center" gap="xs">
-					<DataViews.Search label={ searchLabel } />
-					{ layoutMenu }
-					<DataViews.ViewConfig />
-				</Stack>
+				{ layoutMenu && (
+					<Stack direction="row" align="center" gap="xs">
+						<DataViews.Search label={ searchLabel } />
+						{ layoutMenu }
+						<DataViews.ViewConfig />
+					</Stack>
+				) }
 			</Stack>
+			{ ! layoutMenu && (
+				<div className="sponsor-vetting__list-search">
+					<DataViews.Search label={ searchLabel } />
+				</div>
+			) }
 			<DataViews.FiltersToggled className="dataviews-filters__container" />
 		</>
 	);

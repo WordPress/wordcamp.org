@@ -20,6 +20,7 @@ const LABELS = {
 	'sv-compliant': 'Compliant',
 	'svs-pending': 'Pending',
 	'svs-approved': 'Approved',
+	'svs-canceled': 'Canceled',
 	trash: 'Trash',
 };
 
@@ -96,6 +97,7 @@ function sponsorship(
 		company,
 		event: { name: event, date },
 		approved: '',
+		good_faith: false,
 		trashed_status: '',
 	};
 }
@@ -211,6 +213,38 @@ describe( 'the list of events', () => {
 			'Acme at Later',
 			'Harbor at Undated',
 			'Maple at Past',
+		] );
+	} );
+
+	it( 'shows a sponsorship as its sponsor, with one status: its own once decided, until then what it waits for', () => {
+		const rows = [
+			...SPONSORSHIPS,
+			sponsorship( 6, 'Stranger — Camp Soon', 0, 'Camp Soon', '2026-11-23', 'svs-canceled' ),
+			{
+				...sponsorship( 7, 'Maple at Soon', 2, 'Camp Soon', '2026-11-23', 'svs-approved' ),
+				good_faith: true,
+			},
+			sponsorship( 8, 'Vetted at Soon', 5, 'Camp Soon', '2026-11-23' ),
+		];
+		const vetted: Company = {
+			...COMPANIES[ 0 ],
+			id: 5,
+			title: { raw: 'Vetted', rendered: 'Vetted' },
+			status: 'sv-compliant',
+		};
+		const fields = getSponsorshipFields( LABELS, [ ...COMPANIES, vetted ], rows, '2026-11-13' );
+		const read = ( id: string, item: Sponsorship ) =>
+			fields.find( ( field ) => field.id === id )?.getValue?.( { item } );
+
+		expect( rows.map( ( item ) => [ read( 'title', item ), read( 'status', item ) ] ) ).toEqual( [
+			[ 'Maple Digital', 'Approved' ],
+			[ 'Acme Hosting', 'Needs Vetting' ],
+			[ 'Stranger at Soon', 'Needs a company' ],
+			[ 'Acme Hosting', 'Approved' ],
+			[ 'Harbor & Sons', 'Needs Vetting' ],
+			[ 'Stranger', 'Canceled' ],
+			[ 'Maple Digital', 'Approved in Good Faith' ],
+			[ 'Vetted', 'Pending' ],
 		] );
 	} );
 

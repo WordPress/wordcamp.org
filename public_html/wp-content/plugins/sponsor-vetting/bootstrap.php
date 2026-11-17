@@ -92,8 +92,8 @@ function get_app_url( string $record = '', int $id = 0 ): string {
 		return $url;
 	}
 
-	// The screen has its own address inside the page's: sponsorships open on the Events tab.
-	return add_query_arg( 'p', rawurlencode( 'sponsorship' === $record ? "/?tab=events&sponsorship={$id}" : "/?company={$id}" ), $url );
+	// The screen has its own address inside the page's. It opens on the events, so a company names its own tab.
+	return add_query_arg( 'p', rawurlencode( 'sponsorship' === $record ? "/?sponsorship={$id}" : "/?tab=companies&company={$id}" ), $url );
 }
 
 /**

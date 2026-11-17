@@ -3,10 +3,9 @@ import { __ } from '@wordpress/i18n';
 import { formatDay } from './dates';
 import type { AnyStatus } from './entities';
 import { StatusBadge, getName } from './fields';
-import type { Company, CompanyDetails, Edited, SponsorshipDetails } from './types';
+import type { Company, CompanyDetails, Edited } from './types';
 
 export type CompanyForm = Edited< CompanyDetails >;
-export type SponsorshipForm = Edited< SponsorshipDetails >;
 
 type Labels = Record< string, string >;
 
@@ -42,7 +41,7 @@ function getStatusField< Item extends { status: string } >( record: Saved, label
 	};
 }
 
-/* Shared by both forms: the note that's added when the record is saved. */
+/* The note that's added when the company is saved. */
 const NOTE = {
 	id: 'note',
 	type: 'text',
@@ -84,6 +83,8 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			render: ( { item } ) =>
 				formatDay( item.meta._sv_not_eligible_until ) || __( 'No end date', 'wordcamporg' ),
 			...meta( '_sv_not_eligible_until' ),
+			// Only being Not Eligible has an end, so it shows once that's the status, saved or about to be.
+			isVisible: ( item ) => item.status === 'sv-not-eligible',
 		},
 		{
 			id: 'good_faith_due',
@@ -92,6 +93,8 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			description: __( 'Set when a sponsorship is approved in good faith.', 'wordcamporg' ),
 			render: ( { item } ) => formatDay( item.good_faith_due ) || __( 'None', 'wordcamporg' ),
 			setValue: ( { value }: { value?: string } ) => ( { good_faith_due: value ?? '' } ),
+			// A Good Faith approval sets it, so before one there's nothing to show or change.
+			isVisible: ( item ) => Boolean( company.good_faith_due || item.good_faith_due ),
 		},
 		{
 			id: 'title',
@@ -160,7 +163,7 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 	];
 }
 
-/* A company's forms, one per group of its panel. The first shows each value with the control to change it. */
+/* A company's forms, one per group of its view. The first shows each value with the control to change it. */
 export const VETTING_FORM: Form = {
 	layout: { type: 'panel', labelPosition: 'side', editVisibility: 'always' },
 	fields: [ 'status', 'not_eligible_until', 'good_faith_due' ],
@@ -180,45 +183,24 @@ export const NOTE_FORM: Form = { fields: [ 'note' ] };
 /* What a new company is created with; the rest is filled in once it's open. */
 export const NEW_COMPANY_FORM: Form = { fields: [ 'title', 'domains' ] };
 
+/* The company a vetter picks for a sponsorship, or 0 before they have. */
+export type CompanyPick = { company: number };
+
 /**
- * Builds the fields a sponsorship is edited with.
+ * Builds the field that picks the company a sponsorship is linked to, or moved to.
  *
- * @param sponsorship The saved sponsorship.
- * @param companies   The companies it can be linked to.
- * @param labels      The statuses' labels, keyed by status.
- * @return The fields.
+ * @param companies The companies to pick from.
+ * @param label     What the field is for.
+ * @return The field.
  */
-export function getSponsorshipFormFields(
-	sponsorship: SponsorshipDetails,
-	companies: Company[],
-	labels: Labels
-): Field< SponsorshipForm >[] {
-	return [
-		{
-			id: 'title',
-			type: 'text',
-			label: __( 'Name', 'wordcamporg' ),
-			isValid: { required: true },
-		},
-		getStatusField< SponsorshipForm >( sponsorship, labels ),
-		{
-			id: 'company',
-			type: 'integer',
-			label: sponsorship.company
-				? __( 'Move to another company', 'wordcamporg' )
-				: __( 'Link to a company', 'wordcamporg' ),
-			elements: companies.map( ( company ) => ( { value: company.id, label: getName( company ) } ) ),
-			// Clearing the control leaves the sponsorship where it is: one that's linked can't be unlinked.
-			setValue: ( { value }: { value?: number | string } ) => ( {
-				company: Number( value ) || sponsorship.company,
-			} ),
-		},
-		NOTE,
-	];
+export function getCompanyPickField( companies: Company[], label: string ): Field< CompanyPick > {
+	return {
+		id: 'company',
+		type: 'integer',
+		label,
+		elements: companies.map( ( company ) => ( { value: company.id, label: getName( company ) } ) ),
+		setValue: ( { value }: { value?: number | string } ) => ( { company: Number( value ) || 0 } ),
+	};
 }
 
-export const APPROVAL_FORM: Form = {
-	layout: { type: 'panel', labelPosition: 'side', editVisibility: 'always' },
-	fields: [ 'title', 'status' ],
-};
-export const LINK_FORM: Form = { fields: [ 'company' ] };
+export const COMPANY_PICK_FORM: Form = { fields: [ 'company' ] };

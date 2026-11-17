@@ -80,7 +80,7 @@ add_action( 'wp_abilities_api_categories_init', __NAMESPACE__ . '\register_abili
  * Registers the abilities.
  */
 function register_abilities(): void {
-	foreach ( get_abilities() as $name => $ability ) {
+	foreach ( get_abilities() + get_guidance_abilities() as $name => $ability ) {
 		wp_register_ability(
 			$name,
 			$ability + array(
@@ -93,7 +93,8 @@ function register_abilities(): void {
 add_action( 'wp_abilities_api_init', __NAMESPACE__ . '\register_abilities' );
 
 /**
- * Registers the MCP server, which offers every ability as a tool to vetters alone.
+ * Registers the MCP server, which offers the abilities to vetters alone: the workflow as a prompt, the Community
+ * team's handbook pages as resources, and everything else as tools.
  *
  * @param McpAdapter $adapter The adapter.
  */
@@ -102,45 +103,197 @@ function register_mcp_server( McpAdapter $adapter ): void {
 		return;
 	}
 
+	$guidance = array(
+		'prompt'   => array(),
+		'resource' => array(),
+	);
+
+	foreach ( get_guidance_abilities() as $name => $ability ) {
+		$guidance[ $ability['meta']['mcp']['type'] ][] = $name;
+	}
+
 	$adapter->create_server(
 		MCP_SERVER_ID,
 		'mcp',
 		MCP_SERVER_ID,
 		__( 'WordCamp Sponsor Vetting', 'wordcamporg' ),
-		get_mcp_instructions(),
+		__( 'Vets sponsor companies for WordPress events and approves their sponsorships, on WordCamp Central. Start with the sponsor-vetting-vet-sponsors prompt, which walks through the workflow, and read the wordcamp://sponsor-vetting/ resources for what a review checks.', 'wordcamporg' ),
 		'1.0.0',
 		array( HttpTransport::class ),
 		ErrorLogMcpErrorHandler::class,
 		NullMcpObservabilityHandler::class,
 		array_keys( get_abilities() ),
-		array(),
-		array(),
+		$guidance['resource'],
+		$guidance['prompt'],
 		__NAMESPACE__ . '\can_vet'
 	);
 }
 add_action( 'mcp_adapter_init', __NAMESPACE__ . '\register_mcp_server' );
 
 /**
- * Describes the vetting workflow to an agent, which the server sends it as its instructions.
+ * The Community handbook pages an agent vets by, which the server offers as resources.
  *
- * @return string
+ * @return array[] Each page's `label`, `description`, `url`, and the `uri` it's read at, keyed by ability name.
  */
-function get_mcp_instructions(): string {
-	return sprintf(
+function get_handbook_pages(): array {
+	return array(
+		'sponsor-vetting/vetting-process' => array(
+			'label'       => __( 'Sponsor Vetting Process', 'wordcamporg' ),
+			'description' => __( 'The Community team’s sponsor vetting process, from the Community handbook: what the trademark and GPL reviews check, how findings are recorded, when to ask a sponsor for changes, and when to approve in good faith. It describes the work in Airtable, which these tools replace.', 'wordcamporg' ),
+			'url'         => 'https://make.wordpress.org/community/handbook/community-deputy/super-deputies/sponsor-vetting-process/',
+			'uri'         => 'wordcamp://sponsor-vetting/vetting-process',
+		),
+		'sponsor-vetting/gpl-checklist'   => array(
+			'label'       => __( '100% GPL Vetting Checklist', 'wordcamporg' ),
+			'description' => __( 'The Community handbook’s checklist for whether a sponsor that sells or promotes WordPress themes or plugins meets the GPL requirements.', 'wordcamporg' ),
+			'url'         => 'https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/helpful-documents-and-templates/100-gpl-vetting-checklist/',
+			'uri'         => 'wordcamp://sponsor-vetting/gpl-checklist',
+		),
+	);
+}
+
+/**
+ * The abilities that guide an agent rather than act: the workflow as a prompt, and the handbook pages as resources.
+ *
+ * @return array[] Each ability's arguments for wp_register_ability(), without its category and permission callback.
+ */
+function get_guidance_abilities(): array {
+	$abilities = array(
+		'sponsor-vetting/vet-sponsors' => array(
+			'label'            => __( 'Vet sponsors', 'wordcamporg' ),
+			'description'      => __( 'Walks through vetting sponsors, from linking new sponsorships to a company to approving them: the whole queue, or one company.', 'wordcamporg' ),
+			'input_schema'     => array(
+				'type'       => 'object',
+				'default'    => array(),
+				'properties' => array(
+					'company' => array(
+						'type'        => 'string',
+						'description' => __( 'The ID of one company to vet. Leave it out to work through the queue.', 'wordcamporg' ),
+					),
+				),
+			),
+			'execute_callback' => __NAMESPACE__ . '\get_vetting_prompt',
+			'meta'             => array(
+				'mcp'         => array( 'type' => 'prompt' ),
+				'annotations' => array( 'readonly' => true ),
+			),
+		),
+	);
+
+	foreach ( get_handbook_pages() as $name => $page ) {
+		$abilities[ $name ] = array(
+			'label'            => $page['label'],
+			'description'      => $page['description'],
+			'execute_callback' => static fn(): array => get_handbook_page( $page['uri'], $page['url'] ),
+			'meta'             => array(
+				'mcp' => array(
+					'type'     => 'resource',
+					'uri'      => $page['uri'],
+					'mimeType' => 'text/markdown',
+				),
+			),
+		);
+	}
+
+	return $abilities;
+}
+
+/**
+ * Builds the vetting workflow prompt.
+ *
+ * @param array|null $input The prompt's arguments.
+ * @return array The prompt's messages.
+ */
+function get_vetting_prompt( ?array $input = null ): array {
+	$company = absint( $input['company'] ?? 0 );
+	$scope   = $company
+		/* translators: %d: Company ID. */
+		? sprintf( __( 'Vet company %d: open it with sponsor-vetting-get-company, then follow the steps from step 3.', 'wordcamporg' ), $company )
+		: __( 'Work through the sponsor vetting queue.', 'wordcamporg' );
+
+	$steps = sprintf(
 		/* translators: %d: Number of months. */
 		__(
-			'Vet sponsor companies for WordCamp events. A company is vetted once; each event that takes its sponsorship has a sponsorship under it, which can be approved once the company is Compliant and was vetted within the last %d months.
+			'A company is vetted once. Each event that takes its sponsorship has a sponsorship under it, which can be approved once the company is Compliant and was vetted within the last %d months. Read the wordcamp://sponsor-vetting/vetting-process and wordcamp://sponsor-vetting/gpl-checklist resources first: they say what a review checks. They describe the work in Airtable; here each step is a tool.
 
-1. New sponsorships wait for a company: list-sponsorships with company 0. Link each to the suggested company or another one with link-sponsorship, or create one with create-company.
-2. Work through the queue from list-companies. Open a company with get-company, and set it to In Progress with set-company-status while you vet it.
-3. Check the company’s websites for GPL and trademark compliance, and write what you find, in Markdown, with update-company. The findings are what a compliance request emails to the sponsor, so write them to the sponsor.
-4. Decide. Compliant approves its pending sponsorships and emails their events. A sponsor that has to change something gets send-compliance-request, which emails the findings to its contact and moves it to Compliance Requested. A sponsor that can’t take part is Not Eligible, until a date set with update-company or for good.
-5. Record your reasoning with add-note. Status changes and emails are logged under your name.
+1. New sponsorships wait for a company: sponsor-vetting-list-sponsorships with company 0. Link each to the company suggested, or another one, with sponsor-vetting-link-sponsorship, or create one with sponsor-vetting-create-company. Look a website up with sponsor-vetting-list-companies and its domain before creating a company.
+2. Work through the queue from sponsor-vetting-list-companies, starting with the soonest next_event.
+3. Open the company with sponsor-vetting-get-company, and set it to In Progress with sponsor-vetting-set-company-status while you vet it, so no one else does.
+4. Review its websites for trademark and GPL compliance, as the handbook describes, and write what you find with sponsor-vetting-update-company: the GPL and trademark findings, in Markdown, and the contact if it’s missing. With no issues, write “All good” in both. The findings are what a compliance request emails to the sponsor, so write them to the sponsor.
+5. Decide, and confirm with the person you’re working with before any step that emails or approves:
+   - No issues: set the company to Compliant. That approves its pending sponsorships, for the websites it was vetted for, and emails their events.
+   - Issues to fix: sponsor-vetting-send-compliance-request emails the findings to the contact, copying an event, and moves the company to Compliance Requested. Send it once. When the sponsor replies and issues remain, add a note saying what’s left, for a person to reply to.
+   - The sponsor can’t take part: set it to Not Eligible, with a not_eligible_until date set with sponsor-vetting-update-company, or none for good.
+   - An event that can’t wait for a sponsor who has committed to the changes: approve its sponsorship in good faith with sponsor-vetting-set-sponsorship-status.
+6. Record your reasoning with sponsor-vetting-add-note. Status changes, notes and emails are logged under your name.
 
-Statuses, sponsor emails and approvals have effects outside this site. When unsure, add a note and leave the decision to a person.',
+When unsure, add a note and leave the decision to a person.',
 			'wordcamporg'
 		),
 		REVETTING_MONTHS
+	);
+
+	return array(
+		'messages' => array(
+			array(
+				'role'    => 'user',
+				'content' => array(
+					'type' => 'text',
+					'text' => $scope . "\n\n" . $steps,
+				),
+			),
+		),
+	);
+}
+
+/**
+ * Reads a Community handbook page, as Markdown, for a resource.
+ *
+ * The handbook lives on make.wordpress.org, which serves a page's Markdown to a request that accepts it. Kept for
+ * a while, so reading a resource doesn't ask every time.
+ *
+ * @param string $uri The resource's URI.
+ * @param string $url The page's address.
+ * @return array[] The resource's contents.
+ */
+function get_handbook_page( string $uri, string $url ): array {
+	$key      = 'sv_handbook_' . md5( $url );
+	$markdown = get_transient( $key );
+
+	if ( ! is_string( $markdown ) ) {
+		$response = wp_safe_remote_get(
+			$url,
+			array(
+				'headers' => array( 'Accept' => 'text/markdown' ),
+				'timeout' => 10,
+			)
+		);
+
+		if (
+			200 !== wp_remote_retrieve_response_code( $response )
+			|| ! str_starts_with( (string) wp_remote_retrieve_header( $response, 'content-type' ), 'text/markdown' )
+		) {
+			return array(
+				array(
+					'uri'      => $uri,
+					'mimeType' => 'text/plain',
+					/* translators: %s: Handbook page address. */
+					'text'     => sprintf( __( 'The handbook page couldn’t be loaded. Read it at %s.', 'wordcamporg' ), $url ),
+				),
+			);
+		}
+
+		$markdown = wp_remote_retrieve_body( $response );
+
+		set_transient( $key, $markdown, 12 * HOUR_IN_SECONDS );
+	}
+
+	return array(
+		array(
+			'uri'      => $uri,
+			'mimeType' => 'text/markdown',
+			'text'     => $markdown,
+		),
 	);
 }
 

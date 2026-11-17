@@ -111,7 +111,10 @@ class Mayar_Client {
 
 	/** Refresh quota values after acquiring the network lock, including process-local option caches. */
 	private function fresh_budget( $key ) {
-		wp_cache_delete( $key, 'site-transient' );
+		if ( wp_using_ext_object_cache() || wp_installing() ) {
+			// The cache is the only copy of a transient in this mode. Refresh without deleting it.
+			return wp_cache_get( $key, 'site-transient', true );
+		}
 		wp_cache_delete( '_site_transient_' . $key, 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( get_current_network_id() . ':_site_transient_' . $key, 'site-options' );

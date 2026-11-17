@@ -428,8 +428,20 @@ class Test_Camptix_Payment_Mayar extends WP_UnitTestCase {
 		}
 	}
 
-	/** Respect Retry-After, and do not send provider error text to customers. */
-	public function test_rate_limit_prevents_immediate_followup_requests() {
+	/** Exercise database-backed transients and cache-only transients. */
+	public static function object_cache_modes() {
+		return array(
+			'database'       => array( false ),
+			'external cache' => array( true ),
+		);
+	}
+
+	/**
+	 * Respect Retry-After, and do not send provider error text to customers.
+	 *
+	 * @dataProvider object_cache_modes
+	 */
+	public function test_rate_limit_prevents_immediate_followup_requests( $external_cache ) {
 		$this->override = function () {
 			$response            = $this->response( array(), 429 );
 			$response['headers'] = array( 'retry-after' => '120' );
@@ -437,9 +449,38 @@ class Test_Camptix_Payment_Mayar extends WP_UnitTestCase {
 			return $response;
 		};
 		$client         = new Mayar_Client( 'sandbox', 'rate-limit-test-' . wp_generate_uuid4() );
-		$this->assertWPError( $client->request( 'GET', '/test' ) );
-		$this->assertSame( 'mayar_rate_limit', $client->request( 'GET', '/test' )->get_error_code() );
-		$this->assertCount( 1, $this->requests );
+		$original_cache = wp_using_ext_object_cache( $external_cache );
+		try {
+			$this->assertWPError( $client->request( 'GET', '/test' ) );
+			$this->assertSame( 'mayar_rate_limit', $client->request( 'GET', '/test' )->get_error_code() );
+			$this->assertCount( 1, $this->requests );
+		} finally {
+			wp_using_ext_object_cache( $original_cache );
+		}
+	}
+
+	/**
+	 * The shared quota must survive every read regardless of the transient backend.
+	 *
+	 * @dataProvider object_cache_modes
+	 */
+	public function test_request_budget_blocks_the_46th_provider_call( $external_cache ) {
+		$this->override = function () {
+			return $this->response( array() );
+		};
+		$client         = new Mayar_Client( 'sandbox', 'budget-test-' . wp_generate_uuid4() );
+		$original_cache = wp_using_ext_object_cache( $external_cache );
+		try {
+			for ( $i = 0; $i < 45; ++$i ) {
+				$this->assertSame( array(), $client->request( 'GET', '/test' ) );
+			}
+			$result = $client->request( 'GET', '/test' );
+			$this->assertWPError( $result );
+			$this->assertSame( 'mayar_rate_limit', $result->get_error_code() );
+			$this->assertCount( 45, $this->requests );
+		} finally {
+			wp_using_ext_object_cache( $original_cache );
+		}
 	}
 
 	/** Failed verifications schedule a bounded retry rather than changing attendee status. */
@@ -452,6 +493,76 @@ class Test_Camptix_Payment_Mayar extends WP_UnitTestCase {
 		( new Reconciliation( $this->gateway ) )->run( $this->token );
 		$this->assertNotFalse( wp_next_scheduled( 'camptix_mayar_reconcile', array( $this->token ) ) );
 		$this->assertSame( 'draft', get_post_status( $this->attendee_ids[0] ) );
+	}
+
+	/** Backoff must check at expiry while the seats are still held by CampTix's grace. */
+	public function test_reconciliation_checks_again_by_payment_expiry() {
+		$attempt               = $this->order();
+		$attempt['expires_at'] = time() + 60;
+		$attempt['retries']    = 2;
+		$this->store->save( $attempt );
+		wp_clear_scheduled_hook( 'camptix_mayar_reconcile', array( $this->token ) );
+
+		( new Reconciliation( $this->gateway ) )->run( $this->token );
+
+		$next = wp_next_scheduled( 'camptix_mayar_reconcile', array( $this->token ) );
+		$this->assertNotFalse( $next );
+		$this->assertLessThanOrEqual( $attempt['expires_at'], $next );
+		$this->assertCount( 0, $this->results );
+	}
+
+	/** The longest supported lifetime must not exhaust polling before checkout expires. */
+	public function test_reconciliation_keeps_checking_long_lived_payments() {
+		$this->gateway->options['expiry_minutes'] = 1440;
+		$attempt                                = $this->order();
+		$attempt['retries']                      = 24;
+		$this->store->save( $attempt );
+		wp_clear_scheduled_hook( 'camptix_mayar_reconcile', array( $this->token ) );
+
+		( new Reconciliation( $this->gateway ) )->run( $this->token );
+
+		$this->assertNotFalse( wp_next_scheduled( 'camptix_mayar_reconcile', array( $this->token ) ) );
+		$this->assertSame( '', get_post_meta( $this->attendee_ids[0], '_camptix_mayar_review', true ) );
+	}
+
+	/** Automatic recovery remains bounded when the provider stays unavailable. */
+	public function test_reconciliation_stops_after_its_lifetime_adjusted_budget() {
+		$attempt            = $this->order();
+		$attempt['retries'] = 25;
+		$this->store->save( $attempt );
+		$this->override = static function () {
+			return new WP_Error( 'offline', 'Offline' );
+		};
+		wp_clear_scheduled_hook( 'camptix_mayar_reconcile', array( $this->token ) );
+
+		( new Reconciliation( $this->gateway ) )->run( $this->token );
+
+		$this->assertFalse( wp_next_scheduled( 'camptix_mayar_reconcile', array( $this->token ) ) );
+		$this->assertSame( 'verification_overdue', get_post_meta( $this->attendee_ids[0], '_camptix_mayar_review', true ) );
+	}
+
+	/** Submitting the recheck button must override the surrounding editor's editpost action. */
+	public function test_recheck_button_routes_the_attendee_editor_submission() {
+		$this->order();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		ob_start();
+		( new Reconciliation( $this->gateway ) )->render_meta_box( get_post( $this->attendee_ids[0] ) );
+		$html = ob_get_clean();
+		$dom  = new DOMDocument();
+		$dom->loadHTML( '<form><input type="hidden" name="action" value="editpost" />' . $html . '</form>' );
+
+		$button = $dom->getElementsByTagName( 'button' )->item( 0 );
+		$this->assertNotNull( $button );
+		parse_str( wp_parse_url( $button->getAttribute( 'formaction' ), PHP_URL_QUERY ), $query );
+		$post = array( 'action' => 'editpost' );
+		if ( $button->hasAttribute( 'name' ) ) {
+			$post[ $button->getAttribute( 'name' ) ] = $button->getAttribute( 'value' );
+		}
+		$request = array_merge( $query, $post );
+
+		$this->assertSame( 'camptix_mayar_recheck', $request['action'] );
+		$this->assertSame( $this->attendee_ids[0], (int) $request['attendee_id'] );
+		$this->assertNotFalse( wp_verify_nonce( $request['mayar_nonce'], 'camptix_mayar_recheck_' . $this->attendee_ids[0] ) );
 	}
 
 	/** Reject invalid checkout data before reserving seats, while keeping the free-ticket flow. */

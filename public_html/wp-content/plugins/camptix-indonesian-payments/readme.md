@@ -74,7 +74,10 @@ the same key also consume Mayar's quota.
 
 WordPress cron checks unsettled payments with bounded backoff. Configure a reliable
 server-side WordPress cron runner for events where traffic is insufficient to run
-WP-Cron. The timeout sweep also rechecks once per order. Unknown outcomes do not
+WP-Cron. Backoff schedules a check by payment expiry, within the seat reservation
+grace period. The retry budget includes hourly checks for the configured payment
+lifetime, so long-lived checkouts do not exhaust it while still open.
+The timeout sweep also rechecks once per order. Unknown outcomes do not
 extend reservations indefinitely.
 
 An admin warning links to an attendee needing review. Open that attendee's **Mayar

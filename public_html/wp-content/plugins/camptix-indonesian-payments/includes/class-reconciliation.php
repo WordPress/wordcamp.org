@@ -38,13 +38,21 @@ class Reconciliation {
 			}
 			++$attempt['retries'];
 			$store->save( $attempt );
-			if ( time() > $attempt['expires_at'] + 2 * DAY_IN_SECONDS || $attempt['retries'] > 24 ) {
+			// Allow hourly checks throughout the configured lifetime as well as the recovery budget.
+			$max_retries = 24 + (int) ceil( max( 0, $attempt['expires_at'] - $attempt['created_at'] ) / HOUR_IN_SECONDS );
+			if ( time() > $attempt['expires_at'] + 2 * DAY_IN_SECONDS || $attempt['retries'] > $max_retries ) {
 				if ( 'expired' !== $result ) {
 					$this->gateway->review( $attempt, 'verification_overdue' );
 				}
 				return;
 			}
-			self::schedule( $token, min( HOUR_IN_SECONDS, 300 * ( 2 ** min( 4, $attempt['retries'] ) ) ) );
+			$delay = min( HOUR_IN_SECONDS, 300 * ( 2 ** min( 4, $attempt['retries'] ) ) );
+			// Check at expiry, before CampTix's grace ends and a missed webhook becomes a late payment.
+			$until_expiry = $attempt['expires_at'] - time();
+			if ( $until_expiry > 0 ) {
+				$delay = min( $delay, $until_expiry );
+			}
+			self::schedule( $token, $delay );
 		} finally {
 			$store->unlock( $lock );
 		}
@@ -116,7 +124,7 @@ class Reconciliation {
 			echo '<p><label>' . esc_html__( 'Transaction UUID from Mayar (uncertain creation only)', 'camptix-indonesian-payments' ) . '<input type="text" name="mayar_transaction_id" class="widefat" /></label></p>';
 		}
 		// This button uses the existing post-edit form, so there is no nested HTML form.
-		printf( '<button type="submit" class="button" formnovalidate formaction="%s">%s</button>', esc_url( $url ), esc_html__( 'Recheck payment', 'camptix-indonesian-payments' ) );
+		printf( '<button type="submit" name="action" value="camptix_mayar_recheck" class="button" formnovalidate formaction="%s">%s</button>', esc_url( $url ), esc_html__( 'Recheck payment', 'camptix-indonesian-payments' ) );
 	}
 
 	/** Surface late/uncertain payments without emailing financial data. */

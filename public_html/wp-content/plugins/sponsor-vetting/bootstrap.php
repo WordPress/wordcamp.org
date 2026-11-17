@@ -8,7 +8,7 @@
  *
  * Network-activated. Companies and sponsorships live on central.wordcamp.org, where reviewers with
  * `wordcamp_vet_sponsors` vet them; camp sites only keep a pointer on their `wcb_sponsor` posts, request vetting,
- * and show organizers where it stands. Nothing here is public or in search, and over REST only vetters can read it.
+ * and show organizers where it stands. Nothing here is public or in search, and over REST or MCP only vetters can read it.
  *
  * @package WordCamp\Sponsor_Vetting
  */
@@ -67,6 +67,7 @@ require_once __DIR__ . '/includes/privacy.php';
 require_once __DIR__ . '/includes/organizer.php';
 require_once __DIR__ . '/includes/invoices.php';
 require_once __DIR__ . '/includes/rest.php';
+require_once __DIR__ . '/includes/abilities.php';
 
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin-import.php';

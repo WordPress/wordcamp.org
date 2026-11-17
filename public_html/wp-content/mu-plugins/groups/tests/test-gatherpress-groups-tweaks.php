@@ -4,6 +4,8 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
+use function WordCamp\Groups\GatherPress_Tweaks\get_event_archive_query_vars;
+use function WordCamp\Groups\GatherPress_Tweaks\get_legacy_event_archive_pagination_redirect;
 use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
@@ -14,6 +16,16 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
  * @group groups
  */
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
+
+	/**
+	 * Drop the query string `go_to()` leaves in `$_GET`, which the archive's
+	 * filters would otherwise read in the next test.
+	 */
+	protected function tearDown(): void {
+		$_GET = array();
+
+		parent::tearDown();
+	}
 
 	/**
 	 * Groups-network sites always show the event timezone and never offer
@@ -400,7 +412,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Build the tax query the archive's Query Loop would run.
+	 * Build the query arguments the archive's grid would run with.
 	 *
 	 * @param string|null $event_format   The `event_format` query arg to simulate.
 	 * @param string|null $event_language The `event_language` query arg to simulate.
@@ -425,25 +437,11 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$_GET['event_language'] = $event_language;
 		}
 
-		$block = new \WP_Block(
+		$query_vars = get_event_archive_query_vars(
 			array(
-				'blockName'   => 'core/query',
-				'attrs'       => array(),
-				'innerBlocks' => array(),
-			)
-		);
-
-		$block->context = array(
-			'query' => array(
-				'postType'                => 'gatherpress_event',
+				'post_type'               => 'gatherpress_event',
 				'gatherpress_event_query' => 'upcoming',
-			),
-		);
-
-		$query_vars = apply_filters(
-			'query_loop_block_query_vars',
-			array( 'post_type' => 'gatherpress_event' ),
-			$block
+			)
 		);
 
 		unset( $_GET['event_format'], $_GET['event_language'], $_GET['event_topic'] );
@@ -551,6 +549,290 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
 			$this->assertArrayNotHasKey( 'tax_query', $query_vars );
 		}
+	}
+
+	/**
+	 * Run `go_to()` as a front-end request.
+	 *
+	 * This bootstrap defines `WP_ADMIN`, and the archive's main query is left
+	 * alone in the admin. `go_to()` clears `$current_screen` before it runs
+	 * the request, so the front-end screen goes in from `parse_request`, which
+	 * fires inside it, ahead of the main query.
+	 *
+	 * @param string $url The URL to load.
+	 */
+	private function go_to_front_end( string $url ): void {
+		$front = static function (): void {
+			set_current_screen( 'front' );
+		};
+
+		add_action( 'parse_request', $front );
+		$this->go_to( $url );
+		remove_action( 'parse_request', $front );
+	}
+
+	/**
+	 * Load the events archive as the main query.
+	 *
+	 * Through its plain `?post_type=` URL, since rewrite rules aren't flushed
+	 * in this suite. `go_to()` also fills `$_GET` from the URL, which is
+	 * where the archive's filters read their state from.
+	 *
+	 * @param array  $args View state to put in the query string.
+	 * @param string $url  The archive URL to start from.
+	 *
+	 * @return \WP_Query The main query.
+	 */
+	private function go_to_event_archive( array $args = array(), string $url = '/?post_type=gatherpress_event' ): \WP_Query {
+		$this->go_to_front_end( add_query_arg( $args, home_url( $url ) ) );
+
+		$this->assertTrue( is_post_type_archive( 'gatherpress_event' ), 'Could not set up the events archive request.' );
+
+		return $GLOBALS['wp_query'];
+	}
+
+	/**
+	 * The archive grid inherits the main query, so the main query is what
+	 * has to carry the grid's page size, order and upcoming window.
+	 */
+	public function test_archive_main_query_lists_upcoming_events_twelve_to_a_page() {
+		$query = $this->go_to_event_archive();
+
+		$this->assertSame( 12, $query->get( 'posts_per_page' ) );
+		$this->assertSame( 'upcoming', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 1, $query->get( 'include_unfinished' ) );
+		$this->assertSame( 'datetime', $query->get( 'orderby' ) );
+		$this->assertSame( 'ASC', $query->get( 'order' ) );
+	}
+
+	/**
+	 * The Time filter switches the main query between GatherPress's past and
+	 * upcoming windows, or drops the window for "All".
+	 */
+	public function test_archive_main_query_follows_the_time_filter() {
+		$query = $this->go_to_event_archive( array( 'event_time' => 'past' ) );
+
+		$this->assertSame( 'past', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 0, $query->get( 'include_unfinished' ) );
+		$this->assertSame( 'DESC', $query->get( 'order' ) );
+
+		$query = $this->go_to_event_archive( array( 'event_time' => 'all' ) );
+
+		$this->assertSame( '', $query->get( 'gatherpress_event_query' ) );
+		$this->assertSame( 'date', $query->get( 'orderby' ) );
+		$this->assertSame( 'DESC', $query->get( 'order' ) );
+	}
+
+	/**
+	 * Each view lists the events it's named for. GatherPress only applies its
+	 * upcoming/past window to a query that asks for one by the time its own
+	 * `pre_get_posts` runs, so the archive's settings have to be in place
+	 * before that, or every view lists every event.
+	 */
+	public function test_archive_views_list_their_events() {
+		$last_month = $this->make_dated_event( 'Last month', '-30 days' );
+		$next_week  = $this->make_dated_event( 'Next week', '+7 days' );
+		$next_month = $this->make_dated_event( 'Next month', '+30 days' );
+
+		$this->assertSame(
+			array( $next_week, $next_month ),
+			wp_list_pluck( $this->go_to_event_archive()->posts, 'ID' ),
+			'Upcoming should list the events to come, soonest first.'
+		);
+
+		$this->assertSame(
+			array( $last_month ),
+			wp_list_pluck( $this->go_to_event_archive( array( 'event_time' => 'past' ) )->posts, 'ID' )
+		);
+
+		$this->assertEqualsCanonicalizing(
+			array( $last_month, $next_week, $next_month ),
+			wp_list_pluck( $this->go_to_event_archive( array( 'event_time' => 'all' ) )->posts, 'ID' )
+		);
+	}
+
+	/**
+	 * Create a published event two hours long.
+	 *
+	 * @param string $title  Event title.
+	 * @param string $starts When it starts, relative to now (`strtotime()`).
+	 *
+	 * @return int The event post ID.
+	 */
+	private function make_dated_event( string $title, string $starts ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $starts ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $starts . ' +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * The archive's filters narrow the main query, and what it finds is what
+	 * the grid and its result count show.
+	 */
+	public function test_archive_main_query_applies_the_filters() {
+		$online = $this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query = $this->go_to_event_archive(
+			array(
+				'event_time'   => 'all',
+				'event_format' => 'online',
+			)
+		);
+
+		$this->assertSame( array( $online ), $query->get( 'post__in' ) );
+		$this->assertSame( array( $online ), wp_list_pluck( $query->posts, 'ID' ) );
+		$this->assertSame( 1, $query->found_posts );
+	}
+
+	/**
+	 * A filter that matches nothing leaves an empty archive, not a 404, so
+	 * the grid can show its empty state.
+	 */
+	public function test_archive_with_no_matching_events_is_not_a_404() {
+		$this->make_format_event( 'Hall meetup', false );
+
+		$query = $this->go_to_event_archive( array( 'event_format' => 'online' ) );
+
+		$this->assertSame( array(), $query->posts );
+		$this->assertFalse( is_404() );
+	}
+
+	/**
+	 * Only the archive's main query is changed. The front page and "More
+	 * events" grids run their own queries, which keep their block settings
+	 * and ignore the archive's controls even when the URL carries them.
+	 */
+	public function test_archive_view_state_stays_off_other_event_queries() {
+		$this->make_format_event( 'Online office hours', true );
+		$this->go_to_event_archive( array( 'event_format' => 'online' ) );
+
+		$secondary = new \WP_Query( array( 'post_type' => 'gatherpress_event' ) );
+
+		$this->assertNotSame( 12, $secondary->get( 'posts_per_page' ) );
+		$this->assertSame( '', $secondary->get( 'gatherpress_event_query' ) );
+		$this->assertSame( array(), $secondary->get( 'post__in' ) );
+
+		$block          = new \WP_Block(
+			array(
+				'blockName'   => 'core/post-template',
+				'attrs'       => array(),
+				'innerBlocks' => array(),
+			)
+		);
+		$block->context = array(
+			'query' => array(
+				'postType'                => 'gatherpress_event',
+				'gatherpress_event_query' => 'upcoming',
+			),
+		);
+
+		$query_vars = array(
+			'post_type'               => 'gatherpress_event',
+			'gatherpress_event_query' => 'upcoming',
+		);
+
+		$this->assertSame( $query_vars, apply_filters( 'query_loop_block_query_vars', $query_vars, $block ) );
+	}
+
+	/**
+	 * Feeds of the archive keep their own query.
+	 */
+	public function test_archive_feed_is_left_alone() {
+		$this->go_to_front_end( home_url( '/?post_type=gatherpress_event&feed=rss2' ) );
+
+		$this->assertTrue( is_feed() );
+		$this->assertSame( '', $GLOBALS['wp_query']->get( 'gatherpress_event_query' ) );
+	}
+
+	/**
+	 * The Events screen in wp-admin runs a main query for the same post type
+	 * and has to keep listing every event, past ones included.
+	 */
+	public function test_admin_events_list_is_left_alone() {
+		$last_month = $this->make_dated_event( 'Last month', '-30 days' );
+		$next_week  = $this->make_dated_event( 'Next week', '+7 days' );
+
+		$screen = $GLOBALS['current_screen'] ?? null;
+		set_current_screen( 'edit-gatherpress_event' );
+
+		$this->go_to( home_url( '/?post_type=gatherpress_event' ) );
+		$query = $GLOBALS['wp_query'];
+
+		$GLOBALS['current_screen'] = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Putting back the screen this test changed.
+
+		$this->assertNotSame( 12, $query->get( 'posts_per_page' ) );
+		$this->assertEqualsCanonicalizing( array( $last_month, $next_week ), wp_list_pluck( $query->posts, 'ID' ) );
+	}
+
+	/**
+	 * Old Query Loop page links move to the main query's paged URL and keep
+	 * the rest of the view state.
+	 */
+	public function test_legacy_query_loop_page_links_redirect_to_the_paged_archive() {
+		$this->go_to_event_archive(
+			array(
+				'query-page' => '3',
+				'event_time' => 'past',
+			)
+		);
+
+		$location = get_legacy_event_archive_pagination_redirect();
+
+		$this->assertStringContainsString( '/page/3/', $location );
+		$this->assertStringContainsString( 'event_time=past', $location );
+		$this->assertStringNotContainsString( 'query-page', $location );
+	}
+
+	/**
+	 * A Query Loop with an ID names its page argument after it; page 1 needs
+	 * no page in the URL at all.
+	 */
+	public function test_legacy_numbered_query_loop_page_link_redirects_to_page_one() {
+		$this->go_to_event_archive( array( 'query-7-page' => '1' ) );
+
+		$location = get_legacy_event_archive_pagination_redirect();
+
+		$this->assertNotSame( '', $location );
+		$this->assertStringNotContainsString( '/page/', $location );
+		$this->assertStringNotContainsString( 'query-7-page', $location );
+	}
+
+	/**
+	 * Without an old page link, or off the archive, nothing redirects.
+	 */
+	public function test_archive_without_legacy_page_link_does_not_redirect() {
+		$this->go_to_event_archive( array( 'event_time' => 'past' ) );
+		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
+
+		$this->go_to_front_end( home_url( '/?query-page=2' ) );
+		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
+	}
+
+	/**
+	 * The tests above ask the redirect where it would go. This is what makes
+	 * a request actually go there.
+	 */
+	public function test_legacy_page_link_redirect_runs_on_template_redirect() {
+		$this->assertSame(
+			5,
+			has_action( 'template_redirect', 'WordCamp\\Groups\\GatherPress_Tweaks\\redirect_legacy_event_archive_pagination' )
+		);
 	}
 
 	/**
@@ -1795,5 +2077,229 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$query_general          = new \WP_Comment_Query();
 		$should_exclude_general = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_general );
 		$this->assertTrue( $should_exclude_general );
+	}
+
+	/**
+	 * Make a user a network admin.
+	 *
+	 * `grant_super_admin()` reads `site_admins` off whichever network is
+	 * current, which in this fixture isn't the groups network, so set the
+	 * option `get_super_admins()` actually consults, as the other Groups
+	 * tests do.
+	 *
+	 * @param int $user_id User.
+	 */
+	protected function make_network_admin( int $user_id ): void {
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+	}
+
+	/**
+	 * Organizers can't switch the theme, since they couldn't switch back to
+	 * `groups-site` afterwards (#2368). Network admins still can.
+	 */
+	public function test_only_network_admins_can_switch_themes() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+
+		$this->assertFalse( user_can( $admin_id, 'switch_themes' ) );
+		$this->assertTrue( user_can( $admin_id, 'edit_theme_options' ) );
+		$this->assertTrue( user_can( $super_id, 'switch_themes' ) );
+	}
+
+	/**
+	 * A group site that ends up on another theme anyway is switched back.
+	 *
+	 * Core fires `after_switch_theme` from `check_theme_switched()` on the
+	 * load after a switch, so that's what runs the backstop here. That load is
+	 * Appearance > Themes with `?activated=true` after a switch made there,
+	 * and its "New theme activated." notice is dropped, since the theme it
+	 * would be about is gone again.
+	 */
+	public function test_group_site_switched_back_to_groups_site() {
+		$site_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/theme-backstop/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		switch_to_blog( $site_id );
+
+		try {
+			switch_theme( 'twentytwentyfour' );
+			$_GET['activated'] = 'true';
+			check_theme_switched();
+
+			$this->assertSame( 'groups-site', get_stylesheet() );
+			$this->assertArrayNotHasKey( 'activated', $_GET );
+		} finally {
+			unset( $_GET['activated'] );
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * The network's root site isn't a group, so it keeps its theme.
+	 */
+	public function test_groups_root_site_theme_left_alone() {
+		switch_to_blog( GROUPS_ROOT_BLOG_ID );
+
+		try {
+			switch_theme( 'twentytwentyfour' );
+			check_theme_switched();
+
+			$this->assertSame( 'twentytwentyfour', get_stylesheet() );
+		} finally {
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * Organizers can't unlock the theme's locked blocks or edit the markup
+	 * around them; network admins can.
+	 */
+	public function test_block_locking_and_code_editing_off_for_organizers() {
+		$settings = array(
+			'canLockBlocks'      => true,
+			'codeEditingEnabled' => true,
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$filtered = apply_filters( 'block_editor_settings_all', $settings, new \WP_Block_Editor_Context() );
+
+		$this->assertFalse( $filtered['canLockBlocks'] );
+		$this->assertFalse( $filtered['codeEditingEnabled'] );
+
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+		wp_set_current_user( $super_id );
+		$filtered = apply_filters( 'block_editor_settings_all', $settings, new \WP_Block_Editor_Context() );
+
+		$this->assertTrue( $filtered['canLockBlocks'] );
+		$this->assertTrue( $filtered['codeEditingEnabled'] );
+	}
+
+	/**
+	 * A locked block hidden with "Omit from published content" still renders,
+	 * at the top of a template or inside another block; an unlocked one stays
+	 * hidden.
+	 */
+	public function test_locked_blocks_ignore_hide() {
+		$locked   = '<!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Locked</p><!-- /wp:paragraph -->';
+		$nested   = '<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph {"lock":{"move":true,"remove":true},"metadata":{"blockVisibility":false}} --><p>Nested</p><!-- /wp:paragraph --></div><!-- /wp:group -->';
+		$unlocked = '<!-- wp:paragraph {"metadata":{"blockVisibility":false}} --><p>Unlocked</p><!-- /wp:paragraph -->';
+
+		$html = do_blocks( $locked . $nested . $unlocked );
+
+		$this->assertStringContainsString( 'Locked', $html );
+		$this->assertStringContainsString( 'Nested', $html );
+		$this->assertStringNotContainsString( 'Unlocked', $html );
+	}
+
+	/**
+	 * Run a callback with `groups-site` active from this repo's themes, so
+	 * its template parts resolve.
+	 *
+	 * @param callable $callback What to run.
+	 */
+	protected function with_groups_site_theme( callable $callback ): void {
+		global $wp_theme_directories;
+
+		$directories = $wp_theme_directories;
+		register_theme_directory( SUT_WP_CONTENT_DIR . 'themes' );
+		wp_clean_themes_cache();
+		switch_theme( 'groups-site' );
+
+		try {
+			$callback();
+		} finally {
+			$wp_theme_directories = $directories; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the list this changed.
+			wp_clean_themes_cache();
+		}
+	}
+
+	/**
+	 * Organizers can't save the shared header or footer, but can save other
+	 * template parts and reset the header to the theme's.
+	 */
+	public function test_header_and_footer_parts_locked_for_organizers() {
+		$this->with_groups_site_theme( array( $this, 'assert_header_and_footer_parts_locked' ) );
+	}
+
+	/**
+	 * The assertions for `test_header_and_footer_parts_locked_for_organizers()`.
+	 */
+	public function assert_header_and_footer_parts_locked(): void {
+		// A header customized before the lock, which the organizer can reset.
+		$custom_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_name'    => 'header',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:site-title /-->',
+			)
+		);
+		wp_set_object_terms( $custom_id, 'groups-site', 'wp_theme' );
+		wp_set_object_terms( $custom_id, 'header', 'wp_template_part_area' );
+		$this->assertSame( 'custom', get_block_template( 'groups-site//header', 'wp_template_part' )->source );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		foreach ( array( 'header', 'footer' ) as $slug ) {
+			$request = new \WP_REST_Request( 'POST', "/wp/v2/template-parts/groups-site//$slug" );
+			$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+			$response = rest_do_request( $request );
+
+			$this->assertSame( 403, $response->get_status(), $slug );
+			$this->assertSame( 'groups_locked_template_part', $response->get_data()['code'], $slug );
+		}
+
+		// Core sanitizes a new part's slug when it saves it, so `HEADER` and
+		// `Footer` would replace the shared parts too.
+		foreach ( array( 'header', 'HEADER', 'Footer' ) as $slug ) {
+			$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
+			$request->set_param( 'slug', $slug );
+			$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+			$this->assertSame( 403, rest_do_request( $request )->get_status(), "new $slug" );
+		}
+
+		$this->assertSame( 'theme', get_block_template( 'groups-site//footer', 'wp_template_part' )->source );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts' );
+		$request->set_param( 'slug', 'sidebar' );
+		$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+		$this->assertSame( 201, rest_do_request( $request )->get_status(), 'other part' );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts/groups-site//header' );
+		$request->set_param( 'source', 'theme' );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status(), 'reset' );
+		$this->assertSame( 'theme', get_block_template( 'groups-site//header', 'wp_template_part' )->source );
+	}
+
+	/**
+	 * Network admins can still change the shared header.
+	 */
+	public function test_header_part_editable_by_network_admins() {
+		$this->with_groups_site_theme( array( $this, 'assert_header_part_editable' ) );
+	}
+
+	/**
+	 * The assertions for `test_header_part_editable_by_network_admins()`.
+	 */
+	public function assert_header_part_editable(): void {
+		$super_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$this->make_network_admin( $super_id );
+		wp_set_current_user( $super_id );
+
+		$request = new \WP_REST_Request( 'POST', '/wp/v2/template-parts/groups-site//header' );
+		$request->set_param( 'content', '<!-- wp:site-title /-->' );
+
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
 	}
 }

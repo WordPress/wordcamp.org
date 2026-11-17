@@ -137,3 +137,83 @@ describe( 'group membership notification preference', () => {
 		expect( mockContext.preferenceSaving ).toBe( false );
 	} );
 } );
+
+describe( 'group membership step down', () => {
+	beforeEach( () => {
+		mockContext = {
+			isMember: true,
+			loading: false,
+			errorMessage: '',
+			restNonce: 'rest-nonce',
+			stepDownApi: '/wp-json/wporg-groups/v1/members/me/role',
+			stepDownConfirm: 'Step down to Member?',
+			stepDownError: 'You could not step down.',
+		};
+		mockStoreConfig = null;
+		global.fetch = jest.fn();
+		jest.spyOn( window, 'confirm' ).mockReturnValue( true );
+	} );
+
+	afterEach( () => {
+		jest.restoreAllMocks();
+	} );
+
+	test( 'does nothing when the organizer cancels the confirmation', async () => {
+		window.confirm.mockReturnValue( false );
+		const { actions } = loadStore();
+
+		await actions.stepDown();
+
+		expect( global.fetch ).not.toHaveBeenCalled();
+		expect( mockContext.loading ).toBe( false );
+	} );
+
+	test( 'asks to become a Member', async () => {
+		// jsdom can't reload; a failed response keeps the test on the page.
+		global.fetch.mockResolvedValue( {
+			ok: false,
+			json: async () => ( {} ),
+		} );
+		const { actions } = loadStore();
+
+		await actions.stepDown();
+
+		expect( global.fetch ).toHaveBeenCalledWith( mockContext.stepDownApi, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': 'rest-nonce',
+			},
+			body: JSON.stringify( { role: 'subscriber' } ),
+		} );
+	} );
+
+	test( "shows the server's reason when stepping down is refused", async () => {
+		global.fetch.mockResolvedValue( {
+			ok: false,
+			json: async () => ( {
+				code: 'cannot_remove_last_organizer',
+				message: 'A group must have at least one organizer. Promote someone else first.',
+			} ),
+		} );
+		const { actions } = loadStore();
+
+		await actions.stepDown();
+
+		expect( mockContext.errorMessage ).toBe(
+			'A group must have at least one organizer. Promote someone else first.'
+		);
+		expect( mockContext.loading ).toBe( false );
+	} );
+
+	test( 'falls back to a generic error when the request fails', async () => {
+		global.fetch.mockRejectedValue( new Error( 'offline' ) );
+		const { actions } = loadStore();
+
+		await actions.stepDown();
+
+		expect( mockContext.errorMessage ).toBe( mockContext.stepDownError );
+		expect( mockContext.loading ).toBe( false );
+	} );
+} );

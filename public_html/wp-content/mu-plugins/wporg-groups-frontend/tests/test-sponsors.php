@@ -27,6 +27,13 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	protected $other_group_id;
 
 	/**
+	 * Logo files a test wrote to disk, removed in `tearDown()`.
+	 *
+	 * @var string[]
+	 */
+	protected $logo_files = array();
+
+	/**
 	 * Creates the second group site and clears the cached list, which would
 	 * otherwise leak sponsors between tests.
 	 */
@@ -51,6 +58,10 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 		unset( $GLOBALS['super_admins'] );
 		wp_delete_site( $this->other_group_id );
 		Sponsors\flush_cache();
+
+		foreach ( $this->logo_files as $file ) {
+			wp_delete_file( $file );
+		}
 
 		parent::tearDown();
 	}
@@ -589,6 +600,148 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 			$sponsors[0]['logo'],
 			"The raw ms-files path isn't publicly servable — see correct_switched_upload_url()."
 		);
+	}
+
+	/**
+	 * Give a sponsor a logo whose original file on disk is `$bytes` long.
+	 *
+	 * @param int   $post_id  The sponsor's post ID.
+	 * @param int   $bytes    Size of the original file to write.
+	 * @param array $metadata The attachment metadata to store.
+	 */
+	protected function give_sponsor_logo( int $post_id, int $bytes, array $metadata ): void {
+		switch_to_blog( self::$events_root_site_id );
+
+		$attachment_id = wp_insert_attachment(
+			array(
+				'post_title'     => 'Logo',
+				'post_mime_type' => 'image/png',
+				'post_status'    => 'inherit',
+			),
+			'2026/08/sized-logo.png',
+			$post_id
+		);
+		wp_update_attachment_metadata( $attachment_id, array_merge( array( 'file' => '2026/08/sized-logo.png' ), $metadata ) );
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		// Where the store site really keeps the file, which is what
+		// `BLOGUPLOADDIR` is on a request that starts there. Not wherever
+		// `get_attached_file()` points while switched, since that's the bug
+		// `correct_switched_upload_path()` works around.
+		$file = WP_CONTENT_DIR . '/blogs.dir/' . self::$events_root_site_id . '/files/2026/08/sized-logo.png';
+		wp_mkdir_p( dirname( $file ) );
+		file_put_contents( $file, str_repeat( "\0", $bytes ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing a test fixture.
+
+		$this->logo_files[] = $file;
+
+		restore_current_blog();
+		Sponsors\flush_cache();
+	}
+
+	/**
+	 * Read the sponsor list and render the block from another group site.
+	 *
+	 * @return array{0: array, 1: string} The sponsors, and the rendered block.
+	 */
+	protected function sponsors_from_a_group_site(): array {
+		/*
+		 * In production `ABSPATH` is `mu/`, beside `WP_CONTENT_DIR` rather
+		 * than above it, so the upload directory core builds while switched
+		 * doesn't exist. Here both sit in the test install, which would hide
+		 * that, so move the switched directory the same way.
+		 */
+		$like_production = static function ( array $uploads ): array {
+			if ( ms_is_switched() && str_starts_with( $uploads['basedir'], ABSPATH ) ) {
+				$uploads['basedir'] = ABSPATH . 'mu/' . substr( $uploads['basedir'], strlen( ABSPATH ) );
+			}
+
+			return $uploads;
+		};
+		add_filter( 'upload_dir', $like_production );
+
+		switch_to_blog( $this->other_group_id );
+		$sponsors = Sponsors\get_sponsors();
+		$rendered = do_blocks( '<!-- wp:wporg/sponsors /-->' );
+		restore_current_blog();
+
+		remove_filter( 'upload_dir', $like_production );
+
+		return array( $sponsors, $rendered );
+	}
+
+	/**
+	 * A logo with no `medium` size is served as its original, which is how
+	 * a 781 KB, 17,055 px wide PNG ended up on every group page that lists
+	 * sponsors. Past `MAX_ORIGINAL_LOGO_BYTES` the sponsor is shown by name
+	 * instead.
+	 */
+	public function test_oversized_original_logo_is_not_shown() {
+		$this->give_sponsor_logo(
+			$this->create_sponsor(),
+			Sponsors\MAX_ORIGINAL_LOGO_BYTES + 1,
+			array(
+				'width'  => 1,
+				'height' => 1,
+			)
+		);
+
+		list( $sponsors, $rendered ) = $this->sponsors_from_a_group_site();
+
+		$this->assertSame( '', $sponsors[0]['logo'] );
+		$this->assertStringNotContainsString( 'sized-logo', $rendered );
+		$this->assertStringContainsString( 'Woo', $rendered, 'The sponsor should still be listed by name.' );
+	}
+
+	/**
+	 * An original that's small enough is still shown, since a logo that's
+	 * already small has no `medium` size either. Dimensions too small to be
+	 * real are left off so the image doesn't take a wrong 1:1 shape.
+	 */
+	public function test_small_original_logo_is_shown_without_broken_dimensions() {
+		$this->give_sponsor_logo(
+			$this->create_sponsor(),
+			Sponsors\MAX_ORIGINAL_LOGO_BYTES,
+			array(
+				'width'  => 1,
+				'height' => 1,
+			)
+		);
+
+		list( $sponsors, $rendered ) = $this->sponsors_from_a_group_site();
+
+		$this->assertStringEndsWith( '/sized-logo.png', $sponsors[0]['logo'] );
+		$this->assertSame( 0, $sponsors[0]['logo_width'] );
+		$this->assertSame( 0, $sponsors[0]['logo_height'] );
+		$this->assertStringNotContainsString( 'width="1"', $rendered );
+	}
+
+	/**
+	 * A large original doesn't matter when the `medium` size exists, since
+	 * that's the one shown.
+	 */
+	public function test_logo_uses_its_medium_size_whatever_the_original_weighs() {
+		$this->give_sponsor_logo(
+			$this->create_sponsor(),
+			Sponsors\MAX_ORIGINAL_LOGO_BYTES + 1,
+			array(
+				'width'  => 3000,
+				'height' => 1500,
+				'sizes'  => array(
+					'medium' => array(
+						'file'      => 'sized-logo-300x150.png',
+						'width'     => 300,
+						'height'    => 150,
+						'mime-type' => 'image/png',
+					),
+				),
+			)
+		);
+
+		list( $sponsors ) = $this->sponsors_from_a_group_site();
+
+		$this->assertStringEndsWith( '/sized-logo-300x150.png', $sponsors[0]['logo'] );
+		$this->assertSame( 300, $sponsors[0]['logo_width'] );
+		$this->assertSame( 150, $sponsors[0]['logo_height'] );
 	}
 
 	/**

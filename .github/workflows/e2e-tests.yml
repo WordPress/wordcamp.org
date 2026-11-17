@@ -42,12 +42,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install SVN
-      # A composer dependency uses --prefer-source, which needs svn on PATH.
-      run: |
-        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
-        sudo apt-get update && sudo apt-get install -y subversion
-
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
       with:
@@ -78,10 +72,10 @@ jobs:
         rm composer.lock || true
         composer install
 
-    - name: Use Node.js 20.x
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version-file: .nvmrc
         cache: npm
 
     - name: Cache node_modules
@@ -96,7 +90,7 @@ jobs:
         # must invalidate the cache too, so `npm ci` runs and rejects the
         # mismatch instead of a stale cache hit silently skipping install
         # (and any changed lifecycle scripts) entirely.
-        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: Install dependencies
       run: |
@@ -192,7 +186,7 @@ jobs:
     - name: Install GatherPress on the groups site
       run: |
         docker compose exec -T wordcamp.test wp plugin install \
-          https://github.com/GatherPress/gatherpress/releases/download/0.36.1/gatherpress.0.36.1.zip \
+          https://github.com/GatherPress/gatherpress/releases/download/0.36.2/gatherpress.0.36.2.zip \
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users

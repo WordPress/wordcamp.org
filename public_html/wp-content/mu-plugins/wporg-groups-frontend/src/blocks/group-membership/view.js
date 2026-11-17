@@ -111,6 +111,50 @@ store( 'wporg/group-membership', {
 			}
 		},
 
+		async stepDown() {
+			const ctx = getContext();
+
+			if ( ! ctx.isMember || ctx.loading ) {
+				return;
+			}
+
+			if ( ! window.confirm( ctx.stepDownConfirm ) ) {
+				return;
+			}
+
+			ctx.loading = true;
+			ctx.errorMessage = '';
+
+			try {
+				const resp = await fetch( ctx.stepDownApi, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': await getNonce( ctx ),
+					},
+					body: JSON.stringify( { role: 'subscriber' } ),
+				} );
+
+				const data = await resp.json();
+
+				if ( ! resp.ok ) {
+					// The server's message says why, e.g. that they're now the
+					// group's only organizer.
+					ctx.errorMessage = data?.message || ctx.stepDownError;
+					return;
+				}
+
+				// Reload so the page re-renders everything that depends on the
+				// role: the badge, "Leave group", and the organizer tools.
+				window.location.reload();
+			} catch {
+				ctx.errorMessage = ctx.stepDownError;
+			} finally {
+				ctx.loading = false;
+			}
+		},
+
 		async updateNotificationPreference( event ) {
 			const ctx = getContext();
 

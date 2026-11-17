@@ -542,4 +542,177 @@ class Test_CampTix_Payment_Instamojo extends WP_UnitTestCase {
 		$this->assertFalse( $method->invoke( $gateway, $request, '' ) );
 		$this->assertFalse( $method->invoke( $gateway, false, 'tok_mine' ) );
 	}
+
+	/**
+	 * Before an order times out, Instamojo is asked about its payment request: a credited
+	 * payment settles the order, anything else is reported to the sweep.
+	 *
+	 * @covers CampTix_Payment_Method_Instamojo::reconcile_payment
+	 */
+	public function test_reconcile_payment_settles_a_credited_payment_and_reports_the_rest() {
+		$gateway = $this->make_configured_gateway();
+
+		$paid = $this->make_order( 'tok_late', 500 );
+		update_post_meta( $paid, 'tix_instamojo_payment_request_id', 'req_late' );
+		$result = null;
+		$this->with_instamojo(
+			$this->payment_request( 'req_late', 'tok_late', array( array( 'Failed', '500.00' ), array( 'Credit', '500.00' ) ) ),
+			function () use ( $gateway, &$result ) {
+				$result = $gateway->reconcile_payment( 'tok_late' );
+			}
+		);
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
+		$this->assertSame( 'publish', get_post_status( $paid ) );
+		$this->assertSame( 'MOJO_req_late_1', get_post_meta( $paid, 'tix_transaction_id', true ) );
+
+		$cases = array(
+			'nothing credited' => array( $this->payment_request( 'req_none', 'tok_none', array( array( 'Failed', '500.00' ) ) ), 'tok_none', 'req_none', CampTix_Payment_Method::LOOKUP_EXPIRED ),
+			'another order'    => array( $this->payment_request( 'req_theirs', 'tok_someone_else', array( array( 'Credit', '500.00' ) ) ), 'tok_mine', 'req_theirs', CampTix_Payment_Method::LOOKUP_UNKNOWN ),
+			'nothing recorded' => array( null, 'tok_unrecorded', '', CampTix_Payment_Method::LOOKUP_EXPIRED ),
+		);
+		foreach ( $cases as $name => list( $api_response, $token, $request_id, $expected ) ) {
+			$attendee = $this->make_order( $token, 500 );
+			if ( $request_id ) {
+				update_post_meta( $attendee, 'tix_instamojo_payment_request_id', $request_id );
+			}
+
+			$result = null;
+			$this->with_instamojo(
+				$api_response,
+				function () use ( $gateway, $token, &$result ) {
+					$result = $gateway->reconcile_payment( $token );
+				}
+			);
+
+			$this->assertSame( $expected, $result['status'], $name );
+			$this->assertSame( 'draft', get_post_status( $attendee ), $name );
+		}
+	}
+
+	/**
+	 * Instamojo not answering is not evidence the order went unpaid.
+	 *
+	 * @covers CampTix_Payment_Method_Instamojo::reconcile_payment
+	 */
+	public function test_reconcile_payment_reports_instamojo_unreachable() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_down', 500 );
+		update_post_meta( $attendee, 'tix_instamojo_payment_request_id', 'req_down' );
+
+		$down = function () {
+			return new WP_Error( 'http_request_failed', 'timed out' );
+		};
+		add_filter( 'pre_http_request', $down );
+		try {
+			$result = $gateway->reconcile_payment( 'tok_down' );
+		} finally {
+			remove_filter( 'pre_http_request', $down );
+		}
+
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_UNREACHABLE, $result['status'] );
+		$this->assertSame( 'draft', get_post_status( $attendee ) );
+	}
+
+	/**
+	 * A refund is sent to Instamojo for the order's payment, and its id recorded.
+	 *
+	 * @covers CampTix_Payment_Method_Instamojo::send_refund_request
+	 */
+	public function test_refund_is_sent_for_the_orders_payment() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_refund', 500 );
+		wp_update_post( array(
+			'ID' => $attendee, 'post_status' => 'publish',
+		) );
+		update_post_meta( $attendee, 'tix_transaction_id', 'MOJO_paid' );
+
+		$sent = null;
+		$url  = null;
+		$stub = function ( $pre, $args, $request_url ) use ( &$sent, &$url ) {
+			$sent = $args['body'];
+			$url  = $request_url;
+
+			return array(
+				'response' => array(
+					'code' => 201, 'message' => 'Created',
+				),
+				'headers'  => array(),
+				'body'     => wp_json_encode(
+					array(
+						'success' => true,
+						'refund'  => array(
+							'id' => 'C5c0751269', 'status' => 'Refunded',
+						),
+					)
+				),
+			);
+		};
+		add_filter( 'pre_http_request', $stub, 10, 3 );
+		try {
+			$result = $gateway->send_refund_request( 'tok_refund' );
+		} finally {
+			remove_filter( 'pre_http_request', $stub, 10 );
+		}
+
+		$this->assertSame( 'https://www.instamojo.com/api/1.1/refunds/', $url );
+		$this->assertSame( 'MOJO_paid', $sent['payment_id'] );
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
+		$this->assertSame( 'C5c0751269', $result['refund_transaction_id'] );
+	}
+
+	/**
+	 * A refund Instamojo refuses is reported as failed.
+	 *
+	 * @covers CampTix_Payment_Method_Instamojo::send_refund_request
+	 */
+	public function test_refused_refund_is_reported_failed() {
+		$gateway  = $this->make_configured_gateway();
+		$attendee = $this->make_order( 'tok_refused', 500 );
+		wp_update_post( array(
+			'ID' => $attendee, 'post_status' => 'publish',
+		) );
+		update_post_meta( $attendee, 'tix_transaction_id', 'MOJO_paid' );
+
+		$result = null;
+		$this->with_instamojo(
+			array(
+				'success' => false,
+				'message' => 'Refund already requested.',
+			),
+			function () use ( $gateway, &$result ) {
+				$result = $gateway->send_refund_request( 'tok_refused' );
+			}
+		);
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $result['status'] );
+	}
+
+	/**
+	 * Checkout records the payment request id on the whole order, so the sweep can ask
+	 * Instamojo about it.
+	 *
+	 * @covers CampTix_Payment_Method_Instamojo::payment_checkout
+	 */
+	public function test_checkout_records_the_payment_request_id_on_the_whole_order() {
+		$gateway = $this->make_configured_gateway();
+		$first   = $this->make_order( 'tok_checkout', 500 );
+		$second  = $this->make_order( 'tok_checkout', 500 );
+
+		$this->with_instamojo(
+			array(
+				'success'         => true,
+				'payment_request' => array(
+					'id'      => 'req_checkout',
+					'longurl' => 'https://www.instamojo.com/@wordcamp/req_checkout',
+				),
+			),
+			function () use ( $gateway ) {
+				// The redirect is a raw header(), which the CLI doesn't send.
+				@$gateway->payment_checkout( 'tok_checkout' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			}
+		);
+
+		$this->assertSame( 'req_checkout', get_post_meta( $first, 'tix_instamojo_payment_request_id', true ) );
+		$this->assertSame( 'req_checkout', get_post_meta( $second, 'tix_instamojo_payment_request_id', true ) );
+	}
 }

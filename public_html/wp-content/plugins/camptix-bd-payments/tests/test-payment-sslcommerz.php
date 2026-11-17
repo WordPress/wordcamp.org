@@ -229,6 +229,7 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 	/** Session-key queries return a flat transaction and retain reconciliation data. */
 	public function test_timeout_recovery_stores_references_but_redacts_its_log() {
 		$id = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		set_post_type( $id, 'tix_attendee' );
 		update_post_meta( $id, '_sslcommerz_session_key', 'session-secret' );
 		update_post_meta( $id, 'tix_payment_token', 'order-a' );
 		$this->gateway->method( 'get_order' )->willReturn( [ 'total' => 20 ] );
@@ -266,7 +267,8 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 			),
 			false
 		);
-		$this->gateway->pre_attendee_timeout( $id );
+		$result = $this->gateway->reconcile_payment( 'order-a' );
+		$this->assertSame( CampTix_Payment_Method::LOOKUP_SETTLED, $result['status'] );
 	}
 
 	/** Both HTTP clients retain useful errors without exposing echoed secrets. */
@@ -304,6 +306,215 @@ class Test_Camptix_Payment_SSLCommerz extends WP_UnitTestCase {
 			$this->assertFalse( $api->invoke( $gateway, 'POST', 'https://example.com/api', [ 'password' => 'secret-password' ] ) );
 		}
 	}
+	/**
+	 * Checkout records the session key on every attendee of the order, so the timeout sweep
+	 * can look the payment up from whichever attendee it reaches first.
+	 */
+	public function test_checkout_stores_the_session_key_on_every_attendee() {
+		$first  = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		$second = self::factory()->post->create( [ 'post_status' => 'draft' ] );
+		foreach ( [ $first, $second ] as $id ) {
+			// Retyped directly: inserting a tix_attendee runs CampTix's save hooks, which this suite doesn't set up for.
+			set_post_type( $id, 'tix_attendee' );
+			update_post_meta( $id, 'tix_payment_token', 'order-a' );
+		}
+
+		$GLOBALS['camptix'] = $this->getMockBuilder( CampTix_Plugin::class )->disableOriginalConstructor()->onlyMethods( [ 'log', 'error', 'get_attendees_from_payment_token', 'get_tickets_url', 'email_template_shortcode_event_name' ] )->getMock();
+		$GLOBALS['camptix']->method( 'get_attendees_from_payment_token' )->willReturn( [ get_post( $first ), get_post( $second ) ] );
+		$GLOBALS['camptix']->method( 'get_tickets_url' )->willReturn( 'https://example.test/tickets/' );
+		$GLOBALS['camptix']->method( 'email_template_shortcode_event_name' )->willReturn( 'WordCamp Test' );
+
+		$this->gateway->camptix_options = [ 'currency' => 'BDT' ];
+		$this->gateway->method( 'get_order' )->willReturn(
+			[
+				'total' => 20,
+				'items' => [
+					[
+						'name'     => 'General',
+						'quantity' => 2,
+					],
+				],
+			]
+		);
+
+		add_filter(
+			'pre_http_request',
+			static function () {
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'status'         => 'SUCCESS',
+							'GatewayPageURL' => 'https://sandbox.sslcommerz.com/EasyCheckOut/abc',
+							'sessionkey'     => 'session-for-both',
+						]
+					),
+				];
+			}
+		);
+		add_filter(
+			'wp_redirect',
+			static function () {
+				throw new RuntimeException( 'redirected' );
+			}
+		);
+
+		try {
+			$this->gateway->payment_checkout( 'order-a' );
+			$this->fail( 'Checkout should have redirected to SSLCommerz.' );
+		} catch ( RuntimeException $e ) {
+			$this->assertSame( 'redirected', $e->getMessage() );
+		}
+
+		$this->assertSame( 'session-for-both', get_post_meta( $first, '_sslcommerz_session_key', true ) );
+		$this->assertSame( 'session-for-both', get_post_meta( $second, '_sslcommerz_session_key', true ) );
+	}
+
+	/**
+	 * A paid order, as the mocked CampTix returns it, with its validated transaction details.
+	 *
+	 * @param array $details Transaction details recorded at validation.
+	 *
+	 * @return int Attendee id.
+	 */
+	private function make_paid_order( $details ) {
+		$id = self::factory()->post->create( [ 'post_status' => 'publish' ] );
+		update_post_meta( $id, 'tix_transaction_details', $details );
+		$GLOBALS['camptix']->method( 'get_attendees_from_payment_token' )->willReturn( [ get_post( $id ) ] );
+		$this->gateway->method( 'get_order' )->willReturn(
+			[
+				'total'       => 20,
+				'attendee_id' => $id,
+			]
+		);
+
+		return $id;
+	}
+
+	/**
+	 * A refund is sent for the order's bank transaction and the amount paid, and the
+	 * refund reference recorded.
+	 */
+	public function test_refund_is_sent_for_the_bank_transaction() {
+		$this->make_paid_order(
+			[
+				'bank_tran_id' => 'bank-ref-1',
+				'amount'       => '20.00',
+			]
+		);
+
+		$asked = null;
+		add_filter(
+			'pre_http_request',
+			function ( $pre, $args, $url ) use ( &$asked ) {
+				$asked = $url;
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'APIConnect'    => 'DONE',
+							'status'        => 'success',
+							'refund_ref_id' => 'refund-ref-1',
+						]
+					),
+				];
+			},
+			10,
+			3
+		);
+
+		$result = $this->gateway->send_refund_request( 'order-a' );
+
+		$this->assertStringStartsWith( 'https://sandbox.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php?', $asked );
+		parse_str( (string) wp_parse_url( $asked, PHP_URL_QUERY ), $query );
+		$this->assertSame( 'bank-ref-1', $query['bank_tran_id'] );
+		$this->assertSame( '20.00', $query['refund_amount'] );
+		$this->assertSame( 'order-a', $query['refund_trans_id'], 'the refund is named after the order, so a retry names the same one' );
+		$this->assertArrayHasKey( 'refund_remarks', $query );
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUNDED, $result['status'] );
+		$this->assertSame( 'refund-ref-1', $result['refund_transaction_id'] );
+	}
+
+	/**
+	 * Query values are encoded, so text in one (a refund remark is the buyer's own) can't
+	 * add or replace parameters, or cut the credentials off behind a `#`.
+	 */
+	public function test_api_encodes_query_values() {
+		$asked = null;
+		add_filter(
+			'pre_http_request',
+			function ( $pre, $args, $url ) use ( &$asked ) {
+				$asked = $url;
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode( [ 'status' => 'success' ] ),
+				];
+			},
+			10,
+			3
+		);
+
+		$remark = "Can't come & sorry #1 x&bank_tran_id=other&refund_amount=5000";
+		$this->invoke(
+			'api',
+			'GET',
+			'/validator/api/merchantTransIDvalidationAPI.php',
+			[
+				'bank_tran_id'   => 'bank-ref-1',
+				'refund_amount'  => '20.00',
+				'refund_remarks' => $remark,
+				'store_id'       => 'store',
+				'store_passwd'   => 'p@ss#w&rd',
+			]
+		);
+
+		$this->assertNull( wp_parse_url( $asked, PHP_URL_FRAGMENT ) );
+		parse_str( (string) wp_parse_url( $asked, PHP_URL_QUERY ), $query );
+		$this->assertSame(
+			[
+				'bank_tran_id'   => 'bank-ref-1',
+				'refund_amount'  => '20.00',
+				'refund_remarks' => $remark,
+				'store_id'       => 'store',
+				'store_passwd'   => 'p@ss#w&rd',
+			],
+			$query
+		);
+	}
+
+	/** A refund SSLCommerz refuses, or one without a bank transaction to refund, fails. */
+	public function test_refund_fails_when_refused_or_nothing_to_refund() {
+		$this->make_paid_order(
+			[
+				'bank_tran_id' => 'bank-ref-2',
+				'amount'       => '20.00',
+			]
+		);
+		add_filter(
+			'pre_http_request',
+			static function () {
+				return [
+					'response' => [ 'code' => 200 ],
+					'body'     => wp_json_encode(
+						[
+							'APIConnect'  => 'DONE',
+							'status'      => 'failed',
+							'errorReason' => 'Refund amount exceeds',
+						]
+					),
+				];
+			}
+		);
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $this->gateway->send_refund_request( 'order-a' )['status'] );
+
+		$id = self::factory()->post->create( [ 'post_status' => 'publish' ] );
+		$GLOBALS['camptix']  = $this->getMockBuilder( CampTix_Plugin::class )->disableOriginalConstructor()->onlyMethods( [ 'log', 'get_attendees_from_payment_token' ] )->getMock();
+		$GLOBALS['camptix']->method( 'get_attendees_from_payment_token' )->willReturn( [ get_post( $id ) ] );
+
+		$this->assertSame( CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED, $this->gateway->send_refund_request( 'order-a' )['status'], 'no bank transaction id recorded' );
+	}
+
 	/** Accept the observed live checkout host without accepting arbitrary subdomains. */
 	public function test_gateway_redirect_hosts_are_exact_and_mode_specific() {
 		$this->gateway->options['sandbox'] = false;

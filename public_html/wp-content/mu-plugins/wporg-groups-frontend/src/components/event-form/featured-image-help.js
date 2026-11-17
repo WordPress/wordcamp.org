@@ -41,3 +41,45 @@ export function getFeaturedImageHelp( maxUploadSize ) {
 		)
 	);
 }
+
+/**
+ * The picker's warning when the group's upload space is nearly or completely
+ * used (#2361), or '' when there's room.
+ *
+ * The media library only says the space is used up once it is, and new
+ * uploads fail from then on, so organizers hear about it first here.
+ *
+ * @param {Object} uploadSpace         From the modal config.
+ * @param {string} uploadSpace.status  `ok`, `near`, or `full`.
+ * @param {string} uploadSpace.used    Formatted space used, e.g. "950 MB".
+ * @param {string} uploadSpace.allowed Formatted space allowed, e.g. "1 GB".
+ * @return {string} Warning with an `<a>` around where to ask for more, for `createInterpolateElement()`.
+ */
+export function getUploadSpaceNotice( uploadSpace ) {
+	const { status, used, allowed } = uploadSpace || {};
+
+	if ( 'full' === status ) {
+		return sprintf(
+			/* translators: %s: upload space, e.g. "1 GB". */
+			__(
+				'This group has used all %s of its upload space, so new images can’t be uploaded. You can still choose one that is already in the media library. For more space, ask in <a>#meetups</a> on Make WordPress Slack.',
+				'wordcamporg'
+			),
+			allowed
+		);
+	}
+
+	if ( 'near' === status ) {
+		return sprintf(
+			/* translators: 1: upload space used, e.g. "950 MB". 2: upload space, e.g. "1 GB". */
+			__(
+				'This group has used %1$s of its %2$s upload space. For more space, ask in <a>#meetups</a> on Make WordPress Slack.',
+				'wordcamporg'
+			),
+			used,
+			allowed
+		);
+	}
+
+	return '';
+}

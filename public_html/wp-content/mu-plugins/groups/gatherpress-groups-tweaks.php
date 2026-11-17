@@ -190,6 +190,148 @@ add_filter(
 );
 
 /**
+ * The theme every group site runs.
+ */
+const GROUP_SITE_THEME = 'groups-site';
+
+/**
+ * Template parts every group shares, so each one keeps the same header, local
+ * nav, breadcrumbs, and footer (#2368).
+ */
+const LOCKED_TEMPLATE_PARTS = array( 'header', 'footer' );
+
+/**
+ * Keep theme switching to network admins.
+ *
+ * `groups-site` isn't network-enabled, so once an organizer switches away
+ * from it, it no longer shows up in Appearance > Themes and they can't switch
+ * back (#2368). Mapped rather than filtered in `user_has_cap`, which super
+ * admins skip.
+ *
+ * @param string[] $caps    Primitive caps the user needs.
+ * @param string   $cap     Capability being checked.
+ * @param int      $user_id User being checked.
+ * @return string[]
+ */
+function restrict_switch_themes( array $caps, string $cap, int $user_id ): array {
+	if ( 'switch_themes' === $cap && ! user_can( $user_id, 'manage_network' ) ) {
+		$caps[] = 'do_not_allow';
+	}
+
+	return $caps;
+}
+add_filter( 'map_meta_cap', __NAMESPACE__ . '\restrict_switch_themes', 10, 3 );
+
+/**
+ * Backstop: put a group site back on `groups-site` if it ends up on another
+ * theme anyway, e.g. through WP-CLI or code.
+ *
+ * The reverse of `revert_wrong_network_activation()` in
+ * `wcorg-network-theme-control.php`. The network's root site isn't a group
+ * and keeps whatever theme it has.
+ */
+function revert_group_site_theme(): void {
+	if (
+		GROUPS_ROOT_BLOG_ID === get_current_blog_id() ||
+		GROUPS_NETWORK_ID !== (int) get_site()->network_id ||
+		GROUP_SITE_THEME === get_stylesheet()
+	) {
+		return;
+	}
+
+	switch_theme( GROUP_SITE_THEME );
+
+	// Appearance > Themes would otherwise also say "New theme activated."
+	// under the notice below, about the theme this just switched away from.
+	unset( $_GET['activated'] );
+
+	add_action(
+		'admin_notices',
+		static function () {
+			printf(
+				'<div class="notice notice-error"><p>%s</p></div>',
+				esc_html__( 'Group sites always use the Groups theme, so this site has been switched back to it.', 'wordcamporg' )
+			);
+		}
+	);
+}
+add_action( 'after_switch_theme', __NAMESPACE__ . '\revert_group_site_theme' );
+
+/**
+ * Keep the theme's locked blocks in place for everyone but network admins.
+ *
+ * The theme locks its shared blocks with `lock: { move, remove }`, but
+ * anyone in the Site Editor can unlock them, or edit the markup in the code
+ * editor, unless both are turned off (#2368).
+ *
+ * @param array $settings Block editor settings.
+ * @return array
+ */
+function restrict_block_locking( array $settings ): array {
+	if ( ! current_user_can( 'manage_network' ) ) {
+		$settings['canLockBlocks']      = false;
+		$settings['codeEditingEnabled'] = false;
+	}
+
+	return $settings;
+}
+add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\restrict_block_locking' );
+
+/**
+ * Keep the theme's locked blocks visible on the site.
+ *
+ * The block "Hide" menu ignores the lock, and its "Omit from published
+ * content" leaves a locked block, such as the shared header, out of the page
+ * just as removing it would (#2368). Gutenberg offers it to anyone who can
+ * edit the block, with no setting to turn it off, so a locked block's
+ * visibility is dropped where it renders instead. This also covers a template
+ * saved hidden before this, or through the REST API.
+ *
+ * @param array $parsed_block Block about to be rendered.
+ * @return array
+ */
+function keep_locked_blocks_visible( array $parsed_block ): array {
+	if ( ! empty( $parsed_block['attrs']['lock']['remove'] ) ) {
+		unset( $parsed_block['attrs']['metadata']['blockVisibility'] );
+	}
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', __NAMESPACE__ . '\keep_locked_blocks_visible' );
+
+/**
+ * Reject saves to the shared header and footer parts from anyone but network
+ * admins.
+ *
+ * Other templates and global styles stay editable. Resetting a part to the
+ * theme's version is still allowed, since that restores the shared one.
+ *
+ * @param \stdClass|\WP_Error $changes Template part about to be saved.
+ * @param \WP_REST_Request    $request Request saving it.
+ * @return \stdClass|\WP_Error
+ */
+function protect_locked_template_parts( $changes, $request ) {
+	if ( is_wp_error( $changes ) || current_user_can( 'manage_network' ) ) {
+		return $changes;
+	}
+
+	// A new part only gets its slug from the request, after this filter, and
+	// `wp_insert_post()` sanitizes it then, so `HEADER` would save as `header`.
+	$slug = sanitize_title( $changes->post_name ?? $request['slug'] ?? '' );
+
+	if ( in_array( $slug, LOCKED_TEMPLATE_PARTS, true ) ) {
+		return new \WP_Error(
+			'groups_locked_template_part',
+			__( 'Every group shares this header and footer, so they can\'t be changed here.', 'wordcamporg' ),
+			array( 'status' => rest_authorization_required_code() )
+		);
+	}
+
+	return $changes;
+}
+add_filter( 'rest_pre_insert_wp_template_part', __NAMESPACE__ . '\protect_locked_template_parts', 10, 2 );
+
+/**
  * When searching on the events archive, keep the archive template active
  * instead of switching to the search template. WordPress treats ?s= as a
  * search query which loads search.html — we want to stay on the archive
@@ -243,6 +385,17 @@ function register_event_speakers_meta(): void {
 	);
 }
 add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
+
+/**
+ * Register a 480px image size for event cards and hero images.
+ *
+ * Here and not in the theme, because Meetup imports sideload photos from the
+ * network admin, where no group's theme is loaded.
+ */
+function register_event_card_image_size(): void {
+	add_image_size( 'groups-event-card', 480, 0 );
+}
+add_action( 'after_setup_theme', __NAMESPACE__ . '\register_event_card_image_size' );
 
 /**
  * Rewrite the search block form action on the events archive to submit
@@ -821,98 +974,180 @@ add_filter(
 );
 
 /**
- * Apply the event archive controls to GatherPress Event Query Loop blocks.
+ * Map the archive's controls onto the event query's arguments.
  *
- * GatherPress supplies the SQL for upcoming and past event queries. This
- * filter only maps the archive's event_time control and search field onto
- * the native query arguments.
+ * GatherPress supplies the SQL for upcoming and past event queries. This only
+ * maps the archive's event_time, format, language, and topic controls and its
+ * search field onto the native query arguments.
+ *
+ * @param array $query_vars The query's arguments, already set to the default
+ *                          (upcoming) view.
+ * @return array The arguments for the view the request asks for.
  */
-add_filter(
-	'query_loop_block_query_vars',
-	static function ( array $query_vars, \WP_Block $block ): array {
-		$block_query = $block->context['query'] ?? array();
+function get_event_archive_query_vars( array $query_vars ): array {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
 
-		if (
-			! isset( $block_query['gatherpress_event_query'] ) ||
-			! isset( $query_vars['post_type'] ) ||
-			'gatherpress_event' !== $query_vars['post_type']
-		) {
-			return $query_vars;
+	// An empty search query should not force the "all" time view.
+	if ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time_filter ) {
+		$time_filter = 'upcoming';
+	}
+
+	if ( 'past' === $time_filter ) {
+		$query_vars['gatherpress_event_query'] = 'past';
+		$query_vars['include_unfinished']      = 0;
+		$query_vars['order']                   = 'DESC';
+	} elseif ( 'all' === $time_filter ) {
+		unset( $query_vars['gatherpress_event_query'] );
+
+		// GatherPress's datetime ordering is tied to its upcoming/past
+		// filters, so use a stable core ordering when showing both.
+		$query_vars['orderby'] = 'date';
+		$query_vars['order']   = 'DESC';
+	}
+
+	$format_filter   = get_event_format_filter();
+	$language_filter = get_event_language_filter();
+	$topic_filter    = get_event_topic_filter();
+
+	/*
+	 * Every ID filter has to resolve into the one `post__in`. WP_Query
+	 * treats `post__in` and `post__not_in` as an if/elseif (see
+	 * `parse_where()`), so a `post__not_in` left beside a `post__in`
+	 * would be dropped without a word. Each filter that narrows to a set
+	 * adds it to `$included`, and the sets are intersected in PHP; the
+	 * in-person filter's exclusion is subtracted from the result. Only
+	 * when nothing narrows to a set does the exclusion ride on
+	 * `post__not_in`.
+	 */
+	$included = array();
+	$excluded = array();
+
+	if ( 'all' !== $language_filter ) {
+		$included[] = get_event_ids_for_language( $language_filter );
+	}
+
+	if ( 'all' !== $topic_filter ) {
+		$included[] = get_event_ids_for_topic( $topic_filter );
+	}
+
+	if ( 'online' === $format_filter ) {
+		$included[] = get_online_event_ids();
+	} elseif ( 'in-person' === $format_filter ) {
+		$excluded = get_online_event_ids();
+	}
+
+	if ( $included ) {
+		$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
+		$ids = array_values( array_diff( $ids, $excluded ) );
+
+		// `array( 0 )` rather than an empty array: an empty `post__in` is
+		// ignored by WP_Query, which would show every event under a
+		// filter that matched none.
+		$query_vars['post__in'] = $ids ? $ids : array( 0 );
+	} elseif ( $excluded ) {
+		$query_vars['post__not_in'] = $excluded;
+	}
+
+	// Pass through search if present.
+	if ( ! empty( $_GET['s'] ) ) {
+		$query_vars['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+	}
+
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+	return $query_vars;
+}
+
+/**
+ * Render the events archive grid from the main query.
+ *
+ * The archive template's Query Loop inherits the main query, so this is where
+ * the grid's page size, order, and the archive's filters are applied. Being
+ * the main query is what lets core skip lazy-loading the first card images,
+ * which hold the page's largest contentful paint, and it saves running a main
+ * query only to throw it away for a Query Loop of its own.
+ *
+ * Runs at priority 5 so `gatherpress_event_query` is set before GatherPress
+ * reads it at 10 (`Event\Query::prepare_event_query_before_execution()`).
+ *
+ * @param \WP_Query $query The query about to run.
+ */
+function apply_event_archive_main_query( \WP_Query $query ): void {
+	if ( is_admin() || ! $query->is_main_query() || $query->is_feed() || ! $query->is_post_type_archive( 'gatherpress_event' ) ) {
+		return;
+	}
+
+	$query_vars = get_event_archive_query_vars(
+		array(
+			'posts_per_page'          => 12,
+			'gatherpress_event_query' => 'upcoming',
+			'include_unfinished'      => 1,
+			'orderby'                 => 'datetime',
+			'order'                   => 'ASC',
+		)
+	);
+
+	// The "All" view drops the upcoming/past constraint altogether.
+	if ( ! isset( $query_vars['gatherpress_event_query'] ) ) {
+		$query->set( 'gatherpress_event_query', '' );
+	}
+
+	foreach ( $query_vars as $name => $value ) {
+		$query->set( $name, $value );
+	}
+}
+add_action( 'pre_get_posts', __NAMESPACE__ . '\apply_event_archive_main_query', 5 );
+
+/**
+ * Where an old Query Loop page link on the events archive now lives.
+ *
+ * Before the grid rendered from the main query, its Query Loop paginated with
+ * `?query-page=N` (or `?query-{id}-page=N`). Those links are bookmarked and
+ * indexed, and would now quietly show page 1, so they move to `/page/N/` with
+ * the rest of the view state kept.
+ *
+ * @return string The URL to send the request to, or an empty string when it
+ *                is not an old page link on the events archive.
+ */
+function get_legacy_event_archive_pagination_redirect(): string {
+	if ( ! is_post_type_archive( 'gatherpress_event' ) ) {
+		return '';
+	}
+
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	foreach ( $_GET as $key => $value ) {
+		if ( ! preg_match( '/^query(-\d+)?-page$/', (string) $key ) ) {
+			continue;
 		}
 
-		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+		$page = is_string( $value ) ? absint( $value ) : 0;
 
-		// An empty search query should not force the "all" time view.
-		if ( isset( $_GET['s'] ) && '' === trim( sanitize_text_field( wp_unslash( $_GET['s'] ) ) ) && 'all' === $time_filter ) {
-			$time_filter = 'upcoming';
-		}
+		// `get_pagenum_link()` keeps the rest of the query string, and writes
+		// `/page/N/` or `?paged=N` to suit the permalink structure.
+		return remove_query_arg( $key, get_pagenum_link( max( 1, $page ), false ) );
+	}
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		if ( 'past' === $time_filter ) {
-			$query_vars['gatherpress_event_query'] = 'past';
-			$query_vars['include_unfinished']      = 0;
-			$query_vars['order']                   = 'DESC';
-		} elseif ( 'all' === $time_filter ) {
-			unset( $query_vars['gatherpress_event_query'] );
+	return '';
+}
 
-			// GatherPress's datetime ordering is tied to its upcoming/past
-			// filters, so use a stable core ordering when showing both.
-			$query_vars['orderby'] = 'date';
-			$query_vars['order']   = 'DESC';
-		}
+/**
+ * Redirect old Query Loop page links on the events archive.
+ *
+ * @see get_legacy_event_archive_pagination_redirect()
+ */
+function redirect_legacy_event_archive_pagination(): void {
+	$url = get_legacy_event_archive_pagination_redirect();
 
-		$format_filter   = get_event_format_filter();
-		$language_filter = get_event_language_filter();
-		$topic_filter    = get_event_topic_filter();
+	if ( '' === $url ) {
+		return;
+	}
 
-		/*
-		 * Every ID filter has to resolve into the one `post__in`. WP_Query
-		 * treats `post__in` and `post__not_in` as an if/elseif (see
-		 * `parse_where()`), so a `post__not_in` left beside a `post__in`
-		 * would be dropped without a word. Each filter that narrows to a set
-		 * adds it to `$included`, and the sets are intersected in PHP; the
-		 * in-person filter's exclusion is subtracted from the result. Only
-		 * when nothing narrows to a set does the exclusion ride on
-		 * `post__not_in`.
-		 */
-		$included = array();
-		$excluded = array();
-
-		if ( 'all' !== $language_filter ) {
-			$included[] = get_event_ids_for_language( $language_filter );
-		}
-
-		if ( 'all' !== $topic_filter ) {
-			$included[] = get_event_ids_for_topic( $topic_filter );
-		}
-
-		if ( 'online' === $format_filter ) {
-			$included[] = get_online_event_ids();
-		} elseif ( 'in-person' === $format_filter ) {
-			$excluded = get_online_event_ids();
-		}
-
-		if ( $included ) {
-			$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
-			$ids = array_values( array_diff( $ids, $excluded ) );
-
-			// `array( 0 )` rather than an empty array: an empty `post__in` is
-			// ignored by WP_Query, which would show every event under a
-			// filter that matched none.
-			$query_vars['post__in'] = $ids ? $ids : array( 0 );
-		} elseif ( $excluded ) {
-			$query_vars['post__not_in'] = $excluded;
-		}
-
-		// Pass through search if present.
-		if ( ! empty( $_GET['s'] ) ) {
-			$query_vars['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
-		}
-
-		return $query_vars;
-	},
-	20,
-	2
-);
+	wp_safe_redirect( $url, 301 );
+	exit;
+}
+add_action( 'template_redirect', __NAMESPACE__ . '\redirect_legacy_event_archive_pagination', 5 );
 
 /**
  * Prevent GatherPress from 404-ing the event archive.

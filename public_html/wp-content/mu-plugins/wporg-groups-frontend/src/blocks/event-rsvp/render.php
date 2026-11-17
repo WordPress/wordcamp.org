@@ -155,7 +155,8 @@ $context = array(
 	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
-	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
+	// A non-member's RSVP joins the group first; `source` records that it was by RSVPing.
+	'joinApi'           => add_query_arg( 'source', 'rsvp', rest_url( 'wporg-groups/v1/members/join' ) ),
 	'rsvpApi'           => rest_url( sprintf( 'wporg-groups/v1/event/%d/rsvp', $event_post_id ) ),
 	'recurrenceId'      => '',
 	'hasQuestions'      => ! empty( $questions ),
@@ -273,8 +274,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		type="button"
 		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
 		data-wp-class--has-no-attendees="state.hasNoAttendees"
-		data-wp-on--click="actions.openModal"
-		aria-label="<?php esc_attr_e( 'View attendees', 'wordcamporg' ); ?>">
+		data-wp-on--click="actions.openModal">
 
 		<span class="wporg-event-rsvp__avatars" aria-hidden="true">
 			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
@@ -295,6 +295,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
 			<?php echo esc_html( $count_label ); ?>
 		</span>
+
+		<?php
+		/*
+		 * The button's accessible name has to start with the count it shows,
+		 * so a voice-control user can say what they see ("click 5 going").
+		 * An `aria-label` would replace that text, so what the button does is
+		 * added after it as hidden text instead.
+		 */
+		?>
+		<span class="screen-reader-text"><?php esc_html_e( 'View attendees', 'wordcamporg' ); ?></span>
 	</button>
 
 	<p

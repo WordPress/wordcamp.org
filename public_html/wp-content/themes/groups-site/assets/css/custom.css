@@ -287,10 +287,25 @@ body.error404 .site-content-container h1 {
 	order: 1;
 }
 
+/* The rail is a card, so a visitor's lone Join button has a frame instead of
+   floating beside the main column. */
+
 .groups-site-sidebar {
 	box-sizing: border-box;
 	width: 100%;
-	padding-left: var(--wp--preset--spacing--40);
+	padding: 24px;
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+}
+
+/* Join is the page's primary action for a visitor, so it fills the rail at
+   the global button size, capped like the organizer buttons below. */
+
+.groups-site-sidebar .wporg-group-membership .wp-block-button,
+.groups-site-sidebar .wporg-group-membership .wp-block-button__link {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 320px;
 }
 
 .groups-site-sidebar .wporg-event-manage,

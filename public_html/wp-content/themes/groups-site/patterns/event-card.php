@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:gatherpress/rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
 			<!-- wp:groups-site/event-format /-->
 			<!-- wp:gatherpress/venue -->
-				<!-- wp:post-title {"level":4,"fontSize":"small","fontFamily":"inter","textColor":"charcoal-4","style":{"spacing":{"margin":{"top":"0","bottom":"0"}},"typography":{"fontWeight":"400","lineHeight":"1.55"}}} /-->
+				<!-- wp:post-title {"level":0,"fontSize":"small","fontFamily":"inter","textColor":"charcoal-4","style":{"spacing":{"margin":{"top":"0","bottom":"0"}},"typography":{"fontWeight":"400","lineHeight":"1.55"}}} /-->
 			<!-- /wp:gatherpress/venue -->
 		</div>
 		<!-- /wp:group -->

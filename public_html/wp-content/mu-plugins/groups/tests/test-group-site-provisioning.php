@@ -5,6 +5,7 @@ namespace WordCamp\Groups\Tests;
 use WP_Error;
 
 use function WordCamp\Groups\Site_Provisioning\create_group_site;
+use function WordCamp\Groups\Site_Provisioning\parse_utc_offset;
 
 defined( 'WPINC' ) || die();
 
@@ -45,6 +46,12 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 
 		$this->assertSame( 'groups-site', get_stylesheet() );
 		$this->assertSame( 'Australia/Brisbane', get_option( 'timezone_string' ) );
+
+		// Venue maps start on Google, not GatherPress's CARTO default.
+		$this->assertSame( 'google', get_option( 'gatherpress_settings' )['map_platform'] ?? '' );
+		if ( class_exists( \GatherPress\Core\Settings::class ) ) {
+			$this->assertSame( 'google', \GatherPress\Core\Settings::get_instance()->get( 'map_platform' ) );
+		}
 
 		$organizer = new \WP_User( self::$organizer_id );
 		$this->assertContains( 'administrator', $organizer->roles );
@@ -125,5 +132,76 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'invalid_timezone', $result->get_error_code() );
 		$this->assertCount( $existing_count, get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
+	}
+
+	/**
+	 * A manual offset from the "Manual Offsets" group of the dropdown is
+	 * stored the way core's General Settings stores it.
+	 */
+	public function test_saves_manual_utc_offset() {
+		$site_id = create_group_site( 'Offset Group', 'offset-group', 'grouporganizer', 'UTC-5' );
+
+		$this->assertIsInt( $site_id );
+
+		switch_to_blog( $site_id );
+
+		$this->assertSame( '', get_option( 'timezone_string' ) );
+		$this->assertEquals( -5, get_option( 'gmt_offset' ) );
+		$this->assertSame( '-05:00', wp_timezone_string() );
+
+		restore_current_blog();
+	}
+
+	/**
+	 * Every manual offset `wp_timezone_choice()` renders is accepted.
+	 */
+	public function test_parses_every_offset_core_offers() {
+		preg_match_all( '/value="(UTC[+-][^"]*)"/', wp_timezone_choice( '' ), $matches );
+
+		$this->assertNotEmpty( $matches[1] );
+
+		foreach ( $matches[1] as $value ) {
+			$this->assertNotNull( parse_utc_offset( $value ), $value );
+		}
+	}
+
+	/**
+	 * @dataProvider data_parse_utc_offset
+	 *
+	 * @param string     $value
+	 * @param float|null $expected
+	 */
+	public function test_parse_utc_offset( $value, $expected ) {
+		$this->assertSame( $expected, parse_utc_offset( $value ) );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function data_parse_utc_offset() {
+		return array(
+			'negative whole hour'  => array( 'UTC-5', -5.0 ),
+			'positive half hour'   => array( 'UTC+5.5', 5.5 ),
+			'quarter hour'         => array( 'UTC+13.75', 13.75 ),
+			'upper bound'          => array( 'UTC+14', 14.0 ),
+			'lower bound'          => array( 'UTC-12', -12.0 ),
+			'beyond upper bound'   => array( 'UTC+15', null ),
+			'beyond lower bound'   => array( 'UTC-13', null ),
+			'odd fraction'         => array( 'UTC+5.3', null ),
+			'named zone'           => array( 'America/New_York', null ),
+			'plain UTC'            => array( 'UTC', null ),
+			'trailing junk'        => array( 'UTC-5; DROP', null ),
+			'empty'                => array( '', null ),
+		);
+	}
+
+	/**
+	 * An out-of-range offset is rejected rather than stored.
+	 */
+	public function test_rejects_out_of_range_offset() {
+		$result = create_group_site( 'Far Offset Group', 'far-offset', 'grouporganizer', 'UTC+20' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_timezone', $result->get_error_code() );
 	}
 }

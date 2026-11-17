@@ -18,7 +18,7 @@ use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
 	get_corrected_root_relative_url, get_city_slash_year_url, domain_redirects, root_redirects,
-	get_renamed_site_url,
+	get_renamed_site_url, get_renamed_group_url,
 };
 
 defined( 'WPINC' ) || die();
@@ -709,5 +709,34 @@ class Test_Sunrise extends Database_TestCase {
 				'https://events.wordpress.test/rome/2024/training/',
 			),
 		);
+	}
+
+	/**
+	 * A renamed group's old URLs, home or deeper, go to the same page under
+	 * its new slug.
+	 *
+	 * @covers WordCamp\Sunrise\get_renamed_group_url
+	 */
+	public function test_get_renamed_group_url() {
+		$site_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/western-mass-wordpress/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+		add_site_meta( $site_id, 'old_home_url', 'https://events.wordpress.test/group/wma-wordpress-meetup/' );
+
+		$new = 'https://events.wordpress.test/group/western-mass-wordpress/';
+
+		$this->assertSame( $new, get_renamed_group_url( 'events.wordpress.test', '/group/wma-wordpress-meetup/' ) );
+		$this->assertSame( $new, get_renamed_group_url( 'events.wordpress.test', '/group/wma-wordpress-meetup' ) );
+		$this->assertSame( $new . 'events/monthly-qa/', get_renamed_group_url( 'events.wordpress.test', '/group/wma-wordpress-meetup/events/monthly-qa/' ) );
+		$this->assertSame( $new . 'about/', get_renamed_group_url( 'events.wordpress.test', '/group/wma-wordpress-meetup/about/' ) );
+
+		// A slug that only starts with the old one is a different group.
+		$this->assertFalse( get_renamed_group_url( 'events.wordpress.test', '/group/wma-wordpress-meetup-2/' ) );
+		$this->assertFalse( get_renamed_group_url( 'events.wordpress.test', '/group/narnia/events/' ) );
+		$this->assertFalse( get_renamed_group_url( 'events.wordpress.test', '/rome/2023/training/' ) );
 	}
 }

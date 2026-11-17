@@ -31,6 +31,10 @@ function manually_load_plugin() {
 	// autoloaded in the test environment the way it is on a real request.
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
+	// Before the tools below: `network-messaging.php` and `network-export.php`
+	// define their capability from `Capabilities\CAPABILITY` at load time.
+	require_once dirname( __DIR__ ) . '/capabilities.php';
+	require_once dirname( __DIR__ ) . '/action-log.php';
 	require_once dirname( __DIR__ ) . '/front-end-locale.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';
@@ -40,6 +44,12 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer.php';
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
 	require_once dirname( __DIR__ ) . '/network-export.php';
+	require_once dirname( __DIR__ ) . '/events-feed.php';
+	// The import screen checks the Meetup connection through it. Only the MU
+	// Plugins suite loads it otherwise.
+	require_once dirname( __DIR__, 2 ) . '/wcorg-meetup-oauth.php';
+	require_once dirname( __DIR__ ) . '/meetup-import.php';
+	require_once dirname( __DIR__ ) . '/meetup-shared-connection.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

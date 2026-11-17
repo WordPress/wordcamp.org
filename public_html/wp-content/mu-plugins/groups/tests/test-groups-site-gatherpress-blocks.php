@@ -100,20 +100,39 @@ class Test_Groups_Site_GatherPress_Blocks extends Groups_TestCase {
 	 * `namespace` attribute, and GatherPress only applies its event query
 	 * when that matches. A renamed variation would leave the loops listing
 	 * events by publish date with past ones mixed in.
+	 *
+	 * Loops that inherit the main query are the exception, and must not carry
+	 * the name: GatherPress answers an inheriting loop by swapping its own
+	 * query in for the global one, which makes core lazy-load every card
+	 * image. The events archive inherits and gets its event query from
+	 * `apply_event_archive_main_query()` instead.
 	 */
 	public function test_query_loops_name_gatherpress_event_variation() {
 		$namespaces = array();
+		$inheriting = array();
 
 		foreach ( self::theme_markup() as $file => $markup ) {
 			if ( preg_match_all( '/<!--\s+wp:query\s+(\{.*?\})\s+-->/', $markup, $matches ) ) {
 				foreach ( $matches[1] as $json ) {
 					$attributes = json_decode( $json, true );
 
-					if ( 'gatherpress_event' === ( $attributes['query']['postType'] ?? '' ) ) {
-						$namespaces[ $file . ' #' . count( $namespaces ) ] = $attributes['namespace'] ?? '';
+					if ( 'gatherpress_event' !== ( $attributes['query']['postType'] ?? '' ) ) {
+						continue;
+					}
+
+					$key = $file . ' #' . ( count( $namespaces ) + count( $inheriting ) );
+
+					if ( ! empty( $attributes['query']['inherit'] ) ) {
+						$inheriting[ $key ] = $attributes['namespace'] ?? '';
+					} else {
+						$namespaces[ $key ] = $attributes['namespace'] ?? '';
 					}
 				}
 			}
+		}
+
+		foreach ( $inheriting as $file => $namespace ) {
+			$this->assertSame( '', $namespace, "`{$file}`'s event Query Loop inherits the main query, so GatherPress would replace it." );
 		}
 
 		$this->assertNotEmpty( $namespaces, 'Expected the theme to have event Query Loops.' );

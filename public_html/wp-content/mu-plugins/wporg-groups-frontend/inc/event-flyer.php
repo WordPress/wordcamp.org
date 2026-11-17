@@ -194,7 +194,8 @@ function get_short_url( int $event_id ): string {
  *
  * Empty for anything that isn't an event the visitor can read, so an ID
  * can't be walked to find the slugs of drafts, and for a date the series
- * doesn't have.
+ * doesn't have. A password-protected event leads to its permalink for any
+ * date until the password is entered, so its dates can't be found by asking.
  *
  * @param int    $event_id Event post ID.
  * @param string $date     `Ymd`, a full recurrence ID, or empty.
@@ -210,7 +211,7 @@ function get_short_url_target( int $event_id, string $date = '' ): string {
 		return '';
 	}
 
-	if ( '' === $date ) {
+	if ( '' === $date || post_password_required( $post ) ) {
 		return (string) get_permalink( $post );
 	}
 
@@ -277,7 +278,15 @@ function redirect_short_url( WP $wp ): void {
 		return;
 	}
 
-	wp_safe_redirect( $target, 301 );
+	// Where a protected event's URL leads depends on the visitor's password
+	// cookie, so neither a browser nor a cache may keep the answer.
+	$is_protected = '' !== get_post( absint( $event_id ) )->post_password;
+
+	if ( $is_protected ) {
+		nocache_headers();
+	}
+
+	wp_safe_redirect( $target, $is_protected ? 302 : 301 );
 	exit;
 }
 

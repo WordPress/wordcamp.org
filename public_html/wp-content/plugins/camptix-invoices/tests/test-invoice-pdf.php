@@ -276,4 +276,71 @@ class Test_CampTix_Invoice_PDF extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '#<table class="camptix-inovice-header">\s*<tr>\s*<td class="camptix-invoice-from-box#', $html );
 		$this->assertStringNotContainsString( 'float:', $html );
 	}
+
+	/**
+	 * A site that never saved the Invoices settings tab has none of its keys stored, which
+	 * used to raise "Undefined array key" warnings while rendering the invoice.
+	 *
+	 * @covers CampTix_Addon_Invoices::create_invoice_document
+	 */
+	public function test_renders_without_warnings_when_invoice_settings_were_never_saved() {
+		update_option(
+			'camptix_options',
+			array(
+				'currency'   => 'USD',
+				'event_name' => 'WordCamp Test',
+			)
+		);
+
+		$invoice_id = self::factory()->post->create( array( 'post_type' => 'tix_invoice' ) );
+		update_post_meta( $invoice_id, 'invoice_number', '1-1' );
+		update_post_meta(
+			$invoice_id,
+			'invoice_metas',
+			array(
+				'name'    => 'Jane Doe',
+				'email'   => 'jane@example.org',
+				'address' => 'Street 1',
+			)
+		);
+		update_post_meta(
+			$invoice_id,
+			'original_order',
+			array(
+				'items' => array(
+					array(
+						'name'     => 'Attendee Ticket',
+						'price'    => 25,
+						'quantity' => 2,
+					),
+				),
+				'total' => 50,
+			)
+		);
+
+		require_once CTX_INV_DIR . '/includes/class-camptix-addon-invoices.php';
+
+		$warnings = array();
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Collecting warnings is the point of the test.
+		set_error_handler(
+			function ( $errno, $errstr ) use ( &$warnings ) {
+				$warnings[] = $errstr;
+				return true;
+			},
+			E_WARNING | E_NOTICE
+		);
+		try {
+			CampTix_Addon_Invoices::create_invoice_document( $invoice_id );
+		} finally {
+			restore_error_handler();
+		}
+
+		// The PDF itself needs GD for the logo, which the test environment may not have.
+		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
+		if ( $filename ) {
+			wp_delete_file( wp_upload_dir()['basedir'] . '/camptix-invoices/' . $filename );
+		}
+
+		$this->assertSame( array(), $warnings );
+	}
 }

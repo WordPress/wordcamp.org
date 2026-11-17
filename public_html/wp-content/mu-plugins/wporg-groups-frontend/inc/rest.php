@@ -46,6 +46,7 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
+use WordCamp\Groups\Frontend\Member_Joined;
 
 use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
 
@@ -613,7 +614,12 @@ function save_rsvp( WP_REST_Request $request ) {
 	// becomes a member — same as GatherPress's own endpoint and our
 	// /members/join route.
 	if ( ! is_user_member_of_blog( $user_id ) ) {
-		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+		Member_Joined\with_source(
+			Member_Joined\SOURCE_RSVP,
+			static function () use ( $user_id ) {
+				return add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+			}
+		);
 	}
 
 	$record     = $rsvp->save( $user_id, $status );

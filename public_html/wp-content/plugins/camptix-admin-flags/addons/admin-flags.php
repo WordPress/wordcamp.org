@@ -212,7 +212,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			}
 
 			$key           = sanitize_html_class( sanitize_title_with_dashes( trim( $matches[1] ) ) );
-			$label         = trim( $matches[2] );
+			$label         = sanitize_text_field( $matches[2] );
 			$flags[ $key ] = $label;
 		}
 
@@ -393,7 +393,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 				</a>',
 				esc_url( $url ),
 				$class_html,
-				$label,
+				esc_html( $label ),
 				number_format_i18n( $count )
 			);
 		}

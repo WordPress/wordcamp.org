@@ -170,7 +170,10 @@ function ctx_sanitize_invoice_document( $value ) {
  * Define the default values for options.
  */
 function ctx_default_options( $options ) {
-	$options['invoice-vat-number'] = '';
+	$options['invoice-vat-number']  = '';
+	$options['invoice-date-format'] = 'd F Y';
+	$options['invoice-company']     = '';
+	$options['invoice-thankyou']    = '';
 
 	return $options;
 }

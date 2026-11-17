@@ -18,6 +18,7 @@ namespace WordCamp\Groups\Frontend\Modal;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use WordCamp\Groups\Frontend\Upload_Space;
 use WP_Admin_Bar;
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
@@ -101,14 +102,19 @@ function localize_block_script( string $content, array $block ): string {
 		return $content;
 	}
 
+	$upload_space = get_upload_space_config();
+
 	$config = array(
 		'restNamespace'   => 'wporg-groups/v1',
 		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
 		'minimumEventDate' => wp_date( 'Y-m-d' ),
 		'createEventFragment' => CREATE_EVENT_FRAGMENT,
 		// Shown under the featured image picker (#2257). The media library
-		// only says a file is too large once it's been rejected.
-		'maxUploadSize'       => size_format( wp_max_upload_size() ),
+		// only says a file is too large once it's been rejected. Left out
+		// once the space is used up: core caps the size at the space left,
+		// so it would say 0 B, and the upload space notice says why.
+		'maxUploadSize'       => 'full' === $upload_space['status'] ? '' : size_format( wp_max_upload_size() ),
+		'uploadSpace'         => $upload_space,
 	);
 
 	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {
@@ -116,4 +122,27 @@ function localize_block_script( string $content, array $block ): string {
 	}
 
 	return $content;
+}
+
+/**
+ * The site's upload space, for the featured image picker to warn when it's
+ * nearly or completely used (#2361).
+ *
+ * Only for people who can manage events, the ones the picker is for.
+ *
+ * @return array{status: string, used?: string, allowed?: string, moreSpaceUrl?: string}
+ */
+function get_upload_space_config(): array {
+	if ( ! current_user_can_manage_events() ) {
+		return array( 'status' => 'ok' );
+	}
+
+	$space = Upload_Space\get_upload_space();
+
+	return array(
+		'status'       => $space['status'],
+		'used'         => Upload_Space\format_space( $space['used'] ),
+		'allowed'      => Upload_Space\format_space( $space['allowed'] ),
+		'moreSpaceUrl' => Upload_Space\MORE_SPACE_URL,
+	);
 }

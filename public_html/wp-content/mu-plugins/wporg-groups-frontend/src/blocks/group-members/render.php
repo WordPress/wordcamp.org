@@ -6,7 +6,37 @@
  */
 
 use WordCamp\Groups\Frontend\Members\Members_Controller;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_switch_own_role;
+use function WordCamp\Groups\Frontend\Member_Joined\describe_join;
+
+/*
+ * People join a group to hear about its events, not to be listed publicly,
+ * so logged-out visitors get a login prompt instead of the list. The REST
+ * routes draw the same line in `Members_Controller::read_permissions_check()`.
+ */
+if ( ! is_user_logged_in() ) :
+	?>
+	<div <?php echo get_block_wrapper_attributes( array( 'class' => 'wporg-group-members' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+		<h1 class="wporg-section-heading wporg-group-members__heading">
+			<?php esc_html_e( 'Members', 'wordcamporg' ); ?>
+		</h1>
+		<p class="wporg-group-members__login">
+			<?php
+			printf(
+				wp_kses(
+					/* translators: %s: login URL */
+					__( '<a href="%s">Log in</a> to see who is in this group.', 'wordcamporg' ),
+					array( 'a' => array( 'href' => array() ) )
+				),
+				esc_url( wp_login_url( get_permalink() ?: home_url() ) )
+			);
+			?>
+		</p>
+	</div>
+	<?php
+	return;
+endif;
 
 $role_labels = Members_Controller::ROLE_LABELS;
 
@@ -47,7 +77,7 @@ usort(
 			return $weight_a - $weight_b;
 		}
 
-		return strcasecmp( $a->display_name, $b->display_name );
+		return strcasecmp( Members_Controller::member_name( $a ), Members_Controller::member_name( $b ) );
 	}
 );
 
@@ -94,12 +124,16 @@ if ( $renders_role_switcher ) {
 
 $total_count = count( $users );
 
+// When and how each member joined is for the group's organizers, like the
+// rest of member management; members only see who's in the group.
+$shows_joined = current_user_can_manage_group_settings();
+
 $wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-group-members' )
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<h2 class="wporg-section-heading wporg-group-members__heading">
+	<h1 class="wporg-section-heading wporg-group-members__heading">
 		<?php
 		echo esc_html(
 			sprintf(
@@ -108,7 +142,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			)
 		);
 		?>
-	</h2>
+	</h1>
 
 	<?php if ( $renders_role_switcher ) : ?>
 		<div
@@ -116,9 +150,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wp-interactive="wporg/group-members"
 			data-wp-context="<?php echo esc_attr( wp_json_encode( $switcher_context ) ); ?>"
 		>
-			<h3 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
+			<h2 class="wporg-group-members__role-switcher-heading" id="wporg-role-switcher-heading">
 				<?php esc_html_e( 'Your role in this group', 'wordcamporg' ); ?>
-			</h3>
+			</h2>
 			<p class="wporg-group-members__role-switcher-help">
 				<?php esc_html_e( 'This is a testing group, so you can switch your own role to try out the organizer tools. Pick a role below, then switch back whenever you like.', 'wordcamporg' ); ?>
 			</p>
@@ -162,6 +196,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			$role_label = $role_labels[ $user_role ] ?? __( 'Member', 'wordcamporg' );
 			$bio        = wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" );
 			$profile    = sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename );
+			$joined     = $shows_joined ? describe_join( $user->ID ) : '';
 			?>
 			<a class="wporg-group-members__card" href="<?php echo esc_url( $profile ); ?>" target="_blank" rel="noopener">
 				<img
@@ -173,10 +208,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					loading="lazy"
 				/>
 				<div class="wporg-group-members__info">
-					<span class="wporg-group-members__name"><?php echo esc_html( $user->display_name ); ?></span>
+					<span class="wporg-group-members__name"><?php echo esc_html( Members_Controller::member_name( $user ) ); ?></span>
 					<span class="wporg-group-members__role wporg-group-members__role--<?php echo esc_attr( $user_role ); ?>">
 						<?php echo esc_html( $role_label ); ?>
 					</span>
+					<?php if ( $joined ) : ?>
+						<span class="wporg-group-members__joined"><?php echo esc_html( $joined ); ?></span>
+					<?php endif; ?>
 					<?php if ( $bio ) : ?>
 						<span class="wporg-group-members__bio"><?php echo esc_html( $bio ); ?></span>
 					<?php endif; ?>

@@ -206,7 +206,7 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 	$data = array();
 
 	$field_names = array(
-		'company_name', 'first_name', 'last_name', 'email_address', 'phone_number',
+		'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
 		'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 	);
 
@@ -247,8 +247,21 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 		$data[ $sponsor->ID ]['data_attributes']['amount']   = $meta_values['_wcb_sponsor_amount'][0] ?? '';
 		$data[ $sponsor->ID ]['data_attributes']['currency'] = $meta_values['_wcb_sponsor_currency'][0] ?? '';
 
-		$complete = required_fields_complete( $data[ $sponsor->ID ]['data_attributes'], $required_fields );
-		$data[ $sponsor->ID ]['data_attributes']['required-fields-complete'] = $complete ? 'true' : 'false';
+		/*
+		 * Every save of an invoice needs the contact fields. Sending it also requests vetting, which finds the
+		 * company by the sponsor's website and writes to an email address that must be valid, so the send form
+		 * checks those too.
+		 */
+		$attributes = $data[ $sponsor->ID ]['data_attributes'];
+		$complete   = required_fields_complete( $attributes, $required_fields );
+
+		// What the Request vetting button needs, checked the same way, when Sponsor Vetting is there to check it.
+		$sendable = $complete && ( function_exists( '\WordCamp\Sponsor_Vetting\get_contact_info_problem' )
+			? '' === \WordCamp\Sponsor_Vetting\get_contact_info_problem( $sponsor->ID )
+			: '' !== trim( $attributes['website'] ) && is_email( trim( $attributes['email-address'] ) ) );
+
+		$data[ $sponsor->ID ]['data_attributes']['contact-fields-complete']  = $complete ? 'true' : 'false';
+		$data[ $sponsor->ID ]['data_attributes']['required-fields-complete'] = $sendable ? 'true' : 'false';
 	}
 
 	return $data;
@@ -413,9 +426,20 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 	// The row still holds the status this save is about to overwrite. See `remember_status_before_save()`.
 	\WordCamp_Budgets::remember_status_before_save( $post_data_raw['ID'] ?? null );
 
-	$sponsor                 = prepare_sponsor_data( $post_data_raw['_wcbsi_sponsor_id'] ?? null );
-	$sponsor                 = array_pop( $sponsor );
-	$sponsor_fields_complete = 'true' === $sponsor['data_attributes']['required-fields-complete'];
+	$sponsor = prepare_sponsor_data( $post_data_raw['_wcbsi_sponsor_id'] ?? null );
+	$sponsor = array_pop( $sponsor );
+
+	$draft_statuses = array( 'auto-draft', 'draft' );
+	$stored_status  = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce protection is granted before this hook is called.
+	$sending    = in_array( $post_data['post_status'], $draft_statuses, true ) && isset( $_POST['send-invoice'] );
+	$submitting = $sending || ( 'wcbsi_submitted' === $post_data['post_status'] && in_array( $stored_status ?: 'auto-draft', $draft_statuses, true ) );
+
+	/*
+	 * Submitting needs what the send form checks, since it requests vetting. Saves after that, like approving or
+	 * paying, only need the contact fields, so invoices sent before the website was required can still move along.
+	 */
+	$sponsor_fields_complete = 'true' === $sponsor['data_attributes'][ $submitting ? 'required-fields-complete' : 'contact-fields-complete' ];
 
 	$required_invoice_fields = array(
 		'_wcbsi_sponsor_id', '_wcbsi_description', '_wcbsi_currency', '_wcbsi_amount',
@@ -430,11 +454,7 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 		// todo display message to user letting them know why this is happening.
 		// todo this should run after save, b/c sanitization/validation could empty out some fields.
 
-	} elseif (
-		in_array( $post_data['post_status'], array( 'auto-draft', 'draft' ), true ) &&
-		// phpcs:ignore WordPress.Security.NonceVerification -- nonce protection is granted before this hook is called.
-		isset( $_POST['send-invoice'] )
-	) {
+	} elseif ( $sending ) {
 		/*
 		 * Only set to submitted if the previous status was a draft, because a network admin can make changes
 		 * after it's been submitted, and we don't want to revert the post status in those cases.
@@ -452,11 +472,9 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 	 * left as-is.
 	 */
 	if ( ! current_user_can( 'manage_network' ) ) {
-		$requester_editable_statuses = array( 'auto-draft', 'draft' );
-		$requester_statuses          = array( 'auto-draft', 'draft', 'wcbsi_submitted' );
-		$stored_status               = isset( $post_data_raw['ID'] ) ? get_post_status( (int) $post_data_raw['ID'] ) : false;
+		$requester_statuses = array( 'auto-draft', 'draft', 'wcbsi_submitted' );
 
-		if ( in_array( $stored_status, $requester_editable_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
+		if ( in_array( $stored_status, $draft_statuses, true ) && ! in_array( $post_data['post_status'], $requester_statuses, true ) ) {
 			$post_data['post_status'] = 'draft';
 		}
 	}

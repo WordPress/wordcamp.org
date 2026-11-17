@@ -16,6 +16,12 @@ class SSLCommerz extends Base_Gateway {
 	public $name                 = 'SSLCommerz';
 	public $description          = 'SSLCommerz payment gateway for Bangladesh.';
 	public $supported_currencies = [ 'BDT' ];
+	public $supported_features   = [
+		'refund-single'  => true,
+		'refund-all'     => true,
+		'refund-partial' => false,
+		'payment-lookup' => true,
+	];
 	public $options;
 
 	/**
@@ -48,9 +54,6 @@ class SSLCommerz extends Base_Gateway {
 			add_filter( 'camptix_form_register_complete_attendee_object', [ $this, 'add_attendee_info' ], 10, 3 );
 			add_action( 'template_redirect', [ $this, 'template_redirect' ], 6 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 			add_action( 'template_redirect', [ $this, 'early_template_redirect' ], 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
-
-			// Catch any attendee timeouts that actually paid.
-			add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 		}
 	}
 
@@ -276,9 +279,10 @@ class SSLCommerz extends Base_Gateway {
 				return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 			}
 
-			// Store the sessionkey for future reference (timeout).
+			// Store the sessionkey on every attendee of the order, so the timeout sweep can look
+			// the payment up from whichever attendee it reaches first.
 			if ( ! empty( $response_data['sessionkey'] ) ) {
-				update_post_meta( $attendee->ID, '_sslcommerz_session_key', $response_data['sessionkey'] );
+				$camptix->update_payment_token_meta( $payment_token, '_sslcommerz_session_key', $response_data['sessionkey'] );
 			}
 
 			wp_redirect( $gateway_page_url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- Scheme and exact host are validated above.
@@ -731,23 +735,26 @@ class SSLCommerz extends Base_Gateway {
 	}
 
 	/**
-	 * Prevent a paid order from being marked as timeout.
+	 * Before the sweep times a draft order out, ask SSLCommerz whether it was paid.
 	 *
-	 * @param int $attendee_id The attendee ID that is about to be timed out.
-	 * @return void
+	 * @param string $payment_token CampTix payment token of a draft order.
+	 *
+	 * @return array See CampTix_Payment_Method::reconcile_payment().
 	 */
-	public function pre_attendee_timeout( $attendee_id ) {
+	public function reconcile_payment( $payment_token ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
-			return;
+		$session_key = '';
+		$attendee_id = 0;
+		foreach ( $camptix->get_draft_attendee_ids_from_payment_token( $payment_token ) as $attendee_id ) {
+			$session_key = get_post_meta( $attendee_id, '_sslcommerz_session_key', true );
+			if ( $session_key ) {
+				break;
+			}
 		}
-
-		$session_key   = get_post_meta( $attendee_id, '_sslcommerz_session_key', true );
-		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $session_key || ! $payment_token ) {
-			return;
+		if ( ! $session_key ) {
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'no SSLCommerz session recorded' );
 		}
 
 		$response = $this->api(
@@ -763,24 +770,25 @@ class SSLCommerz extends Base_Gateway {
 			$attendee_id
 		);
 		if ( ! $response ) {
-			return;
+			// api() has logged the reason, without secrets.
+			return $this->lookup_result( self::LOOKUP_UNREACHABLE, 'could not get an answer from SSLCommerz' );
 		}
 
 		if ( ! in_array( $response->status ?? '', [ 'VALID', 'VALIDATED' ], true ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'SSLCommerz reports no valid payment' );
 		}
 
-		// Bind the validator response to this attendee's payment_token. The session_key was
-		// stored against this attendee, so the response should be for the same transaction —
+		// Bind the validator response to this order's payment_token. The session_key was
+		// stored against this order, so the response should be for the same transaction —
 		// but cross-checking tran_id makes that an assertion rather than an assumption.
 		if ( ! hash_equals( (string) $payment_token, (string) ( $response->tran_id ?? '' ) ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'the SSLCommerz payment is for a different order' );
 		}
 
 		// If the order details don't match, bail out.
 		$order = $this->get_order( $payment_token );
 		if ( ! $this->sslcommerz_response_matches_order( $response, $order ) ) {
-			return;
+			return $this->lookup_result( self::LOOKUP_EXPIRED, 'the SSLCommerz payment does not match the order' );
 		}
 
 		$camptix->log(
@@ -800,8 +808,127 @@ class SSLCommerz extends Base_Gateway {
 			$payment_data,
 			false /* non-interactive */
 		);
+
+		return $this->lookup_result( self::LOOKUP_SETTLED, 'SSLCommerz reports the order paid' );
 	}
 
+
+	/**
+	 * Refund an order in full, and record the result.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants.
+	 */
+	public function payment_refund( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = $this->send_refund_request( $payment_token );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED !== $result['status'] ) {
+			$order = $this->get_order( $payment_token );
+			$camptix->log( 'SSLCommerz refund failed', $order['attendee_id'] ?? null, $result, 'refund' );
+		}
+
+		return $camptix->payment_result( $payment_token, $result['status'], $result );
+	}
+
+	/**
+	 * Ask SSLCommerz to refund an order's payment in full.
+	 *
+	 * SSLCommerz refunds by the bank transaction id, which is recorded in the order's
+	 * transaction details when the payment is validated. It answers `success` when the
+	 * refund was initiated and `processing` when one already was; either way the money is
+	 * on its way back. The refund's own id is derived from the order, so asking again (a
+	 * retry, two requests racing) names the same refund rather than a second one.
+	 *
+	 * The refund API only answers servers whose public IP is registered with SSLCommerz.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return array
+	 */
+	public function send_refund_request( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$result = [
+			'token'                      => $payment_token,
+			'status'                     => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
+			'refund_transaction_id'      => null,
+			'refund_transaction_details' => [],
+		];
+
+		$order        = $this->get_order( $payment_token );
+		$details      = $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_details' );
+		$bank_tran_id = is_array( $details ) ? (string) ( $details['bank_tran_id'] ?? '' ) : '';
+		$amount       = is_array( $details ) && is_numeric( $details['amount'] ?? null ) ? (float) $details['amount'] : (float) ( $order['total'] ?? 0 );
+
+		if ( ! $order || '' === $bank_tran_id || $amount <= 0 ) {
+			$camptix->log( 'Could not refund: the order has no SSLCommerz bank transaction id or amount.', $order['attendee_id'] ?? null, compact( 'payment_token' ), 'refund' );
+
+			return $result;
+		}
+
+		// Null without a POST body, e.g. when the refund-all cron sends it.
+		$reason = (string) filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW );
+
+		// Required by SSLCommerz since February 2025, at most 30 characters, and unique per refund.
+		$refund_trans_id = substr( (string) $payment_token, 0, 30 );
+
+		$response = $this->api(
+			'GET',
+			'/validator/api/merchantTransIDvalidationAPI.php',
+			[
+				'bank_tran_id'    => $bank_tran_id,
+				'refund_trans_id' => $refund_trans_id,
+				'refund_amount'   => number_format( $amount, 2, '.', '' ),
+				'refund_remarks'  => CampTix_Plugin::substr_bytes( $reason ? $reason : 'Refund requested through CampTix.', 0, 255 ),
+				'store_id'        => $this->options['merchant_id'],
+				'store_passwd'    => $this->options['store_password'],
+				'v'               => 1,
+				'format'          => 'json',
+			],
+			[],
+			$order['attendee_id']
+		);
+
+		if ( ! $response ) {
+			// api() has logged the reason, without secrets.
+			$result['refund_transaction_details'] = [ 'error' => 'Could not get an answer from SSLCommerz.' ];
+
+			return $result;
+		}
+
+		$status        = strtolower( (string) ( $response->status ?? '' ) );
+		$refund_ref_id = (string) ( $response->refund_ref_id ?? '' );
+		$answer        = [
+			'APIConnect'    => $response->APIConnect ?? null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- SSLCommerz's field name.
+			'status'        => $status,
+			'refund_ref_id' => $refund_ref_id,
+			'errorReason'   => $response->errorReason ?? null, // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- SSLCommerz's field name.
+		];
+
+		if ( ! in_array( $status, [ 'success', 'processing' ], true ) ) {
+			$result['refund_transaction_details'] = $answer;
+
+			return $result;
+		}
+
+		$result['status']                     = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+		$result['transaction_id']             = $payment_token;
+		$result['refund_transaction_id']      = $refund_ref_id;
+		$result['refund_transaction_details'] = [
+			'raw' => [
+				'refund_transaction_id' => $refund_ref_id,
+				'refund_trans_id'       => $refund_trans_id,
+				'refund'                => $answer,
+			],
+		];
+
+		return $result;
+	}
 
 	/**
 	 * Make an API call
@@ -828,7 +955,8 @@ class SSLCommerz extends Base_Gateway {
 		if ( 'POST' === strtoupper( $method ) ) {
 			$request_args['body'] = $args;
 		} elseif ( ! empty( $args ) ) {
-			$full_url = add_query_arg( $args, $full_url );
+			// add_query_arg() doesn't encode values, and a refund remark is the buyer's own text.
+			$full_url = add_query_arg( rawurlencode_deep( $args ), $full_url );
 		}
 
 		$response = wp_remote_request( $full_url, $request_args );

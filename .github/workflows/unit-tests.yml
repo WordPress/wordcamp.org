@@ -6,7 +6,7 @@ on:
     paths:
     - public_html/**
     - .github/workflows/**
-    - phpunit.*
+    - phpunit*
     - composer.json
     - composer-dev.json
   push:
@@ -14,7 +14,7 @@ on:
     paths:
     - public_html/**
     - .github/workflows/**
-    - phpunit.*
+    - phpunit*
     - composer.json
     - composer-dev.json
 
@@ -31,10 +31,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 20.x
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version-file: .nvmrc
         cache: npm
 
     - name: Cache node_modules
@@ -44,7 +44,7 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
 
     - name: Install dependencies
       # We don't need to build, since jest can interpret the source files.
@@ -91,11 +91,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install SVN
-      run: |
-        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
-        sudo apt-get update && sudo apt-get install -y subversion
-
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
       with:
@@ -134,7 +129,7 @@ jobs:
       # groups-gatherpress-compat-test skill). GatherPress is gitignored/
       # third-party; the WordCamp Groups PHPUnit suite needs it present.
       run: |
-        curl -sL "https://github.com/GatherPress/gatherpress/releases/download/0.36.1/gatherpress.0.36.1.zip" -o /tmp/gatherpress.zip
+        curl -sL "https://github.com/GatherPress/gatherpress/releases/download/0.36.2/gatherpress.0.36.2.zip" -o /tmp/gatherpress.zip
         unzip -q -o /tmp/gatherpress.zip -d public_html/wp-content/plugins/
         rm -f /tmp/gatherpress.zip
 
@@ -146,13 +141,13 @@ jobs:
       uses: actions/cache@v4
       with:
         path: public_html/wp-content/mu-plugins/wporg-groups-frontend/build
-        key: groups-blocks-${{ runner.os }}-node20-${{ hashFiles('package-lock.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
+        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
 
-    - name: Use Node.js 20.x
+    - name: Set up Node.js
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version-file: .nvmrc
         cache: npm
 
     - name: Cache node_modules
@@ -163,7 +158,7 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
 
     - name: Build the groups frontend blocks
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'

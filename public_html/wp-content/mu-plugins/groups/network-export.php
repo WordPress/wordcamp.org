@@ -4,7 +4,7 @@
  *
  * The network-wide half of the export feature (#1780): the per-group export in
  * `wporg-groups-frontend/inc/export.php` gives one group's organisers their
- * own full history; this gives Program Managers (network admins) the whole
+ * own full history; this gives Program Managers and Program Supporters the whole
  * network's picture in one file.
  *
  * Deliberately aggregate-only: per event, the RSVP counts by status — never
@@ -41,11 +41,12 @@ use WP_Error;
 defined( 'WPINC' ) || die();
 
 /**
- * Capability required to generate and download the export. `manage_network`
- * is what makes someone a Program Manager on this network, and this tool
- * reads every group at once.
+ * Capability required to generate and download the export: the Groups tools
+ * capability, held by Program Supporters and by everyone with
+ * `manage_network`. See `capabilities.php`. The export is aggregate-only, so
+ * this doesn't hand out anyone's identity.
  */
-const CAPABILITY = 'manage_network';
+const CAPABILITY = \WordCamp\Groups\Capabilities\CAPABILITY;
 
 /** Network Admin page slug. */
 const MENU_SLUG = 'wporg-groups-export';
@@ -1048,6 +1049,8 @@ function handle_start_export(): void {
 	if ( 'queued' !== $queued['status'] ) {
 		redirect_with_notice( 'queue-locked' );
 	}
+
+	\WordCamp\Groups\Action_Log\record( 'export_started', 0, array( 'group_count' => count( $site_ids ) ) );
 
 	redirect_with_notice( 'queued', count( $site_ids ) );
 }

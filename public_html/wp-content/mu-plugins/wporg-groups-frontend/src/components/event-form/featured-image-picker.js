@@ -8,14 +8,14 @@
 /**
  * WordPress dependencies.
  */
-import { createElement as h } from '@wordpress/element';
+import { createInterpolateElement, createElement as h } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies.
  */
-import { getFeaturedImageHelp } from './featured-image-help';
+import { getFeaturedImageHelp, getUploadSpaceNotice } from './featured-image-help';
 
 /**
  * Featured image picker — opens the standard `wp.media` library frame
@@ -50,6 +50,10 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 	};
 
 	const helpId = `${ classPrefix }__featured-help`;
+	const spaceId = `${ classPrefix }__featured-space`;
+	const uploadSpace = window.wporgGroupsEventModal?.uploadSpace;
+	const spaceNotice = getUploadSpaceNotice( uploadSpace );
+	const describedBy = spaceNotice ? `${ helpId } ${ spaceId }` : helpId;
 
 	return h(
 		'div',
@@ -84,14 +88,22 @@ export default function FeaturedImagePicker( { imageId, imageUrl, onChange, clas
 				)
 				: h(
 					Button,
-					{ variant: 'secondary', onClick: openMediaFrame, 'aria-describedby': helpId },
+					{ variant: 'secondary', onClick: openMediaFrame, 'aria-describedby': describedBy },
 					__( 'Choose featured image', 'wordcamporg' )
 				),
 			h(
 				'p',
 				{ id: helpId, className: helpId },
 				getFeaturedImageHelp( window.wporgGroupsEventModal?.maxUploadSize || '' )
-			)
+			),
+			spaceNotice &&
+				h(
+					'p',
+					{ id: spaceId, className: spaceId },
+					createInterpolateElement( spaceNotice, {
+						a: h( 'a', { href: uploadSpace.moreSpaceUrl, target: '_blank', rel: 'noreferrer' } ),
+					} )
+				)
 		)
 	);
 }

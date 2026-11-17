@@ -73,6 +73,56 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
+ * Keep Jetpack's sharing styles off the members page, which never shows the buttons.
+ *
+ * @param bool $enqueue
+ * @return bool
+ */
+function skip_sharing_assets_on_members_page( $enqueue ) {
+	return is_page( 'members' ) ? false : $enqueue;
+}
+add_filter( 'sharing_enqueue_scripts', __NAMESPACE__ . '\skip_sharing_assets_on_members_page' );
+
+/**
+ * The current page's description: a public post's own words, the group's tagline otherwise.
+ */
+function get_meta_description(): string {
+	$text = '';
+	$post = is_singular() && ! is_front_page() ? get_queried_object() : null;
+
+	if (
+		$post instanceof \WP_Post &&
+		! post_password_required( $post ) &&
+		function_exists( '\WordCamp\Groups\Events_Feed\get_description' )
+	) {
+		$text = \WordCamp\Groups\Events_Feed\get_description( $post );
+	}
+
+	if ( '' === $text ) {
+		$text = get_bloginfo( 'description', 'display' );
+	}
+
+	// Escaped first, or trimming strips a tag written out as text: "the <button> element".
+	return wp_trim_words( esc_html( $text ), 30, '&hellip;' );
+}
+
+/**
+ * Print the page's meta description.
+ */
+function print_meta_description(): void {
+	if ( is_404() ) {
+		return;
+	}
+
+	$description = get_meta_description();
+
+	if ( '' !== $description ) {
+		printf( '<meta name="description" content="%s" />' . "\n", esc_attr( $description ) );
+	}
+}
+add_action( 'wp_head', __NAMESPACE__ . '\print_meta_description', 1 );
+
+/**
  * Give the post editor canvas a side gutter. See #1967.
  *
  * Not `styles.spacing.padding` in `theme.json`: root padding also hits
@@ -104,14 +154,16 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
 /**
  * Adjust the featured image inside event card grids.
  *
- * Two changes, both scoped so the single-event hero is left alone. The guard
- * tests `is_singular( 'gatherpress_event' )` rather than a bare
- * `is_singular()`: the group front page is a static Page, so it is singular
- * too, and the broader test excluded the very cards this is meant to fix.
+ * Two changes, applied to every event card grid: the archive, the front page
+ * and an event page's "More events from this group". On an event page only
+ * the event's own image, the page's hero, is left alone. It isn't a card,
+ * has no link, and shouldn't gain a placeholder when the event has no image.
  *
- *   - Drop the image link from the keyboard tab order. The title link already
- *     provides keyboard access to the event, so a second focusable link on
- *     the image is redundant and slows tab navigation.
+ *   - Take the image link out of the tab order and hide it from screen
+ *     readers. It goes to the same place as the title link, and its image's
+ *     alt text is the event title, so without this a screen reader announced
+ *     every event twice and keyboard users tabbed through each card twice.
+ *     The title link keeps the card reachable.
  *   - Substitute a placeholder when the event has no thumbnail. Core renders
  *     the block as an empty string in that case, so one image-less event in a
  *     row of three used to start its date where its neighbours started their
@@ -128,13 +180,18 @@ add_filter( 'block_editor_settings_all', __NAMESPACE__ . '\add_post_editor_canva
  */
 function filter_event_card_featured_image( string $content, array $block ): string {
 	$post_type = $block['context']['postType'] ?? get_post_type();
+	$post_id   = (int) ( $block['context']['postId'] ?? get_the_ID() );
 
-	if ( 'gatherpress_event' !== $post_type || is_singular( 'gatherpress_event' ) ) {
+	if ( 'gatherpress_event' !== $post_type ) {
+		return $content;
+	}
+
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() === $post_id ) {
 		return $content;
 	}
 
 	if ( '' === trim( $content ) ) {
-		$permalink = get_permalink( $block['context']['postId'] ?? get_the_ID() );
+		$permalink = get_permalink( $post_id );
 
 		return sprintf(
 			'<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true">%s</div>',
@@ -142,9 +199,93 @@ function filter_event_card_featured_image( string $content, array $block ): stri
 		);
 	}
 
-	return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+	$processor = new \WP_HTML_Tag_Processor( $content );
+
+	if ( $processor->next_tag( 'a' ) ) {
+		$processor->set_attribute( 'tabindex', '-1' );
+		$processor->set_attribute( 'aria-hidden', 'true' );
+	}
+
+	return $processor->get_updated_html();
 }
 add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_event_card_featured_image', 10, 2 );
+
+/**
+ * Tell the browser how wide the events archive's card images really are.
+ *
+ * Core's default `sizes` says the image fills the viewport. Core only makes up
+ * for that with `auto` on lazy images, and the archive's first cards aren't
+ * lazy, so desktop browsers would download a near full-size file for each one.
+ * Core fires these hooks around each featured image, so the filter only applies
+ * to event card images on the archive. The front page's cards are narrower.
+ *
+ * @param int $post_id The post whose featured image is being rendered.
+ */
+function start_archive_event_card_image( $post_id ): void {
+	if ( is_post_type_archive( 'gatherpress_event' ) && 'gatherpress_event' === get_post_type( $post_id ) ) {
+		add_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\archive_event_card_image_sizes' );
+	}
+}
+add_action( 'begin_fetch_post_thumbnail_html', __NAMESPACE__ . '\start_archive_event_card_image' );
+
+/**
+ * Remove the filter `start_archive_event_card_image()` added.
+ */
+function end_archive_event_card_image(): void {
+	remove_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\archive_event_card_image_sizes' );
+}
+add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_archive_event_card_image' );
+
+/**
+ * The archive grid's card width, for an image's `sizes`.
+ *
+ * One column up to 480px and two up to 781px (`responsive.css`), three above
+ * that, never wider than 414px. Rounded up slightly so the browser never picks
+ * a smaller image. Core still adds `auto` in front of this on lazy images.
+ *
+ * @return string The card image's `sizes`.
+ */
+function archive_event_card_image_sizes(): string {
+	return '(max-width: 480px) 90vw, (max-width: 781px) 46vw, (max-width: 1376px) 30vw, 414px';
+}
+
+/**
+ * `sizes` for each hero image, keyed by its block's class.
+ *
+ * Measured from the templates' layouts, so they change when a hero's layout does.
+ */
+const HERO_IMAGE_SIZES = array(
+	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
+	'groups-site-home-hero-image'  => '(max-width: 781px) calc(100vw - 140px), (max-width: 1428px) 35vw, 500px',
+);
+
+/**
+ * Give a hero image its real `sizes`. Core's default says it fills the viewport.
+ *
+ * Matched by the block's class, because the event flyer draws the same image
+ * at another size.
+ *
+ * @param string $sizes
+ * @return string
+ */
+function hero_image_sizes( $sizes ) {
+	$block = \WP_Block_Supports::$block_to_render;
+
+	if ( 'core/post-featured-image' !== ( $block['blockName'] ?? '' ) ) {
+		return $sizes;
+	}
+
+	$classes = explode( ' ', $block['attrs']['className'] ?? '' );
+
+	foreach ( HERO_IMAGE_SIZES as $class => $hero_sizes ) {
+		if ( in_array( $class, $classes, true ) ) {
+			return $hero_sizes;
+		}
+	}
+
+	return $sizes;
+}
+add_filter( 'wp_calculate_image_sizes', __NAMESPACE__ . '\hero_image_sizes' );
 
 /**
  * Prime the featured-image cache for the theme's event card grids.
@@ -156,14 +297,13 @@ add_filter( 'render_block_core/post-featured-image', __NAMESPACE__ . '\filter_ev
  * through `wp:pattern`, which core only expands at render time, so that
  * scan sees a lone `core/pattern` and skips the priming. Every card then
  * resolves its own thumbnail: one `get_post()` for the attachment plus one
- * `wp_get_attachment_metadata()` lookup, up to twelve cards per archive
- * page.
+ * `wp_get_attachment_metadata()` lookup per card.
  *
  * `loop_start` fires from the first `the_post()` of the loop, before any
  * card renders, which is exactly where core would have primed. Scoped to
- * secondary `gatherpress_event` queries: the main query is primed by
- * whichever template renders it, and no other loop on these sites draws
- * card thumbnails.
+ * secondary `gatherpress_event` queries: the events archive renders its grid
+ * from the main query, which `get_the_post_thumbnail()` primes on its own
+ * while in the loop, and no other loop on these sites draws card thumbnails.
  *
  * @param \WP_Query $query The query starting its loop.
  */
@@ -213,6 +353,53 @@ function exclude_current_event_from_query( array $query_vars, \WP_Block $block )
 	return $query_vars;
 }
 add_filter( 'query_loop_block_query_vars', __NAMESPACE__ . '\exclude_current_event_from_query', 10, 2 );
+
+/**
+ * Lazy-load other events' images on an event page.
+ *
+ * A block theme renders the whole single template inside the main query's
+ * loop, so core counts every image on the page towards the first few it
+ * loads right away (`wp_omit_loading_attr_threshold()`, 3 by default). The
+ * event's own image is the first. The next two were the first cards of the
+ * "More events from this group" grid at the bottom of the page, which then
+ * downloaded alongside the event's image, the page's Largest Contentful
+ * Paint, and slowed it down.
+ *
+ * Any featured image on an event page that isn't the event's own is now
+ * lazy. Core fires `begin_fetch_post_thumbnail_html` and
+ * `end_fetch_post_thumbnail_html` around each featured image, so the filter
+ * applies to that one image only. Core still adds `auto` to its `sizes`,
+ * because the image is lazy by the time `sizes` is built.
+ *
+ * @param int $post_id The post whose featured image is about to render.
+ */
+function start_other_event_thumbnail( $post_id ): void {
+	if ( is_singular( 'gatherpress_event' ) && get_queried_object_id() !== (int) $post_id ) {
+		add_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+	}
+}
+add_action( 'begin_fetch_post_thumbnail_html', __NAMESPACE__ . '\start_other_event_thumbnail' );
+
+/**
+ * Remove the filter `start_other_event_thumbnail()` added.
+ */
+function end_other_event_thumbnail(): void {
+	remove_filter( 'wp_get_loading_optimization_attributes', __NAMESPACE__ . '\lazy_load_other_event_thumbnail' );
+}
+add_action( 'end_fetch_post_thumbnail_html', __NAMESPACE__ . '\end_other_event_thumbnail' );
+
+/**
+ * Make an image lazy and drop any high fetch priority core gave it.
+ *
+ * @param array $loading_attrs The loading attributes core chose.
+ * @return array The loading attributes to use.
+ */
+function lazy_load_other_event_thumbnail( $loading_attrs ): array {
+	unset( $loading_attrs['fetchpriority'] );
+	$loading_attrs['loading'] = 'lazy';
+
+	return $loading_attrs;
+}
 
 /**
  * Drop the "More events from this group" section when it has nothing to show.
@@ -334,6 +521,30 @@ function author_profile_link( $link, $author_id, $author_nicename ) {
 add_filter( 'author_link', __NAMESPACE__ . '\author_profile_link', 10, 3 );
 
 /**
+ * Answer author archives with a 404.
+ *
+ * Nothing links to them (see `author_profile_link()`), and Core keeps them
+ * alive for any member of the site, even one with no posts. So
+ * `?author=<id>` was a way to walk user IDs and list a group's members,
+ * names included, without the login the Members page asks for.
+ *
+ * Runs before `redirect_canonical()`, so it can't redirect `?author=<id>`
+ * to a slug first.
+ */
+function disable_author_archives() {
+	if ( ! is_author() ) {
+		return;
+	}
+
+	global $wp_query;
+
+	$wp_query->set_404();
+	status_header( 404 );
+	nocache_headers();
+}
+add_action( 'template_redirect', __NAMESPACE__ . '\disable_author_archives', 0 );
+
+/**
  * Register a block pattern category for the theme.
  */
 function register_pattern_category() {
@@ -407,6 +618,18 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
  */
 function add_local_navigation_menus( $menus ) {
 	global $wp;
+
+	// The list of groups isn't a group: it has no events, members or login to offer.
+	if ( is_groups_directory() ) {
+		$menus['local-navigation'] = array(
+			array(
+				'label' => __( 'Upcoming events', 'wordcamporg' ),
+				'url'   => \WordCamp\Groups\Frontend\Groups_Directory\get_events_site_url( '/upcoming-events/' ),
+			),
+		);
+
+		return $menus;
+	}
 
 	// Return the visitor to the page they logged in or out from.
 	// `$wp->request` is the current path relative to the site's home, so
@@ -487,6 +710,16 @@ add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_local_navigati
  * @return array
  */
 function filter_site_breadcrumbs( $breadcrumbs ) {
+	// The network root is a placeholder whose own name isn't meant to be read.
+	if ( is_groups_directory() ) {
+		return array(
+			array(
+				'url'   => false,
+				'title' => __( 'WordPress Groups', 'wordcamporg' ),
+			),
+		);
+	}
+
 	if ( is_front_page() ) {
 		return array(
 			array(
@@ -551,6 +784,33 @@ function single_template_hierarchy( $templates ) {
 	return $templates;
 }
 add_filter( 'single_template_hierarchy', __NAMESPACE__ . '\single_template_hierarchy' );
+
+/**
+ * Whether this request is for the list of every group, at `/group/`.
+ */
+function is_groups_directory(): bool {
+	return function_exists( '\WordCamp\Groups\Frontend\Groups_Directory\is_directory_request' )
+		&& \WordCamp\Groups\Frontend\Groups_Directory\is_directory_request();
+}
+
+/**
+ * Render the list of groups with its own template.
+ *
+ * Hooked to three hierarchies: the root site's missing settings decide which one WordPress uses.
+ *
+ * @param string[] $templates
+ * @return string[]
+ */
+function directory_template_hierarchy( $templates ) {
+	if ( is_groups_directory() ) {
+		array_unshift( $templates, 'groups-directory' );
+	}
+
+	return $templates;
+}
+add_filter( 'frontpage_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'home_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
+add_filter( 'index_template_hierarchy', __NAMESPACE__ . '\directory_template_hierarchy' );
 
 
 /**
@@ -828,6 +1088,39 @@ function label_the_online_event_link( $block_content, $parsed_block ) {
 	return $tags->get_updated_html();
 }
 add_filter( 'render_block_gatherpress/online-event-link', __NAMESPACE__ . '\label_the_online_event_link', 10, 2 );
+
+/**
+ * Hold a venue's interactive map back until it scrolls into view.
+ *
+ * Points the block's `data-wp-init` at `assets/js/venue-map.js`. A static map
+ * has none and is left alone.
+ *
+ * @param string $block_content
+ * @return string
+ */
+function defer_venue_map( $block_content ) {
+	$tags = new \WP_HTML_Tag_Processor( (string) $block_content );
+
+	if ( ! $tags->next_tag() || 'callbacks.init' !== $tags->get_attribute( 'data-wp-init' ) ) {
+		return $block_content;
+	}
+
+	wp_enqueue_script_module(
+		'groups-site-venue-map',
+		get_theme_file_uri( 'assets/js/venue-map.js' ),
+		array( '@wordpress/interactivity' ),
+		filemtime( get_theme_file_path( 'assets/js/venue-map.js' ) ),
+		array(
+			'in_footer'     => true,
+			'fetchpriority' => 'low',
+		)
+	);
+
+	$tags->set_attribute( 'data-wp-init', 'groups-site/venue-map::callbacks.init' );
+
+	return $tags->get_updated_html();
+}
+add_filter( 'render_block_gatherpress/venue-map', __NAMESPACE__ . '\defer_venue_map' );
 
 /**
  * Determine the event format: 'hybrid', 'online', or 'in-person'.

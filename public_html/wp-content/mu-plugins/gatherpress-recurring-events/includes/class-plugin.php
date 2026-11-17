@@ -160,6 +160,9 @@ final class Plugin {
 		add_filter( 'query_vars', array( Context::class, 'query_vars' ) );
 		add_action( 'template_redirect', array( Context::class, 'resolve' ), 1 );
 		add_action( 'template_redirect', array( $this, 'series_ical' ), 5 );
+		add_action( 'template_redirect', array( Ical::class, 'intercept_feed' ), 20 );
+		add_action( 'gpre_occurrence_status_changed', array( Ical::class, 'mark_changed' ), 10, 0 );
+		add_action( 'gpre_series_ended', array( Ical::class, 'mark_changed' ), 10, 0 );
 		add_filter( 'get_post_metadata', array( Context::class, 'metadata' ), 10, 4 );
 		add_filter( 'post_type_link', array( Context::class, 'post_link' ), 10, 2 );
 		add_filter( 'redirect_canonical', array( Context::class, 'canonical_redirect' ) );
@@ -184,6 +187,7 @@ final class Plugin {
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
 		add_filter( 'rest_request_before_callbacks', array( Rest_API::class, 'upstream_context' ), 10, 3 );
+		add_filter( 'rest_prepare_gatherpress_event', array( Rest_API::class, 'hide_protected_schedule' ), 10, 3 );
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
@@ -283,28 +287,37 @@ final class Plugin {
 		}
 	}
 
-	/** Enqueues occurrence selector assets. */
+	/**
+	 * Enqueues occurrence selector assets.
+	 *
+	 * Only on a page with an active occurrence, which is a date of a series
+	 * viewed on its own page. Everything these assets act on exists only
+	 * there: the stylesheet styles the date selector and the "series has
+	 * ended" notice, both printed by `Context::selector()`, and the script
+	 * drives that selector and tags GatherPress's RSVP requests with the
+	 * date. Every other page was loading a render-blocking stylesheet and a
+	 * script for nothing. `wp_enqueue_scripts` runs after
+	 * `template_redirect`, so the context is already resolved here.
+	 */
 	public function assets(): void {
+		if ( ! Context::get() ) {
+			return;
+		}
+
 		$style_path  = DIR . '/assets/style.css';
 		$script_path = DIR . '/assets/view.js';
 
 		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), (string) filemtime( $style_path ) );
 		wp_enqueue_script( 'gpre', plugin_dir_url( FILE ) . 'assets/view.js', array(), (string) filemtime( $script_path ), true );
 
-		// Only on a date's own page, and only for a series that has one: the
-		// script below uses this to tell GatherPress's RSVP requests which
-		// date they are about. `wp_enqueue_scripts` runs after
-		// `template_redirect`, so the context is already resolved here.
-		if ( Context::get() ) {
-			wp_localize_script(
-				'gpre',
-				'gpreOccurrence',
-				array(
-					'recurrenceId' => Context::recurrence_id(),
-					'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
-				)
-			);
-		}
+		wp_localize_script(
+			'gpre',
+			'gpreOccurrence',
+			array(
+				'recurrenceId' => Context::recurrence_id(),
+				'eventApi'     => rest_url( Rest_API::upstream_namespace() . '/event/' ),
+			)
+		);
 	}
 
 	/**
@@ -407,9 +420,7 @@ final class Plugin {
 
 		Context::set( null );
 		$event = ( new Calendar( $post_id ) )->get_ical_event_string();
-		$rrule = (string) get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true );
-		$event = str_replace( 'END:VEVENT', 'RRULE:' . $rrule . "\r\nEND:VEVENT", $event );
 
-		return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n";
+		return Ical::recur( "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WordPress.org//GatherPress Recurring Events//EN\r\n" . $event . "\r\nEND:VCALENDAR\r\n" );
 	}
 }

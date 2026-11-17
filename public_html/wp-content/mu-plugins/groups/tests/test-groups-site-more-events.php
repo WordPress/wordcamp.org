@@ -188,6 +188,29 @@ class Test_Groups_Site_More_Events extends Groups_TestCase {
 	}
 
 	/**
+	 * The events archive's filters read the URL, but they belong to the
+	 * archive's main query alone. This grid keeps listing upcoming events
+	 * whatever view state a link carries in.
+	 */
+	public function test_section_ignores_the_archive_filters_in_the_url() {
+		$current = $this->create_upcoming_event( 'The Event Being Viewed', 3 );
+		$this->create_upcoming_event( 'Another Upcoming Event', 10 );
+
+		$this->view_event( $current );
+
+		$_GET = array(
+			'event_time'   => 'past',
+			'event_format' => 'online',
+		);
+
+		$html = $this->render_section();
+
+		$_GET = array();
+
+		$this->assertStringContainsString( 'Another Upcoming Event', $html );
+	}
+
+	/**
 	 * With no other upcoming events, the heading doesn't render on its own.
 	 */
 	public function test_section_is_hidden_when_there_are_no_other_events() {

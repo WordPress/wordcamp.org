@@ -312,6 +312,7 @@ h3.widget-title {
 
 #content {
 	width: 660px;
+	overflow-wrap: break-word;
 }
 
 #primary,

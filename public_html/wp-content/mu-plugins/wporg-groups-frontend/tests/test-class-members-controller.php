@@ -203,6 +203,60 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
+	 * Some older w.org accounts have an empty `display_name`. `wp_insert_user()`
+	 * always fills one in, so blank it directly to reproduce them.
+	 */
+	private function create_member_without_display_name( string $login ): int {
+		global $wpdb;
+
+		$user_id = self::factory()->user->create(
+			array(
+				'role'       => 'subscriber',
+				'user_login' => $login,
+			)
+		);
+		$wpdb->update( $wpdb->users, array( 'display_name' => '' ), array( 'ID' => $user_id ) );
+		clean_user_cache( $user_id );
+
+		return $user_id;
+	}
+
+	/**
+	 * A member with no display name falls back to their username, instead of
+	 * returning an empty name the Members page renders as a blank card.
+	 */
+	public function test_member_without_display_name_falls_back_to_login() {
+		$user_id = $this->create_member_without_display_name( 'nonamemember' );
+
+		$request = $this->request( 'GET', '/members/' . $user_id );
+		$request->set_param( 'id', $user_id );
+		$response = self::$controller->get_item( $request );
+
+		$this->assertSame( 'nonamemember', $response->get_data()['name'] );
+	}
+
+	/**
+	 * The fallback name is also what members sort by, so a nameless member
+	 * doesn't jump to the top of their role tier.
+	 */
+	public function test_member_without_display_name_sorts_by_login() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Aaron Early',
+			)
+		);
+		$this->create_member_without_display_name( 'zzz-nameless' );
+
+		$request = $this->request( 'GET', '/members' );
+		$request->set_param( 'per_page', Members_Controller::MAX_PER_PAGE );
+		$names = wp_list_pluck( self::$controller->get_items( $request )->get_data(), 'name' );
+
+		$this->assertNotContains( '', $names );
+		$this->assertLessThan( array_search( 'zzz-nameless', $names, true ), array_search( 'Aaron Early', $names, true ) );
+	}
+
+	/**
 	 * Clears every organizer the fixture/site creation left behind, so
 	 * "is this the last organizer?" assertions are deterministic.
 	 */
@@ -341,6 +395,125 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'rest_self_serve_roles_disabled', $result->get_error_code() );
+	}
+
+	/**
+	 * Runs a callback with self-serve role switching off, as on every real
+	 * community group.
+	 */
+	private function with_self_serve_disabled( callable $callback ) {
+		add_filter( 'wporg_groups_frontend_self_serve_roles_enabled', '__return_false' );
+
+		try {
+			return $callback();
+		} finally {
+			remove_filter( 'wporg_groups_frontend_self_serve_roles_enabled', '__return_false' );
+		}
+	}
+
+	/**
+	 * Organizers can step down to Member on any group, not only the beta
+	 * groups with self-serve switching.
+	 */
+	public function test_organizer_steps_down_when_self_serve_disabled() {
+		$this->remove_existing_organizers();
+		self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = $this->request( 'POST', '/members/me/role' );
+		$request->set_param( 'role', 'subscriber' );
+
+		$response = $this->with_self_serve_disabled(
+			function () use ( $request ) {
+				$this->assertTrue( self::$controller->update_own_role_permissions_check( $request ) );
+
+				return self::$controller->update_own_role( $request );
+			}
+		);
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( array( 'subscriber' ), get_userdata( $editor_id )->roles );
+	}
+
+	/**
+	 * The last organizer still can't step down where self-serve is off.
+	 */
+	public function test_only_organizer_cannot_step_down_when_self_serve_disabled() {
+		$this->remove_existing_organizers();
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = $this->request( 'POST', '/members/me/role' );
+		$request->set_param( 'role', 'subscriber' );
+
+		$result = $this->with_self_serve_disabled(
+			function () use ( $request ) {
+				return self::$controller->update_own_role( $request );
+			}
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'cannot_remove_last_organizer', $result->get_error_code() );
+		$this->assertSame( array( 'editor' ), get_userdata( $editor_id )->roles );
+	}
+
+	/**
+	 * Stepping down only goes to Member. An organizer can't use it to
+	 * switch to Event Organizer, and a member can't use it to promote
+	 * themselves, outside the beta groups.
+	 *
+	 * @dataProvider data_role_changes_outside_step_down
+	 */
+	public function test_only_step_down_allowed_when_self_serve_disabled( string $current_role, string $new_role ) {
+		$user_id = self::factory()->user->create( array( 'role' => $current_role ) );
+		wp_set_current_user( $user_id );
+
+		$request = $this->request( 'POST', '/members/me/role' );
+		$request->set_param( 'role', $new_role );
+
+		$result = $this->with_self_serve_disabled(
+			function () use ( $request ) {
+				return self::$controller->update_own_role_permissions_check( $request );
+			}
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'rest_self_serve_roles_disabled', $result->get_error_code() );
+	}
+
+	/**
+	 * Data provider for test_only_step_down_allowed_when_self_serve_disabled().
+	 */
+	public function data_role_changes_outside_step_down(): array {
+		return array(
+			'organizer to event organizer' => array( 'editor', 'author' ),
+			'member to organizer'          => array( 'subscriber', 'editor' ),
+			'member to event organizer'    => array( 'subscriber', 'author' ),
+			'event organizer to organizer' => array( 'author', 'editor' ),
+		);
+	}
+
+	/**
+	 * Administrators stay managed in wp-admin, also for stepping down.
+	 */
+	public function test_administrator_cannot_step_down_when_self_serve_disabled() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$request = $this->request( 'POST', '/members/me/role' );
+		$request->set_param( 'role', 'subscriber' );
+
+		$result = $this->with_self_serve_disabled(
+			function () use ( $request ) {
+				return self::$controller->update_own_role_permissions_check( $request );
+			}
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( array( 'administrator' ), get_userdata( $admin_id )->roles );
 	}
 
 	/**

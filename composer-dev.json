@@ -45,11 +45,10 @@
 				{
 					"name": "wordpress-plugin/bbpress",
 					"type": "wordpress-plugin",
-					"version": "2.6",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/bbpress/",
-						"reference": "branches/2.6/"
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/bbpress.latest-stable.zip"
 					}
 				},
 				{
@@ -218,10 +217,9 @@
 					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
 					"type": "wordpress-plugin",
 					"version": "1.1",
-					"source": {
-						"type": "svn",
-						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/",
-						"reference": "wporg-profiles-wp-activity-notifier/"
+					"dist": {
+						"type": "file",
+						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php"
 					}
 				}
 			]

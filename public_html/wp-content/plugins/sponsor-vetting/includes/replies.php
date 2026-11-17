@@ -44,8 +44,7 @@ function check_replies(): void {
 	);
 
 	foreach ( $company_ids as $company_id ) {
-		$conversations = get_conversations( $company_id, 'compliance' );
-		$latest        = end( $conversations );
+		$latest = get_latest_conversation( $company_id, 'compliance' );
 
 		if ( ! $latest ) {
 			continue;
@@ -100,4 +99,23 @@ function sponsor_wrote_last( array $conversation ): bool {
 	);
 
 	return 'customer' === end( $messages )['type'];
+}
+
+/**
+ * Gets when the latest message of one type was written in a conversation.
+ *
+ * @param array  $conversation A conversation, as `FreeScout::get()` returns it.
+ * @param string $type         The thread type: `customer` for the sponsor, `message` for an agent.
+ * @return int A timestamp, or 0 without such a message.
+ */
+function get_last_message_time( array $conversation, string $type ): int {
+	$times = array();
+
+	foreach ( (array) ( $conversation['_embedded']['threads'] ?? array() ) as $thread ) {
+		if ( is_array( $thread ) && ( $thread['type'] ?? '' ) === $type ) {
+			$times[] = (int) strtotime( (string) ( $thread['createdAt'] ?? '' ) );
+		}
+	}
+
+	return $times ? max( $times ) : 0;
 }

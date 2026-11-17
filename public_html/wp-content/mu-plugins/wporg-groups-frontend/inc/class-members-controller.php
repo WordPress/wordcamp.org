@@ -11,6 +11,7 @@
 namespace WordCamp\Groups\Frontend\Members;
 
 use WordCamp\Groups\Frontend\Leave_Cleanup;
+use WordCamp\Groups\Frontend\Member_Joined;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 defined( 'WPINC' ) || die();
@@ -19,9 +20,9 @@ defined( 'WPINC' ) || die();
  * Members REST controller.
  *
  * Routes:
- *   GET    /wporg-groups/v1/members       — list group members
- *   GET    /wporg-groups/v1/members/{id}  — single member
- *   POST   /wporg-groups/v1/members/me/role — change your own role (beta groups only)
+ *   GET    /wporg-groups/v1/members       — list group members (logged in)
+ *   GET    /wporg-groups/v1/members/{id}  — single member (logged in)
+ *   POST   /wporg-groups/v1/members/me/role — step down to Member; any role change on beta groups
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
  *   POST   /wporg-groups/v1/members/notification-preference — update event email preference
@@ -79,7 +80,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_items' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'per_page' => array(
 							'default'           => 100,
@@ -109,7 +110,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'read_permissions_check' ),
 					'args'                => array(
 						'id' => array(
 							'validate_callback' => function ( $param ) {
@@ -183,6 +184,14 @@ class Members_Controller extends \WP_REST_Users_Controller {
 					'methods'             => \WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'join_group' ),
 					'permission_callback' => 'is_user_logged_in',
+					'args'                => array(
+						// The RSVP block joins through here before it RSVPs.
+						'source' => array(
+							'type'    => 'string',
+							'enum'    => array( Member_Joined\SOURCE_JOIN, Member_Joined\SOURCE_RSVP ),
+							'default' => Member_Joined\SOURCE_JOIN,
+						),
+					),
 				),
 			)
 		);
@@ -219,6 +228,28 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Check permissions for reading the member list or a single member.
+	 *
+	 * People join a group to hear about its events, not to be listed
+	 * publicly, so the list is only shown to logged-in visitors (the same
+	 * line Meetup draws). The Members page applies the same rule in
+	 * `group-members/render.php`.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function read_permissions_check() {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in to see the members of this group.', 'wordcamporg' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		return true;
 	}
 
 	/**
@@ -305,7 +336,16 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
-		$result = add_user_to_blog( $blog_id, $user_id, 'subscriber' );
+		$source = Member_Joined\SOURCE_RSVP === $request->get_param( 'source' )
+			? Member_Joined\SOURCE_RSVP
+			: Member_Joined\SOURCE_JOIN;
+
+		$result = Member_Joined\with_source(
+			$source,
+			static function () use ( $blog_id, $user_id ) {
+				return add_user_to_blog( $blog_id, $user_id, 'subscriber' );
+			}
+		);
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
@@ -357,11 +397,12 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$blog_id = get_current_blog_id();
 		$user    = get_userdata( $user_id );
 
-		// Prevent organizers from leaving without demotion.
+		// An organizer steps down to Member first (`POST /members/me/role`),
+		// which is where the last-organizer floor is enforced.
 		if ( $user && array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
 			return new \WP_Error(
 				'cannot_leave',
-				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wordcamporg' ),
+				__( 'Organizers cannot leave the group. Step down to Member first.', 'wordcamporg' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -539,6 +580,16 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
+		// Stepping down to Member works on every group: the lowest tier can't
+		// grant anything, and `update_own_role()` still refuses the last
+		// organizer. Everything else is the beta's self-serve switching.
+		$is_step_down = 'subscriber' === $request->get_param( 'role' )
+			&& \WordCamp\Groups\Frontend\Capabilities\current_user_can_step_down();
+
+		if ( $is_step_down ) {
+			return true;
+		}
+
 		if ( ! \WordCamp\Groups\Frontend\Capabilities\self_serve_roles_enabled() ) {
 			return new \WP_Error(
 				'rest_self_serve_roles_disabled',
@@ -579,7 +630,8 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	/**
 	 * Change the current user's own role within this group.
 	 *
-	 * Only reachable on the beta groups listed in `SELF_SERVE_ROLE_GROUPS`;
+	 * Organizers can step down to Member on any group. Any other change is
+	 * only reachable on the beta groups listed in `SELF_SERVE_ROLE_GROUPS`;
 	 * see that constant for why this isn't a general capability.
 	 *
 	 * @param \WP_REST_Request $request Full details about the request.
@@ -626,7 +678,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 
 		return array(
 			'id'        => $user->ID,
-			'name'      => $user->display_name,
+			'name'      => self::member_name( $user ),
 			'avatar'    => get_avatar_url( $user->ID, array( 'size' => 128 ) ),
 			'profile'   => sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename ),
 			'bio'       => wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" ),
@@ -661,7 +713,23 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			return $weight_a - $weight_b;
 		}
 
-		return strcasecmp( $a->display_name, $b->display_name );
+		return strcasecmp( self::member_name( $a ), self::member_name( $b ) );
+	}
+
+	/**
+	 * The name to show for a member.
+	 *
+	 * `display_name` isn't required on WordPress.org accounts and some older
+	 * ones have it empty, which left a blank card on the Members page. Fall
+	 * back to the username so every member has a visible name.
+	 *
+	 * @param \WP_User $user User object.
+	 * @return string
+	 */
+	public static function member_name( \WP_User $user ): string {
+		$name = trim( (string) $user->display_name );
+
+		return '' !== $name ? $name : (string) $user->user_login;
 	}
 
 	/**
@@ -753,21 +821,10 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @return bool
 	 */
 	private function can_demote_organizer( \WP_User $user, string $new_role ): bool {
-		if ( ! array_intersect( $user->roles, ORGANIZER_ROLES ) || in_array( $new_role, ORGANIZER_ROLES, true ) ) {
+		if ( in_array( $new_role, ORGANIZER_ROLES, true ) ) {
 			return true;
 		}
 
-		$other_organizers = get_users(
-			array(
-				'blog_id'     => get_current_blog_id(),
-				'role__in'    => ORGANIZER_ROLES,
-				'exclude'     => array( $user->ID ),
-				'number'      => 1,
-				'count_total' => false,
-				'fields'      => 'ids',
-			)
-		);
-
-		return ! empty( $other_organizers );
+		return ! \WordCamp\Groups\Frontend\Capabilities\is_only_organizer( $user->ID );
 	}
 }

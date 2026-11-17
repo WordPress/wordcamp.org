@@ -2,7 +2,7 @@
 
 namespace WordCamp\Sunrise\Groups;
 use WP_Network, WP_Site;
-use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url, get_url_port };
+use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_group_url, get_url_port };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\PATTERN_GROUP_PATH;
@@ -32,7 +32,7 @@ function main() {
  *
  * URL structure:
  *   - `events.wordpress.org/group/{slug}/` → an individual group subsite
- *   - `events.wordpress.org/group/`        → the network root (placeholder)
+ *   - `events.wordpress.org/group/`        → the network root (the list of groups)
  *
  * phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- WP is designed in a way that requires this.
  * That's the whole point of `sunrise.php`.
@@ -58,8 +58,9 @@ function set_network_and_site() {
 		// for the groups network is `/group/` (the network root). Treat that
 		// as "no group matched" so the not-found chain (renamed-url →
 		// NOBLOGREDIRECT) can handle unknown `/group/<slug>/` paths. Bare
-		// `/group/` requests are intentionally left on the root blog so
-		// `do_redirects()` can send them to the events root below.
+		// `/group/` requests are intentionally left on the root blog, where
+		// `do_redirects()` below either serves the list of groups or sends
+		// them to the events root.
 		$is_bare_group_request = '/group/' === $path || '/group' === rtrim( $path, '/' );
 		if ( $current_blog && '/group/' === $current_blog->path && ! $is_bare_group_request ) {
 			$current_blog = false;
@@ -72,8 +73,13 @@ function set_network_and_site() {
 	}
 
 	if ( ! $current_blog ) {
-		// Check if this URL was previously used by a group that has since been renamed.
-		$renamed_url = get_renamed_site_url( DOMAIN_CURRENT_SITE, $path );
+		// Check if this URL was previously used by a group that has since been
+		// renamed, keeping the rest of the path and the query string.
+		$renamed_url = get_renamed_group_url( DOMAIN_CURRENT_SITE, $path );
+
+		if ( $renamed_url && ! empty( $_SERVER['QUERY_STRING'] ) ) {
+			$renamed_url .= '?' . $_SERVER['QUERY_STRING'];
+		}
 
 		if ( $renamed_url ) {
 			header( 'X-Redirect-By: Groups/Sunrise::set_network_and_site (renamed site)' );
@@ -113,6 +119,18 @@ function set_network_and_site() {
  *   owned by the root site — the group messaging queue, for one — lives in
  *   this blog's `cron` option, and the spawn is non-blocking, so a redirect
  *   is never followed: the job simply never ran.
+ * - The `wporg-groups/v1/events` REST route is the network-wide events feed
+ *   WordPress.org's events importer reads (#1786). It's matched as one exact
+ *   route, in the plain spelling only (`/group/?rest_route=/wporg-groups/v1/events`),
+ *   which WordPress answers whatever the root's permalink setting. Not the
+ *   pretty `/group/wp-json/...` one: WordPress routes by query vars, and a
+ *   `rest_route` in the query string or body overrides the path, so allowing
+ *   that path would serve any route (`?rest_route=/wp/v2/users`), and on a
+ *   plain-permalink root it renders the root's front end. The plain spelling
+ *   can't be redirected that way: REST exits before any template loads, and
+ *   a POSTed `rest_route` that differs from the query string's makes
+ *   WordPress refuse the request. Every other REST route on the root still
+ *   redirects.
  *
  * The list is a local rather than a namespace constant on purpose: this file
  * is `require`d from inside `load_network_sunrise()`, so a file-scope `const`
@@ -141,7 +159,48 @@ function is_reachable_root_endpoint() {
 		return false;
 	}
 
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only compared, never used.
+	$rest_route = $_GET['rest_route'] ?? null;
+
+	if (
+		in_array( $path, array( '/group/', '/group/index.php' ), true ) &&
+		is_string( $rest_route ) &&
+		'/wporg-groups/v1/events' === rtrim( $rest_route, '/' )
+	) {
+		return true;
+	}
+
 	return in_array( basename( $path ), $reachable, true );
+}
+
+/**
+ * Whether the current request is for the list of groups at `/group/` (#2036).
+ *
+ * Exact on purpose: the root's front page answers any public query var
+ * (`?rest_route=`, `?feed=`, `?p=`), and WordPress reads those from a `POST`
+ * body first. So only a `GET` or `HEAD` for `/group/` with nothing but the
+ * list's search, `q`, gets through.
+ *
+ * @return bool
+ */
+function is_directory_request() {
+	if ( ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', array( 'GET', 'HEAD' ), true ) ) {
+		return false;
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- `wp_parse_url()` isn't available this early.
+	if ( '/group/' !== parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ) ) {
+		return false;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only inspected, never used.
+	foreach ( $_GET as $name => $value ) {
+		if ( 'q' !== $name || ! is_string( $value ) ) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -151,9 +210,10 @@ function do_redirects() {
 	global $blog_id, $site_id;
 
 	/*
-	 * The groups network root (`events.wordpress.org/group/`) is a placeholder
-	 * that exists only because WordPress multisite requires every network to
-	 * have a root site. Front-end requests bounce to the events root.
+	 * The groups network root (`events.wordpress.org/group/`) exists because
+	 * WordPress multisite requires every network to have a root site. The
+	 * only page it serves is the list of groups; see `is_directory_request()`.
+	 * Every other front-end request bounces to the events root.
 	 *
 	 * `REACHABLE_ROOT_ENDPOINTS` are exempt: `is_admin()` is false for them,
 	 * so bouncing `wp-login.php` left every Network Admin screen here
@@ -161,7 +221,13 @@ function do_redirects() {
 	 * sets an admin cookie scoped to `/wp-admin`, never `/group/wp-admin` —
 	 * and bouncing `wp-cron.php` silently dropped this blog's scheduled work.
 	 */
-	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() && ! is_reachable_root_endpoint() ) {
+	if (
+		GROUPS_ROOT_BLOG_ID === $blog_id &&
+		! is_admin() &&
+		! is_network_admin() &&
+		! is_reachable_root_endpoint() &&
+		! is_directory_request()
+	) {
 		header( 'X-Redirect-By: Groups/Sunrise::do_redirects' );
 		header( 'Location: https://events.wordpress.' . get_top_level_domain() . get_url_port() . '/', true, 302 );
 		exit;

@@ -234,6 +234,14 @@
 	margin: 0;
 }
 
+/* The group's upload space is nearly or completely used (#2361). In the body
+   color rather than the help's grey, so it stands out from the help above. */
+.wporg-groups-event-modal__featured-space {
+	font-size: 12px;
+	color: var(--wp--preset--color--charcoal-0);
+	margin: 0;
+}
+
 .wporg-groups-event-modal__featured-actions {
 	display: flex;
 	gap: 8px;

@@ -27,13 +27,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/group-location',
 		'wporg/group-settings',
 		'wporg/group-news',
+		'wporg/groups-directory',
 		'wporg/my-events',
 		'wporg/page-content',
 		'wporg/sponsors',
 	);
 
 	/**
-	 * Exactly these 18 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 19 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -111,6 +112,10 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	/**
 	 * The attendee summary is a native button and its avatar stack is
 	 * decorative, so attendee names do not pollute the control's name.
+	 *
+	 * Its name starts with the count it shows, so a voice-control user can
+	 * say what they see (WCAG 2.5.3, Label in Name). An `aria-label` would
+	 * replace that text, so what the button does follows it as hidden text.
 	 */
 	public function test_event_rsvp_summary_uses_accessible_markup() {
 		$event_id = self::factory()->post->create(
@@ -139,6 +144,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'actions.handleSummaryKeydown', $output );
 		$this->assertSame( 2, substr_count( $output, 'alt=""' ) );
 		$this->assertStringNotContainsString( 'alt="Avatar Name Must Stay Decorative"', $output );
+
+		$this->assertSame( 1, preg_match( '/<button[^>]*wporg-event-rsvp__summary.*?<\/button>/s', $output, $summary ) );
+		$this->assertStringNotContainsString( 'aria-label', strtok( $summary[0], '>' ), 'An aria-label would hide the visible count from the button\'s name.' );
+		$this->assertSame(
+			\WordCamp\Groups\Frontend\RSVP_Labels\get_count_label( 1, false ) . ' View attendees',
+			trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $summary[0] ) ) ),
+			'The button\'s name should be its visible count, then what it does.'
+		);
 	}
 
 	/**
@@ -448,9 +461,63 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Logged-out visitors get a login prompt on the Members page, not the
+	 * list: people join a group to hear about its events, not to be listed
+	 * publicly (#2304).
+	 */
+	public function test_group_members_block_hides_members_from_logged_out_visitors() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Hidden Member Name',
+			)
+		);
+		wp_set_current_user( 0 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
+		$this->assertStringContainsString( 'wporg-group-members__login', $output );
+		$this->assertStringContainsString( wp_login_url(), html_entity_decode( $output ) );
+		$this->assertStringNotContainsString( 'Hidden Member Name', $output );
+		$this->assertStringNotContainsString( 'wporg-group-members__card', $output );
+	}
+
+	/**
+	 * Any logged-in visitor sees the list, member of this group or not.
+	 */
+	public function test_group_members_block_lists_members_for_logged_in_visitors() {
+		self::factory()->user->create(
+			array(
+				'role'         => 'subscriber',
+				'display_name' => 'Listed Member Name',
+			)
+		);
+		$outsider_id = self::factory()->user->create();
+		remove_user_from_blog( $outsider_id, get_current_blog_id() );
+		wp_set_current_user( $outsider_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( '<h1 class="wporg-section-heading wporg-group-members__heading">', $output );
+		$this->assertStringContainsString( 'Listed Member Name', $output );
+		$this->assertStringNotContainsString( 'wporg-group-members__login', $output );
+	}
+
+	/**
+	 * The role panel heading sits under the page's h1, so it's an h2.
+	 */
+	public function test_group_members_block_role_switcher_heading_follows_h1() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-members /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-members__role-switcher-heading"', $output );
+	}
+
+	/**
 	 * The default combined variant preserves the original unheaded output.
-	 * A plain member gets no role badge; see
-	 * `test_group_membership_block_badges_event_manager_roles()`.
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
@@ -458,7 +525,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-membership /-->' );
 
-		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
 		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
 		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
@@ -487,18 +554,115 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * Event-manager roles keep the role badge a plain member doesn't get.
+	 * Every member sees their role, so they know why they get "Leave group"
+	 * or "Step down to Member".
+	 *
+	 * @dataProvider data_group_membership_role_badges
 	 */
-	public function test_group_membership_block_badges_event_manager_roles() {
-		$organizer_id = self::factory()->user->create( array( 'role' => 'author' ) );
-		wp_set_current_user( $organizer_id );
+	public function test_group_membership_block_badges_every_role( string $role, string $label ) {
+		$user_id = self::factory()->user->create( array( 'role' => $role ) );
+		wp_set_current_user( $user_id );
 
 		$output = do_blocks(
 			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
 		);
 
-		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertMatchesRegularExpression( '#wporg-group-membership__badge[^>]*>\s*' . preg_quote( $label, '#' ) . '\s*<#', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
+	}
+
+	/**
+	 * Data provider for test_group_membership_block_badges_every_role().
+	 */
+	public function data_group_membership_role_badges(): array {
+		return array(
+			'member'          => array( 'subscriber', 'Member' ),
+			'event organizer' => array( 'author', 'Event Organizer' ),
+			'organizer'       => array( 'editor', 'Organizer' ),
+		);
+	}
+
+	/**
+	 * Clears the organizers site creation left behind, so "only organizer"
+	 * rendering is deterministic.
+	 */
+	private function remove_existing_organizers(): void {
+		$organizer_ids = get_users(
+			array(
+				'blog_id'  => get_current_blog_id(),
+				'role__in' => array( 'administrator', 'editor' ),
+				'fields'   => 'ids',
+			)
+		);
+
+		foreach ( $organizer_ids as $organizer_id ) {
+			remove_user_from_blog( (int) $organizer_id, get_current_blog_id() );
+		}
+	}
+
+	/**
+	 * An organizer gets "Step down to Member" instead of "Leave group".
+	 */
+	public function test_group_membership_block_offers_organizer_step_down() {
+		$this->remove_existing_organizers();
+		self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'data-wp-on--click="actions.stepDown"', $output );
+		$this->assertStringContainsString( 'Step down to Member', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__status', $output );
+		$this->assertStringNotContainsString( 'actions.leave', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__note', $output );
+	}
+
+	/**
+	 * The only organizer is told to promote someone first, and gets no
+	 * button the endpoint would refuse anyway.
+	 */
+	public function test_group_membership_block_tells_only_organizer_to_promote_first() {
+		$this->remove_existing_organizers();
+
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__note', $output );
+		$this->assertStringContainsString( 'only organizer', $output );
+		$this->assertStringContainsString( 'data-wporg-settings-open="members"', $output );
+		$this->assertStringNotContainsString( 'actions.stepDown', $output );
+		$this->assertStringNotContainsString( 'actions.leave', $output );
+	}
+
+	/**
+	 * Administrators are managed in wp-admin, so they get neither action.
+	 */
+	public function test_group_membership_block_offers_administrator_no_role_action() {
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'actions.stepDown', $output );
+		$this->assertStringNotContainsString( 'actions.leave', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__note', $output );
+	}
+
+	/**
+	 * A visitor sees what joining gets them under the Join button.
+	 */
+	public function test_group_membership_block_tells_visitor_what_joining_does() {
+		wp_set_current_user( 0 );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"membership"} /-->' );
+
+		$this->assertStringContainsString( 'actions.join', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__note', $output );
 	}
 
 	/**

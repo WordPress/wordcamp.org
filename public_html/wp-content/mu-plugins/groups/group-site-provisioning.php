@@ -2,7 +2,7 @@
 /**
  * Network-admin tool for provisioning new Group sites.
  *
- * Deputies/Program Managers can create a fully configured Group site
+ * Program Managers and Program Supporters can create a fully configured Group site
  * (`events.wordpress.org/group/{slug}/`) from Network Admin > Groups, instead
  * of hand-running `wp_insert_site()`/`wp site create` on the sandbox.
  *
@@ -14,6 +14,8 @@
 
 namespace WordCamp\Groups\Site_Provisioning;
 
+use WordCamp\Groups\Action_Log;
+use WordCamp\Groups\Capabilities;
 use WordCamp\Logger;
 use WP_Error;
 
@@ -34,7 +36,7 @@ function register_admin_page() {
 		\WordCamp\Groups\Archive\PAGE_SLUG,
 		__( 'Add Group Site', 'wordcamporg' ),
 		__( 'Add Group Site', 'wordcamporg' ),
-		'manage_sites',
+		Capabilities\CAPABILITY,
 		PAGE_SLUG,
 		__NAMESPACE__ . '\render_admin_page'
 	);
@@ -53,7 +55,7 @@ function handle_form_submission() {
 		return;
 	}
 
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! Capabilities\current_user_can_manage_groups() ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to create sites on this network.', 'wordcamporg' ) );
 	}
 
@@ -70,6 +72,8 @@ function handle_form_submission() {
 		add_settings_error( 'wcorg-add-group-site', $result->get_error_code(), $result->get_error_message() );
 		return;
 	}
+
+	Action_Log\record( 'group_created', $result, array( 'organizer_login' => $organizer_login ) );
 
 	add_settings_error(
 		'wcorg-add-group-site',
@@ -88,7 +92,7 @@ function handle_form_submission() {
  * Render the "Add Group Site" form.
  */
 function render_admin_page() {
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! Capabilities\current_user_can_manage_groups() ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to create sites on this network.', 'wordcamporg' ) );
 	}
 
@@ -136,16 +140,42 @@ function render_admin_page() {
 }
 
 /**
+ * Parse a manual UTC offset as `wp_timezone_choice()` lists it.
+ *
+ * Accepts the values core offers in the "Manual Offsets" group: `UTC-12`
+ * through `UTC+14` in quarter-hour steps (e.g. `UTC-5`, `UTC+5.5`,
+ * `UTC+13.75`).
+ *
+ * @param string $value The submitted timezone value.
+ *
+ * @return float|null The offset in hours, or null if `$value` isn't a manual offset.
+ */
+function parse_utc_offset( string $value ) {
+	if ( ! preg_match( '/^UTC([+-])(\d{1,2}(?:\.(?:25|5|75))?)$/', $value, $matches ) ) {
+		return null;
+	}
+
+	$offset = (float) ( $matches[1] . $matches[2] );
+
+	if ( $offset < -12 || $offset > 14 ) {
+		return null;
+	}
+
+	return $offset;
+}
+
+/**
  * Create and configure a new Group site.
  *
- * Callers MUST verify the `manage_sites` capability before calling this --
+ * Callers MUST verify `Capabilities\current_user_can_manage_groups()` before calling this --
  * it performs no capability check of its own, matching the convention in
  * `WordCamp_New_Site::_create_site()`.
  *
  * @param string $title           The group's display name.
  * @param string $slug            The desired `/group/{slug}/` path segment.
  * @param string $organizer_login The WordPress.org username of the lead organizer.
- * @param string $timezone_string Optional. A PHP timezone identifier (e.g. `Australia/Brisbane`).
+ * @param string $timezone_string Optional. A PHP timezone identifier (e.g. `Australia/Brisbane`),
+ *                                or a manual UTC offset as `wp_timezone_choice()` lists it (e.g. `UTC-5`).
  *
  * @return int|WP_Error The new site's ID, or a WP_Error on failure.
  */
@@ -172,7 +202,9 @@ function create_group_site( string $title, string $slug, string $organizer_login
 		return new WP_Error( 'organizer_not_found', __( 'No user was found with that WordPress.org username.', 'wordcamporg' ) );
 	}
 
-	if ( $timezone_string && ! in_array( $timezone_string, timezone_identifiers_list(), true ) ) {
+	$gmt_offset = parse_utc_offset( $timezone_string );
+
+	if ( $timezone_string && null === $gmt_offset && ! in_array( $timezone_string, timezone_identifiers_list(), true ) ) {
 		Logger\log( 'invalid_timezone', compact( 'title', 'slug', 'organizer_login', 'timezone_string' ) );
 		return new WP_Error( 'invalid_timezone', __( 'Please select a valid timezone.', 'wordcamporg' ) );
 	}
@@ -199,9 +231,22 @@ function create_group_site( string $title, string $slug, string $organizer_login
 	update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );
 	update_option( 'home', set_url_scheme( get_option( 'home' ), 'https' ) );
 
-	if ( $timezone_string ) {
+	// Same storage as core's General Settings: a manual offset goes in
+	// `gmt_offset` with an empty `timezone_string`.
+	if ( null !== $gmt_offset ) {
+		update_option( 'timezone_string', '' );
+		update_option( 'gmt_offset', $gmt_offset );
+	} elseif ( $timezone_string ) {
 		update_option( 'timezone_string', $timezone_string );
 	}
+
+	// GatherPress defaults venue maps to CARTO tiles, which now only serve an
+	// "API key required" placeholder. Google Maps needs no key for the
+	// interactive map (it falls back to the free embed), so start every group
+	// there; an organizer can still switch it in the venue settings.
+	$gatherpress_settings                 = (array) get_option( 'gatherpress_settings', array() );
+	$gatherpress_settings['map_platform'] = 'google';
+	update_option( 'gatherpress_settings', $gatherpress_settings );
 
 	// `wp_initialize_site()` seeds every new site with generic WP boilerplate
 	// ("Hello world!", "Sample Page") via `wp_install_defaults()`. A group

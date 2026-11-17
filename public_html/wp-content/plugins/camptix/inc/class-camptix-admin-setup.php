@@ -48,6 +48,7 @@ class CampTix_Admin_Setup {
 		$section = $this->get_setup_section();
 
 		add_action( 'admin_notices', array( $this, 'admin_notice_supported_currencies' ) );
+		add_action( 'admin_notices', array( $this, 'admin_notice_payment_method_requirements' ) );
 
 		switch ( $section ) {
 			case 'general':
@@ -276,6 +277,47 @@ class CampTix_Admin_Setup {
 					esc_url( add_query_arg( 'tix_section', 'general', $base_url ) ),
 					esc_url( add_query_arg( 'tix_section', 'payment', $base_url ) )
 				) );
+				?>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * Show an admin notice when an enabled payment method is missing a required feature.
+	 *
+	 * @return void
+	 */
+	public function admin_notice_payment_method_requirements() {
+		global $pagenow;
+		$page = wp_unslash( $_GET['page'] ?? '' );
+
+		if ( 'edit.php' !== $pagenow || 'camptix_options' !== $page ) {
+			return;
+		}
+
+		$options = $this->plugin->get_options();
+
+		foreach ( $this->plugin->get_available_payment_methods() as $key => $method ) {
+			$payment_method_obj = $this->plugin->get_payment_method_by_id( $key );
+			if ( empty( $options['payment_methods'][ $key ] ) || ! $payment_method_obj ) {
+				continue;
+			}
+
+			$missing = $payment_method_obj->get_missing_requirements();
+			if ( ! $missing ) {
+				continue;
+			}
+
+			?>
+			<div class="notice notice-warning">
+				<?php
+				echo wpautop( esc_html( sprintf(
+					/* translators: 1: Payment method name. 2: Missing features, e.g. "refunds, payment lookup". */
+					__( '%1$s does not support %2$s. Refunds, or payments CampTix could not confirm, may have to be handled in the payment provider dashboard.', 'wordcamporg' ),
+					$payment_method_obj->name,
+					implode( ', ', $missing )
+				) ) );
 				?>
 			</div>
 			<?php

@@ -328,25 +328,84 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 	}
 
 	/**
-	 * A copy's draft autosaves before its date is chosen, keeping the date
-	 * unset.
+	 * A copy's draft autosaves before its date is chosen. Reopened, it still
+	 * has no date, and keeps the copied times and timezone rather than the
+	 * new-event defaults. Once dated, it's an ordinary draft.
 	 */
 	public function test_copy_autosaves_without_a_date() {
 		wp_set_current_user( $this->organiser_id );
 
-		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
-		$request->set_body_params(
+		$draft_id = $this->save_draft( array( 'date' => '' ) );
+
+		// GatherPress fills in a default at the end of a real request.
+		( new \GatherPress\Core\Event\Event( $draft_id ) )->save_datetimes(
 			array(
+				'post_id'        => $draft_id,
+				'datetime_start' => gmdate( 'Y-m-d 18:00:00', strtotime( 'tomorrow' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d 20:00:00', strtotime( 'tomorrow' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$fields = $this->load_draft( $draft_id );
+
+		$this->assertSame( '', $fields['date'] );
+		$this->assertSame( '19:15', $fields['time_start'] );
+		$this->assertSame( '21:45', $fields['time_end'] );
+		$this->assertSame( 'Europe/Paris', $fields['timezone'] );
+
+		$date = current_datetime()->modify( '+2 weeks' )->format( 'Y-m-d' );
+		$this->save_draft(
+			array(
+				'date'       => $date,
+				'time_start' => '18:00',
+				'time_end'   => '20:00',
+			),
+			$draft_id
+		);
+		$fields = $this->load_draft( $draft_id );
+
+		$this->assertSame( $date, $fields['date'] );
+		$this->assertSame( '18:00', $fields['time_start'] );
+		$this->assertSame( '', get_post_meta( $draft_id, '_wporg_groups_undated_schedule', true ) );
+	}
+
+	/**
+	 * Autosave a draft through the form's endpoint.
+	 *
+	 * @param array $params   Params overriding a copy's times and timezone.
+	 * @param int   $draft_id The draft to update, or 0 for a new one.
+	 *
+	 * @return int The draft ID.
+	 */
+	private function save_draft( array $params, int $draft_id = 0 ): int {
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' . ( $draft_id ? "/{$draft_id}" : '' ) );
+		$request->set_body_params(
+			$params + array(
 				'title'      => 'Copied Meetup',
-				'date'       => '',
 				'time_start' => '19:15',
 				'time_end'   => '21:45',
+				'timezone'   => 'Europe/Paris',
 			)
 		);
 
 		$response = rest_do_request( $request );
-
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( '', get_post_meta( $response->get_data()['id'], 'gatherpress_datetime_start', true ) );
+
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Reopen a draft in the form.
+	 *
+	 * @param int $draft_id The draft.
+	 *
+	 * @return array The form fields.
+	 */
+	private function load_draft( int $draft_id ): array {
+		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$request->set_param( 'event_id', $draft_id );
+
+		return rest_do_request( $request )->get_data()['fields'];
 	}
 }

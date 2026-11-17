@@ -91,6 +91,15 @@ use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
 const NAMESPACE_V1 = 'wporg-groups/v1';
 
 /**
+ * Post meta holding a draft's times and timezone while it has no date.
+ *
+ * GatherPress stores an event's times only as full datetimes, and fills in
+ * a default one for an event saved without. So a draft saved before its
+ * date is picked, like a copy (#2398), keeps them here.
+ */
+const UNDATED_SCHEDULE_META = '_wporg_groups_undated_schedule';
+
+/**
  * Hook the REST routes into rest_api_init.
  */
 function bootstrap(): void {
@@ -999,6 +1008,15 @@ function get_existing_event_fields( int $event_id ): array {
 		$fields['time_end'] = $m[1];
 	}
 
+	// A draft saved without a date keeps it unset, along with its times.
+	// This wins over the stored datetimes: GatherPress fills in a default
+	// one for an event saved without, at the end of the request. A real
+	// date, saved through this form, removes it.
+	$undated = get_post_meta( $event_id, UNDATED_SCHEDULE_META, true );
+	if ( is_array( $undated ) ) {
+		$fields = array_merge( $fields, array( 'date' => '' ), $undated );
+	}
+
 	$fields['venue_id']          = get_event_venue_post_id( $event_id );
 	$fields['is_online']         = ( new Event( $event_id ) )->is_online();
 	$fields['online_event_link'] = (string) get_post_meta(
@@ -1010,7 +1028,7 @@ function get_existing_event_fields( int $event_id ): array {
 	// An event with no usable stored zone reads back as '', which the
 	// form shows as the site default rather than as a blank option.
 	$stored_timezone = get_event_timezone( $event_id );
-	if ( '' !== $stored_timezone ) {
+	if ( '' !== $stored_timezone && ! isset( $fields['timezone'] ) ) {
 		$fields['timezone'] = $stored_timezone;
 	}
 
@@ -1331,6 +1349,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
 	) {
 		clear_all_day( $saved_id );
+		delete_post_meta( $saved_id, UNDATED_SCHEDULE_META );
 
 		$event = new Event( $saved_id );
 		$event->save_datetimes(
@@ -1342,6 +1361,19 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			)
 		);
 		sync_block_editor_datetime( $saved_id );
+	} elseif ( '' === $date
+		&& preg_match( '/^\d{2}:\d{2}$/', $time_start )
+		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
+	) {
+		update_post_meta(
+			$saved_id,
+			UNDATED_SCHEDULE_META,
+			array(
+				'time_start' => $time_start,
+				'time_end'   => $time_end,
+				'timezone'   => storable_timezone( (string) $request->get_param( 'timezone' ) ),
+			)
+		);
 	}
 
 	// Physical and online venues — same path as the publish flow.
@@ -1603,6 +1635,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
 	clear_all_day( $saved_id );
+	delete_post_meta( $saved_id, UNDATED_SCHEDULE_META );
 
 	$event = new Event( $saved_id );
 	$event->save_datetimes(

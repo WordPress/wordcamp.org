@@ -1,3 +1,7 @@
+/**
+ * Orders a company's events, and merges its history with theirs.
+ */
+
 import { compareEventDays } from './dates';
 import type { Event, LogEntry } from './types';
 

@@ -1,3 +1,7 @@
+/**
+ * The open company: its events, above its findings, vetting, details and notes.
+ */
+
 import apiFetch from '@wordpress/api-fetch';
 import { store as coreStore, useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
@@ -16,7 +20,7 @@ import { DETAILS_FORM, FINDINGS_FORM, NOTE_FORM, VETTING_FORM, getCompanyFormFie
 import type { CompanyForm } from './forms';
 import { useOpenRecord, useStatusLabels, useTask } from './hooks';
 import { MoveSponsorship } from './move-sponsorship';
-import { useSponsorshipChanges } from './sponsorships';
+import { countApprovals, useSponsorshipChanges } from './sponsorships';
 import { buildTimeline, sortByEvent } from './timeline';
 import type { CompanyDetails, CompanySponsorship, EventActions } from './types';
 
@@ -37,6 +41,7 @@ type EditorProps = {
  * @param props          Props.
  * @param props.pending  The company's pending sponsorships, the one to offer first.
  * @param props.hasEdits Whether the company has changes that sending saves first.
+ * @param props.isValid  Whether the changes can be saved.
  * @param props.isBusy   Whether the request is being sent.
  * @param props.onSend   Sends the request for a sponsorship.
  * @return The form.
@@ -44,11 +49,13 @@ type EditorProps = {
 function ComplianceRequest( {
 	pending,
 	hasEdits,
+	isValid,
 	isBusy,
 	onSend,
 }: {
 	pending: CompanySponsorship[];
 	hasEdits: boolean;
+	isValid: boolean;
 	isBusy: boolean;
 	onSend: ( sponsorshipId: number ) => void;
 } ) {
@@ -82,7 +89,13 @@ function ComplianceRequest( {
 				onChange={ ( edits ) => setPicked( Number( edits.sponsorship ) ) }
 			/>
 			<Stack direction="row">
-				<Button variant="outline" loading={ isBusy } onClick={ () => onSend( sponsorship.id ) }>
+				<Button
+					variant="outline"
+					disabled={ hasEdits && ! isValid }
+					focusableWhenDisabled
+					loading={ isBusy }
+					onClick={ () => onSend( sponsorship.id ) }
+				>
 					{ hasEdits
 						? __( 'Save and send compliance request', 'wordcamporg' )
 						: __( 'Send compliance request', 'wordcamporg' ) }
@@ -148,17 +161,77 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 		.sort( ( a, b ) => Number( b.id === sponsorshipId ) - Number( a.id === sponsorshipId ) );
 	const form = { data: edited, fields, onChange: edit };
 
+	/*
+	 * A status change is from the status the vetter was shown, so the server refuses it from another: a company
+	 * loaded before someone else's change would otherwise undo it.
+	 */
+	const saveChanges = async () => {
+		if ( edited.status !== company.status ) {
+			edit( { original_status: company.status } );
+		}
+
+		try {
+			await save();
+		} catch ( error ) {
+			edit( { original_status: undefined } );
+
+			throw error;
+		}
+	};
+
 	const onSave = () =>
 		run( 'save', async () => {
-			await save();
+			// Becoming Compliant approves the pending events and emails them, which the save itself doesn't say.
+			const waiting =
+				edited.status === 'sv-compliant' && company.status !== 'sv-compliant'
+					? pending.map( ( sponsorship ) => sponsorship.id )
+					: [];
 
-			return __( 'Company saved.', 'wordcamporg' );
+			await saveChanges();
+
+			const { approved, unsent } = waiting.length
+				? await countApprovals( waiting )
+				: { approved: 0, unsent: 0 };
+
+			if ( ! approved ) {
+				return __( 'Company saved.', 'wordcamporg' );
+			}
+
+			const message = sprintf(
+				/* translators: %d: Number of events. */
+				_n(
+					'Company saved. %d pending event was approved automatically.',
+					'Company saved. %d pending events were approved automatically.',
+					approved,
+					'wordcamporg'
+				),
+				approved
+			);
+
+			if ( unsent ) {
+				throw new Error(
+					message +
+						' ' +
+						sprintf(
+							/* translators: %d: Number of emails. */
+							_n(
+								'%d approval email wasn’t sent (see history). Send it again from its event.',
+								'%d approval emails weren’t sent (see history). Send them again from their events.',
+								unsent,
+								'wordcamporg'
+							),
+							unsent
+						)
+				);
+			}
+
+			return message;
 		} );
 
 	const onSend = ( sponsorship: number ) =>
 		run( 'send', async () => {
 			if ( hasEdits ) {
-				await save();
+				await saveChanges();
 			}
 
 			const { message } = await apiFetch< { message: string } >( {
@@ -268,6 +341,7 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 								<ComplianceRequest
 									pending={ pending }
 									hasEdits={ hasEdits }
+									isValid={ isValid }
 									isBusy={ running === 'send' }
 									onSend={ onSend }
 								/>

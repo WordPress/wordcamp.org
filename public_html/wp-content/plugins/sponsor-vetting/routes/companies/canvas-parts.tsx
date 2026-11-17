@@ -1,3 +1,7 @@
+/**
+ * What the open record's view is built from: its header, parts, sections, rows, emails and history.
+ */
+
 import { RawHTML } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { close } from '@wordpress/icons';

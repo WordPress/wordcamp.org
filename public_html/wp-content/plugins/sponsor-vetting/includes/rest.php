@@ -231,7 +231,9 @@ function get_rest_fields(): array {
 		COMPANY_POST_TYPE     => $shared + array(
 			'domains'        => array(
 				'get'    => __NAMESPACE__ . '\get_company_domains',
-				'update' => static fn( int $company_id, mixed $domains ) => set_company_domains( $company_id, (array) $domains ),
+				'update' => static function ( int $company_id, mixed $domains ): void {
+					set_company_domains( $company_id, (array) $domains );
+				},
 				'schema' => $strings,
 			),
 			'flags'          => array(
@@ -572,11 +574,21 @@ function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array
 			$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? 0;
 
 			return array(
-				'name' => get_event_name( $blog_id ),
+				'name' => decode_name( get_event_name( $blog_id ) ),
 				'date' => $start ? gmdate( 'Y-m-d', $start ) : '',
 			);
 		}
 	);
+}
+
+/**
+ * Turns a name as it's stored, with its `&` and the like encoded, into the text the screen shows.
+ *
+ * @param string $name The stored name.
+ * @return string
+ */
+function decode_name( string $name ): string {
+	return html_entity_decode( $name, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 }
 
 /**
@@ -600,7 +612,7 @@ function get_rest_sponsor( int $sponsorship_id ): ?array {
 	$url = esc_url_raw( $sponsor['website'], array( 'http', 'https' ) );
 
 	return array(
-		'name'        => $sponsor['name'],
+		'name'        => decode_name( $sponsor['name'] ),
 		'website'     => $sponsor['website'],
 		'website_url' => '' === normalize_domain( $url ) ? '' : $url,
 		'first_name'  => $sponsor['first_name'],
@@ -724,6 +736,8 @@ add_filter( 'rest_' . SPONSORSHIP_POST_TYPE . '_collection_params', __NAMESPACE_
 /**
  * Makes a status change over REST keep the workflow's rules, and say so when it can't.
  *
+ * - A change from a status the record no longer has is refused: the screen names the status it was showing as
+ *   `original_status`, and one loaded before someone else's change would otherwise undo it.
  * - A record leaving the trash is restored the way wp-admin restores it, to the status it had.
  * - Approving a sponsorship goes through approve_sponsorship(), which checks the company and the website the
  *   vetter was shown, and is followed by the approval email. A failed email is noted, and can be sent again.
@@ -741,7 +755,22 @@ function prepare_rest_update( \stdClass|\WP_Error $prepared, \WP_REST_Request $r
 		return $prepared;
 	}
 
-	$to = (string) $prepared->post_status;
+	$to   = (string) $prepared->post_status;
+	$seen = $request['original_status'];
+
+	if ( is_string( $seen ) && $seen !== $post->post_status ) {
+		$statuses = get_statuses( $post->post_type );
+
+		return new \WP_Error(
+			'sv_status_changed',
+			sprintf(
+				/* translators: %s: Status. */
+				__( 'Someone changed the status to %s after this was loaded. It’s up to date now: check it, then try again.', 'wordcamporg' ),
+				$statuses[ $post->post_status ] ?? $post->post_status
+			),
+			array( 'status' => 409 )
+		);
+	}
 
 	if ( 'trash' === $post->post_status && 'trash' !== $to ) {
 		wp_untrash_post( $post->ID );
@@ -826,6 +855,8 @@ function send_rest_approval_email( \WP_REST_Request $request ): array|\WP_Error 
 		$message = __( 'The approval email was sent to the event.', 'wordcamporg' );
 	} elseif ( get_conversations( $sponsorship_id, 'approval' ) ) {
 		$message = __( 'No approval email was sent: the event already has one.', 'wordcamporg' );
+	} elseif ( event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
+		$message = __( 'No approval email was sent: the event is over.', 'wordcamporg' );
 	} else {
 		$message = __( 'No approval email was needed: the event has invoiced the sponsor, and approving the invoice tells them.', 'wordcamporg' );
 	}

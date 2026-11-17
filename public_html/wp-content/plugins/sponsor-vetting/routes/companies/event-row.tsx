@@ -1,3 +1,7 @@
+/**
+ * One of a company's events, with what a vetter does about it.
+ */
+
 import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { moreVertical } from '@wordpress/icons';
@@ -61,7 +65,7 @@ export function EventRow( {
 	const sponsor = actions?.sponsor;
 	const emails = ( actions?.conversations ?? [] ).filter( ( { type } ) => type === 'approval' );
 	// Approving has a button of its own.
-	const others = ( actions?.allowed_statuses ?? [] ).filter( ( next ) => next !== 'svs-approved' );
+	const others = actions?.allowed_statuses ?? [];
 
 	return (
 		<li className={ isMarked ? 'sponsor-vetting__event is-marked' : 'sponsor-vetting__event' }>

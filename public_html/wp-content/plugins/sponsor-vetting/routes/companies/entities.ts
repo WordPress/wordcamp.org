@@ -1,14 +1,26 @@
-import type { Badge } from '@wordpress/ui';
-import type { ComponentProps } from 'react';
-
-/*
+/**
+ * The two post types, their statuses, and the queries the screen reads them with.
+ *
  * Companies and sponsorships are post types, read and edited through core's own REST endpoints and core-data. What
  * the endpoints add for them is in `includes/rest.php`.
  */
+
+import type { Badge } from '@wordpress/ui';
+import type { ComponentProps } from 'react';
+
+/**
+ * The company post type.
+ */
 export const COMPANY = 'sv_company';
+
+/**
+ * The sponsorship post type.
+ */
 export const SPONSORSHIP = 'sv_sponsorship';
 
-/* The vetting pipeline, in the order companies move through it. */
+/**
+ * The vetting pipeline, in the order companies move through it.
+ */
 export const COMPANY_STATUSES = [
 	'sv-needs-vetting',
 	'sv-in-progress',
@@ -18,8 +30,14 @@ export const COMPANY_STATUSES = [
 	'sv-inactive',
 ] as const;
 
+/**
+ * The statuses of a sponsorship, as its event sees them.
+ */
 export const SPONSORSHIP_STATUSES = [ 'svs-pending', 'svs-approved', 'svs-not-approved', 'svs-canceled' ] as const;
 
+/**
+ * Core's status of a trashed record.
+ */
 export const TRASH = 'trash';
 
 export type CompanyStatus = ( typeof COMPANY_STATUSES )[ number ];
@@ -28,6 +46,9 @@ export type AnyStatus = CompanyStatus | SponsorshipStatus | typeof TRASH;
 
 export type Intent = NonNullable< ComponentProps< typeof Badge >[ 'intent' ] >;
 
+/**
+ * What each status's badge conveys.
+ */
 export const STATUS_INTENTS: Record< AnyStatus, Intent > = {
 	'sv-needs-vetting': 'informational',
 	'sv-in-progress': 'draft',
@@ -42,7 +63,7 @@ export const STATUS_INTENTS: Record< AnyStatus, Intent > = {
 	trash: 'none',
 };
 
-/*
+/**
  * Every company, with only what the list shows. The statuses are named because the endpoint lists published posts
  * unless told otherwise, and `any` leaves these statuses out. One object, since core-data caches by query.
  */
@@ -62,7 +83,9 @@ export const COMPANIES_QUERY = {
 	],
 };
 
-/* Every sponsorship, with only what the list of events shows. */
+/**
+ * Every sponsorship, with only what the list of events shows.
+ */
 export const SPONSORSHIPS_QUERY = {
 	status: [ ...SPONSORSHIP_STATUSES, TRASH ],
 	per_page: -1,

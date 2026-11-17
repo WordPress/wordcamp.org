@@ -1,3 +1,7 @@
+/**
+ * Tests for what a company's list of events says about them.
+ */
+
 import { describe, expect, it } from 'vitest';
 import { getEventFlag, getEventsHint, splitEvents } from '../events';
 import type { Company, Sponsorship } from '../types';

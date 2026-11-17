@@ -1,3 +1,7 @@
+/**
+ * Tests for the fields of the two lists.
+ */
+
 import { describe, expect, it } from 'vitest';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';

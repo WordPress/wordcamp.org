@@ -1,12 +1,18 @@
+/**
+ * What a vetter does to a sponsorship, wherever it's shown.
+ */
+
 import apiFetch from '@wordpress/api-fetch';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
-import { SPONSORSHIP } from './entities';
+import { SPONSORSHIP, SPONSORSHIP_STATUSES } from './entities';
 import type { Run } from './hooks';
 import type { SponsorshipDetails } from './types';
 
-/* The sponsorship a change is made to, with what the change needs of it. */
+/**
+ * The sponsorship a change is made to, with what the change needs of it.
+ */
 type Target< Key extends keyof SponsorshipDetails = never > = Pick< SponsorshipDetails, 'id' | Key >;
 
 /**
@@ -39,6 +45,32 @@ export function getStatusChangeInfo( status: string ): string | undefined {
 	return status === 'svs-canceled'
 		? __( 'The event sees it as Canceled, and its invoices can’t be approved.', 'wordcamporg' )
 		: undefined;
+}
+
+/**
+ * Counts how many of some sponsorships are approved now, and how many of those still wait for the approval email.
+ *
+ * Asked of the server, since what core-data holds is from before the change that approved them.
+ *
+ * @param ids The sponsorships.
+ * @return The two counts.
+ */
+export async function countApprovals( ids: number[] ): Promise< { approved: number; unsent: number } > {
+	const params = new URLSearchParams( {
+		include: ids.join( ',' ),
+		status: SPONSORSHIP_STATUSES.join( ',' ),
+		per_page: '100',
+		_fields: 'id,status,needs_approval_email',
+	} );
+	const records = await apiFetch< Pick< SponsorshipDetails, 'status' | 'needs_approval_email' >[] >( {
+		path: `/wp/v2/sv-sponsorships?${ params }`,
+	} );
+	const approved = records.filter( ( { status } ) => status === 'svs-approved' );
+
+	return {
+		approved: approved.length,
+		unsent: approved.filter( ( record ) => record.needs_approval_email ).length,
+	};
 }
 
 /**
@@ -82,9 +114,10 @@ export function useSponsorshipChanges( run: Run ) {
 				return __( 'The sponsorship was approved.', 'wordcamporg' );
 			} ),
 
-		setStatus: ( { id }: Target, status: string, label: string ) =>
+		setStatus: ( { id, status: shown }: Target< 'status' >, status: string, label: string ) =>
 			run( `status-${ id }`, async () => {
-				await write( id, { status } );
+				// The change is from the status the vetter was shown, so the server refuses it from another.
+				await write( id, { status, original_status: shown } );
 
 				/* translators: %s: Status, like "Canceled". */
 				return sprintf( __( 'The sponsorship is now %s.', 'wordcamporg' ), label );

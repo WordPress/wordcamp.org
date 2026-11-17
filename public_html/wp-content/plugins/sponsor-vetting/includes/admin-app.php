@@ -69,7 +69,8 @@ function render_app_page(): void {
 /**
  * Sends the addresses of the screens this one replaced to it, with the same record open.
  *
- * Vetters have those bookmarked, and core would answer them with an error now.
+ * Vetters have those bookmarked, and core would answer them with an error now. It refuses them to a vetter who
+ * can't edit posts as soon as the menu is built, so this runs before that.
  */
 function redirect_old_screens(): void {
 	global $pagenow;
@@ -93,4 +94,4 @@ function redirect_old_screens(): void {
 		exit;
 	}
 }
-add_action( 'admin_init', __NAMESPACE__ . '\redirect_old_screens' );
+add_action( 'admin_menu', __NAMESPACE__ . '\redirect_old_screens' );

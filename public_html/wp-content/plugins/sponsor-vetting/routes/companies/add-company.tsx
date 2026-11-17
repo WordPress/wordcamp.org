@@ -1,3 +1,7 @@
+/**
+ * The dialog that adds a company.
+ */
+
 import { Modal } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
@@ -11,6 +15,9 @@ import { useOpenRecord, useTask } from './hooks';
 
 type NewCompany = { title: string; domains: string };
 
+/**
+ * The fields a new company is created with.
+ */
 const FIELDS: Field< NewCompany >[] = [
 	{
 		id: 'title',
@@ -27,6 +34,9 @@ const FIELDS: Field< NewCompany >[] = [
 	},
 ];
 
+/**
+ * The form a new company is created with; the rest is filled in once it's open.
+ */
 const FORM = { fields: [ 'title', 'domains' ] };
 
 /**

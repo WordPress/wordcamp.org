@@ -96,8 +96,7 @@ function register_types(): void {
 function register_post_types(): void {
 	$shared = array(
 		'public'              => false,
-		// The vetting screen is the plugin's own, on core's REST endpoints, which only vetters can use: see
-		// get_capabilities().
+		// The vetting screen is the plugin's own, on core's REST endpoints: see get_capabilities() for who can use them.
 		'show_ui'             => false,
 		'show_in_rest'        => is_central(),
 		'show_in_nav_menus'   => false,

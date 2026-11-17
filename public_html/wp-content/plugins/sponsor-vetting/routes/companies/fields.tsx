@@ -1,3 +1,7 @@
+/**
+ * The fields of the two lists, and how a record's name, status and flags are shown.
+ */
+
 import type { Field } from '@wordpress/dataviews';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __, sprintf } from '@wordpress/i18n';

@@ -1,3 +1,7 @@
+/**
+ * Tests for a company's events and history.
+ */
+
 import { describe, expect, it } from 'vitest';
 import { buildTimeline, sortByEvent } from '../timeline';
 import type { CompanySponsorship } from '../types';

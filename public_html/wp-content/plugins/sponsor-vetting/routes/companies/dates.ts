@@ -1,3 +1,7 @@
+/**
+ * Formats and compares the screen's dates.
+ */
+
 import { dateI18n, getSettings, humanTimeDiff } from '@wordpress/date';
 import { __ } from '@wordpress/i18n';
 

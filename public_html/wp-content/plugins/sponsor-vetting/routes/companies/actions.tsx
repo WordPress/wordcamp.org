@@ -1,3 +1,7 @@
+/**
+ * The actions the lists offer on their rows: trash, restore and delete for good.
+ */
+
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import type { Action } from '@wordpress/dataviews';
@@ -8,7 +12,9 @@ import { COMPANY, TRASH } from './entities';
 import { getName } from './fields';
 import { useOpenRecord, useTask } from './hooks';
 
-/* What a list needs of a record to trash it, restore it, or delete it. */
+/**
+ * What a list needs of a record to trash it, restore it, or delete it.
+ */
 type Listed = {
 	id: number;
 	title: { raw: string };

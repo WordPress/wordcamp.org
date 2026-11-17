@@ -1,3 +1,7 @@
+/**
+ * The route's stage: the lists of events and of companies.
+ */
+
 import { Page } from '@wordpress/admin-ui';
 import { DataViews } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
@@ -199,4 +203,7 @@ function Stage() {
 	);
 }
 
+/**
+ * The route's stage, under the name its surface is looked up by.
+ */
 export const stage = Stage;

@@ -1,7 +1,13 @@
+/**
+ * What a company's list of events says about them: its hint, the urgent ones, and which are past.
+ */
+
 import { __, _n, sprintf } from '@wordpress/i18n';
 import type { Company, Event, Flag, Sponsorship } from './types';
 
-/* How many days before its event a sponsor that isn't approved yet turns urgent. */
+/**
+ * How many days before its event a sponsor that isn't approved yet turns urgent.
+ */
 const SOON_DAYS = 7;
 
 /**

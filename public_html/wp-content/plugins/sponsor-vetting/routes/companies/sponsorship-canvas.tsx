@@ -1,3 +1,7 @@
+/**
+ * The open sponsorship, while it has no company or is in the Trash.
+ */
+
 import { store as coreStore, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { DataForm } from '@wordpress/dataviews';
@@ -36,8 +40,8 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 		[ companies ]
 	);
 	const suggested = suggestion ? companies.find( ( candidate ) => candidate.id === suggestion.id ) : undefined;
-	// Approving takes a company first.
-	const others = sponsorship.allowed_statuses.filter( ( next ) => next !== 'svs-approved' );
+	// An approval was for its company's vetting, so one that lost its company is canceled and reopened first.
+	const isApproved = status === 'svs-approved';
 
 	const onCreate = () =>
 		run( 'create', async () => {
@@ -92,64 +96,81 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 			</CanvasHeader>
 			<Stack direction="column" gap="lg" className="sponsor-vetting__canvas-body is-narrow">
 				<Section title={ __( 'Link to a company', 'wordcamporg' ) }>
-					{ suggested && suggestion ? (
+					{ isApproved ? (
+						<Text>
+							{ __(
+								'An approved sponsorship can’t be linked to a company. Cancel it and reopen it first, then approve it again once it’s linked.',
+								'wordcamporg'
+							) }
+						</Text>
+					) : (
 						<>
-							<Text>
-								{ sprintf(
-									/* translators: 1: Company name. 2: Why it's suggested. */
-									__( 'Suggested: %1$s. %2$s', 'wordcamporg' ),
-									getName( suggested ),
-									suggestion.reason
-								) }
-							</Text>
-							<Stack direction="row">
+							{ suggested && suggestion ? (
+								<>
+									<Text>
+										{ sprintf(
+											/* translators: 1: Company name. 2: Why it's suggested. */
+											__( 'Suggested: %1$s. %2$s', 'wordcamporg' ),
+											getName( suggested ),
+											suggestion.reason
+										) }
+									</Text>
+									<Stack direction="row">
+										<Button
+											loading={ running === `link-${ id }` && ! pick.company }
+											onClick={ () => changes.link( sponsorship, suggested.id ) }
+										>
+											{ sprintf(
+												/* translators: %s: Company name. */
+												__( 'Link to %s', 'wordcamporg' ),
+												getName( suggested )
+											) }
+										</Button>
+									</Stack>
+								</>
+							) : (
+								<Text>{ __( 'Not linked to a company yet.', 'wordcamporg' ) }</Text>
+							) }
+							<Stack direction="row" align="end" gap="sm">
+								<div className="sponsor-vetting__pick">
+									<DataForm
+										data={ pick }
+										fields={ fields }
+										form={ COMPANY_PICK_FORM }
+										onChange={ ( edits ) =>
+											setPick( ( current ) => ( { ...current, ...edits } ) )
+										}
+									/>
+								</div>
 								<Button
-									loading={ running === `link-${ id }` && ! pick.company }
-									onClick={ () => changes.link( sponsorship, suggested.id ) }
+									variant="outline"
+									disabled={ ! pick.company }
+									focusableWhenDisabled
+									loading={ running === `link-${ id }` && Boolean( pick.company ) }
+									onClick={ () => changes.link( sponsorship, pick.company ) }
 								>
-									{ sprintf(
-										/* translators: %s: Company name. */
-										__( 'Link to %s', 'wordcamporg' ),
-										getName( suggested )
-									) }
+									{ __( 'Link', 'wordcamporg' ) }
 								</Button>
 							</Stack>
+							{ sponsor && (
+								<Stack direction="row">
+									<Button
+										variant="outline"
+										loading={ running === 'create' }
+										onClick={ onCreate }
+									>
+										{ __( 'Create a company from this sponsor', 'wordcamporg' ) }
+									</Button>
+								</Stack>
+							) }
+							<Hint>
+								{ __(
+									'Once it’s linked, this opens the company, with this event among its events.',
+									'wordcamporg'
+								) }
+							</Hint>
 						</>
-					) : (
-						<Text>{ __( 'Not linked to a company yet.', 'wordcamporg' ) }</Text>
 					) }
-					<Stack direction="row" align="end" gap="sm">
-						<div className="sponsor-vetting__pick">
-							<DataForm
-								data={ pick }
-								fields={ fields }
-								form={ COMPANY_PICK_FORM }
-								onChange={ ( edits ) => setPick( ( current ) => ( { ...current, ...edits } ) ) }
-							/>
-						</div>
-						<Button
-							variant="outline"
-							disabled={ ! pick.company }
-							focusableWhenDisabled
-							loading={ running === `link-${ id }` && Boolean( pick.company ) }
-							onClick={ () => changes.link( sponsorship, pick.company ) }
-						>
-							{ __( 'Link', 'wordcamporg' ) }
-						</Button>
-					</Stack>
-					{ sponsor && (
-						<Stack direction="row">
-							<Button variant="outline" loading={ running === 'create' } onClick={ onCreate }>
-								{ __( 'Create a company from this sponsor', 'wordcamporg' ) }
-							</Button>
-						</Stack>
-					) }
-					<Hint>
-						{ __(
-							'Once it’s linked, this opens the company, with this event among its events.',
-							'wordcamporg'
-						) }
-					</Hint>
 				</Section>
 
 				<Section title={ __( 'From the event', 'wordcamporg' ) }>
@@ -187,7 +208,7 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 				) }
 
 				<Stack direction="row" gap="sm" wrap="wrap">
-					{ others.map( ( next ) => (
+					{ sponsorship.allowed_statuses.map( ( next ) => (
 						<Button
 							key={ next }
 							variant="minimal"

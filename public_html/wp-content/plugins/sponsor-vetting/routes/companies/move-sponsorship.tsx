@@ -1,3 +1,7 @@
+/**
+ * The dialog that moves a sponsorship to another company.
+ */
+
 import { Modal } from '@wordpress/components';
 import { DataForm } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';

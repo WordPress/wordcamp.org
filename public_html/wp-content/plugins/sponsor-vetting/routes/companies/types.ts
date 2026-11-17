@@ -1,10 +1,16 @@
+/**
+ * The records as the REST API returns them, and what the screen makes of them.
+ */
+
 import type { CompanyStatus, SponsorshipStatus, TRASH } from './entities';
 
 /**
  * The records as REST returns them in the `edit` context.
  */
 
-/* `event_soon` is the screen's own: the rest come with a company. */
+/**
+ * `event_soon` is the screen's own: the rest come with a company.
+ */
 export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied' | 'event_soon';
 
 export type Flag = {
@@ -31,7 +37,9 @@ type Title = {
 	rendered: string;
 };
 
-/* What a company and a sponsorship have in common beyond what their lists show. */
+/**
+ * What a company and a sponsorship have in common beyond what their lists show.
+ */
 type Details = {
 	allowed_statuses: string[];
 	conversations: Conversation[];
@@ -102,14 +110,18 @@ export type SponsorshipDetails = Sponsorship &
 		needs_approval_email: boolean;
 	};
 
-/* A sponsorship as its company lists it: an event, and how its approval stands. */
+/**
+ * A sponsorship as its company lists it: an event, and how its approval stands.
+ */
 export type CompanySponsorship = Pick<
 	SponsorshipDetails,
 	'id' | 'title' | 'status' | 'event' | 'approved' | 'good_faith' | 'log'
 >;
 
-/* What a vetter does about one of a company's events. Read only for the events its list shows: most of it is
-   looked up on the event's site. */
+/**
+ * What a vetter does about one of a company's events. Read only for the events its list shows: most of it is
+ * looked up on the event's site.
+ */
 export type EventActions = Pick<
 	SponsorshipDetails,
 	| 'id'
@@ -123,10 +135,14 @@ export type EventActions = Pick<
 	| 'sponsor'
 >;
 
-/* A record while it's edited: core-data hands its title over as the text itself. */
+/**
+ * A record while it's edited: core-data hands its title over as the text itself.
+ */
 export type Edited< Record extends { title: Title } > = Omit< Record, 'title' > & { title: string };
 
-/* A post status, from core's `statuses` endpoint. */
+/**
+ * A post status, from core's `statuses` endpoint.
+ */
 export type Status = {
 	slug: string;
 	name: string;

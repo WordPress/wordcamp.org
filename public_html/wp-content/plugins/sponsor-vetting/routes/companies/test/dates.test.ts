@@ -1,3 +1,7 @@
+/**
+ * Tests for the screen's dates.
+ */
+
 import { afterEach, describe, expect, it } from 'vitest';
 import { getSettings, setSettings } from '@wordpress/date';
 import { compareDays, formatDay } from '../dates';

@@ -1,3 +1,7 @@
+/**
+ * The Layout menu of the list of companies.
+ */
+
 import { DropdownMenu, MenuGroup, MenuItemsChoice } from '@wordpress/components';
 import type { View } from '@wordpress/dataviews';
 import { __, isRTL } from '@wordpress/i18n';

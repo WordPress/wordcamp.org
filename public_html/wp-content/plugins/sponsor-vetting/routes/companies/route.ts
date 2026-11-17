@@ -1,8 +1,15 @@
+/**
+ * The route of the vetting screen.
+ */
+
 import { store as coreStore } from '@wordpress/core-data';
 import { resolveSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import { COMPANIES_QUERY, COMPANY } from './entities';
 
+/**
+ * The route: its title, what it starts loading, and whether it has a canvas.
+ */
 export const route = {
 	title: () => __( 'Sponsor Vetting', 'wordcamporg' ),
 

@@ -1,3 +1,7 @@
+/**
+ * The screen's hooks: what the address names, the records, the two lists, and running a change.
+ */
+
 import { store as coreStore, useEntityRecords } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
@@ -12,7 +16,7 @@ import { getCompanyFields, getSponsorshipFields } from './fields';
 import type { Company, Sponsorship, Status } from './types';
 import { COMPANY_LAYOUTS, COMPANY_VIEW, SPONSORSHIP_LAYOUTS, SPONSORSHIP_VIEW, withoutTrash } from './view';
 
-/*
+/**
  * The route tree is assembled at runtime, so the router can't infer this route's search params. These describe the
  * params the screen keeps there, and the one call it makes.
  */
@@ -214,8 +218,10 @@ export function getErrorMessage( error: unknown ): string {
 		: __( 'Something went wrong. Try again.', 'wordcamporg' );
 }
 
-/* Runs one change: takes its name and the work, which resolves to the message to show, and resolves to whether the
-   work succeeded. */
+/**
+ * Runs one change: takes its name and the work, which resolves to the message to show, and resolves to whether the
+ * work succeeded.
+ */
 export type Run = ( name: string, work: () => Promise< string | undefined > ) => Promise< boolean >;
 
 /**

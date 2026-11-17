@@ -317,15 +317,16 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
-	 * A status change the workflow refuses is answered with an error and leaves the company as it was.
+	 * A status change the workflow refuses, or one from a status the company no longer has, is answered with an
+	 * error and leaves the company as it was.
 	 *
 	 * @dataProvider data_status_changes
 	 *
-	 * @param string $to     The status asked for.
+	 * @param array  $params What the request sends.
 	 * @param int    $status The response's status.
 	 * @param string $stored The company's status afterwards.
 	 */
-	public function test_refused_status_changes_are_errors( string $to, int $status, string $stored ): void {
+	public function test_refused_status_changes_are_errors( array $params, int $status, string $stored ): void {
 		$company_id = self::factory()->post->create(
 			array(
 				'post_type'   => COMPANY_POST_TYPE,
@@ -333,7 +334,7 @@ class Test_Rest extends Database_TestCase {
 			)
 		);
 
-		$response = $this->request( 'POST', '/sv-companies/' . $company_id, array( 'status' => $to ) );
+		$response = $this->request( 'POST', '/sv-companies/' . $company_id, $params );
 
 		$this->assertSame( array( $status, $stored ), array( $response->get_status(), get_post_status( $company_id ) ) );
 	}
@@ -345,8 +346,24 @@ class Test_Rest extends Database_TestCase {
 	 */
 	public function data_status_changes(): array {
 		return array(
-			'a status the company can move to'   => array( 'sv-compliance-req', 200, 'sv-compliance-req' ),
-			'a status the company can’t move to' => array( 'sv-needs-vetting', 400, 'sv-in-progress' ),
+			'a status the company can move to'      => array( array( 'status' => 'sv-compliance-req' ), 200, 'sv-compliance-req' ),
+			'a status the company can’t move to'    => array( array( 'status' => 'sv-needs-vetting' ), 400, 'sv-in-progress' ),
+			'a change from a status it has left'    => array(
+				array(
+					'status'          => 'sv-compliance-req',
+					'original_status' => 'sv-needs-vetting',
+				),
+				409,
+				'sv-in-progress',
+			),
+			'a change from the status it still has' => array(
+				array(
+					'status'          => 'sv-compliance-req',
+					'original_status' => 'sv-in-progress',
+				),
+				200,
+				'sv-compliance-req',
+			),
 		);
 	}
 

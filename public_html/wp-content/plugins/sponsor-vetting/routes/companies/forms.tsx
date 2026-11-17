@@ -1,11 +1,16 @@
+/**
+ * The fields and forms a company is edited with.
+ */
+
 import type { Field, Form } from '@wordpress/dataviews';
+import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
 import { formatDay } from './dates';
 import type { AnyStatus } from './entities';
 import { StatusBadge, getName } from './fields';
 import type { Company, CompanyDetails, Edited } from './types';
 
-export type CompanyForm = Edited< CompanyDetails >;
+export type CompanyForm = Edited< CompanyDetails > & { original_status?: string };
 
 type Labels = Record< string, string >;
 
@@ -41,7 +46,9 @@ function getStatusField< Item extends { status: string } >( record: Saved, label
 	};
 }
 
-/* The note that's added when the company is saved. */
+/**
+ * The note that's added when the company is saved.
+ */
 const NOTE = {
 	id: 'note',
 	type: 'text',
@@ -101,6 +108,8 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			type: 'text',
 			label: __( 'Name', 'wordcamporg' ),
 			isValid: { required: true },
+			// Stored with its `&` and the like encoded, and edited as the text they stand for.
+			getValue: ( { item } ) => decodeEntities( item.title ),
 		},
 		{
 			id: 'domains',
@@ -163,12 +172,22 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 	];
 }
 
-/* A company's forms, one per group of its view. The first shows each value with the control to change it. */
+/**
+ * A company's forms, one per group of its view. The first shows each value with the control to change it.
+ */
 export const VETTING_FORM: Form = {
 	layout: { type: 'panel', labelPosition: 'side', editVisibility: 'always' },
 	fields: [ 'status', 'not_eligible_until', 'good_faith_due' ],
 };
+
+/**
+ * The findings of a company's vetting.
+ */
 export const FINDINGS_FORM: Form = { fields: [ 'gpl_findings', 'trademark_findings' ] };
+
+/**
+ * Who the company is and who to write to.
+ */
 export const DETAILS_FORM: Form = {
 	fields: [
 		'title',
@@ -178,12 +197,15 @@ export const DETAILS_FORM: Form = {
 		'mes',
 	],
 };
+
+/**
+ * The note a vetter adds.
+ */
 export const NOTE_FORM: Form = { fields: [ 'note' ] };
 
-/* What a new company is created with; the rest is filled in once it's open. */
-export const NEW_COMPANY_FORM: Form = { fields: [ 'title', 'domains' ] };
-
-/* The company a vetter picks for a sponsorship, or 0 before they have. */
+/**
+ * The company a vetter picks for a sponsorship, or 0 before they have.
+ */
 export type CompanyPick = { company: number };
 
 /**
@@ -203,4 +225,7 @@ export function getCompanyPickField( companies: Company[], label: string ): Fiel
 	};
 }
 
+/**
+ * The form a company is picked with.
+ */
 export const COMPANY_PICK_FORM: Form = { fields: [ 'company' ] };

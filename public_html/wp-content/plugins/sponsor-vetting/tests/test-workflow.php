@@ -21,6 +21,8 @@ use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
+require_once dirname( __DIR__ ) . '/includes/records.php';
+
 /**
  * @group sponsor-vetting
  */

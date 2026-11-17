@@ -1,3 +1,7 @@
+/**
+ * The route's canvas: the open record, beside the list.
+ */
+
 import { __ } from '@wordpress/i18n';
 import { CanvasPlaceholder } from './canvas-parts';
 import { CompanyCanvas } from './company-canvas';
@@ -60,4 +64,7 @@ function Canvas() {
 	);
 }
 
+/**
+ * The route's canvas, under the name its surface is looked up by.
+ */
 export const canvas = Canvas;

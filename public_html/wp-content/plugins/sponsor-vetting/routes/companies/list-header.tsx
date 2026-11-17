@@ -1,3 +1,7 @@
+/**
+ * The head of a list: its tabs, its search and its Layout menu.
+ */
+
 import { DataViews } from '@wordpress/dataviews';
 import { __ } from '@wordpress/i18n';
 import { Stack, Tabs } from '@wordpress/ui';

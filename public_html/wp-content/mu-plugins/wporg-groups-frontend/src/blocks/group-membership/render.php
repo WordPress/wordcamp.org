@@ -11,7 +11,7 @@ use function WordCamp\Groups\Frontend\Capabilities\is_only_organizer;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
-if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count' ), true ) ) {
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count', 'count-join' ), true ) ) {
 	$variant = 'combined';
 }
 
@@ -21,14 +21,17 @@ $shows_preference = in_array( $variant, array( 'combined', 'preference' ), true 
 // The standalone count lives in the hero's meta row next to the group
 // location; the sidebar membership variant leaves it out so the number
 // isn't stated twice on the same page.
-$shows_count = in_array( $variant, array( 'combined', 'count' ), true );
+$shows_count = in_array( $variant, array( 'combined', 'count', 'count-join' ), true );
+
+// `count-join` follows the count with a Join button, or the visitor's role.
+$offers_join = $shows_membership || 'count-join' === $variant;
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
 $user_role    = '';
 $role_label   = '';
 
-if ( $shows_membership && $is_member ) {
+if ( $offers_join && $is_member ) {
 	$user       = wp_get_current_user();
 	$user_role  = reset( $user->roles ) ?: 'subscriber';
 	$role_label = get_role_tier_label( $user_role );
@@ -105,7 +108,7 @@ if ( $shows_count ) {
 	);
 }
 
-if ( $shows_membership ) {
+if ( $offers_join ) {
 	$context = array_merge(
 		$context,
 		array(
@@ -116,6 +119,7 @@ if ( $shows_membership ) {
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
 			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
+			'joinError'    => __( 'You could not join this group. Please try again.', 'wordcamporg' ),
 			'loading'      => false,
 			'errorMessage' => '',
 		)
@@ -262,14 +266,33 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				?>
 			</p>
 		<?php endif; ?>
+	<?php endif; ?>
 
-		<?php if ( $renders_step_down ) : ?>
-			<p
-				class="wporg-group-membership__status is-error"
-				role="alert"
-				data-wp-text="context.errorMessage"
-			></p>
+	<?php if ( 'count-join' === $variant ) : ?>
+		<?php if ( $is_member ) : ?>
+			<span class="wporg-group-membership__badge">
+				<?php echo esc_html( $role_label ); ?>
+				<span aria-hidden="true">&#10003;</span>
+			</span>
+		<?php else : ?>
+			<div class="wp-block-button">
+				<button
+					type="button"
+					class="wp-block-button__link wp-element-button"
+					data-wp-on--click="actions.join"
+					data-wp-bind--disabled="context.loading"
+					data-wp-bind--aria-busy="context.loading"
+				><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
+			</div>
 		<?php endif; ?>
+	<?php endif; ?>
+
+	<?php if ( ( $offers_join && ! $is_member ) || $renders_step_down ) : ?>
+		<p
+			class="wporg-group-membership__status is-error"
+			role="alert"
+			data-wp-text="context.errorMessage"
+		></p>
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>

@@ -18,6 +18,12 @@ test.describe( 'anonymous visitor', () => {
 		await expect( heroCount ).toHaveText( /\d+ members?/ );
 		await expect( heroCount ).toHaveAttribute( 'href', /\/members\/$/ );
 
+		// Joining is offered next to the count, ahead of the page content.
+		const heroJoin = page
+			.locator( '.groups-site-hero-meta' )
+			.getByRole( 'button', { name: 'Join this group' } );
+		await expect( heroJoin ).toBeVisible();
+
 		const sidebar = page.locator( '.groups-site-sidebar' );
 		await expect( sidebar.getByRole( 'button', { name: 'Join this group' } ) ).toBeVisible();
 		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveCount( 0 );

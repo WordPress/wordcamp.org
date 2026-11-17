@@ -219,6 +219,10 @@ describe( 'group membership step down', () => {
 } );
 
 describe( 'group membership join', () => {
+	afterEach( () => {
+		jest.restoreAllMocks();
+	} );
+
 	test( 'tells the visitor when joining fails', async () => {
 		mockContext = {
 			isLoggedIn: true,

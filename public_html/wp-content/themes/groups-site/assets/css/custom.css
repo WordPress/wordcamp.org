@@ -505,30 +505,30 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	line-height: 26px;
 }
 
-/* The dot trails the location, so it never opens a wrapped line, and a
-   group without a location gets no dot at all. The extra 2px makes up the
-   difference between the location's own gap and the row's. */
+/* `wporg/group-location` renders nothing at all when the group hasn't set a
+   location, so the separator is bound to the sibling it separates from —
+   otherwise the member count picks up a leading middle dot with nothing on
+   its left. */
 
-.groups-site-hero-meta .wp-block-wporg-group-location::after {
+.groups-site-hero-meta
+	.wp-block-wporg-group-location
+	+ .wporg-group-membership::before {
 	content: "\00b7";
 	content: "\00b7" / "";
-	margin-left: 2px;
 	color: var(--wp--preset--color--charcoal-5);
 }
 
-/* On the group home the count and the Join button are items of the meta
-   row itself, so on a narrow screen the button wraps under the text line
-   instead of dragging the count down with it. */
+/* The hero's Join button only shows while the sidebar's is stacked under the
+   content; responsive.css reveals it there. */
 
-.groups-site-hero-meta > .groups-site-hero-membership {
-	display: contents;
+.groups-site-hero-content .groups-site-hero-join {
+	display: none;
 }
 
-/* The hero's Join button takes the compact size so it sits in the meta line
-   instead of towering over it. The padding goes through the parent theme's
-   tokens, as the sidebar buttons' does. */
+/* Compact size, with the padding set through the parent theme's tokens as
+   the sidebar buttons' is. */
 
-.groups-site-hero-meta .wp-block-button__link.wp-element-button {
+.groups-site-hero-join .wp-block-button__link.wp-element-button {
 	--wp--custom--button--spacing--padding--top: 10px;
 	--wp--custom--button--spacing--padding--bottom: 10px;
 	--wp--custom--button--spacing--padding--left: 20px;
@@ -845,7 +845,7 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 }
 
 /* "Part of {group} · {count}". The separator binds to the count it
-   introduces. */
+   introduces, mirroring the location + count pair on the front page. */
 
 .groups-site-event-hero-meta
 	.wp-block-site-title

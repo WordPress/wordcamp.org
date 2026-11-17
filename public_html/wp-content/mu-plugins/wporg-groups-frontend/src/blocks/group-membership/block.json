@@ -10,7 +10,7 @@
 	"attributes": {
 		"variant": {
 			"type": "string",
-			"enum": [ "combined", "membership", "preference", "count", "count-join" ],
+			"enum": [ "combined", "membership", "preference", "count", "join" ],
 			"default": "combined"
 		}
 	},

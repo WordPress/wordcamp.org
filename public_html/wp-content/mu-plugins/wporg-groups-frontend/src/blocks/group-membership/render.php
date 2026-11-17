@@ -11,7 +11,7 @@ use function WordCamp\Groups\Frontend\Capabilities\is_only_organizer;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
-if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count', 'count-join' ), true ) ) {
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count', 'join' ), true ) ) {
 	$variant = 'combined';
 }
 
@@ -21,17 +21,18 @@ $shows_preference = in_array( $variant, array( 'combined', 'preference' ), true 
 // The standalone count lives in the hero's meta row next to the group
 // location; the sidebar membership variant leaves it out so the number
 // isn't stated twice on the same page.
-$shows_count = in_array( $variant, array( 'combined', 'count', 'count-join' ), true );
-
-// `count-join` follows the count with a Join button, or the visitor's role.
-$offers_join = $shows_membership || 'count-join' === $variant;
+$shows_count = in_array( $variant, array( 'combined', 'count' ), true );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
 $user_role    = '';
 $role_label   = '';
 
-if ( $offers_join && $is_member ) {
+// `join` is a lone Join button, for visitors who haven't joined.
+$renders_lone_join = 'join' === $variant && ! $is_member;
+$offers_join       = $shows_membership || $renders_lone_join;
+
+if ( $shows_membership && $is_member ) {
 	$user       = wp_get_current_user();
 	$user_role  = reset( $user->roles ) ?: 'subscriber';
 	$role_label = get_role_tier_label( $user_role );
@@ -53,7 +54,7 @@ $renders_role_action = $renders_leave || $renders_step_down;
 // "Step down" rather than "Leave group", and a member knows where they stand.
 $renders_role_badge = $shows_membership && $is_member;
 
-if ( ! $shows_membership && ! $renders_preference && ! $shows_count ) {
+if ( ! $offers_join && ! $renders_preference && ! $shows_count ) {
 	return;
 }
 
@@ -268,26 +269,19 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endif; ?>
 	<?php endif; ?>
 
-	<?php if ( 'count-join' === $variant ) : ?>
-		<?php if ( $is_member ) : ?>
-			<span class="wporg-group-membership__badge">
-				<?php echo esc_html( $role_label ); ?>
-				<span aria-hidden="true">&#10003;</span>
-			</span>
-		<?php else : ?>
-			<div class="wp-block-button">
-				<button
-					type="button"
-					class="wp-block-button__link wp-element-button"
-					data-wp-on--click="actions.join"
-					data-wp-bind--disabled="context.loading"
-					data-wp-bind--aria-busy="context.loading"
-				><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
-			</div>
-		<?php endif; ?>
+	<?php if ( $renders_lone_join ) : ?>
+		<div class="wp-block-button">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wp-on--click="actions.join"
+				data-wp-bind--disabled="context.loading"
+				data-wp-bind--aria-busy="context.loading"
+			><?php esc_html_e( 'Join this group', 'wordcamporg' ); ?></button>
+		</div>
 	<?php endif; ?>
 
-	<?php if ( ( $offers_join && ! $is_member ) || $renders_step_down ) : ?>
+	<?php if ( $offers_join ) : ?>
 		<p
 			class="wporg-group-membership__status is-error"
 			role="alert"

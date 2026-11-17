@@ -29,6 +29,13 @@
 	border-radius: 100px;
 }
 
+/* The check marks the badge as the visitor's own status. The slash keeps
+   it from being read out. */
+.wporg-group-membership__badge::after {
+	content: "\2713";
+	content: "\2713" / "";
+}
+
 /* Both of these are text about your membership, not a primary/secondary
    action pair — so they share one row and one style. */
 .wporg-group-membership__meta {

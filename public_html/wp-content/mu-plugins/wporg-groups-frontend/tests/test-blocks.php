@@ -745,54 +745,19 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * The front page hero offers joining to anyone who doesn't belong yet.
-	 *
-	 * @dataProvider data_group_membership_hero_non_members
+	 * The hero's lone Join button is for visitors who haven't joined; members get nothing.
 	 */
-	public function test_group_membership_hero_offers_joining_to_non_members( bool $logged_in ) {
-		$this->stub_count_users( 28 );
+	public function test_group_membership_join_variant_is_only_for_non_members() {
+		wp_set_current_user( 0 );
 
-		$visitor_id = 0;
-		if ( $logged_in ) {
-			$visitor_id = self::factory()->user->create();
-			remove_user_from_blog( $visitor_id, get_current_blog_id() );
-		}
-		wp_set_current_user( $visitor_id );
-
-		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"count-join"} /-->' );
-
-		$this->assertStringContainsString( '28 members', $output );
 		$this->assertMatchesRegularExpression(
 			'/<button[^>]*data-wp-on--click="actions\.join"[^>]*>\s*Join this group\s*</',
-			$output
+			do_blocks( '<!-- wp:wporg/group-membership {"variant":"join"} /-->' )
 		);
-		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
-	}
 
-	/**
-	 * Data provider for test_group_membership_hero_offers_joining_to_non_members().
-	 */
-	public function data_group_membership_hero_non_members(): array {
-		return array(
-			'logged out'           => array( false ),
-			'logged in, no member' => array( true ),
-		);
-	}
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
 
-	/**
-	 * Once they belong, the hero shows their role in place of the Join button.
-	 *
-	 * @dataProvider data_group_membership_role_badges
-	 */
-	public function test_group_membership_hero_shows_members_their_role( string $role, string $label ) {
-		$user_id = self::factory()->user->create( array( 'role' => $role ) );
-		wp_set_current_user( $user_id );
-
-		$output = do_blocks( '<!-- wp:wporg/group-membership {"variant":"count-join"} /-->' );
-
-		$this->assertMatchesRegularExpression( '#wporg-group-membership__badge[^>]*>\s*' . preg_quote( $label, '#' ) . '\s*<span aria-hidden="true">#', $output );
-		$this->assertStringNotContainsString( 'actions.join', $output );
-		$this->assertStringNotContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-membership {"variant":"join"} /-->' ) ) );
 	}
 
 	/**

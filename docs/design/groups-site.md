@@ -121,6 +121,7 @@ This is a provisional treatment. Ask Brand whether the placeholder should eventu
 ### Responsive behavior and accessibility
 
 - Keep visual, DOM, keyboard, and screen-reader order aligned. Do not use CSS `order` to place a sidebar after the main column visually while leaving it first in the DOM.
+- The group home repeats “Join this group” in the hero only while the sidebar is stacked under the content (up to 960px). It is hidden on wider screens, where the sidebar’s button is already beside the hero.
 - Allow long dates and translated labels to wrap without clipping or overlap.
 - Test at 320px, 375px, and 430px viewport widths.
 - Test at 200% browser zoom.

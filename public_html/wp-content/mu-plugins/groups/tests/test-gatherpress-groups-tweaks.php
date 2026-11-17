@@ -1523,6 +1523,39 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * On an event page, the venue shows its description once without the seeded address, and "More events" cards show none.
+	 */
+	public function test_venue_description_on_the_event_page() {
+		$event_id = $this->create_event_with_venue();
+		$card_id  = $this->create_event_with_venue( 'Peregian Digital Hub' );
+
+		// GatherPress seeds venue content with a venue block; the list is the organizer's description.
+		wp_update_post(
+			array(
+				'ID'           => get_page_by_path( 'salty-spaces', OBJECT, 'gatherpress_venue' )->ID,
+				'post_content' => '<!-- wp:gatherpress/venue --><!-- wp:gatherpress/venue-detail {"fieldType":"address"} /--><!-- /wp:gatherpress/venue -->'
+					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li>Use the side door.</li><!-- /wp:list-item --></ul><!-- /wp:list -->',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'           => get_page_by_path( 'peregian-digital-hub', OBJECT, 'gatherpress_venue' )->ID,
+				'post_content' => 'Park out the back.',
+			)
+		);
+
+		$this->go_to_front_end( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$this->assertTrue( is_singular( 'gatherpress_event' ), 'Could not set up the event page.' );
+
+		$venue = $this->render_venue_block( $event_id );
+		$card  = $this->render_venue_block( $card_id );
+
+		$this->assertStringContainsString( 'Use the side door.', $venue );
+		$this->assertSame( 1, substr_count( $venue, 'The Wharf Mooloolaba' ), 'The description repeats the venue address.' );
+		$this->assertStringNotContainsString( 'Park out the back.', $card, 'A "More events" card got its venue description.' );
+	}
+
+	/**
 	 * A password-protected event's venue block is blanked until the password
 	 * is entered, so the venue does not show on the event's own page or card.
 	 */

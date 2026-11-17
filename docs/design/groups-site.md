@@ -32,7 +32,7 @@ Keep the document outline semantic. Apply a visual token or class when a heading
 
 | Element | Specification | Preferred implementation |
 |---|---|---|
-| Page width | 1160px maximum | `contentSize` and `wideSize` in `theme.json` |
+| Page width | 1280px for page layouts (group home, event, archive, directory, members); 1160px for reading-width content | Templates set 1280px on their layout; `theme.json` holds the 1160px default |
 | Horizontal padding | `clamp(20px, 4vw, 80px)` | `var(--wp--preset--spacing--edge-space)` |
 | Section spacing | 50–80px | `var(--wp--preset--spacing--60)` |
 | Component gaps | 10px, 20px, or 30px | `var(--wp--preset--spacing--10)`, `--20`, or `--30` |

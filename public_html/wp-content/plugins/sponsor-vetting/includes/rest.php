@@ -335,10 +335,6 @@ function get_rest_fields(): array {
 				'get'    => __NAMESPACE__ . '\get_rest_approvable',
 				'schema' => $string,
 			),
-			'approval_hint'        => array(
-				'get'    => __NAMESPACE__ . '\get_rest_approval_hint',
-				'schema' => $string,
-			),
 			// Sent with a status of Approved to approve in good faith.
 			'good_faith'           => array(
 				'get'      => static fn( int $sponsorship_id ): bool => (bool) get_post_meta( $sponsorship_id, '_sv_good_faith', true ),
@@ -674,26 +670,6 @@ function get_rest_approvable( int $sponsorship_id ): string {
 	}
 
 	return 'sv-compliance-req' === $state['status'] ? 'good_faith' : '';
-}
-
-/**
- * Says what approving a pending sponsorship takes, under its approval buttons.
- *
- * @param int $sponsorship_id The sponsorship.
- * @return string The hint, or an empty string where there's nothing to say.
- */
-function get_rest_approval_hint( int $sponsorship_id ): string {
-	if ( 'svs-pending' !== get_post_status( $sponsorship_id ) ) {
-		return '';
-	}
-
-	return match ( get_rest_approvable( $sponsorship_id ) ) {
-		'approve'    => '',
-		/* translators: %d: Number of days. */
-		'good_faith' => sprintf( __( 'Only when the sponsor has committed to the changes and the event can’t wait. They then have %d days to finish.', 'wordcamporg' ), GOOD_FAITH_DAYS ),
-		/* translators: %d: Number of months. */
-		default      => sprintf( __( 'Can be approved once the company is Compliant, vetted within the last %d months.', 'wordcamporg' ), REVETTING_MONTHS ),
-	};
 }
 
 /**

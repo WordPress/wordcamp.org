@@ -127,7 +127,6 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 	const pending = events
 		.filter( ( { status } ) => status === 'svs-pending' )
 		.sort( ( a, b ) => Number( b.id === sponsorshipId ) - Number( a.id === sponsorshipId ) );
-	const goodFaithHint = events.find( ( { approvable } ) => approvable === 'good_faith' )?.approval_hint;
 	const form = { data: edited, fields, onChange: edit };
 
 	const onSave = () =>
@@ -207,7 +206,6 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 							</ul>
 						</Card.Root>
 					) }
-					{ goodFaithHint && <Hint>{ goodFaithHint }</Hint> }
 				</Part>
 
 				<Part title={ __( 'Company', 'wordcamporg' ) }>

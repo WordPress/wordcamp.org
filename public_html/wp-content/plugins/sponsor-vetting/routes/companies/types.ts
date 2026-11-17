@@ -95,7 +95,6 @@ export type SponsorshipDetails = Sponsorship &
 			edit_url: string;
 		} | null;
 		approvable: 'approve' | 'good_faith' | '';
-		approval_hint: string;
 		domain: string;
 		approved_domain: string;
 		website_changed: boolean;
@@ -114,7 +113,6 @@ export type CompanySponsorship = Pick<
 	| 'log'
 	| 'allowed_statuses'
 	| 'approvable'
-	| 'approval_hint'
 	| 'domain'
 	| 'approved_domain'
 	| 'website_changed'

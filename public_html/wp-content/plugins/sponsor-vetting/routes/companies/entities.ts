@@ -90,7 +90,6 @@ export function getSponsorshipsQuery( companyId: number ) {
 			'log',
 			'allowed_statuses',
 			'approvable',
-			'approval_hint',
 			'domain',
 			'approved_domain',
 			'website_changed',

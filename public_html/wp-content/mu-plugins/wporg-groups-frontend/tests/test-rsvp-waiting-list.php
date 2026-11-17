@@ -21,7 +21,7 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 	/**
 	 * A future event with room for one, already taken.
 	 */
-	private function create_full_event( string $title = 'Full meetup', int $start_offset_days = 30 ): int {
+	private function create_full_event( string $title = 'Full meetup' ): int {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -33,8 +33,8 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		( new Event( $event_id ) )->save_datetimes(
 			array(
 				'post_id'        => $event_id,
-				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( "+{$start_offset_days} days" ) ),
-				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( "+{$start_offset_days} days +2 hours" ) ),
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+30 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+30 days +2 hours' ) ),
 				'timezone'       => 'UTC',
 			)
 		);
@@ -96,7 +96,7 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		$this->assertSame( 'On the waiting list', $this->main_button_label( $output ) );
 		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__cancel"[^>]*>\s*Leave waiting list\s*</', $output );
 		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__modal-status"[^>]*>\s*You&#039;re on the waiting list\./', $output );
-		$this->assertMatchesRegularExpression( '/class="wp-block-button is-style-outline is-waiting"/', $output );
+		$this->assertStringContainsString( 'class="wp-block-button is-style-outline is-waiting"', $output );
 	}
 
 	/**
@@ -118,7 +118,7 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		$output = $this->render_rsvp_block( $event_id );
 
 		$this->assertStringContainsString( 'class="wporg-event-rsvp__save-answers wp-element-button"', $output );
-		$this->assertStringContainsString( 'data-wp-class--is-hidden="state.hasNoResponse"', $output );
+		$this->assertStringContainsString( 'data-wp-class--is-hidden="!state.hasResponse"', $output );
 	}
 
 	/**

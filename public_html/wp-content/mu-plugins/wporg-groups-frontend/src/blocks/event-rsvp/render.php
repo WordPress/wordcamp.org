@@ -64,8 +64,9 @@ if ( $is_login ) {
 
 // The names on the waiting list are for the people running the event, like
 // the answers below. Everyone else sees only how many are waiting.
+$can_view_roster = current_user_can_view_answers( $event_post_id );
 $waiting_records = array();
-if ( $waiting_count && current_user_can_view_answers( $event_post_id ) ) {
+if ( $waiting_count && $can_view_roster ) {
 	$waiting_records = $responses['waiting_list']['records'] ?? array();
 
 	// Queue order, which is the order `Rsvp::check_waiting_list()` promotes in.
@@ -86,7 +87,7 @@ if ( $attendee_user_ids ) {
 // publicly (dietary needs, accessibility requirements), so they're only
 // rendered for organizers.
 $questions        = get_questions( $event_post_id );
-$can_view_answers = $questions && current_user_can_view_answers( $event_post_id );
+$can_view_answers = $questions && $can_view_roster;
 $own_answers      = ( $questions && $is_login ) ? get_user_answers( $event_post_id, get_current_user_id() ) : array();
 
 // Same treatment for the answers, which live in commentmeta on each RSVP.
@@ -135,45 +136,6 @@ $is_full          = $capacity > 0 && $count >= $capacity;
 $has_no_attendees = 0 === $count;
 $modal_title      = get_modal_title_label( $count, $event_title );
 
-// Each string is used by the labels array, the SSR state and the markup
-// below — keep them in locals so the three can't drift.
-$cancel_rsvp        = _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wordcamporg' );
-$leave_waiting_list = _x( 'Leave waiting list', 'button to give up a place on an event waiting list', 'wordcamporg' );
-$attending_label    = "\u{2713} " . __( 'Attending', 'wordcamporg' );
-$waiting_label      = __( 'On the waiting list', 'wordcamporg' );
-$join_waiting_list  = __( 'Join waiting list', 'wordcamporg' );
-$status_attending   = __( 'You are attending this event.', 'wordcamporg' );
-$status_waiting     = __( "You're on the waiting list. If a spot opens up, you'll move to attending automatically.", 'wordcamporg' );
-$status_none        = __( 'You have not RSVPed to this event.', 'wordcamporg' );
-
-// The SSR side of the `rsvpButtonLabel`, `statusText`, `modalRsvpLabel` and
-// `cancelLabel` getters in view.js.
-if ( $is_attending ) {
-	$rsvp_button_label = $attending_label;
-} elseif ( $is_waiting ) {
-	$rsvp_button_label = $waiting_label;
-} elseif ( $is_full ) {
-	$rsvp_button_label = $join_waiting_list;
-} else {
-	$rsvp_button_label = $is_member ? __( 'RSVP', 'wordcamporg' ) : __( 'Join & RSVP', 'wordcamporg' );
-}
-
-if ( $is_attending ) {
-	$modal_rsvp_label = $cancel_rsvp;
-} elseif ( $is_waiting ) {
-	$modal_rsvp_label = $leave_waiting_list;
-} else {
-	$modal_rsvp_label = $is_full ? $join_waiting_list : __( 'Attend', 'wordcamporg' );
-}
-
-if ( $is_attending ) {
-	$status_text = $status_attending;
-} else {
-	$status_text = $is_waiting ? $status_waiting : $status_none;
-}
-
-$cancel_label = $is_waiting ? $leave_waiting_list : $cancel_rsvp;
-
 // Both the count line and the formats the view module re-renders it from come
 // out of `inc/rsvp-labels.php`, so the wording lives in one place. See
 // `getCountParts()` in view.js for the browser-side half of the branching.
@@ -185,28 +147,45 @@ $rsvp_labels = array_merge(
 	get_waiting_formats(),
 	get_modal_title_formats(),
 	array(
-		'loading'                 => "\u{2026}",
-		'attending'               => $attending_label,
-		'waitingListed'           => $waiting_label,
-		'joinWaitingList'         => $join_waiting_list,
-		'leaveWaitingList'        => $leave_waiting_list,
-		'rsvp'                    => __( 'RSVP', 'wordcamporg' ),
-		'joinRsvp'                => __( 'Join & RSVP', 'wordcamporg' ),
-		'statusAttending'         => $status_attending,
-		'statusWaiting'           => $status_waiting,
-		'statusNotAttending'      => $status_none,
-		'cancelRsvp'              => $cancel_rsvp,
-		'attend'                  => __( 'Attend', 'wordcamporg' ),
-		'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wordcamporg' ),
-		'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wordcamporg' ),
-		'rsvpSuccessNotAttending' => __( 'Your RSVP has been canceled.', 'wordcamporg' ),
-		'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wordcamporg' ),
+		'loading'                    => "\u{2026}",
+		'attending'                  => "\u{2713} " . __( 'Attending', 'wordcamporg' ),
+		'waitingListed'              => __( 'On the waiting list', 'wordcamporg' ),
+		'joinWaitingList'            => __( 'Join waiting list', 'wordcamporg' ),
+		'leaveWaitingList'           => _x( 'Leave waiting list', 'button to give up a place on an event waiting list', 'wordcamporg' ),
+		'rsvp'                       => __( 'RSVP', 'wordcamporg' ),
+		'joinRsvp'                   => __( 'Join & RSVP', 'wordcamporg' ),
+		'statusAttending'            => __( 'You are attending this event.', 'wordcamporg' ),
+		'statusWaiting'              => __( "You're on the waiting list. If a spot opens up, you'll move to attending automatically.", 'wordcamporg' ),
+		'statusNotAttending'         => __( 'You have not RSVPed to this event.', 'wordcamporg' ),
+		'cancelRsvp'                 => _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wordcamporg' ),
+		'attend'                     => __( 'Attend', 'wordcamporg' ),
+		'emptyAttendees'             => __( 'No attendees yet. Be the first to RSVP!', 'wordcamporg' ),
+		'rsvpSuccessAttending'       => __( 'You are now attending this event.', 'wordcamporg' ),
+		'rsvpSuccessNotAttending'    => __( 'Your RSVP has been canceled.', 'wordcamporg' ),
+		'rsvpSuccessWaitingList'     => __( 'You have joined the event waiting list.', 'wordcamporg' ),
 		'rsvpSuccessLeftWaitingList' => __( 'You left the waiting list.', 'wordcamporg' ),
-		'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wordcamporg' ),
-		'missingAnswers'          => __( 'Please answer the required questions.', 'wordcamporg' ),
-		'answersSaved'            => __( 'Your answers have been saved.', 'wordcamporg' ),
+		'rsvpError'                  => __( 'Your RSVP could not be updated. Please try again.', 'wordcamporg' ),
+		'missingAnswers'             => __( 'Please answer the required questions.', 'wordcamporg' ),
+		'answersSaved'               => __( 'Your answers have been saved.', 'wordcamporg' ),
 	)
 );
+
+// The SSR side of the same-named getters in view.js, picked by the same keys.
+if ( $is_attending ) {
+	$rsvp_button_label = $rsvp_labels['attending'];
+	$modal_rsvp_label  = $rsvp_labels['cancelRsvp'];
+	$status_text       = $rsvp_labels['statusAttending'];
+} elseif ( $is_waiting ) {
+	$rsvp_button_label = $rsvp_labels['waitingListed'];
+	$modal_rsvp_label  = $rsvp_labels['leaveWaitingList'];
+	$status_text       = $rsvp_labels['statusWaiting'];
+} else {
+	$rsvp_button_label = $rsvp_labels[ $is_full ? 'joinWaitingList' : ( $is_member ? 'rsvp' : 'joinRsvp' ) ];
+	$modal_rsvp_label  = $rsvp_labels[ $is_full ? 'joinWaitingList' : 'attend' ];
+	$status_text       = $rsvp_labels['statusNotAttending'];
+}
+
+$cancel_label = $rsvp_labels[ $is_waiting ? 'leaveWaitingList' : 'cancelRsvp' ];
 
 $context = array(
 	'postId'            => (int) $event_post_id,
@@ -227,8 +206,7 @@ $context = array(
 	'recurrenceId'      => '',
 	'hasQuestions'      => ! empty( $questions ),
 	'canViewAnswers'    => $can_view_answers,
-	'listsWaiting'      => ! empty( $waiting_records ),
-	'canViewWaiting'    => $is_login && current_user_can_view_answers( $event_post_id ),
+	'canViewWaiting'    => $can_view_roster,
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
@@ -244,14 +222,11 @@ wp_interactivity_state(
 	'wporg/event-rsvp',
 	array(
 		'isAttending'       => $is_attending,
-		'isNotAttending'    => ! $is_attending,
 		'isWaiting'         => $is_waiting,
 		'hasResponse'       => $has_response,
-		'hasNoResponse'     => ! $has_response,
 		'hasNoAttendees'    => $has_no_attendees,
 		'countLabel'        => $count_label,
 		'waitingLabel'      => $waiting_line_label,
-		'hasNoWaitingLabel' => '' === $waiting_line_label,
 		'modalTitle'        => $modal_title,
 		'isMember'          => $is_member,
 		'rsvpButtonLabel'   => $rsvp_button_label,
@@ -344,7 +319,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		 * Rendered for every signed-in visitor and hidden until they are
 		 * attending or waiting, rather than rendered on demand: the button
 		 * above changes status without a reload, so the control has to
-		 * already be in the DOM for `state.hasNoResponse` to reveal it.
+		 * already be in the DOM for `state.hasResponse` to reveal it.
 		 */
 		?>
 		<button
@@ -352,7 +327,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			class="wporg-event-rsvp__cancel<?php echo $has_response ? '' : ' is-hidden'; ?>"
 			data-wp-on--click="actions.toggleRsvp"
 			data-wp-text="state.cancelLabel"
-			data-wp-class--is-hidden="state.hasNoResponse"
+			data-wp-class--is-hidden="!state.hasResponse"
 			data-wp-bind--disabled="context.rsvpLoading"
 			data-wp-bind--aria-busy="context.rsvpLoading"
 		>
@@ -400,7 +375,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<p
 		class="wporg-event-rsvp__waiting<?php echo '' === $waiting_line_label ? ' is-hidden' : ''; ?>"
 		data-wp-text="state.waitingLabel"
-		data-wp-class--is-hidden="state.hasNoWaitingLabel"
+		data-wp-class--is-hidden="!state.waitingLabel"
 	><?php echo esc_html( $waiting_line_label ); ?></p>
 
 	<p
@@ -488,7 +463,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									type="button"
 									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $has_response ? '' : ' is-hidden'; ?>"
 									data-wp-on--click="actions.saveAnswers"
-									data-wp-class--is-hidden="state.hasNoResponse"
+									data-wp-class--is-hidden="!state.hasResponse"
 									data-wp-bind--disabled="context.rsvpLoading"
 									data-wp-bind--aria-busy="context.rsvpLoading"
 								>

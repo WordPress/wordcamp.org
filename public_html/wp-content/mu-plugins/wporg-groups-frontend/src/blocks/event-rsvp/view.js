@@ -25,20 +25,12 @@ store( 'wporg/event-rsvp', {
 			return getContext().currentUserStatus === 'attending';
 		},
 
-		get isNotAttending() {
-			return getContext().currentUserStatus !== 'attending';
-		},
-
 		get isWaiting() {
 			return getContext().currentUserStatus === 'waiting_list';
 		},
 
 		get hasResponse() {
 			return hasResponse( getContext() );
-		},
-
-		get hasNoResponse() {
-			return ! hasResponse( getContext() );
 		},
 
 		get hasNoAttendees() {
@@ -56,16 +48,7 @@ store( 'wporg/event-rsvp', {
 			const ctx = getContext();
 			const [ key, value ] = getWaitingParts( ctx.waitingCount, isFull( ctx ) );
 
-			if ( null === key ) {
-				return '';
-			}
-
 			return null === value ? label( key ) : formatLabel( label( key ), [ formatNumber( value ) ] );
-		},
-
-		get hasNoWaitingLabel() {
-			const ctx = getContext();
-			return null === getWaitingParts( ctx.waitingCount, isFull( ctx ) )[ 0 ];
 		},
 
 		get modalTitle() {
@@ -406,7 +389,6 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
 	const oldWaiting = ctx.waitingCount;
-	const statusChanged = ! answersOnly && newStatus !== oldStatus;
 	if ( ! answersOnly ) {
 		applyOptimisticStatus( ctx, newStatus );
 	}
@@ -418,16 +400,16 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 		ctx.currentUserStatus = data.status;
 		ctx.attendingCount = data.responses.attending.count;
 		ctx.waitingCount = data.responses.waiting_list?.count ?? ctx.waitingCount;
-		ctx.rsvpNotice = statusChanged
-			? getRsvpSuccessNotice( ctx, data.status, oldStatus )
-			: labelFromContext( ctx, 'answersSaved' );
+		ctx.rsvpNotice = answersOnly
+			? labelFromContext( ctx, 'answersSaved' )
+			: getRsvpSuccessNotice( ctx, data.status, oldStatus );
 		ctx.rsvpNoticeSuccess = true;
 		ctx.rsvpNoticeError = false;
 
 		// Organizers see answers and the waiting list inline in the attendee
 		// list, which the client-side refresh can't rebuild — reload so their
 		// view stays complete.
-		if ( ctx.canViewAnswers || ctx.listsWaiting || ( ctx.canViewWaiting && ctx.waitingCount > 0 ) ) {
+		if ( ctx.canViewAnswers || ( ctx.canViewWaiting && ( oldWaiting > 0 || ctx.waitingCount > 0 ) ) ) {
 			window.location.reload();
 			return;
 		}
@@ -643,14 +625,7 @@ function getCountParts( count, isAttending ) {
 	return [ 'countZero', null ];
 }
 
-/**
- * Mirrors `get_waiting_parts()` in `inc/rsvp-labels.php`.
- *
- * @param {number}  waiting Number of people on the waiting list.
- * @param {boolean} full    Whether the attendee limit has been reached.
- * @return {[string|null, number|null]} Key into `context.labels` (null for no
- *                                      line), and the number to substitute.
- */
+// Mirrors `get_waiting_parts()` in `inc/rsvp-labels.php`; a null key means no line.
 function getWaitingParts( waiting, full ) {
 	if ( waiting > 0 ) {
 		return [ 1 === waiting ? 'waitingSingular' : 'waitingPlural', waiting ];
@@ -671,14 +646,10 @@ function isFull( ctx ) {
 	return ctx.capacity > 0 && ctx.attendingCount >= ctx.capacity;
 }
 
-// A full event puts a new RSVP on the waiting list, so predict that instead of
-// flashing "Attending". Leaving the waiting list frees no seat.
+// A full event puts a new RSVP on the waiting list, so predict that. Leaving
+// the waiting list frees no seat.
 function applyOptimisticStatus( ctx, newStatus ) {
 	const oldStatus = ctx.currentUserStatus;
-
-	if ( newStatus === oldStatus ) {
-		return;
-	}
 
 	if ( newStatus === 'attending' && isFull( ctx ) ) {
 		ctx.currentUserStatus = 'waiting_list';

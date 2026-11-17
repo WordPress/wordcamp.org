@@ -59,7 +59,7 @@ function get_upcoming_events( int $user_id ): array {
 	}
 
 	$candidates = array_merge(
-		get_attending_candidates( $user_id, array( 'attending', 'waiting_list' ) ),
+		get_attending_candidates( $user_id ),
 		get_authored_candidates( $user_id )
 	);
 
@@ -100,7 +100,7 @@ function get_past_events( int $user_id, int $limit = PAST_EVENTS_LIMIT ): array 
 	}
 
 	$candidates = filter_to_attended(
-		get_attending_candidates( $user_id, array( 'attending', 'waiting_list' ) )
+		get_attending_candidates( $user_id )
 	);
 
 	if ( empty( $candidates ) ) {
@@ -224,15 +224,13 @@ function filter_to_past( array $candidates, int $limit ): array {
 }
 
 /**
- * Dates the member has RSVP'd to as attending.
+ * Dates the member has RSVP'd to, as attending or on the waiting list.
  *
- * @param int      $user_id  Member to resolve RSVPs for.
- * @param string[] $statuses RSVP statuses to include. Past dates also want
- *                           the waiting list, for walk-ins checked in there.
+ * @param int $user_id Member to resolve RSVPs for.
  *
  * @return array<int, array{event_id: int, recurrence_id: string, comment_id: int, status: string}> Unordered.
  */
-function get_attending_candidates( int $user_id, array $statuses = array( 'attending' ) ): array {
+function get_attending_candidates( int $user_id ): array {
 	/*
 	 * Uncapped, deliberately. A cap here is not a cap on the list -- it is a
 	 * cap on the *candidates*, applied before anything knows which of them are
@@ -272,11 +270,12 @@ function get_attending_candidates( int $user_id, array $statuses = array( 'atten
 		return array();
 	}
 
-	// Filter to the wanted statuses without re-querying per event.
+	// Filter to the wanted statuses without re-querying per event. Past dates
+	// want the waiting list too, for walk-ins checked in there.
 	$attending = array();
 	$status_of = array();
 	foreach ( $rsvp_terms as $rsvp_term ) {
-		if ( ! in_array( $rsvp_term->slug, $statuses, true ) ) {
+		if ( ! in_array( $rsvp_term->slug, array( 'attending', 'waiting_list' ), true ) ) {
 			continue;
 		}
 

@@ -83,6 +83,8 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			render: ( { item } ) =>
 				formatDay( item.meta._sv_not_eligible_until ) || __( 'No end date', 'wordcamporg' ),
 			...meta( '_sv_not_eligible_until' ),
+			// Only being Not Eligible has an end, so it shows once that's the status, saved or about to be.
+			isVisible: ( item ) => item.status === 'sv-not-eligible',
 		},
 		{
 			id: 'good_faith_due',
@@ -91,6 +93,8 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			description: __( 'Set when a sponsorship is approved in good faith.', 'wordcamporg' ),
 			render: ( { item } ) => formatDay( item.good_faith_due ) || __( 'None', 'wordcamporg' ),
 			setValue: ( { value }: { value?: string } ) => ( { good_faith_due: value ?? '' } ),
+			// A Good Faith approval sets it, so before one there's nothing to show or change.
+			isVisible: ( item ) => Boolean( company.good_faith_due || item.good_faith_due ),
 		},
 		{
 			id: 'title',

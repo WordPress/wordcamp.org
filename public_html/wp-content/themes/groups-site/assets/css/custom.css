@@ -55,8 +55,8 @@ body.error404 .site-content-container h1 {
 	color: inherit;
 }
 
-/* Its light, underlined links are meant for the 404 message, but the rule also
-   reaches the breadcrumb and the footer callout. */
+/* The parent theme's light, underlined 404 links are meant for the message,
+   but also reach the breadcrumb and the footer callout. */
 
 body.error404 .wp-block-wporg-site-breadcrumbs a {
 	color: var(--wp--preset--color--charcoal-4);

@@ -1197,8 +1197,8 @@ add_action(
 add_filter(
 	'render_block_gatherpress/venue',
 	static function ( string $content ): string {
-		// A venue block inside the venue's own content, which GatherPress seeds
-		// with one (address and map), isn't part of the description below.
+		// GatherPress seeds venue content with a venue block. Rendered into the
+		// description below, it would repeat the address and map credit.
 		static $rendering = false;
 		if ( $rendering ) {
 			return '';
@@ -1231,8 +1231,9 @@ add_filter(
 
 		if ( $venue_desc ) {
 			$rendering = true;
-			$plain     = trim( wp_strip_all_tags( do_blocks( $venue_desc ) ) );
+			$plain     = wp_strip_all_tags( do_blocks( $venue_desc ) );
 			$rendering = false;
+			$plain     = trim( $plain );
 			if ( $plain ) {
 				$extra .= '<p class="wporg-venue-description">' . esc_html( $plain ) . '</p>';
 			}

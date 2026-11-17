@@ -205,9 +205,38 @@ function apply_to_event_date_block( array $parsed_block ): array {
 		return with_formats( $parsed_block, $date );
 	}
 
-	if ( in_array( TIME_CLASS, $classes, true ) && '' !== $time ) {
-		return with_formats( $parsed_block, $time );
+	if ( in_array( TIME_CLASS, $classes, true ) ) {
+		if ( '' !== $time ) {
+			$parsed_block = with_formats( $parsed_block, $time );
+		}
+
+		return with_end_date( $parsed_block, $date );
 	}
+
+	return $parsed_block;
+}
+
+/**
+ * Put the date in front of the end time when the event ends on a later day, since the time line's end format is a time alone.
+ *
+ * @param array  $parsed_block A parsed time-role block.
+ * @param string $date         The group's date format, or ''.
+ * @return array The block.
+ */
+function with_end_date( array $parsed_block, string $date ): array {
+	// The event the block itself renders: its `postId`, else the current post.
+	$post_id = \GatherPress\Core\Blocks\Setup::get_instance()->get_post_id( $parsed_block );
+
+	if ( empty( $parsed_block['attrs']['endDateFormat'] ) || 'gatherpress_event' !== get_post_type( $post_id ) ) {
+		return $parsed_block;
+	}
+
+	if ( ( new \GatherPress\Core\Event\Event( $post_id ) )->is_same_date() ) {
+		return $parsed_block;
+	}
+
+	// Without a group choice, the format of the templates' date line above.
+	$parsed_block['attrs']['endDateFormat'] = ( '' !== $date ? $date : 'l, F j' ) . DATETIME_SEPARATOR . $parsed_block['attrs']['endDateFormat'];
 
 	return $parsed_block;
 }

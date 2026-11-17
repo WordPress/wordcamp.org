@@ -262,6 +262,38 @@ class Test_Groups_Event_Date_Format extends Groups_TestCase {
 	}
 
 	/**
+	 * The event page's time line names the end date when the event ends on a later day, and only then.
+	 */
+	public function test_the_time_line_shows_the_end_date_of_a_multi_day_event() {
+		$markup = '<!-- wp:gatherpress/event-date {"startDateFormat":"g:i A","endDateFormat":"g:i A","showTimezone":"no","className":"' . TIME_CLASS . '"} /-->';
+
+		$render = function ( string $start, string $end ) use ( $markup ): string {
+			$event_id = self::factory()->post->create(
+				array(
+					'post_type'   => 'gatherpress_event',
+					'post_status' => 'publish',
+				)
+			);
+
+			( new Event( $event_id ) )->save_datetimes(
+				array(
+					'post_id'        => $event_id,
+					'datetime_start' => $start,
+					'datetime_end'   => $end,
+					'timezone'       => 'UTC',
+				)
+			);
+
+			$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+
+			return wp_strip_all_tags( do_blocks( $markup ) );
+		};
+
+		$this->assertStringContainsString( 'to Wednesday, November 18 · 1:00 AM', $render( '2026-11-16 19:00:00', '2026-11-18 01:00:00' ) );
+		$this->assertStringNotContainsString( 'November', $render( '2026-11-16 19:00:00', '2026-11-16 21:00:00' ) );
+	}
+
+	/**
 	 * Every offered format renders an example, which is what the settings
 	 * form labels its radio buttons with. A format that rendered nothing
 	 * would be an unlabelled option.

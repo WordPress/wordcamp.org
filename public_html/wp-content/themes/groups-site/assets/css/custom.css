@@ -310,11 +310,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 }
 
 /* The rail is a card, so a visitor's lone Join button has a frame instead of
-   floating beside the main column. */
+   floating beside the main column. The cap keeps it a card once the columns
+   stack: its controls stop at 320px, so a full-width rail is mostly empty. */
 
 .groups-site-sidebar {
 	box-sizing: border-box;
 	width: 100%;
+	max-width: 400px;
 	padding: 24px;
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;

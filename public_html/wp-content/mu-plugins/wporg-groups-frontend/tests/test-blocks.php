@@ -745,6 +745,22 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The hero's lone Join button is for visitors who haven't joined; members get nothing.
+	 */
+	public function test_group_membership_join_variant_is_only_for_non_members() {
+		wp_set_current_user( 0 );
+
+		$this->assertMatchesRegularExpression(
+			'/<button[^>]*data-wp-on--click="actions\.join"[^>]*>\s*Join this group\s*</',
+			do_blocks( '<!-- wp:wporg/group-membership {"variant":"join"} /-->' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-membership {"variant":"join"} /-->' ) ) );
+	}
+
+	/**
 	 * The front page renders a `count` block in the hero and a `membership`
 	 * block in the sidebar, and only the first needs the total.
 	 * `count_users()` runs Core's usermeta aggregate, so a second block

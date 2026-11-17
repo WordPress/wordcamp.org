@@ -43,6 +43,7 @@ store( 'wporg/group-membership', {
 			}
 
 			ctx.loading = true;
+			ctx.errorMessage = '';
 
 			try {
 				const resp = await fetch( ctx.joinApi, {
@@ -67,6 +68,7 @@ store( 'wporg/group-membership', {
 			} catch ( error ) {
 				// eslint-disable-next-line no-console
 				console.error( 'Group join failed:', error );
+				ctx.errorMessage = ctx.joinError;
 			} finally {
 				ctx.loading = false;
 			}

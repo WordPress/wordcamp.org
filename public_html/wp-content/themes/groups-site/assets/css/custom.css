@@ -310,11 +310,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 }
 
 /* The rail is a card, so a visitor's lone Join button has a frame instead of
-   floating beside the main column. */
+   floating beside the main column. The cap keeps it a card once the columns
+   stack: its controls stop at 320px, so a full-width rail is mostly empty. */
 
 .groups-site-sidebar {
 	box-sizing: border-box;
 	width: 100%;
+	max-width: 400px;
 	padding: 24px;
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
@@ -516,6 +518,26 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	content: "\00b7";
 	content: "\00b7" / "";
 	color: var(--wp--preset--color--charcoal-5);
+}
+
+/* The hero's Join button only shows while the sidebar's is stacked under the
+   content; responsive.css reveals it there. */
+
+.groups-site-hero-content .groups-site-hero-join {
+	display: none;
+}
+
+/* Compact size, with the padding set through the parent theme's tokens as
+   the sidebar buttons' is. */
+
+.groups-site-hero-join .wp-block-button__link.wp-element-button {
+	--wp--custom--button--spacing--padding--top: 10px;
+	--wp--custom--button--spacing--padding--bottom: 10px;
+	--wp--custom--button--spacing--padding--left: 20px;
+	--wp--custom--button--spacing--padding--right: 20px;
+	padding: var(--wp--custom--button--spacing--padding--top)
+		var(--wp--custom--button--spacing--padding--right);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* ==========================================================================

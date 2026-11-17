@@ -4,6 +4,7 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { DataForm, useFormValidity } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import { chevronDown, chevronUp } from '@wordpress/icons';
 import { Button, Card, Notice, Stack, Text } from '@wordpress/ui';
 import { CanvasHeader, CanvasPlaceholder, Emails, Hint, History, Part, Row, Section } from './canvas-parts';
 import { formatDay, getToday } from './dates';
@@ -227,7 +228,7 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 							{ past.length > 0 && (
 								<div className="sponsor-vetting__events-more">
 									<Button
-										size="compact"
+										size="small"
 										variant="minimal"
 										tone="neutral"
 										aria-expanded={ showsPast }
@@ -245,6 +246,7 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 													),
 													past.length
 											  ) }
+										<Button.Icon icon={ showsPast ? chevronUp : chevronDown } />
 									</Button>
 								</div>
 							) }

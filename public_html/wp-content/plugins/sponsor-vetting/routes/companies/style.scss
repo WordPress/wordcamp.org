@@ -55,6 +55,11 @@
 	}
 }
 
+// DataViews' filters have no room above them of their own.
+.sponsor-vetting__list-search + .dataviews-filters__container {
+	padding-top: var(--wpds-dimension-padding-md);
+}
+
 // The open record scrolls as a whole, so its name and controls stick to the top.
 .sponsor-vetting__canvas-header {
 	background-color: var(--wpds-color-background-surface-neutral);
@@ -66,6 +71,7 @@
 }
 
 .sponsor-vetting__canvas-body {
+	container-type: inline-size;
 	padding: var(--wpds-dimension-padding-2xl);
 
 	// A record with little to show doesn't spread across the canvas.
@@ -118,9 +124,11 @@
 	}
 }
 
-// The button that unfolds the events that are over, under the ones that aren't.
+// The button that unfolds the events that are over, under the ones that aren't: a slim row, with the button's
+// words in line with the events' names, which takes its own padding and border off the row's.
 .sponsor-vetting__events-more {
-	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+	padding: var(--wpds-dimension-padding-xs)
+		calc(var(--wpds-dimension-padding-lg) - var(--wpds-dimension-padding-sm) - 1px);
 
 	ul:not(:empty) + & {
 		border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
@@ -150,22 +158,18 @@
 	}
 }
 
-// What's vetted once: the work on one side, the company's state and details on the other, or under it where the
-// canvas is too narrow for both.
+// What's vetted once: the work on one side, the company's state and details in a narrower column on the other.
 .sponsor-vetting__columns {
-	align-items: flex-start;
-	display: flex;
-	flex-wrap: wrap;
+	align-items: start;
+	display: grid;
 	gap: var(--wpds-dimension-gap-lg);
+	grid-template-columns: minmax(0, 1fr) 320px;
+}
 
-	> :first-child {
-		flex: 999 1 440px;
-		min-width: 0;
-	}
-
-	> :last-child {
-		flex: 1 1 320px;
-		min-width: 0;
+// Under each other only where the canvas is too narrow to leave the work a column worth writing in.
+@container (max-width: 640px) {
+	.sponsor-vetting__columns {
+		grid-template-columns: minmax(0, 1fr);
 	}
 }
 

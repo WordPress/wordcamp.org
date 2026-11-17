@@ -627,6 +627,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	height: 100%;
 }
 
+/* The placeholder only keeps cards aligned with ones that have an image. In a
+   list with no images at all, it's just an empty block on every card. */
+
+.wp-block-post-template:not(:has(.wp-block-post-featured-image:not(.groups-site-featured-placeholder))) .groups-site-featured-placeholder {
+	display: none;
+}
+
 .wp-block-post-template .wp-block-post-title a:hover {
 	text-decoration: none;
 	color: var(--wp--preset--color--blueberry-1);

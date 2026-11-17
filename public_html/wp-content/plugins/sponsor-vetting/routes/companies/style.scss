@@ -180,7 +180,9 @@
 	text-align: end;
 }
 
-.sponsor-vetting__overdue {
+// What can't wait: a deadline that has passed, or an event about to start with a sponsor still not approved.
+.sponsor-vetting__urgent {
+	color: var(--wpds-color-foreground-content-error-weak);
 	font-weight: 600;
 }
 

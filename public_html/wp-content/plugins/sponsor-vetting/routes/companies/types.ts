@@ -4,7 +4,8 @@ import type { CompanyStatus, SponsorshipStatus, TRASH } from './entities';
  * The records as REST returns them in the `edit` context.
  */
 
-export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied';
+/* `event_soon` is the screen's own: the rest come with a company. */
+export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied' | 'event_soon';
 
 export type Flag = {
 	type: FlagType;

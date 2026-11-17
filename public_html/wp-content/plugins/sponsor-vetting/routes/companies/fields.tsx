@@ -5,6 +5,7 @@ import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, compareEventDays, formatDay } from './dates';
 import { COMPANY_STATUSES, STATUS_INTENTS, TRASH } from './entities';
 import type { AnyStatus, Intent } from './entities';
+import { getEventFlag } from './events';
 import type { Company, Event, Flag, Sponsorship } from './types';
 
 /**
@@ -36,7 +37,9 @@ export function Flags( { flags }: { flags: Flag[] } ) {
 			{ flags.map( ( flag ) => (
 				<Text
 					key={ flag.type }
-					className={ flag.overdue ? 'sponsor-vetting__overdue' : undefined }
+					className={
+						flag.overdue || flag.type === 'event_soon' ? 'sponsor-vetting__urgent' : undefined
+					}
 					title={ flag.date ? formatDay( flag.date ) : undefined }
 				>
 					{ flag.url ? (
@@ -118,15 +121,20 @@ function getStatusField< Item extends { status: AnyStatus } >(
 /**
  * Builds the Follow-up field of a list: what a reviewer should know about a company beyond its status.
  *
- * @param getFlags Gets the flags of the company a row is about.
+ * @param getFlags Gets the flags of a row: its company's, and any of its own.
+ * @param own      The flags a row can have of its own, as the filter offers them.
  * @return The field.
  */
-function getFollowUpField< Item >( getFlags: ( item: Item ) => Flag[] ): Field< Item > {
+function getFollowUpField< Item >(
+	getFlags: ( item: Item ) => Flag[],
+	own: { value: string; label: string }[] = []
+): Field< Item > {
 	return {
 		id: 'follow_up',
 		label: __( 'Follow-up', 'wordcamporg' ),
 		type: 'array',
 		elements: [
+			...own,
 			{ value: 'replied', label: __( 'Sponsor replied', 'wordcamporg' ) },
 			{ value: 'good_faith', label: __( 'Good Faith', 'wordcamporg' ) },
 			{ value: 'lapsed', label: __( 'Vetting has lapsed', 'wordcamporg' ) },
@@ -366,7 +374,14 @@ export function getSponsorshipFields(
 				return direction === 'asc' ? delta : -delta;
 			},
 		},
-		getFollowUpField< Sponsorship >( ( item ) => getCompany( item )?.flags ?? [] ),
+		getFollowUpField< Sponsorship >(
+			( item ) => {
+				const flag = getEventFlag( item, today );
+
+				return [ ...( flag ? [ flag ] : [] ), ...( getCompany( item )?.flags ?? [] ) ];
+			},
+			[ { value: 'event_soon', label: __( 'Event within a week', 'wordcamporg' ) } ]
+		),
 		{
 			id: 'needs_company',
 			label: sprintf(

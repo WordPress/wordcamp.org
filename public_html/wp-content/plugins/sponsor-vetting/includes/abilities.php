@@ -69,8 +69,8 @@ function register_ability_category(): void {
 	wp_register_ability_category(
 		ABILITY_CATEGORY,
 		array(
-			'label'       => __( 'Sponsor Vetting', 'wordcamporg' ),
-			'description' => __( 'Vetting sponsor companies and approving their sponsorships of events.', 'wordcamporg' ),
+			'label'       => 'Sponsor Vetting',
+			'description' => 'Vetting sponsor companies and approving their sponsorships of events.',
 		)
 	);
 }
@@ -116,8 +116,8 @@ function register_mcp_server( McpAdapter $adapter ): void {
 		MCP_SERVER_ID,
 		'mcp',
 		MCP_SERVER_ID,
-		__( 'WordCamp Sponsor Vetting', 'wordcamporg' ),
-		__( 'Vets sponsor companies for WordPress events and approves their sponsorships, on WordCamp Central. Start with the sponsor-vetting-vet-sponsors prompt, which walks through the workflow, and read the wordcamp://sponsor-vetting/ resources for what a review checks.', 'wordcamporg' ),
+		'WordCamp Sponsor Vetting',
+		'Vets sponsor companies for WordPress events and approves their sponsorships, on WordCamp Central. Start with the sponsor-vetting-vet-sponsors prompt, which walks through the workflow, and read the wordcamp://sponsor-vetting/ resources for what a review checks.',
 		'1.0.0',
 		array( HttpTransport::class ),
 		ErrorLogMcpErrorHandler::class,
@@ -138,14 +138,14 @@ add_action( 'mcp_adapter_init', __NAMESPACE__ . '\register_mcp_server' );
 function get_handbook_pages(): array {
 	return array(
 		'sponsor-vetting/vetting-process' => array(
-			'label'       => __( 'Sponsor Vetting Process', 'wordcamporg' ),
-			'description' => __( 'The Community team’s sponsor vetting process, from the Community handbook: what the trademark and GPL reviews check, how findings are recorded, when to ask a sponsor for changes, and when to approve in good faith. It describes the work in Airtable, which these tools replace.', 'wordcamporg' ),
+			'label'       => 'Sponsor Vetting Process',
+			'description' => 'The Community team’s sponsor vetting process, from the Community handbook: what the trademark and GPL reviews check, how findings are recorded, when to ask a sponsor for changes, and when to approve in good faith. It describes the work in Airtable, which these tools replace.',
 			'url'         => 'https://make.wordpress.org/community/handbook/community-deputy/super-deputies/sponsor-vetting-process/',
 			'uri'         => 'wordcamp://sponsor-vetting/vetting-process',
 		),
 		'sponsor-vetting/gpl-checklist'   => array(
-			'label'       => __( '100% GPL Vetting Checklist', 'wordcamporg' ),
-			'description' => __( 'The Community handbook’s checklist for whether a sponsor that sells or promotes WordPress themes or plugins meets the GPL requirements.', 'wordcamporg' ),
+			'label'       => '100% GPL Vetting Checklist',
+			'description' => 'The Community handbook’s checklist for whether a sponsor that sells or promotes WordPress themes or plugins meets the GPL requirements.',
 			'url'         => 'https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/helpful-documents-and-templates/100-gpl-vetting-checklist/',
 			'uri'         => 'wordcamp://sponsor-vetting/gpl-checklist',
 		),
@@ -160,15 +160,15 @@ function get_handbook_pages(): array {
 function get_guidance_abilities(): array {
 	$abilities = array(
 		'sponsor-vetting/vet-sponsors' => array(
-			'label'            => __( 'Vet sponsors', 'wordcamporg' ),
-			'description'      => __( 'Walks through vetting sponsors, from linking new sponsorships to a company to approving them: the whole queue, or one company.', 'wordcamporg' ),
+			'label'            => 'Vet sponsors',
+			'description'      => 'Walks through vetting sponsors, from linking new sponsorships to a company to approving them: the whole queue, or one company.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'default'    => array(),
 				'properties' => array(
 					'company' => array(
 						'type'        => 'string',
-						'description' => __( 'The ID of one company to vet. Leave it out to work through the queue.', 'wordcamporg' ),
+						'description' => 'The ID of one company to vet. Leave it out to work through the queue.',
 					),
 				),
 			),
@@ -207,14 +207,11 @@ function get_guidance_abilities(): array {
 function get_vetting_prompt( ?array $input = null ): array {
 	$company = absint( $input['company'] ?? 0 );
 	$scope   = $company
-		/* translators: %d: Company ID. */
-		? sprintf( __( 'Vet company %d: open it with sponsor-vetting-get-company, then follow the steps from step 3.', 'wordcamporg' ), $company )
-		: __( 'Work through the sponsor vetting queue.', 'wordcamporg' );
+		? sprintf( 'Vet company %d: open it with sponsor-vetting-get-company, then follow the steps from step 3.', $company )
+		: 'Work through the sponsor vetting queue.';
 
 	$steps = sprintf(
-		/* translators: %d: Number of months. */
-		__(
-			'A company is vetted once. Each event that takes its sponsorship has a sponsorship under it, which can be approved once the company is Compliant and was vetted within the last %d months. Read the wordcamp://sponsor-vetting/vetting-process and wordcamp://sponsor-vetting/gpl-checklist resources first: they say what a review checks. They describe the work in Airtable; here each step is a tool.
+		'A company is vetted once. Each event that takes its sponsorship has a sponsorship under it, which can be approved once the company is Compliant and was vetted within the last %d months. Read the wordcamp://sponsor-vetting/vetting-process and wordcamp://sponsor-vetting/gpl-checklist resources first: they say what a review checks. They describe the work in Airtable; here each step is a tool.
 
 1. New sponsorships wait for a company: sponsor-vetting-list-sponsorships with company 0. Link each to the company suggested, or another one, with sponsor-vetting-link-sponsorship, or create one with sponsor-vetting-create-company. Look a website up with sponsor-vetting-list-companies and its domain before creating a company.
 2. Work through the queue from sponsor-vetting-list-companies, starting with the soonest next_event.
@@ -228,8 +225,6 @@ function get_vetting_prompt( ?array $input = null ): array {
 6. Record your reasoning with sponsor-vetting-add-note. Status changes, notes and emails are logged under your name.
 
 When unsure, add a note and leave the decision to a person.',
-			'wordcamporg'
-		),
 		REVETTING_MONTHS
 	);
 
@@ -277,8 +272,7 @@ function get_handbook_page( string $uri, string $url ): array {
 				array(
 					'uri'      => $uri,
 					'mimeType' => 'text/plain',
-					/* translators: %s: Handbook page address. */
-					'text'     => sprintf( __( 'The handbook page couldn’t be loaded. Read it at %s.', 'wordcamporg' ), $url ),
+					'text'     => sprintf( 'The handbook page couldn’t be loaded. Read it at %s.', $url ),
 				),
 			);
 		}
@@ -315,7 +309,7 @@ function get_abilities(): array {
 	$date     = array(
 		'type'        => 'string',
 		'pattern'     => '^(\d{4}-\d{2}-\d{2})?$',
-		'description' => __( 'A date as YYYY-MM-DD, or an empty string for none.', 'wordcamporg' ),
+		'description' => 'A date as YYYY-MM-DD, or an empty string for none.',
 	);
 	$page     = array(
 		'type'    => 'integer',
@@ -367,8 +361,8 @@ function get_abilities(): array {
 
 	return array(
 		'sponsor-vetting/list-companies'          => array(
-			'label'            => __( 'List companies', 'wordcamporg' ),
-			'description'      => __( 'Lists sponsor companies, oldest first: by default the ones still being vetted (Needs Vetting, In Progress, Compliance Requested), or, looking a website up, any. Each comes with its status, websites, flags, the date of its next event and how many sponsorships it has.', 'wordcamporg' ),
+			'label'            => 'List companies',
+			'description'      => 'Lists sponsor companies, oldest first: by default the ones still being vetted (Needs Vetting, In Progress, Compliance Requested), or, looking a website up, any. Each comes with its status, websites, flags, the date of its next event and how many sponsorships it has.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'default'    => array(),
@@ -379,15 +373,15 @@ function get_abilities(): array {
 							'type' => 'string',
 							'enum' => array_keys( get_company_statuses() ),
 						),
-						'description' => __( 'The statuses to list.', 'wordcamporg' ),
+						'description' => 'The statuses to list.',
 					),
 					'search'   => array(
 						'type'        => 'string',
-						'description' => __( 'Words in the company’s name.', 'wordcamporg' ),
+						'description' => 'Words in the company’s name.',
 					),
 					'domain'   => array(
 						'type'        => 'string',
-						'description' => __( 'A website, to find the company it belongs to.', 'wordcamporg' ),
+						'description' => 'A website, to find the company it belongs to.',
 					),
 					'page'     => $page,
 					'per_page' => $per_page,
@@ -408,8 +402,8 @@ function get_abilities(): array {
 			'meta'             => $reads,
 		),
 		'sponsor-vetting/get-company'             => array(
-			'label'            => __( 'Get a company', 'wordcamporg' ),
-			'description'      => __( 'Gets everything about a company: its status and the statuses it can change to, websites, contact, GPL and trademark findings, flags, linked Multi-Event Sponsor, emails, notes and history, and its sponsorships.', 'wordcamporg' ),
+			'label'            => 'Get a company',
+			'description'      => 'Gets everything about a company: its status and the statuses it can change to, websites, contact, GPL and trademark findings, flags, linked Multi-Event Sponsor, emails, notes and history, and its sponsorships.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id' ),
@@ -420,8 +414,8 @@ function get_abilities(): array {
 			'meta'             => $reads,
 		),
 		'sponsor-vetting/list-sponsorships'       => array(
-			'label'            => __( 'List sponsorships', 'wordcamporg' ),
-			'description'      => __( 'Lists event sponsorships, oldest first: by default the pending ones. Company 0 lists the ones still waiting to be linked to a company.', 'wordcamporg' ),
+			'label'            => 'List sponsorships',
+			'description'      => 'Lists event sponsorships, oldest first: by default the pending ones. Company 0 lists the ones still waiting to be linked to a company.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'default'    => array(),
@@ -432,12 +426,12 @@ function get_abilities(): array {
 							'type' => 'string',
 							'enum' => array_keys( get_sponsorship_statuses() ),
 						),
-						'description' => __( 'The statuses to list.', 'wordcamporg' ),
+						'description' => 'The statuses to list.',
 					),
 					'company'  => array(
 						'type'        => 'integer',
 						'minimum'     => 0,
-						'description' => __( 'Only this company’s sponsorships, or 0 for those without a company.', 'wordcamporg' ),
+						'description' => 'Only this company’s sponsorships, or 0 for those without a company.',
 					),
 					'page'     => $page,
 					'per_page' => $per_page,
@@ -458,8 +452,8 @@ function get_abilities(): array {
 			'meta'             => $reads,
 		),
 		'sponsor-vetting/get-sponsorship'         => array(
-			'label'            => __( 'Get a sponsorship', 'wordcamporg' ),
-			'description'      => __( 'Gets everything about an event’s sponsorship: the event, the sponsor as the event entered it, its company or the one suggested, whether and how it can be approved, emails, notes and history.', 'wordcamporg' ),
+			'label'            => 'Get a sponsorship',
+			'description'      => 'Gets everything about an event’s sponsorship: the event, the sponsor as the event entered it, its company or the one suggested, whether and how it can be approved, emails, notes and history.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id' ),
@@ -470,8 +464,8 @@ function get_abilities(): array {
 			'meta'             => $reads,
 		),
 		'sponsor-vetting/create-company'          => array(
-			'label'            => __( 'Create a company', 'wordcamporg' ),
-			'description'      => __( 'Creates a company in Needs Vetting, for a sponsor no company covers yet, and links a sponsorship to it if given one.', 'wordcamporg' ),
+			'label'            => 'Create a company',
+			'description'      => 'Creates a company in Needs Vetting, for a sponsor no company covers yet, and links a sponsorship to it if given one.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'name' ),
@@ -480,8 +474,8 @@ function get_abilities(): array {
 						'type'      => 'string',
 						'minLength' => 1,
 					),
-					'domains'     => $strings + array( 'description' => __( 'The company’s websites.', 'wordcamporg' ) ),
-					'sponsorship' => $id + array( 'description' => __( 'A sponsorship to link to the new company.', 'wordcamporg' ) ),
+					'domains'     => $strings + array( 'description' => 'The company’s websites.' ),
+					'sponsorship' => $id + array( 'description' => 'A sponsorship to link to the new company.' ),
 				),
 			),
 			'output_schema'    => $company,
@@ -489,8 +483,8 @@ function get_abilities(): array {
 			'meta'             => $additions,
 		),
 		'sponsor-vetting/update-company'          => array(
-			'label'            => __( 'Update a company', 'wordcamporg' ),
-			'description'      => __( 'Changes a company’s details: only the ones given. Findings are Markdown, and a compliance request emails them to the sponsor as written. Use set-company-status for its status.', 'wordcamporg' ),
+			'label'            => 'Update a company',
+			'description'      => 'Changes a company’s details: only the ones given. Findings are Markdown, and a compliance request emails them to the sponsor as written. Use set-company-status for its status.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id' ),
@@ -500,17 +494,17 @@ function get_abilities(): array {
 						'type'      => 'string',
 						'minLength' => 1,
 					),
-					'domains'            => $strings + array( 'description' => __( 'All of the company’s websites, replacing the ones it has.', 'wordcamporg' ) ),
+					'domains'            => $strings + array( 'description' => 'All of the company’s websites, replacing the ones it has.' ),
 					'contact_first_name' => $string,
 					'contact_last_name'  => $string,
-					'contact_email'      => $string + array( 'description' => __( 'Where compliance requests go.', 'wordcamporg' ) ),
+					'contact_email'      => $string + array( 'description' => 'Where compliance requests go.' ),
 					'gpl_findings'       => $string,
 					'trademark_findings' => $string,
 					'not_eligible_until' => $date,
 					'mes'                => array(
 						'type'        => 'integer',
 						'minimum'     => 0,
-						'description' => __( 'The Multi-Event Sponsor to link, from the company’s mes_options, or 0 to unlink.', 'wordcamporg' ),
+						'description' => 'The Multi-Event Sponsor to link, from the company’s mes_options, or 0 to unlink.',
 					),
 				),
 			),
@@ -519,8 +513,8 @@ function get_abilities(): array {
 			'meta'             => $edits,
 		),
 		'sponsor-vetting/set-company-status'      => array(
-			'label'            => __( 'Set a company’s status', 'wordcamporg' ),
-			'description'      => __( 'Moves a company along the vetting workflow, to one of its allowed_statuses. Compliant approves its pending sponsorships and emails their events. Not Eligible lasts until the company’s not_eligible_until date, or for good without one. To ask the sponsor for changes, use send-compliance-request instead.', 'wordcamporg' ),
+			'label'            => 'Set a company’s status',
+			'description'      => 'Moves a company along the vetting workflow, to one of its allowed_statuses. Compliant approves its pending sponsorships and emails their events. Not Eligible lasts until the company’s not_eligible_until date, or for good without one. To ask the sponsor for changes, use send-compliance-request instead.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'status' ),
@@ -537,14 +531,14 @@ function get_abilities(): array {
 			'meta'             => $effects,
 		),
 		'sponsor-vetting/send-compliance-request' => array(
-			'label'            => __( 'Send a compliance request', 'wordcamporg' ),
-			'description'      => __( 'Emails the company’s findings to its contact from the Community mailbox, copying the event of one of its pending sponsorships, and moves the company to Compliance Requested. The company needs a contact email and findings first.', 'wordcamporg' ),
+			'label'            => 'Send a compliance request',
+			'description'      => 'Emails the company’s findings to its contact from the Community mailbox, copying the event of one of its pending sponsorships, and moves the company to Compliance Requested. The company needs a contact email and findings first.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'sponsorship' ),
 				'properties' => array(
 					'id'          => $id,
-					'sponsorship' => $id + array( 'description' => __( 'The pending sponsorship whose event the request is for.', 'wordcamporg' ) ),
+					'sponsorship' => $id + array( 'description' => 'The pending sponsorship whose event the request is for.' ),
 				),
 			),
 			'output_schema'    => $message,
@@ -552,8 +546,8 @@ function get_abilities(): array {
 			'meta'             => $effects,
 		),
 		'sponsor-vetting/link-sponsorship'        => array(
-			'label'            => __( 'Link a sponsorship to a company', 'wordcamporg' ),
-			'description'      => __( 'Links a sponsorship to its company, or moves it to another. A company that needs vetting goes back in the queue. If the company is already vetted for the sponsorship’s website, the sponsorship is approved and its event emailed.', 'wordcamporg' ),
+			'label'            => 'Link a sponsorship to a company',
+			'description'      => 'Links a sponsorship to its company, or moves it to another. A company that needs vetting goes back in the queue. If the company is already vetted for the sponsorship’s website, the sponsorship is approved and its event emailed.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'company' ),
@@ -567,8 +561,8 @@ function get_abilities(): array {
 			'meta'             => $effects,
 		),
 		'sponsor-vetting/set-sponsorship-status'  => array(
-			'label'            => __( 'Set a sponsorship’s status', 'wordcamporg' ),
-			'description'      => __( 'Approves a sponsorship, or moves it to one of its allowed_statuses. Approving needs the website you checked, and emails the event. Approve in good faith only when the sponsor has committed to the changes asked for and the event can’t wait.', 'wordcamporg' ),
+			'label'            => 'Set a sponsorship’s status',
+			'description'      => 'Approves a sponsorship, or moves it to one of its allowed_statuses. Approving needs the website you checked, and emails the event. Approve in good faith only when the sponsor has committed to the changes asked for and the event can’t wait.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'status' ),
@@ -578,11 +572,11 @@ function get_abilities(): array {
 						'type' => 'string',
 						'enum' => array_keys( get_sponsorship_statuses() ),
 					),
-					'domain'     => $string + array( 'description' => __( 'For an approval: the sponsorship’s domain you checked. If the event has changed it since, the approval is refused.', 'wordcamporg' ) ),
+					'domain'     => $string + array( 'description' => 'For an approval: the sponsorship’s domain you checked. If the event has changed it since, the approval is refused.' ),
 					'good_faith' => array(
 						'type'        => 'boolean',
 						'default'     => false,
-						'description' => __( 'For an approval: approve while the company is Compliance Requested.', 'wordcamporg' ),
+						'description' => 'For an approval: approve while the company is Compliance Requested.',
 					),
 				),
 			),
@@ -591,14 +585,14 @@ function get_abilities(): array {
 			'meta'             => $effects,
 		),
 		'sponsor-vetting/confirm-website'         => array(
-			'label'            => __( 'Confirm a sponsorship’s new website', 'wordcamporg' ),
-			'description'      => __( 'Confirms the website an event changed an approved sponsorship to, which its invoices wait for. If it’s a different company now, cancel the sponsorship instead.', 'wordcamporg' ),
+			'label'            => 'Confirm a sponsorship’s new website',
+			'description'      => 'Confirms the website an event changed an approved sponsorship to, which its invoices wait for. If it’s a different company now, cancel the sponsorship instead.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'domain' ),
 				'properties' => array(
 					'id'     => $id,
-					'domain' => $string + array( 'description' => __( 'The sponsorship’s current domain, which you checked.', 'wordcamporg' ) ),
+					'domain' => $string + array( 'description' => 'The sponsorship’s current domain, which you checked.' ),
 				),
 			),
 			'output_schema'    => $sponsor,
@@ -606,8 +600,8 @@ function get_abilities(): array {
 			'meta'             => $edits,
 		),
 		'sponsor-vetting/send-approval-email'     => array(
-			'label'            => __( 'Send an approval email', 'wordcamporg' ),
-			'description'      => __( 'Sends an approved sponsorship’s approval email to its event again, when sending it failed.', 'wordcamporg' ),
+			'label'            => 'Send an approval email',
+			'description'      => 'Sends an approved sponsorship’s approval email to its event again, when sending it failed.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id' ),
@@ -618,13 +612,13 @@ function get_abilities(): array {
 			'meta'             => $effects,
 		),
 		'sponsor-vetting/add-note'                => array(
-			'label'            => __( 'Add a note', 'wordcamporg' ),
-			'description'      => __( 'Adds a private note to a company’s or sponsorship’s history, for the other vetters.', 'wordcamporg' ),
+			'label'            => 'Add a note',
+			'description'      => 'Adds a private note to a company’s or sponsorship’s history, for the other vetters.',
 			'input_schema'     => array(
 				'type'       => 'object',
 				'required'   => array( 'id', 'note' ),
 				'properties' => array(
-					'id'   => $id + array( 'description' => __( 'The company or sponsorship.', 'wordcamporg' ) ),
+					'id'   => $id + array( 'description' => 'The company or sponsorship.' ),
 					'note' => array(
 						'type'      => 'string',
 						'minLength' => 1,
@@ -1056,7 +1050,7 @@ function update_company( array $input ): array|\WP_Error {
 	}
 
 	if ( ! $params ) {
-		return new \WP_Error( 'sv_nothing_to_update', __( 'Give at least one detail to change.', 'wordcamporg' ) );
+		return new \WP_Error( 'sv_nothing_to_update', 'Give at least one detail to change.' );
 	}
 
 	$updated = ask_rest( 'POST', '/wp/v2/sv-companies/' . (int) $input['id'], $params );
@@ -1112,7 +1106,7 @@ function set_sponsorship_status( array $input ): array|\WP_Error {
 	if ( 'svs-approved' === $params['status'] ) {
 		// The approval is for the website the agent checked, as it is for the one a vetter was shown.
 		if ( ! isset( $input['domain'] ) ) {
-			return new \WP_Error( 'sv_domain_required', __( 'Name the domain you checked to approve a sponsorship.', 'wordcamporg' ) );
+			return new \WP_Error( 'sv_domain_required', 'Name the domain you checked to approve a sponsorship.' );
 		}
 
 		$params['shown_domain'] = (string) $input['domain'];
@@ -1163,7 +1157,7 @@ function add_note_for_agent( array $input ): array|\WP_Error {
 	$route  = $routes[ get_post_type( $id ) ] ?? '';
 
 	if ( '' === $route ) {
-		return new \WP_Error( 'sv_no_record', __( 'That’s neither a company nor a sponsorship.', 'wordcamporg' ) );
+		return new \WP_Error( 'sv_no_record', 'That’s neither a company nor a sponsorship.' );
 	}
 
 	$added = ask_rest( 'POST', $route . $id, array( 'note' => (string) $input['note'] ) );
@@ -1186,7 +1180,7 @@ function get_agent_log( int $post_id ): array {
 			$user = get_userdata( (int) $entry['user_id'] );
 			$item = array(
 				'time' => gmdate( 'c', (int) $entry['time'] ),
-				'by'   => $user ? $user->display_name : __( 'System', 'wordcamporg' ),
+				'by'   => $user ? $user->display_name : 'System',
 			);
 
 			if ( isset( $entry['text'] ) ) {

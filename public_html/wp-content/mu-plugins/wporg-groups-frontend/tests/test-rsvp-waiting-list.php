@@ -186,18 +186,7 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		$this->rsvp_as( $event_id, $this->create_member( 'Zed First In Line' ) );
 		$this->rsvp_as( $event_id, $this->create_member( 'Amy Second In Line' ) );
 
-		// The RSVP timestamps share a second; spread them so the order is unambiguous.
-		foreach ( get_comments( array(
-			'post_id' => $event_id, 'type' => 'gatherpress_rsvp',
-		) ) as $comment ) {
-			$name = get_userdata( (int) $comment->user_id )->display_name;
-			$date = str_starts_with( $name, 'Zed' ) ? '2026-01-01 10:00:00' : '2026-01-01 11:00:00';
-			wp_update_comment( array(
-				'comment_ID' => $comment->comment_ID, 'comment_date' => $date, 'comment_date_gmt' => $date,
-			) );
-		}
-		\GatherPress\Core\Rsvp\Cache::delete( $event_id );
-
+		// The two RSVPs usually share a second, which the order they came in settles.
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$output = $this->render_rsvp_block( $event_id );
 

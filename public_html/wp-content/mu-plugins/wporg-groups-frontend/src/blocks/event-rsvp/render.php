@@ -70,7 +70,11 @@ if ( $waiting_count && $can_view_roster ) {
 	$waiting_records = $responses['waiting_list']['records'] ?? array();
 
 	// Queue order, which is the order `Rsvp::check_waiting_list()` promotes in.
-	usort( $waiting_records, array( $rsvp, 'sort_by_timestamp' ) );
+	// RSVPs made in the same second stay in the order they came in.
+	usort(
+		$waiting_records,
+		static fn( array $a, array $b ): int => array( $a['timestamp'], $a['commentId'] ) <=> array( $b['timestamp'], $b['commentId'] )
+	);
 }
 
 $listed_records = array_merge( $records, $waiting_records );

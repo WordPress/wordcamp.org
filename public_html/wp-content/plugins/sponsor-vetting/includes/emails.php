@@ -192,7 +192,8 @@ function build_approval_email( int $sponsorship_id ): array|\WP_Error {
  * Whether an approved sponsorship still needs the approval email.
  *
  * Not when the camp has invoiced the sponsor: approving the invoice tells the organizers. Not twice, either, nor
- * when the event was told some other way, like the Airtable approvals the import carried over.
+ * when the event was told some other way, like the Airtable approvals the import carried over. And not once the
+ * event is over: a sponsorship can still be approved then, for its invoice, but there's nobody left to tell.
  *
  * @param int $sponsorship_id The sponsorship.
  * @return bool
@@ -202,7 +203,9 @@ function needs_approval_email( int $sponsorship_id ): bool {
 		return false;
 	}
 
-	return ! has_invoice( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ), (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
+	$blog_id = (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true );
+
+	return ! event_has_ended( $blog_id ) && ! has_invoice( $blog_id, (int) get_post_meta( $sponsorship_id, '_sv_sponsor_id', true ) );
 }
 
 /**

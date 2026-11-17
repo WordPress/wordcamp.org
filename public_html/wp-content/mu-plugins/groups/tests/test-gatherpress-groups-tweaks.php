@@ -38,6 +38,39 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
+		$this->assertSame( 'event', $settings['events_url'] );
+	}
+
+	/**
+	 * A group running in another language keeps its events under `event/`.
+	 *
+	 * GatherPress's own default is the event label in the site language, which
+	 * the occurrence rules in `gatherpress-recurring-events` would not match.
+	 * The label filter stands in for a Japanese site, since the test suite has
+	 * no language packs installed. GatherPress builds its defaults once per
+	 * request, so the cache is dropped to have them built under that label.
+	 */
+	public function test_event_permalink_base_ignores_the_site_language() {
+		$settings       = \GatherPress\Core\Settings::get_instance();
+		$defaults_cache = new \ReflectionProperty( $settings, 'defaults_cache' );
+		$japanese_label = static function ( $labels ) {
+			$labels->singular_name = 'イベント';
+
+			return $labels;
+		};
+
+		add_filter( 'post_type_labels_gatherpress_event', $japanese_label );
+		$defaults_cache->setValue( $settings, null );
+
+		$localized  = \GatherPress\Core\Event\Setup::get_localized_post_type_slug();
+		$events_url = $settings->get( 'events_url' );
+
+		remove_filter( 'post_type_labels_gatherpress_event', $japanese_label );
+		$defaults_cache->setValue( $settings, null );
+
+		// Without the pin this is the base GatherPress would use.
+		$this->assertSame( sanitize_title( 'イベント' ), $localized );
+		$this->assertSame( 'event', $events_url );
 	}
 
 	/**
@@ -52,6 +85,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 				'guest_limit'      => 5,
 				'enable_open_rsvp' => 1,
 				'show_timezone'    => 0,
+				'events_url'       => 'evento',
 			)
 		);
 
@@ -63,6 +97,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		// Forced keys win regardless of what was stored.
 		$this->assertSame( 1, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_open_rsvp'] );
+		$this->assertSame( 'event', $settings['events_url'] );
 	}
 
 	/**

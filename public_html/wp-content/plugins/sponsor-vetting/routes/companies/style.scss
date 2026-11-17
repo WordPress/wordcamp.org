@@ -118,6 +118,15 @@
 	}
 }
 
+// The button that unfolds the events that are over, under the ones that aren't.
+.sponsor-vetting__events-more {
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+
+	ul:not(:empty) + & {
+		border-top: 1px solid var(--wpds-color-stroke-surface-neutral-weak);
+	}
+}
+
 .sponsor-vetting__event-name {
 	font-weight: 500;
 }

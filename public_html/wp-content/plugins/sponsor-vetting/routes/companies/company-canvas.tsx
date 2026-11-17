@@ -3,13 +3,13 @@ import { store as coreStore, useEntityRecord, useEntityRecords } from '@wordpres
 import { useDispatch, useSelect } from '@wordpress/data';
 import { DataForm, useFormValidity } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { Button, Card, Notice, Stack, Text } from '@wordpress/ui';
 import { CanvasHeader, CanvasPlaceholder, Emails, Hint, History, Part, Row, Section } from './canvas-parts';
 import { formatDay, getToday } from './dates';
-import { COMPANY, SPONSORSHIP, TRASH, getSponsorshipsQuery } from './entities';
+import { COMPANY, SPONSORSHIP, TRASH, getEventActionsQuery, getSponsorshipsQuery } from './entities';
 import { EventRow } from './event-row';
-import { getEventsHint } from './events';
+import { getEventsHint, splitEvents } from './events';
 import { Domains, Flags, StatusBadge, getName } from './fields';
 import { DETAILS_FORM, FINDINGS_FORM, NOTE_FORM, VETTING_FORM, getCompanyFormFields } from './forms';
 import type { CompanyForm } from './forms';
@@ -17,7 +17,7 @@ import { useOpenRecord, useStatusLabels, useTask } from './hooks';
 import { MoveSponsorship } from './move-sponsorship';
 import { useSponsorshipChanges } from './sponsorships';
 import { buildTimeline, sortByEvent } from './timeline';
-import type { CompanyDetails, CompanySponsorship } from './types';
+import type { CompanyDetails, CompanySponsorship, EventActions } from './types';
 
 type EditorProps = {
 	company: CompanyDetails;
@@ -122,6 +122,24 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 	const fields = useMemo( () => getCompanyFormFields( company, labels ), [ company, labels ] );
 	const { validity, isValid } = useFormValidity( edited, fields, DETAILS_FORM );
 	const events = useMemo( () => sortByEvent( sponsorships, today ), [ sponsorships, today ] );
+	const [ showsPast, setShowsPast ] = useState( false );
+	const { shown, past } = useMemo(
+		() => splitEvents( events, today, sponsorshipId ),
+		[ events, today, sponsorshipId ]
+	);
+	const listed = showsPast ? events : shown;
+	// Read only for the events listed, so years of past ones don't slow a company down.
+	const actionsQuery = useMemo( () => getEventActionsQuery( listed.map( ( { id } ) => id ) ), [ listed ] );
+	const { records: actionRecords, hasResolved: hasActions } = useEntityRecords< EventActions >(
+		'postType',
+		SPONSORSHIP,
+		actionsQuery,
+		{ enabled: listed.length > 0 }
+	);
+	const actions = useMemo(
+		() => new Map( ( actionRecords ?? [] ).map( ( record ) => [ record.id, record ] ) ),
+		[ actionRecords ]
+	);
 	const timeline = useMemo( () => buildTimeline( company.log, sponsorships ), [ company.log, sponsorships ] );
 	// The request is most likely about the event the company was opened from.
 	const pending = events
@@ -191,10 +209,12 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 					) : (
 						<Card.Root className="sponsor-vetting__events">
 							<ul>
-								{ events.map( ( sponsorship ) => (
+								{ listed.map( ( sponsorship ) => (
 									<EventRow
 										key={ sponsorship.id }
 										sponsorship={ sponsorship }
+										actions={ actions.get( sponsorship.id ) }
+										isLoading={ ! hasActions }
 										isMarked={ sponsorship.id === sponsorshipId }
 										labels={ labels }
 										today={ today }
@@ -204,6 +224,30 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 									/>
 								) ) }
 							</ul>
+							{ past.length > 0 && (
+								<div className="sponsor-vetting__events-more">
+									<Button
+										size="compact"
+										variant="minimal"
+										tone="neutral"
+										aria-expanded={ showsPast }
+										onClick={ () => setShowsPast( ! showsPast ) }
+									>
+										{ showsPast
+											? __( 'Hide past events', 'wordcamporg' )
+											: sprintf(
+													/* translators: %d: Number of events. */
+													_n(
+														'Show %d past event',
+														'Show %d past events',
+														past.length,
+														'wordcamporg'
+													),
+													past.length
+											  ) }
+									</Button>
+								</div>
+							) }
 						</Card.Root>
 					) }
 				</Part>

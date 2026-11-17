@@ -1,5 +1,5 @@
 import { __, _n, sprintf } from '@wordpress/i18n';
-import type { Company, Flag, Sponsorship } from './types';
+import type { Company, Event, Flag, Sponsorship } from './types';
 
 /* How many days before its event a sponsor that isn't approved yet turns urgent. */
 const SOON_DAYS = 7;
@@ -68,5 +68,27 @@ export function getEventFlag(
 				? __( 'Event today', 'wordcamporg' )
 				: /* translators: %d: Number of days. */
 				  sprintf( _n( 'Event in %d day', 'Event in %d days', days, 'wordcamporg' ), days ),
+	};
+}
+
+/**
+ * Tells the events a company's list shows from the ones it folds away: those that are over, apart from the one
+ * the company was opened from.
+ *
+ * @param events The company's sponsorships, in the order they're listed.
+ * @param today  Today, as `Y-m-d`.
+ * @param openId The sponsorship the company was opened from, if any.
+ * @return The sponsorships that are `shown` and the `past` ones, each in the order given.
+ */
+export function splitEvents< Item extends { id: number; event: Event } >(
+	events: Item[],
+	today: string,
+	openId?: number
+): { shown: Item[]; past: Item[] } {
+	const isPast = ( { id, event }: Item ) => event.date !== '' && event.date < today && id !== openId;
+
+	return {
+		shown: events.filter( ( item ) => ! isPast( item ) ),
+		past: events.filter( isPast ),
 	};
 }

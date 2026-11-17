@@ -6,8 +6,8 @@ import { SPONSORSHIP } from './entities';
 import type { Run } from './hooks';
 import type { SponsorshipDetails } from './types';
 
-/* What these changes need of a sponsorship, which both its company's list of events and its own record have. */
-type Target = Pick< SponsorshipDetails, 'id' | 'status' | 'approvable' | 'domain' >;
+/* The sponsorship a change is made to, with what the change needs of it. */
+type Target< Key extends keyof SponsorshipDetails = never > = Pick< SponsorshipDetails, 'id' | Key >;
 
 /**
  * Names the change of a sponsorship to a status, for the control that makes it.
@@ -61,7 +61,7 @@ export function useSponsorshipChanges( run: Run ) {
 		) as Promise< SponsorshipDetails >;
 
 	return {
-		approve: ( { id, approvable, domain }: Target ) =>
+		approve: ( { id, approvable, domain }: Target< 'approvable' | 'domain' > ) =>
 			run( `approve-${ id }`, async () => {
 				// The approval is for the website the vetter was shown, so the server refuses another.
 				const approved = await write( id, {
@@ -90,7 +90,7 @@ export function useSponsorshipChanges( run: Run ) {
 				return sprintf( __( 'The sponsorship is now %s.', 'wordcamporg' ), label );
 			} ),
 
-		confirmWebsite: ( { id, domain }: Target ) =>
+		confirmWebsite: ( { id, domain }: Target< 'domain' > ) =>
 			run( `confirm-${ id }`, async () => {
 				await write( id, { approved_domain: domain } );
 
@@ -107,7 +107,7 @@ export function useSponsorshipChanges( run: Run ) {
 				return message;
 			} ),
 
-		link: ( { id, status }: Target, company: number ) =>
+		link: ( { id, status }: Target< 'status' >, company: number ) =>
 			run( `link-${ id }`, async () => {
 				const linked = await write( id, { company } );
 

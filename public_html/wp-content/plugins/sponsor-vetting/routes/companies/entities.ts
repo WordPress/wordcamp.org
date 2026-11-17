@@ -70,7 +70,7 @@ export const SPONSORSHIPS_QUERY = {
 };
 
 /**
- * Builds the query for one company's sponsorships, with what its view shows of them and does about them.
+ * Builds the query for one company's sponsorships, with what its list of events shows of each.
  *
  * @param companyId The company.
  * @return The query.
@@ -80,14 +80,26 @@ export function getSponsorshipsQuery( companyId: number ) {
 		parent: [ companyId ],
 		status: SPONSORSHIP_STATUSES,
 		per_page: -1,
+		_fields: [ 'id', 'title', 'status', 'event', 'approved', 'good_faith', 'log' ],
+	};
+}
+
+/**
+ * Builds the query for what a vetter does about some of a company's events: the ones its list shows.
+ *
+ * Kept apart from the list itself because most of these are looked up on each event's site, which a company with
+ * years of events behind it would wait for.
+ *
+ * @param ids The sponsorships.
+ * @return The query.
+ */
+export function getEventActionsQuery( ids: number[] ) {
+	return {
+		include: ids,
+		status: SPONSORSHIP_STATUSES,
+		per_page: -1,
 		_fields: [
 			'id',
-			'title',
-			'status',
-			'event',
-			'approved',
-			'good_faith',
-			'log',
 			'allowed_statuses',
 			'approvable',
 			'domain',

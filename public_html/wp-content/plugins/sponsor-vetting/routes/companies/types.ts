@@ -102,16 +102,17 @@ export type SponsorshipDetails = Sponsorship &
 		needs_approval_email: boolean;
 	};
 
-/* A sponsorship as its company's view lists it: an event, with what a vetter does about it there. */
+/* A sponsorship as its company lists it: an event, and how its approval stands. */
 export type CompanySponsorship = Pick<
 	SponsorshipDetails,
+	'id' | 'title' | 'status' | 'event' | 'approved' | 'good_faith' | 'log'
+>;
+
+/* What a vetter does about one of a company's events. Read only for the events its list shows: most of it is
+   looked up on the event's site. */
+export type EventActions = Pick<
+	SponsorshipDetails,
 	| 'id'
-	| 'title'
-	| 'status'
-	| 'event'
-	| 'approved'
-	| 'good_faith'
-	| 'log'
 	| 'allowed_statuses'
 	| 'approvable'
 	| 'domain'

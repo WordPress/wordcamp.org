@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEventFlag, getEventsHint } from '../events';
+import { getEventFlag, getEventsHint, splitEvents } from '../events';
 import type { Company, Sponsorship } from '../types';
 
 const PENDING: Pick< Sponsorship, 'status' >[] = [ { status: 'svs-pending' } ];
@@ -48,4 +48,19 @@ describe( 'getEventFlag', () => {
 			);
 		}
 	);
+} );
+
+describe( 'splitEvents', () => {
+	it( 'folds away the events that are over, but not the one the company was opened from', () => {
+		const events = [
+			{ id: 1, event: { name: 'Today', date: '2026-11-17' } },
+			{ id: 2, event: { name: 'Undated', date: '' } },
+			{ id: 3, event: { name: 'Yesterday', date: '2026-11-16' } },
+			{ id: 4, event: { name: 'Last year', date: '2025-11-16' } },
+		];
+		const { shown, past } = splitEvents( events, '2026-11-17', 4 );
+
+		expect( shown.map( ( { id } ) => id ) ).toEqual( [ 1, 2, 4 ] );
+		expect( past.map( ( { id } ) => id ) ).toEqual( [ 3 ] );
+	} );
 } );

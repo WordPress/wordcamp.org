@@ -1,16 +1,18 @@
 import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { moreVertical } from '@wordpress/icons';
-import { Button, Notice, Stack, Text } from '@wordpress/ui';
+import { Button, Notice, Spinner, Stack, Text } from '@wordpress/ui';
 import { formatDay, formatDistance, formatTime } from './dates';
 import { StatusBadge, getApprovalLabel } from './fields';
 import { Hint } from './canvas-parts';
 import { getStatusChangeInfo, getStatusChangeLabel } from './sponsorships';
 import type { SponsorshipChanges } from './sponsorships';
-import type { CompanySponsorship } from './types';
+import type { CompanySponsorship, EventActions } from './types';
 
 type EventRowProps = {
 	sponsorship: CompanySponsorship;
+	actions?: EventActions;
+	isLoading: boolean;
 	isMarked: boolean;
 	labels: Record< string, string >;
 	today: string;
@@ -29,10 +31,13 @@ function openInNewTab( url: string ): void {
 }
 
 /**
- * One of a company's events: when it is, how its approval stands, and what a vetter does about it.
+ * One of a company's events: when it is, how its approval stands, and what a vetter does about it, which is read
+ * after the event itself.
  *
  * @param props             Props.
  * @param props.sponsorship The company's sponsorship of the event.
+ * @param props.actions     What a vetter can do about it, once that's been read.
+ * @param props.isLoading   Whether that's still being read.
  * @param props.isMarked    Whether it's the event the company was opened from.
  * @param props.labels      The statuses' labels, keyed by status.
  * @param props.today       Today, as `Y-m-d`.
@@ -41,11 +46,22 @@ function openInNewTab( url: string ): void {
  * @param props.onMove      Asks which company to move it to.
  * @return The event's row, with a notice under it when its website changed after approval.
  */
-export function EventRow( { sponsorship, isMarked, labels, today, running, changes, onMove }: EventRowProps ) {
-	const { id, event, status, approvable, sponsor } = sponsorship;
-	const emails = sponsorship.conversations.filter( ( { type } ) => type === 'approval' );
+export function EventRow( {
+	sponsorship,
+	actions,
+	isLoading,
+	isMarked,
+	labels,
+	today,
+	running,
+	changes,
+	onMove,
+}: EventRowProps ) {
+	const { id, event, status } = sponsorship;
+	const sponsor = actions?.sponsor;
+	const emails = ( actions?.conversations ?? [] ).filter( ( { type } ) => type === 'approval' );
 	// Approving has a button of its own.
-	const others = sponsorship.allowed_statuses.filter( ( next ) => next !== 'svs-approved' );
+	const others = ( actions?.allowed_statuses ?? [] ).filter( ( next ) => next !== 'svs-approved' );
 
 	return (
 		<li className={ isMarked ? 'sponsor-vetting__event is-marked' : 'sponsor-vetting__event' }>
@@ -66,19 +82,20 @@ export function EventRow( { sponsorship, isMarked, labels, today, running, chang
 				gap="xs"
 				className="sponsor-vetting__event-actions"
 			>
-				{ approvable && (
+				{ isLoading && ! actions && <Spinner /> }
+				{ actions?.approvable && (
 					<Button
 						size="compact"
-						variant={ approvable === 'approve' ? 'solid' : 'outline' }
+						variant={ actions.approvable === 'approve' ? 'solid' : 'outline' }
 						loading={ running === `approve-${ id }` }
-						onClick={ () => changes.approve( sponsorship ) }
+						onClick={ () => changes.approve( actions ) }
 					>
-						{ approvable === 'approve'
+						{ actions.approvable === 'approve'
 							? __( 'Approve', 'wordcamporg' )
 							: __( 'Approve in Good Faith', 'wordcamporg' ) }
 					</Button>
 				) }
-				{ sponsorship.needs_approval_email && (
+				{ actions?.needs_approval_email && (
 					<Button
 						size="compact"
 						variant="outline"
@@ -88,69 +105,75 @@ export function EventRow( { sponsorship, isMarked, labels, today, running, chang
 						{ __( 'Send approval email', 'wordcamporg' ) }
 					</Button>
 				) }
-				<DropdownMenu
-					icon={ moreVertical }
-					/* translators: %s: Event name. */
-					label={ sprintf( __( 'More actions for %s', 'wordcamporg' ), event.name ) }
-					toggleProps={ { size: 'compact' } }
-				>
-					{ ( { onClose } ) => (
-						<>
-							<MenuGroup>
-								{ others.map( ( next ) => (
-									<MenuItem
-										key={ next }
-										info={ getStatusChangeInfo( next ) }
-										onClick={ () => {
-											void changes.setStatus( sponsorship, next, labels[ next ] ?? next );
-											onClose();
-										} }
-									>
-										{ getStatusChangeLabel( next, labels ) }
-									</MenuItem>
-								) ) }
-								{ status !== 'svs-approved' && (
-									<MenuItem
-										onClick={ () => {
-											onMove();
-											onClose();
-										} }
-									>
-										{ __( 'Move to another company', 'wordcamporg' ) }
-									</MenuItem>
-								) }
-								<MenuItem
-									onClick={ () => {
-										void changes.trash( sponsorship );
-										onClose();
-									} }
-								>
-									{ __( 'Move to Trash', 'wordcamporg' ) }
-								</MenuItem>
-							</MenuGroup>
-							{ ( sponsor || emails.length > 0 ) && (
+				{ actions && (
+					<DropdownMenu
+						icon={ moreVertical }
+						/* translators: %s: Event name. */
+						label={ sprintf( __( 'More actions for %s', 'wordcamporg' ), event.name ) }
+						toggleProps={ { size: 'compact' } }
+					>
+						{ ( { onClose } ) => (
+							<>
 								<MenuGroup>
-									{ sponsor && (
-										<MenuItem onClick={ () => openInNewTab( sponsor.edit_url ) }>
-											{ __( 'Open the sponsor on the event site', 'wordcamporg' ) }
-										</MenuItem>
-									) }
-									{ emails.map( ( { url, time } ) => (
-										<MenuItem key={ url } onClick={ () => openInNewTab( url ) }>
-											{ sprintf(
-												/* translators: %s: Date and time. */
-												__( 'Approval email of %s', 'wordcamporg' ),
-												formatTime( time )
-											) }
+									{ others.map( ( next ) => (
+										<MenuItem
+											key={ next }
+											info={ getStatusChangeInfo( next ) }
+											onClick={ () => {
+												void changes.setStatus(
+													sponsorship,
+													next,
+													labels[ next ] ?? next
+												);
+												onClose();
+											} }
+										>
+											{ getStatusChangeLabel( next, labels ) }
 										</MenuItem>
 									) ) }
+									{ status !== 'svs-approved' && (
+										<MenuItem
+											onClick={ () => {
+												onMove();
+												onClose();
+											} }
+										>
+											{ __( 'Move to another company', 'wordcamporg' ) }
+										</MenuItem>
+									) }
+									<MenuItem
+										onClick={ () => {
+											void changes.trash( sponsorship );
+											onClose();
+										} }
+									>
+										{ __( 'Move to Trash', 'wordcamporg' ) }
+									</MenuItem>
 								</MenuGroup>
-							) }
-						</>
-					) }
-				</DropdownMenu>
+								{ ( sponsor || emails.length > 0 ) && (
+									<MenuGroup>
+										{ sponsor && (
+											<MenuItem onClick={ () => openInNewTab( sponsor.edit_url ) }>
+												{ __( 'Open the sponsor on the event site', 'wordcamporg' ) }
+											</MenuItem>
+										) }
+										{ emails.map( ( { url, time } ) => (
+											<MenuItem key={ url } onClick={ () => openInNewTab( url ) }>
+												{ sprintf(
+													/* translators: %s: Date and time. */
+													__( 'Approval email of %s', 'wordcamporg' ),
+													formatTime( time )
+												) }
+											</MenuItem>
+										) ) }
+									</MenuGroup>
+								) }
+							</>
+						) }
+					</DropdownMenu>
+				) }
 			</Stack>
-			{ sponsorship.website_changed && (
+			{ actions?.website_changed && (
 				<Notice.Root intent="warning" className="sponsor-vetting__event-notice">
 					<Notice.Title>{ __( 'The sponsor’s website changed', 'wordcamporg' ) }</Notice.Title>
 					<Notice.Description>
@@ -160,14 +183,14 @@ export function EventRow( { sponsorship, isMarked, labels, today, running, chang
 								'The camp changed it from %1$s to %2$s after approval. Invoices can’t be approved until you confirm the new website. If it’s a different company now, cancel the sponsorship instead.',
 								'wordcamporg'
 							),
-							sponsorship.approved_domain || __( 'none', 'wordcamporg' ),
-							sponsorship.domain || __( 'none', 'wordcamporg' )
+							actions.approved_domain || __( 'none', 'wordcamporg' ),
+							actions.domain || __( 'none', 'wordcamporg' )
 						) }
 					</Notice.Description>
 					<Notice.Actions>
 						<Notice.ActionButton
 							loading={ running === `confirm-${ id }` }
-							onClick={ () => changes.confirmWebsite( sponsorship ) }
+							onClick={ () => changes.confirmWebsite( actions ) }
 						>
 							{ __( 'Confirm new website', 'wordcamporg' ) }
 						</Notice.ActionButton>

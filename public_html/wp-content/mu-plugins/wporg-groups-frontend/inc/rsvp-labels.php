@@ -132,6 +132,57 @@ function get_count_formats(): array {
 }
 
 /**
+ * The keys `getWaitingParts()` in `view.js` selects between.
+ */
+const WAITING_FORMAT_KEYS = array( 'waitingFull', 'waitingSingular', 'waitingPlural' );
+
+/**
+ * The format and number for the "Full · N on the waiting list" line; an empty format hides it.
+ */
+function get_waiting_parts( int $waiting, bool $is_full ): array {
+	if ( $waiting > 0 ) {
+		return array(
+			/* translators: %s: number of people on the event's waiting list. */
+			_n( 'Full · %s on the waiting list', 'Full · %s on the waiting list', $waiting, 'wordcamporg' ),
+			$waiting,
+		);
+	}
+
+	if ( $is_full ) {
+		return array( __( 'Full', 'wordcamporg' ), null );
+	}
+
+	return array( '', null );
+}
+
+/**
+ * The finished waiting-list line for the server-rendered markup.
+ */
+function get_waiting_label( int $waiting, bool $is_full ): string {
+	list( $format, $value ) = get_waiting_parts( $waiting, $is_full );
+
+	if ( null === $value ) {
+		return $format;
+	}
+
+	return sprintf( $format, number_format_i18n( $value ) );
+}
+
+/**
+ * The waiting-list formats for `context.labels`, harvested as `get_count_formats()` does.
+ */
+function get_waiting_formats(): array {
+	return array_combine(
+		WAITING_FORMAT_KEYS,
+		array(
+			get_waiting_parts( 0, true )[0],
+			get_waiting_parts( 1, true )[0],
+			get_waiting_parts( 2, true )[0],
+		)
+	);
+}
+
+/**
  * The keys `get_modal_title_formats()` returns, which are also the keys
  * `modalTitle` in `view.js` selects between.
  */

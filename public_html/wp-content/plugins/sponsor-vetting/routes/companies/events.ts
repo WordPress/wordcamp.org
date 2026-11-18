@@ -3,6 +3,7 @@
  */
 
 import { __, _n, sprintf } from '@wordpress/i18n';
+import { isEventOver, isEventUnderWay } from './dates';
 import type { Company, Event, Flag, Sponsorship } from './types';
 
 /**
@@ -43,7 +44,8 @@ export function getEventsHint(
 }
 
 /**
- * Flags a sponsorship that still isn't approved with its event a week away or less, which is when it turns urgent.
+ * Flags a sponsorship that still isn't approved with its event a week away or less, which is when it turns urgent,
+ * and stays so until the event's last day.
  *
  * @param sponsorship        The sponsorship.
  * @param sponsorship.status Its status.
@@ -57,6 +59,10 @@ export function getEventFlag(
 ): Flag | undefined {
 	if ( status !== 'svs-pending' || ! event.date ) {
 		return undefined;
+	}
+
+	if ( isEventUnderWay( event, today ) ) {
+		return { type: 'event_soon', text: __( 'Event under way', 'wordcamporg' ) };
 	}
 
 	const days = Math.round(
@@ -91,7 +97,7 @@ export function splitEvents< Item extends { id: number; event: Event } >(
 	today: string,
 	openId?: number
 ): { shown: Item[]; past: Item[] } {
-	const isPast = ( { id, event }: Item ) => event.date !== '' && event.date < today && id !== openId;
+	const isPast = ( { id, event }: Item ) => isEventOver( event, today ) && id !== openId;
 
 	return {
 		shown: events.filter( ( item ) => ! isPast( item ) ),

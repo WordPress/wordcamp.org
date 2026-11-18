@@ -12,7 +12,6 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\approve_sponsorship;
-use function WordCamp\Sponsor_Vetting\register_company_meta;
 use function WordCamp\Sponsor_Vetting\register_post_types;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\set_company_domains;
@@ -28,7 +27,7 @@ defined( 'WPINC' ) || die();
  */
 class Test_Rest extends Database_TestCase {
 	/**
-	 * Registers the post types and their meta on Central, the only site where they're in REST.
+	 * Registers the post types on Central, the only site where they're in REST.
 	 */
 	public function set_up(): void {
 		parent::set_up();
@@ -37,7 +36,6 @@ class Test_Rest extends Database_TestCase {
 		register_types();
 		// Registered again, since an earlier test may have registered them from another site.
 		register_post_types();
-		register_company_meta();
 	}
 
 	/**
@@ -209,6 +207,40 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
+	 * An event that started yesterday and ends tomorrow isn't over: it's still its company's next event, and its
+	 * sponsorship says when it ends.
+	 */
+	public function test_event_under_way_is_not_over(): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-in-progress',
+			)
+		);
+
+		self::factory()->post->create(
+			array(
+				'post_type'  => 'wordcamp',
+				'meta_input' => array(
+					'_site_id'                => self::$year_dot_2018_site_id,
+					'Start Date (YYYY-mm-dd)' => strtotime( '-1 day' ),
+					'End Date (YYYY-mm-dd)'   => strtotime( '+1 day' ),
+				),
+			)
+		);
+
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', $company_id );
+
+		$this->assertSame(
+			array( gmdate( 'Y-m-d', strtotime( '-1 day' ) ), gmdate( 'Y-m-d', strtotime( '+1 day' ) ) ),
+			array(
+				$this->request( 'GET', '/sv-companies/' . $company_id )->get_data()['next_event'],
+				$this->request( 'GET', '/sv-sponsorships/' . $sponsorship_id )->get_data()['event']['end'],
+			)
+		);
+	}
+
+	/**
 	 * A company opens with its contact and findings, its emails and its own notes; its sponsorships are listed by
 	 * company, each with its event and its own notes.
 	 */
@@ -278,6 +310,7 @@ class Test_Rest extends Database_TestCase {
 		$event = static fn( string $title, string $start ): array => array(
 			'name' => $title . ' ' . gmdate( 'Y', strtotime( $start ) ),
 			'date' => gmdate( 'Y-m-d', strtotime( $start ) ),
+			'end'  => gmdate( 'Y-m-d', strtotime( $start ) ),
 		);
 
 		$this->assertSame(
@@ -327,8 +360,8 @@ class Test_Rest extends Database_TestCase {
 				),
 			),
 			array(
-				'contact'       => $company['meta']['_sv_contact_email'],
-				'findings'      => $company['meta']['_sv_gpl_findings'],
+				'contact'       => $company['contact_email'],
+				'findings'      => $company['gpl_findings'],
 				'conversations' => $company['conversations'],
 				'log'           => $company['log'],
 				'sponsorships'  => array_map( static fn( array $sponsorship ): array => array_diff_key( $sponsorship, array( '_links' => true ) ), rest_get_server()->response_to_data( $sponsorships, false ) ),
@@ -405,16 +438,14 @@ class Test_Rest extends Database_TestCase {
 			'POST',
 			'/sv-companies/' . $company_id,
 			array(
-				'title'          => 'Acme Hosting',
-				'domains'        => array( 'https://www.Acme.test/plans', 'acme-two.test' ),
-				'meta'           => array(
-					'_sv_contact_first_name' => '',
-					'_sv_contact_email'      => 'Dana@Acme.TEST',
-					'_sv_gpl_findings'       => '- Bundles a **non-GPL** theme.',
-					'_sv_not_eligible_until' => 'soon',
-				),
-				'good_faith_due' => '2027-01-15',
-				'note'           => 'Asked <b>Dana</b>',
+				'title'              => 'Acme Hosting',
+				'domains'            => array( 'https://www.Acme.test/plans', 'acme-two.test' ),
+				'contact_first_name' => '',
+				'contact_email'      => 'Dana@Acme.TEST',
+				'gpl_findings'       => '- Bundles a **non-GPL** theme, \\*as sold\\*.',
+				'not_eligible_until' => 'soon',
+				'good_faith_due'     => '2027-01-15',
+				'note'               => 'Asked <b>Dana</b>',
 			)
 		);
 		$stored = array(
@@ -440,7 +471,7 @@ class Test_Rest extends Database_TestCase {
 		);
 
 		$this->assertSame(
-			array( 200, 'Acme Hosting', array( 'acme.test', 'acme-two.test' ), 'dana@acme.test', '- Bundles a **non-GPL** theme.', false, false, '2027-01-15', array( 'Asked Dana' ) ),
+			array( 200, 'Acme Hosting', array( 'acme.test', 'acme-two.test' ), 'dana@acme.test', '- Bundles a **non-GPL** theme, \\*as sold\\*.', false, false, '2027-01-15', array( 'Asked Dana' ) ),
 			$stored
 		);
 		$this->assertSame( array( 200, false ), array( $compliant->get_status(), metadata_exists( 'post', $company_id, '_sv_good_faith_due' ) ) );

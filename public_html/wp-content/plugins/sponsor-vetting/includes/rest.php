@@ -17,24 +17,26 @@ namespace WordCamp\Sponsor_Vetting;
 defined( 'WPINC' ) || die();
 
 /**
- * The company meta the screen reads and writes as it's stored, and how each value is cleaned.
+ * The company values the screen reads and writes as they're stored.
  *
- * A request that changes one of them sends them all, as the screen loaded them. That's why the Good Faith date
- * isn't among them: an approval sets it, and a screen loaded before that would set it back.
+ * Each is a field of its own, so a request sends only the ones its vetter changed. As one `meta` object they'd all
+ * travel together, as the screen loaded them, and undo what someone else saved since.
  *
- * @return callable[] Sanitizers, keyed by meta key.
+ * @return array[] Each value's meta key and the callback that cleans it, keyed by the field's name.
  */
-function get_company_meta_keys(): array {
+function get_company_values(): array {
 	// Markdown, kept as written.
 	$text = static fn( mixed $value ): string => (string) $value;
+	$day  = __NAMESPACE__ . '\sanitize_day';
 
 	return array(
-		'_sv_contact_first_name' => 'sanitize_text_field',
-		'_sv_contact_last_name'  => 'sanitize_text_field',
-		'_sv_contact_email'      => static fn( mixed $value ): string => strtolower( sanitize_email( (string) $value ) ),
-		'_sv_gpl_findings'       => $text,
-		'_sv_trademark_findings' => $text,
-		'_sv_not_eligible_until' => __NAMESPACE__ . '\sanitize_day',
+		'contact_first_name' => array( '_sv_contact_first_name', 'sanitize_text_field' ),
+		'contact_last_name'  => array( '_sv_contact_last_name', 'sanitize_text_field' ),
+		'contact_email'      => array( '_sv_contact_email', static fn( mixed $value ): string => strtolower( sanitize_email( (string) $value ) ) ),
+		'gpl_findings'       => array( '_sv_gpl_findings', $text ),
+		'trademark_findings' => array( '_sv_trademark_findings', $text ),
+		'not_eligible_until' => array( '_sv_not_eligible_until', $day ),
+		'good_faith_due'     => array( '_sv_good_faith_due', $day ),
 	);
 }
 
@@ -49,52 +51,32 @@ function sanitize_day( mixed $value ): string {
 }
 
 /**
- * Registers the company's meta.
+ * Stores a company value, or removes it when it's empty: the daily checks ask whether a date exists, not what it
+ * holds.
  *
- * The keys are protected, which core refuses to write unless they're allowed. Allowed, they take what any meta
- * takes: being able to edit the company.
+ * @param int    $company_id The company.
+ * @param string $key        The value's meta key.
+ * @param string $value      The value, cleaned.
  */
-function register_company_meta(): void {
-	if ( ! is_central() ) {
-		return;
-	}
-
-	foreach ( get_company_meta_keys() as $key => $sanitize ) {
-		register_post_meta(
-			COMPANY_POST_TYPE,
-			$key,
-			array(
-				'type'              => 'string',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'sanitize_callback' => $sanitize,
-				'auth_callback'     => '__return_true',
-			)
-		);
+function set_company_value( int $company_id, string $key, string $value ): void {
+	if ( '' === $value ) {
+		delete_post_meta( $company_id, $key );
+	} else {
+		update_post_meta( $company_id, $key, wp_slash( $value ) );
 	}
 }
-add_action( 'init', __NAMESPACE__ . '\register_company_meta' );
 
 /**
- * Keeps a company's meta as the rest of the plugin expects it once a request has written it.
- *
- * An empty value is no value: the daily checks ask whether a date exists, not what it holds. And a Compliant
- * company has no Good Faith date, even when the request that made it Compliant sent the old one along.
+ * Clears a Compliant company's Good Faith date, even when the request that made it Compliant sent one along.
  *
  * @param \WP_Post $company The company.
  */
-function tidy_company_meta( \WP_Post $company ): void {
-	foreach ( array_keys( get_company_meta_keys() ) as $key ) {
-		if ( '' === get_post_meta( $company->ID, $key, true ) ) {
-			delete_post_meta( $company->ID, $key );
-		}
-	}
-
+function clear_good_faith_due( \WP_Post $company ): void {
 	if ( 'sv-compliant' === $company->post_status ) {
 		delete_post_meta( $company->ID, '_sv_good_faith_due' );
 	}
 }
-add_action( 'rest_after_insert_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\tidy_company_meta' );
+add_action( 'rest_after_insert_' . COMPANY_POST_TYPE, __NAMESPACE__ . '\clear_good_faith_due' );
 
 /**
  * Keeps real-time collaboration off for companies and sponsorships.
@@ -178,8 +160,8 @@ function as_bad_request( mixed $result ): mixed {
  * The fields of companies and sponsorships beyond core's.
  *
  * A field is worked out only when a request asks for it, so a list that names its fields skips the rest. Most are
- * read-only. One with an `update` callback does more than store a value when it's written, and `writable` marks a
- * value a request sends for prepare_rest_update() to act on.
+ * read-only. One with an `update` callback is written through it, and `writable` marks a value a request sends
+ * for prepare_rest_update() to act on.
  *
  * @return array[] For each post type, each field's `get` callback, which takes the post's ID and the request, its
  *                 `update` callback, if any, which takes the post's ID and the value, and its `schema`, keyed by
@@ -235,9 +217,20 @@ function get_rest_fields(): array {
 			'schema' => $string,
 		),
 	);
+	$stored = array();
+
+	foreach ( get_company_values() as $name => list( $key, $sanitize ) ) {
+		$stored[ $name ] = array(
+			'get'    => static fn( int $company_id ): string => (string) get_post_meta( $company_id, $key, true ),
+			'update' => static function ( int $company_id, mixed $value ) use ( $key, $sanitize ): void {
+				set_company_value( $company_id, $key, $sanitize( $value ) );
+			},
+			'schema' => $string,
+		);
+	}
 
 	return array(
-		COMPANY_POST_TYPE     => $shared + array(
+		COMPANY_POST_TYPE     => $shared + $stored + array(
 			'domains'        => array(
 				'get'    => __NAMESPACE__ . '\get_company_domains',
 				'update' => static function ( int $company_id, mixed $domains ): void {
@@ -271,11 +264,6 @@ function get_rest_fields(): array {
 			),
 			'last_vetted'    => array(
 				'get'    => __NAMESPACE__ . '\get_rest_last_vetted',
-				'schema' => $string,
-			),
-			'good_faith_due' => array(
-				'get'    => static fn( int $company_id ): string => (string) get_post_meta( $company_id, '_sv_good_faith_due', true ),
-				'update' => __NAMESPACE__ . '\set_rest_good_faith_due',
 				'schema' => $string,
 			),
 			'mes'            => array(
@@ -320,6 +308,7 @@ function get_rest_fields(): array {
 					'properties' => array(
 						'name' => $string,
 						'date' => $string,
+						'end'  => $string,
 					),
 				),
 			),
@@ -411,7 +400,7 @@ function get_rest_allowed_statuses( int $post_id ): array {
 }
 
 /**
- * Gets when a company's next event starts.
+ * Gets when a company's next event starts, which is in the past for one that's under way.
  *
  * @param int              $company_id The company.
  * @param \WP_REST_Request $request    The request.
@@ -492,22 +481,6 @@ function get_rest_mes_options( int $company_id ): array {
 }
 
 /**
- * Sets or clears the date a company's Good Faith changes are due.
- *
- * @param int   $company_id The company.
- * @param mixed $due        The date, as `Y-m-d`, or anything else for none.
- */
-function set_rest_good_faith_due( int $company_id, mixed $due ): void {
-	$due = sanitize_day( $due );
-
-	if ( $due ) {
-		update_post_meta( $company_id, '_sv_good_faith_due', $due );
-	} else {
-		delete_post_meta( $company_id, '_sv_good_faith_due' );
-	}
-}
-
-/**
  * Gets the emails sent about a record, newest first.
  *
  * @param int $post_id The company or sponsorship.
@@ -561,7 +534,8 @@ function add_rest_note( int $post_id, mixed $note ): void {
  *
  * @param int              $sponsorship_id The sponsorship.
  * @param \WP_REST_Request $request        The request.
- * @return string[] The event's `name`, and its `date` as `Y-m-d` or an empty string.
+ * @return string[] The event's `name`, the day it starts as `date` and its last day as `end`, each as `Y-m-d`, or
+ *                  as an empty string for an event without a date.
  */
 function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array {
 	$blog_id = (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true );
@@ -570,11 +544,12 @@ function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array
 		$request,
 		'event_' . $blog_id,
 		static function () use ( $blog_id ): array {
-			$start = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? 0;
+			$dates = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? null;
 
 			return array(
 				'name' => decode_name( get_event_name( $blog_id ) ),
-				'date' => $start ? gmdate( 'Y-m-d', $start ) : '',
+				'date' => $dates ? gmdate( 'Y-m-d', $dates['start'] ) : '',
+				'end'  => $dates ? gmdate( 'Y-m-d', $dates['end'] ) : '',
 			);
 		}
 	);

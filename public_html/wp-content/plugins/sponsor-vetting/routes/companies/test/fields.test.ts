@@ -119,7 +119,7 @@ function sponsorship(
 		title: { raw: name, rendered: name },
 		status,
 		company,
-		event: { name: event, date },
+		event: { name: event, date, end: date },
 		approved: '',
 		good_faith: false,
 		trashed_status: '',

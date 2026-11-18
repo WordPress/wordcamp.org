@@ -56,18 +56,28 @@ const NOTE = {
 	Edit: { control: 'textarea', rows: 3 },
 } as const;
 
+type Stored =
+	| 'contact_first_name'
+	| 'contact_last_name'
+	| 'contact_email'
+	| 'gpl_findings'
+	| 'trademark_findings'
+	| 'not_eligible_until'
+	| 'good_faith_due';
+
 /**
- * Reads and writes one of a company's meta values as a field of its own.
+ * Names a field after the company value it edits, and writes an emptied one as an empty string, which is what the
+ * server takes for no value.
  *
- * @param key The meta key.
- * @return The field's accessors.
+ * Each value is a field of the record, so a save sends only the ones the vetter changed.
+ *
+ * @param id The value's name.
+ * @return The field's ID and how it's written.
  */
-function meta( key: keyof CompanyDetails[ 'meta' ] ) {
+function stored( id: Stored ) {
 	return {
-		getValue: ( { item }: { item: CompanyForm } ) => item.meta[ key ],
-		setValue: ( { value }: { value?: string } ) => ( {
-			meta: { [ key ]: value ?? '' } as Partial< CompanyDetails[ 'meta' ] >,
-		} ),
+		id,
+		setValue: ( { value }: { value?: string } ) => ( { [ id ]: value ?? '' } ) as Partial< CompanyForm >,
 	};
 }
 
@@ -103,23 +113,20 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 	return [
 		getStatusField< CompanyForm >( company, labels ),
 		{
-			id: 'not_eligible_until',
+			...stored( 'not_eligible_until' ),
 			type: 'date',
 			label: __( 'Not Eligible until', 'wordcamporg' ),
 			description: __( 'Leave empty for no end date.', 'wordcamporg' ),
-			render: ( { item } ) =>
-				formatDay( item.meta._sv_not_eligible_until ) || __( 'No end date', 'wordcamporg' ),
-			...meta( '_sv_not_eligible_until' ),
+			render: ( { item } ) => formatDay( item.not_eligible_until ) || __( 'No end date', 'wordcamporg' ),
 			// Only being Not Eligible has an end, so it shows once that's the status, saved or about to be.
 			isVisible: ( item ) => item.status === 'sv-not-eligible',
 		},
 		{
-			id: 'good_faith_due',
+			...stored( 'good_faith_due' ),
 			type: 'date',
 			label: __( 'Good Faith due', 'wordcamporg' ),
 			description: __( 'Set when a sponsorship is approved in good faith.', 'wordcamporg' ),
 			render: ( { item } ) => formatDay( item.good_faith_due ) || __( 'None', 'wordcamporg' ),
-			setValue: ( { value }: { value?: string } ) => ( { good_faith_due: value ?? '' } ),
 			// A Good Faith approval sets it, so before one there's nothing to show or change.
 			isVisible: ( item ) => Boolean( company.good_faith_due || item.good_faith_due ),
 		},
@@ -134,22 +141,19 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			setValue: ( { value }: { value?: string } ) => ( { domains: ( value ?? '' ).split( '\n' ) } ),
 		},
 		{
-			id: 'first_name',
+			...stored( 'contact_first_name' ),
 			type: 'text',
 			label: __( 'Contact first name', 'wordcamporg' ),
-			...meta( '_sv_contact_first_name' ),
 		},
 		{
-			id: 'last_name',
+			...stored( 'contact_last_name' ),
 			type: 'text',
 			label: __( 'Contact last name', 'wordcamporg' ),
-			...meta( '_sv_contact_last_name' ),
 		},
 		{
-			id: 'email',
+			...stored( 'contact_email' ),
 			type: 'email',
 			label: __( 'Contact email', 'wordcamporg' ),
-			...meta( '_sv_contact_email' ),
 		},
 		{
 			id: 'mes',
@@ -167,19 +171,17 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			isVisible: () => company.mes_options.length > 0,
 		},
 		{
-			id: 'gpl_findings',
+			...stored( 'gpl_findings' ),
 			type: 'text',
 			label: __( 'GPL', 'wordcamporg' ),
 			Edit: { control: 'textarea', rows: 6 },
-			...meta( '_sv_gpl_findings' ),
 		},
 		{
-			id: 'trademark_findings',
+			...stored( 'trademark_findings' ),
 			type: 'text',
 			label: __( 'Trademark', 'wordcamporg' ),
 			description: __( 'Markdown. The compliance request sends these to the sponsor.', 'wordcamporg' ),
 			Edit: { control: 'textarea', rows: 6 },
-			...meta( '_sv_trademark_findings' ),
 		},
 		NOTE,
 	];
@@ -205,8 +207,8 @@ export const DETAILS_FORM: Form = {
 	fields: [
 		'title',
 		'domains',
-		{ id: 'contact', layout: { type: 'row' }, children: [ 'first_name', 'last_name' ] },
-		'email',
+		{ id: 'contact', layout: { type: 'row' }, children: [ 'contact_first_name', 'contact_last_name' ] },
+		'contact_email',
 		'mes',
 	],
 };

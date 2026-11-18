@@ -56,11 +56,9 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 					title: sponsor.name,
 					status: 'sv-needs-vetting',
 					domains: [ sponsor.website ],
-					meta: {
-						_sv_contact_first_name: sponsor.first_name,
-						_sv_contact_last_name: sponsor.last_name,
-						_sv_contact_email: sponsor.email,
-					},
+					contact_first_name: sponsor.first_name,
+					contact_last_name: sponsor.last_name,
+					contact_email: sponsor.email,
 				},
 				{ throwOnError: true }
 			) ) as CompanyDetails;

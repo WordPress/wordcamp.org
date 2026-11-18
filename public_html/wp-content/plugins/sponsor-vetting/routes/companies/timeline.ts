@@ -18,7 +18,7 @@ export type TimelineEntry = LogEntry & {
  * @return The sponsorships, sorted.
  */
 export function sortByEvent< Item extends { event: Event } >( sponsorships: Item[], today: string ): Item[] {
-	return [ ...sponsorships ].sort( ( a, b ) => compareEventDays( a.event.date, b.event.date, today ) );
+	return [ ...sponsorships ].sort( ( a, b ) => compareEventDays( a.event, b.event, today ) );
 }
 
 /**

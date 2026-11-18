@@ -361,10 +361,25 @@ export function getSponsorshipFields(
 	const byId = new Map( companies.map( ( company ) => [ company.id, company ] ) );
 	const getCompany = ( { company }: Sponsorship ) => byId.get( company );
 	const getStatus = ( item: Sponsorship ) => getSponsorStatus( item, getCompany( item ), labels );
-	// A group is headed by its field's value, and sorted by it: so the heading says when, and this knows when.
-	const days = new Map( sponsorships.map( ( { event } ) => [ getEventHeading( event ), event.date ] ) );
+	/*
+	 * A field is sorted by its value, and a group is headed by it: so the heading says when, the date is the day
+	 * the event starts, and these know its other days. Events that start the same day sort as the last to end.
+	 */
+	const undated = { date: '', end: '' };
+	const byHeading = new Map( sponsorships.map( ( { event } ) => [ getEventHeading( event ), event ] ) );
+	const byStart = new Map< string, Event >();
+
+	for ( const { event } of sponsorships ) {
+		if ( event.end > ( byStart.get( event.date )?.end ?? '' ) ) {
+			byStart.set( event.date, event );
+		}
+	}
+
 	const compareEvents = ( a: string, b: string ) =>
-		compareEventDays( days.get( a ) ?? '', days.get( b ) ?? '', today ) || a.localeCompare( b );
+		compareEventDays( byHeading.get( a ) ?? undated, byHeading.get( b ) ?? undated, today ) ||
+		a.localeCompare( b );
+	const compareStarts = ( a: string, b: string ) =>
+		compareEventDays( byStart.get( a ) ?? undated, byStart.get( b ) ?? undated, today );
 	// What still takes a vetter comes first: a company, an approval, its company's vetting. Then what's decided.
 	const options: StatusOption[] = [
 		{ value: NEEDS_COMPANY, label: __( 'Needs a company', 'wordcamporg' ) },
@@ -411,7 +426,7 @@ export function getSponsorshipFields(
 			getValue: ( { item } ) => item.event.date,
 			render: ( { item } ) => formatDay( item.event.date ),
 			sort: ( a: string, b: string, direction ) =>
-				direction === 'asc' ? compareEventDays( a, b, today ) : compareEventDays( b, a, today ),
+				direction === 'asc' ? compareStarts( a, b ) : compareStarts( b, a ),
 		},
 		...getStatusFields< Sponsorship >(
 			options,

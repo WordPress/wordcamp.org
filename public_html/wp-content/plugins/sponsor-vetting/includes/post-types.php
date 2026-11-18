@@ -107,8 +107,7 @@ function register_post_types(): void {
 		'query_var'           => false,
 		'can_export'          => false,
 		'delete_with_user'    => false,
-		// `custom-fields` is what lets REST show registered meta.
-		'supports'            => array( 'title', 'custom-fields' ),
+		'supports'            => array( 'title' ),
 		'map_meta_cap'        => true,
 	);
 

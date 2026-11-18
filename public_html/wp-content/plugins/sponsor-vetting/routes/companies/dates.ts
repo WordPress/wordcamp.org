@@ -4,6 +4,9 @@
 
 import { dateI18n, getSettings, humanTimeDiff } from '@wordpress/date';
 import { __ } from '@wordpress/i18n';
+import type { Event } from './types';
+
+type EventDays = Pick< Event, 'date' | 'end' >;
 
 /**
  * Formats a day (`Y-m-d`) in the site's date format.
@@ -70,26 +73,49 @@ export function compareDays( a: string, b: string, direction: 'asc' | 'desc' ): 
 }
 
 /**
- * Compares the days two events start on the way a vetter needs them: events still to come soonest first, then
+ * Whether an event is over: its last day is before today. An event without a date isn't.
+ *
+ * @param event     The event.
+ * @param event.end Its last day.
+ * @param today     Today, as `Y-m-d`.
+ * @return Whether it's over.
+ */
+export function isEventOver( { end }: Pick< Event, 'end' >, today: string ): boolean {
+	return end !== '' && end < today;
+}
+
+/**
+ * Whether an event is under way: it started before today and isn't over.
+ *
+ * @param event Its days.
+ * @param today Today, as `Y-m-d`.
+ * @return Whether it's under way.
+ */
+export function isEventUnderWay( event: EventDays, today: string ): boolean {
+	return event.date !== '' && event.date < today && ! isEventOver( event, today );
+}
+
+/**
+ * Compares the days of two events the way a vetter needs them: events that aren't over yet soonest first, then
  * undated ones, then past ones, latest first.
  *
- * @param a     A day, or an empty string.
- * @param b     Another day, or an empty string.
+ * @param a     An event's days.
+ * @param b     Another event's days.
  * @param today Today, as `Y-m-d`.
  * @return A negative number, zero, or a positive number.
  */
-export function compareEventDays( a: string, b: string, today: string ): number {
-	const rank = ( day: string ): number => {
-		if ( ! day ) {
+export function compareEventDays( a: EventDays, b: EventDays, today: string ): number {
+	const rank = ( event: EventDays ): number => {
+		if ( ! event.date ) {
 			return 1;
 		}
 
-		return day >= today ? 0 : 2;
+		return isEventOver( event, today ) ? 2 : 0;
 	};
 
 	if ( rank( a ) !== rank( b ) ) {
 		return rank( a ) - rank( b );
 	}
 
-	return rank( a ) === 2 ? b.localeCompare( a ) : a.localeCompare( b );
+	return rank( a ) === 2 ? b.date.localeCompare( a.date ) : a.date.localeCompare( b.date );
 }

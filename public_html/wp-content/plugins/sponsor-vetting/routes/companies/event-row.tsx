@@ -6,7 +6,7 @@ import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { moreVertical } from '@wordpress/icons';
 import { Button, Notice, Spinner, Stack, Text } from '@wordpress/ui';
-import { formatDay, formatDistance, formatTime } from './dates';
+import { formatDay, formatDistance, formatTime, isEventUnderWay } from './dates';
 import { StatusBadge, getApprovalLabel } from './fields';
 import { Hint } from './canvas-parts';
 import { getStatusChangeInfo, getStatusChangeLabel } from './sponsorships';
@@ -74,7 +74,11 @@ export function EventRow( {
 			</Text>
 			<div className="sponsor-vetting__event-date">
 				<Text render={ <div /> }>{ formatDay( event.date ) || __( 'No date yet', 'wordcamporg' ) }</Text>
-				<Hint>{ formatDistance( event.date, today ) }</Hint>
+				<Hint>
+					{ isEventUnderWay( event, today )
+						? __( 'Under way', 'wordcamporg' )
+						: formatDistance( event.date, today ) }
+				</Hint>
 			</div>
 			<span title={ ( status === 'svs-approved' && sponsorship.approved ) || undefined }>
 				<StatusBadge status={ status } label={ getApprovalLabel( sponsorship, labels ) } />

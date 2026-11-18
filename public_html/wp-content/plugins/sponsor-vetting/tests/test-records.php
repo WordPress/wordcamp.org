@@ -135,31 +135,53 @@ class Test_Records extends Database_TestCase {
 	}
 
 	/**
-	 * A site with more than one event gets the newest one's date, even when only an older one has a date.
+	 * A site with more than one event gets the newest one's dates, even when only an older one has a date. An
+	 * event ends on its end date, or the day it starts when it has none.
 	 */
-	public function test_event_date_is_the_newest_events(): void {
+	public function test_event_dates_are_the_newest_events(): void {
 		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
+		$start  = strtotime( '+10 days' );
+		$end    = strtotime( '+12 days' );
 		$events = array(
-			array( 901, '', strtotime( '+10 days' ) ),
-			array( 905, '2023-01-01 00:00:00', strtotime( '+1 day' ) ),
-			array( 905, '', 0 ),
+			array( 901, '', $start, $end ),
+			array( 903, '', $start, 0 ),
+			array( 905, '2023-01-01 00:00:00', strtotime( '+1 day' ), 0 ),
+			array( 905, '', 0, 0 ),
 		);
 
-		foreach ( $events as list( $blog_id, $created, $start ) ) {
+		foreach ( $events as list( $blog_id, $created, $starts, $ends ) ) {
 			self::factory()->post->create(
 				array(
 					'post_type'  => 'wordcamp',
-					'meta_input' => array( '_site_id' => $blog_id ) + ( $start ? array( 'Start Date (YYYY-mm-dd)' => $start ) : array() ),
+					'meta_input' => array_filter(
+						array(
+							'_site_id'                => $blog_id,
+							'Start Date (YYYY-mm-dd)' => $starts,
+							'End Date (YYYY-mm-dd)'   => $ends,
+						)
+					),
 				) + ( $created ? array( 'post_date' => $created ) : array() )
 			);
 		}
 
-		$dates = get_event_dates( array( 901, 905 ) );
+		$dates = get_event_dates( array( 901, 903, 905 ) );
 
 		restore_current_blog();
 
-		$this->assertSame( array( 901 => strtotime( '+10 days' ) ), $dates );
+		$this->assertSame(
+			array(
+				901 => array(
+					'start' => $start,
+					'end'   => $end,
+				),
+				903 => array(
+					'start' => $start,
+					'end'   => $start,
+				),
+			),
+			$dates
+		);
 	}
 
 	/**

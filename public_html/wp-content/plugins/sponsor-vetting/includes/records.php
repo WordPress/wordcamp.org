@@ -84,7 +84,7 @@ function get_company_flag_items( int $company_id ): array {
 }
 
 /**
- * Gets the soonest event still to come for companies, among the events their pending sponsorships are for.
+ * Gets the soonest event that isn't over yet for companies, among the events their pending sponsorships are for.
  *
  * @param int[]|null $company_ids The companies, or null for all of them.
  * @return array[] The event's start date, as get_event_dates() returns it, and the sponsorship it's for, keyed by
@@ -110,9 +110,12 @@ function get_next_events( ?array $company_ids = null ): array {
 	$today        = strtotime( gmdate( 'Y-m-d' ) . ' UTC' );
 
 	foreach ( $sponsorships as $sponsorship ) {
-		$start = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? 0;
+		list( 'start' => $start, 'end' => $end ) = $dates[ $blog_ids[ $sponsorship->ID ] ] ?? array(
+			'start' => 0,
+			'end'   => 0,
+		);
 
-		if ( $start >= $today && $start < ( $next[ $sponsorship->post_parent ]['start'] ?? PHP_INT_MAX ) ) {
+		if ( $end >= $today && $start < ( $next[ $sponsorship->post_parent ]['start'] ?? PHP_INT_MAX ) ) {
 			$next[ $sponsorship->post_parent ] = array(
 				'start'          => $start,
 				'sponsorship_id' => $sponsorship->ID,
@@ -162,13 +165,14 @@ function get_sponsorship_counts( ?array $company_ids = null ): array {
 }
 
 /**
- * Gets when the events of camp sites start, with one query for them all.
+ * Gets when the events of camp sites start and end, with one query for them all.
  *
  * A site with more than one `wordcamp` post gets the newest one's, as get_wordcamp_post() does, even when only an
- * older one has a date.
+ * older one has a date. An event without an end date ends the day it starts.
  *
  * @param int[] $blog_ids The camp sites.
- * @return int[] Start dates, as timestamps of midnight UTC, keyed by camp site; only sites whose event has one.
+ * @return array[] Each event's `start` and `end`, as timestamps of midnight UTC, keyed by camp site; only sites
+ *                 whose event has a start date.
  */
 function get_event_dates( array $blog_ids ): array {
 	$blog_ids = array_values( array_unique( array_filter( array_map( 'intval', $blog_ids ) ) ) );
@@ -198,12 +202,17 @@ function get_event_dates( array $blog_ids ): array {
 
 	// Oldest first, so the newest overwrites it.
 	foreach ( $events as $event ) {
-		$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
+		$start = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
+
+		$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = array(
+			'start' => $start,
+			'end'   => max( $start, (int) get_post_meta( $event->ID, 'End Date (YYYY-mm-dd)', true ) ),
+		);
 	}
 
 	restore_current_blog();
 
-	return array_filter( $dates );
+	return array_filter( $dates, static fn( array $event ): bool => $event['start'] > 0 );
 }
 
 /**

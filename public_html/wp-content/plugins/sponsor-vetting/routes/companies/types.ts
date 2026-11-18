@@ -55,14 +55,12 @@ export type Company = {
 
 export type CompanyDetails = Company &
 	Details & {
-		meta: {
-			_sv_contact_first_name: string;
-			_sv_contact_last_name: string;
-			_sv_contact_email: string;
-			_sv_gpl_findings: string;
-			_sv_trademark_findings: string;
-			_sv_not_eligible_until: string;
-		};
+		contact_first_name: string;
+		contact_last_name: string;
+		contact_email: string;
+		gpl_findings: string;
+		trademark_findings: string;
+		not_eligible_until: string;
 		good_faith_due: string;
 		mes: number;
 		mes_options: { id: number; name: string }[];
@@ -70,7 +68,10 @@ export type CompanyDetails = Company &
 
 export type Event = {
 	name: string;
+	/* The day it starts, as `Y-m-d`, or an empty string for an event without a date. */
 	date: string;
+	/* Its last day, which is the day it starts for a one-day event. */
+	end: string;
 };
 
 export type Sponsorship = {

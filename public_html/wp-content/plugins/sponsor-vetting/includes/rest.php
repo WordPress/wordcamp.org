@@ -22,21 +22,23 @@ defined( 'WPINC' ) || die();
  * Each is a field of its own, so a request sends only the ones its vetter changed. As one `meta` object they'd all
  * travel together, as the screen loaded them, and undo what someone else saved since.
  *
- * @return array[] Each value's meta key and the callback that cleans it, keyed by the field's name.
+ * @return array[] Each value's meta key, the callback that cleans it and, where only an email address or a day
+ *                 will do, what to say about anything else, keyed by the field's name.
  */
 function get_company_values(): array {
 	// Markdown, kept as written.
-	$text = static fn( mixed $value ): string => (string) $value;
-	$day  = __NAMESPACE__ . '\sanitize_day';
+	$text  = static fn( mixed $value ): string => (string) $value;
+	$email = static fn( mixed $value ): string => strtolower( sanitize_email( (string) $value ) );
+	$day   = __NAMESPACE__ . '\sanitize_day';
 
 	return array(
-		'contact_first_name' => array( '_sv_contact_first_name', 'sanitize_text_field' ),
-		'contact_last_name'  => array( '_sv_contact_last_name', 'sanitize_text_field' ),
-		'contact_email'      => array( '_sv_contact_email', static fn( mixed $value ): string => strtolower( sanitize_email( (string) $value ) ) ),
-		'gpl_findings'       => array( '_sv_gpl_findings', $text ),
-		'trademark_findings' => array( '_sv_trademark_findings', $text ),
-		'not_eligible_until' => array( '_sv_not_eligible_until', $day ),
-		'good_faith_due'     => array( '_sv_good_faith_due', $day ),
+		'contact_first_name' => array( '_sv_contact_first_name', 'sanitize_text_field', null ),
+		'contact_last_name'  => array( '_sv_contact_last_name', 'sanitize_text_field', null ),
+		'contact_email'      => array( '_sv_contact_email', $email, __( 'The contact email isn’t an email address. Correct it, or leave it empty.', 'wordcamporg' ) ),
+		'gpl_findings'       => array( '_sv_gpl_findings', $text, null ),
+		'trademark_findings' => array( '_sv_trademark_findings', $text, null ),
+		'not_eligible_until' => array( '_sv_not_eligible_until', $day, __( 'The Not Eligible date isn’t a date.', 'wordcamporg' ) ),
+		'good_faith_due'     => array( '_sv_good_faith_due', $day, __( 'The Good Faith date isn’t a date.', 'wordcamporg' ) ),
 	);
 }
 
@@ -219,13 +221,16 @@ function get_rest_fields(): array {
 	);
 	$stored = array();
 
-	foreach ( get_company_values() as $name => list( $key, $sanitize ) ) {
+	foreach ( get_company_values() as $name => list( $key, $sanitize, $invalid ) ) {
+		// Cleaned to nothing, a value that isn't one would remove the stored one: so the request is refused.
+		$validate = static fn( mixed $value ): true|\WP_Error => is_string( $value ) && ( '' === $value || '' !== $sanitize( $value ) ) ? true : new \WP_Error( 'rest_invalid_param', $invalid );
+
 		$stored[ $name ] = array(
 			'get'    => static fn( int $company_id ): string => (string) get_post_meta( $company_id, $key, true ),
 			'update' => static function ( int $company_id, mixed $value ) use ( $key, $sanitize ): void {
 				set_company_value( $company_id, $key, $sanitize( $value ) );
 			},
-			'schema' => $string,
+			'schema' => $string + ( $invalid ? array( 'arg_options' => array( 'validate_callback' => $validate ) ) : array() ),
 		);
 	}
 
@@ -686,6 +691,25 @@ function link_rest_sponsorship( int $sponsorship_id, mixed $company_id ): true|\
 
 	return true;
 }
+
+/**
+ * Answers a request with the status a sponsorship has now.
+ *
+ * Core answers a save with the post as it was before the fields were written, and linking a pending sponsorship to
+ * a vetted company approves it.
+ *
+ * @param \WP_REST_Response $response The response.
+ * @param \WP_Post          $post     The sponsorship.
+ * @return \WP_REST_Response
+ */
+function refresh_rest_status( \WP_REST_Response $response, \WP_Post $post ): \WP_REST_Response {
+	if ( isset( $response->data['status'] ) ) {
+		$response->data['status'] = (string) get_post_status( $post->ID );
+	}
+
+	return $response;
+}
+add_filter( 'rest_prepare_' . SPONSORSHIP_POST_TYPE, __NAMESPACE__ . '\refresh_rest_status', 10, 2 );
 
 /**
  * Lets sponsorships be listed by company.

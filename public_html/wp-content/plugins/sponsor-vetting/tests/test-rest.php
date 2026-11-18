@@ -423,14 +423,17 @@ class Test_Rest extends Database_TestCase {
 	/**
 	 * A vetter edits a company's name, websites, contact, findings and dates and adds a note in one request, each
 	 * cleaned as it's stored and an emptied value removed. Making the company Compliant then clears its Good Faith
-	 * date, even one sent with that request.
+	 * date, even one sent with that request. A contact email that isn't one is refused, and the stored one kept.
 	 */
 	public function test_vetter_edits_a_company(): void {
 		$company_id = self::factory()->post->create(
 			array(
 				'post_type'   => COMPANY_POST_TYPE,
 				'post_status' => 'sv-compliance-req',
-				'meta_input'  => array( '_sv_contact_first_name' => 'Dana' ),
+				'meta_input'  => array(
+					'_sv_contact_first_name' => 'Dana',
+					'_sv_not_eligible_until' => '2027-03-01',
+				),
 			)
 		);
 
@@ -443,7 +446,7 @@ class Test_Rest extends Database_TestCase {
 				'contact_first_name' => '',
 				'contact_email'      => 'Dana@Acme.TEST',
 				'gpl_findings'       => '- Bundles a **non-GPL** theme, \\*as sold\\*.',
-				'not_eligible_until' => 'soon',
+				'not_eligible_until' => '',
 				'good_faith_due'     => '2027-01-15',
 				'note'               => 'Asked <b>Dana</b>',
 			)
@@ -475,6 +478,14 @@ class Test_Rest extends Database_TestCase {
 			$stored
 		);
 		$this->assertSame( array( 200, false ), array( $compliant->get_status(), metadata_exists( 'post', $company_id, '_sv_good_faith_due' ) ) );
+
+		// Cleaned as it's stored, it would come to nothing and remove the address.
+		$refused = $this->request( 'POST', '/sv-companies/' . $company_id, array( 'contact_email' => 'dana@acme' ) );
+
+		$this->assertSame(
+			array( 400, 'The contact email isn’t an email address. Correct it, or leave it empty.', 'dana@acme.test' ),
+			array( $refused->get_status(), $refused->get_data()['data']['params']['contact_email'] ?? '', get_post_meta( $company_id, '_sv_contact_email', true ) )
+		);
 	}
 
 	/**
@@ -606,6 +617,39 @@ class Test_Rest extends Database_TestCase {
 			array( $suggested_id, $status, $is_linked ? $suggested_id : 0 ),
 			array( $suggestion['id'], $response->get_status(), (int) get_post_field( 'post_parent', $sponsorship_id ) )
 		);
+	}
+
+	/**
+	 * Linking a pending sponsorship to a vetted company approves it, and the answer says so: the screen words its
+	 * message by it.
+	 */
+	public function test_linking_to_a_vetted_company_answers_approved(): void {
+		$company_id = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliant',
+				'meta_input'  => array( '_sv_last_vetted' => time() ),
+			)
+		);
+		set_company_domains( $company_id, array( 'acme.test' ) );
+
+		switch_to_blog( self::$year_dot_2018_site_id );
+		$sponsor_id = self::factory()->post->create(
+			array(
+				'post_type'  => 'wcb_sponsor',
+				'meta_input' => array( '_wcpt_sponsor_website' => 'https://acme.test/' ),
+			)
+		);
+		restore_current_blog();
+
+		$sponsorship_id = $this->create_sponsorship( self::$year_dot_2018_site_id, 'svs-pending', 0 );
+		update_post_meta( $sponsorship_id, '_sv_sponsor_id', $sponsor_id );
+		// The event was told some other way, so approving sends it no email.
+		update_post_meta( $sponsorship_id, '_sv_approval_notified', 1 );
+
+		$response = $this->request( 'POST', '/sv-sponsorships/' . $sponsorship_id, array( 'company' => $company_id ) );
+
+		$this->assertSame( array( 'svs-approved', 'svs-approved' ), array( get_post_status( $sponsorship_id ), $response->get_data()['status'] ) );
 	}
 
 	/**

@@ -255,9 +255,10 @@ export function useSponsorshipList(): RecordList< Sponsorship > {
 	const statuses = useStatuses();
 	const { records, error } = useRecords< Sponsorship >( SPONSORSHIP, SPONSORSHIPS_QUERY );
 	const { records: companies, error: companiesError } = useRecords< Company >( COMPANY, COMPANIES_QUERY );
+	const today = getToday();
 	const fields = useMemo(
-		() => getSponsorshipFields( statuses, companies ?? [], records ?? [], getToday() ),
-		[ statuses, companies, records ]
+		() => getSponsorshipFields( statuses, companies ?? [], records ?? [], today ),
+		[ statuses, companies, records, today ]
 	);
 
 	return useList( {
@@ -274,12 +275,27 @@ export function useSponsorshipList(): RecordList< Sponsorship > {
 /**
  * Words an error for the vetter.
  *
+ * A value the server refuses comes as "Invalid parameter(s)" and the field's name, with what's wrong with it
+ * beside that: so that's what is shown.
+ *
  * @param error What a request threw.
  * @return The server's message, or a general one.
  */
 export function getErrorMessage( error: unknown ): string {
-	return error instanceof Object && 'message' in error && typeof error.message === 'string' && error.message
-		? error.message
+	const { message, data } = ( error instanceof Object ? error : {} ) as {
+		message?: unknown;
+		data?: { params?: Record< string, unknown > };
+	};
+	const reasons = Object.values( data?.params ?? {} ).filter(
+		( reason ): reason is string => typeof reason === 'string' && reason !== ''
+	);
+
+	if ( reasons.length ) {
+		return reasons.join( ' ' );
+	}
+
+	return typeof message === 'string' && message
+		? message
 		: __( 'Something went wrong. Try again.', 'wordcamporg' );
 }
 

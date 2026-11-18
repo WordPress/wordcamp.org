@@ -499,7 +499,9 @@ function event_templates_permissions_check(): bool {
  * Whether an event can be used as a template for a new one.
  *
  * Only published events: a draft is someone's unfinished work, and the
- * modal already offers the user's own drafts separately.
+ * modal already offers the user's own drafts separately. A password-protected
+ * event only once its password is entered, or to someone who can edit it,
+ * since `read_post` doesn't check the password.
  */
 function is_event_template( int $event_id ): bool {
 	$post = get_post( $event_id );
@@ -507,7 +509,8 @@ function is_event_template( int $event_id ): bool {
 	return $post
 		&& Event::POST_TYPE === $post->post_type
 		&& 'publish' === $post->post_status
-		&& current_user_can( 'read_post', $event_id );
+		&& current_user_can( 'read_post', $event_id )
+		&& ( ! post_password_required( $post ) || current_user_can( 'edit_post', $event_id ) );
 }
 
 /**

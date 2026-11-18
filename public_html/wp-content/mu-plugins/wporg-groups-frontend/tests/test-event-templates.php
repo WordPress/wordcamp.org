@@ -313,6 +313,35 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 	}
 
 	/**
+	 * A password-protected event can't be copied or used as a template by
+	 * someone who hasn't entered its password, so its details stay behind it.
+	 * Its organizer still can.
+	 */
+	public function test_password_protected_event_is_not_offered_without_the_password() {
+		$event_id = $this->create_event( array() );
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret',
+			)
+		);
+
+		wp_set_current_user( $this->event_organiser_id );
+
+		foreach ( array( false, true ) as $copy ) {
+			$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+			$request->set_param( 'template_id', $event_id );
+			$request->set_param( 'copy', $copy );
+			$this->assertSame( 403, rest_do_request( $request )->get_status() );
+		}
+
+		$listed = wp_list_pluck( rest_do_request( new WP_REST_Request( 'GET', '/wporg-groups/v1/event-templates' ) )->get_data(), 'id' );
+		$this->assertNotContains( $event_id, $listed );
+
+		$this->load_template( $event_id, $this->organiser_id, true );
+	}
+
+	/**
 	 * A copy of a series is a one-off event whose schedule is still open.
 	 */
 	public function test_copy_of_a_recurring_event_is_a_one_off() {

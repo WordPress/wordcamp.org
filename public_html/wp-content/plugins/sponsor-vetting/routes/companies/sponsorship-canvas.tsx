@@ -7,14 +7,14 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { DataForm } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import { Badge, Button, Link, Notice, Stack, Text } from '@wordpress/ui';
-import { CanvasHeader, CanvasPlaceholder, Hint, History, Row, Section } from './canvas-parts';
+import { Badge, Button, Link, Stack, Text } from '@wordpress/ui';
+import { CanvasHeader, CanvasPlaceholder, Hint, History, Row, Section, Trashed } from './canvas-parts';
 import { formatDay } from './dates';
 import { COMPANIES_QUERY, COMPANY, SPONSORSHIP, TRASH } from './entities';
 import { StatusBadge, getName, getSponsorName, needsCompany } from './fields';
 import { COMPANY_PICK_FORM, getCompanyPickField } from './forms';
 import type { CompanyPick } from './forms';
-import { useOpenRecord, useRecords, useStatusLabels, useTask } from './hooks';
+import { useOpenRecord, useRecords, useStatuses, useTask } from './hooks';
 import { getStatusChangeLabel, useSponsorshipChanges } from './sponsorships';
 import type { Company, CompanyDetails, SponsorshipDetails } from './types';
 
@@ -29,7 +29,7 @@ import type { Company, CompanyDetails, SponsorshipDetails } from './types';
  */
 function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails; companies: Company[] } ) {
 	const { id, sponsor, suggestion, event, status } = sponsorship;
-	const { labels } = useStatusLabels();
+	const { labels } = useStatuses();
 	const { open } = useOpenRecord();
 	const { saveEntityRecord } = useDispatch( coreStore );
 	const { running, run } = useTask();
@@ -234,49 +234,6 @@ function Unlinked( { sponsorship, companies }: { sponsorship: SponsorshipDetails
 }
 
 /**
- * A sponsorship in the Trash, which can only come back out of it.
- *
- * @param props             Props.
- * @param props.sponsorship The sponsorship.
- * @return The sponsorship.
- */
-function Trashed( { sponsorship }: { sponsorship: SponsorshipDetails } ) {
-	const { open } = useOpenRecord();
-	const { saveEntityRecord } = useDispatch( coreStore );
-	const { running, run } = useTask();
-	const onRestore = () =>
-		run( 'restore', async () => {
-			await saveEntityRecord(
-				'postType',
-				SPONSORSHIP,
-				{ id: sponsorship.id, status: sponsorship.trashed_status },
-				{ throwOnError: true }
-			);
-
-			return __( 'Sponsorship restored.', 'wordcamporg' );
-		} );
-
-	return (
-		<>
-			<CanvasHeader title={ getName( sponsorship ) } onClose={ () => open() } />
-			<Stack direction="column" gap="lg" className="sponsor-vetting__canvas-body is-narrow">
-				<Notice.Root intent="warning">
-					<Notice.Title>{ __( 'This sponsorship is in the Trash.', 'wordcamporg' ) }</Notice.Title>
-					<Notice.Description>
-						{ __( 'Restore it to see and change it again.', 'wordcamporg' ) }
-					</Notice.Description>
-				</Notice.Root>
-				<Stack direction="row">
-					<Button loading={ running === 'restore' } onClick={ onRestore }>
-						{ __( 'Restore', 'wordcamporg' ) }
-					</Button>
-				</Stack>
-			</Stack>
-		</>
-	);
-}
-
-/**
  * The open sponsorship, where it isn't shown as one of its company's events: because it has no company yet, or is
  * in the Trash.
  *
@@ -308,7 +265,14 @@ export function SponsorshipCanvas( { id }: { id: number } ) {
 	}
 
 	if ( record.status === TRASH ) {
-		return <Trashed sponsorship={ record } />;
+		return (
+			<Trashed
+				name={ SPONSORSHIP }
+				record={ record }
+				title={ __( 'This sponsorship is in the Trash.', 'wordcamporg' ) }
+				isNarrow
+			/>
+		);
 	}
 
 	return <Unlinked sponsorship={ record } companies={ linkable } />;

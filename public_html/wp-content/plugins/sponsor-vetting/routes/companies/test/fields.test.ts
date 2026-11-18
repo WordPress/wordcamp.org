@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
 import { getCompanyFields, getSponsorshipFields } from '../fields';
-import type { Company, Sponsorship } from '../types';
+import type { Company, Sponsorship, Statuses } from '../types';
 import {
 	COMPANY_LAYOUT_CHOICES,
 	COMPANY_VIEW,
@@ -14,18 +14,32 @@ import {
 	SPONSORSHIP_VIEW,
 	applyLayoutChoice,
 	getLayoutChoice,
+	withoutHiddenFilters,
 	withoutTrash,
 } from '../view';
 
-const LABELS = {
-	'sv-needs-vetting': 'Needs Vetting',
-	'sv-in-progress': 'In Progress',
-	'sv-compliance-req': 'Compliance Requested',
-	'sv-compliant': 'Compliant',
-	'svs-pending': 'Pending',
-	'svs-approved': 'Approved',
-	'svs-canceled': 'Canceled',
-	trash: 'Trash',
+const STATUSES: Statuses = {
+	company: [
+		{ slug: 'sv-needs-vetting', name: 'Needs Vetting' },
+		{ slug: 'sv-in-progress', name: 'In Progress' },
+		{ slug: 'sv-compliance-req', name: 'Compliance Requested' },
+		{ slug: 'sv-compliant', name: 'Compliant' },
+	],
+	sponsorship: [
+		{ slug: 'svs-pending', name: 'Pending' },
+		{ slug: 'svs-approved', name: 'Approved' },
+		{ slug: 'svs-canceled', name: 'Canceled' },
+	],
+	labels: {
+		'sv-needs-vetting': 'Needs Vetting',
+		'sv-in-progress': 'In Progress',
+		'sv-compliance-req': 'Compliance Requested',
+		'sv-compliant': 'Compliant',
+		'svs-pending': 'Pending',
+		'svs-approved': 'Approved',
+		'svs-canceled': 'Canceled',
+		trash: 'Trash',
+	},
 };
 
 const COMPANIES: Company[] = [
@@ -121,10 +135,14 @@ const SPONSORSHIPS: Sponsorship[] = [
  * @return The names of the listed companies, in order.
  */
 function listCompanies( changes: Partial< View > = {} ): string[] {
-	const fields = getCompanyFields( LABELS );
+	const fields = getCompanyFields( STATUSES );
 	const title = fields.find( ( { id } ) => id === 'title' );
 	const view = { ...COMPANY_VIEW, ...changes } as View;
-	const { data } = filterSortAndPaginate( withoutTrash( COMPANIES, view, LABELS.trash ), view, fields );
+	const { data } = filterSortAndPaginate(
+		withoutTrash( COMPANIES, view ),
+		withoutHiddenFilters( view, fields ),
+		fields
+	);
 
 	return data.map( ( item ) => title?.getValue?.( { item } ) );
 }
@@ -136,7 +154,7 @@ function listCompanies( changes: Partial< View > = {} ): string[] {
  * @return The names of the listed sponsorships, in order.
  */
 function listSponsorships( view: View ): string[] {
-	const fields = getSponsorshipFields( LABELS, COMPANIES, SPONSORSHIPS, '2026-11-13' );
+	const fields = getSponsorshipFields( STATUSES, COMPANIES, SPONSORSHIPS, '2026-11-13' );
 	const { data } = filterSortAndPaginate( SPONSORSHIPS, view, fields );
 
 	return data.map( ( { title } ) => title.raw );
@@ -182,7 +200,7 @@ describe( 'the company list', () => {
 	} );
 
 	it( 'heads a group with the status’s label', () => {
-		const status = getCompanyFields( LABELS ).find( ( { id } ) => id === 'status' );
+		const status = getCompanyFields( STATUSES ).find( ( { id } ) => id === 'status' );
 
 		expect( status?.getValue?.( { item: COMPANIES[ 1 ] } ) ).toBe( 'Compliance Requested' );
 	} );
@@ -195,13 +213,18 @@ describe( 'the company list', () => {
 			[ 'Maple Digital' ],
 		],
 		[
-			'statuses',
-			{ filters: [ { field: 'status', operator: 'isNone', value: [ 'Needs Vetting' ] } ] },
+			'statuses, which a filter names by slug so it outlives their labels',
+			{ filters: [ { field: 'status_filter', operator: 'isNone', value: [ 'sv-needs-vetting' ] } ] },
 			[ 'Maple Digital' ],
 		],
 		[
+			'no filter it has no control for, like one a kept view holds on the status’s label',
+			{ filters: [ { field: 'status', operator: 'isAny', value: [ 'Compliance Requested' ] } ] },
+			[ 'Acme Hosting', 'Maple Digital', 'Harbor & Sons' ],
+		],
+		[
 			'the Trash, which only its own filter shows',
-			{ filters: [ { field: 'status', operator: 'isAny', value: [ 'Trash' ] } ] },
+			{ filters: [ { field: 'status_filter', operator: 'isAny', value: [ 'trash' ] } ] },
 			[ 'Binned Co' ],
 		],
 	] as [ string, Partial< View >, string[] ][] )( 'finds companies by %s', ( name, view, expected ) => {
@@ -236,24 +259,30 @@ describe( 'the list of events', () => {
 			title: { raw: 'Vetted', rendered: 'Vetted' },
 			status: 'sv-compliant',
 		};
-		const fields = getSponsorshipFields( LABELS, [ ...COMPANIES, vetted ], rows, '2026-11-13' );
+		const fields = getSponsorshipFields( STATUSES, [ ...COMPANIES, vetted ], rows, '2026-11-13' );
 		const read = ( id: string, item: Sponsorship ) =>
 			fields.find( ( field ) => field.id === id )?.getValue?.( { item } );
 
-		expect( rows.map( ( item ) => [ read( 'title', item ), read( 'status', item ) ] ) ).toEqual( [
-			[ 'Maple Digital', 'Approved' ],
-			[ 'Acme Hosting', 'Needs Vetting' ],
-			[ 'Stranger at Soon', 'Needs a company' ],
-			[ 'Acme Hosting', 'Approved' ],
-			[ 'Harbor & Sons', 'Needs Vetting' ],
-			[ 'Stranger', 'Canceled' ],
-			[ 'Maple Digital', 'Approved in Good Faith' ],
-			[ 'Vetted', 'Pending' ],
+		expect(
+			rows.map( ( item ) => [
+				read( 'title', item ),
+				read( 'status', item ),
+				read( 'status_filter', item ),
+			] )
+		).toEqual( [
+			[ 'Maple Digital', 'Approved', 'svs-approved' ],
+			[ 'Acme Hosting', 'Needs Vetting', 'sv-needs-vetting' ],
+			[ 'Stranger at Soon', 'Needs a company', 'needs-company' ],
+			[ 'Acme Hosting', 'Approved', 'svs-approved' ],
+			[ 'Harbor & Sons', 'Needs Vetting', 'sv-needs-vetting' ],
+			[ 'Stranger', 'Canceled', 'svs-canceled' ],
+			[ 'Maple Digital', 'Approved in Good Faith', 'good-faith' ],
+			[ 'Vetted', 'Pending', 'svs-pending' ],
 		] );
 	} );
 
 	it( 'counts the sponsorships waiting for a company in the filter that narrows to them', () => {
-		const waiting = getSponsorshipFields( LABELS, COMPANIES, SPONSORSHIPS, '2026-11-13' ).find(
+		const waiting = getSponsorshipFields( STATUSES, COMPANIES, SPONSORSHIPS, '2026-11-13' ).find(
 			( { id } ) => id === 'needs_company'
 		);
 		const narrowed: View = {

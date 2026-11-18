@@ -1,15 +1,18 @@
 /**
- * What the open record's view is built from: its header, parts, sections, rows, emails and history.
+ * What the open record's view is built from: its header, parts, sections, rows, emails and history, and what's
+ * shown of one that's in the Trash.
  */
 
 import { RawHTML } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { close } from '@wordpress/icons';
-import { Card, IconButton, Link, Notice, Spinner, Stack, Text } from '@wordpress/ui';
+import { Button, Card, IconButton, Link, Notice, Spinner, Stack, Text } from '@wordpress/ui';
 import type { ReactNode } from 'react';
+import { useRestore } from './actions';
 import { formatTime } from './dates';
-import { getErrorMessage } from './hooks';
-import type { Conversation } from './types';
+import { getName } from './fields';
+import { getErrorMessage, useOpenRecord, useTask } from './hooks';
+import type { Conversation, Trashable } from './types';
 
 /**
  * The button that closes the open record, which gives the list its full width back.
@@ -116,6 +119,58 @@ export function CanvasPlaceholder( {
 					</Stack>
 				) }
 			</div>
+		</>
+	);
+}
+
+/**
+ * A record in the Trash, which can only come back out of it.
+ *
+ * @param props          Props.
+ * @param props.name     The record's post type.
+ * @param props.record   The record.
+ * @param props.title    Says that it's in the Trash.
+ * @param props.isNarrow Whether the record's view is the narrow one.
+ * @return The record.
+ */
+export function Trashed( {
+	name,
+	record,
+	title,
+	isNarrow = false,
+}: {
+	name: string;
+	record: Trashable;
+	title: string;
+	isNarrow?: boolean;
+} ) {
+	const { open } = useOpenRecord();
+	const restore = useRestore( name );
+	const { running, run } = useTask();
+
+	return (
+		<>
+			<CanvasHeader title={ getName( record ) } onClose={ () => open() } />
+			<Stack
+				direction="column"
+				gap="lg"
+				className={ isNarrow ? 'sponsor-vetting__canvas-body is-narrow' : 'sponsor-vetting__canvas-body' }
+			>
+				<Notice.Root intent="warning">
+					<Notice.Title>{ title }</Notice.Title>
+					<Notice.Description>
+						{ __( 'Restore it to see and change it again.', 'wordcamporg' ) }
+					</Notice.Description>
+				</Notice.Root>
+				<Stack direction="row">
+					<Button
+						loading={ running === 'restore' }
+						onClick={ () => run( 'restore', () => restore( [ record ] ) ) }
+					>
+						{ __( 'Restore', 'wordcamporg' ) }
+					</Button>
+				</Stack>
+			</Stack>
 		</>
 	);
 }

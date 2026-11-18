@@ -2,8 +2,6 @@
  * The records as the REST API returns them, and what the screen makes of them.
  */
 
-import type { CompanyStatus, SponsorshipStatus, TRASH } from './entities';
-
 /**
  * The records as REST returns them in the `edit` context.
  */
@@ -50,7 +48,7 @@ type Details = {
 export type Company = {
 	id: number;
 	title: Title;
-	status: CompanyStatus | typeof TRASH;
+	status: string;
 	domains: string[];
 	flags: Flag[];
 	next_event: string;
@@ -82,7 +80,7 @@ export type Event = {
 export type Sponsorship = {
 	id: number;
 	title: Title;
-	status: SponsorshipStatus | typeof TRASH;
+	status: string;
 	company: number;
 	event: Event;
 	approved: string;
@@ -141,9 +139,36 @@ export type EventActions = Pick<
 export type Edited< Record extends { title: Title } > = Omit< Record, 'title' > & { title: string };
 
 /**
- * A post status, from core's `statuses` endpoint.
+ * A status of a company or of a sponsorship.
  */
 export type Status = {
 	slug: string;
 	name: string;
+};
+
+/**
+ * One of the two post types, as REST describes it: add_rest_statuses() adds its statuses, in their own order.
+ */
+export type PostType = {
+	slug: string;
+	statuses: Status[];
+};
+
+/**
+ * The statuses of the two post types, and every status's label, the Trash included, keyed by status.
+ */
+export type Statuses = {
+	company: Status[];
+	sponsorship: Status[];
+	labels: Record< string, string >;
+};
+
+/**
+ * What a record has that puts it in the Trash and takes it back out.
+ */
+export type Trashable = {
+	id: number;
+	title: { raw: string };
+	status: string;
+	trashed_status: string;
 };

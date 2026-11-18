@@ -268,18 +268,7 @@ function link_mes( int $company_id, int $mes_id ): true|\WP_Error {
 		return new \WP_Error( 'sv_mes_taken', __( 'That Multi-Event Sponsor is linked to another company.', 'wordcamporg' ) );
 	}
 
-	$current = get_posts(
-		array(
-			'post_type'      => 'mes',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'meta_key'       => '_sv_company_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One company's link.
-			'meta_value'     => $company_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- One company's link.
-		)
-	);
-
-	foreach ( array_diff( array_map( 'intval', $current ), array( $mes_id ) ) as $old_mes_id ) {
+	foreach ( array_diff( get_company_mes( $company_id ), array( $mes_id ) ) as $old_mes_id ) {
 		delete_post_meta( $old_mes_id, '_sv_company_id' );
 	}
 

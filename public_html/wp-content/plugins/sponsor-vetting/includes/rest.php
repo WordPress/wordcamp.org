@@ -25,7 +25,6 @@ defined( 'WPINC' ) || die();
  * @return callable[] Sanitizers, keyed by meta key.
  */
 function get_company_meta_keys(): array {
-	$date = static fn( mixed $value ): string => preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $value ) ? (string) $value : '';
 	// Markdown, kept as written.
 	$text = static fn( mixed $value ): string => (string) $value;
 
@@ -35,8 +34,18 @@ function get_company_meta_keys(): array {
 		'_sv_contact_email'      => static fn( mixed $value ): string => strtolower( sanitize_email( (string) $value ) ),
 		'_sv_gpl_findings'       => $text,
 		'_sv_trademark_findings' => $text,
-		'_sv_not_eligible_until' => $date,
+		'_sv_not_eligible_until' => __NAMESPACE__ . '\sanitize_day',
 	);
+}
+
+/**
+ * Keeps a day only as `Y-m-d`, which is how the plugin stores and compares its dates.
+ *
+ * @param mixed $value The value a request sent.
+ * @return string The day, or an empty string for anything else.
+ */
+function sanitize_day( mixed $value ): string {
+	return preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $value ) ? (string) $value : '';
 }
 
 /**
@@ -444,19 +453,7 @@ function get_rest_last_vetted( int $company_id ): string {
  * @return int The `mes` post's ID, or 0 for none.
  */
 function get_rest_mes( int $company_id ): int {
-	$mes = get_posts(
-		array(
-			'post_type'      => 'mes',
-			'post_status'    => 'any',
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'meta_key'       => '_sv_company_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One company's link.
-			'meta_value'     => $company_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- One company's link.
-		)
-	);
-
-	return (int) ( $mes[0] ?? 0 );
+	return get_company_mes( $company_id )[0] ?? 0;
 }
 
 /**
@@ -501,8 +498,10 @@ function get_rest_mes_options( int $company_id ): array {
  * @param mixed $due        The date, as `Y-m-d`, or anything else for none.
  */
 function set_rest_good_faith_due( int $company_id, mixed $due ): void {
-	if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $due ) ) {
-		update_post_meta( $company_id, '_sv_good_faith_due', (string) $due );
+	$due = sanitize_day( $due );
+
+	if ( $due ) {
+		update_post_meta( $company_id, '_sv_good_faith_due', $due );
 	} else {
 		delete_post_meta( $company_id, '_sv_good_faith_due' );
 	}
@@ -732,6 +731,59 @@ function add_parent_param( array $params ): array {
 	return $params;
 }
 add_filter( 'rest_' . SPONSORSHIP_POST_TYPE . '_collection_params', __NAMESPACE__ . '\add_parent_param' );
+
+/**
+ * Lists companies and sponsorships of any status when a request asks for `any`, so the screen doesn't have to know
+ * the statuses to list them.
+ *
+ * Core's `any` leaves out the statuses that are excluded from search, which these all are. It's still only for
+ * those who can edit the records: core refuses the parameter to everyone else.
+ *
+ * @param array $args The arguments of the list's query.
+ * @return array
+ */
+function list_any_status( array $args ): array {
+	$statuses = (array) ( $args['post_status'] ?? array() );
+
+	if ( in_array( 'any', $statuses, true ) ) {
+		$args['post_status'] = array_merge(
+			array_diff( $statuses, array( 'any' ) ),
+			array_keys( get_statuses( $args['post_type'] ) )
+		);
+	}
+
+	return $args;
+}
+add_filter( 'rest_' . COMPANY_POST_TYPE . '_query', __NAMESPACE__ . '\list_any_status' );
+add_filter( 'rest_' . SPONSORSHIP_POST_TYPE . '_query', __NAMESPACE__ . '\list_any_status' );
+
+/**
+ * Adds the statuses of companies and sponsorships to what REST says about their post types, in their own order
+ * and with their labels: the one place the screen learns them from.
+ *
+ * @param \WP_REST_Response $response  The response.
+ * @param \WP_Post_Type     $post_type The post type.
+ * @param \WP_REST_Request  $request   The request.
+ * @return \WP_REST_Response
+ */
+function add_rest_statuses( \WP_REST_Response $response, \WP_Post_Type $post_type, \WP_REST_Request $request ): \WP_REST_Response {
+	$statuses = get_statuses( $post_type->name );
+
+	// Read for editing, which core allows only those who can edit the records.
+	if ( $statuses && 'edit' === $request['context'] ) {
+		$response->data['statuses'] = array_map(
+			static fn( string $slug, string $name ): array => array(
+				'slug' => $slug,
+				'name' => $name,
+			),
+			array_keys( $statuses ),
+			$statuses
+		);
+	}
+
+	return $response;
+}
+add_filter( 'rest_prepare_post_type', __NAMESPACE__ . '\add_rest_statuses', 10, 3 );
 
 /**
  * Makes a status change over REST keep the workflow's rules, and say so when it can't.

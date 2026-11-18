@@ -1,5 +1,5 @@
 /**
- * The two post types, their statuses, and the queries the screen reads them with.
+ * The two post types, what their statuses convey, and the queries the screen reads them with.
  *
  * Companies and sponsorships are post types, read and edited through core's own REST endpoints and core-data. What
  * the endpoints add for them is in `includes/rest.php`.
@@ -19,37 +19,22 @@ export const COMPANY = 'sv_company';
 export const SPONSORSHIP = 'sv_sponsorship';
 
 /**
- * The vetting pipeline, in the order companies move through it.
- */
-export const COMPANY_STATUSES = [
-	'sv-needs-vetting',
-	'sv-in-progress',
-	'sv-compliance-req',
-	'sv-compliant',
-	'sv-not-eligible',
-	'sv-inactive',
-] as const;
-
-/**
- * The statuses of a sponsorship, as its event sees them.
- */
-export const SPONSORSHIP_STATUSES = [ 'svs-pending', 'svs-approved', 'svs-not-approved', 'svs-canceled' ] as const;
-
-/**
  * Core's status of a trashed record.
  */
 export const TRASH = 'trash';
 
-export type CompanyStatus = ( typeof COMPANY_STATUSES )[ number ];
-export type SponsorshipStatus = ( typeof SPONSORSHIP_STATUSES )[ number ];
-export type AnyStatus = CompanyStatus | SponsorshipStatus | typeof TRASH;
+/**
+ * Every status a post type has, the Trash aside. The screen learns which those are from the server, so a list
+ * asks for them this way: see list_any_status() in `includes/rest.php`.
+ */
+export const ANY = 'any';
 
 export type Intent = NonNullable< ComponentProps< typeof Badge >[ 'intent' ] >;
 
 /**
- * What each status's badge conveys.
+ * What each status's badge conveys. One that isn't here conveys nothing.
  */
-export const STATUS_INTENTS: Record< AnyStatus, Intent > = {
+export const STATUS_INTENTS: Record< string, Intent > = {
 	'sv-needs-vetting': 'informational',
 	'sv-in-progress': 'draft',
 	'sv-compliance-req': 'low',
@@ -64,11 +49,11 @@ export const STATUS_INTENTS: Record< AnyStatus, Intent > = {
 };
 
 /**
- * Every company, with only what the list shows. The statuses are named because the endpoint lists published posts
- * unless told otherwise, and `any` leaves these statuses out. One object, since core-data caches by query.
+ * Every company, with only what the list shows. The endpoint lists published posts unless told otherwise, which
+ * these never are. One object, since core-data caches by query.
  */
 export const COMPANIES_QUERY = {
-	status: [ ...COMPANY_STATUSES, TRASH ],
+	status: [ ANY, TRASH ],
 	per_page: -1,
 	_fields: [
 		'id',
@@ -87,7 +72,7 @@ export const COMPANIES_QUERY = {
  * Every sponsorship, with only what the list of events shows.
  */
 export const SPONSORSHIPS_QUERY = {
-	status: [ ...SPONSORSHIP_STATUSES, TRASH ],
+	status: [ ANY, TRASH ],
 	per_page: -1,
 	_fields: [ 'id', 'title', 'status', 'company', 'event', 'approved', 'good_faith', 'trashed_status' ],
 };
@@ -101,7 +86,7 @@ export const SPONSORSHIPS_QUERY = {
 export function getSponsorshipsQuery( companyId: number ) {
 	return {
 		parent: [ companyId ],
-		status: SPONSORSHIP_STATUSES,
+		status: ANY,
 		per_page: -1,
 		_fields: [ 'id', 'title', 'status', 'event', 'approved', 'good_faith', 'log' ],
 	};
@@ -119,7 +104,7 @@ export function getSponsorshipsQuery( companyId: number ) {
 export function getEventActionsQuery( ids: number[] ) {
 	return {
 		include: ids,
-		status: SPONSORSHIP_STATUSES,
+		status: ANY,
 		per_page: -1,
 		_fields: [
 			'id',

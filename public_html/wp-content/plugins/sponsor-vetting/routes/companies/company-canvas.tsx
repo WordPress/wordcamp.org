@@ -9,8 +9,18 @@ import { DataForm, useFormValidity } from '@wordpress/dataviews';
 import { useMemo, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { chevronDown, chevronUp } from '@wordpress/icons';
-import { Button, Card, Notice, Stack, Text } from '@wordpress/ui';
-import { CanvasHeader, CanvasPlaceholder, Emails, Hint, History, Part, Row, Section } from './canvas-parts';
+import { Button, Card, Stack, Text } from '@wordpress/ui';
+import {
+	CanvasHeader,
+	CanvasPlaceholder,
+	Emails,
+	Hint,
+	History,
+	Part,
+	Row,
+	Section,
+	Trashed,
+} from './canvas-parts';
 import { formatDay, getToday } from './dates';
 import { COMPANY, SPONSORSHIP, TRASH, getEventActionsQuery, getSponsorshipsQuery } from './entities';
 import { EventRow } from './event-row';
@@ -18,7 +28,7 @@ import { getEventsHint, splitEvents } from './events';
 import { Domains, Flags, StatusBadge, getName } from './fields';
 import { DETAILS_FORM, FINDINGS_FORM, NOTE_FORM, VETTING_FORM, getCompanyFormFields } from './forms';
 import type { CompanyForm } from './forms';
-import { useOpenRecord, useStatusLabels, useTask } from './hooks';
+import { useOpenRecord, useStatuses, useTask } from './hooks';
 import { MoveSponsorship } from './move-sponsorship';
 import { countApprovals, useSponsorshipChanges } from './sponsorships';
 import { buildTimeline, sortByEvent } from './timeline';
@@ -126,7 +136,7 @@ function ComplianceRequest( {
  * @return The company.
  */
 function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsorshipId }: EditorProps ) {
-	const { labels } = useStatusLabels();
+	const { labels } = useStatuses();
 	const { open } = useOpenRecord();
 	const { deleteEntityRecord } = useDispatch( coreStore );
 	const { running, run } = useTask();
@@ -389,49 +399,6 @@ function Editor( { company, edited, hasEdits, edit, save, sponsorships, sponsors
 }
 
 /**
- * A company in the Trash, which can only come back out of it.
- *
- * @param props         Props.
- * @param props.company The company.
- * @return The company.
- */
-function Trashed( { company }: { company: CompanyDetails } ) {
-	const { open } = useOpenRecord();
-	const { saveEntityRecord } = useDispatch( coreStore );
-	const { running, run } = useTask();
-	const onRestore = () =>
-		run( 'restore', async () => {
-			await saveEntityRecord(
-				'postType',
-				COMPANY,
-				{ id: company.id, status: company.trashed_status },
-				{ throwOnError: true }
-			);
-
-			return __( 'Company restored.', 'wordcamporg' );
-		} );
-
-	return (
-		<>
-			<CanvasHeader title={ getName( company ) } onClose={ () => open() } />
-			<Stack direction="column" gap="lg" className="sponsor-vetting__canvas-body">
-				<Notice.Root intent="warning">
-					<Notice.Title>{ __( 'This company is in the Trash.', 'wordcamporg' ) }</Notice.Title>
-					<Notice.Description>
-						{ __( 'Restore it to see and change it again.', 'wordcamporg' ) }
-					</Notice.Description>
-				</Notice.Root>
-				<Stack direction="row">
-					<Button loading={ running === 'restore' } onClick={ onRestore }>
-						{ __( 'Restore', 'wordcamporg' ) }
-					</Button>
-				</Stack>
-			</Stack>
-		</>
-	);
-}
-
-/**
  * The open company: its record in full, which the list only has in part, and its sponsorships.
  *
  * @param props               Props.
@@ -471,7 +438,13 @@ export function CompanyCanvas( { id, sponsorshipId }: { id: number; sponsorshipI
 	}
 
 	if ( record.status === TRASH ) {
-		return <Trashed company={ record } />;
+		return (
+			<Trashed
+				name={ COMPANY }
+				record={ record }
+				title={ __( 'This company is in the Trash.', 'wordcamporg' ) }
+			/>
+		);
 	}
 
 	return (

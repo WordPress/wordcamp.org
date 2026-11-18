@@ -5,22 +5,13 @@
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import type { Action } from '@wordpress/dataviews';
-import { useMemo } from '@wordpress/element';
+import { useCallback, useMemo } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { COMPANY, TRASH } from './entities';
 import { getName } from './fields';
 import { useOpenRecord, useTask } from './hooks';
-
-/**
- * What a list needs of a record to trash it, restore it, or delete it.
- */
-type Listed = {
-	id: number;
-	title: { raw: string };
-	status: string;
-	trashed_status: string;
-};
+import type { Trashable } from './types';
 
 /**
  * Names the records an action is about: the one record, or how many there are.
@@ -28,7 +19,7 @@ type Listed = {
  * @param items The records.
  * @return The name, for the start of a sentence.
  */
-function describe( items: Listed[] ): string {
+function describe( items: Trashable[] ): string {
 	if ( items.length === 1 ) {
 		return `“${ getName( items[ 0 ] ) }”`;
 	}
@@ -46,7 +37,15 @@ function describe( items: Listed[] ): string {
  * @param props.closeModal Closes the question.
  * @return The question.
  */
-function DeleteModal( { name, items, closeModal }: { name: string; items: Listed[]; closeModal?: () => void } ) {
+function DeleteModal( {
+	name,
+	items,
+	closeModal,
+}: {
+	name: string;
+	items: Trashable[];
+	closeModal?: () => void;
+} ) {
 	const { deleteEntityRecord } = useDispatch( coreStore );
 	const { companyId, sponsorshipId, open } = useOpenRecord();
 	const { running, run } = useTask();
@@ -94,13 +93,39 @@ function DeleteModal( { name, items, closeModal }: { name: string; items: Listed
 }
 
 /**
+ * Gives what takes records back out of the Trash, from a list or from the open record.
+ *
+ * @param name The records' post type.
+ * @return The function that restores records, which resolves to what to say once it has.
+ */
+export function useRestore( name: string ): ( items: Trashable[] ) => Promise< string > {
+	const { saveEntityRecord } = useDispatch( coreStore );
+
+	return useCallback(
+		async ( items ) => {
+			// Written back to the status it had, which is how a record leaves the Trash.
+			await Promise.all(
+				items.map( ( { id, trashed_status: status } ) =>
+					saveEntityRecord( 'postType', name, { id, status }, { throwOnError: true } )
+				)
+			);
+
+			/* translators: %s: A record's name in quotes, or a number of records. */
+			return sprintf( __( '%s restored.', 'wordcamporg' ), describe( items ) );
+		},
+		[ name, saveEntityRecord ]
+	);
+}
+
+/**
  * Builds the actions of a list's rows: to the Trash, back out of it, and gone for good.
  *
  * @param name The list's post type.
  * @return The actions.
  */
-export function useRecordActions< Item extends Listed >( name: string ): Action< Item >[] {
-	const { deleteEntityRecord, saveEntityRecord } = useDispatch( coreStore );
+export function useRecordActions< Item extends Trashable >( name: string ): Action< Item >[] {
+	const { deleteEntityRecord } = useDispatch( coreStore );
+	const restore = useRestore( name );
 	const { run } = useTask();
 
 	return useMemo(
@@ -127,18 +152,7 @@ export function useRecordActions< Item extends Listed >( name: string ): Action<
 				label: __( 'Restore', 'wordcamporg' ),
 				supportsBulk: true,
 				isEligible: ( { status } ) => status === TRASH,
-				callback: ( items ) =>
-					void run( 'restore', async () => {
-						// Written back to the status it had, which is how a record leaves the Trash.
-						await Promise.all(
-							items.map( ( { id, trashed_status: status } ) =>
-								saveEntityRecord( 'postType', name, { id, status }, { throwOnError: true } )
-							)
-						);
-
-						/* translators: %s: A record's name in quotes, or a number of records. */
-						return sprintf( __( '%s restored.', 'wordcamporg' ), describe( items ) );
-					} ),
+				callback: ( items ) => void run( 'restore', () => restore( items ) ),
 			},
 			{
 				id: 'delete',
@@ -151,6 +165,6 @@ export function useRecordActions< Item extends Listed >( name: string ): Action<
 				),
 			},
 		],
-		[ deleteEntityRecord, name, run, saveEntityRecord ]
+		[ deleteEntityRecord, name, restore, run ]
 	);
 }

@@ -67,6 +67,21 @@ function render_app_page(): void {
 }
 
 /**
+ * Sends the two post types along with the page, statuses included, which the screen asks for as soon as it starts.
+ *
+ * @param array $paths The REST paths the page preloads.
+ * @return array
+ */
+function preload_post_types( array $paths ): array {
+	// As core-data asks for them, or the preloaded answers aren't used.
+	$paths[] = '/wp/v2/types/' . COMPANY_POST_TYPE . '?context=edit';
+	$paths[] = '/wp/v2/types/' . SPONSORSHIP_POST_TYPE . '?context=edit';
+
+	return $paths;
+}
+add_filter( 'sponsor_vetting_sponsor_vetting_wp_admin_preload_paths', __NAMESPACE__ . '\preload_post_types' );
+
+/**
  * Sends the addresses of the screens this one replaced to it, with the same record open.
  *
  * Vetters have those bookmarked, and core would answer them with an error now. It refuses them to a vetter who

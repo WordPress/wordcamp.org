@@ -11,6 +11,7 @@ import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Button, Stack } from '@wordpress/ui';
 import { COMPANY } from './entities';
+import { DOMAINS_FIELD, NAME_FIELD } from './forms';
 import { useOpenRecord, useTask } from './hooks';
 
 type NewCompany = { title: string; domains: string };
@@ -18,21 +19,7 @@ type NewCompany = { title: string; domains: string };
 /**
  * The fields a new company is created with.
  */
-const FIELDS: Field< NewCompany >[] = [
-	{
-		id: 'title',
-		type: 'text',
-		label: __( 'Name', 'wordcamporg' ),
-		isValid: { required: true },
-	},
-	{
-		id: 'domains',
-		type: 'text',
-		label: __( 'Website domains', 'wordcamporg' ),
-		description: __( 'One per line. Addresses are reduced to their domain, without www.', 'wordcamporg' ),
-		Edit: { control: 'textarea', rows: 3 },
-	},
-];
+const FIELDS: Field< NewCompany >[] = [ NAME_FIELD, DOMAINS_FIELD ];
 
 /**
  * The form a new company is created with; the rest is filled in once it's open.

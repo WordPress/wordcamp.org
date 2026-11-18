@@ -6,7 +6,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
-import { SPONSORSHIP, SPONSORSHIP_STATUSES } from './entities';
+import { ANY, SPONSORSHIP } from './entities';
 import type { Run } from './hooks';
 import type { SponsorshipDetails } from './types';
 
@@ -58,7 +58,7 @@ export function getStatusChangeInfo( status: string ): string | undefined {
 export async function countApprovals( ids: number[] ): Promise< { approved: number; unsent: number } > {
 	const params = new URLSearchParams( {
 		include: ids.join( ',' ),
-		status: SPONSORSHIP_STATUSES.join( ',' ),
+		status: ANY,
 		per_page: '100',
 		_fields: 'id,status,needs_approval_email',
 	} );

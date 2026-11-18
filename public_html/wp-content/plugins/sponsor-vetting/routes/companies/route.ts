@@ -13,10 +13,12 @@ import { COMPANIES_QUERY, COMPANY } from './entities';
 export const route = {
 	title: () => __( 'Sponsor Vetting', 'wordcamporg' ),
 
-	/* Starts the requests both lists make while the screen's script loads. Not awaited, so nothing waits. */
+	/*
+	 * Starts the request both lists make while the screen's script loads. Not awaited, so nothing waits. The
+	 * statuses come with the page: see preload_post_types().
+	 */
 	loader: () => {
 		void resolveSelect( coreStore ).getEntityRecords( 'postType', COMPANY, COMPANIES_QUERY );
-		void resolveSelect( coreStore ).getEntityRecords( 'root', 'status', {} );
 	},
 
 	/*

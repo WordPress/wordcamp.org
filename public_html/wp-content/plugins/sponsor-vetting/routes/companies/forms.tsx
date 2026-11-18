@@ -6,7 +6,6 @@ import type { Field, Form } from '@wordpress/dataviews';
 import { decodeEntities } from '@wordpress/html-entities';
 import { __ } from '@wordpress/i18n';
 import { formatDay } from './dates';
-import type { AnyStatus } from './entities';
 import { StatusBadge, getName } from './fields';
 import type { Company, CompanyDetails, Edited } from './types';
 
@@ -41,7 +40,7 @@ function getStatusField< Item extends { status: string } >( record: Saved, label
 		label: __( 'Status', 'wordcamporg' ),
 		elements: getStatusOptions( record.status, record.allowed_statuses, labels ),
 		render: ( { item } ) => (
-			<StatusBadge status={ item.status as AnyStatus } label={ labels[ item.status ] ?? item.status } />
+			<StatusBadge status={ item.status } label={ labels[ item.status ] ?? item.status } />
 		),
 	};
 }
@@ -71,6 +70,27 @@ function meta( key: keyof CompanyDetails[ 'meta' ] ) {
 		} ),
 	};
 }
+
+/**
+ * A company's name, as it's asked for when the company is added and when it's edited.
+ */
+export const NAME_FIELD = {
+	id: 'title',
+	type: 'text',
+	label: __( 'Name', 'wordcamporg' ),
+	isValid: { required: true },
+} as const;
+
+/**
+ * A company's websites, as they're asked for when the company is added and when it's edited.
+ */
+export const DOMAINS_FIELD = {
+	id: 'domains',
+	type: 'text',
+	label: __( 'Website domains', 'wordcamporg' ),
+	description: __( 'One per line. Addresses are reduced to their domain, without www.', 'wordcamporg' ),
+	Edit: { control: 'textarea', rows: 3 },
+} as const;
 
 /**
  * Builds the fields a company is edited with.
@@ -104,19 +124,12 @@ export function getCompanyFormFields( company: CompanyDetails, labels: Labels ):
 			isVisible: ( item ) => Boolean( company.good_faith_due || item.good_faith_due ),
 		},
 		{
-			id: 'title',
-			type: 'text',
-			label: __( 'Name', 'wordcamporg' ),
-			isValid: { required: true },
+			...NAME_FIELD,
 			// Stored with its `&` and the like encoded, and edited as the text they stand for.
 			getValue: ( { item } ) => decodeEntities( item.title ),
 		},
 		{
-			id: 'domains',
-			type: 'text',
-			label: __( 'Website domains', 'wordcamporg' ),
-			description: __( 'One per line. Addresses are reduced to their domain, without www.', 'wordcamporg' ),
-			Edit: { control: 'textarea', rows: 3 },
+			...DOMAINS_FIELD,
 			getValue: ( { item } ) => item.domains.join( '\n' ),
 			setValue: ( { value }: { value?: string } ) => ( { domains: ( value ?? '' ).split( '\n' ) } ),
 		},

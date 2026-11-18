@@ -7,10 +7,25 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { __, sprintf } from '@wordpress/i18n';
 import { Badge, Link, Stack, Text } from '@wordpress/ui';
 import { compareDays, compareEventDays, formatDay } from './dates';
-import { COMPANY_STATUSES, STATUS_INTENTS, TRASH } from './entities';
-import type { AnyStatus, Intent } from './entities';
+import { STATUS_INTENTS, TRASH } from './entities';
+import type { Intent } from './entities';
 import { getEventFlag } from './events';
-import type { Company, Event, Flag, Sponsorship } from './types';
+import type { Company, Event, Flag, Sponsorship, Statuses } from './types';
+
+/**
+ * A status as a list offers it: its slug, or a name of the screen's own, and its label.
+ */
+type StatusOption = { value: string; label: string };
+
+/**
+ * What the list of events calls a sponsorship that waits for a company, which is no status of its own.
+ */
+const NEEDS_COMPANY = 'needs-company';
+
+/**
+ * What the list of events calls an approval given in good faith, which it tells from the rest.
+ */
+const GOOD_FAITH = 'good-faith';
 
 /**
  * A company's or sponsorship's status.
@@ -20,7 +35,7 @@ import type { Company, Event, Flag, Sponsorship } from './types';
  * @param props.label  Its label.
  * @return The status, on one line however narrow its column.
  */
-export function StatusBadge( { status, label }: { status: AnyStatus; label: string } ) {
+export function StatusBadge( { status, label }: { status: string; label: string } ) {
 	return (
 		<Badge className="sponsor-vetting__status" intent={ STATUS_INTENTS[ status ] ?? 'none' }>
 			{ label }
@@ -91,35 +106,59 @@ export function getName( { title }: { title: { raw: string } } ): string {
 }
 
 /**
- * Builds the status field of a list, which filters by status, the Trash included, and sorts in the statuses' own
- * order.
+ * Builds the two status fields of a list: the one that's shown, sorted and grouped by, and the one that filters.
  *
- * @param statuses The post type's statuses, in order.
- * @param labels   The statuses' labels, keyed by status.
- * @return The field.
+ * DataViews heads a group with its field's value, so the first has the status's label for one. A filter is kept
+ * with the vetter's view, so the second has the slug: a kept filter still matches once a label is reworded, or
+ * read in another language.
+ *
+ * @param options   The statuses the list has, in the order they sort in.
+ * @param getStatus Gets the status of a row.
+ * @param render    Shows it.
+ * @return The fields.
  */
-function getStatusField< Item extends { status: AnyStatus } >(
-	statuses: readonly AnyStatus[],
-	labels: Record< string, string >
-): Field< Item > {
-	const order = [ ...statuses, TRASH ].map( ( status ) => labels[ status ] ?? status );
+function getStatusFields< Item >(
+	options: StatusOption[],
+	getStatus: ( item: Item ) => string,
+	render: NonNullable< Field< Item >[ 'render' ] >
+): Field< Item >[] {
+	const labels = new Map( options.map( ( { value, label } ) => [ value, label ] ) );
+	const order = options.map( ( { label } ) => label );
 
-	return {
-		id: 'status',
-		label: __( 'Status', 'wordcamporg' ),
-		// A group is headed by its field's value, so the value is the status's label, not its slug.
-		getValue: ( { item } ) => labels[ item.status ] ?? item.status,
-		elements: order.map( ( label ) => ( { value: label, label } ) ),
-		filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
-		render: ( { item } ) => (
-			<StatusBadge status={ item.status } label={ labels[ item.status ] ?? item.status } />
-		),
-		sort: ( a: string, b: string, direction ) => {
-			const delta = order.indexOf( a ) - order.indexOf( b );
+	return [
+		{
+			id: 'status',
+			label: __( 'Status', 'wordcamporg' ),
+			getValue: ( { item } ) => labels.get( getStatus( item ) ) ?? getStatus( item ),
+			filterBy: false,
+			render,
+			sort: ( a: string, b: string, direction ) => {
+				const delta = order.indexOf( a ) - order.indexOf( b );
 
-			return direction === 'asc' ? delta : -delta;
+				return direction === 'asc' ? delta : -delta;
+			},
 		},
-	};
+		{
+			id: 'status_filter',
+			label: __( 'Status', 'wordcamporg' ),
+			getValue: ( { item } ) => getStatus( item ),
+			elements: options,
+			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
+			enableHiding: false,
+			enableSorting: false,
+		},
+	];
+}
+
+/**
+ * Offers a status in a list's filter, under its label.
+ *
+ * @param status The status.
+ * @param labels The statuses' labels, keyed by status.
+ * @return The option.
+ */
+function toOption( status: string, labels: Record< string, string > ): StatusOption {
+	return { value: status, label: labels[ status ] ?? status };
 }
 
 /**
@@ -154,10 +193,15 @@ function getFollowUpField< Item >(
 /**
  * Builds the fields of the company list.
  *
- * @param labels The statuses' labels, keyed by status.
+ * @param statuses         The statuses.
+ * @param statuses.company Those of a company, in the order of the pipeline.
+ * @param statuses.labels  Every status's label, keyed by status.
  * @return The fields.
  */
-export function getCompanyFields( labels: Record< string, string > ): Field< Company >[] {
+export function getCompanyFields( {
+	company,
+	labels,
+}: Pick< Statuses, 'company' | 'labels' > ): Field< Company >[] {
 	return [
 		{
 			id: 'title',
@@ -176,7 +220,11 @@ export function getCompanyFields( labels: Record< string, string > ): Field< Com
 			getValue: ( { item } ) => item.domains.join( ' ' ),
 			render: ( { item } ) => <Domains domains={ item.domains } />,
 		},
-		getStatusField< Company >( COMPANY_STATUSES, labels ),
+		...getStatusFields< Company >(
+			[ ...company.map( ( { slug } ) => slug ), TRASH ].map( ( status ) => toOption( status, labels ) ),
+			( { status } ) => status,
+			( { item } ) => <StatusBadge status={ item.status } label={ labels[ item.status ] ?? item.status } />
+		),
 		{
 			...getFollowUpField< Company >( ( { flags } ) => flags ),
 			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
@@ -254,22 +302,23 @@ export function needsCompany( { company, status }: Pick< Sponsorship, 'company' 
  * @param sponsorship The sponsorship.
  * @param company     Its company, if it has one.
  * @param labels      The statuses' labels, keyed by status.
- * @return The status's label, and the intent of its badge.
+ * @return The status, its label, and the intent of its badge.
  */
 export function getSponsorStatus(
 	sponsorship: Sponsorship,
 	company: Company | undefined,
 	labels: Record< string, string >
-): { label: string; intent: Intent } {
+): StatusOption & { intent: Intent } {
 	if ( needsCompany( sponsorship ) ) {
-		return { label: __( 'Needs a company', 'wordcamporg' ), intent: 'informational' };
+		return { value: NEEDS_COMPANY, label: __( 'Needs a company', 'wordcamporg' ), intent: 'informational' };
 	}
 
 	if ( sponsorship.status === 'svs-pending' && company && company.status !== 'sv-compliant' ) {
-		return { label: labels[ company.status ] ?? company.status, intent: STATUS_INTENTS[ company.status ] };
+		return { ...toOption( company.status, labels ), intent: STATUS_INTENTS[ company.status ] ?? 'none' };
 	}
 
 	return {
+		value: sponsorship.status === 'svs-approved' && sponsorship.good_faith ? GOOD_FAITH : sponsorship.status,
 		label: getApprovalLabel( sponsorship, labels ),
 		intent: STATUS_INTENTS[ sponsorship.status ] ?? 'none',
 	};
@@ -296,18 +345,19 @@ export function getSponsorName( sponsorship: Pick< Sponsorship, 'title' | 'event
 /**
  * Builds the fields of the list of events, which shows each sponsorship as its sponsor at an event.
  *
- * @param labels       The statuses' labels, keyed by status.
+ * @param statuses     The statuses of the two post types, and every status's label.
  * @param companies    The companies, for their names, statuses and flags.
  * @param sponsorships The sponsorships, for when their events are and how many wait for a company.
  * @param today        Today, as `Y-m-d`.
  * @return The fields.
  */
 export function getSponsorshipFields(
-	labels: Record< string, string >,
+	statuses: Statuses,
 	companies: Company[],
 	sponsorships: Sponsorship[],
 	today: string
 ): Field< Sponsorship >[] {
+	const { labels } = statuses;
 	const byId = new Map( companies.map( ( company ) => [ company.id, company ] ) );
 	const getCompany = ( { company }: Sponsorship ) => byId.get( company );
 	const getStatus = ( item: Sponsorship ) => getSponsorStatus( item, getCompany( item ), labels );
@@ -316,17 +366,23 @@ export function getSponsorshipFields(
 	const compareEvents = ( a: string, b: string ) =>
 		compareEventDays( days.get( a ) ?? '', days.get( b ) ?? '', today ) || a.localeCompare( b );
 	// What still takes a vetter comes first: a company, an approval, its company's vetting. Then what's decided.
-	const order = [
-		__( 'Needs a company', 'wordcamporg' ),
-		labels[ 'svs-pending' ] ?? 'svs-pending',
-		...COMPANY_STATUSES.filter( ( status ) => status !== 'sv-compliant' ).map(
-			( status ) => labels[ status ] ?? status
-		),
-		labels[ 'svs-approved' ] ?? 'svs-approved',
-		__( 'Approved in Good Faith', 'wordcamporg' ),
-		labels[ 'svs-not-approved' ] ?? 'svs-not-approved',
-		labels[ 'svs-canceled' ] ?? 'svs-canceled',
-		labels[ TRASH ] ?? TRASH,
+	const options: StatusOption[] = [
+		{ value: NEEDS_COMPANY, label: __( 'Needs a company', 'wordcamporg' ) },
+		toOption( 'svs-pending', labels ),
+		...statuses.company
+			.filter( ( { slug } ) => slug !== 'sv-compliant' )
+			.map( ( { slug } ) => toOption( slug, labels ) ),
+		...statuses.sponsorship
+			.filter( ( { slug } ) => slug !== 'svs-pending' )
+			.flatMap( ( { slug } ) =>
+				slug === 'svs-approved'
+					? [
+							toOption( slug, labels ),
+							{ value: GOOD_FAITH, label: __( 'Approved in Good Faith', 'wordcamporg' ) },
+					  ]
+					: [ toOption( slug, labels ) ]
+			),
+		toOption( TRASH, labels ),
 	];
 
 	return [
@@ -357,13 +413,10 @@ export function getSponsorshipFields(
 			sort: ( a: string, b: string, direction ) =>
 				direction === 'asc' ? compareEventDays( a, b, today ) : compareEventDays( b, a, today ),
 		},
-		{
-			id: 'status',
-			label: __( 'Status', 'wordcamporg' ),
-			getValue: ( { item } ) => getStatus( item ).label,
-			elements: order.map( ( label ) => ( { value: label, label } ) ),
-			filterBy: { operators: [ 'isAny', 'isNone' ], isPrimary: true },
-			render: ( { item } ) => {
+		...getStatusFields< Sponsorship >(
+			options,
+			( item ) => getStatus( item ).value,
+			( { item } ) => {
 				const { label, intent } = getStatus( item );
 
 				return (
@@ -371,13 +424,8 @@ export function getSponsorshipFields(
 						{ label }
 					</Badge>
 				);
-			},
-			sort: ( a: string, b: string, direction ) => {
-				const delta = order.indexOf( a ) - order.indexOf( b );
-
-				return direction === 'asc' ? delta : -delta;
-			},
-		},
+			}
+		),
 		getFollowUpField< Sponsorship >(
 			( item ) => {
 				const flag = getEventFlag( item, today );

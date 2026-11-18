@@ -2,9 +2,10 @@
  * The screen's hooks: what the address names, the records, the two lists, and running a change.
  */
 
-import { store as coreStore, useEntityRecords } from '@wordpress/core-data';
+import { store as coreStore, useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
+import type { Field, View } from '@wordpress/dataviews';
 import { useCallback, useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { store as noticesStore } from '@wordpress/notices';
@@ -13,8 +14,16 @@ import { useView } from '@wordpress/views';
 import { getToday } from './dates';
 import { COMPANIES_QUERY, COMPANY, SPONSORSHIP, SPONSORSHIPS_QUERY, TRASH } from './entities';
 import { getCompanyFields, getSponsorshipFields } from './fields';
-import type { Company, Sponsorship, Status } from './types';
-import { COMPANY_LAYOUTS, COMPANY_VIEW, SPONSORSHIP_LAYOUTS, SPONSORSHIP_VIEW, withoutTrash } from './view';
+import type { Company, PostType, Sponsorship, Statuses } from './types';
+import {
+	COMPANY_LAYOUTS,
+	COMPANY_VIEW,
+	SPONSORSHIP_LAYOUTS,
+	SPONSORSHIP_VIEW,
+	withoutHiddenFilters,
+	withoutTrash,
+} from './view';
+import type { Layouts } from './view';
 
 /**
  * The route tree is assembled at runtime, so the router can't infer this route's search params. These describe the
@@ -86,21 +95,32 @@ export function useOpenRecord() {
 }
 
 /**
- * Gets the labels of the post statuses, which core lists with their names.
+ * Gets the statuses of companies and of sponsorships, which REST lists with each post type.
  *
- * @return The labels, keyed by status, and whether they've loaded.
+ * @return The statuses of each, in their own order, every status's label, keyed by status, and whether they've
+ *         loaded.
  */
-export function useStatusLabels(): { labels: Record< string, string >; hasResolved: boolean } {
-	const { records, hasResolved } = useEntityRecords< Status >( 'root', 'status' );
-	const labels = useMemo(
-		() => ( {
-			[ TRASH ]: __( 'Trash', 'wordcamporg' ),
-			...Object.fromEntries( ( records ?? [] ).map( ( { slug, name } ) => [ slug, name ] ) ),
-		} ),
-		[ records ]
-	);
+export function useStatuses(): Statuses & { hasResolved: boolean } {
+	const company = useEntityRecord< PostType >( 'root', 'postType', COMPANY );
+	const sponsorship = useEntityRecord< PostType >( 'root', 'postType', SPONSORSHIP );
 
-	return { labels, hasResolved };
+	return useMemo( () => {
+		const statuses = {
+			company: company.record?.statuses ?? [],
+			sponsorship: sponsorship.record?.statuses ?? [],
+		};
+
+		return {
+			...statuses,
+			labels: {
+				[ TRASH ]: __( 'Trash', 'wordcamporg' ),
+				...Object.fromEntries(
+					[ ...statuses.company, ...statuses.sponsorship ].map( ( { slug, name } ) => [ slug, name ] )
+				),
+			},
+			hasResolved: company.hasResolved && sponsorship.hasResolved,
+		};
+	}, [ company.record, company.hasResolved, sponsorship.record, sponsorship.hasResolved ] );
 }
 
 /**
@@ -124,31 +144,72 @@ export function useRecords< Item >( name: string, query: Record< string, unknown
 }
 
 /**
- * Gets the companies as the list shows them: searched, filtered, sorted and paged by the vetter's view.
- *
- * Every company is loaded once, through core-data, and the view is applied here: the list sorts by next event and
- * groups by status, which the endpoint can't do. The view is the vetter's own, kept with their preferences, with
- * its page and search in the address.
- *
- * @return The page of companies, its pagination and fields, the view and how to change it, and how loading went.
+ * A list as its DataViews shows it: the page of records, its pagination and fields, the view and how to change it,
+ * and how loading went.
  */
-export function useCompanyList() {
+export type RecordList< Item > = {
+	data: Item[];
+	paginationInfo: { totalItems: number; totalPages: number };
+	fields: Field< Item >[];
+	view: View;
+	updateView: ( view: View ) => void;
+	resetToDefault?: () => void;
+	error?: unknown;
+	isLoading: boolean;
+};
+
+/**
+ * Shows records as a list does: searched, filtered, sorted and paged by the vetter's view.
+ *
+ * Every record is loaded once, through core-data, and the view is applied here: the lists sort and group in ways
+ * the endpoint can't. The view is the vetter's own, kept with their preferences, with its page and search in the
+ * address.
+ *
+ * @param list           The list.
+ * @param list.name      Its post type.
+ * @param list.view      How it looks until a vetter changes it.
+ * @param list.layouts   What each of its layouts shows.
+ * @param list.records   Its records, once they've loaded.
+ * @param list.fields    Its fields.
+ * @param list.error     What loading it threw, if it failed.
+ * @param list.hasLoaded Whether everything it shows has loaded.
+ * @return The list.
+ */
+function useList< Item extends { status: string } >( {
+	name,
+	view: defaultView,
+	layouts: defaultLayouts,
+	records,
+	fields,
+	error,
+	hasLoaded,
+}: {
+	name: string;
+	view: View;
+	layouts: Layouts;
+	records: Item[] | null;
+	fields: Field< Item >[];
+	error: unknown;
+	hasLoaded: boolean;
+} ): RecordList< Item > {
 	const [ search, update ] = useParams();
 	const { view, updateView, isModified, resetToDefault } = useView( {
 		kind: 'postType',
-		name: COMPANY,
+		name,
 		slug: 'default',
-		defaultView: COMPANY_VIEW,
-		defaultLayouts: COMPANY_LAYOUTS,
+		defaultView,
+		defaultLayouts,
 		queryParams: search,
 		onChangeQueryParams: update,
 	} );
-	const { labels, hasResolved: hasLabels } = useStatusLabels();
-	const { records, error } = useRecords< Company >( COMPANY, COMPANIES_QUERY );
-	const fields = useMemo( () => getCompanyFields( labels ), [ labels ] );
 	const { data, paginationInfo } = useMemo(
-		() => filterSortAndPaginate( withoutTrash( records ?? [], view, labels[ TRASH ] ), view, fields ),
-		[ records, view, fields, labels ]
+		() =>
+			filterSortAndPaginate(
+				withoutTrash( records ?? [], view ),
+				withoutHiddenFilters( view, fields ),
+				fields
+			),
+		[ records, view, fields ]
 	);
 
 	return {
@@ -159,51 +220,55 @@ export function useCompanyList() {
 		updateView,
 		resetToDefault: isModified ? resetToDefault : undefined,
 		error,
-		isLoading: ! error && ! ( records && hasLabels ),
+		isLoading: ! error && ! hasLoaded,
 	};
 }
 
 /**
- * Gets the sponsorships as the list of events shows them, the way useCompanyList() gets the companies.
+ * Gets the companies as their list shows them.
  *
- * Each is shown with its company, which comes from the companies the screen has already loaded.
- *
- * @return The page of sponsorships, its pagination and fields, the view and how to change it, and how loading
- *         went.
+ * @return The list.
  */
-export function useSponsorshipList() {
-	const [ search, update ] = useParams();
-	const { view, updateView, isModified, resetToDefault } = useView( {
-		kind: 'postType',
-		name: SPONSORSHIP,
-		slug: 'default',
-		defaultView: SPONSORSHIP_VIEW,
-		defaultLayouts: SPONSORSHIP_LAYOUTS,
-		queryParams: search,
-		onChangeQueryParams: update,
+export function useCompanyList(): RecordList< Company > {
+	const statuses = useStatuses();
+	const { records, error } = useRecords< Company >( COMPANY, COMPANIES_QUERY );
+	const fields = useMemo( () => getCompanyFields( statuses ), [ statuses ] );
+
+	return useList( {
+		name: COMPANY,
+		view: COMPANY_VIEW,
+		layouts: COMPANY_LAYOUTS,
+		records,
+		fields,
+		error,
+		hasLoaded: Boolean( records && statuses.hasResolved ),
 	} );
-	const { labels, hasResolved: hasLabels } = useStatusLabels();
+}
+
+/**
+ * Gets the sponsorships as the list of events shows them: each with its company, which comes from the companies
+ * the screen has already loaded.
+ *
+ * @return The list.
+ */
+export function useSponsorshipList(): RecordList< Sponsorship > {
+	const statuses = useStatuses();
 	const { records, error } = useRecords< Sponsorship >( SPONSORSHIP, SPONSORSHIPS_QUERY );
 	const { records: companies, error: companiesError } = useRecords< Company >( COMPANY, COMPANIES_QUERY );
 	const fields = useMemo(
-		() => getSponsorshipFields( labels, companies ?? [], records ?? [], getToday() ),
-		[ labels, companies, records ]
-	);
-	const { data, paginationInfo } = useMemo(
-		() => filterSortAndPaginate( withoutTrash( records ?? [], view, labels[ TRASH ] ), view, fields ),
-		[ records, view, fields, labels ]
+		() => getSponsorshipFields( statuses, companies ?? [], records ?? [], getToday() ),
+		[ statuses, companies, records ]
 	);
 
-	return {
-		data,
-		paginationInfo,
+	return useList( {
+		name: SPONSORSHIP,
+		view: SPONSORSHIP_VIEW,
+		layouts: SPONSORSHIP_LAYOUTS,
+		records,
 		fields,
-		view,
-		updateView,
-		resetToDefault: isModified ? resetToDefault : undefined,
 		error: error ?? companiesError,
-		isLoading: ! ( error ?? companiesError ) && ! ( records && companies && hasLabels ),
-	};
+		hasLoaded: Boolean( records && companies && statuses.hasResolved ),
+	} );
 }
 
 /**

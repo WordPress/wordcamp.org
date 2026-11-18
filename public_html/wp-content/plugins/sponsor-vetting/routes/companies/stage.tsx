@@ -13,11 +13,13 @@ import { useRecordActions } from './actions';
 import { AddCompany } from './add-company';
 import { COMPANY, SPONSORSHIP } from './entities';
 import { getErrorMessage, useCompanyList, useOpenRecord, useSponsorshipList } from './hooks';
+import type { RecordList } from './hooks';
 import { LayoutMenu } from './layout-menu';
 import { ListHeader, ListTabs } from './list-header';
 import './style.scss';
-import type { Company, Sponsorship } from './types';
+import type { Company, Sponsorship, Trashable } from './types';
 import { COMPANY_LAYOUTS, COMPANY_LAYOUT_CHOICES, SPONSORSHIP_LAYOUTS, asNarrowList } from './view';
+import type { Layouts } from './view';
 
 /**
  * Says that a list couldn't be loaded, under the tabs, so the other list can still be reached.
@@ -88,91 +90,132 @@ function fitView( view: View, updateView: ( view: View ) => void, fields: string
 }
 
 /**
- * The list of companies. Clicking one opens it beside the list.
+ * Works out what a list hands its DataViews. Clicking a record opens it beside the list.
+ *
+ * @param name    The list's post type.
+ * @param list    The list.
+ * @param layouts What each of its layouts shows.
+ * @param openId  The record of the list that's open, if any.
+ * @param onOpen  Opens a record or, without an ID, closes it.
+ * @return The props, and whether the list is the narrow one beside an open record.
+ */
+function useListProps< Item extends Trashable >(
+	name: string,
+	list: RecordList< Item >,
+	layouts: Layouts,
+	openId: number | undefined,
+	onOpen: ( id?: number ) => void
+) {
+	const { data, paginationInfo, fields, view, updateView, resetToDefault, isLoading } = list;
+	const { companyId, sponsorshipId } = useOpenRecord();
+	const actions = useRecordActions< Item >( name );
+	const isNarrow = Boolean( companyId || sponsorshipId );
+	const fitted = fitView( view, updateView, layouts.list.fields, isNarrow );
+	const selection = useSelection( fitted.view, openId, onOpen );
+
+	return {
+		isNarrow,
+		props: {
+			data,
+			fields,
+			actions,
+			...fitted,
+			onReset: resetToDefault ?? ( false as const ),
+			isLoading,
+			paginationInfo,
+			defaultLayouts: layouts,
+			getItemId: ( item: Item ) => String( item.id ),
+			onClickItem: ( item: Item ) => onOpen( item.id ),
+			...selection,
+		},
+	};
+}
+
+/**
+ * What's inside a list's DataViews: its head, its records and its footer.
+ *
+ * @param props             Props.
+ * @param props.searchLabel What the search field is for.
+ * @param props.layoutMenu  The list's Layout menu, which the narrow list has no room for.
+ * @return The contents.
+ */
+function ListContents( { searchLabel, layoutMenu }: { searchLabel: string; layoutMenu: ReactNode } ) {
+	return (
+		<>
+			<ListHeader searchLabel={ searchLabel } layoutMenu={ layoutMenu } />
+			<DataViews.Layout />
+			<DataViews.Footer />
+		</>
+	);
+}
+
+/**
+ * The list of companies.
  *
  * @return The list.
  */
 function Companies() {
-	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } = useCompanyList();
-	const { companyId, sponsorshipId, open } = useOpenRecord();
-	const openCompany = ( company?: number ) => open( { company } );
-	const actions = useRecordActions< Company >( COMPANY );
-	const isNarrow = Boolean( companyId || sponsorshipId );
-	const fitted = fitView( view, updateView, COMPANY_LAYOUTS.list.fields, isNarrow );
-	const selection = useSelection( fitted.view, companyId, openCompany );
+	const list = useCompanyList();
+	const { companyId, open } = useOpenRecord();
+	const { props, isNarrow } = useListProps( COMPANY, list, COMPANY_LAYOUTS, companyId, ( company ) =>
+		open( { company } )
+	);
 
-	if ( error ) {
-		return <LoadError title={ __( 'The companies couldn’t be loaded.', 'wordcamporg' ) } error={ error } />;
+	if ( list.error ) {
+		return (
+			<LoadError title={ __( 'The companies couldn’t be loaded.', 'wordcamporg' ) } error={ list.error } />
+		);
 	}
 
 	return (
-		<DataViews< Company >
-			data={ data }
-			fields={ fields }
-			actions={ actions }
-			{ ...fitted }
-			onReset={ resetToDefault ?? false }
-			isLoading={ isLoading }
-			paginationInfo={ paginationInfo }
-			defaultLayouts={ COMPANY_LAYOUTS }
-			getItemId={ ( item ) => String( item.id ) }
-			onClickItem={ ( item ) => openCompany( item.id ) }
-			{ ...selection }
-		>
-			<ListHeader
+		<DataViews< Company > { ...props }>
+			<ListContents
 				searchLabel={ __( 'Search companies', 'wordcamporg' ) }
 				layoutMenu={
 					! isNarrow && (
-						<LayoutMenu view={ view } onChangeView={ updateView } choices={ COMPANY_LAYOUT_CHOICES } />
+						<LayoutMenu
+							view={ list.view }
+							onChangeView={ list.updateView }
+							choices={ COMPANY_LAYOUT_CHOICES }
+						/>
 					)
 				}
 			/>
-			<DataViews.Layout />
-			<DataViews.Footer />
 		</DataViews>
 	);
 }
 
 /**
- * The list of events: every sponsorship, as its sponsor under the event it's for. Clicking one opens its company
- * beside the list.
+ * The list of events: every sponsorship, as its sponsor under the event it's for. Clicking one opens its company.
  *
  * @return The list.
  */
 function Events() {
-	const { data, paginationInfo, fields, view, updateView, resetToDefault, error, isLoading } =
-		useSponsorshipList();
-	const { companyId, sponsorshipId, open } = useOpenRecord();
-	const openSponsorship = ( sponsorship?: number ) => open( { sponsorship } );
-	const actions = useRecordActions< Sponsorship >( SPONSORSHIP );
-	const isNarrow = Boolean( companyId || sponsorshipId );
-	const fitted = fitView( view, updateView, SPONSORSHIP_LAYOUTS.list.fields, isNarrow );
-	const selection = useSelection( fitted.view, sponsorshipId, openSponsorship );
+	const list = useSponsorshipList();
+	const { sponsorshipId, open } = useOpenRecord();
+	const { props, isNarrow } = useListProps(
+		SPONSORSHIP,
+		list,
+		SPONSORSHIP_LAYOUTS,
+		sponsorshipId,
+		( sponsorship ) => open( { sponsorship } )
+	);
 
-	if ( error ) {
-		return <LoadError title={ __( 'The sponsorships couldn’t be loaded.', 'wordcamporg' ) } error={ error } />;
+	if ( list.error ) {
+		return (
+			<LoadError
+				title={ __( 'The sponsorships couldn’t be loaded.', 'wordcamporg' ) }
+				error={ list.error }
+			/>
+		);
 	}
 
 	return (
-		<DataViews< Sponsorship >
-			data={ data }
-			fields={ fields }
-			actions={ actions }
-			{ ...fitted }
-			onReset={ resetToDefault ?? false }
-			isLoading={ isLoading }
-			paginationInfo={ paginationInfo }
-			defaultLayouts={ SPONSORSHIP_LAYOUTS }
-			getItemId={ ( item ) => String( item.id ) }
-			onClickItem={ ( item ) => openSponsorship( item.id ) }
-			{ ...selection }
-		>
-			<ListHeader
+		<DataViews< Sponsorship > { ...props }>
+			<ListContents
 				searchLabel={ __( 'Search events and sponsors', 'wordcamporg' ) }
 				layoutMenu={ ! isNarrow && <DataViews.LayoutSwitcher /> }
 			/>
-			<DataViews.Layout />
-			<DataViews.Footer />
 		</DataViews>
 	);
 }

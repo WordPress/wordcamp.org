@@ -28,16 +28,6 @@ defined( 'WPINC' ) || die();
  */
 class Test_Rest extends Database_TestCase {
 	/**
-	 * The company statuses, which a list has to name: the endpoint lists published posts otherwise.
-	 */
-	private const COMPANY_STATUSES = 'sv-needs-vetting,sv-in-progress,sv-compliance-req,sv-compliant,sv-not-eligible,sv-inactive';
-
-	/**
-	 * The sponsorship statuses.
-	 */
-	private const SPONSORSHIP_STATUSES = 'svs-pending,svs-approved,svs-not-approved,svs-canceled';
-
-	/**
 	 * Registers the post types and their meta on Central, the only site where they're in REST.
 	 */
 	public function set_up(): void {
@@ -65,7 +55,7 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
-	 * Only sponsor vetters read companies and sponsorships.
+	 * Only sponsor vetters read companies and sponsorships, and the statuses their post types have.
 	 *
 	 * @dataProvider data_readers
 	 *
@@ -93,17 +83,19 @@ class Test_Rest extends Database_TestCase {
 	 * @return array[]
 	 */
 	public function data_readers(): array {
-		$companies    = array( 'status' => self::COMPANY_STATUSES );
-		$sponsorships = array( 'status' => self::SPONSORSHIP_STATUSES );
+		// What the screen lists with: the endpoint lists published posts otherwise, and these never are.
+		$any = array( 'status' => 'any' );
 
 		return array(
-			'a vetter lists companies'      => array( 'sponsor_vetter', '/sv-companies', $companies, 200 ),
+			'a vetter lists companies'      => array( 'sponsor_vetter', '/sv-companies', $any, 200 ),
 			'a vetter opens a company'      => array( 'sponsor_vetter', '/sv-companies/%d', array(), 200 ),
-			'a vetter lists sponsorships'   => array( 'sponsor_vetter', '/sv-sponsorships', $sponsorships, 200 ),
+			'a vetter lists sponsorships'   => array( 'sponsor_vetter', '/sv-sponsorships', $any, 200 ),
+			'a vetter reads the statuses'   => array( 'sponsor_vetter', '/types/sv_company', array(), 200 ),
 			// A status the user may not list fails the parameter, hence 400.
-			'a wrangler lists companies'    => array( 'wordcamp_wrangler', '/sv-companies', $companies, 400 ),
+			'a wrangler lists companies'    => array( 'wordcamp_wrangler', '/sv-companies', $any, 400 ),
 			'a wrangler opens a company'    => array( 'wordcamp_wrangler', '/sv-companies/%d', array(), 403 ),
-			'a wrangler lists sponsorships' => array( 'wordcamp_wrangler', '/sv-sponsorships', $sponsorships, 400 ),
+			'a wrangler lists sponsorships' => array( 'wordcamp_wrangler', '/sv-sponsorships', $any, 400 ),
+			'a wrangler reads the statuses' => array( 'wordcamp_wrangler', '/types/sv_company', array(), 403 ),
 		);
 	}
 
@@ -114,6 +106,34 @@ class Test_Rest extends Database_TestCase {
 		$this->assertTrue( apply_filters( 'wp_is_post_type_collaboration_disabled', false, COMPANY_POST_TYPE ) );
 		$this->assertTrue( apply_filters( 'wp_is_post_type_collaboration_disabled', false, SPONSORSHIP_POST_TYPE ) );
 		$this->assertFalse( apply_filters( 'wp_is_post_type_collaboration_disabled', false, 'post' ) );
+	}
+
+	/**
+	 * The screen learns a post type's statuses from what REST says about the type: their slugs and labels, in the
+	 * order of the pipeline.
+	 */
+	public function test_post_type_lists_its_statuses(): void {
+		$this->assertSame(
+			array(
+				array(
+					'slug' => 'svs-pending',
+					'name' => 'Pending',
+				),
+				array(
+					'slug' => 'svs-approved',
+					'name' => 'Approved',
+				),
+				array(
+					'slug' => 'svs-not-approved',
+					'name' => 'Not Approved',
+				),
+				array(
+					'slug' => 'svs-canceled',
+					'name' => 'Canceled',
+				),
+			),
+			$this->request( 'GET', '/types/sv_sponsorship' )->get_data()['statuses']
+		);
 	}
 
 	/**
@@ -148,7 +168,7 @@ class Test_Rest extends Database_TestCase {
 			'GET',
 			'/sv-companies',
 			array(
-				'status'  => self::COMPANY_STATUSES,
+				'status'  => 'any',
 				'orderby' => 'title',
 				'order'   => 'asc',
 				'_fields' => 'id,status,domains,flags,next_event,sponsorships,last_vetted',
@@ -247,7 +267,7 @@ class Test_Rest extends Database_TestCase {
 			'/sv-sponsorships',
 			array(
 				'parent'  => array( $company_id ),
-				'status'  => self::SPONSORSHIP_STATUSES,
+				'status'  => 'any',
 				'orderby' => 'id',
 				'order'   => 'asc',
 				'_fields' => 'id,status,event,approved,log',

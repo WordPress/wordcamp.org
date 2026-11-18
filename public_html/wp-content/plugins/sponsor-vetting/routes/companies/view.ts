@@ -2,14 +2,19 @@
  * How the two lists look: their layouts, their grouping, and what they start with.
  */
 
-import type { View } from '@wordpress/dataviews';
+import type { Field, View } from '@wordpress/dataviews';
 import { TRASH } from './entities';
+
+/**
+ * What each layout of a list shows.
+ */
+export type Layouts = { table: { fields: string[] }; list: { fields: string[] } };
 
 /**
  * What each layout shows beside the company's name and website. A list row has no column headers, so it keeps to
  * the fields that explain themselves.
  */
-export const COMPANY_LAYOUTS = {
+export const COMPANY_LAYOUTS: Layouts = {
 	table: { fields: [ 'status', 'follow_up', 'next_event', 'sponsorships', 'last_vetted' ] },
 	list: { fields: [ 'status', 'follow_up', 'next_event' ] },
 };
@@ -69,7 +74,7 @@ export const GROUP_BY_EVENT: NonNullable< View[ 'groupBy' ] > = {
 /**
  * What each layout shows beside the sponsor's name. The event heads the group.
  */
-export const SPONSORSHIP_LAYOUTS = {
+export const SPONSORSHIP_LAYOUTS: Layouts = {
 	table: { fields: [ 'status', 'follow_up', 'approved' ] },
 	list: { fields: [ 'status', 'follow_up' ] },
 };
@@ -142,20 +147,29 @@ export function asNarrowList( view: View, fields: string[] ): View {
 /**
  * Leaves the trashed records out of a list, unless the view asks for them by filtering for the Trash.
  *
- * @param records    The records.
- * @param view       The view.
- * @param trashLabel The label of the Trash, which is what the status filter holds.
+ * @param records The records.
+ * @param view    The view.
  * @return The records the view is about.
  */
-export function withoutTrash< Item extends { status: string } >(
-	records: Item[],
-	view: View,
-	trashLabel: string
-): Item[] {
+export function withoutTrash< Item extends { status: string } >( records: Item[], view: View ): Item[] {
 	const wantsTrash = view.filters?.some(
 		( { field, operator, value } ) =>
-			field === 'status' && operator === 'isAny' && [ value ].flat().includes( trashLabel )
+			field === 'status_filter' && operator === 'isAny' && [ value ].flat().includes( TRASH )
 	);
 
 	return wantsTrash ? records : records.filter( ( { status } ) => status !== TRASH );
+}
+
+/**
+ * Leaves out of a view the filters its list has no control for, which a vetter could neither see nor clear: a view
+ * that was kept can still hold one on a field that has stopped filtering.
+ *
+ * @param view   The view.
+ * @param fields The list's fields.
+ * @return The view with the filters its list offers.
+ */
+export function withoutHiddenFilters< Item >( view: View, fields: Field< Item >[] ): View {
+	const offered = new Set( fields.filter( ( { filterBy } ) => filterBy !== false ).map( ( { id } ) => id ) );
+
+	return { ...view, filters: view.filters?.filter( ( { field } ) => offered.has( field ) ) } as View;
 }

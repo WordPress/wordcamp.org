@@ -201,25 +201,20 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
-	 * Copying (#2398) is offered on any published event for whoever can
-	 * create events, from the toolbar beside Edit, including for an Event
-	 * Organizer on someone else's event. The page gets no button, but keeps
-	 * the modal the toolbar link opens.
+	 * An Event Organizer can copy someone else's published event (#2398),
+	 * without getting the actions that need edit rights.
 	 */
-	public function test_copy_is_in_the_toolbar_on_others_event() {
+	public function test_copy_offered_on_others_event() {
 		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$event_id = $this->go_to_event_owned_by( $owner_id );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
 		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
 
-		$this->assertSame( '<div id="wporg-groups-event-modal-root"></div>', trim( $output ) );
-
-		$node = $this->get_copy_node();
-		$this->assertNotNull( $node );
-		$this->assertSame( 'Copy this event', $node->title );
-		$this->assertSame( get_permalink( $event_id ) . '#copy-event', $node->href );
-		$this->assertSame( $event_id, \WordCamp\Groups\Frontend\Modal\get_copyable_event_id() );
+		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-event-id="' . $event_id . '"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="edit"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-all"', $output );
 	}
 
 	/**
@@ -230,7 +225,7 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		$event_id = $this->go_to_event_owned_by( $owner_id );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-		$this->assertNull( $this->get_copy_node() );
+		$this->assertSame( '', trim( (string) do_blocks( '<!-- wp:wporg/event-manage /-->' ) ) );
 
 		wp_update_post(
 			array(
@@ -240,21 +235,26 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		);
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
 
-		$this->assertNull( $this->get_copy_node() );
 		$this->assertSame( '', trim( (string) do_blocks( '<!-- wp:wporg/event-manage /-->' ) ) );
 	}
 
 	/**
-	 * Build the toolbar for the current request and return its copy node.
-	 *
-	 * @return object|null The node, or null when it isn't there.
+	 * A group admin's Edit opens the settings app, on the row after the
+	 * messaging actions, and the settings block no longer adds a second one.
 	 */
-	private function get_copy_node() {
-		require_once ABSPATH . WPINC . '/class-wp-admin-bar.php';
+	public function test_admin_edit_opens_settings_app() {
+		$event_id = $this->go_to_event_owned_by( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
-		$wp_admin_bar = new \WP_Admin_Bar();
-		\WordCamp\Groups\Frontend\Modal\add_copy_event_node( $wp_admin_bar );
+		$output = do_blocks( '<!-- wp:wporg/event-manage /--><!-- wp:wporg/group-settings /-->' );
 
-		return $wp_admin_bar->get_node( \WordCamp\Groups\Frontend\Modal\COPY_EVENT_NODE );
+		$this->assertSame( 1, substr_count( $output, 'Edit this event' ) );
+		$this->assertStringContainsString( 'data-wporg-settings-open="events"', $output );
+		$this->assertStringContainsString( 'data-wporg-settings-event-id="' . $event_id . '"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
+		$this->assertLessThan(
+			strpos( $output, 'data-wporg-settings-open="events"' ),
+			strpos( $output, 'data-wporg-groups-modal="message-attendees"' )
+		);
 	}
 }

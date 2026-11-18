@@ -27,6 +27,7 @@ function get_company_statuses(): array {
 		'sv-needs-vetting'  => __( 'Needs Vetting', 'wordcamporg' ),
 		'sv-in-progress'    => __( 'In Progress', 'wordcamporg' ),
 		'sv-compliance-req' => __( 'Compliance Requested', 'wordcamporg' ),
+		'sv-on-hold'        => __( 'On Hold', 'wordcamporg' ),
 		'sv-compliant'      => __( 'Compliant', 'wordcamporg' ),
 		'sv-not-eligible'   => __( 'Not Eligible', 'wordcamporg' ),
 		'sv-inactive'       => __( 'Inactive', 'wordcamporg' ),

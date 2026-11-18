@@ -25,10 +25,12 @@ defined( 'WPINC' ) || die();
 function get_allowed_transitions( string $post_type ): array {
 	if ( COMPANY_POST_TYPE === $post_type ) {
 		return array(
-			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-compliant'      => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
+			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliance-req' => array( 'sv-in-progress', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			// Paused while still under review: nothing is decided, and a sponsor's silence doesn't count against it.
+			'sv-on-hold'        => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliant'    => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
 			'sv-not-eligible'   => array( 'sv-needs-vetting', 'sv-in-progress' ),
 			'sv-inactive'       => array( 'sv-needs-vetting', 'sv-in-progress' ),
 		);

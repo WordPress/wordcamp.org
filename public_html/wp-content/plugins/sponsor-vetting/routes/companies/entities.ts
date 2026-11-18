@@ -38,6 +38,7 @@ export const STATUS_INTENTS: Record< string, Intent > = {
 	'sv-needs-vetting': 'informational',
 	'sv-in-progress': 'draft',
 	'sv-compliance-req': 'low',
+	'sv-on-hold': 'medium',
 	'sv-compliant': 'stable',
 	'sv-not-eligible': 'high',
 	'sv-inactive': 'none',

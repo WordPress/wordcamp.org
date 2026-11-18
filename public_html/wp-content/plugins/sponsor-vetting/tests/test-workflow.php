@@ -108,6 +108,8 @@ class Test_Workflow extends WP_UnitTestCase {
 	public function data_status_changes(): array {
 		return array(
 			'allowed'               => array( 'sv-in-progress', array( 'post_status' => 'sv-compliance-req' ), 'sv-compliance-req' ),
+			'put on hold in review' => array( 'sv-in-progress', array( 'post_status' => 'sv-on-hold' ), 'sv-on-hold' ),
+			'on hold once decided'  => array( 'sv-compliant', array( 'post_status' => 'sv-on-hold' ), 'sv-compliant' ),
 			'not in the workflow'   => array( 'sv-compliance-req', array( 'post_status' => 'sv-needs-vetting' ), 'sv-compliance-req' ),
 			'a core status'         => array( 'sv-compliant', array( 'post_status' => 'publish' ), 'sv-compliant' ),
 			'from a stale screen'   => array(

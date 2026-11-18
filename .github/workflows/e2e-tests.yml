@@ -17,6 +17,10 @@ on:
     - tests/e2e/**
     - playwright.config.js
     - .github/workflows/e2e-tests.yml
+    # Dependency bumps (Playwright, @wordpress/scripts) change what the specs run against.
+    - .nvmrc
+    - package.json
+    - package-lock.json
   workflow_dispatch: {}
 
 concurrency:

@@ -1,6 +1,6 @@
 name: Unit Tests
 
-# Run on any changes in public_html
+# Run on changes to public_html and to the dependencies and test setup the suites use.
 on:
   pull_request:
     paths:
@@ -9,6 +9,10 @@ on:
     - phpunit*
     - composer.json
     - composer-dev.json
+    - .nvmrc
+    - package.json
+    - package-lock.json
+    - .docker/bin/install-wp-tests.sh
   push:
     branches: [production]
     paths:
@@ -17,6 +21,10 @@ on:
     - phpunit*
     - composer.json
     - composer-dev.json
+    - .nvmrc
+    - package.json
+    - package-lock.json
+    - .docker/bin/install-wp-tests.sh
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,7 +52,7 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: Install dependencies
       # We don't need to build, since jest can interpret the source files.
@@ -141,7 +149,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: public_html/wp-content/mu-plugins/wporg-groups-frontend/build
-        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
+        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
 
     - name: Set up Node.js
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'
@@ -158,7 +166,7 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: Build the groups frontend blocks
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'

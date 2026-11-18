@@ -1,18 +1,40 @@
 name: Static Analysis (Linting)
 
-# Run on any changes in public_html
+# Run on changes to public_html and to the dependencies and configs the linters read.
 on:
   pull_request:
     paths:
     - public_html/**
     - .github/workflows/**
+    - .github/bin/**
+    - .nvmrc
+    - package.json
+    - package-lock.json
+    - composer.json
+    - composer-dev.json
+    - phpcs.xml.dist
+    - eslint.config.cjs
+    - .prettierrc.js
+    - .stylelintrc
   push:
     branches: [production]
     paths:
     - public_html/**
+    - .github/workflows/**
+    - .github/bin/**
+    - .nvmrc
+    - package.json
+    - package-lock.json
+    - composer.json
+    - composer-dev.json
+    - phpcs.xml.dist
+    - eslint.config.cjs
+    - .prettierrc.js
+    - .stylelintrc
 
+# PHP lint only checks each push's own changes, so a newer push must not cancel an older one.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -66,7 +88,8 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
+        # Includes the manifests, so a package.json edit without a lockfile update reaches `npm ci`, which rejects it.
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: npm install and build
       run: |
@@ -92,5 +115,10 @@ jobs:
           'public_html/wp-content/mu-plugins/gatherpress-recurring-events/assets/*.css'
 
     - name: Lint PHP
+      env:
+        # `github.base_ref` is only set on pull requests; a push compares against the commit before it.
+        BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.event.before }}
       run: |
-        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php
+        # Load the ruleset even when no PHP file changed, so a broken phpcs.xml.dist fails.
+        ruleset=$( public_html/wp-content/mu-plugins/vendor/bin/phpcs --standard=./phpcs.xml.dist -e ) || { echo "$ruleset"; exit 1; }
+        php .github/bin/phpcs-branch.php

@@ -6,7 +6,14 @@ import { describe, expect, it } from 'vitest';
 import { getEventFlag, getEventsHint, splitEvents } from '../events';
 import type { Company, Sponsorship } from '../types';
 
+/**
+ * A company's events, one of them pending.
+ */
 const PENDING: Pick< Sponsorship, 'status' >[] = [ { status: 'svs-pending' } ];
+
+/**
+ * The flags of a company whose vetting has lapsed.
+ */
 const LAPSED: Company[ 'flags' ] = [ { type: 'lapsed', text: 'Vetting has lapsed' } ];
 
 describe( 'getEventsHint', () => {

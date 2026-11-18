@@ -8,6 +8,7 @@
 		"start": "wp-build --watch",
 		"lint:js": "eslint --config=../../../../eslint.config.cjs routes && tsc --noEmit",
 		"format:js": "eslint --config=../../../../eslint.config.cjs --fix routes",
+		"lint:css": "stylelint 'routes/**/*.scss'",
 		"test": "vitest run"
 	},
 	"wpPlugin": {

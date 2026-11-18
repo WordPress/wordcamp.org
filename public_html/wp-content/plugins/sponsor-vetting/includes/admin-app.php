@@ -97,6 +97,7 @@ function redirect_old_screens(): void {
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Which screen was asked for.
 	$post_id   = absint( $_GET['post'] ?? 0 );
 	$post_type = $post_id ? (string) get_post_type( $post_id ) : sanitize_key( $_GET['post_type'] ?? '' );
+	$page      = sanitize_key( $_GET['page'] ?? '' );
 	// phpcs:enable
 
 	$records = array(
@@ -104,9 +105,12 @@ function redirect_old_screens(): void {
 		SPONSORSHIP_POST_TYPE => 'sponsorship',
 	);
 
-	if ( isset( $records[ $post_type ] ) ) {
-		wp_safe_redirect( get_app_url( $records[ $post_type ], $post_id ) );
-		exit;
+	if ( ! isset( $records[ $post_type ] ) ) {
+		return;
 	}
+
+	// The import screen was listed under the companies, and has moved with the menu.
+	wp_safe_redirect( 'sv-import' === $page ? admin_url( 'admin.php?page=sv-import' ) : get_app_url( $records[ $post_type ], $post_id ) );
+	exit;
 }
 add_action( 'admin_menu', __NAMESPACE__ . '\redirect_old_screens' );

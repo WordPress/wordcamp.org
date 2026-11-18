@@ -1,3 +1,7 @@
+/**
+ * Runs the screen's unit tests on Vitest.
+ */
+
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig( {

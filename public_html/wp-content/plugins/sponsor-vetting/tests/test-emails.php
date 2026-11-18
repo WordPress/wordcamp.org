@@ -256,6 +256,19 @@ class Test_Emails extends Database_TestCase {
 	}
 
 	/**
+	 * A company in the Trash gets no compliance request, and stays there: a screen loaded before it was trashed
+	 * still offers to send one.
+	 */
+	public function test_a_trashed_company_gets_no_compliance_request(): void {
+		wp_trash_post( $this->company_id );
+
+		$sent = send_compliance_request( $this->company_id, $this->sponsorship_id );
+
+		$this->assertWPError( $sent );
+		$this->assertSame( array( 'sv_in_trash', 'trash' ), array( $sent->get_error_code(), get_post_status( $this->company_id ) ) );
+	}
+
+	/**
 	 * Marking a company Compliant approves its pending sponsorship, as the system, and emails the event unless it has
 	 * invoiced the sponsor, since approving the invoice tells them, or is over, when there's nobody left to tell. A
 	 * sponsor whose website isn't one the company was vetted for waits for a vetter.

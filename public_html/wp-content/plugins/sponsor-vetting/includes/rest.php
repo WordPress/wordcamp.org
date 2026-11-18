@@ -905,8 +905,12 @@ function send_rest_approval_email( \WP_REST_Request $request ): array|\WP_Error 
 
 	if ( $sent ) {
 		$message = __( 'The approval email was sent to the event.', 'wordcamporg' );
+	} elseif ( 'svs-approved' !== get_post_status( $sponsorship_id ) ) {
+		$message = __( 'No approval email was sent: the sponsorship isn’t approved.', 'wordcamporg' );
 	} elseif ( get_conversations( $sponsorship_id, 'approval' ) ) {
 		$message = __( 'No approval email was sent: the event already has one.', 'wordcamporg' );
+	} elseif ( get_post_meta( $sponsorship_id, '_sv_approval_notified', true ) ) {
+		$message = __( 'No approval email was sent: the event has been told already.', 'wordcamporg' );
 	} elseif ( event_has_ended( (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ) ) {
 		$message = __( 'No approval email was sent: the event is over.', 'wordcamporg' );
 	} else {

@@ -3,10 +3,6 @@
  */
 
 /**
- * The records as REST returns them in the `edit` context.
- */
-
-/**
  * `event_soon` is the screen's own: the rest come with a company.
  */
 export type FlagType = 'lapsed' | 'not_eligible' | 'not_eligible_ended' | 'good_faith' | 'replied' | 'event_soon';

@@ -18,6 +18,9 @@ import {
 	withoutTrash,
 } from '../view';
 
+/**
+ * The statuses, as the server lists them.
+ */
 const STATUSES: Statuses = {
 	company: [
 		{ slug: 'sv-needs-vetting', name: 'Needs Vetting' },
@@ -42,6 +45,9 @@ const STATUSES: Statuses = {
 	},
 };
 
+/**
+ * The companies: three in the pipeline, one in the Trash.
+ */
 const COMPANIES: Company[] = [
 	{
 		id: 1,
@@ -120,6 +126,9 @@ function sponsorship(
 	};
 }
 
+/**
+ * The companies' sponsorships, and one that has no company yet.
+ */
 const SPONSORSHIPS: Sponsorship[] = [
 	sponsorship( 1, 'Maple at Past', 2, 'Camp Past', '2026-11-01', 'svs-approved' ),
 	sponsorship( 2, 'Acme at Later', 3, 'Camp Later', '2027-01-15' ),

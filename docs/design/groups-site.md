@@ -48,6 +48,7 @@ Avoid arbitrary gap and margin values when one of these tokens fits the composit
 | Input | 1px border, 2px radius, approximately 8px 12px padding |
 | Focus indicator | 2px `blueberry-1` outline with a 2px offset |
 | Modal | Approximately 520px maximum width, 8px radius, 24px 32px 32px content padding |
+| Organizer tools | Organizer-only actions on a page: a small uppercase label above a wrapping row of 20px icon + Inter 14px `charcoal-3` text buttons, `blueberry-1` with underline on hover. Not full buttons, so they don't compete with visitor actions such as RSVP |
 
 Use an established component variant before creating a visually unrelated component. In particular, “My events” is the compact variant of the normal event card and should retain the same date/title typography and interaction treatment.
 

@@ -31,11 +31,15 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 	const AUTOSAVE_INTERVAL_MS = 5000;
 
 	/**
-	 * Modal containing the create/edit form. Mode is `'create'` or `'edit'`,
-	 * `eventId` is the integer post id when editing.
+	 * Modal containing the create/edit form. Mode is `'create'`, `'edit'` or
+	 * `'copy'`; `eventId` is the integer post id being edited or copied. A
+	 * copy is a new event prefilled from the copied one (#2398).
 	 */
 	function EventModal( { mode, eventId, onClose } ) {
 		const isEdit = mode === 'edit' && eventId > 0;
+		const isCopy = mode === 'copy' && eventId > 0;
+		// A new event from scratch, which can start from a draft or template.
+		const isFresh = ! isEdit && ! isCopy;
 		const formRef = useRef( null );
 
 		// Drafts: list of available drafts (create mode only) and the id
@@ -69,9 +73,9 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			}
 		};
 
-		// Create mode: fetch the existing drafts list.
+		// Create mode: fetch the drafts and templates for the pickers.
 		useEffect( () => {
-			if ( isEdit ) {
+			if ( ! isFresh ) {
 				return;
 			}
 			apiFetch( { path: `/${ NS }/drafts` } )
@@ -80,7 +84,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			apiFetch( { path: `/${ NS }/event-templates` } )
 				.then( ( res ) => setTemplates( Array.isArray( res ) ? res : [] ) )
 				.catch( () => {} );
-		}, [ isEdit ] );
+		}, [ isFresh ] );
 
 		// Autosave: every AUTOSAVE_INTERVAL_MS, if the form is dirty and we
 		// aren't already saving, push a draft. Only runs in create mode —
@@ -210,8 +214,15 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			return () => document.removeEventListener( 'keydown', onEscape, true );
 		} );
 
-		const showDraftPicker = ! isEdit && drafts.length > 0;
-		const showTemplatePicker = ! isEdit && templates.length > 0;
+		const showDraftPicker = isFresh && drafts.length > 0;
+		const showTemplatePicker = isFresh && templates.length > 0;
+
+		let title = __( 'Create event', 'wordcamporg' );
+		if ( isEdit ) {
+			title = __( 'Edit event', 'wordcamporg' );
+		} else if ( isCopy ) {
+			title = __( 'Copy event', 'wordcamporg' );
+		}
 
 		const autosaveLabel = ( () => {
 			if ( isEdit ) {
@@ -235,9 +246,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 		return h(
 			Modal,
 			{
-				title: isEdit
-					? __( 'Edit event', 'wordcamporg' )
-					: __( 'Create event', 'wordcamporg' ),
+				title,
 				onRequestClose: handleClose,
 				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
 				size: 'large',
@@ -247,6 +256,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				ref: formRef,
 				mode: isEdit ? 'edit' : 'create',
 				eventId: isEdit ? eventId : 0,
+				copyId: isCopy ? eventId : 0,
 				classPrefix: 'wporg-groups-event-modal',
 				className: 'wporg-groups-event-modal__form',
 				onSubmitPayload: submitPayload,

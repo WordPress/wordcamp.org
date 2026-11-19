@@ -5,7 +5,7 @@
  * Runs `phpcs` as normal on new files, and `phpcs-changed` on modified files. `phpcs-changed` will only report
  * on changed lines in each modified file.
  *
- * How to use: php .github/bin/phpcs-branch.php
+ * How to use: BASE_REF=production php .github/bin/phpcs-branch.php
  */
 
 // phpcs:ignoreFile
@@ -47,17 +47,29 @@ function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
 }
 
 function main() {
-	$base_branch = 'remotes/origin/' . getenv( 'BASE_REF' );
+	$base_branch = getenv( 'BASE_REF' );
 	$git_dir     = dirname( dirname( __DIR__ ) );
 	$bin_dir     = dirname( dirname( __DIR__ ) ) . '/public_html/wp-content/mu-plugins/vendor/bin';
-	$git         = "git -C $git_dir";
+	$git         = 'git -C ' . escapeshellarg( $git_dir );
 
 	try {
+		if ( ! $base_branch ) {
+			throw new \RuntimeException( 'BASE_REF must name the branch or commit to compare against.' );
+		}
+
+		// A branch name means its origin copy; anything else (such as a commit SHA) is used as is.
+		exec( "$git show-ref --verify --quiet " . escapeshellarg( "refs/remotes/origin/$base_branch" ), $unused, $remote_status );
+		if ( 0 === $remote_status ) {
+			$base_branch = "refs/remotes/origin/$base_branch";
+		}
+
 		echo "\nScanning changed files...\n";
 		$status = 0;
 
-		$affected_files = shell_exec( "$git diff $base_branch --name-status --diff-filter=AM 2>&1 | grep .php$" );
-		$affected_files = explode( "\n", trim( $affected_files ) );
+		exec( "$git diff " . escapeshellarg( $base_branch ) . " --name-status --diff-filter=AM -- '*.php'", $affected_files, $diff_status );
+		if ( 0 !== $diff_status ) {
+			throw new \RuntimeException( "Could not compare changed files against $base_branch." );
+		}
 
 		foreach ( $affected_files as $record ) {
 			if ( ! $record ) {
@@ -81,7 +93,7 @@ function main() {
 			$status |= $cmd_status;
 		}
 
-	} catch ( Exception $exception ) {
+	} catch ( \Exception $exception ) {
 		echo "\nAborting because of error: {$exception->getMessage()} \n";
 		$status = 1;
 

@@ -17,6 +17,10 @@ on:
     - tests/e2e/**
     - playwright.config.js
     - .github/workflows/e2e-tests.yml
+    # Dependency bumps (Playwright, @wordpress/scripts) change what the specs run against.
+    - .nvmrc
+    - package.json
+    - package-lock.json
   workflow_dispatch: {}
 
 concurrency:
@@ -78,6 +82,15 @@ jobs:
         node-version-file: .nvmrc
         cache: npm
 
+    - name: Hash the workspace manifests
+      id: npm-manifests
+      # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
+      # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
+      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      run: |
+        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
     - name: Cache node_modules
       id: node-modules-cache
       uses: actions/cache@v4
@@ -85,12 +98,8 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        # Includes package.json (root + every workspace), not just the
-        # lockfile: a manifest edited without a matching lockfile update
-        # must invalidate the cache too, so `npm ci` runs and rejects the
-        # mismatch instead of a stale cache hit silently skipping install
-        # (and any changed lifecycle scripts) entirely.
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+        # Includes the manifests, so a package.json edit without a lockfile update reaches `npm ci`, which rejects it.
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json') }}-${{ steps.npm-manifests.outputs.hash }}
 
     - name: Install dependencies
       run: |

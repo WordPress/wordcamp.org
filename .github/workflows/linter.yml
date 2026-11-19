@@ -125,6 +125,7 @@ jobs:
         # `github.base_ref` is only set on pull requests; a push compares against the commit before it.
         BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.event.before }}
       run: |
-        # Load the ruleset even when no PHP file changed, so a broken phpcs.xml.dist fails.
-        ruleset=$( public_html/wp-content/mu-plugins/vendor/bin/phpcs --standard=./phpcs.xml.dist -e ) || { echo "$ruleset"; exit 1; }
+        # Lint a one-line file even when no PHP file changed, so a broken phpcs.xml.dist fails. Listing the sniffs
+        # with `-e` isn't enough: some bad settings only fail once a file is checked.
+        echo '<?php' | public_html/wp-content/mu-plugins/vendor/bin/phpcs --standard=./phpcs.xml.dist -q -
         php .github/bin/phpcs-branch.php

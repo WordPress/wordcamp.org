@@ -52,9 +52,14 @@ export const STATUS_INTENTS: Record< string, Intent > = {
 /**
  * Every company, with only what the list shows. The endpoint lists published posts unless told otherwise, which
  * these never are. One object, since core-data caches by query.
+ *
+ * Its pages load at once, each its own query, so they're ordered by ID, which no two records share: by date, a
+ * record could fall on two pages, or on none. Newest first, as by date.
  */
 export const COMPANIES_QUERY = {
 	status: [ ANY, TRASH ],
+	orderby: 'id',
+	order: 'desc',
 	per_page: -1,
 	_fields: [
 		'id',
@@ -70,10 +75,13 @@ export const COMPANIES_QUERY = {
 };
 
 /**
- * Every sponsorship, with only what the list of events shows, its company's name, status and flags included.
+ * Every sponsorship, with only what the list of events shows, its company's name, status and flags included. In
+ * the order of the companies, for the same reason.
  */
 export const SPONSORSHIPS_QUERY = {
 	status: [ ANY, TRASH ],
+	orderby: 'id',
+	order: 'desc',
 	per_page: -1,
 	_fields: [
 		'id',

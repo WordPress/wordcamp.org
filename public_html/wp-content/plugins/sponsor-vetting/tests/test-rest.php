@@ -253,7 +253,12 @@ class Test_Rest extends Database_TestCase {
 				'meta_input'  => array( '_sv_sponsor_replied' => 1 ),
 			)
 		);
-		$list    = function (): array {
+		/**
+		 * Lists the sponsorships as the list of events asks for them, from a cold cache.
+		 *
+		 * @return array The rows, and how many queries the request took.
+		 */
+		$list = function (): array {
 			wp_cache_flush();
 
 			$before   = get_num_queries();
@@ -270,7 +275,14 @@ class Test_Rest extends Database_TestCase {
 
 			return array( $response->get_data(), get_num_queries() - $before );
 		};
-		// Dated camps are named after their post, so their sites needn't exist.
+		/**
+		 * Creates a dated camp and a sponsorship for it. A dated camp is named after its post, so its site needn't
+		 * exist.
+		 *
+		 * @param int $blog_id    The camp site.
+		 * @param int $company_id The sponsorship's company, or 0.
+		 * @return int The sponsorship.
+		 */
 		$sponsor = function ( int $blog_id, int $company_id ): int {
 			self::factory()->post->create(
 				array(
@@ -296,7 +308,7 @@ class Test_Rest extends Database_TestCase {
 				array(
 					'id'              => $first,
 					'company_summary' => array(
-						'name'   => 'Harbor &amp; Sons',
+						'name'   => 'Harbor & Sons',
 						'status' => 'sv-compliance-req',
 						'flags'  => array(
 							array(

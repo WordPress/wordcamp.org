@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
-import { getCompanyFields, getSponsorshipFields } from '../fields';
+import { getCompanyFields, getName, getSponsorshipFields } from '../fields';
 import type { Company, Sponsorship, Statuses } from '../types';
 import {
 	COMPANY_LAYOUT_CHOICES,
@@ -109,12 +109,12 @@ const VETTED: Company = {
  * Gets what a sponsorship shows of its company, as the server sends it.
  *
  * @param id The company's ID, or 0.
- * @return The company's name as it's stored, its status and flags, or null for none.
+ * @return The company's name, its status and flags, or null for none.
  */
 function summarize( id: number ): Sponsorship[ 'company_summary' ] {
 	const company = [ ...COMPANIES, VETTED ].find( ( item ) => item.id === id );
 
-	return company ? { name: company.title.raw, status: company.status, flags: company.flags } : null;
+	return company ? { name: getName( company ), status: company.status, flags: company.flags } : null;
 }
 
 /**

@@ -636,8 +636,8 @@ function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array
  *
  * @param int              $sponsorship_id The sponsorship.
  * @param \WP_REST_Request $request        The request.
- * @return array|null The company's `name` as it's stored, its `status`, and its `flags` as get_company_flag_items()
- *                    lists them, or null for a sponsorship without a company.
+ * @return array|null The company's `name`, its `status`, and its `flags` as get_company_flag_items() lists them,
+ *                    or null for a sponsorship without a company.
  */
 function get_rest_company_summary( int $sponsorship_id, \WP_REST_Request $request ): ?array {
 	$summaries = remember_for_page( $request, 'company_summaries', $sponsorship_id, __NAMESPACE__ . '\get_company_summaries' );

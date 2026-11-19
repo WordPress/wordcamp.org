@@ -279,8 +279,8 @@ function get_events( array $blog_ids ): array {
  * Gets the name, status and flags of the companies of sponsorships, with one query for the companies.
  *
  * @param int[] $sponsorship_ids The sponsorships.
- * @return array[] Each company's `name` as it's stored, its `status`, and its `flags` as get_company_flag_items()
- *                 lists them, keyed by company; only companies that exist.
+ * @return array[] Each company's `name`, its `status`, and its `flags` as get_company_flag_items() lists them,
+ *                 keyed by company; only companies that exist.
  */
 function get_company_summaries( array $sponsorship_ids ): array {
 	$company_ids = array_values( array_unique( array_filter( array_map( static fn( int $id ): int => (int) get_post_field( 'post_parent', $id ), $sponsorship_ids ) ) ) );
@@ -293,7 +293,7 @@ function get_company_summaries( array $sponsorship_ids ): array {
 
 		if ( $company && COMPANY_POST_TYPE === $company->post_type ) {
 			$summaries[ $company_id ] = array(
-				'name'   => $company->post_title,
+				'name'   => decode_name( $company->post_title ),
 				'status' => $company->post_status,
 				'flags'  => get_company_flag_items( $company_id ),
 			);

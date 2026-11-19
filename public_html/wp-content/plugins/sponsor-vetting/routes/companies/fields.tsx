@@ -328,7 +328,7 @@ export function getSponsorStatus(
  * Gets who a sponsorship is from: its company or, before it has one, the sponsor as its event named it.
  *
  * @param sponsorship The sponsorship, whose own name is the sponsor's followed by the event's.
- * @param company     Its company, if it has one, with its name as it's stored.
+ * @param company     Its company, if it has one.
  * @return The name.
  */
 export function getSponsorName(
@@ -336,7 +336,7 @@ export function getSponsorName(
 	company?: Pick< CompanySummary, 'name' > | null
 ): string {
 	if ( company ) {
-		return decodeEntities( company.name );
+		return company.name;
 	}
 
 	const name = getName( sponsorship );

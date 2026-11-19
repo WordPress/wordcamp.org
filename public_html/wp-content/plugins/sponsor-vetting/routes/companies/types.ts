@@ -75,7 +75,7 @@ export type Event = {
 };
 
 /**
- * What the list of events shows of a sponsorship's company: its name as it's stored, its status and its flags.
+ * What the list of events shows of a sponsorship's company: its name, its status and its flags.
  */
 export type CompanySummary = {
 	name: string;

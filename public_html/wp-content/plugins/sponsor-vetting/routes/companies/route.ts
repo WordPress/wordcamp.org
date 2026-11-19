@@ -31,8 +31,10 @@ export const route = {
 				? [ loadCompanies, loadSponsorships ]
 				: [ loadSponsorships, loadCompanies ];
 
-		// The list shows its own error, so the other still loads if it fails.
-		void first().then( then, then );
+		// Each list shows its own error, so the other still loads if one fails.
+		first()
+			.then( then, then )
+			.catch( () => undefined );
 	},
 
 	/*

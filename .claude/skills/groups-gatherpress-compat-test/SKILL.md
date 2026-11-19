@@ -41,9 +41,7 @@ browser interaction, cross-plugin capability leaks, exploratory checks.
   match `groups-site-*` classes only the theme emits, so changes confined to
   either used to skip E2E. When a spec starts depending on a new path, add it
   there in the same PR.
-  Covers the anonymous front page, an author creating an event through the
-  real UI, per-event messaging, the auto-publish-notification email, the
-  member directory, and Reply → Cancel on a group news post's comment form.
+  The specs in `tests/e2e/` are the list of what it covers.
   Accounts (all `password`) are created by the user-setup step in
   `.github/workflows/e2e-tests.yml`: `organiser1`–`11` (editor tier),
   `eventorganiser1`–`7` (author tier), `member1`. **Every test that logs in
@@ -148,10 +146,11 @@ which tests publish through the same hook.
 - **Find every pinned copy of the version** (there is no single source of
   truth):
   `grep -rln "<old-version>" . --include="*.yml" --include="*.php" --include="*.md" --include="*.sh" | grep -v "plugins/gatherpress"`.
-  At the 0.35.0 bump: `.github/workflows/e2e-tests.yml`,
-  `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`
-  (already stale at an older version than the workflows, so don't assume
-  they agree), and this skill's install commands below.
+  Expect at least `.github/workflows/e2e-tests.yml`,
+  `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`,
+  the rollout snippet in `GROUPS.md`, and this skill's install commands
+  below. They have drifted apart before, so check each rather than assuming
+  they agree.
 
 ## 1. Environment setup
 
@@ -743,7 +742,6 @@ current status before treating any as new:
 
 | Symptom | Exercised by | Notes |
 |---|---|---|
-| Join/leave silently 403s via the UI (front-end nonce lookup finds nothing) | Section 3 join/leave | Front-end only; REST works with a valid nonce (section 2). |
 | `/members` fully public | Section 5 | Open product/privacy question, not a bug in itself. |
 | `my-events` empty for a creator who never RSVP'd | Section 3 as an event creator | RSVP-based by design; confirm it still matches the product decision. |
 | A departed member's RSVP still in `wp_comments` with `comment_approved = trash` | Section 3 leave-group, then inspect the comment rows | Expected. `Leave_Cleanup\cancel_future_rsvps()` uses `wp_delete_comment()` without force, matching GatherPress's `no_status` path (`Rsvp\Storage::save()`), so with trash enabled (default) it trashes. The seat is released either way (RSVP counts read approved comments only). `deleted_comment` doesn't fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied. Past RSVPs kept on purpose (attendance history). |

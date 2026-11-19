@@ -339,20 +339,24 @@ class CampTix_Admin_Tools {
 			if ( empty( $_POST['tix_notify_body'] ) )
 				$errors[] = __( 'Please enter the e-mail body.', 'wordcamporg' );
 
-			if ( empty( $_POST['tix-notify-segment-query'] ) )
+			$match = $_POST['tix-notify-segment-match'] ?? '';
+			if ( empty( $match ) ) {
+				$errors[] = __( 'Please select a segment match mode', 'wordcamporg' );
+			}
+
+			$conditions = json_decode( $_POST['tix-notify-segment-query'] ?? '', true );
+			if ( ! is_array( $conditions ) || count( $conditions ) < 1 ) {
 				$errors[] = __( 'At least one segment condition must be defined.', 'wordcamporg' );
+			}
 
-			if ( empty( $_POST['tix-notify-segment-match'] ) )
-				$errors[] = __( 'Please select a segment match mode' );
+			// Only look recipients up for a complete segment; the errors above already explain an incomplete one.
+			$recipients = array();
+			if ( ! empty( $match ) && is_array( $conditions ) && count( $conditions ) > 0 ) {
+				$recipients = $this->plugin->get_segment( $match, $conditions );
 
-			$conditions = json_decode( $_POST['tix-notify-segment-query'], true );
-			if ( ! is_array( $conditions ) || count( $conditions ) < 1 )
-				$errors[] = __( 'At least one segment condition must be defined.', 'wordcamporg' );
-
-			$recipients = $this->plugin->get_segment( $_POST['tix-notify-segment-match'], $conditions );
-
-			if ( count( $recipients ) < 1 ) {
-				$errors[] = __( 'The selected segment does not match any recipients. Please try again.', 'wordcamporg' );
+				if ( count( $recipients ) < 1 ) {
+					$errors[] = __( 'The selected segment does not match any recipients. Please try again.', 'wordcamporg' );
+				}
 			}
 
 			// If everything went well.
@@ -390,8 +394,8 @@ class CampTix_Admin_Tools {
 				}
 
 				// Keep form data.
-				$form_data['subject'] = wp_kses_post( $_POST['tix_notify_subject'] );
-				$form_data['body'] = wp_kses_post( $_POST['tix_notify_body'] );
+				$form_data['subject'] = wp_kses_post( $_POST['tix_notify_subject'] ?? '' );
+				$form_data['body']    = wp_kses_post( $_POST['tix_notify_body'] ?? '' );
 				if ( isset( $_POST['tix_notify_tickets'] ) )
 					$form_data['tickets'] = array_map( 'absint', (array) $_POST['tix_notify_tickets'] );
 			}

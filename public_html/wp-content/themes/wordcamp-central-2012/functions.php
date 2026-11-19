@@ -132,9 +132,9 @@ class WordCamp_Central_Theme {
 					return;
 				}
 
-				// Jetpack will do the is_email check for us
+				// Jetpack will do the is_email check for us, so a missing address ends up as invalid_email.
 				$jetpack_subscriptions = Jetpack_Subscriptions::init();
-				$email                 = wp_unslash( $_REQUEST['wccentral-subscribe-email'] );
+				$email                 = is_string( $_REQUEST['wccentral-subscribe-email'] ?? null ) ? wp_unslash( $_REQUEST['wccentral-subscribe-email'] ) : '';
 				$extra_data            = array(
 					'source'      => 'homepage-widget',
 					'server_data' => jetpack_subscriptions_cherry_pick_server_data(),

@@ -2376,4 +2376,123 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertStringContainsString( '€', $formatted, "EUR invoices must render with the euro sign, got: {$formatted}" );
 		$this->assertStringNotContainsString( '$', $formatted, "EUR invoices must not render with a dollar sign, got: {$formatted}" );
 	}
+
+	/**
+	 * Submit the Tools > Notify form as an administrator.
+	 *
+	 * @param array $fields Form fields, on top of the nonce and the submit flag.
+	 * @return string[] The settings error messages the form reported.
+	 */
+	protected function submit_notify_form( $fields ) {
+		global $wp_settings_errors;
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$wp_settings_errors   = array();
+		$_POST                = array_merge(
+			array(
+				'tix_notify_attendees' => '1',
+				'_wpnonce'             => wp_create_nonce( 'tix_notify_attendees' ),
+			),
+			$fields
+		);
+		$_REQUEST['_wpnonce'] = $_POST['_wpnonce'];
+
+		// The WordCamp error handler reports warnings to Slack instead of letting PHPUnit fail on them.
+		$php_errors = array();
+		set_error_handler(
+			static function ( $errno, $errstr ) use ( &$php_errors ) {
+				$php_errors[] = $errstr;
+				return true;
+			}
+		);
+
+		ob_start();
+		try {
+			self::$camptix->admin_tools->menu_tools_notify();
+		} finally {
+			ob_end_clean();
+			restore_error_handler();
+		}
+
+		$this->assertSame( array(), $php_errors, 'The notify form must not raise PHP warnings or deprecations.' );
+
+		$messages           = wp_list_pluck( get_settings_errors( 'camptix' ), 'message' );
+		$wp_settings_errors = array();
+		unset( $_REQUEST['_wpnonce'] );
+
+		return $messages;
+	}
+
+	/**
+	 * Build a Notify segment query that matches one ticket.
+	 *
+	 * @param int $ticket_id Ticket post ID.
+	 * @return string JSON, as the segment builder posts it.
+	 */
+	protected function ticket_segment_query( $ticket_id ) {
+		return wp_json_encode(
+			array(
+				array(
+					'field' => 'ticket',
+					'op'    => 'is',
+					'value' => (string) $ticket_id,
+				),
+			)
+		);
+	}
+
+	/**
+	 * A notify request without the match mode reports only that, instead of a
+	 * PHP warning plus a misleading "no recipients" error.
+	 */
+	public function test_notify_without_match_mode_reports_missing_match() {
+		$ticket_id = $this->create_ticket();
+		$this->create_attendee( $ticket_id );
+
+		$messages = $this->submit_notify_form( array(
+			'tix-notify-segment-query' => $this->ticket_segment_query( $ticket_id ),
+			'tix_notify_subject'       => 'Contributor Day',
+			'tix_notify_body'          => 'Sign up for your seat.',
+			'tix_notify_preview'       => '1',
+		) );
+
+		$this->assertSame( array( 'Please select a segment match mode' ), $messages );
+	}
+
+	/**
+	 * A notify request without any form fields reports each missing field once.
+	 */
+	public function test_notify_without_fields_reports_each_error_once() {
+		$messages = $this->submit_notify_form( array() );
+
+		$this->assertSame(
+			array(
+				'Please enter a subject line.',
+				'Please enter the e-mail body.',
+				'Please select a segment match mode',
+				'At least one segment condition must be defined.',
+			),
+			$messages
+		);
+	}
+
+	/**
+	 * A complete notify preview still counts the attendees the segment matches.
+	 */
+	public function test_notify_preview_counts_matching_attendees() {
+		$ticket_id = $this->create_ticket();
+		$this->create_attendee( $ticket_id );
+		$this->create_attendee( $ticket_id );
+
+		$messages = $this->submit_notify_form( array(
+			'tix-notify-segment-match' => 'OR',
+			'tix-notify-segment-query' => $this->ticket_segment_query( $ticket_id ),
+			'tix_notify_subject'       => 'Contributor Day',
+			'tix_notify_body'          => 'Sign up for your seat.',
+			'tix_notify_preview'       => '1',
+		) );
+
+		$this->assertSame( array( 'Your segment matched 2 recipients.' ), $messages );
+	}
 }

@@ -81,6 +81,12 @@ jobs:
         rm composer.lock || true
         composer install
 
+    - name: Hash the workspace manifests
+      id: npm-manifests
+      # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
+      # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
+      run: echo "hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )" >> "$GITHUB_OUTPUT"
+
     - name: Cache node_modules
       id: node-modules-cache
       uses: actions/cache@v4
@@ -89,7 +95,7 @@ jobs:
           node_modules
           public_html/wp-content/**/node_modules
         # Includes the manifests, so a package.json edit without a lockfile update reaches `npm ci`, which rejects it.
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json') }}-${{ steps.npm-manifests.outputs.hash }}
 
     - name: npm install and build
       run: |

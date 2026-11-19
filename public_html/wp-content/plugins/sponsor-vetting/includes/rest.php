@@ -219,6 +219,19 @@ function get_rest_fields(): array {
 			'schema' => $string,
 		),
 	);
+	$flags  = array(
+		'type'  => 'array',
+		'items' => array(
+			'type'       => 'object',
+			'properties' => array(
+				'type'    => $string,
+				'text'    => $string,
+				'url'     => $string,
+				'date'    => $string,
+				'overdue' => array( 'type' => 'boolean' ),
+			),
+		),
+	);
 	$stored = array();
 
 	foreach ( get_company_values() as $name => list( $key, $sanitize, $invalid ) ) {
@@ -245,19 +258,7 @@ function get_rest_fields(): array {
 			),
 			'flags'          => array(
 				'get'    => __NAMESPACE__ . '\get_company_flag_items',
-				'schema' => array(
-					'type'  => 'array',
-					'items' => array(
-						'type'       => 'object',
-						'properties' => array(
-							'type'    => $string,
-							'text'    => $string,
-							'url'     => $string,
-							'date'    => $string,
-							'overdue' => array( 'type' => 'boolean' ),
-						),
-					),
-				),
+				'schema' => $flags,
 			),
 			'next_event'     => array(
 				'get'    => __NAMESPACE__ . '\get_rest_next_event',
@@ -295,6 +296,18 @@ function get_rest_fields(): array {
 				'get'    => static fn( int $sponsorship_id ): int => (int) get_post_field( 'post_parent', $sponsorship_id ),
 				'update' => __NAMESPACE__ . '\link_rest_sponsorship',
 				'schema' => array( 'type' => 'integer' ),
+			),
+			// What the list of events shows of the company, so it needs no list of companies to show a sponsorship.
+			'company_summary'      => array(
+				'get'    => __NAMESPACE__ . '\get_rest_company_summary',
+				'schema' => array(
+					'type'       => array( 'object', 'null' ),
+					'properties' => array(
+						'name'   => $string,
+						'status' => $string,
+						'flags'  => $flags,
+					),
+				),
 			),
 			'suggestion'           => array(
 				'get'    => __NAMESPACE__ . '\get_rest_suggestion',
@@ -391,6 +404,72 @@ function remember( \WP_REST_Request $request, string $key, callable $compute ): 
 }
 
 /**
+ * Marks the query of a REST list, so the records it finds are kept for their fields: see keep_listed_ids().
+ *
+ * @param array $args The arguments of the list's query.
+ * @return array
+ */
+function mark_rest_list( array $args ): array {
+	$args['sv_rest_list'] = true;
+
+	return $args;
+}
+add_filter( 'rest_' . COMPANY_POST_TYPE . '_query', __NAMESPACE__ . '\mark_rest_list' );
+add_filter( 'rest_' . SPONSORSHIP_POST_TYPE . '_query', __NAMESPACE__ . '\mark_rest_list' );
+
+/**
+ * Keeps the IDs of the records a REST list found, which the controller then prepares one by one.
+ *
+ * @param \WP_Post[] $posts The records.
+ * @param \WP_Query  $query The list's query.
+ * @return \WP_Post[]
+ */
+function keep_listed_ids( array $posts, \WP_Query $query ): array {
+	if ( $query->get( 'sv_rest_list' ) ) {
+		listed_ids( (string) $query->get( 'post_type' ), array_map( 'intval', wp_list_pluck( $posts, 'ID' ) ) );
+	}
+
+	return $posts;
+}
+add_filter( 'the_posts', __NAMESPACE__ . '\keep_listed_ids', 10, 2 );
+
+/**
+ * Gets the records the last REST list of a post type found, and sets them.
+ *
+ * @param string     $post_type The post type.
+ * @param int[]|null $ids       Optional. The records to keep.
+ * @return int[]
+ */
+function listed_ids( string $post_type, ?array $ids = null ): array {
+	static $listed = array();
+
+	if ( null !== $ids ) {
+		$listed[ $post_type ] = $ids;
+	}
+
+	return $listed[ $post_type ] ?? array();
+}
+
+/**
+ * Works a value out once for the page of records a record was listed with, or for the record alone.
+ *
+ * The fields of a list are worked out one record at a time, so this is what lets a lookup cover the page at once.
+ * A record that wasn't listed, or was listed by another request, gets its own.
+ *
+ * @param \WP_REST_Request $request The request.
+ * @param string           $key     What the value is.
+ * @param int              $post_id The record.
+ * @param callable         $compute Works the value out from the records' IDs.
+ * @return mixed
+ */
+function remember_for_page( \WP_REST_Request $request, string $key, int $post_id, callable $compute ): mixed {
+	$listed = listed_ids( (string) get_post_type( $post_id ) );
+	$ids    = in_array( $post_id, $listed, true ) ? $listed : array( $post_id );
+
+	return remember( $request, $key . ':' . md5( implode( ',', $ids ) ), static fn(): mixed => $compute( $ids ) );
+}
+
+/**
  * Gets the statuses a record's status picker offers: the ones it may change to by hand.
  *
  * Approval has its own buttons, which check the company and say whose approval it is.
@@ -412,7 +491,7 @@ function get_rest_allowed_statuses( int $post_id ): array {
  * @return string The date, as `Y-m-d`, or an empty string for none.
  */
 function get_rest_next_event( int $company_id, \WP_REST_Request $request ): string {
-	$next = remember( $request, 'next_events', __NAMESPACE__ . '\get_next_events' );
+	$next = remember_for_page( $request, 'next_events', $company_id, __NAMESPACE__ . '\get_next_events' );
 
 	return isset( $next[ $company_id ] ) ? gmdate( 'Y-m-d', $next[ $company_id ]['start'] ) : '';
 }
@@ -425,7 +504,7 @@ function get_rest_next_event( int $company_id, \WP_REST_Request $request ): stri
  * @return int
  */
 function get_rest_sponsorship_count( int $company_id, \WP_REST_Request $request ): int {
-	return remember( $request, 'sponsorship_counts', __NAMESPACE__ . '\get_sponsorship_counts' )[ $company_id ] ?? 0;
+	return remember_for_page( $request, 'sponsorship_counts', $company_id, __NAMESPACE__ . '\get_sponsorship_counts' )[ $company_id ] ?? 0;
 }
 
 /**
@@ -535,7 +614,7 @@ function add_rest_note( int $post_id, mixed $note ): void {
 }
 
 /**
- * Gets the event a sponsorship is for.
+ * Gets the event a sponsorship is for, looked up once for the page it was listed with.
  *
  * @param int              $sponsorship_id The sponsorship.
  * @param \WP_REST_Request $request        The request.
@@ -543,21 +622,27 @@ function add_rest_note( int $post_id, mixed $note ): void {
  *                  as an empty string for an event without a date.
  */
 function get_rest_event( int $sponsorship_id, \WP_REST_Request $request ): array {
-	$blog_id = (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true );
+	$events = remember_for_page( $request, 'events', $sponsorship_id, static fn( array $ids ): array => get_events( get_sponsorship_blog_ids( $ids ) ) );
 
-	return remember(
-		$request,
-		'event_' . $blog_id,
-		static function () use ( $blog_id ): array {
-			$dates = get_event_dates( array( $blog_id ) )[ $blog_id ] ?? null;
-
-			return array(
-				'name' => decode_name( get_event_name( $blog_id ) ),
-				'date' => $dates ? gmdate( 'Y-m-d', $dates['start'] ) : '',
-				'end'  => $dates ? gmdate( 'Y-m-d', $dates['end'] ) : '',
-			);
-		}
+	return $events[ (int) get_post_meta( $sponsorship_id, '_sv_blog_id', true ) ] ?? array(
+		'name' => '',
+		'date' => '',
+		'end'  => '',
 	);
+}
+
+/**
+ * Gets the name, status and flags of a sponsorship's company, which the list of events shows with it.
+ *
+ * @param int              $sponsorship_id The sponsorship.
+ * @param \WP_REST_Request $request        The request.
+ * @return array|null The company's `name` as it's stored, its `status`, and its `flags` as get_company_flag_items()
+ *                    lists them, or null for a sponsorship without a company.
+ */
+function get_rest_company_summary( int $sponsorship_id, \WP_REST_Request $request ): ?array {
+	$summaries = remember_for_page( $request, 'company_summaries', $sponsorship_id, __NAMESPACE__ . '\get_company_summaries' );
+
+	return $summaries[ (int) get_post_field( 'post_parent', $sponsorship_id ) ] ?? null;
 }
 
 /**

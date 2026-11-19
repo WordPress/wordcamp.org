@@ -10,7 +10,7 @@ import { compareDays, compareEventDays, formatDay } from './dates';
 import { STATUS_INTENTS, TRASH } from './entities';
 import type { Intent } from './entities';
 import { getEventFlag } from './events';
-import type { Company, Event, Flag, Sponsorship, Statuses } from './types';
+import type { Company, CompanySummary, Event, Flag, Sponsorship, Statuses } from './types';
 
 /**
  * A status as a list offers it: its slug, or a name of the screen's own, and its label.
@@ -299,16 +299,16 @@ export function needsCompany( { company, status }: Pick< Sponsorship, 'company' 
  * it waits for, which is its company's vetting or, before that, a company. One that waits for neither is Pending:
  * its company is vetted, and a vetter has yet to approve it.
  *
- * @param sponsorship The sponsorship.
- * @param company     Its company, if it has one.
+ * @param sponsorship The sponsorship, with what it shows of its company, if it has one.
  * @param labels      The statuses' labels, keyed by status.
  * @return The status, its label, and the intent of its badge.
  */
 export function getSponsorStatus(
 	sponsorship: Sponsorship,
-	company: Company | undefined,
 	labels: Record< string, string >
 ): StatusOption & { intent: Intent } {
+	const company = sponsorship.company_summary;
+
 	if ( needsCompany( sponsorship ) ) {
 		return { value: NEEDS_COMPANY, label: __( 'Needs a company', 'wordcamporg' ), intent: 'informational' };
 	}
@@ -328,12 +328,15 @@ export function getSponsorStatus(
  * Gets who a sponsorship is from: its company or, before it has one, the sponsor as its event named it.
  *
  * @param sponsorship The sponsorship, whose own name is the sponsor's followed by the event's.
- * @param company     Its company, if it has one.
+ * @param company     Its company, if it has one, with its name as it's stored.
  * @return The name.
  */
-export function getSponsorName( sponsorship: Pick< Sponsorship, 'title' | 'event' >, company?: Company ): string {
+export function getSponsorName(
+	sponsorship: Pick< Sponsorship, 'title' | 'event' >,
+	company?: Pick< CompanySummary, 'name' > | null
+): string {
 	if ( company ) {
-		return getName( company );
+		return decodeEntities( company.name );
 	}
 
 	const name = getName( sponsorship );
@@ -346,21 +349,17 @@ export function getSponsorName( sponsorship: Pick< Sponsorship, 'title' | 'event
  * Builds the fields of the list of events, which shows each sponsorship as its sponsor at an event.
  *
  * @param statuses     The statuses of the two post types, and every status's label.
- * @param companies    The companies, for their names, statuses and flags.
  * @param sponsorships The sponsorships, for when their events are and how many wait for a company.
  * @param today        Today, as `Y-m-d`.
  * @return The fields.
  */
 export function getSponsorshipFields(
 	statuses: Statuses,
-	companies: Company[],
 	sponsorships: Sponsorship[],
 	today: string
 ): Field< Sponsorship >[] {
 	const { labels } = statuses;
-	const byId = new Map( companies.map( ( company ) => [ company.id, company ] ) );
-	const getCompany = ( { company }: Sponsorship ) => byId.get( company );
-	const getStatus = ( item: Sponsorship ) => getSponsorStatus( item, getCompany( item ), labels );
+	const getStatus = ( item: Sponsorship ) => getSponsorStatus( item, labels );
 	/*
 	 * A field is sorted by its value, and a group is headed by it: so the heading says when, the date is the day
 	 * the event starts, and these know its other days. Events that start the same day sort as the last to end.
@@ -407,7 +406,7 @@ export function getSponsorshipFields(
 			enableGlobalSearch: true,
 			enableHiding: false,
 			filterBy: false,
-			getValue: ( { item } ) => getSponsorName( item, getCompany( item ) ),
+			getValue: ( { item } ) => getSponsorName( item, item.company_summary ),
 		},
 		{
 			id: 'event',
@@ -445,7 +444,7 @@ export function getSponsorshipFields(
 			( item ) => {
 				const flag = getEventFlag( item, today );
 
-				return [ ...( flag ? [ flag ] : [] ), ...( getCompany( item )?.flags ?? [] ) ];
+				return [ ...( flag ? [ flag ] : [] ), ...( item.company_summary?.flags ?? [] ) ];
 			},
 			[ { value: 'event_soon', label: __( 'Event within a week', 'wordcamporg' ) } ]
 		),

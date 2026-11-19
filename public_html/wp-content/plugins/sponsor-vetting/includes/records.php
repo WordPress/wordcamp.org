@@ -175,16 +175,26 @@ function get_sponsorship_counts( ?array $company_ids = null ): array {
  *                 whose event has a start date.
  */
 function get_event_dates( array $blog_ids ): array {
+	return get_camp_dates( get_camp_posts( $blog_ids ) );
+}
+
+/**
+ * Gets the `wordcamp` post of camp sites, with one query for them all: the newest, for a site with more than one.
+ *
+ * @param int[] $blog_ids The camp sites.
+ * @return \WP_Post[] The posts, keyed by camp site; only sites that have one.
+ */
+function get_camp_posts( array $blog_ids ): array {
 	$blog_ids = array_values( array_unique( array_filter( array_map( 'intval', $blog_ids ) ) ) );
-	$dates    = array();
+	$camps    = array();
 
 	if ( ! $blog_ids ) {
-		return $dates;
+		return $camps;
 	}
 
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
-	$events = get_posts(
+	$posts = get_posts(
 		array(
 			'post_type'      => 'wordcamp',
 			'post_status'    => 'any',
@@ -201,18 +211,96 @@ function get_event_dates( array $blog_ids ): array {
 	);
 
 	// Oldest first, so the newest overwrites it.
-	foreach ( $events as $event ) {
-		$start = (int) get_post_meta( $event->ID, 'Start Date (YYYY-mm-dd)', true );
+	foreach ( $posts as $post ) {
+		$camps[ (int) get_post_meta( $post->ID, '_site_id', true ) ] = $post;
+	}
 
-		$dates[ (int) get_post_meta( $event->ID, '_site_id', true ) ] = array(
+	restore_current_blog();
+
+	return $camps;
+}
+
+/**
+ * Gets when the events of camps start and end.
+ *
+ * @param \WP_Post[] $camps The camps' `wordcamp` posts, keyed by camp site.
+ * @return array[] As get_event_dates() returns them.
+ */
+function get_camp_dates( array $camps ): array {
+	$dates = array();
+
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	foreach ( $camps as $blog_id => $camp ) {
+		$start = (int) get_post_meta( $camp->ID, 'Start Date (YYYY-mm-dd)', true );
+
+		$dates[ $blog_id ] = array(
 			'start' => $start,
-			'end'   => max( $start, (int) get_post_meta( $event->ID, 'End Date (YYYY-mm-dd)', true ) ),
+			'end'   => max( $start, (int) get_post_meta( $camp->ID, 'End Date (YYYY-mm-dd)', true ) ),
 		);
 	}
 
 	restore_current_blog();
 
 	return array_filter( $dates, static fn( array $event ): bool => $event['start'] > 0 );
+}
+
+/**
+ * Gets the events of camp sites as the screen shows them, with one query for them all.
+ *
+ * Named as get_wordcamp_name() names them, which would look each one up on its own site: the camp's name with the
+ * year it's in, or the site's name for a camp without a date.
+ *
+ * @param int[] $blog_ids The camp sites.
+ * @return array[] Each event's `name`, and the days it starts and ends as `date` and `end`, each `Y-m-d` or empty
+ *                 for an event without a date, keyed by camp site.
+ */
+function get_events( array $blog_ids ): array {
+	$camps  = get_camp_posts( $blog_ids );
+	$dates  = get_camp_dates( $camps );
+	$events = array();
+
+	foreach ( array_unique( array_filter( array_map( 'intval', $blog_ids ) ) ) as $blog_id ) {
+		$start = $dates[ $blog_id ]['start'] ?? 0;
+		$name  = $start ? $camps[ $blog_id ]->post_title : (string) get_blog_option( $blog_id, 'blogname' );
+		$year  = $start ? gmdate( 'Y', $start ) : '';
+
+		$events[ $blog_id ] = array(
+			'name' => decode_name( '' === $year || str_contains( $name, $year ) ? $name : "{$name} {$year}" ),
+			'date' => $start ? gmdate( 'Y-m-d', $start ) : '',
+			'end'  => $start ? gmdate( 'Y-m-d', $dates[ $blog_id ]['end'] ) : '',
+		);
+	}
+
+	return $events;
+}
+
+/**
+ * Gets the name, status and flags of the companies of sponsorships, with one query for the companies.
+ *
+ * @param int[] $sponsorship_ids The sponsorships.
+ * @return array[] Each company's `name` as it's stored, its `status`, and its `flags` as get_company_flag_items()
+ *                 lists them, keyed by company; only companies that exist.
+ */
+function get_company_summaries( array $sponsorship_ids ): array {
+	$company_ids = array_values( array_unique( array_filter( array_map( static fn( int $id ): int => (int) get_post_field( 'post_parent', $id ), $sponsorship_ids ) ) ) );
+	$summaries   = array();
+
+	_prime_post_caches( $company_ids );
+
+	foreach ( $company_ids as $company_id ) {
+		$company = get_post( $company_id );
+
+		if ( $company && COMPANY_POST_TYPE === $company->post_type ) {
+			$summaries[ $company_id ] = array(
+				'name'   => $company->post_title,
+				'status' => $company->post_status,
+				'flags'  => get_company_flag_items( $company_id ),
+			);
+		}
+	}
+
+	return $summaries;
 }
 
 /**

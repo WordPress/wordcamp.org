@@ -70,12 +70,22 @@ export const COMPANIES_QUERY = {
 };
 
 /**
- * Every sponsorship, with only what the list of events shows.
+ * Every sponsorship, with only what the list of events shows, its company's name, status and flags included.
  */
 export const SPONSORSHIPS_QUERY = {
 	status: [ ANY, TRASH ],
 	per_page: -1,
-	_fields: [ 'id', 'title', 'status', 'company', 'event', 'approved', 'good_faith', 'trashed_status' ],
+	_fields: [
+		'id',
+		'title',
+		'status',
+		'company',
+		'company_summary',
+		'event',
+		'approved',
+		'good_faith',
+		'trashed_status',
+	],
 };
 
 /**

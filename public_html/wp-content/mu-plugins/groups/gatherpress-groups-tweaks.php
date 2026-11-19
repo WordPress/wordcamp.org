@@ -98,6 +98,10 @@ function get_event_venue_post_id( int $event_id ): int {
  * so the answer is the same on every group, including one whose organizer
  * switched it off before this changed.
  *
+ * Capacity defaults to no limit, as the front-end form saves. GatherPress's
+ * default of 50 applies to any event without a capacity of its own, so Meetup
+ * imports put every RSVP past the 50th on the waiting list.
+ *
  * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
  * so the forced keys overlay the stored settings (or defaults when unset)
  * instead of replacing them.
@@ -111,6 +115,7 @@ $force_gatherpress_settings = static function ( $value ) {
 	$value['enable_anonymous_rsvp'] = 0;
 	$value['enable_open_rsvp']      = 0;
 	$value['events_url']            = 'event';
+	$value['capacity']              = 0;
 
 	return $value;
 };

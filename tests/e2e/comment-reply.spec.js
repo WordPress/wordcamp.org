@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
@@ -12,16 +12,16 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
  * placeholder and the screen-reader label) is pinned in
  * `mu-plugins/groups/tests/test-groups-site-comment-form.php`.
  *
- * Requires the `eventorganiser6` / `password` test user from the skill's
+ * Requires the `eventorganiser1` / `password` test user from the skill's
  * environment-setup step. It authors both the post and the comment, which
  * is what keeps the comment out of moderation: core auto-approves a post
  * author's comments on their own post.
  */
 test.describe( 'news post comments', () => {
+	test.use( { storageState: STORAGE_STATE.eventorganiser1 } );
+
 	test( 'Reply then Cancel puts the form back to a top-level comment', async ( { page } ) => {
 		test.slow(); // The block editor can be slow to boot on a cold local dev stack.
-
-		await login( page, 'eventorganiser6', 'password' );
 
 		// --- Publish a news post to comment on. ---------------------------
 		await page.goto( 'wp-admin/post-new.php?post_type=post' );

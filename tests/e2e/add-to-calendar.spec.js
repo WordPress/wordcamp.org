@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * The "Add to calendar" control on an event page.
@@ -10,20 +10,18 @@ const { login } = require( './utils/login' );
  * (#2028). The inner blocks now live in the template, and GatherPress swaps
  * the placeholder hrefs for the event's real calendar endpoints at render.
  *
- * Requires the `organiser7` / `password` editor-tier test user. One account
- * per test: this environment only supports a single active session per user
- * and specs run concurrently under `fullyParallel` (see utils/login.js).
+ * Requires the `organiser1` / `password` editor-tier test user.
  */
 test.describe( 'add to calendar', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-03-04'; // 2099-03-04 is a Wednesday.
 	const START = '12:00';
 
-	test( 'offers the four calendar links on an event page', async ( { page, request } ) => {
+	test( 'offers the four calendar links on an event page', async ( { page, browser } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
-
-		await login( page, 'organiser7', 'password' );
 
 		/*
 		 * Publish an event of our own rather than reading whatever the archive
@@ -76,10 +74,11 @@ test.describe( 'add to calendar', () => {
 		expect( overflow ).toBe( 0 );
 
 		/*
-		 * `request` is its own context, so these run as a logged-out visitor:
-		 * adding an event to your own calendar needs no account, and the
-		 * block's own gate is whether the event is viewable.
+		 * A context without the saved login, so these run as a logged-out
+		 * visitor: adding an event to your own calendar needs no account, and
+		 * the block's own gate is whether the event is viewable.
 		 */
+		const { request } = await browser.newContext( { storageState: { cookies: [], origins: [] } } );
 		const anonymousPage = await request.get( eventUrl );
 		expect( anonymousPage.ok() ).toBe( true );
 		const html = await anonymousPage.text();

@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * Edit mode of the shared event form, through the group-settings Events tab.
@@ -8,14 +8,16 @@ const { login } = require( './utils/login' );
  * rendered for users who cannot manage group settings, so it needs its own
  * author-tier account and event and is not covered here.
  *
- * Requires the `organiser2` (`password`) editor-tier test user, and
- * `organiser1` to exist as a group member to pick as the speaker.
+ * Requires the `organiser1` (`password`) editor-tier test user, and
+ * `organiser2` to exist as a group member to pick as the speaker.
  */
 test.describe( 'event form edit mode', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// See event-form.spec.js for why the date sits this far out.
 	const DATE = '2099-03-04';
 	const START = '12:00';
-	const SPEAKER = 'organiser1';
+	const SPEAKER = 'organiser2';
 
 	/**
 	 * Reads the event's meta through REST rather than the rendered page.
@@ -33,8 +35,6 @@ test.describe( 'event form edit mode', () => {
 
 	test( 'keeps the speakers and drops the create-only date minimum when editing', async ( { page } ) => {
 		test.slow(); // Two cold boots of the inline block editor.
-
-		await login( page, 'organiser2', 'password' );
 
 		const title = `Event form edit E2E ${ Date.now() }`;
 		await page.goto( '' );

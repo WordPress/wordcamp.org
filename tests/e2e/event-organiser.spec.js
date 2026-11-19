@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
@@ -13,10 +13,10 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
  * environment-setup step.
  */
 test.describe( 'event organizer (author role)', () => {
+	test.use( { storageState: STORAGE_STATE.eventorganiser1 } );
+
 	test( 'can create and publish an event via wp-admin, and it appears on the front page', async ( { page } ) => {
 		test.slow(); // The block editor can be slow to boot on a cold local dev stack.
-
-		await login( page, 'eventorganiser1', 'password' );
 
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );

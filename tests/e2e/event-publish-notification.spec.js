@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
 const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 const { mailcatcherUrl } = require( './utils/env' );
@@ -12,29 +12,25 @@ const { mailcatcherUrl } = require( './utils/env' );
  * carries real data; editing an already-published event afterwards does
  * not send a duplicate.
  *
- * Requires the `eventorganiser3` / `password` test user from the
+ * Requires the `eventorganiser1` / `password` test user from the
  * groups-gatherpress-compat-test skill's environment-setup step, and a
  * reachable MailCatcher instance (the local dev stack's mail sink — at
  * http://localhost:1080 unless `.env` overrides the binding; see
- * .docker/readme.md). Uses a dedicated account
- * (not `eventorganiser1`, shared by event-organiser.spec.js) since this
- * spec can run concurrently with the others under `fullyParallel` — this
- * environment only supports one active session per user, so sharing an
- * account risked one worker's login invalidating another's mid-test.
+ * .docker/readme.md).
  */
 test.describe( 'event publish notification', () => {
+	test.use( { storageState: STORAGE_STATE.eventorganiser1 } );
+
 	const MAILCATCHER_URL = mailcatcherUrl();
 
 	/**
-	 * Creates and publishes a fresh event as `eventorganiser3` via the
+	 * Creates and publishes a fresh event as `eventorganiser1` via the
 	 * wp-admin block editor, and returns its post id.
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
 	 */
 	async function createAndPublishEvent( page, title ) {
-		await login( page, 'eventorganiser3', 'password' );
-
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 

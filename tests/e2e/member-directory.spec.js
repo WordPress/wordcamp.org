@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * The member directory (`wporg/group-members` block, rendered on the
@@ -7,7 +7,11 @@ const { login } = require( './utils/login' );
  * group to hear about its events, not to be listed publicly.
  */
 test.describe( 'member directory', () => {
+	test.use( { storageState: STORAGE_STATE.member1 } );
+
 	test( 'asks logged-out visitors to log in instead of listing members', async ( { page } ) => {
+		await page.context().clearCookies();
+
 		const response = await page.goto( 'members/' );
 		expect( response.status() ).toBe( 200 );
 
@@ -22,8 +26,6 @@ test.describe( 'member directory', () => {
 	} );
 
 	test( 'lists members with correct role labels when logged in', async ( { page } ) => {
-		await login( page, 'member1', 'password' );
-
 		const response = await page.goto( 'members/' );
 		expect( response.status() ).toBe( 200 );
 
@@ -39,7 +41,6 @@ test.describe( 'member directory', () => {
 	} );
 
 	test( 'keeps the leave action in the homepage sidebar', async ( { page } ) => {
-		await login( page, 'member1', 'password' );
 		await page.goto( '' );
 
 		const sidebar = page.locator( '.groups-site-sidebar' );

@@ -37,9 +37,15 @@ module.exports = defineConfig( {
 		trace: 'retain-on-failure',
 	},
 	projects: [
+		// Logs in once per test account; the specs reuse the saved sessions.
+		{
+			name: 'setup',
+			testMatch: /auth\.setup\.js/,
+		},
 		{
 			name: 'chromium',
 			use: { ...devices[ 'Desktop Chrome' ] },
+			dependencies: [ 'setup' ],
 		},
 	],
 } );

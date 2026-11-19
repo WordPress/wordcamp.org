@@ -43,13 +43,13 @@ browser interaction, cross-plugin capability leaks, exploratory checks.
   there in the same PR.
   The specs in `tests/e2e/` are the list of what it covers.
   Accounts (all `password`) are created by the user-setup step in
-  `.github/workflows/e2e-tests.yml`: `organiser1`–`11` (editor tier),
-  `eventorganiser1`–`7` (author tier), `member1`. **Every test that logs in
-  has its own account, not just every spec file**: `organiser2`/`3`/`4` are
-  `event-form.spec.js`'s, one per test, and
-  `event-manage-messaging.spec.js` needs
-  `eventorganiser2`/`4`/`5` because its three tests run concurrently under
-  `fullyParallel`. Don't consolidate them onto shared accounts.
+  `.github/workflows/e2e-tests.yml`: `organiser1` (editor tier),
+  `eventorganiser1` (author tier) and `member1`, one per role.
+  `tests/e2e/auth.setup.js` logs each in once and the specs share that
+  session through `storageState`, so a spec never logs in itself.
+  `organiser2` never logs in: it keeps `organiser1` from being the group's
+  only organizer (which adds a step-down note to the sidebar) and is the
+  speaker `event-form-edit.spec.js` picks.
 
 ### Reading an E2E failure
 
@@ -65,12 +65,13 @@ mistaken for flakiness:
   Escape don't dismiss it. It sat over the sidebar and hung every later
   interaction. Every spec creating an event must call
   `tests/e2e/utils/dismiss-editor-onboarding.js`.
-- **Shared logins.** This environment allows one active session per user
-  (see `tests/e2e/utils/login.js`), so one worker's login can invalidate
-  another's established session mid-test; `error-context.md` shows a login
-  form instead of the editor. `login()`'s retry only covers a collision
-  during the login request itself. The only fix is one account per
-  concurrently running test, including within one spec file.
+- **Concurrent logins.** WordPress keeps all of a user's sessions in one
+  `session_tokens` user meta row and rewrites the whole row on login, so two
+  logins as the same user that overlap drop one of the sessions;
+  `error-context.md` shows a login form instead of the editor. A session
+  that already exists is safe. Reuse the saved login from
+  `tests/e2e/auth.setup.js` instead of logging in inside a spec, and never
+  log out in one: that ends the session every other spec is using.
 - **Collapsed "Event settings" panel.** The panel holding
   `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start" button is a
   `PanelBody` whose open state is a per-user preference persisted
@@ -221,7 +222,7 @@ Create one user per role tier with **both** a login password (browser pass)
 and an application password (REST pass):
 
 ```bash
-for pair in "organiser1:editor" eventorganiser{1..7}:author "member1:subscriber"; do
+for pair in "organiser1:editor" "organiser2:editor" "eventorganiser1:author" "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \

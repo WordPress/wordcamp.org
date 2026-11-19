@@ -246,19 +246,18 @@ export function useCompanyList(): RecordList< Company > {
 }
 
 /**
- * Gets the sponsorships as the list of events shows them: each with its company, which comes from the companies
- * the screen has already loaded.
+ * Gets the sponsorships as the list of events shows them: each with what it shows of its company, so the list
+ * doesn't wait for the companies.
  *
  * @return The list.
  */
 export function useSponsorshipList(): RecordList< Sponsorship > {
 	const statuses = useStatuses();
 	const { records, error } = useRecords< Sponsorship >( SPONSORSHIP, SPONSORSHIPS_QUERY );
-	const { records: companies, error: companiesError } = useRecords< Company >( COMPANY, COMPANIES_QUERY );
 	const today = getToday();
 	const fields = useMemo(
-		() => getSponsorshipFields( statuses, companies ?? [], records ?? [], today ),
-		[ statuses, companies, records, today ]
+		() => getSponsorshipFields( statuses, records ?? [], today ),
+		[ statuses, records, today ]
 	);
 
 	return useList( {
@@ -267,8 +266,8 @@ export function useSponsorshipList(): RecordList< Sponsorship > {
 		layouts: SPONSORSHIP_LAYOUTS,
 		records,
 		fields,
-		error: error ?? companiesError,
-		hasLoaded: Boolean( records && companies && statuses.hasResolved ),
+		error,
+		hasLoaded: Boolean( records && statuses.hasResolved ),
 	} );
 }
 

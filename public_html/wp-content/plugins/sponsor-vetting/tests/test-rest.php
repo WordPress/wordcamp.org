@@ -241,6 +241,113 @@ class Test_Rest extends Database_TestCase {
 	}
 
 	/**
+	 * The list of events gives each sponsorship its event and what it shows of its company, with lookups for the
+	 * page at once: a page with more events and companies takes no more queries.
+	 */
+	public function test_list_of_events_looks_up_the_page_at_once(): void {
+		$replied = self::factory()->post->create(
+			array(
+				'post_type'   => COMPANY_POST_TYPE,
+				'post_status' => 'sv-compliance-req',
+				'post_title'  => 'Harbor &amp; Sons',
+				'meta_input'  => array( '_sv_sponsor_replied' => 1 ),
+			)
+		);
+		/**
+		 * Lists the sponsorships as the list of events asks for them, from a cold cache.
+		 *
+		 * @return array The rows, and how many queries the request took.
+		 */
+		$list = function (): array {
+			wp_cache_flush();
+
+			$before   = get_num_queries();
+			$response = $this->request(
+				'GET',
+				'/sv-sponsorships',
+				array(
+					'status'  => 'any',
+					'orderby' => 'id',
+					'order'   => 'asc',
+					'_fields' => 'id,company_summary,event',
+				)
+			);
+
+			return array( $response->get_data(), get_num_queries() - $before );
+		};
+		/**
+		 * Creates a dated camp and a sponsorship for it. A dated camp is named after its post, so its site needn't
+		 * exist.
+		 *
+		 * @param int $blog_id    The camp site.
+		 * @param int $company_id The sponsorship's company, or 0.
+		 * @return int The sponsorship.
+		 */
+		$sponsor = function ( int $blog_id, int $company_id ): int {
+			self::factory()->post->create(
+				array(
+					'post_type'  => 'wordcamp',
+					'post_title' => 'Camp ' . $blog_id,
+					'meta_input' => array(
+						'_site_id'                => $blog_id,
+						'Start Date (YYYY-mm-dd)' => strtotime( '2027-03-04 UTC' ),
+					),
+				)
+			);
+
+			return $this->create_sponsorship( $blog_id, 'svs-pending', $company_id );
+		};
+
+		$first = $sponsor( 9001, $replied );
+		$none  = $sponsor( 9002, 0 );
+
+		list( $rows, $queries ) = $list();
+
+		$this->assertSame(
+			array(
+				array(
+					'id'              => $first,
+					'company_summary' => array(
+						'name'   => 'Harbor & Sons',
+						'status' => 'sv-compliance-req',
+						'flags'  => array(
+							array(
+								'type' => 'replied',
+								'text' => 'Sponsor replied',
+								'url'  => '',
+							),
+						),
+					),
+					'event'           => array(
+						'name' => 'Camp 9001 2027',
+						'date' => '2027-03-04',
+						'end'  => '2027-03-04',
+					),
+				),
+				array(
+					'id'              => $none,
+					'company_summary' => null,
+					'event'           => array(
+						'name' => 'Camp 9002 2027',
+						'date' => '2027-03-04',
+						'end'  => '2027-03-04',
+					),
+				),
+			),
+			$rows
+		);
+
+		foreach ( range( 9003, 9008 ) as $blog_id ) {
+			$sponsor( $blog_id, self::factory()->post->create( array( 'post_type' => COMPANY_POST_TYPE ) ) );
+		}
+
+		list( $rows, $more ) = $list();
+
+		$this->assertCount( 8, $rows );
+		$this->assertSame( $queries, $more );
+	}
+
+	/**
 	 * A company opens with its contact and findings, its emails and its own notes; its sponsorships are listed by
 	 * company, each with its event and its own notes.
 	 */

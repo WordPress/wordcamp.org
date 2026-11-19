@@ -74,11 +74,22 @@ export type Event = {
 	end: string;
 };
 
+/**
+ * What the list of events shows of a sponsorship's company: its name, its status and its flags.
+ */
+export type CompanySummary = {
+	name: string;
+	status: string;
+	flags: Flag[];
+};
+
 export type Sponsorship = {
 	id: number;
 	title: Title;
 	status: string;
 	company: number;
+	/** Null for a sponsorship without a company. */
+	company_summary: CompanySummary | null;
 	event: Event;
 	approved: string;
 	good_faith: boolean;

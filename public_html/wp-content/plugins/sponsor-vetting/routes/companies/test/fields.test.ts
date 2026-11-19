@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { filterSortAndPaginate } from '@wordpress/dataviews';
 import type { View } from '@wordpress/dataviews';
-import { getCompanyFields, getSponsorshipFields } from '../fields';
+import { getCompanyFields, getName, getSponsorshipFields } from '../fields';
 import type { Company, Sponsorship, Statuses } from '../types';
 import {
 	COMPANY_LAYOUT_CHOICES,
@@ -96,6 +96,28 @@ const COMPANIES: Company[] = [
 ];
 
 /**
+ * A company that's vetted, which only the sponsorships know.
+ */
+const VETTED: Company = {
+	...COMPANIES[ 0 ],
+	id: 5,
+	title: { raw: 'Vetted', rendered: 'Vetted' },
+	status: 'sv-compliant',
+};
+
+/**
+ * Gets what a sponsorship shows of its company, as the server sends it.
+ *
+ * @param id The company's ID, or 0.
+ * @return The company's name, its status and flags, or null for none.
+ */
+function summarize( id: number ): Sponsorship[ 'company_summary' ] {
+	const company = [ ...COMPANIES, VETTED ].find( ( item ) => item.id === id );
+
+	return company ? { name: getName( company ), status: company.status, flags: company.flags } : null;
+}
+
+/**
  * Builds a sponsorship of one of the companies, or of none, for an event.
  *
  * @param id      Its ID.
@@ -119,6 +141,7 @@ function sponsorship(
 		title: { raw: name, rendered: name },
 		status,
 		company,
+		company_summary: summarize( company ),
 		event: { name: event, date, end: date },
 		approved: '',
 		good_faith: false,
@@ -163,7 +186,7 @@ function listCompanies( changes: Partial< View > = {} ): string[] {
  * @return The names of the listed sponsorships, in order.
  */
 function listSponsorships( view: View ): string[] {
-	const fields = getSponsorshipFields( STATUSES, COMPANIES, SPONSORSHIPS, '2026-11-13' );
+	const fields = getSponsorshipFields( STATUSES, SPONSORSHIPS, '2026-11-13' );
 	const { data } = filterSortAndPaginate( SPONSORSHIPS, view, fields );
 
 	return data.map( ( { title } ) => title.raw );
@@ -262,13 +285,7 @@ describe( 'the list of events', () => {
 			},
 			sponsorship( 8, 'Vetted at Soon', 5, 'Camp Soon', '2026-11-23' ),
 		];
-		const vetted: Company = {
-			...COMPANIES[ 0 ],
-			id: 5,
-			title: { raw: 'Vetted', rendered: 'Vetted' },
-			status: 'sv-compliant',
-		};
-		const fields = getSponsorshipFields( STATUSES, [ ...COMPANIES, vetted ], rows, '2026-11-13' );
+		const fields = getSponsorshipFields( STATUSES, rows, '2026-11-13' );
 		const read = ( id: string, item: Sponsorship ) =>
 			fields.find( ( field ) => field.id === id )?.getValue?.( { item } );
 
@@ -291,7 +308,7 @@ describe( 'the list of events', () => {
 	} );
 
 	it( 'counts the sponsorships waiting for a company in the filter that narrows to them', () => {
-		const waiting = getSponsorshipFields( STATUSES, COMPANIES, SPONSORSHIPS, '2026-11-13' ).find(
+		const waiting = getSponsorshipFields( STATUSES, SPONSORSHIPS, '2026-11-13' ).find(
 			( { id } ) => id === 'needs_company'
 		);
 		const narrowed: View = {

@@ -1,4 +1,4 @@
-const { test: setup } = require( '@playwright/test' );
+const { test: setup, expect } = require( '@playwright/test' );
 const { STORAGE_STATE } = require( './utils/accounts' );
 
 /*
@@ -18,5 +18,21 @@ for ( const [ username, statePath ] of Object.entries( STORAGE_STATE ) ) {
 		await page.waitForURL( ( url ) => ! url.pathname.endsWith( 'wp-login.php' ) );
 
 		await page.context().storageState( { path: statePath } );
+
+		// The editor's welcome guide and starter-pattern picker cover a new post, and closing them is a race.
+		const nonce = await ( await page.request.get( 'wp-admin/admin-ajax.php?action=rest-nonce' ) ).text();
+		const response = await page.request.post( 'wp-json/wp/v2/users/me', {
+			headers: { 'X-WP-Nonce': nonce },
+			data: {
+				meta: {
+					persisted_preferences: {
+						core: { enableChoosePatternModal: false },
+						'core/edit-post': { welcomeGuide: false },
+						_modified: new Date().toISOString(),
+					},
+				},
+			},
+		} );
+		expect( response.ok() ).toBe( true );
 	} );
 }

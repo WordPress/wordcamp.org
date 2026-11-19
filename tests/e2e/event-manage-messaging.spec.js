@@ -1,7 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { STORAGE_STATE } = require( './utils/accounts' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
-const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * The `wporg/event-manage` block's "Message attendees" action (#1822),
@@ -24,8 +23,6 @@ test.describe( 'event manage — message attendees', () => {
 	async function createEventAsOrganiser( page ) {
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
-
-		await dismissEditorOnboarding( page );
 
 		const title = `Messaging Test Event ${ Date.now() }`;
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();

@@ -59,12 +59,11 @@ so don't reach for `--workers=1`. Every failure writes an `error-context.md`
 moment of timeout. Read it first. These deterministic bugs were all first
 mistaken for flakiness:
 
-- **Starter-pattern dialog.** "Choose a pattern" opens on every fresh
-  `post-new.php` for a post type with starter patterns (`gatherpress_event`
-  has them). Unlike the "Welcome to the editor" guide, its Close button and
-  Escape don't dismiss it. It sat over the sidebar and hung every later
-  interaction. Every spec creating an event must call
-  `tests/e2e/utils/dismiss-editor-onboarding.js`.
+- **Editor onboarding dialogs.** "Welcome to the editor" and "Choose a
+  pattern" (`gatherpress_event` has starter patterns) open over a fresh
+  `post-new.php` and hang every later interaction. Closing them from a spec
+  is a race, so `tests/e2e/auth.setup.js` turns both off in each test
+  account's editor preferences. A new account needs to go through that setup.
 - **Concurrent logins.** WordPress keeps all of a user's sessions in one
   `session_tokens` user meta row and rewrites the whole row on login, so two
   logins as the same user that overlap drop one of the sessions;
@@ -185,9 +184,6 @@ Environment gotchas:
   Re-add named callbacks in `setUp()`.
 - `go_to( get_permalink( $id ) )` doesn't establish a singular query in this
   fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
-- If a new test account's first E2E run fails in `dismissEditorOnboarding`,
-  rerun once, and only when `error-context.md` shows the Welcome dialog
-  reinitializing.
 - `is_admin()` is true throughout the PHPUnit suite, so any gate that skips
   admin screens (GatherPress 0.36.1's `leave_password_protected_events_out()`,
   core term classes in `get_post_class()`) silently doesn't run. Call

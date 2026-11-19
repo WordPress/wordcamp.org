@@ -1,6 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
 const { STORAGE_STATE } = require( './utils/accounts' );
-const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * Reply → Cancel on a group news post.
@@ -26,8 +25,6 @@ test.describe( 'news post comments', () => {
 		// --- Publish a news post to comment on. ---------------------------
 		await page.goto( 'wp-admin/post-new.php?post_type=post' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
-
-		await dismissEditorOnboarding( page );
 
 		const title = `E2E Comment Reply ${ Date.now() }`;
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();

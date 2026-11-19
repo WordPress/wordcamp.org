@@ -1,7 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { STORAGE_STATE } = require( './utils/accounts' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
-const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 const { mailcatcherUrl } = require( './utils/env' );
 
 /**
@@ -33,8 +32,6 @@ test.describe( 'event publish notification', () => {
 	async function createAndPublishEvent( page, title ) {
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
-
-		await dismissEditorOnboarding( page );
 
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).fill( title );

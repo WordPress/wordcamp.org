@@ -25,10 +25,12 @@ defined( 'WPINC' ) || die();
 function get_allowed_transitions( string $post_type ): array {
 	if ( COMPANY_POST_TYPE === $post_type ) {
 		return array(
-			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-compliance-req' => array( 'sv-in-progress', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
-			'sv-compliant'      => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
+			'sv-needs-vetting'  => array( 'sv-in-progress', 'sv-compliance-req', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-in-progress'    => array( 'sv-compliance-req', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliance-req' => array( 'sv-in-progress', 'sv-on-hold', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			// Paused while still under review: nothing is decided, and a sponsor's silence doesn't count against it.
+			'sv-on-hold'        => array( 'sv-in-progress', 'sv-compliance-req', 'sv-compliant', 'sv-not-eligible', 'sv-inactive' ),
+			'sv-compliant'    => array( 'sv-in-progress', 'sv-needs-vetting', 'sv-not-eligible' ),
 			'sv-not-eligible'   => array( 'sv-needs-vetting', 'sv-in-progress' ),
 			'sv-inactive'       => array( 'sv-needs-vetting', 'sv-in-progress' ),
 		);
@@ -341,7 +343,9 @@ function auto_approve( int $sponsorship_id ): bool {
 }
 
 /**
- * Approves a company's pending sponsorships once it's Compliant, and tells a vetter on the screen how that went.
+ * Approves a company's pending sponsorships once it's Compliant, and tells a vetter in wp-admin how that went. Each
+ * approval, and an email that failed, is noted in the sponsorship's history too, which is where the vetting screen
+ * shows it.
  *
  * After the save, so the domains saved with the status count. Restoring a company from the trash isn't a new vetting.
  *
@@ -477,6 +481,13 @@ function apply_status_side_effects( string $new_status, string $old_status, \WP_
 		update_post_meta( $post->ID, '_sv_approved_at', time() );
 		update_post_meta( $post->ID, '_sv_approved_by', get_acting_user_id() );
 		snapshot_approved_domain( $post->ID );
+	}
+
+	// A withdrawn approval is forgotten, or it would show on, and mark the next one as given in good faith too.
+	if ( SPONSORSHIP_POST_TYPE === $post->post_type && 'svs-approved' === $old_status && 'trash' !== $new_status ) {
+		delete_post_meta( $post->ID, '_sv_approved_at' );
+		delete_post_meta( $post->ID, '_sv_approved_by' );
+		delete_post_meta( $post->ID, '_sv_good_faith' );
 	}
 }
 add_action( 'transition_post_status', __NAMESPACE__ . '\apply_status_side_effects', 10, 3 );

@@ -11,7 +11,6 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sponsor_Vetting\get_company_statuses;
-use function WordCamp\Sponsor_Vetting\register_company_meta;
 use function WordCamp\Sponsor_Vetting\register_post_types;
 use function WordCamp\Sponsor_Vetting\register_types;
 use function WordCamp\Sponsor_Vetting\set_company_domains;
@@ -27,7 +26,7 @@ defined( 'WPINC' ) || die();
  */
 class Test_Abilities extends Database_TestCase {
 	/**
-	 * Registers the post types and their meta on Central, the only site where they're in REST.
+	 * Registers the post types on Central, the only site where they're in REST.
 	 */
 	public function set_up(): void {
 		parent::set_up();
@@ -36,7 +35,6 @@ class Test_Abilities extends Database_TestCase {
 		register_types();
 		// Registered again, since an earlier test may have registered them from another site.
 		register_post_types();
-		register_company_meta();
 	}
 
 	/**

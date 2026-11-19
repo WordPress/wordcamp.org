@@ -716,7 +716,6 @@ function get_sponsorship_schema(): array {
 			'approved_domain'      => $string,
 			'website_changed'      => array( 'type' => 'boolean' ),
 			'approvable'           => $string,
-			'approval_hint'        => $string,
 			'needs_approval_email' => array( 'type' => 'boolean' ),
 			'good_faith'           => array( 'type' => 'boolean' ),
 			'conversations'        => array(
@@ -835,7 +834,7 @@ function get_company( array $input ): array|\WP_Error {
 	$company = ask_rest(
 		'GET',
 		'/wp/v2/sv-companies/' . $id,
-		array( '_fields' => 'id,title,status,meta,allowed_statuses,domains,flags,last_vetted,good_faith_due,mes,mes_options,conversations' )
+		array( '_fields' => 'id,title,status,allowed_statuses,domains,contact_first_name,contact_last_name,contact_email,gpl_findings,trademark_findings,not_eligible_until,good_faith_due,flags,last_vetted,mes,mes_options,conversations' )
 	);
 
 	if ( is_wp_error( $company ) ) {
@@ -858,7 +857,6 @@ function get_company( array $input ): array|\WP_Error {
 	}
 
 	$company = $company->get_data();
-	$meta    = $company['meta'];
 
 	return array(
 		'id'                 => $id,
@@ -867,13 +865,13 @@ function get_company( array $input ): array|\WP_Error {
 		'allowed_statuses'   => $company['allowed_statuses'],
 		'domains'            => $company['domains'],
 		'contact'            => array(
-			'first_name' => (string) $meta['_sv_contact_first_name'],
-			'last_name'  => (string) $meta['_sv_contact_last_name'],
-			'email'      => (string) $meta['_sv_contact_email'],
+			'first_name' => $company['contact_first_name'],
+			'last_name'  => $company['contact_last_name'],
+			'email'      => $company['contact_email'],
 		),
-		'gpl_findings'       => (string) $meta['_sv_gpl_findings'],
-		'trademark_findings' => (string) $meta['_sv_trademark_findings'],
-		'not_eligible_until' => (string) $meta['_sv_not_eligible_until'],
+		'gpl_findings'       => $company['gpl_findings'],
+		'trademark_findings' => $company['trademark_findings'],
+		'not_eligible_until' => $company['not_eligible_until'],
 		'good_faith_due'     => $company['good_faith_due'],
 		'last_vetted'        => $company['last_vetted'],
 		'flags'              => $company['flags'],
@@ -954,7 +952,7 @@ function get_sponsorship( array $input ): array|\WP_Error {
 	$sponsorship = ask_rest(
 		'GET',
 		'/wp/v2/sv-sponsorships/' . $id,
-		array( '_fields' => 'id,title,status,allowed_statuses,company,suggestion,event,sponsor,domain,approved,approved_domain,website_changed,approvable,approval_hint,needs_approval_email,good_faith,conversations' )
+		array( '_fields' => 'id,title,status,allowed_statuses,company,suggestion,event,sponsor,domain,approved,approved_domain,website_changed,approvable,needs_approval_email,good_faith,conversations' )
 	);
 
 	if ( is_wp_error( $sponsorship ) ) {
@@ -977,7 +975,6 @@ function get_sponsorship( array $input ): array|\WP_Error {
 		'approved_domain'      => $sponsorship['approved_domain'],
 		'website_changed'      => $sponsorship['website_changed'],
 		'approvable'           => $sponsorship['approvable'],
-		'approval_hint'        => $sponsorship['approval_hint'],
 		'needs_approval_email' => $sponsorship['needs_approval_email'],
 		'good_faith'           => $sponsorship['good_faith'],
 		'conversations'        => $sponsorship['conversations'],
@@ -1052,19 +1049,12 @@ function check_domains( array $domains ): true|\WP_Error {
  * @return array|\WP_Error The company.
  */
 function update_company( array $input ): array|\WP_Error {
-	$params = array();
-	$meta   = array(
-		'contact_first_name' => '_sv_contact_first_name',
-		'contact_last_name'  => '_sv_contact_last_name',
-		'contact_email'      => '_sv_contact_email',
-		'gpl_findings'       => '_sv_gpl_findings',
-		'trademark_findings' => '_sv_trademark_findings',
-		'not_eligible_until' => '_sv_not_eligible_until',
-	);
+	$params  = array();
+	$details = array( 'contact_first_name', 'contact_last_name', 'contact_email', 'gpl_findings', 'trademark_findings', 'not_eligible_until', 'domains', 'mes' );
 
-	foreach ( $meta as $name => $key ) {
+	foreach ( $details as $name ) {
 		if ( isset( $input[ $name ] ) ) {
-			$params['meta'][ $key ] = (string) $input[ $name ];
+			$params[ $name ] = $input[ $name ];
 		}
 	}
 
@@ -1072,17 +1062,11 @@ function update_company( array $input ): array|\WP_Error {
 		$params['title'] = (string) $input['name'];
 	}
 
-	foreach ( array( 'domains', 'mes' ) as $name ) {
-		if ( isset( $input[ $name ] ) ) {
-			$params[ $name ] = $input[ $name ];
-		}
-	}
-
 	if ( ! $params ) {
 		return new \WP_Error( 'sv_nothing_to_update', 'Give at least one detail to change.' );
 	}
 
-	// Saving cleans an address that isn't one away to nothing, which deletes the contact the company had.
+	// The endpoint refuses it too, but names only the parameter.
 	$email = (string) ( $input['contact_email'] ?? '' );
 
 	if ( '' !== $email && ! is_email( $email ) ) {

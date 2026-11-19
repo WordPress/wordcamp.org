@@ -217,6 +217,9 @@ class Test_Groups_Upload_Space extends Groups_TestCase {
 			wp_register_script( $handle, 'https://example.org/view.js', array(), '1', true );
 		}
 
+		// Drop the config an earlier test's render left on the handle.
+		wp_scripts()->add_data( $handle, 'data', '' );
+
 		localize_block_script( '', array( 'blockName' => 'wporg/group-settings' ) );
 
 		$data = (string) wp_scripts()->get_data( $handle, 'data' );

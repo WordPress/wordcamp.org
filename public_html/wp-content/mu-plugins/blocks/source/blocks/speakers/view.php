@@ -61,29 +61,31 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 							<?php echo wp_kses_post( get_the_title( $session ) ); ?>
 						</a>
 
-						<span class="wordcamp-speakers__session-info">
-							<?php if ( ! is_wp_error( $tracks ) && ! empty( $tracks ) ) : ?>
-								<?php
-									printf(
-										/* translators: 1: A date; 2: A time; 3: A location; */
-										esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
-										esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-										esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) ),
-										esc_html( $tracks[0]->name )
-									);
-								?>
+						<?php if ( $session->_wcpt_session_time ) : ?>
+							<span class="wordcamp-speakers__session-info">
+								<?php if ( ! is_wp_error( $tracks ) && ! empty( $tracks ) ) : ?>
+									<?php
+										printf(
+											/* translators: 1: A date; 2: A time; 3: A location; */
+											esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
+											esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
+											esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) ),
+											esc_html( $tracks[0]->name )
+										);
+									?>
 
-							<?php else : ?>
-								<?php
-									printf(
-										/* translators: 1: A date; 2: A time; */
-										esc_html__( '%1$s at %2$s', 'wordcamporg' ),
-										esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-										esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) )
-									);
-								?>
-							<?php endif; ?>
-						</span>
+								<?php else : ?>
+									<?php
+										printf(
+											/* translators: 1: A date; 2: A time; */
+											esc_html__( '%1$s at %2$s', 'wordcamporg' ),
+											esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
+											esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) )
+										);
+									?>
+								<?php endif; ?>
+							</span>
+						<?php endif; ?>
 					</li>
 				<?php endforeach; ?>
 			</ul>

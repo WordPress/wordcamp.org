@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * The toolbar's + New → Event opens the front-end Create event form (#2027).
@@ -10,18 +10,17 @@ const { login } = require( './utils/login' );
  * Create event button is screens down there.
  *
  * Runs as an Event Organizer (author), the narrowest role the form serves.
- * Requires the `eventorganiser7` / `password` test user, which no other spec
- * logs in as: this environment only supports one active session per user
- * (see utils/login.js).
+ * Requires the `eventorganiser1` / `password` test user.
  *
  * Follows the link's address rather than opening the menu. + New is a hover
  * menu, which is fiddly to drive and isn't what this covers.
  */
 test.describe( 'toolbar + New → Event', () => {
+	test.use( { storageState: STORAGE_STATE.eventorganiser1 } );
+
 	test( 'opens the Create event form on the home page', async ( { page } ) => {
-		// Logging in leaves the page in wp-admin, so following the link from
-		// there loads the home page.
-		await login( page, 'eventorganiser7', 'password' );
+		// Start in wp-admin, so following the link from there loads the home page.
+		await page.goto( 'wp-admin/' );
 
 		const link = page.locator( '#wp-admin-bar-new-gatherpress_event > a' );
 		const href = await link.getAttribute( 'href' );

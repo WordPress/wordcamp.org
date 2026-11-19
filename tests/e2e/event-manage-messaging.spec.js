@@ -1,42 +1,28 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
-const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * The `wporg/event-manage` block's "Message attendees" action (#1822),
  * stacked on top of the pre-existing "Message all members" action (#1821).
  *
- * Requires the `eventorganiser2` / `eventorganiser4` / `eventorganiser5`
- * (all `password`) and `member1` / `password` test users from the
- * groups-gatherpress-compat-test skill's environment-setup step. Each of
- * this file's three tests uses its own dedicated account, not just a
- * different account from OTHER spec files — this file's own three tests
- * also run concurrently against each other under `fullyParallel`, and
- * sharing one account between them hit the same session-collision failure
- * as sharing one across files (this environment only supports one active
- * session per user; see the comment in `login.js`). `login()`'s own retry
- * only covers a collision during the login request itself — it can't help
- * once a later worker's login invalidates an earlier worker's
- * already-established session mid-test.
+ * Requires the `eventorganiser1` and `member1` (both `password`) test users
+ * from the groups-gatherpress-compat-test skill's environment-setup step.
  */
 test.describe( 'event manage — message attendees', () => {
+	test.use( { storageState: STORAGE_STATE.eventorganiser1 } );
+
 	/**
-	 * Creates a fresh event as the given organizer account via the
+	 * Creates a fresh event as the logged-in organizer via the
 	 * wp-admin block editor (same flow as event-organiser.spec.js) and
 	 * returns its front-end permalink, so this spec doesn't depend on any
 	 * hand-seeded event data.
 	 *
 	 * @param {import('@playwright/test').Page} page
-	 * @param {string}                          username
 	 */
-	async function createEventAsOrganiser( page, username ) {
-		await login( page, username, 'password' );
-
+	async function createEventAsOrganiser( page ) {
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
 		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
-
-		await dismissEditorOnboarding( page );
 
 		const title = `Messaging Test Event ${ Date.now() }`;
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
@@ -79,7 +65,7 @@ test.describe( 'event manage — message attendees', () => {
 	} ) => {
 		test.slow(); // Shares the block editor's cold-boot cost from createEventAsOrganiser().
 
-		await createEventAsOrganiser( page, 'eventorganiser2' );
+		await createEventAsOrganiser( page );
 
 		await page.getByRole( 'button', { name: 'Message attendees' } ).click();
 
@@ -135,7 +121,7 @@ test.describe( 'event manage — message attendees', () => {
 	test( 'Message all members has no recipient checkboxes', async ( { page } ) => {
 		test.slow();
 
-		await createEventAsOrganiser( page, 'eventorganiser4' );
+		await createEventAsOrganiser( page );
 
 		await page.getByRole( 'button', { name: 'Message all members' } ).click();
 
@@ -150,14 +136,13 @@ test.describe( 'event manage — message attendees', () => {
 	test( 'an ordinary member sees neither messaging action', async ( { page, browser } ) => {
 		test.slow();
 
-		const organiserPage = await ( await browser.newContext() ).newPage();
-		const eventUrl = await createEventAsOrganiser( organiserPage, 'eventorganiser5' );
-		await organiserPage.close();
+		const eventUrl = await createEventAsOrganiser( page );
 
-		await login( page, 'member1', 'password' );
-		await page.goto( eventUrl );
+		const memberContext = await browser.newContext( { storageState: STORAGE_STATE.member1 } );
+		const memberPage = await memberContext.newPage();
+		await memberPage.goto( eventUrl );
 
-		await expect( page.getByRole( 'button', { name: 'Message all members' } ) ).toHaveCount( 0 );
-		await expect( page.getByRole( 'button', { name: 'Message attendees' } ) ).toHaveCount( 0 );
+		await expect( memberPage.getByRole( 'button', { name: 'Message all members' } ) ).toHaveCount( 0 );
+		await expect( memberPage.getByRole( 'button', { name: 'Message attendees' } ) ).toHaveCount( 0 );
 	} );
 } );

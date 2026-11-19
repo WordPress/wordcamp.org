@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * Every event card opens its event from anywhere on the card, including the
@@ -16,11 +16,11 @@ const { login } = require( './utils/login' );
  * Hit-testing is the point here: the markup can carry a link and still not
  * receive the click, which is exactly how the bug was missed.
  *
- * Requires the `organiser5` / `password` editor-tier test user. One account
- * per test: this environment only supports a single active session per user
- * and specs run concurrently under `fullyParallel` (see utils/login.js).
+ * Requires the `organiser1` / `password` editor-tier test user.
  */
 test.describe( 'event card clickability', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-03-04'; // 2099-03-04 is a Wednesday.
@@ -28,8 +28,6 @@ test.describe( 'event card clickability', () => {
 
 	test( "the media region of every card opens that card's event", async ( { page } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
-
-		await login( page, 'organiser5', 'password' );
 
 		/*
 		 * Publish an event of our own rather than reading whatever the archive

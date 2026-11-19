@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 const { siteOrigin } = require( './utils/env' );
 
 /**
@@ -20,13 +20,11 @@ const { siteOrigin } = require( './utils/env' );
  * rather than shown a control that will fail, and that the route itself
  * refuses a direct POST regardless of what the UI offers.
  *
- * Requires the `organiser9` and `organiser10` / `password` editor-tier test
- * users — one per test. This environment only supports a single active
- * session per user, and under `fullyParallel` the two tests below run
- * concurrently with each other as well as with other specs, so they cannot
- * share an account (see utils/login.js).
+ * Requires the `organiser1` / `password` editor-tier test user.
  */
 test.describe( 'RSVP lifecycle', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-05-06'; // 2099-05-06 is a Wednesday.
@@ -64,7 +62,6 @@ test.describe( 'RSVP lifecycle', () => {
 	test( 'a member can attend, cancel, and attend again', async ( { page } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
 
-		await login( page, 'organiser9', 'password' );
 		await publishEvent( page, `RSVP Lifecycle E2E ${ Date.now() }` );
 
 		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wp-block-button__link' );
@@ -113,10 +110,9 @@ test.describe( 'RSVP lifecycle', () => {
 		await expect( avatars ).toHaveCount( 1 );
 	} );
 
-	test( 'an anonymous visitor is sent to log in, and the route refuses them', async ( { page, request } ) => {
+	test( 'an anonymous visitor is sent to log in, and the route refuses them', async ( { page } ) => {
 		test.slow();
 
-		await login( page, 'organiser10', 'password' );
 		const eventUrl = await publishEvent( page, `RSVP Anon E2E ${ Date.now() }` );
 		const eventId = await page.locator( 'body' ).evaluate( () => {
 			return document.body.className.match( /postid-(\d+)/ )?.[ 1 ] ?? '';
@@ -124,8 +120,8 @@ test.describe( 'RSVP lifecycle', () => {
 
 		expect( eventId, 'the event page should expose its post ID on the body class' ).not.toBe( '' );
 
-		// Drop the session rather than opening a second context, so this is
-		// the same page an anonymous visitor lands on.
+		// Drop the session's cookies rather than opening a second context, so
+		// this is the same page an anonymous visitor lands on.
 		await page.context().clearCookies();
 		await page.goto( eventUrl );
 
@@ -144,7 +140,7 @@ test.describe( 'RSVP lifecycle', () => {
 		// PHPUnit asserts the status (tests/test-rest-authorization.php) —
 		// this confirms it holds over real HTTP, unauthenticated, against a
 		// running site rather than a dispatched request.
-		const response = await request.post(
+		const response = await page.request.post(
 			`${ siteOrigin() }/group/sunshine-coast-qld/wp-json/wporg-groups/v1/event/${ eventId }/rsvp`,
 			{ data: { status: 'attending' } }
 		);

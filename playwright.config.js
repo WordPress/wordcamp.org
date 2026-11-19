@@ -18,6 +18,8 @@ module.exports = defineConfig( {
 	fullyParallel: true,
 	forbidOnly: !! process.env.CI,
 	retries: process.env.CI ? 2 : 0,
+	// The CI runner has 4 CPUs; Playwright's default of half of them leaves the specs on 2 workers.
+	workers: process.env.CI ? 4 : undefined,
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		// Trailing slash matters: Playwright/URL resolution treats a
@@ -37,9 +39,15 @@ module.exports = defineConfig( {
 		trace: 'retain-on-failure',
 	},
 	projects: [
+		// Logs in once per test account; the specs reuse the saved sessions.
+		{
+			name: 'setup',
+			testMatch: /auth\.setup\.js/,
+		},
 		{
 			name: 'chromium',
 			use: { ...devices[ 'Desktop Chrome' ] },
+			dependencies: [ 'setup' ],
 		},
 	],
 } );

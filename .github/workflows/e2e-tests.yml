@@ -4,11 +4,9 @@ name: E2E Tests (Groups/GatherPress)
 # dispatch for ad-hoc runs. Scoped to these paths (rather than every PR)
 # because this stands up real docker-based provisioning (WordPress core
 # checkout, TLS cert, DB import, third-party plugin install).
-# Also runs on pushes to production, so the Playwright browser cache is saved
-# where every PR can restore it instead of each PR downloading its own copy.
 on:
   pull_request:
-    paths: &e2e-paths
+    paths:
     - public_html/wp-content/mu-plugins/wporg-groups-frontend/**
     - public_html/wp-content/mu-plugins/groups/**
     # The specs assert on this plugin's occurrence pages, and on class names
@@ -23,10 +21,6 @@ on:
     - .nvmrc
     - package.json
     - package-lock.json
-  push:
-    branches:
-    - production
-    paths: *e2e-paths
   workflow_dispatch: {}
 
 concurrency:
@@ -44,7 +38,8 @@ jobs:
     runs-on: ubuntu-latest
 
     # A normal run takes 3-6 minutes; without a limit a stalled download holds the check for 6 hours.
-    timeout-minutes: 15
+    # 20 leaves room for a run where every spec times out and retries, so its traces still upload.
+    timeout-minutes: 20
 
     env:
       # Every `docker compose` call in this job should see only the base
@@ -116,21 +111,10 @@ jobs:
           npm ci --no-audit --no-fund
         fi
 
-    - name: Get installed Playwright version
-      id: playwright-version
-      run: echo "version=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> "$GITHUB_OUTPUT"
-
-    - name: Cache Playwright browsers
-      id: playwright-cache
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
     - name: Install Playwright browsers
       # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
-      # don't need, and a slow mirror once stalled this step for over 7 minutes.
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      # don't need, and a slow mirror once stalled this step for over 7 minutes. Not cached: the download takes
+      # about 10 seconds, against 4 for a cache restore, and a cache PRs could share would need a run on production.
       run: npx playwright install chromium
 
     - name: Build all workspace assets

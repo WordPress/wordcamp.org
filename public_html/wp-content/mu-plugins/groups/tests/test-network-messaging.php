@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use WordCamp\Groups\Frontend\Member_Joined;
 use WordCamp\Groups\Messaging;
 
 defined( 'WPINC' ) || die();
@@ -221,6 +222,30 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 		$this->assertContains( 'editor@example.test', $emails );
 		$this->assertContains( 'author@example.test', $emails );
 		$this->assertContains( 'subscriber@example.test', $emails );
+	}
+
+	/**
+	 * The imported audience is the members the Meetup import added, so they
+	 * can be told their account is ready (#2408). Members who joined on their
+	 * own don't get it, even once an import has found them in the group.
+	 */
+	public function test_imported_audience_includes_only_members_the_import_added() {
+		$site_id = $this->group_sites['brisbane'];
+
+		$this->add_member( $site_id, 'subscriber', 'joined@example.test' );
+
+		$imported_id = self::factory()->user->create( array( 'user_email' => 'imported@example.test' ) );
+		Member_Joined\with_source(
+			Member_Joined\SOURCE_IMPORT,
+			static function () use ( $site_id, $imported_id ) {
+				return add_user_to_blog( $site_id, $imported_id, 'subscriber' );
+			}
+		);
+
+		$this->assertSame(
+			array( 'imported@example.test' ),
+			wp_list_pluck( Messaging\get_site_recipients( $site_id, Messaging\AUDIENCE_IMPORTED, 100 ), 'email' )
+		);
 	}
 
 	/**

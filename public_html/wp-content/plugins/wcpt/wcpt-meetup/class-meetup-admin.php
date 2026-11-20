@@ -18,6 +18,18 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 	 */
 	class Meetup_Admin extends Event_Admin {
 
+		/** Editable field linking the group to its site on events.wordpress.org. */
+		const GROUP_URL_KEY = 'GatherPress group URL';
+
+		/** The linked group site's ID. Present only for migrated groups. */
+		const GROUP_SITE_ID_KEY = '_group_site_id';
+
+		/** Group site meta written by `mu-plugins/groups/group-stats.php`. */
+		const GROUP_STATS_KEY = 'wporg_group_stats';
+
+		/** Groups-network cron hook that refreshes one site's stats, from the same file. */
+		const GROUP_REFRESH_HOOK = 'wporg_groups_refresh_site_stats';
+
 		/**
 		 * Meetup_Admin constructor.
 		 */
@@ -28,6 +40,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_meetup_api_sync', array( $this, 'meetup_api_sync' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_update_meetup_data' ) );
+			add_action( 'wcpt_metabox_save_done', array( $this, 'update_group_site_link' ) );
 			add_action( 'wcpt_metabox_value', array( $this, 'render_co_organizers_list' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'meetup_organizers_changed' ), 10, 2 );
 			add_action( 'transition_post_status', array( $this, 'maybe_update_organizers' ), 10, 3 );
@@ -242,6 +255,195 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'high'
 			);
 
+			if ( self::get_group_site( get_the_ID() ) ) {
+				add_meta_box(
+					'wcpt_meetup_gatherpress_platform',
+					__( 'Platform', 'wordcamporg' ),
+					array( $this, 'render_platform_metabox' ),
+					Meetup_Application::POST_TYPE,
+					'side',
+					'high'
+				);
+
+				add_meta_box(
+					'wcpt_meetup_gatherpress_data',
+					__( 'Group data', 'wordcamporg' ),
+					array( $this, 'render_group_data_metabox' ),
+					Meetup_Application::POST_TYPE,
+					'side',
+					'high'
+				);
+			}
+		}
+
+		/**
+		 * The live group site a tracker record is linked to, if any.
+		 *
+		 * @param int $post_id Tracker record.
+		 * @return WP_Site|null
+		 */
+		public static function get_group_site( $post_id ) {
+			$site = get_site( (int) get_post_meta( $post_id, self::GROUP_SITE_ID_KEY, true ) );
+
+			if ( ! $site || GROUPS_NETWORK_ID !== (int) $site->network_id || $site->archived || $site->deleted || $site->spam ) {
+				return null;
+			}
+
+			return $site;
+		}
+
+		/**
+		 * Find the group site a URL on events.wordpress.org points to.
+		 *
+		 * @param string $url Group URL, e.g. `https://events.wordpress.org/group/wp-joinville/`.
+		 * @return int Site ID, or 0 when the URL isn't a group's.
+		 */
+		public static function resolve_group_site( $url ) {
+			$host = wp_parse_url( $url, PHP_URL_HOST );
+
+			if ( ! $host ) {
+				return 0;
+			}
+
+			$site = get_site_by_path( $host, trailingslashit( (string) wp_parse_url( $url, PHP_URL_PATH ) ) );
+
+			if ( ! $site || GROUPS_NETWORK_ID !== (int) $site->network_id || GROUPS_ROOT_BLOG_ID === (int) $site->blog_id ) {
+				return 0;
+			}
+
+			return (int) $site->blog_id;
+		}
+
+		/**
+		 * Link the record to its group site on save, and request a stats refresh if asked.
+		 *
+		 * @param int $post_id Tracker record.
+		 */
+		public function update_group_site_link( $post_id ) {
+			if ( $this->get_event_type() !== get_post_type( $post_id ) ) {
+				return;
+			}
+
+			$url     = (string) get_post_meta( $post_id, self::GROUP_URL_KEY, true );
+			$site_id = '' === $url ? 0 : self::resolve_group_site( $url );
+
+			if ( ! $site_id ) {
+				delete_post_meta( $post_id, self::GROUP_SITE_ID_KEY );
+
+				if ( '' !== $url ) {
+					$this->active_admin_notices[] = 'invalid-group-url';
+				}
+
+				return;
+			}
+
+			update_post_meta( $post_id, self::GROUP_SITE_ID_KEY, $site_id );
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
+			if ( ! empty( $_POST['refresh_group_stats'] ) ) {
+				self::request_group_stats_refresh( $site_id );
+				$this->active_admin_notices[] = 'group-refresh-requested';
+			}
+		}
+
+		/**
+		 * Ask the groups network to rebuild a site's stats on its next cron run.
+		 *
+		 * Core drops a duplicate single event within ten minutes, so repeated
+		 * clicks queue one refresh.
+		 *
+		 * @param int $site_id Group site.
+		 */
+		public static function request_group_stats_refresh( $site_id ) {
+			switch_to_blog( GROUPS_ROOT_BLOG_ID );
+
+			try {
+				wp_schedule_single_event( time(), self::GROUP_REFRESH_HOOK, array( (int) $site_id ) );
+			} finally {
+				restore_current_blog();
+			}
+		}
+
+		/**
+		 * Render the "migrated to GatherPress" box.
+		 *
+		 * @param WP_Post $post Tracker record.
+		 */
+		public function render_platform_metabox( $post ) {
+			$site = self::get_group_site( $post->ID );
+			$url  = get_home_url( $site->blog_id, '/' );
+			?>
+			<p>
+				<span class="dashicons dashicons-yes-alt" style="color: #00a32a;" aria-hidden="true"></span>
+				<?php
+				printf(
+					/* translators: %s: date the group site was created. */
+					esc_html__( 'This community has migrated to GatherPress on %s.', 'wordcamporg' ),
+					esc_html( gmdate( 'Y-m-d', strtotime( $site->registered . ' UTC' ) ) )
+				);
+				?>
+			</p>
+			<p><a href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( untrailingslashit( preg_replace( '#^https?://#', '', $url ) ) ); ?></a></p>
+			<?php
+		}
+
+		/**
+		 * Render the group's stats from the groups network, with a "Sync now" checkbox.
+		 *
+		 * @param WP_Post $post Tracker record.
+		 */
+		public function render_group_data_metabox( $post ) {
+			$site  = self::get_group_site( $post->ID );
+			$stats = get_site_meta( $site->blog_id, self::GROUP_STATS_KEY, true );
+			$date  = static function ( $gmt ) {
+				return $gmt ? gmdate( 'Y-m-d', strtotime( $gmt . ' UTC' ) ) : '';
+			};
+
+			if ( is_array( $stats ) ) {
+				// The stats are refreshed daily, so a "next" event may have happened since.
+				$next = $stats['next_event_at'] > gmdate( 'Y-m-d H:i:s' ) ? $stats['next_event_at'] : '';
+
+				$fields = array(
+					__( 'Group location', 'wordcamporg' ) => $stats['location'],
+					__( 'Members count', 'wordcamporg' ) => $stats['members_count'],
+					__( 'Organizers usernames', 'wordcamporg' ) => implode( ', ', $stats['organizers'] ),
+					__( 'Number of past events', 'wordcamporg' ) => $stats['past_events_count'],
+					__( 'Last event on', 'wordcamporg' ) => $date( $stats['last_event_at'] ),
+					__( 'Last event RSVP count', 'wordcamporg' ) => $stats['last_event_at'] ? $stats['last_event_rsvps'] : '',
+					__( 'Next event on', 'wordcamporg' ) => $date( $next ),
+					__( 'Events in the last 12 months', 'wordcamporg' ) => $stats['events_last_12_months'],
+					__( 'Average RSVPs (last 12 months)', 'wordcamporg' ) => $stats['events_last_12_months'] ? $stats['average_rsvps'] : '',
+				);
+			}
+			?>
+			<div class="wcb submitbox">
+				<?php if ( empty( $fields ) ) : ?>
+					<div class="misc-pub-section"><?php esc_html_e( 'Not synced yet.', 'wordcamporg' ); ?></div>
+				<?php else : ?>
+					<?php foreach ( $fields as $label => $value ) : ?>
+						<div class="misc-pub-section">
+							<strong><?php echo esc_html( $label ); ?>:</strong>
+							<?php echo esc_html( '' === (string) $value ? '—' : $value ); ?>
+						</div>
+					<?php endforeach; ?>
+					<div class="misc-pub-section">
+						<?php
+						printf(
+							/* translators: %s: date and time, UTC. */
+							esc_html__( 'Last sync: %s UTC', 'wordcamporg' ),
+							esc_html( gmdate( 'Y-m-d H:i', (int) $stats['synced_at'] ) )
+						);
+						?>
+					</div>
+				<?php endif; ?>
+				<div class="misc-pub-section">
+					<label>
+						<input type="checkbox" name="refresh_group_stats" />
+						<?php esc_html_e( 'Sync now', 'wordcamporg' ); ?>
+					</label>
+				</div>
+			</div>
+			<?php
 		}
 
 		/**
@@ -597,6 +799,14 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 					'type'   => 'notice',
 					'notice' => __( 'Received invalid response code from Meetup API. Please make sure Meetup URL is correct, or try again after some time.', 'wordcamporg' ),
 				),
+				'invalid-group-url'       => array(
+					'type'   => 'notice notice-warning',
+					'notice' => __( 'The GatherPress group URL doesn\'t match a group on events.wordpress.org, so the group isn\'t marked as migrated.', 'wordcamporg' ),
+				),
+				'group-refresh-requested' => array(
+					'type'   => 'notice notice-success',
+					'notice' => __( 'Group data refresh requested. It usually updates within the hour.', 'wordcamporg' ),
+				),
 			);
 
 		}
@@ -647,7 +857,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$info_keys = array(
 				'Meetup URL'                                   => 'text',
-				'Meetup Co-organizer names'                    => 'meetup_coorganizers',
+				self::GROUP_URL_KEY                            => 'text',
+				'Meetup Co-organizer names'                  => 'meetup_coorganizers',
 				'Primary organizer WordPress.org username'     => 'text',
 				'Co-Organizers usernames (seperated by comma)' => 'text',
 				'Meetup Location (From meetup.com)'            => 'text',

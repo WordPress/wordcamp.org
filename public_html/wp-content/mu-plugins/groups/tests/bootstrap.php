@@ -50,6 +50,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__, 2 ) . '/wcorg-meetup-oauth.php';
 	require_once dirname( __DIR__ ) . '/meetup-import.php';
 	require_once dirname( __DIR__ ) . '/meetup-shared-connection.php';
+	require_once dirname( __DIR__ ) . '/group-stats.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

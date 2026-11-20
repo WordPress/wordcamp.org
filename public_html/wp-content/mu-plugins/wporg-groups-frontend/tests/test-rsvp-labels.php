@@ -4,6 +4,7 @@ namespace WordCamp\Groups\Tests;
 
 use WP_UnitTestCase;
 
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_formats;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_label;
 
 defined( 'WPINC' ) || die();
@@ -49,5 +50,20 @@ class Test_Groups_RSVP_Labels extends WP_UnitTestCase {
 	 */
 	public function test_get_count_label( int $count, bool $is_attending, string $expected ): void {
 		$this->assertSame( $expected, get_count_label( $count, $is_attending ) );
+	}
+
+	/**
+	 * The formats shipped to `view.js` render the same line as the server, at
+	 * counts other than the ones they were harvested at.
+	 */
+	public function test_shipped_formats_match_the_server_label(): void {
+		$formats = get_count_formats();
+
+		$this->assertSame( get_count_label( 0, false ), $formats['countZero'] );
+		$this->assertSame( get_count_label( 1, true ), $formats['countYouFirst'] );
+		$this->assertSame( get_count_label( 1, false ), sprintf( $formats['countSingular'], '1' ) );
+		$this->assertSame( get_count_label( 14, false ), sprintf( $formats['countPlural'], '14' ) );
+		$this->assertSame( get_count_label( 2, true ), sprintf( $formats['countYouAndOneOther'], '1' ) );
+		$this->assertSame( get_count_label( 15, true ), sprintf( $formats['countYouAndOthers'], '14' ) );
 	}
 }

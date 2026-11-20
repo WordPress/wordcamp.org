@@ -1917,6 +1917,32 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Our venue filter blanks a protected event's venue even when GatherPress
+	 * renders it, so the gate doesn't rest on GatherPress hiding it first.
+	 */
+	public function test_venue_filter_blanks_venue_markup_for_protected_event() {
+		global $post;
+
+		$public_id    = $this->create_dated_event_with_venue();
+		$protected_id = $this->create_dated_event_with_venue( 'secret-pass' );
+		$markup       = '<div class="wp-block-gatherpress-venue">Salty Spaces</div>';
+
+		wp_set_current_user( 0 );
+
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited
+		$original_post = $post;
+
+		$post = get_post( $public_id );
+		$this->assertSame( $markup, apply_filters( 'render_block_gatherpress/venue', $markup, array(), null ) );
+
+		$post = get_post( $protected_id );
+		$this->assertSame( '', apply_filters( 'render_block_gatherpress/venue', $markup, array(), null ) );
+
+		$post = $original_post;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+
+	/**
 	 * GatherPress hides a protected event's venue from a logged-out visitor,
 	 * which also keeps its venue feed out of the page head, and shows it to
 	 * an editor.

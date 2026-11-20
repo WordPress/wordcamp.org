@@ -407,15 +407,17 @@
 
 .wporg-members-tab {
 
+	// Wraps on narrow screens, so the message button doesn't squeeze search.
 	&__controls {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 16px;
 		margin-bottom: 16px;
 	}
 
 	&__search {
-		flex: 1;
+		flex: 1 1 200px;
 		max-width: 300px;
 	}
 

@@ -17,6 +17,7 @@ on:
     - tests/e2e/**
     - playwright.config.js
     - .github/workflows/e2e-tests.yml
+    - .github/bin/background.sh
     # Dependency bumps (Playwright, @wordpress/scripts) change what the specs run against.
     - .nvmrc
     - package.json
@@ -47,8 +48,35 @@ jobs:
       # dev's `docker compose up --build` rebuild from Dockerfile.php-fpm.
       COMPOSE_FILE: docker-compose.yaml
 
+    # Independent setup runs in the background; see .github/bin/background.sh.
     steps:
     - uses: actions/checkout@v4
+
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      run: |
+        repo=$( echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]' )
+        echo "WORDCAMP_TEST_IMAGE=ghcr.io/$repo/e2e-php-fpm:latest" >> "$GITHUB_ENV"
+        echo "WORDCAMP_DB_IMAGE=ghcr.io/$repo/e2e-mariadb:latest" >> "$GITHUB_ENV"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull the images and start the database
+      # Pulls the prebuilt images published by e2e-image.yml instead of
+      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
+      # former does apt-get + PHP extension compilation) on every run --
+      # see that workflow for the image builds, including the baked-in TLS
+      # cert for local hostnames.
+      #
+      # Only the database starts this early. wordcamp.test's entrypoint creates mu-plugins/blocks/build/ as root
+      # when it is missing, which would stop the npm build below from writing there.
+      run: bash .github/bin/background.sh start docker bash -c 'docker compose pull && docker compose up -d wordcamp.db'
 
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
@@ -71,20 +99,17 @@ jobs:
         restore-keys: |
           composer-${{ runner.os }}-
 
-    - name: Install PHP dependencies
+    - name: Start installing PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
       # post-install script — see composer-dev.json's installer-paths) is loaded
       # unconditionally by load-other-mu-plugins.php; without it every
       # request, including wp-cli, fatals.
-      run: |
-        rm composer.lock || true
-        composer install
+      run: bash .github/bin/background.sh start composer composer install
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Hash the workspace manifests
       id: npm-manifests
@@ -111,12 +136,11 @@ jobs:
           npm ci --no-audit --no-fund
         fi
 
-    - name: Install Playwright browsers
+    - name: Start installing the Playwright browser
       # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
       # don't need, and a slow mirror once stalled this step for over 7 minutes. Not cached: the download takes
       # about 10 seconds, against 4 for a cache restore, and a cache PRs could share would need a run on production.
-      timeout-minutes: 5
-      run: npx playwright install chromium
+      run: bash .github/bin/background.sh start playwright npx playwright install chromium
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's
@@ -136,29 +160,13 @@ jobs:
         unzip -q /tmp/wordpress.zip -d /tmp
         mv /tmp/wordpress public_html/mu
 
-    - name: Lowercase the image repository path
-      # GHCR requires lowercase image references; github.repository
-      # preserves the repo's actual casing (WordPress/wordcamp.org).
-      id: image
-      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-
-    - name: Log in to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Boot the docker environment
-      # Pulls the prebuilt images published by e2e-image.yml instead of
-      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
-      # former does apt-get + PHP extension compilation) on every run --
-      # see that workflow for the image builds, including the baked-in TLS
-      # cert for local hostnames.
-      env:
-        WORDCAMP_TEST_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
-        WORDCAMP_DB_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-mariadb:latest
-      run: docker compose up -d
+      run: |
+        bash .github/bin/background.sh wait docker
+        docker compose up -d
+
+    - name: Wait for the PHP dependencies
+      run: bash .github/bin/background.sh wait composer
 
     - name: Wait for the site to respond
       run: |
@@ -217,6 +225,11 @@ jobs:
             --post_title="$2" --post_name="$1" --post_status=publish --url="$SITE_URL"
         }
         create_page members Members
+
+    - name: Wait for the Playwright browser
+      # A slow mirror once stalled the download for over 7 minutes.
+      timeout-minutes: 5
+      run: bash .github/bin/background.sh wait playwright
 
     - name: Run Playwright tests
       run: npx playwright test

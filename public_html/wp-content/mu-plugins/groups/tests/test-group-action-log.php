@@ -536,6 +536,29 @@ class Test_Group_Action_Log extends Groups_TestCase {
 	}
 
 	/**
+	 * The Activity screen names each message audience, so a send to imported
+	 * members isn't shown as one to organizers.
+	 */
+	public function test_message_details_name_the_audience() {
+		$details = static function ( string $audience ): string {
+			return Action_Log\format_details(
+				array(
+					'action'  => 'message_queued',
+					'context' => array(
+						'audience'    => $audience,
+						'group_count' => 2,
+						'subject'     => 'Hello',
+					),
+				)
+			);
+		};
+
+		$this->assertSame( 'Organizers of 2 groups: "Hello"', $details( Messaging\AUDIENCE_ORGANIZERS ) );
+		$this->assertSame( 'All members of 2 groups: "Hello"', $details( Messaging\AUDIENCE_MEMBERS ) );
+		$this->assertSame( 'Imported members of 2 groups: "Hello"', $details( Messaging\AUDIENCE_IMPORTED ) );
+	}
+
+	/**
 	 * Starting a network export is logged.
 	 */
 	public function test_starting_an_export_is_logged() {

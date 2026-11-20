@@ -134,7 +134,7 @@ The card placeholder is a provisional treatment. The August 2026 design review d
 
 ### About content
 
-The group home shows a teaser of the group's About page between “My upcoming events” and “Upcoming events”, with a “Read more” link to the full page. The `wporg/page-content` block renders it in excerpt mode, so the prose is edited in one place. Keep newcomer content reachable from the home page this way; do not move it behind navigation alone.
+The group home shows a teaser of the group's About page between “My upcoming events” and “Upcoming events”, with a “Read more” link to the full page. “Events I attended” comes after “Upcoming events”, so a member with nothing booked still sees what's next before their history. The `wporg/page-content` block renders it in excerpt mode, so the prose is edited in one place. Keep newcomer content reachable from the home page this way; do not move it behind navigation alone.
 
 ## Minimum visual QA matrix
 

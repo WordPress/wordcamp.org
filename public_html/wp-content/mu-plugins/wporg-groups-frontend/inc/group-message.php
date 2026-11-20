@@ -53,17 +53,41 @@ function register_routes(): void {
 				'subject' => array(
 					'type'              => 'string',
 					'required'          => true,
-					'sanitize_callback' => 'sanitize_text_field',
+					'sanitize_callback' => __NAMESPACE__ . '\sanitize_subject',
 				),
 				'message' => array(
 					'type'              => 'string',
 					'required'          => true,
-					// Keeps percent-encoded links intact, as for event messages.
-					'sanitize_callback' => 'WordCamp\Groups\Frontend\Event_Email\sanitize_message',
+					'sanitize_callback' => __NAMESPACE__ . '\sanitize_plain_text',
 				),
 			),
 		)
 	);
+}
+
+/**
+ * Clean a plain-text message without HTML-encoding it.
+ *
+ * The email is `text/plain` and nothing renders it as HTML, so `&`, `<3` or a
+ * link with several query parameters must reach members as typed. The core
+ * sanitizers (and `Event_Email\sanitize_message()`, built for GatherPress's HTML
+ * template) encode entities and strip anything between `<` and `>`.
+ *
+ * @param mixed $text Raw text.
+ * @return string
+ */
+function sanitize_plain_text( $text ): string {
+	return is_string( $text ) ? trim( wp_check_invalid_utf8( $text ) ) : '';
+}
+
+/**
+ * Clean a subject: plain text on one line, so it can't add mail headers.
+ *
+ * @param mixed $subject Raw subject.
+ * @return string
+ */
+function sanitize_subject( $subject ): string {
+	return trim( preg_replace( '/[\r\n\t]+/', ' ', sanitize_plain_text( $subject ) ) );
 }
 
 /**
@@ -124,8 +148,15 @@ function send_batch( string $subject, string $message, int $offset ): int {
 		)
 	);
 
-	if ( count( $users ) === BATCH_SIZE ) {
-		wp_schedule_single_event( time(), CRON_HOOK, array( $subject, $message, $offset + BATCH_SIZE ) );
+	if ( count( $users ) === BATCH_SIZE && ! wp_schedule_single_event( time(), CRON_HOOK, array( $subject, $message, $offset + BATCH_SIZE ) ) ) {
+		trigger_error(
+			sprintf(
+				'Could not schedule the next batch of a group message on site %d; members after offset %d were not emailed.',
+				get_current_blog_id(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Internal log message, not HTML output.
+				$offset + BATCH_SIZE // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Internal log message, not HTML output.
+			),
+			E_USER_WARNING
+		);
 	}
 
 	// One query for the batch's opt-in meta, instead of one per member.
@@ -141,7 +172,8 @@ function send_batch( string $subject, string $message, int $offset ): int {
 		home_url( '/' )
 	);
 
-	$sent = 0;
+	$sent   = 0;
+	$failed = 0;
 
 	foreach ( $users as $user ) {
 		if ( ! is_email( $user->user_email ) || ! User::get_instance()->has_event_updates_opt_in( (int) $user->ID ) ) {
@@ -153,7 +185,21 @@ function send_batch( string $subject, string $message, int $offset ): int {
 		// An array, as in `RSVP_Confirmation\send_email()`, so a comma in a display name can't add a recipient.
 		if ( wp_mail( array( $to ), $subject, $body, array( 'Content-Type: text/plain; charset=UTF-8' ) ) ) {
 			++$sent;
+		} else {
+			++$failed;
 		}
+	}
+
+	if ( $failed ) {
+		trigger_error(
+			sprintf(
+				'A group message on site %d failed to send to %d member(s) in the batch at offset %d.',
+				get_current_blog_id(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Internal log message, not HTML output.
+				$failed, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Internal log message, not HTML output.
+				$offset // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Internal log message, not HTML output.
+			),
+			E_USER_WARNING
+		);
 	}
 
 	return $sent;

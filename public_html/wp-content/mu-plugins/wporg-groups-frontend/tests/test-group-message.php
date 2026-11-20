@@ -83,6 +83,44 @@ class Test_Groups_Group_Message extends Groups_TestCase {
 	}
 
 	/**
+	 * The email is plain text, so the organizer's characters arrive as typed:
+	 * no HTML entities, and nothing between `<` and `>` is lost.
+	 */
+	public function test_message_text_arrives_as_typed() {
+		$member = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+		update_user_meta( $member->ID, get_scoped_opt_in_meta_key(), '1' );
+
+		$message = "Q&A night, we <3 questions\nhttps://example.org/?a=1&b=2&lang=en\nx > y";
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->post_message(
+			array(
+				'subject' => "Q&A <tonight>\r\nBcc: x@example.test",
+				'message' => $message,
+			)
+		);
+
+		// The subject is kept on one line, so the "Bcc:" can't become a header.
+		$args = array( 'Q&A <tonight> Bcc: x@example.test', $message, 0 );
+		$this->assertNotFalse( wp_next_scheduled( CRON_HOOK, $args ) );
+
+		$sent    = array();
+		$capture = static function ( $short_circuit, $atts ) use ( &$sent ) {
+			$sent[ $atts['to'][0] ] = $atts;
+			return true;
+		};
+
+		add_filter( 'pre_wp_mail', $capture, 10, 2 );
+		do_action_ref_array( CRON_HOOK, $args );
+		remove_filter( 'pre_wp_mail', $capture, 10 );
+
+		$mail = array_values( array_filter( $sent, static fn( $to ) => str_contains( $to, $member->user_email ), ARRAY_FILTER_USE_KEY ) )[0];
+
+		$this->assertSame( $args[0], $mail['subject'] );
+		$this->assertStringStartsWith( $message . "\n", $mail['message'] );
+	}
+
+	/**
 	 * A full batch schedules the next one, so large groups are mailed in steps.
 	 */
 	public function test_full_batch_schedules_the_next() {

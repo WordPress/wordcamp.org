@@ -43,7 +43,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Hash the workspace manifests
       id: npm-manifests
@@ -102,9 +101,9 @@ jobs:
         options: >-
           --tmpfs /var/lib/mysql
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=10s
+          --health-interval=2s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=15
 
     steps:
     - uses: actions/checkout@v4
@@ -159,14 +158,14 @@ jobs:
       uses: actions/cache@v4
       with:
         path: public_html/wp-content/mu-plugins/wporg-groups-frontend/build
-        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
+        # Only the build's inputs, so a change to the PHP or the tests doesn't rebuild.
+        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/src/**') }}
 
     - name: Set up Node.js
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Hash the workspace manifests
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'

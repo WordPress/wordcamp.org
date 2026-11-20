@@ -233,8 +233,14 @@ final class Context {
 	public static function selector( int $post_id ): string {
 		$current      = self::recurrence_id();
 		$occurrences  = Occurrences::around( $post_id, 6 );
-		$has_upcoming = ! empty( $occurrences );
 		$items        = '';
+
+		/*
+		 * The next date that hasn't ended, scheduled ones first. Dates left after
+		 * "End series after" are kept as cancelled rows; they aren't upcoming.
+		 */
+		$next         = Occurrences::select_for_series( $post_id );
+		$has_upcoming = $next && 'scheduled' === $next->status && $next->datetime_end_gmt >= current_time( 'mysql', true );
 
 		if ( ! in_array( $current, wp_list_pluck( $occurrences, 'recurrence_id' ), true ) ) {
 			$occurrences[] = self::$occurrence;

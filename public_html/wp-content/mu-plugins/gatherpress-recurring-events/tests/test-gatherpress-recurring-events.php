@@ -572,7 +572,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
 		global $wpdb;
 
-		$post_id = $this->create_projected_weekly_series( 'Weekly series' );
+		$post_id = $this->create_projected_weekly_series( 'Weekly series', 9 );
 		$past    = Occurrences::all( $post_id, 'past', 1 );
 		$this->assertCount( 1, $past, 'The series should have one past date.' );
 		Context::set( $past[0] );
@@ -582,10 +582,29 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			$this->assertStringContainsString( 'This event has ended.', $selector );
 			$this->assertStringNotContainsString( 'This event series has ended.', $selector );
 
+			// A break longer than the selector's six dates: the series still meets after it.
+			$upcoming = Occurrences::all( $post_id, 'upcoming' );
+			$this->assertCount( 8, $upcoming, 'The series should have eight upcoming dates.' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query(
 				$wpdb->prepare(
-					'DELETE FROM %i WHERE series_post_id = %d AND datetime_start_gmt >= %s',
+					"UPDATE %i SET status = 'cancelled' WHERE series_post_id = %d AND datetime_start_gmt >= %s AND datetime_start_gmt < %s",
+					Database::occurrences_table(),
+					$post_id,
+					current_time( 'mysql', true ),
+					end( $upcoming )->datetime_start_gmt
+				)
+			);
+
+			$selector = Context::selector( $post_id );
+			$this->assertStringContainsString( 'This event has ended.', $selector );
+			$this->assertStringNotContainsString( 'This event series has ended.', $selector );
+
+			// Ending the series keeps its later dates as cancelled rows.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = 'cancelled' WHERE series_post_id = %d AND datetime_start_gmt >= %s",
 					Database::occurrences_table(),
 					$post_id,
 					current_time( 'mysql', true )
@@ -2025,9 +2044,10 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	 * occurrences projected.
 	 *
 	 * @param string $title Event title.
+	 * @param int    $count Number of dates in the series.
 	 * @return int Event post ID.
 	 */
-	private function create_projected_weekly_series( string $title ): int {
+	private function create_projected_weekly_series( string $title, int $count = 6 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'  => $title,
@@ -2048,7 +2068,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
 		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
 		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
-		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 6 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', $count );
 		wp_update_post(
 			array(
 				'ID'          => $post_id,

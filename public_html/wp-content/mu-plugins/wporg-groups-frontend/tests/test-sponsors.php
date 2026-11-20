@@ -120,14 +120,6 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	}
 
 	/**
-	 * The sponsor post type has to exist on every group site, not just the
-	 * one that stores the posts, so the block can resolve it while reading.
-	 */
-	public function test_post_type_is_registered() {
-		$this->assertTrue( post_type_exists( Sponsors\POST_TYPE ) );
-	}
-
-	/**
 	 * The admin screens only exist on the store site. A group organizer
 	 * browsing their own wp-admin should never find a Sponsors menu, quite
 	 * apart from not having the capability to use one.

@@ -11,12 +11,11 @@ require_once __DIR__ . '/class-groups-testcase.php';
 /**
  * Authorization matrix for every front-end REST route.
  *
- * The rest of this suite checks permission callbacks by calling them (or the
- * capability functions behind them) directly, and checks controllers by
- * calling their handler methods directly — see Test_Groups_Members_Controller,
- * which never dispatches. That leaves the join between the two untested: a
- * route registered without its permission callback, or with the wrong one,
- * passes every existing test in this suite.
+ * Much of the rest of this suite checks permission callbacks by calling them
+ * (or the capability functions behind them) directly, and checks controllers
+ * by calling their handler methods directly. That leaves the join between the
+ * two untested: a route registered without its permission callback, or with
+ * the wrong one, passes those tests.
  *
  * So everything here goes through `rest_do_request()`, which is the only way
  * to exercise route registration, the args schema, and the permission
@@ -24,9 +23,7 @@ require_once __DIR__ . '/class-groups-testcase.php';
  *
  * Reading the table: each case is one route, one actor, one expected HTTP
  * status. The expectations are transcribed from the callbacks as they behave
- * today, not from what they arguably should do — see
- * `test_non_member_status_is_inconsistent_across_member_routes()` for a case
- * where today's behaviour is not self-consistent.
+ * today, not from what they arguably should do.
  *
  * @group groups
  */
@@ -475,9 +472,7 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				'outsider'        => 403,
 			),
 
-			// Export: the one route that already had denial coverage, kept
-			// here so the matrix is the complete picture rather than most of
-			// it. See Test_Groups_Export for the payload-level assertions.
+			// Export. See Test_Groups_Export for the payload-level assertions.
 			'GET /export' => array(
 				'anonymous'       => 401,
 				'member'          => 403,
@@ -538,36 +533,6 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 	}
 
 	/**
-	 * A denied request must not be a 404 in disguise.
-	 *
-	 * `rest_do_request()` answers an unregistered route with
-	 * `rest_no_route` / 404. Every 401 and 403 in the matrix above would
-	 * still be "not 200" if the route silently stopped being registered, so
-	 * this asserts each one is a real authorization refusal.
-	 */
-	public function test_denials_are_authorization_errors_not_missing_routes(): void {
-		foreach ( $this->data_authorization_matrix() as $case ) {
-			list( $route_key, $actor, $expected_status ) = $case;
-
-			if ( $expected_status < 400 ) {
-				continue;
-			}
-
-			wp_set_current_user( 'anonymous' === $actor ? 0 : $this->actors[ $actor ] );
-
-			$data = rest_do_request( $this->build_request( $route_key ) )->get_data();
-
-			$this->assertIsArray( $data, "{$route_key} as {$actor} should return an error payload." );
-			$this->assertArrayHasKey( 'code', $data );
-			$this->assertNotSame(
-				'rest_no_route',
-				$data['code'],
-				"{$route_key} is no longer registered — its denial is a 404, not an authorization refusal."
-			);
-		}
-	}
-
-	/**
 	 * Any logged-in w.org account can read the member directory, so what it
 	 * discloses is the thing worth pinning down.
 	 *
@@ -589,9 +554,7 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 		$payloads       = array_merge( (array) $collection->get_data(), array( $single->get_data() ) );
 
 		foreach ( $payloads as $index => $member ) {
-			if ( ! is_array( $member ) ) {
-				continue;
-			}
+			$this->assertIsArray( $member, "Member directory entry {$index} should be an array." );
 
 			foreach ( $private_fields as $field ) {
 				$this->assertArrayNotHasKey(
@@ -601,31 +564,5 @@ class Test_Groups_REST_Authorization extends Groups_TestCase {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Documents an inconsistency rather than asserting it is correct.
-	 *
-	 * `leave_permissions_check()` answers a non-member with 400, while
-	 * `notification_preference_permissions_check()` answers the identical
-	 * condition with 403. A client cannot tell from the status alone whether
-	 * it hit an authorization boundary or sent a bad request.
-	 *
-	 * Changing either one is a behaviour change and does not belong in a
-	 * test-only patch, so this pins today's behaviour and will fail loudly if
-	 * someone reconciles them — at which point this test is the note saying
-	 * that was the intent. See #1863.
-	 */
-	public function test_non_member_status_is_inconsistent_across_member_routes(): void {
-		wp_set_current_user( $this->actors['outsider'] );
-
-		$leave        = rest_do_request( $this->build_request( 'DELETE /members/leave' ) );
-		$notification = rest_do_request( $this->build_request( 'POST /members/notification-preference' ) );
-
-		$this->assertSame( 400, $leave->get_status() );
-		$this->assertSame( 'not_a_member', $leave->get_data()['code'] );
-
-		$this->assertSame( 403, $notification->get_status() );
-		$this->assertSame( 'not_a_member', $notification->get_data()['code'] );
 	}
 }

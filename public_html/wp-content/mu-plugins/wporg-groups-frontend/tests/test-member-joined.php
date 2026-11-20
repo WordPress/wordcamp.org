@@ -254,9 +254,7 @@ class Test_Groups_Member_Joined extends Groups_TestCase {
 
 		$this->assertSame( '', Member_Joined\describe_join( $user_id ) );
 
-		if ( ! defined( '\WordCamp\Groups\Meetup_Import\IMPORTED_USERS_OPTION' ) ) {
-			$this->markTestIncomplete( 'The Meetup import is not loaded in this suite.' );
-		}
+		$this->assertTrue( defined( '\WordCamp\Groups\Meetup_Import\IMPORTED_USERS_OPTION' ), 'The Meetup import should be loaded in this suite.' );
 
 		update_option( \WordCamp\Groups\Meetup_Import\IMPORTED_USERS_OPTION, array( $user_id ) );
 		$this->assertSame( 'From the Meetup import', Member_Joined\describe_join( $user_id ) );

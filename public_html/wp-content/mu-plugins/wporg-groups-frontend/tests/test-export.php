@@ -9,7 +9,6 @@ use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use function WordCamp\Groups\Frontend\Export\build_csv;
 use function WordCamp\Groups\Frontend\Export\collect_export_data;
 use function WordCamp\Groups\Frontend\Export\esc_csv_cell;
-use function WordCamp\Groups\Frontend\Export\export_permissions_check;
 use function WordCamp\Groups\Frontend\Export\filter_json_fields;
 use function WordCamp\Groups\Frontend\REST\create_event;
 
@@ -140,54 +139,9 @@ class Test_Groups_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * A logged-out request is rejected as unauthenticated, not just forbidden.
+	 * Unknown formats are rejected by the route's arg schema.
 	 */
-	public function test_export_requires_login() {
-		wp_set_current_user( 0 );
-
-		$permission = export_permissions_check();
-
-		$this->assertWPError( $permission );
-		$this->assertSame( 'rest_not_logged_in', $permission->get_error_code() );
-		$this->assertSame( 401, $permission->get_error_data()['status'] );
-	}
-
-	/**
-	 * Members and Event Organisers (authors) are below the Organiser tier
-	 * and cannot export.
-	 */
-	public function test_export_denied_below_organiser_tier() {
-		foreach ( array( 'subscriber', 'author' ) as $role ) {
-			wp_set_current_user( self::factory()->user->create( array( 'role' => $role ) ) );
-
-			$permission = export_permissions_check();
-
-			$this->assertWPError( $permission, "A {$role} must not be able to export." );
-			$this->assertSame( 'rest_forbidden', $permission->get_error_code() );
-			$this->assertSame( 403, $permission->get_error_data()['status'] );
-		}
-	}
-
-	/**
-	 * Organisers (editors) and administrators can export.
-	 */
-	public function test_export_allowed_for_organiser_tier() {
-		foreach ( array( 'editor', 'administrator' ) as $role ) {
-			wp_set_current_user( self::factory()->user->create( array( 'role' => $role ) ) );
-
-			$this->assertTrue( export_permissions_check(), "An {$role} must be able to export." );
-		}
-	}
-
-	/**
-	 * The route enforces the permission callback on real dispatches too, and
-	 * rejects unknown formats via the arg schema.
-	 */
-	public function test_export_route_dispatch() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-		$response = $this->dispatch_export_request();
-		$this->assertSame( 403, $response->get_status() );
-
+	public function test_export_rejects_unknown_format() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 
 		$response = $this->dispatch_export_request( array( 'format' => 'xml' ) );

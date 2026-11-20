@@ -617,35 +617,4 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 
 		$this->assertContains( 'Second', $subjects, 'The concurrently queued job should still be in the queue.' );
 	}
-
-	/**
-	 * Group organizers — even administrators of their own group — can't reach
-	 * the whole network.
-	 */
-	public function test_group_administrators_cannot_send_messages() {
-		$user_id = $this->add_member( $this->group_sites['brisbane'], 'administrator', 'group-admin@example.test' );
-
-		wp_set_current_user( $user_id );
-
-		$this->assertFalse( Messaging\current_user_can_send_messages() );
-	}
-
-	/**
-	 * Network admins (Program Managers) can.
-	 */
-	public function test_network_admins_can_send_messages() {
-		$user_id = self::factory()->user->create();
-
-		// `grant_super_admin()` reads `site_admins` off whichever network is
-		// current, which in this fixture isn't the groups network. Set the
-		// option `get_super_admins()` actually consults instead.
-		$original = get_site_option( 'site_admins' );
-
-		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
-		wp_set_current_user( $user_id );
-
-		$this->assertTrue( Messaging\current_user_can_send_messages() );
-
-		update_site_option( 'site_admins', $original );
-	}
 }

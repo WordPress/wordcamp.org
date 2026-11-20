@@ -7,6 +7,7 @@ use WordCamp\Groups\Capabilities;
 use WordCamp\Groups\Messaging;
 use WordCamp\Groups\Network_Export;
 use WordCamp\Groups\Ownership_Transfer;
+use WordCamp\Groups\Site_Provisioning;
 use WP_Admin_Bar;
 use WPDieException;
 
@@ -98,6 +99,101 @@ class Test_Group_Capabilities extends Groups_TestCase {
 		foreach ( $this->tool_gates() as $tool => $allowed ) {
 			$this->assertFalse( $allowed, "A group administrator should not be able to use: $tool." );
 		}
+	}
+
+	/**
+	 * The tool handlers refuse a group administrator themselves, so a
+	 * hand-made request with a valid nonce changes nothing.
+	 *
+	 * @dataProvider data_tool_handlers
+	 *
+	 * @param string $tool Which handler to post to.
+	 */
+	public function test_tool_handlers_refuse_group_administrators( string $tool ) {
+		$group_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/handler-refusal/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+		$user_id  = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$new_path = '/group/handler-refusal-new/';
+
+		add_user_to_blog( $group_id, $user_id, 'administrator' );
+		$this->use_groups_network();
+		wp_set_current_user( $user_id );
+
+		$requests = array(
+			'archive'   => array(
+				'handler' => 'WordCamp\Groups\Archive\handle_update',
+				'refusal' => 'not allowed to manage groups',
+				'fields'  => array(
+					'site_id'  => (string) $group_id,
+					'archived' => '1',
+					'_wpnonce' => wp_create_nonce( Archive\UPDATE_ACTION . '_' . $group_id ),
+				),
+			),
+			'provision' => array(
+				'handler' => 'WordCamp\Groups\Site_Provisioning\handle_form_submission',
+				'refusal' => 'not allowed to create sites',
+				'fields'  => array(
+					'wcorg_create_group_site'    => '1',
+					'group_title'                => 'Handler Refusal',
+					'group_slug'                 => 'handler-refusal-new',
+					'organizer_login'            => get_userdata( $user_id )->user_login,
+					Site_Provisioning\NONCE_NAME => wp_create_nonce( Site_Provisioning\NONCE_ACTION ),
+				),
+			),
+			'message'   => array(
+				'handler' => 'WordCamp\Groups\Messaging\handle_form_post',
+				'refusal' => 'permission to send messages',
+				'fields'  => array(
+					'subject'  => 'Hello organizers',
+					'body'     => 'To every group.',
+					'audience' => Messaging\AUDIENCE_ORGANIZERS,
+					'scope'    => 'all',
+					'_wpnonce' => wp_create_nonce( Messaging\FORM_ACTION ),
+				),
+			),
+		);
+
+		$request = $requests[ $tool ];
+
+		$_POST    = $request['fields'];
+		$_REQUEST = $request['fields'];
+
+		// A regression would redirect and exit; fail instead.
+		$redirected = static function () {
+			throw new \Exception( 'The handler redirected instead of refusing.' );
+		};
+		add_filter( 'wp_redirect', $redirected );
+
+		try {
+			call_user_func( $request['handler'] );
+			$this->fail( 'The handler should have refused.' );
+		} catch ( WPDieException $refused ) {
+			$this->assertStringContainsString( $request['refusal'], $refused->getMessage() );
+		} finally {
+			remove_filter( 'wp_redirect', $redirected );
+			$_POST    = array();
+			$_REQUEST = array();
+		}
+
+		$this->assertSame( '0', get_site( $group_id )->archived, 'The group should not be archived.' );
+		$this->assertNull( domain_exists( get_network( GROUPS_NETWORK_ID )->domain, $new_path, GROUPS_NETWORK_ID ), 'No site should be created.' );
+		$this->assertEmpty( get_site_option( Messaging\JOBS_OPTION ), 'Nothing should be queued.' );
+	}
+
+	/**
+	 * Network tools whose handlers write.
+	 */
+	public function data_tool_handlers(): array {
+		return array(
+			'archive a group'     => array( 'archive' ),
+			'create a group site' => array( 'provision' ),
+			'message groups'      => array( 'message' ),
+		);
 	}
 
 	/**

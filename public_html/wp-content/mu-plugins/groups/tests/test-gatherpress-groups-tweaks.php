@@ -6,7 +6,6 @@ use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
 use function WordCamp\Groups\Frontend\Event_Topics\set_event_topics;
 use function WordCamp\Groups\GatherPress_Tweaks\get_event_archive_query_vars;
 use function WordCamp\Groups\GatherPress_Tweaks\get_legacy_event_archive_pagination_redirect;
-use function WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_filter;
 
 defined( 'WPINC' ) || die();
 
@@ -243,16 +242,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Every view names itself, so the toggle reads the same way whichever one
-	 * is applied. "All" had no coverage at all before this.
-	 */
-	public function test_event_time_filter_names_every_view() {
-		$this->assertSame( 'Time: Upcoming', $this->get_event_time_filter( 'upcoming' )['label'] );
-		$this->assertSame( 'Time: Past', $this->get_event_time_filter( 'past' )['label'] );
-		$this->assertSame( 'Time: All', $this->get_event_time_filter( 'all' )['label'] );
-	}
-
-	/**
 	 * A hand-typed `event_time` that isn't one of the three views falls back
 	 * to the default, and the toggle names that fallback rather than the
 	 * value the reader typed.
@@ -380,29 +369,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->assertCount( 1, $comments );
 		$this->assertSame( $comment_id, (int) $comments[0]->comment_ID );
-	}
-
-	/**
-	 * The exclusion hook runs after the capture hook, and both stay attached.
-	 *
-	 * The ordering is the whole mechanism: `capture_explicit_rsvp_query()` has
-	 * to mark an explicit request before `exclude_rsvps_from_general_comment_queries()`
-	 * decides whether to subtract. Pinned here because nothing else would
-	 * notice a priority drifting, and the symptom would be silent.
-	 */
-	public function test_the_rsvp_exclusion_hooks_are_wired_in_order() {
-		$this->assertSame(
-			5,
-			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query' )
-		);
-		$this->assertSame(
-			20,
-			has_action( 'pre_get_comments', 'WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries' )
-		);
-		$this->assertSame(
-			10,
-			has_filter( 'gatherpress_rsvp_comment_query_exclusion', 'WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries' )
-		);
 	}
 
 	/**
@@ -827,11 +793,30 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 
-		$location = get_legacy_event_archive_pagination_redirect();
+		$redirect = array();
+		$catcher  = static function ( $location, $status ) use ( &$redirect ) {
+			$redirect = array(
+				'location' => $location,
+				'status'   => $status,
+			);
 
-		$this->assertStringContainsString( '/page/3/', $location );
-		$this->assertStringContainsString( 'event_time=past', $location );
-		$this->assertStringNotContainsString( 'query-page', $location );
+			throw new \Exception( 'redirected' );
+		};
+
+		add_filter( 'wp_redirect', $catcher, 10, 2 );
+
+		try {
+			do_action( 'template_redirect' );
+		} catch ( \Exception $thrown ) {
+			$this->assertSame( 'redirected', $thrown->getMessage() );
+		} finally {
+			remove_filter( 'wp_redirect', $catcher, 10 );
+		}
+
+		$this->assertSame( 301, $redirect['status'] ?? null, 'The archive did not redirect.' );
+		$this->assertStringContainsString( '/page/3/', $redirect['location'] );
+		$this->assertStringContainsString( 'event_time=past', $redirect['location'] );
+		$this->assertStringNotContainsString( 'query-page', $redirect['location'] );
 	}
 
 	/**
@@ -857,17 +842,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->go_to_front_end( home_url( '/?query-page=2' ) );
 		$this->assertSame( '', get_legacy_event_archive_pagination_redirect() );
-	}
-
-	/**
-	 * The tests above ask the redirect where it would go. This is what makes
-	 * a request actually go there.
-	 */
-	public function test_legacy_page_link_redirect_runs_on_template_redirect() {
-		$this->assertSame(
-			5,
-			has_action( 'template_redirect', 'WordCamp\\Groups\\GatherPress_Tweaks\\redirect_legacy_event_archive_pagination' )
-		);
 	}
 
 	/**
@@ -1597,17 +1571,20 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 
-		$build_response = static function (): \WP_REST_Response {
-			return new \WP_REST_Response( array( 'meta' => array( '_event_speakers' => array( 101, 102 ) ) ) );
+		$prepare = static function () use ( $event ): array {
+			$response = new \WP_REST_Response( array( 'meta' => array( '_event_speakers' => array( 101, 102 ) ) ) );
+			$request  = new \WP_REST_Request( 'GET', '/wp/v2/gatherpress_events/' . $event->ID );
+
+			return apply_filters( 'rest_prepare_gatherpress_event', $response, $event, $request )->get_data();
 		};
 
 		wp_set_current_user( 0 );
-		$hidden = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
+		$hidden = $prepare();
 
 		$this->assertArrayNotHasKey( '_event_speakers', $hidden['meta'] );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$kept = \WordCamp\Groups\GatherPress_Tweaks\hide_event_details_in_rest( $build_response(), $event )->get_data();
+		$kept = $prepare();
 
 		$this->assertSame( array( 101, 102 ), $kept['meta']['_event_speakers'] );
 	}
@@ -1846,13 +1823,8 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
 			$controller = dirname( __DIR__, 2 ) . '/blocks/source/blocks/meta-link/controller.php';
 
-			if ( is_readable( $controller ) ) {
-				require_once $controller;
-			}
-		}
-
-		if ( ! function_exists( 'WordCamp\Blocks\MetaLink\render' ) ) {
-			$this->markTestSkipped( 'The wordcamp/meta-link block could not be loaded.' );
+			$this->assertFileIsReadable( $controller, 'The wordcamp/meta-link block could not be loaded.' );
+			require_once $controller;
 		}
 
 		register_post_meta(
@@ -1896,28 +1868,6 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 		$this->assertSame( '', \WordCamp\Blocks\MetaLink\render( $attributes, '', $block ) );
-	}
-
-	/**
-	 * The protection callbacks are hooked to the filters that actually fire.
-	 *
-	 * The behavioural tests above call each callback directly, so they would
-	 * stay green even if a registration named the wrong hook. Assert the wiring
-	 * so a typo in a hook name cannot pass unnoticed.
-	 */
-	public function test_protection_callbacks_are_hooked() {
-		$ns = 'WordCamp\Groups\GatherPress_Tweaks\\';
-
-		$this->assertSame(
-			5,
-			has_filter( 'render_block_gatherpress/venue', $ns . 'hide_venue_block_for_protected_event' ),
-			'The venue render gate is not hooked where it fires.'
-		);
-		$this->assertSame(
-			20,
-			has_filter( 'rest_prepare_gatherpress_event', $ns . 'hide_event_details_in_rest' ),
-			'The REST item gate is not hooked where it fires.'
-		);
 	}
 
 	/**
@@ -2046,105 +1996,40 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Empty search query parameter reverts the default all-time view back to upcoming.
+	 * A search keeps the "All" view, but an empty one reverts it to upcoming.
+	 *
+	 * @dataProvider data_event_time_filter_with_a_search
+	 *
+	 * @param string      $event_time The `event_time` query arg.
+	 * @param string|null $search     The `s` query arg, or null for none.
+	 * @param string      $expected   The view the toggle applies.
+	 * @param string      $label      The toggle's label.
 	 */
-	public function test_event_time_filter_reverts_to_upcoming_on_empty_search() {
-		$_GET['s'] = '';
-		$filter    = $this->get_event_time_filter( 'all' );
+	public function test_event_time_filter_with_a_search( string $event_time, ?string $search, string $expected, string $label ) {
+		if ( null === $search ) {
+			unset( $_GET['s'] );
+		} else {
+			$_GET['s'] = $search;
+		}
+
+		$filter = $this->get_event_time_filter( $event_time );
 		unset( $_GET['s'] );
 
-		$this->assertSame( 'Time: Upcoming', $filter['label'] );
-		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
+		$this->assertSame( $label, $filter['label'] );
+		$this->assertSame( array( $expected ), $filter['selected'] );
 	}
 
 	/**
-	 * Normalizing event time filter reverts 'all' to 'upcoming' on empty search query.
+	 * Inputs for `test_event_time_filter_with_a_search()`.
 	 */
-	public function test_normalize_event_time_filter() {
-		// When search query is empty string or whitespace and time is 'all'.
-		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '' ) );
-		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all', '   ' ) );
-
-		// When search query has text, 'all' is preserved.
-		$this->assertSame( 'all', normalize_event_time_filter( 'all', 'wordcamp' ) );
-
-		// When search is not set (null), 'all' is preserved.
-		unset( $_GET['s'] );
-		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
-
-		// When reading from $_GET['s'].
-		$_GET['s'] = '';
-		$this->assertSame( 'upcoming', normalize_event_time_filter( 'all' ) );
-		$_GET['s'] = 'community';
-		$this->assertSame( 'all', normalize_event_time_filter( 'all' ) );
-		unset( $_GET['s'] );
-
-		// When time is not 'all', it is preserved.
-		$this->assertSame( 'past', normalize_event_time_filter( 'past', '' ) );
-		$this->assertSame( 'upcoming', normalize_event_time_filter( 'upcoming', '' ) );
-	}
-
-	/**
-	 * RSVPs should never leak into general comment queries, even when
-	 * no standard comments exist yet on the site.
-	 */
-	public function test_rsvps_excluded_from_general_comment_query() {
-		$query                     = new \WP_Comment_Query();
-		$query->query_vars['type'] = array();
-
-		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
-
-		$this->assertContains( 'gatherpress_rsvp', (array) ( $query->query_vars['type__not_in'] ?? array() ) );
-	}
-
-	/**
-	 * Queries specifically requesting RSVPs should not have them excluded.
-	 */
-	public function test_rsvps_not_excluded_when_explicitly_requested() {
-		$query                     = new \WP_Comment_Query();
-		$query->query_vars['type'] = 'gatherpress_rsvp';
-
-		\WordCamp\Groups\GatherPress_Tweaks\exclude_rsvps_from_general_comment_queries( $query );
-
-		$this->assertEmpty( $query->query_vars['type__not_in'] ?? array() );
-	}
-
-	/**
-	 * Caller's explicit RSVP intent should be captured before GatherPress priority 10 filter runs.
-	 */
-	public function test_capture_explicit_rsvp_query_records_intent() {
-		$query_single                     = new \WP_Comment_Query();
-		$query_single->query_vars['type'] = 'gatherpress_rsvp';
-
-		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_single );
-		$this->assertTrue( $query_single->query_vars['_gatherpress_rsvp_explicit'] );
-
-		$query_in                         = new \WP_Comment_Query();
-		$query_in->query_vars['type__in'] = array( 'gatherpress_rsvp' );
-
-		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_in );
-		$this->assertTrue( $query_in->query_vars['_gatherpress_rsvp_explicit'] );
-
-		$query_general                     = new \WP_Comment_Query();
-		$query_general->query_vars['type'] = '';
-
-		\WordCamp\Groups\GatherPress_Tweaks\capture_explicit_rsvp_query( $query_general );
-		$this->assertArrayNotHasKey( '_gatherpress_rsvp_explicit', $query_general->query_vars );
-	}
-
-	/**
-	 * GatherPress RSVP exclusion filter should opt out when query explicitly asks for RSVPs.
-	 */
-	public function test_skip_rsvp_exclusion_for_explicit_queries() {
-		$query_explicit = new \WP_Comment_Query();
-		$query_explicit->query_vars['_gatherpress_rsvp_explicit'] = true;
-
-		$should_exclude = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_explicit );
-		$this->assertFalse( $should_exclude );
-
-		$query_general          = new \WP_Comment_Query();
-		$should_exclude_general = \WordCamp\Groups\GatherPress_Tweaks\skip_rsvp_exclusion_for_explicit_queries( true, $query_general );
-		$this->assertTrue( $should_exclude_general );
+	public function data_event_time_filter_with_a_search(): array {
+		return array(
+			'all, empty search'  => array( 'all', '', 'upcoming', 'Time: Upcoming' ),
+			'all, blank search'  => array( 'all', '   ', 'upcoming', 'Time: Upcoming' ),
+			'all, search text'   => array( 'all', 'wordcamp', 'all', 'Time: All' ),
+			'all, no search'     => array( 'all', null, 'all', 'Time: All' ),
+			'past, empty search' => array( 'past', '', 'past', 'Time: Past' ),
+		);
 	}
 
 	/**

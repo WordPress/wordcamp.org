@@ -4,9 +4,11 @@ name: E2E Tests (Groups/GatherPress)
 # dispatch for ad-hoc runs. Scoped to these paths (rather than every PR)
 # because this stands up real docker-based provisioning (WordPress core
 # checkout, TLS cert, DB import, third-party plugin install).
+# Also runs on pushes to production, so the Playwright browser cache is saved
+# where every PR can restore it instead of each PR downloading its own copy.
 on:
   pull_request:
-    paths:
+    paths: &e2e-paths
     - public_html/wp-content/mu-plugins/wporg-groups-frontend/**
     - public_html/wp-content/mu-plugins/groups/**
     # The specs assert on this plugin's occurrence pages, and on class names
@@ -21,6 +23,10 @@ on:
     - .nvmrc
     - package.json
     - package-lock.json
+  push:
+    branches:
+    - production
+    paths: *e2e-paths
   workflow_dispatch: {}
 
 concurrency:
@@ -36,6 +42,9 @@ jobs:
     name: Playwright E2E
 
     runs-on: ubuntu-latest
+
+    # A normal run takes 3-6 minutes; without a limit a stalled download holds the check for 6 hours.
+    timeout-minutes: 15
 
     env:
       # Every `docker compose` call in this job should see only the base
@@ -119,15 +128,10 @@ jobs:
         key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
     - name: Install Playwright browsers
-      # On a cache hit the browser binaries are already present, but the
-      # runner's OS-level deps (apt packages) still need installing --
-      # `install-deps` alone skips the (slow) browser download.
-      run: |
-        if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = 'true' ]; then
-          npx playwright install-deps chromium
-        else
-          npx playwright install --with-deps chromium
-        fi
+      # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
+      # don't need, and a slow mirror once stalled this step for over 7 minutes.
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: npx playwright install chromium
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's

@@ -875,6 +875,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		$this->post_decision( $this->group_site_id, 'approve', true );
 
 		$this->expectException( WPDieException::class );
+		$this->expectExceptionMessage( 'not allowed to decide group ownership transfers' );
 
 		handle_decision();
 	}
@@ -898,6 +899,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 			handle_decision();
 			$this->fail( 'handle_decision() should have died on the missing nonce.' );
 		} catch ( WPDieException $exception ) {
+			$this->assertStringContainsString( 'The link you followed has expired', $exception->getMessage() );
 			$this->assertNotNull( get_pending_transfer( $this->group_site_id ), 'No decision may be applied without a valid nonce.' );
 		}
 

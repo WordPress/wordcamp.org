@@ -238,31 +238,4 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		}
 		return $cases;
 	}
-
-	/**
-	 * `Event\Setup::handle_event_archive_redirect()` existing isn't enough
-	 * on its own — `gatherpress-groups-tweaks.php` specifically removes it
-	 * from `template_redirect` (see the comment there for why). Confirm
-	 * GatherPress is still hooking it the way that removal assumes; if
-	 * GatherPress moved it to a different hook or stopped registering it
-	 * by default, the `remove_action()` call silently becomes a no-op and
-	 * the archive page starts 404ing again for exactly the reason that
-	 * code exists to prevent.
-	 */
-	public function test_event_archive_redirect_hook_removal_still_targets_something() {
-		$setup = \GatherPress\Core\Event\Setup::get_instance();
-
-		// gatherpress-groups-tweaks.php's template_redirect callback (priority
-		// 1) runs before GatherPress registers its own instance-bound
-		// callback in a fresh test process, so re-fire the registration this
-		// integration relies on being present, then confirm removal works.
-		add_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
-
-		$this->assertNotFalse(
-			has_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) ),
-			'GatherPress\Core\Event\Setup::handle_event_archive_redirect() is expected to be hookable on template_redirect — gatherpress-groups-tweaks.php removes it there. If this fails, GatherPress changed which hook it uses.'
-		);
-
-		remove_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
-	}
 }

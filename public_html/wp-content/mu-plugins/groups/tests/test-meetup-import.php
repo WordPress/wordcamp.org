@@ -73,6 +73,15 @@ class Test_Meetup_Import extends Groups_TestCase {
 		add_filter( 'wcorg_meetup_import_pre_fetch_organizers', '__return_empty_array', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_connection_member', '__return_empty_string', 5 );
 		add_filter( 'wcorg_meetup_import_pre_fetch_rsvps', '__return_empty_array', 5 );
+
+		// `raw_group()` has a photo; without this, importing it downloads from Meetup.
+		add_filter(
+			'wcorg_meetup_import_pre_sideload_photo',
+			static function () {
+				return new \WP_Error( 'photo_download_stubbed', 'Photo downloads are stubbed in tests.' );
+			},
+			5
+		);
 	}
 
 	/**

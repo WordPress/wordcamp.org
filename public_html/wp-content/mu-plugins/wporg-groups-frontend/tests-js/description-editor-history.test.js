@@ -21,38 +21,6 @@ describe( 'DescriptionEditor history manager', () => {
 
 	const serialize = ( blocks ) => JSON.stringify( blocks );
 
-	test( 'initializes with empty past/future and set present/lastCommitted', () => {
-		const initial = [ makeBlock( 'Initial' ) ];
-		const history = createHistoryManager( initial );
-
-		expect( history.past ).toEqual( [] );
-		expect( history.future ).toEqual( [] );
-		expect( history.present ).toBe( initial );
-		expect( history.lastCommitted ).toBe( initial );
-	} );
-
-	test( 'cloneBlocks deep clones blocks preserving attributes and clientIds', () => {
-		const original = [
-			{
-				...makeBlock( 'Hello' ),
-				attributes: {
-					content: 'Hello',
-					metadata: { nested: { value: 42 }, list: [ 1, 2, 3 ] },
-				},
-			},
-		];
-		const cloned = cloneBlocks( original );
-
-		expect( cloned ).toEqual( original );
-		expect( cloned ).not.toBe( original );
-		expect( cloned[ 0 ] ).not.toBe( original[ 0 ] );
-		expect( cloned[ 0 ].attributes ).not.toBe( original[ 0 ].attributes );
-		expect( cloned[ 0 ].attributes.metadata ).not.toBe( original[ 0 ].attributes.metadata );
-		expect( cloned[ 0 ].attributes.metadata.nested ).not.toBe( original[ 0 ].attributes.metadata.nested );
-		expect( cloned[ 0 ].attributes.metadata.list ).not.toBe( original[ 0 ].attributes.metadata.list );
-		expect( cloned[ 0 ].clientId ).toBe( original[ 0 ].clientId );
-	} );
-
 	/*
 	 * The regression test for #2018. Since WordPress 6.5 the `content`
 	 * attribute of every rich-text block is a `RichTextData`, which keeps

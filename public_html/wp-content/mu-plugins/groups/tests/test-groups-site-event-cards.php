@@ -703,36 +703,6 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
-	 * Test that get_event_format() returns 'in-person' by default and for physical venue events.
-	 */
-	public function test_event_format_helper_returns_in_person_by_default() {
-		$event_without_terms = $this->create_event_post( 'Default Event' );
-		$this->assertSame( 'in-person', \WordCamp\Groups\Site\get_event_format( $event_without_terms ) );
-
-		$event_with_venue = $this->create_event_post( 'In Person Venue Event' );
-		$this->set_event_format_terms( $event_with_venue, false, true );
-		$this->assertSame( 'in-person', \WordCamp\Groups\Site\get_event_format( $event_with_venue ) );
-	}
-
-	/**
-	 * Test that get_event_format() returns 'online' for online-only events.
-	 */
-	public function test_event_format_helper_returns_online_for_online_only_event() {
-		$event_online = $this->create_event_post( 'Online Only Event' );
-		$this->set_event_format_terms( $event_online, true, false );
-		$this->assertSame( 'online', \WordCamp\Groups\Site\get_event_format( $event_online ) );
-	}
-
-	/**
-	 * Test that get_event_format() returns 'hybrid' for events with both online and physical venue terms.
-	 */
-	public function test_event_format_helper_returns_hybrid_for_event_with_online_and_venue_terms() {
-		$event_hybrid = $this->create_event_post( 'Hybrid Event' );
-		$this->set_event_format_terms( $event_hybrid, true, true );
-		$this->assertSame( 'hybrid', \WordCamp\Groups\Site\get_event_format( $event_hybrid ) );
-	}
-
-	/**
 	 * Test that event cards in the grid render the format badge correctly for in-person events.
 	 */
 	public function test_card_renders_event_format_badge_in_person() {

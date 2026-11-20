@@ -67,7 +67,7 @@ class Test_Groups_Front_End_Locale extends Groups_TestCase {
 		update_user_meta( $user_id, 'locale', 'es_ES' );
 		wp_set_current_user( $user_id );
 
-		$this->assertSame( 'es_ES', use_visitor_locale( self::SITE_LOCALE ) );
+		$this->assertSame( 'es_ES', determine_locale() );
 	}
 
 	/**
@@ -78,7 +78,7 @@ class Test_Groups_Front_End_Locale extends Groups_TestCase {
 	public function test_a_visitor_without_a_language_keeps_the_site_locale() {
 		wp_set_current_user( self::factory()->user->create() );
 
-		$this->assertSame( self::SITE_LOCALE, use_visitor_locale( self::SITE_LOCALE ) );
+		$this->assertSame( self::SITE_LOCALE, determine_locale() );
 	}
 
 	/**
@@ -89,13 +89,15 @@ class Test_Groups_Front_End_Locale extends Groups_TestCase {
 	public function test_an_anonymous_visitor_keeps_the_site_locale() {
 		wp_set_current_user( 0 );
 
-		$this->assertSame( self::SITE_LOCALE, use_visitor_locale( self::SITE_LOCALE ) );
+		$this->assertSame( self::SITE_LOCALE, determine_locale() );
 	}
 
 	/**
 	 * The admin is core's own business, and it already resolves the user's
 	 * locale in wp-admin. Stepping in would at best duplicate that and at
-	 * worst disagree with it.
+	 * worst disagree with it. Called directly, since in wp-admin core's own
+	 * answer is the user's locale too. REST is guarded the same way, but
+	 * proving it means defining `REST_REQUEST` for the rest of the process.
 	 */
 	public function test_wp_admin_is_left_to_core() {
 		$user_id = self::factory()->user->create();
@@ -106,22 +108,5 @@ class Test_Groups_Front_End_Locale extends Groups_TestCase {
 
 		$this->assertTrue( is_admin(), 'This test needs an admin screen to mean anything.' );
 		$this->assertSame( self::SITE_LOCALE, use_visitor_locale( self::SITE_LOCALE ) );
-	}
-
-	/**
-	 * The filter is actually hooked. Every assertion above calls the function
-	 * directly, which would keep passing if the `add_filter()` line were
-	 * dropped and the front end quietly went back to English.
-	 *
-	 * The REST API is guarded the same way as wp-admin, in
-	 * `should_follow_visitor()`. It isn't asserted here because proving it
-	 * means defining `REST_REQUEST`, which can't be undefined again and would
-	 * follow this process into every test that runs after it.
-	 */
-	public function test_the_filter_is_registered() {
-		$this->assertNotFalse(
-			has_filter( 'determine_locale', 'WordCamp\\Groups\\Front_End_Locale\\use_visitor_locale' ),
-			'The front end will not follow the visitor without this hook.'
-		);
 	}
 }

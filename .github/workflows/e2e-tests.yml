@@ -37,9 +37,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # A normal run takes 3-6 minutes; without a limit a stalled download holds the check for 6 hours.
-    # 20 leaves room for a run where every spec times out and retries, so its traces still upload.
-    timeout-minutes: 20
+    # A normal run takes 3-6 minutes; without a limit a stall holds the check for 6 hours. A run where every
+    # spec times out and retries takes about 27, and a timed-out job skips the trace upload, so allow 35.
+    timeout-minutes: 35
 
     env:
       # Every `docker compose` call in this job should see only the base
@@ -115,6 +115,7 @@ jobs:
       # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
       # don't need, and a slow mirror once stalled this step for over 7 minutes. Not cached: the download takes
       # about 10 seconds, against 4 for a cache restore, and a cache PRs could share would need a run on production.
+      timeout-minutes: 5
       run: npx playwright install chromium
 
     - name: Build all workspace assets

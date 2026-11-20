@@ -151,3 +151,21 @@ function get_rsvp_comments( int $user_id ): array {
 
 	return $events_by_comment;
 }
+
+/**
+ * Take a member out of the current group, whether they left or an organizer removed them.
+ *
+ * Their upcoming RSVPs are cancelled first, while they still belong to a
+ * member: a seat held for a date they will not be at is a seat nobody else
+ * can take (#2022).
+ *
+ * @param int $user_id Member leaving the group.
+ * @return int Number of RSVPs cancelled.
+ */
+function remove_from_group( int $user_id ): int {
+	$cancelled = cancel_future_rsvps( $user_id );
+
+	remove_user_from_blog( $user_id, get_current_blog_id() );
+
+	return $cancelled;
+}

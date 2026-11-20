@@ -231,9 +231,10 @@ final class Context {
 	 * @return string Selector markup.
 	 */
 	public static function selector( int $post_id ): string {
-		$current     = self::recurrence_id();
-		$occurrences = Occurrences::around( $post_id, 6 );
-		$items       = '';
+		$current      = self::recurrence_id();
+		$occurrences  = Occurrences::around( $post_id, 6 );
+		$has_upcoming = ! empty( $occurrences );
+		$items        = '';
 
 		if ( ! in_array( $current, wp_list_pluck( $occurrences, 'recurrence_id' ), true ) ) {
 			$occurrences[] = self::$occurrence;
@@ -274,7 +275,15 @@ final class Context {
 		if ( 'cancelled' === self::$occurrence->status ) {
 			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been canceled.', 'wordcamporg' ) . '</p>';
 		} elseif ( self::$occurrence->datetime_end_gmt < current_time( 'mysql', true ) ) {
-			$notice = '<p class="gpre-series-ended" role="status">' . esc_html__( 'This event series has ended.', 'wordcamporg' ) . '</p>';
+			/*
+			 * A past date of a series that still has upcoming dates has ended on
+			 * its own; saying the series ended reads as the group having stopped
+			 * meeting (#2406).
+			 */
+			$message = $has_upcoming
+				? __( 'This event has ended.', 'wordcamporg' )
+				: __( 'This event series has ended.', 'wordcamporg' );
+			$notice  = '<p class="gpre-series-ended" role="status">' . esc_html( $message ) . '</p>';
 		}
 
 		return sprintf(

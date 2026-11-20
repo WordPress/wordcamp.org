@@ -564,6 +564,41 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A past date of a series that still meets says that date ended, not the
+	 * series: members read "This event series has ended" on last week's date
+	 * as the group having stopped meeting (#2406). Once no dates are left,
+	 * the series has ended.
+	 */
+	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
+		global $wpdb;
+
+		$post_id = $this->create_projected_weekly_series( 'Weekly series' );
+		$past    = Occurrences::all( $post_id, 'past', 1 );
+		$this->assertCount( 1, $past, 'The series should have one past date.' );
+		Context::set( $past[0] );
+
+		try {
+			$selector = Context::selector( $post_id );
+			$this->assertStringContainsString( 'This event has ended.', $selector );
+			$this->assertStringNotContainsString( 'This event series has ended.', $selector );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query(
+				$wpdb->prepare(
+					'DELETE FROM %i WHERE series_post_id = %d AND datetime_start_gmt >= %s',
+					Database::occurrences_table(),
+					$post_id,
+					current_time( 'mysql', true )
+				)
+			);
+
+			$this->assertStringContainsString( 'This event series has ended.', Context::selector( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/**
 	 * The selector's stylesheet and script load only where there's a
 	 * selector: a page with an active occurrence. Everywhere else they were
 	 * a render-blocking stylesheet and a script that did nothing.

@@ -8,6 +8,7 @@ import classnames from 'classnames';
  */
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { addQueryArgs, isURL } from '@wordpress/url';
+import { decodeEntities } from '@wordpress/html-entities';
 
 // Avatar-specific presets for the ImageSizeControl component.
 export const avatarSizePresets = [
@@ -62,7 +63,7 @@ export function AvatarImage( { className, name, size, url, imageLink } ) {
 		? sprintf(
 				/* translators: %s: The person's name. */
 				__( 'Avatar of %s', 'wordcamporg' ),
-				name
+				decodeEntities( name )
 		  )
 		: '';
 

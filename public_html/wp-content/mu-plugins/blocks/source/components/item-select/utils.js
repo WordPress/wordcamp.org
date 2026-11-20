@@ -8,6 +8,7 @@ import createSelector from 'rememo';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 
 /**
  * Internal dependencies
@@ -22,7 +23,7 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 			case 'post':
 				parsedItem = {
 					label:
-						item.title.rendered.trim() ||
+						decodeEntities( item.title.rendered.trim() ) ||
 						__( '(Untitled)', 'wordcamporg' ),
 					value: item.id,
 					type,

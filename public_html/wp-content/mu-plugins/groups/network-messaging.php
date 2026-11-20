@@ -28,6 +28,7 @@
 
 namespace WordCamp\Groups\Messaging;
 
+use WordCamp\Groups\Frontend\Member_Joined;
 use WordCamp\Logger;
 
 defined( 'WPINC' ) || die();
@@ -91,6 +92,13 @@ const AUDIENCE_ORGANIZERS = 'organizers';
 const AUDIENCE_MEMBERS = 'members';
 
 /**
+ * Audience: members the Meetup import added to the group, e.g. to tell them
+ * their account is ready (#2408). Not those who joined on their own, even if
+ * the import later found them in the group too.
+ */
+const AUDIENCE_IMPORTED = 'imported';
+
+/**
  * Roles that make someone a group organizer. Mirrors the "Organizer" tier in
  * `Members_Controller::ROLE_LABELS` — authors are "Event Organizers" and are
  * deliberately not included, since they only manage their own events.
@@ -120,7 +128,8 @@ function current_user_can_send_messages(): bool {
 }
 
 /**
- * Whether the current user may pick the "All members" audience.
+ * Whether the current user may pick the "All members" or "Imported members"
+ * audience.
  */
 function current_user_can_message_members(): bool {
 	return current_user_can( MEMBERS_CAPABILITY );
@@ -204,6 +213,9 @@ function get_site_recipients( int $site_id, string $audience, int $number, int $
 
 	if ( AUDIENCE_ORGANIZERS === $audience ) {
 		$args['role__in'] = ORGANIZER_ROLES;
+	} elseif ( AUDIENCE_IMPORTED === $audience ) {
+		$args['meta_key']   = Member_Joined\meta_key( Member_Joined\SOURCE_META, $site_id ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_key
+		$args['meta_value'] = Member_Joined\SOURCE_IMPORT; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_query_meta_value
 	}
 
 	$recipients = array();
@@ -570,12 +582,12 @@ function handle_form_post(): void {
 	$scope    = sanitize_key( wp_unslash( $_POST['scope'] ?? '' ) );
 	$selected = array_map( 'absint', (array) ( $_POST['groups'] ?? array() ) );
 
-	if ( ! in_array( $audience, array( AUDIENCE_ORGANIZERS, AUDIENCE_MEMBERS ), true ) ) {
+	if ( ! in_array( $audience, array( AUDIENCE_ORGANIZERS, AUDIENCE_MEMBERS, AUDIENCE_IMPORTED ), true ) ) {
 		redirect_with_notice( 'invalid-audience' );
 	}
 
 	// The form doesn't offer it, so only a hand-made request gets here.
-	if ( AUDIENCE_MEMBERS === $audience && ! current_user_can_message_members() ) {
+	if ( in_array( $audience, array( AUDIENCE_MEMBERS, AUDIENCE_IMPORTED ), true ) && ! current_user_can_message_members() ) {
 		wp_die( 'You do not have permission to message all members of a group.', 403 );
 	}
 
@@ -759,6 +771,11 @@ function render_page(): void {
 								<label>
 									<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_MEMBERS ); ?>" />
 									All members, whatever their role
+								</label>
+								<br />
+								<label>
+									<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_IMPORTED ); ?>" />
+									Members added by the Meetup import, not those who joined on their own
 								</label>
 							<?php else : ?>
 								<p class="description">Messaging all members of a group is limited to network admins.</p>

@@ -37,8 +37,22 @@ if ( ! is_user_logged_in() || ! is_user_member_of_blog() ) {
 
 $wporg_member_id = get_current_user_id();
 
+/*
+ * `variant` lets the group home show the two lists in different places
+ * (#2406): "My upcoming events" at the top, "Events I attended" below the
+ * group's own upcoming events. The past variant still loads the upcoming list,
+ * to know whether it has to carry the header link's anchor.
+ */
+$wporg_variant = $attributes['variant'] ?? 'combined';
+if ( ! in_array( $wporg_variant, array( 'combined', 'upcoming', 'past' ), true ) ) {
+	$wporg_variant = 'combined';
+}
+
+$wporg_shows_upcoming = 'past' !== $wporg_variant;
+$wporg_shows_past     = 'upcoming' !== $wporg_variant;
+
 $wporg_upcoming = get_upcoming_events( $wporg_member_id );
-$wporg_past     = get_past_events( $wporg_member_id );
+$wporg_past     = $wporg_shows_past ? get_past_events( $wporg_member_id ) : array();
 
 if ( empty( $wporg_upcoming ) && empty( $wporg_past ) ) {
 	return;
@@ -99,7 +113,7 @@ $wporg_sections = array();
 
 // Upcoming first: what the member still has to turn up to outranks what
 // they have already done.
-if ( $wporg_upcoming ) {
+if ( $wporg_shows_upcoming && $wporg_upcoming ) {
 	$wporg_sections[] = array(
 		'heading' => __( 'My upcoming events', 'wordcamporg' ),
 		'entries' => $wporg_upcoming,
@@ -123,13 +137,17 @@ if ( empty( $wporg_sections ) ) {
  * than a route of its own. A member with nothing to show has no section to
  * jump to and lands at the top of the front page, which is the same trade the
  * block already makes by rendering nothing.
+ *
+ * A past-only instance takes the anchor only when the member has nothing
+ * upcoming, since otherwise the upcoming instance above already has it.
  */
-$wporg_wrapper_attributes = get_block_wrapper_attributes(
-	array(
-		'class' => 'wporg-my-events',
-		'id'    => 'my-events',
-	)
-);
+$wporg_wrapper_args = array( 'class' => 'wporg-my-events' );
+
+if ( $wporg_shows_upcoming || ! $wporg_upcoming ) {
+	$wporg_wrapper_args['id'] = 'my-events';
+}
+
+$wporg_wrapper_attributes = get_block_wrapper_attributes( $wporg_wrapper_args );
 
 /*
  * The group's own choice of how its dates are written (#2033), with the

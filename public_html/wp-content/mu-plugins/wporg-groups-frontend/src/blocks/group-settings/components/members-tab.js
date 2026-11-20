@@ -74,14 +74,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 
 			setMembers( data );
 			setTotal( Number( response.headers.get( 'X-WP-Total' ) ) || data.length );
-			const pages = Math.max( 1, Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1 );
-			setTotalPages( pages );
-
-			// Removals can shrink the list, so a page past the end goes back to the last one.
-			if ( page > pages ) {
-				setPage( pages );
-				return;
-			}
+			setTotalPages( Math.max( 1, Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1 ) );
 			setLoading( false );
 		};
 
@@ -99,6 +92,13 @@ export default function MembersTab( { canManageRoles = false } ) {
 			isMounted = false;
 		};
 	}, [ page, search ] );
+
+	// Removals can empty the page you're on, so go back one rather than show an empty list.
+	useEffect( () => {
+		if ( ! loading && page > 1 && members.length === 0 ) {
+			setPage( ( currentPage ) => currentPage - 1 );
+		}
+	}, [ loading, page, members.length ] );
 
 	const updateRole = useCallback( async ( userId, newRole ) => {
 		setNotice( '' );
@@ -231,7 +231,8 @@ export default function MembersTab( { canManageRoles = false } ) {
 										isSmall: true,
 										isBusy: removingId === member.id,
 										'aria-busy': removingId === member.id,
-										disabled: removingId === member.id,
+										// One removal at a time, so a finished request can't re-enable another's button.
+										disabled: removingId !== 0,
 										onClick: () => removeMember( member ),
 										label: sprintf(
 											/* translators: %s: member name. */

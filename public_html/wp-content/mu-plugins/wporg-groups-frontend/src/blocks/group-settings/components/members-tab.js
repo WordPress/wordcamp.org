@@ -33,6 +33,9 @@ const ROLE_OPTIONS = [
 const PER_PAGE = 20;
 const ASSIGNABLE_ROLES = ROLE_OPTIONS.map( ( option ) => option.value );
 
+// Mirrors the PHP `ORGANIZER_ROLES`: these are changed to Member before they can be removed.
+const ORGANIZER_ROLES = [ 'administrator', 'editor' ];
+
 export default function MembersTab( { canManageRoles = false } ) {
 	const [ members, setMembers ] = useState( [] );
 	const [ total, setTotal ] = useState( 0 );
@@ -71,7 +74,14 @@ export default function MembersTab( { canManageRoles = false } ) {
 
 			setMembers( data );
 			setTotal( Number( response.headers.get( 'X-WP-Total' ) ) || data.length );
-			setTotalPages( Math.max( 1, Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1 ) );
+			const pages = Math.max( 1, Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1 );
+			setTotalPages( pages );
+
+			// Removals can shrink the list, so a page past the end goes back to the last one.
+			if ( page > pages ) {
+				setPage( pages );
+				return;
+			}
 			setLoading( false );
 		};
 
@@ -183,8 +193,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 			{ className: 'wporg-members-tab__list' },
 			members.map( ( member ) => {
 				const canEditRole = canManageRoles && ASSIGNABLE_ROLES.includes( member.role );
-				// Organizers are changed to Member before they can be removed.
-				const canRemove = canEditRole && member.role !== 'editor';
+				const canRemove = canManageRoles && ! ORGANIZER_ROLES.includes( member.role );
 
 				return h(
 					'div',
@@ -221,6 +230,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 										isDestructive: true,
 										isSmall: true,
 										isBusy: removingId === member.id,
+										'aria-busy': removingId === member.id,
 										disabled: removingId === member.id,
 										onClick: () => removeMember( member ),
 										label: sprintf(

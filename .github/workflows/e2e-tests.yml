@@ -37,6 +37,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # A normal run takes 3-6 minutes; without a limit a stall holds the check for 6 hours. A run where every
+    # spec times out and retries takes about 27, and a timed-out job skips the trace upload, so allow 35.
+    timeout-minutes: 35
+
     env:
       # Every `docker compose` call in this job should see only the base
       # file -- not docker-compose.override.yml, which is what makes local
@@ -107,27 +111,12 @@ jobs:
           npm ci --no-audit --no-fund
         fi
 
-    - name: Get installed Playwright version
-      id: playwright-version
-      run: echo "version=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> "$GITHUB_OUTPUT"
-
-    - name: Cache Playwright browsers
-      id: playwright-cache
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
     - name: Install Playwright browsers
-      # On a cache hit the browser binaries are already present, but the
-      # runner's OS-level deps (apt packages) still need installing --
-      # `install-deps` alone skips the (slow) browser download.
-      run: |
-        if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = 'true' ]; then
-          npx playwright install-deps chromium
-        else
-          npx playwright install --with-deps chromium
-        fi
+      # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
+      # don't need, and a slow mirror once stalled this step for over 7 minutes. Not cached: the download takes
+      # about 10 seconds, against 4 for a cache restore, and a cache PRs could share would need a run on production.
+      timeout-minutes: 5
+      run: npx playwright install chromium
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's

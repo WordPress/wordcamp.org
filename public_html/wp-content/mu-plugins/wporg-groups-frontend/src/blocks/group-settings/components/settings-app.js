@@ -53,6 +53,13 @@ export default function SettingsApp( {
 	// Global escape handler — prompt before closing if needed.
 	useEffect( () => {
 		const onEscape = ( ev ) => {
+			// A modal opened on top of Settings, like "Message all members",
+			// closes itself on Escape and leaves Settings open.
+			const frame = ev.target.closest?.( '.components-modal__frame' );
+			if ( frame && ! frame.classList.contains( 'wporg-group-settings-modal' ) ) {
+				return;
+			}
+
 			if ( ev.key === 'Escape' ) {
 				ev.stopPropagation();
 				ev.preventDefault();

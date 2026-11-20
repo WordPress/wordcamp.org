@@ -1,16 +1,34 @@
 /**
- * Modal for sending an event-related message to all group members.
+ * Modal for messaging group members: about an event, or (`message-group`) a
+ * plain group-wide message with no event attached (#2409).
  *
  * @package WordCamp\Groups\Frontend
  */
 
 import apiFetch from '@wordpress/api-fetch';
-import { Button, CheckboxControl, Modal, Notice, TextareaControl } from '@wordpress/components';
+import { Button, CheckboxControl, Modal, Notice, TextareaControl, TextControl } from '@wordpress/components';
 import { createElement as h, useState } from '@wordpress/element';
 import { __, _x } from '@wordpress/i18n';
 
 export default function MessageMembersModal( { eventId, recipientMode, onClose } ) {
-	const isAllMembers = 'message-all' === recipientMode;
+	const isGroupMessage = 'message-group' === recipientMode;
+	// Every mode but attendees goes to all opted-in members, with no RSVP picker.
+	const isAllMembers = 'message-attendees' !== recipientMode;
+	const descriptions = {
+		'message-group': __(
+			'This message will be emailed to every member of this group who has event emails turned on. It isn’t linked to any event.',
+			'wordcamporg'
+		),
+		'message-all': __(
+			'This message will be emailed to every opted-in member of this group.',
+			'wordcamporg'
+		),
+		'message-attendees': __(
+			'This message will be emailed to the opted-in attendees in the RSVP groups you choose.',
+			'wordcamporg'
+		),
+	};
+	const [ subject, setSubject ] = useState( '' );
 	const [ message, setMessage ] = useState( '' );
 	const [ recipients, setRecipients ] = useState( {
 		attending: true,
@@ -35,20 +53,28 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 		setSending( true );
 		setError( '' );
 
-		apiFetch( {
-			path: '/gatherpress/v1/event/email',
-			method: 'POST',
-			data: {
-				post_id: eventId,
-				message,
-				send: {
-					all: isAllMembers,
-					attending: ! isAllMembers && recipients.attending,
-					waiting_list: ! isAllMembers && recipients.waiting_list,
-					not_attending: ! isAllMembers && recipients.not_attending,
-				},
-			},
-		} )
+		const request = isGroupMessage
+			? {
+					path: '/wporg-groups/v1/group-message',
+					method: 'POST',
+					data: { subject, message },
+			  }
+			: {
+					path: '/gatherpress/v1/event/email',
+					method: 'POST',
+					data: {
+						post_id: eventId,
+						message,
+						send: {
+							all: isAllMembers,
+							attending: ! isAllMembers && recipients.attending,
+							waiting_list: ! isAllMembers && recipients.waiting_list,
+							not_attending: ! isAllMembers && recipients.not_attending,
+						},
+					},
+			  };
+
+		apiFetch( request )
 			.then( ( response ) => {
 				if ( ! response?.success ) {
 					throw new Error( __( 'The message could not be scheduled.', 'wordcamporg' ) );
@@ -90,19 +116,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 					'form',
 					{ onSubmit, className: 'wporg-groups-message-modal__form' },
 					error && h( Notice, { status: 'error', isDismissible: false }, error ),
-					h(
-						'p',
-						{},
-						isAllMembers
-							? __(
-									'This message will be emailed to every opted-in member of this group.',
-									'wordcamporg'
-							  )
-							: __(
-									'This message will be emailed to the opted-in attendees in the RSVP groups you choose.',
-									'wordcamporg'
-							  )
-					),
+					h( 'p', {}, descriptions[ recipientMode ] ),
 					! isAllMembers &&
 						h(
 							'fieldset',
@@ -133,6 +147,15 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 							{ status: 'warning', isDismissible: false },
 							__( 'Select at least one RSVP group.', 'wordcamporg' )
 						),
+					isGroupMessage &&
+						h( TextControl, {
+							label: __( 'Subject', 'wordcamporg' ),
+							value: subject,
+							onChange: setSubject,
+							required: true,
+							__nextHasNoMarginBottom: true,
+							__next40pxDefaultSize: true,
+						} ),
 					h( TextareaControl, {
 						label: __( 'Message', 'wordcamporg' ),
 						value: message,
@@ -159,7 +182,11 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								variant: 'primary',
 								type: 'submit',
 								isBusy: sending,
-								disabled: sending || ! message.trim() || ! hasRecipients,
+								disabled:
+									sending ||
+									! message.trim() ||
+									! hasRecipients ||
+									( isGroupMessage && ! subject.trim() ),
 							},
 							__( 'Send message', 'wordcamporg' )
 						)

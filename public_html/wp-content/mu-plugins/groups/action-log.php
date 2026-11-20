@@ -4,7 +4,7 @@
  *
  * Every create, archive, reactivate, transfer decision, message and export
  * run is logged with who did it, when, and to which group. So is an
- * organizer removing a member from their group's settings (#2395). It's an audit
+ * organizer removing a member (#2395) or messaging their whole group (#2409). It's an audit
  * trail now that Program Supporters use these tools as well as network admins
  * (#2294), and the source for crediting that work on WordPress.org profiles
  * later (#2075, #2076).
@@ -47,6 +47,7 @@ add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page', 12 );
 add_action( 'wporg_groups_ownership_transfer_executed', __NAMESPACE__ . '\record_transfer_approved', 10, 2 );
 add_action( 'wporg_groups_ownership_transfer_rejected', __NAMESPACE__ . '\record_transfer_rejected', 10, 3 );
 add_action( 'wporg_groups_member_removed', __NAMESPACE__ . '\record_member_removed', 10, 3 );
+add_action( 'wporg_groups_group_message_queued', __NAMESPACE__ . '\record_group_message', 10, 2 );
 
 /**
  * The actions that can be logged, and how the Activity screen describes them.
@@ -63,6 +64,7 @@ function get_action_labels(): array {
 		'message_queued'    => __( 'Sent a message', 'wordcamporg' ),
 		'export_started'    => __( 'Started a network export', 'wordcamporg' ),
 		'member_removed'    => __( 'Removed a member', 'wordcamporg' ),
+		'group_messaged'    => __( 'Messaged their group', 'wordcamporg' ),
 	);
 }
 
@@ -209,6 +211,16 @@ function record_member_removed( int $site_id, int $user_id, int $cancelled ): vo
 }
 
 /**
+ * Log an organizer messaging their whole group.
+ *
+ * @param int    $site_id Group site ID.
+ * @param string $subject Message subject.
+ */
+function record_group_message( int $site_id, string $subject ): void {
+	record( 'group_messaged', $site_id, array( 'subject' => $subject ) );
+}
+
+/**
  * Get a page of entries, newest first.
  *
  * @param int $page 1-based page number.
@@ -332,6 +344,13 @@ function format_details( array $entry ): string {
 				_n( '%1$s, %2$d upcoming RSVP cancelled', '%1$s, %2$d upcoming RSVPs cancelled', (int) ( $context['rsvps_cancelled'] ?? 0 ), 'wordcamporg' ),
 				format_user( (int) ( $context['removed_user_id'] ?? 0 ) ),
 				(int) ( $context['rsvps_cancelled'] ?? 0 )
+			);
+
+		case 'group_messaged':
+			return sprintf(
+				/* translators: %s: email subject. */
+				__( '"%s"', 'wordcamporg' ),
+				$context['subject'] ?? ''
 			);
 
 		case 'export_started':

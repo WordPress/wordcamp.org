@@ -102,7 +102,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			)
 		);
 
-		// Single: GET /members/{id}.
+		// Single: GET /members/{id}, and DELETE to remove a member.
 		register_rest_route(
 			$this->namespace,
 			'/' . $this->rest_base . '/(?P<id>[\d]+)',
@@ -116,6 +116,16 @@ class Members_Controller extends \WP_REST_Users_Controller {
 							'validate_callback' => function ( $param ) {
 								return is_numeric( $param );
 							},
+						),
+					),
+				),
+				array(
+					'methods'             => \WP_REST_Server::DELETABLE,
+					'callback'            => array( $this, 'remove_member' ),
+					'permission_callback' => array( $this, 'update_member_role_permissions_check' ),
+					'args'                => array(
+						'id' => array(
+							'sanitize_callback' => 'absint',
 						),
 					),
 				),
@@ -394,7 +404,6 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 */
 	public function leave_group( $request ) {
 		$user_id = get_current_user_id();
-		$blog_id = get_current_blog_id();
 		$user    = get_userdata( $user_id );
 
 		// An organizer steps down to Member first (`POST /members/me/role`),
@@ -407,13 +416,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
-		// Before the removal, while the RSVPs still belong to a member: a
-		// seat held for a date they will not be at is a seat nobody else
-		// can take (#2022). Past dates are left alone -- they are what the
-		// member attended, not a commitment to undo.
-		$cancelled = Leave_Cleanup\cancel_future_rsvps( $user_id );
-
-		remove_user_from_blog( $user_id, $blog_id );
+		$cancelled = Leave_Cleanup\remove_from_group( $user_id );
 
 		return rest_ensure_response(
 			array(
@@ -563,6 +566,53 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$user = get_userdata( $user_id );
 
 		return rest_ensure_response( $this->prepare_member( $user ) );
+	}
+
+	/**
+	 * Remove a member from the current group, cancelling their upcoming RSVPs like leaving does.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function remove_member( $request ) {
+		$user_id = (int) $request->get_param( 'id' );
+		$blog_id = get_current_blog_id();
+		$user    = get_userdata( $user_id );
+
+		if ( ! $user || ! is_user_member_of_blog( $user_id, $blog_id ) ) {
+			return new \WP_Error(
+				'rest_user_not_found',
+				__( 'User not found.', 'wordcamporg' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		// Organizers are changed to Member first, so the last-organizer rule stays in one place.
+		if ( array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
+			return new \WP_Error(
+				'cannot_remove_organizer',
+				__( 'Change this organizer\'s role to Member before removing them.', 'wordcamporg' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$cancelled = Leave_Cleanup\remove_from_group( $user_id );
+
+		/**
+		 * Fires after an organizer removes a member from a group.
+		 *
+		 * @param int $blog_id   Group site ID.
+		 * @param int $user_id   The removed member.
+		 * @param int $cancelled How many upcoming RSVPs were cancelled.
+		 */
+		do_action( 'wporg_groups_member_removed', $blog_id, $user_id, $cancelled );
+
+		return rest_ensure_response(
+			array(
+				'success'         => true,
+				'rsvps_cancelled' => $cancelled,
+			)
+		);
 	}
 
 	/**

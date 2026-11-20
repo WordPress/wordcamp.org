@@ -1,7 +1,7 @@
 /**
  * Group Settings — Members tab.
  *
- * Lists group members with role management, search, and pagination.
+ * Lists group members with role management, removal, search, and pagination.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -20,7 +20,7 @@ import {
 	Notice,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 import OwnershipTransferPanel from './ownership-transfer-panel';
 
@@ -41,6 +41,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 	const [ notice, setNotice ] = useState( '' );
 	const [ search, setSearch ] = useState( '' );
 	const [ page, setPage ] = useState( 1 );
+	const [ removingId, setRemovingId ] = useState( 0 );
 
 	useEffect( () => {
 		let isMounted = true;
@@ -111,6 +112,43 @@ export default function MembersTab( { canManageRoles = false } ) {
 		}
 	}, [] );
 
+	const removeMember = useCallback( async ( member ) => {
+		const message = sprintf(
+			/* translators: %s: member name. */
+			__( 'Remove %s from this group? Their RSVPs to upcoming events will be cancelled.', 'wordcamporg' ),
+			member.name
+		);
+
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( message ) ) {
+			return;
+		}
+
+		setNotice( '' );
+		setRemovingId( member.id );
+
+		try {
+			await apiFetch( {
+				path: `/wporg-groups/v1/members/${ member.id }`,
+				method: 'DELETE',
+			} );
+
+			setMembers( ( prev ) => prev.filter( ( m ) => m.id !== member.id ) );
+			setTotal( ( prev ) => prev - 1 );
+			setNotice(
+				sprintf(
+					/* translators: %s: member name. */
+					__( '%s was removed from the group.', 'wordcamporg' ),
+					member.name
+				)
+			);
+		} catch ( err ) {
+			setNotice( err.message || __( 'Could not remove member.', 'wordcamporg' ) );
+		} finally {
+			setRemovingId( 0 );
+		}
+	}, [] );
+
 	const onSearchChange = useCallback( ( value ) => {
 		setSearch( value );
 		setPage( 1 );
@@ -145,6 +183,8 @@ export default function MembersTab( { canManageRoles = false } ) {
 			{ className: 'wporg-members-tab__list' },
 			members.map( ( member ) => {
 				const canEditRole = canManageRoles && ASSIGNABLE_ROLES.includes( member.role );
+				// Organizers are changed to Member before they can be removed.
+				const canRemove = canEditRole && member.role !== 'editor';
 
 				return h(
 					'div',
@@ -169,6 +209,28 @@ export default function MembersTab( { canManageRoles = false } ) {
 						} )
 						: h( 'span', { className: 'wporg-members-tab__role-readonly' },
 							member.roleLabel || __( 'Organizer', 'wordcamporg' )
+						),
+					// Every row gets the slot, so the role controls line up.
+					canManageRoles &&
+						h( 'div', { className: 'wporg-members-tab__actions' },
+							canRemove &&
+								h(
+									Button,
+									{
+										variant: 'tertiary',
+										isDestructive: true,
+										isSmall: true,
+										isBusy: removingId === member.id,
+										disabled: removingId === member.id,
+										onClick: () => removeMember( member ),
+										label: sprintf(
+											/* translators: %s: member name. */
+											__( 'Remove %s', 'wordcamporg' ),
+											member.name
+										),
+									},
+									__( 'Remove', 'wordcamporg' )
+								)
 						)
 				);
 			} )

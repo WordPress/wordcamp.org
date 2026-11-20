@@ -18,23 +18,20 @@ shift 2
 
 case "$action" in
 	start)
+		: > "$dir/$name.log"
+
 		# Detached from the step's output, or the runner would hold the step open until the command ends.
-		# The exit file is renamed into place, so `wait` never reads it half written.
 		(
 			set +e
 			"$@" > "$dir/$name.log" 2>&1
-			echo $? > "$dir/$name.exit.tmp"
-			mv "$dir/$name.exit.tmp" "$dir/$name.exit"
+			echo $? > "$dir/$name.exit"
 		) < /dev/null > /dev/null 2>&1 &
+		echo $! > "$dir/$name.pid"
 		;;
 
 	wait)
-		# Bounded by the step's or the job's `timeout-minutes`.
-		until [ -f "$dir/$name.exit" ]; do
-			sleep 1
-		done
-
-		cat "$dir/$name.log"
+		# Streams the output until the command ends, so a step that times out still shows where it got stuck.
+		tail -n +1 -f --pid="$( cat "$dir/$name.pid" )" "$dir/$name.log"
 		exit "$( cat "$dir/$name.exit" )"
 		;;
 

@@ -103,7 +103,7 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=2s
           --health-timeout=5s
-          --health-retries=15
+          --health-retries=25
 
     steps:
     - uses: actions/checkout@v4

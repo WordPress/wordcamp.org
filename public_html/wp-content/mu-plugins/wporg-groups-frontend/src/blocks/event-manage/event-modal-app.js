@@ -407,7 +407,7 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 			} );
 		}
 
-		if ( [ 'message-all', 'message-attendees', 'message-group' ].includes( state.mode ) ) {
+		if ( [ 'message-all', 'message-attendees' ].includes( state.mode ) ) {
 			return h( MessageMembersModal, {
 				eventId: state.eventId,
 				recipientMode: state.mode,

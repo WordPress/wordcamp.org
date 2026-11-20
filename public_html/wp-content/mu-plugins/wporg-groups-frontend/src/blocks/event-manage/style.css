@@ -66,11 +66,6 @@
 	outline-offset: 2px;
 }
 
-/* "Message all members" under the group home's "Create event" button. */
-.wporg-event-manage > .wporg-event-manage__tool {
-	margin-top: var(--wp--preset--spacing--10);
-}
-
 /* === Message members modal === */
 
 .wporg-groups-message-modal .components-modal__content {

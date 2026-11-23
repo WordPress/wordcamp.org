@@ -110,7 +110,8 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 						{ status: 'success', isDismissible: false },
 						__( 'Your message will be emailed shortly.', 'wordcamporg' )
 					),
-					h( Button, { variant: 'primary', onClick: onClose }, __( 'Close', 'wordcamporg' ) )
+					// Focused on mount: the form, and the button that had focus, are gone.
+					h( Button, { variant: 'primary', onClick: onClose, autoFocus: true }, __( 'Close', 'wordcamporg' ) )
 			  )
 			: h(
 					'form',

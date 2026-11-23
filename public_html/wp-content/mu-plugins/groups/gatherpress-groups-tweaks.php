@@ -375,23 +375,26 @@ add_action(
 /**
  * Register event speakers post meta.
  *
- * Stores an array of user IDs who are speaking at the event.
+ * Stores an array of user IDs who are speaking at the event. Only members of
+ * the group are kept, since speakers are credited on their WordPress.org
+ * profiles.
  */
 function register_event_speakers_meta(): void {
 	register_post_meta(
 		'gatherpress_event',
 		'_event_speakers',
 		array(
-			'type'          => 'array',
-			'single'        => true,
-			'default'       => array(),
-			'show_in_rest'  => array(
+			'type'              => 'array',
+			'single'            => true,
+			'default'           => array(),
+			'show_in_rest'      => array(
 				'schema' => array(
 					'type'  => 'array',
 					'items' => array( 'type' => 'integer' ),
 				),
 			),
-			'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
+			'sanitize_callback' => 'WordCamp\Groups\Frontend\Event_Hosts\sanitize_ids',
+			'auth_callback'     => static function ( $allowed, $meta_key, $post_id ) {
 				return current_user_can( 'edit_post', (int) $post_id );
 			},
 		)

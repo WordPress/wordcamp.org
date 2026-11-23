@@ -47,13 +47,13 @@ function schedule_stats_cron(): void {
 /**
  * Fetch fresh figures and store them.
  *
- * When the groups can't be fetched, the figures already stored stay, so a Meetup outage never puts zeros
- * on the homepage.
+ * When the groups can't be fetched, or come back without their analytics, the figures already stored stay,
+ * so a Meetup outage or a missing token never puts zeros on the homepage.
  */
 function refresh_stats(): void {
 	$groups = fetch_meetup_groups();
 
-	if ( is_wp_error( $groups ) || ! is_array( $groups ) || ! $groups ) {
+	if ( is_wp_error( $groups ) || ! is_array( $groups ) || ! $groups || ! has_group_analytics( $groups ) ) {
 		return;
 	}
 
@@ -88,6 +88,27 @@ function fetch_meetup_groups() {
 }
 
 /**
+ * Whether any of the groups came back with its analytics.
+ *
+ * The member and past-event counts come from `groupAnalytics`, which Meetup only returns to an authorized
+ * request. Without a token it still lists every group but leaves that field null, and the client turns that
+ * into `member_count` 0, so a refresh would store "0 meetup members".
+ *
+ * @param array[] $groups From `fetch_meetup_groups()`.
+ *
+ * @return bool
+ */
+function has_group_analytics( array $groups ): bool {
+	foreach ( $groups as $group ) {
+		if ( ! empty( $group['groupAnalytics'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * How many WordCamps have been held or are on the schedule, from the posts on central.
  *
  * The `wporg_events_stats_wordcamp_count` filter supplies the number instead when it returns anything
@@ -106,19 +127,24 @@ function count_wordcamps(): int {
 		return 0;
 	}
 
+	global $wpdb;
+
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
-	// Not `get_wordcamps()`: it loads every camp's meta, and only the number is needed here.
-	$wordcamps = get_posts( array(
-		'post_type'   => 'wordcamp',
-		'post_status' => array( 'wcpt-scheduled', 'wcpt-closed' ),
-		'fields'      => 'ids',
-		'numberposts' => -1,
+	/*
+	 * A direct count, not `get_posts()` or `get_wordcamps()`: the cron runs on the Events network, where the
+	 * `wcpt-*` statuses aren't registered, so `WP_Query` would drop them and count every `wordcamp` post.
+	 */
+	$count = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status IN ( %s, %s )",
+		'wordcamp',
+		'wcpt-scheduled',
+		'wcpt-closed'
 	) );
 
 	restore_current_blog();
 
-	return count( $wordcamps );
+	return $count;
 }
 
 /**

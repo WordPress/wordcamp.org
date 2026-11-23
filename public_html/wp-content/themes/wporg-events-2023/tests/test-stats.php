@@ -39,13 +39,43 @@ class Test_Stats extends Database_TestCase {
 		return array(
 			array(
 				'member_count' => 100, 'country' => 'DE', 'past_event_count' => 10,
+				'groupAnalytics' => array(
+					'totalMembers'    => 100,
+					'totalPastEvents' => 10,
+				),
 			),
 			array(
 				'member_count' => 50, 'country' => 'de', 'past_event_count' => 5,
+				'groupAnalytics' => array(
+					'totalMembers'    => 50,
+					'totalPastEvents' => 5,
+				),
 			),
 			array(
 				'member_count' => 1, 'country' => 'US', 'past_event_count' => 0,
+				'groupAnalytics' => array(
+					'totalMembers'    => 1,
+					'totalPastEvents' => 0,
+				),
 			),
+		);
+	}
+
+	/**
+	 * The same groups as Meetup returns them to a request without a token: listed, but with no analytics.
+	 *
+	 * The client then fills in `member_count` as 0 and leaves `past_event_count` out.
+	 *
+	 * @return array[]
+	 */
+	protected function groups_without_analytics(): array {
+		return array_map(
+			fn( $group ) => array(
+				'member_count'   => 0,
+				'country'        => $group['country'],
+				'groupAnalytics' => null,
+			),
+			$this->groups()
 		);
 	}
 
@@ -188,6 +218,78 @@ class Test_Stats extends Database_TestCase {
 		refresh_stats();
 
 		$this->assertSame( 18, get_stats()['events'] );
+	}
+
+	/**
+	 * Groups without analytics mean the request had no token, so their zeros aren't stored over real figures.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\refresh_stats
+	 */
+	public function test_refresh_keeps_the_last_stats_when_no_group_has_analytics() {
+		$this->inject( $this->groups(), 3 );
+		refresh_stats();
+
+		remove_all_filters( 'wporg_events_stats_groups' );
+		add_filter( 'wporg_events_stats_groups', fn() => $this->groups_without_analytics() );
+		refresh_stats();
+
+		$this->assertSame( 18, get_stats()['events'] );
+		$this->assertSame( 151, get_stats()['members'] );
+	}
+
+	/**
+	 * Before any good refresh, groups without analytics leave the launch copy up instead of "0 meetup members".
+	 *
+	 * @covers \WordPressdotorg\Events_2023\refresh_stats
+	 */
+	public function test_refresh_stores_nothing_when_no_group_has_analytics() {
+		$this->inject( $this->groups_without_analytics(), 3 );
+
+		refresh_stats();
+
+		$this->assertFalse( get_option( STATS_OPTION ) );
+		$this->assertTrue( get_stats()['fallback'] );
+	}
+
+	/**
+	 * The WordCamp statuses are only registered on the WordCamp network, so the count can't rely on them.
+	 *
+	 * On the Events network, where the cron runs, `WP_Query` drops the unregistered statuses and counts every
+	 * `wordcamp` post instead.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\count_wordcamps
+	 */
+	public function test_refresh_counts_the_wordcamps_when_their_statuses_are_not_registered() {
+		global $wp_post_statuses;
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+		foreach ( array( 'wcpt-scheduled', 'wcpt-closed', 'wcpt-needs-vetting', 'wcpt-cancelled', 'draft' ) as $status ) {
+			self::factory()->post->create( array(
+				'post_type'   => 'wordcamp',
+				'post_status' => $status,
+			) );
+		}
+
+		restore_current_blog();
+
+		$registered = $wp_post_statuses;
+
+		foreach ( array_keys( $wp_post_statuses ) as $status ) {
+			if ( str_starts_with( $status, 'wcpt-' ) ) {
+				unset( $wp_post_statuses[ $status ] );
+			}
+		}
+
+		add_filter( 'wporg_events_stats_groups', fn() => $this->groups() );
+
+		try {
+			do_action( STATS_CRON_HOOK );
+		} finally {
+			$wp_post_statuses = $registered; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
+
+		$this->assertSame( 15 + 2, get_stats()['events'] );
 	}
 
 	/**

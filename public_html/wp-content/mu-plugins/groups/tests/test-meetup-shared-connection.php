@@ -26,44 +26,50 @@ class Test_Meetup_Shared_Connection extends Groups_TestCase {
 	);
 
 	/**
-	 * Clear the token on both networks.
+	 * Clear the token on every network.
 	 */
 	protected function tearDown(): void {
 		delete_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION );
 		$this->delete_groups_row();
+		$this->delete_groups_row( EVENTS_NETWORK_ID );
+		$this->delete_groups_row( CAMPUS_NETWORK_ID );
 
 		parent::tearDown();
 	}
 
 	/**
-	 * Whether the Groups network has a token row of its own, read past the filters.
+	 * Whether a network has a token row of its own, read past the filters.
+	 *
+	 * @param int $network_id The Groups network unless given.
 	 */
-	protected function groups_row_exists(): bool {
+	protected function groups_row_exists( int $network_id = GROUPS_NETWORK_ID ): bool {
 		global $wpdb;
 
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM $wpdb->sitemeta WHERE site_id = %d AND meta_key = %s",
-				GROUPS_NETWORK_ID,
+				$network_id,
 				Meetup_Shared_Connection\TOKEN_OPTION
 			)
 		);
 	}
 
 	/**
-	 * Remove any Groups network token row, past the filters.
+	 * Remove a network's token row, past the filters.
+	 *
+	 * @param int $network_id The Groups network unless given.
 	 */
-	protected function delete_groups_row(): void {
+	protected function delete_groups_row( int $network_id = GROUPS_NETWORK_ID ): void {
 		global $wpdb;
 
 		$wpdb->delete(
 			$wpdb->sitemeta,
 			array(
-				'site_id'  => GROUPS_NETWORK_ID,
+				'site_id'  => $network_id,
 				'meta_key' => Meetup_Shared_Connection\TOKEN_OPTION, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			)
 		);
-		wp_cache_delete( GROUPS_NETWORK_ID . ':' . Meetup_Shared_Connection\TOKEN_OPTION, 'site-options' );
+		wp_cache_delete( $network_id . ':' . Meetup_Shared_Connection\TOKEN_OPTION, 'site-options' );
 	}
 
 	/**
@@ -138,11 +144,44 @@ class Test_Meetup_Shared_Connection extends Groups_TestCase {
 	}
 
 	/**
+	 * The Events network sees Central's connection too, for the events.wordpress.org homepage stats.
+	 */
+	public function test_events_reads_central_token() {
+		update_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION, $this->token );
+
+		$this->assertSame( $this->token, get_network_option( EVENTS_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION ) );
+	}
+
+	/**
+	 * A refresh on the Events network lands on Central, and Events keeps no copy.
+	 */
+	public function test_events_refresh_writes_to_central() {
+		update_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION, $this->token );
+
+		$refreshed = array_merge( $this->token, array( 'access_token' => 'refreshed-access' ) );
+		update_network_option( EVENTS_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION, $refreshed );
+
+		$this->assertSame( $refreshed, get_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION ) );
+		$this->assertFalse( $this->groups_row_exists( EVENTS_NETWORK_ID ) );
+	}
+
+	/**
+	 * A reset on the Events network resets Central's token.
+	 */
+	public function test_events_reset_deletes_central_token() {
+		update_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION, $this->token );
+
+		delete_network_option( EVENTS_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION );
+
+		$this->assertFalse( get_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION ) );
+	}
+
+	/**
 	 * Other networks keep their own option.
 	 */
 	public function test_other_networks_are_unaffected() {
 		update_network_option( WORDCAMP_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION, $this->token );
 
-		$this->assertFalse( get_network_option( EVENTS_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION ) );
+		$this->assertFalse( get_network_option( CAMPUS_NETWORK_ID, Meetup_Shared_Connection\TOKEN_OPTION ) );
 	}
 }

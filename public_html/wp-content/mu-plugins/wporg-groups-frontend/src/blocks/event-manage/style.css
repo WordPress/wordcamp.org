@@ -213,6 +213,14 @@
 	max-height: 90vh !important;
 }
 
+@media (min-width: 600px) {
+
+	.components-modal__frame.wporg-groups-event-modal {
+		width: 100%;
+		max-width: min(704px, calc(100% - 32px));
+	}
+}
+
 .wporg-groups-event-modal__form {
 	display: flex;
 	flex-direction: column;

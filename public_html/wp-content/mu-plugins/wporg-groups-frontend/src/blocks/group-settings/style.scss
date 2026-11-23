@@ -24,6 +24,10 @@
 	// Accent tokens and the header stacking fix come from
 	// `components/component-accents.css`.
 
+	&.components-modal__frame.is-full-screen {
+		max-width: 688px;
+	}
+
 	.components-modal__content {
 		padding: 0;
 		display: flex;

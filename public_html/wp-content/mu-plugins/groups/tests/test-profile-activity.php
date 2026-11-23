@@ -8,7 +8,6 @@ use WP_REST_Request;
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-testcase.php';
-require_once __DIR__ . '/stub-profile-helpers.php';
 
 /**
  * @group groups
@@ -34,19 +33,14 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->requests = array();
-		$this->status   = 200;
-
 		add_filter( 'pre_http_request', array( $this, 'answer_profiles' ), 10, 3 );
 		add_filter( 'wporg_groups_frontend_self_serve_roles_enabled', '__return_false' );
 	}
 
 	/**
-	 * Drop the filters and any queued jobs.
+	 * Drop any queued jobs.
 	 */
 	protected function tearDown(): void {
-		remove_filter( 'pre_http_request', array( $this, 'answer_profiles' ), 10 );
-		remove_filter( 'wporg_groups_frontend_self_serve_roles_enabled', '__return_false' );
 		wp_unschedule_hook( Profile_Activity\SYNC_HOOK );
 		wp_unschedule_hook( Profile_Activity\RETRACT_HOOK );
 
@@ -116,15 +110,30 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 	}
 
 	/**
-	 * The `command`/`user` pairs sent so far.
+	 * Update an event's fields, then run cron.
+	 *
+	 * @param int   $event_id Event post ID.
+	 * @param array $fields   Post fields.
+	 */
+	protected function update_event( int $event_id, array $fields ): void {
+		wp_update_post( array( 'ID' => $event_id ) + $fields );
+		$this->run_cron();
+	}
+
+	/**
+	 * The `command`/`user` pairs sent since the last call.
 	 *
 	 * @return string[]
 	 */
 	protected function sent(): array {
-		return array_map(
+		$sent = array_map(
 			static fn( array $body ): string => $body['command'] . ' ' . $body['user'],
 			$this->requests
 		);
+
+		$this->requests = array();
+
+		return $sent;
 	}
 
 	/**
@@ -136,28 +145,30 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 
 		$this->run_cron();
 
-		$this->assertCount( 1, $this->requests );
 		$this->assertSame(
 			array(
-				'action'      => 'wporg_handle_activity',
-				'source'      => 'groups',
-				'command'     => 'add',
-				'role'        => 'speaker',
-				'user'        => $speaker,
-				'event_id'    => $event_id,
-				'group_id'    => get_current_blog_id(),
-				'event_title' => 'Meetup Night',
-				'url'         => get_permalink( $event_id ),
-				'group_name'  => get_bloginfo( 'name' ),
-				'group_url'   => home_url( '/' ),
+				array(
+					'action'      => 'wporg_handle_activity',
+					'source'      => 'groups',
+					'command'     => 'add',
+					'role'        => 'speaker',
+					'user'        => $speaker,
+					'event_id'    => $event_id,
+					'group_id'    => get_current_blog_id(),
+					'event_title' => 'Meetup Night',
+					'url'         => get_permalink( $event_id ),
+					'group_name'  => get_bloginfo( 'name' ),
+					'group_url'   => home_url( '/' ),
+				),
 			),
-			$this->requests[0]
+			$this->requests
 		);
 		$this->assertArrayHasKey( $speaker, Profile_Activity\get_synced( $event_id ) );
+		$this->sent();
 
 		Profile_Activity\sync( $event_id );
 
-		$this->assertCount( 1, $this->requests, 'A sync with nothing changed sends nothing.' );
+		$this->assertSame( array(), $this->sent(), 'A sync with nothing changed sends nothing.' );
 	}
 
 	/**
@@ -165,17 +176,9 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 	 * a second request. The sync has to wait for both.
 	 */
 	public function test_speakers_saved_after_publishing_are_added() {
-		$speaker = self::factory()->user->create();
-		$editor  = self::factory()->user->create( array( 'role' => 'editor' ) );
-
-		$event_id = self::factory()->post->create(
-			array(
-				'post_type'   => 'gatherpress_event',
-				'post_status' => 'publish',
-				'post_title'  => 'Meetup Night',
-			)
-		);
-		update_post_meta( $event_id, Profile_Activity\SPEAKERS_META, array() );
+		$speaker  = self::factory()->user->create();
+		$editor   = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$event_id = $this->create_event( array() );
 
 		// Core's tearDown() unregisters meta keys after every test.
 		\WordCamp\Groups\GatherPress_Tweaks\register_event_speakers_meta();
@@ -203,48 +206,21 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 		$second   = self::factory()->user->create();
 		$event_id = $this->create_event( array( $first, $second ) );
 		$this->run_cron();
-		$this->requests = array();
+		$this->sent();
 
 		update_post_meta( $event_id, Profile_Activity\SPEAKERS_META, array( $first ) );
 		$this->run_cron();
 		$this->assertSame( array( 'remove ' . $second ), $this->sent() );
 
-		$this->requests = array();
-		wp_update_post(
-			array(
-				'ID'         => $event_id,
-				'post_title' => 'Meetup Night, Renamed',
-			)
-		);
-		$this->run_cron();
-		$this->assertSame( array( 'add ' . $first ), $this->sent() );
+		$this->update_event( $event_id, array( 'post_title' => 'Meetup Night, Renamed' ) );
 		$this->assertSame( 'Meetup Night, Renamed', $this->requests[0]['event_title'] );
+		$this->assertSame( array( 'add ' . $first ), $this->sent() );
 
-		$this->requests = array();
-		wp_update_post(
-			array(
-				'ID'            => $event_id,
-				'post_password' => 'secret',
-			)
-		);
-		$this->run_cron();
+		$this->update_event( $event_id, array( 'post_password' => 'secret' ) );
 		$this->assertSame( array( 'remove ' . $first ), $this->sent() );
 
-		$this->requests = array();
-		wp_update_post(
-			array(
-				'ID'            => $event_id,
-				'post_password' => '',
-			)
-		);
-		$this->run_cron();
-		wp_update_post(
-			array(
-				'ID'          => $event_id,
-				'post_status' => 'draft',
-			)
-		);
-		$this->run_cron();
+		$this->update_event( $event_id, array( 'post_password' => '' ) );
+		$this->update_event( $event_id, array( 'post_status' => 'draft' ) );
 		$this->assertSame( array( 'add ' . $first, 'remove ' . $first ), $this->sent() );
 		$this->assertSame( array(), Profile_Activity\get_synced( $event_id ) );
 	}
@@ -262,15 +238,8 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 		$this->run_cron();
 		$this->assertSame( array( 'add ' . $member ), $this->sent() );
 
-		$this->requests = array();
 		remove_user_from_blog( $member, get_current_blog_id() );
-		wp_update_post(
-			array(
-				'ID'         => $event_id,
-				'post_title' => 'Meetup Night, Renamed',
-			)
-		);
-		$this->run_cron();
+		$this->update_event( $event_id, array( 'post_title' => 'Meetup Night, Renamed' ) );
 
 		$this->assertSame( array( 'add ' . $member ), $this->sent() );
 		$this->assertSame( array( $member, $non_member ), get_post_meta( $event_id, Profile_Activity\SPEAKERS_META, true ) );
@@ -286,7 +255,7 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 		$this->create_event( array( $speaker ) );
 		$this->run_cron();
 
-		$this->assertSame( array(), $this->requests );
+		$this->assertSame( array(), $this->sent() );
 	}
 
 	/**
@@ -299,19 +268,13 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 		$this->status = 500;
 		$event_id     = $this->create_event( array( $speaker ) );
 		$this->run_cron();
+		$this->sent();
 
 		$retry = wp_next_scheduled( Profile_Activity\SYNC_HOOK, array( $event_id, 2 ) );
 		$this->assertGreaterThanOrEqual( time() + HOUR_IN_SECONDS - 5, $retry );
 
-		$this->status   = 200;
-		$this->requests = array();
-		wp_update_post(
-			array(
-				'ID'            => $event_id,
-				'post_password' => 'secret',
-			)
-		);
-		$this->run_cron();
+		$this->status = 200;
+		$this->update_event( $event_id, array( 'post_password' => 'secret' ) );
 
 		$this->assertSame( array( 'remove ' . $speaker ), $this->sent() );
 		$this->assertSame( array(), Profile_Activity\get_synced( $event_id ) );
@@ -335,7 +298,7 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 
 		restore_error_handler();
 
-		$this->assertCount( 2, $this->requests );
+		$this->assertCount( 2, $this->sent() );
 		$this->assertFalse( wp_next_scheduled( Profile_Activity\SYNC_HOOK, array( $event_id, 2 ) ) );
 		$this->assertFalse( wp_next_scheduled( Profile_Activity\SYNC_HOOK, array( $event_id, Profile_Activity\MAX_ATTEMPTS + 1 ) ) );
 	}
@@ -347,7 +310,7 @@ class Test_Groups_Profile_Activity extends Groups_TestCase {
 		$speaker  = self::factory()->user->create();
 		$event_id = $this->create_event( array( $speaker ) );
 		$this->run_cron();
-		$this->requests = array();
+		$this->sent();
 
 		wp_delete_post( $event_id, true );
 		$this->run_cron();

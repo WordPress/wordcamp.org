@@ -45,6 +45,8 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
 	require_once dirname( __DIR__ ) . '/network-export.php';
 	require_once dirname( __DIR__ ) . '/events-feed.php';
+	// Before the module, which hooks nothing without `Profiles\api()`.
+	require_once __DIR__ . '/stub-profile-helpers.php';
 	require_once dirname( __DIR__ ) . '/profile-activity.php';
 	// The import screen checks the Meetup connection through it. Only the MU
 	// Plugins suite loads it otherwise.

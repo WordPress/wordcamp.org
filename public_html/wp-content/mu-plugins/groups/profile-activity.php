@@ -38,6 +38,10 @@ if ( is_readable( PROFILE_HELPERS ) ) {
 	require_once PROFILE_HELPERS;
 }
 
+if ( ! function_exists( 'WordPressdotorg\Profiles\api' ) ) {
+	return;
+}
+
 add_action( 'added_post_meta', __NAMESPACE__ . '\on_meta_change', 10, 3 );
 add_action( 'updated_post_meta', __NAMESPACE__ . '\on_meta_change', 10, 3 );
 add_action( 'deleted_post_meta', __NAMESPACE__ . '\on_meta_change', 10, 3 );
@@ -46,13 +50,6 @@ add_action( 'post_updated', __NAMESPACE__ . '\on_post_updated', 10, 3 );
 add_action( 'before_delete_post', __NAMESPACE__ . '\on_delete', 10, 2 );
 add_action( SYNC_HOOK, __NAMESPACE__ . '\sync', 10, 2 );
 add_action( RETRACT_HOOK, __NAMESPACE__ . '\retract', 10, 3 );
-
-/**
- * Whether the Profiles API is available.
- */
-function is_enabled(): bool {
-	return function_exists( 'WordPressdotorg\Profiles\api' );
-}
 
 /**
  * Queue a sync when an event's speakers change.
@@ -104,7 +101,7 @@ function on_post_updated( $post_id, $post_after, $post_before ): void {
  * @param WP_Post $post    The post.
  */
 function on_delete( $post_id, $post ): void {
-	if ( ! is_enabled() || ! $post || 'gatherpress_event' !== $post->post_type ) {
+	if ( ! $post || 'gatherpress_event' !== $post->post_type ) {
 		return;
 	}
 
@@ -126,7 +123,7 @@ function on_delete( $post_id, $post ): void {
 function schedule_sync( int $event_id ): void {
 	$post = get_post( $event_id );
 
-	if ( ! is_enabled() || ! $post || 'gatherpress_event' !== $post->post_type ) {
+	if ( ! $post || 'gatherpress_event' !== $post->post_type ) {
 		return;
 	}
 
@@ -146,10 +143,6 @@ function schedule_sync( int $event_id ): void {
  * @param int $attempt  Which try this is.
  */
 function sync( int $event_id, int $attempt = 1 ): void {
-	if ( ! is_enabled() ) {
-		return;
-	}
-
 	$post    = get_post( $event_id );
 	$synced  = get_synced( $event_id );
 	$targets = get_target_user_ids( $post, $synced );
@@ -157,17 +150,14 @@ function sync( int $event_id, int $attempt = 1 ): void {
 	$retry   = false;
 
 	foreach ( $targets as $user_id ) {
-		if ( isset( $synced[ $user_id ] ) && $sig === $synced[ $user_id ]['sig'] ) {
+		if ( isset( $synced[ $user_id ] ) && $sig === $synced[ $user_id ] ) {
 			continue;
 		}
 
 		$result = send( 'add', $event_id, $user_id, $post );
 
 		if ( 'sent' === $result ) {
-			$synced[ $user_id ] = array(
-				'role' => 'speaker',
-				'sig'  => $sig,
-			);
+			$synced[ $user_id ] = $sig;
 			save_synced( $event_id, $synced );
 		} elseif ( 'failed' === $result ) {
 			$retry = true;
@@ -175,13 +165,8 @@ function sync( int $event_id, int $attempt = 1 ): void {
 			// Profiles may have saved it anyway, so record it as pending: a
 			// later sync then sends the add again, or a remove if it's no
 			// longer wanted.
-			if ( ! isset( $synced[ $user_id ] ) ) {
-				$synced[ $user_id ] = array(
-					'role' => 'speaker',
-					'sig'  => '',
-				);
-				save_synced( $event_id, $synced );
-			}
+			$synced[ $user_id ] ??= '';
+			save_synced( $event_id, $synced );
 		}
 	}
 
@@ -209,10 +194,6 @@ function sync( int $event_id, int $attempt = 1 ): void {
  * @param int   $attempt  Which try this is.
  */
 function retract( int $event_id, array $user_ids, int $attempt = 1 ): void {
-	if ( ! is_enabled() ) {
-		return;
-	}
-
 	$failed = array();
 
 	foreach ( $user_ids as $user_id ) {
@@ -253,20 +234,19 @@ function get_target_user_ids( ?WP_Post $post, array $synced ): array {
 	return array_values(
 		array_filter(
 			$ids,
-			static fn( int $id ): bool => $id > 0
-				&& false !== get_userdata( $id )
+			static fn( int $id ): bool => false !== get_userdata( $id )
 				&& ( isset( $synced[ $id ] ) || is_user_member_of_blog( $id ) )
 		)
 	);
 }
 
 /**
- * What Profiles has been told about an event, keyed by user ID.
- *
- * An empty `sig` marks an add that may not have reached Profiles.
+ * What Profiles has been told about an event: user ID => signature of the
+ * event details sent. An empty signature marks an add that may not have
+ * reached Profiles.
  *
  * @param int $event_id Event post ID.
- * @return array<int, array{role:string, sig:string}>
+ * @return array<int, string>
  */
 function get_synced( int $event_id ): array {
 	$synced = get_post_meta( $event_id, ACTIVITY_META, true );

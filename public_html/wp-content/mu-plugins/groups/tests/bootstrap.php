@@ -45,7 +45,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__ ) . '/group-ownership-transfer-notifications.php';
 	require_once dirname( __DIR__ ) . '/network-export.php';
 	require_once dirname( __DIR__ ) . '/events-feed.php';
-	require_once dirname( __DIR__ ) . '/profile-credit.php';
+	require_once dirname( __DIR__ ) . '/profile-activity.php';
 	// The import screen checks the Meetup connection through it. Only the MU
 	// Plugins suite loads it otherwise.
 	require_once dirname( __DIR__, 2 ) . '/wcorg-meetup-oauth.php';

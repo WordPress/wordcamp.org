@@ -85,8 +85,8 @@ jobs:
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # The unquoted list lets Bash expand workspace globs like routes/*, and pipefail makes a manifest that
-      # can't be read fail the step instead of being left out of the hash.
+      # Assigned first so a jq error fails the step, unquoted so Bash expands globs like routes/*, and pipefail so
+      # a manifest that can't be read fails the step instead of being left out of the hash.
       run: |
         set -o pipefail
         manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )

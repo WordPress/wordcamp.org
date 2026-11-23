@@ -80,6 +80,10 @@ use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
 use function WordCamp\Groups\Frontend\Group_Location\normalize_location;
 use function WordCamp\Groups\Frontend\Group_Location\save_location;
+use function WordCamp\Groups\Frontend\Site_Language\get_options as get_site_language_options;
+use function WordCamp\Groups\Frontend\Site_Language\get_site_language;
+use function WordCamp\Groups\Frontend\Site_Language\save_site_language;
+use function WordCamp\Groups\Frontend\Site_Language\validate_locale as validate_site_language;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_missing_required;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
@@ -336,6 +340,11 @@ function register_routes(): void {
 						'required'          => false,
 						'sanitize_callback' => static fn( $format ): string => sanitize_group_time_format( $format ),
 					),
+					'site_language' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
 				),
 			),
 		)
@@ -355,17 +364,19 @@ function manage_group_settings_permissions_check(): bool {
 function get_group_info(): WP_REST_Response {
 	return new WP_REST_Response(
 		array(
-			'title'       => get_option( 'blogname', '' ),
-			'description' => get_option( 'blogdescription', '' ),
-			'location'    => get_location(),
-			'countries'   => get_country_options(),
-			'dateFormat'  => get_date_format(),
-			'timeFormat'  => get_time_format(),
+			'title'         => get_option( 'blogname', '' ),
+			'description'   => get_option( 'blogdescription', '' ),
+			'location'      => get_location(),
+			'countries'     => get_country_options(),
+			'siteLanguage'  => get_site_language(),
+			'siteLanguages' => get_site_language_options(),
+			'dateFormat'    => get_date_format(),
+			'timeFormat'    => get_time_format(),
 			// Each choice ships with the example it renders, so the form can
 			// offer "Tuesday, September 29" instead of `l, F j`. That is the
 			// whole point of the setting (#2033).
-			'dateChoices' => build_choices( get_date_formats() ),
-			'timeChoices' => build_choices( get_time_formats() ),
+			'dateChoices'   => build_choices( get_date_formats() ),
+			'timeChoices'   => build_choices( get_time_formats() ),
 		)
 	);
 }
@@ -394,10 +405,12 @@ function sanitize_group_time_format( $format ): string {
  * @return WP_Error|WP_REST_Response
  */
 function update_group_info( WP_REST_Request $request ) {
-	$title        = $request->get_param( 'title' );
-	$description  = $request->get_param( 'description' );
-	$has_location = $request->has_param( 'location' );
-	$location     = null;
+	$title             = $request->get_param( 'title' );
+	$description       = $request->get_param( 'description' );
+	$has_location      = $request->has_param( 'location' );
+	$has_site_language = $request->has_param( 'site_language' );
+	$location          = null;
+	$site_language     = null;
 
 	// An empty group name is not recoverable from this UI: the next load
 	// returns the blank value, so there is nothing left to restore it from.
@@ -419,12 +432,24 @@ function update_group_info( WP_REST_Request $request ) {
 		}
 	}
 
+	if ( $has_site_language ) {
+		$site_language = validate_site_language( (string) $request->get_param( 'site_language' ) );
+
+		if ( is_wp_error( $site_language ) ) {
+			return $site_language;
+		}
+	}
+
 	if ( null !== $title ) {
 		update_option( 'blogname', $title );
 	}
 
 	if ( null !== $description ) {
 		update_option( 'blogdescription', $description );
+	}
+
+	if ( $has_site_language ) {
+		save_site_language( $site_language );
 	}
 
 	if ( $request->has_param( 'date_format' ) ) {

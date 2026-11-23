@@ -16,6 +16,7 @@ namespace WordCamp\Groups\Site_Provisioning;
 
 use WordCamp\Groups\Action_Log;
 use WordCamp\Groups\Capabilities;
+use WordCamp\Groups\Frontend\Site_Language;
 use WordCamp\Logger;
 use WP_Error;
 
@@ -65,8 +66,9 @@ function handle_form_submission() {
 	$slug            = isset( $_POST['group_slug'] ) ? sanitize_text_field( wp_unslash( $_POST['group_slug'] ) ) : '';
 	$organizer_login = isset( $_POST['organizer_login'] ) ? sanitize_user( wp_unslash( $_POST['organizer_login'] ), true ) : '';
 	$timezone_string = isset( $_POST['timezone_string'] ) ? sanitize_text_field( wp_unslash( $_POST['timezone_string'] ) ) : '';
+	$site_language   = isset( $_POST['site_language'] ) ? sanitize_text_field( wp_unslash( $_POST['site_language'] ) ) : '';
 
-	$result = create_group_site( $title, $slug, $organizer_login, $timezone_string );
+	$result = create_group_site( $title, $slug, $organizer_login, $timezone_string, $site_language );
 
 	if ( is_wp_error( $result ) ) {
 		add_settings_error( 'wcorg-add-group-site', $result->get_error_code(), $result->get_error_message() );
@@ -131,6 +133,18 @@ function render_admin_page() {
 						</select>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row"><label for="site_language"><?php esc_html_e( 'Site language', 'wordcamporg' ); ?></label></th>
+					<td>
+						<select id="site_language" name="site_language">
+							<?php foreach ( Site_Language\get_options() as $language_option ) : ?>
+								<option value="<?php echo esc_attr( $language_option['code'] ); ?>">
+									<?php echo esc_html( $language_option['name'] ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</td>
+				</tr>
 			</table>
 
 			<?php submit_button( __( 'Create Group Site', 'wordcamporg' ) ); ?>
@@ -176,10 +190,12 @@ function parse_utc_offset( string $value ) {
  * @param string $organizer_login The WordPress.org username of the lead organizer.
  * @param string $timezone_string Optional. A PHP timezone identifier (e.g. `Australia/Brisbane`),
  *                                or a manual UTC offset as `wp_timezone_choice()` lists it (e.g. `UTC-5`).
+ * @param string $site_language   Optional. An installed WordPress locale code (e.g. `pl_PL`), or empty / `en_US`
+ *                                for US English.
  *
  * @return int|WP_Error The new site's ID, or a WP_Error on failure.
  */
-function create_group_site( string $title, string $slug, string $organizer_login, string $timezone_string = '' ) {
+function create_group_site( string $title, string $slug, string $organizer_login, string $timezone_string = '', string $site_language = '' ) {
 	$slug = sanitize_title( $slug );
 
 	if ( '' === $slug || ! preg_match( '/^[\w-]+$/', $slug ) ) {
@@ -207,6 +223,13 @@ function create_group_site( string $title, string $slug, string $organizer_login
 	if ( $timezone_string && null === $gmt_offset && ! in_array( $timezone_string, timezone_identifiers_list(), true ) ) {
 		Logger\log( 'invalid_timezone', compact( 'title', 'slug', 'organizer_login', 'timezone_string' ) );
 		return new WP_Error( 'invalid_timezone', __( 'Please select a valid timezone.', 'wordcamporg' ) );
+	}
+
+	$normalized_language = Site_Language\validate_locale( $site_language );
+
+	if ( is_wp_error( $normalized_language ) ) {
+		Logger\log( 'invalid_site_language', compact( 'title', 'slug', 'organizer_login', 'site_language' ) );
+		return new WP_Error( 'invalid_site_language', __( 'Please select a valid site language.', 'wordcamporg' ) );
 	}
 
 	$site_id = wp_insert_site(
@@ -238,6 +261,12 @@ function create_group_site( string $title, string $slug, string $organizer_login
 		update_option( 'gmt_offset', $gmt_offset );
 	} elseif ( $timezone_string ) {
 		update_option( 'timezone_string', $timezone_string );
+	}
+
+	$switched_locale = false;
+	if ( '' !== $normalized_language ) {
+		Site_Language\save_site_language( $normalized_language );
+		$switched_locale = switch_to_locale( $normalized_language );
 	}
 
 	// GatherPress defaults venue maps to CARTO tiles, which now only serve an
@@ -301,6 +330,10 @@ function create_group_site( string $title, string $slug, string $organizer_login
 
 	if ( is_wp_error( $about_page ) ) {
 		Logger\log( 'about_page_failed', compact( 'title', 'slug', 'organizer_login', 'site_id' ) );
+	}
+
+	if ( $switched_locale ) {
+		restore_previous_locale();
 	}
 
 	restore_current_blog();

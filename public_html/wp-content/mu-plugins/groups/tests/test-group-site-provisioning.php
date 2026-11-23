@@ -204,4 +204,58 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'invalid_timezone', $result->get_error_code() );
 	}
+
+	/**
+	 * Filter installed languages to include Polish during provisioning tests.
+	 *
+	 * @return string[]
+	 */
+	public function filter_installed_polish(): array {
+		return array( 'pl_PL' );
+	}
+
+	/**
+	 * A valid installed site language is persisted to `WPLANG` on the new group site.
+	 */
+	public function test_saves_site_language_when_provided() {
+		add_filter( 'get_available_languages', array( $this, 'filter_installed_polish' ) );
+
+		try {
+			$site_id = create_group_site( 'Olsztyn WordPress Community', 'olsztyn-wordpress', 'grouporganizer', 'Europe/Warsaw', 'pl_PL' );
+		} finally {
+			remove_filter( 'get_available_languages', array( $this, 'filter_installed_polish' ) );
+		}
+
+		$this->assertIsInt( $site_id );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( 'pl_PL', get_option( 'WPLANG' ) );
+		restore_current_blog();
+	}
+
+	/**
+	 * `en_US` normalizes to an empty `WPLANG` option, matching core's General Settings.
+	 */
+	public function test_normalizes_en_us_to_empty_wplang() {
+		$site_id = create_group_site( 'English Group', 'english-group', 'grouporganizer', 'UTC', 'en_US' );
+
+		$this->assertIsInt( $site_id );
+
+		switch_to_blog( $site_id );
+		$this->assertSame( '', get_option( 'WPLANG' ) );
+		restore_current_blog();
+	}
+
+	/**
+	 * An uninstalled or unrecognized site language is rejected before creating any site.
+	 */
+	public function test_rejects_invalid_site_language() {
+		$existing_count = count( get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
+
+		$result = create_group_site( 'Bad Language Group', 'bad-language', 'grouporganizer', 'UTC', 'xx_INVALID' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_site_language', $result->get_error_code() );
+		$this->assertCount( $existing_count, get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
+	}
 }

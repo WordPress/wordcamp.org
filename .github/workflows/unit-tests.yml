@@ -49,9 +49,12 @@ jobs:
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      # The unquoted list lets Bash expand workspace globs like routes/*, and pipefail makes a manifest that
+      # can't be read fail the step instead of being left out of the hash.
       run: |
-        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules
@@ -173,9 +176,12 @@ jobs:
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      # The unquoted list lets Bash expand workspace globs like routes/*, and pipefail makes a manifest that
+      # can't be read fail the step instead of being left out of the hash.
       run: |
-        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules

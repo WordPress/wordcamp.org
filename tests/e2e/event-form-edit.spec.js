@@ -2,11 +2,9 @@ const { test, expect } = require( '@playwright/test' );
 const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
- * Edit mode of the shared event form, through the group-settings Events tab.
- * The tab is the only surface with the Speakers field, and the only edit
- * surface an editor-tier user sees: the group page's modal edit button is
- * rendered for users who cannot manage group settings, so it needs its own
- * author-tier account and event and is not covered here.
+ * Speakers and edit mode in the event modal: the speakers picked when the
+ * event is created are saved with it, and "Edit this event" opens the same
+ * modal with them loaded (#2424).
  *
  * Requires the `organiser1` (`password`) editor-tier test user, and
  * `organiser2` to exist as a group member to pick as the speaker.
@@ -38,10 +36,8 @@ test.describe( 'event form edit mode', () => {
 
 		const title = `Event form edit E2E ${ Date.now() }`;
 		await page.goto( '' );
-		await page.locator( '[data-wporg-settings-open]' ).click();
-		const dialog = page.getByRole( 'dialog' );
-		await dialog.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
-		const form = page.locator( 'form.wporg-event-form' );
+		await page.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
+		const form = page.locator( 'form.wporg-groups-event-modal__form' );
 
 		// The minimum only applies when creating; the edit assertion below
 		// would pass vacuously if it went missing here too.
@@ -71,8 +67,6 @@ test.describe( 'event form edit mode', () => {
 		const created = await fetchMeta( page, slug );
 		expect( created._event_speakers ).toHaveLength( 1 );
 
-		// The single-event page renders the settings block's edit button,
-		// which opens the Events tab straight into this event.
 		await page.getByRole( 'button', { name: 'Edit this event' } ).click();
 		await expect( form.getByLabel( 'Event title' ) ).toHaveValue( title );
 		await expect( form.getByLabel( 'Date', { exact: true } ) ).not.toHaveAttribute( 'min' );

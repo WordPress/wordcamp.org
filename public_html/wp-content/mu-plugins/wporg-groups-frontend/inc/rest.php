@@ -66,6 +66,8 @@ use function WordCamp\Groups\Frontend\Event_Date_Format\set_time_format;
 use function WordCamp\Groups\Frontend\Event_Hosts\get_default_form_value as get_default_hosts;
 use function WordCamp\Groups\Frontend\Event_Hosts\get_form_value as get_event_hosts_form_value;
 use function WordCamp\Groups\Frontend\Event_Hosts\set_event_hosts;
+use function WordCamp\Groups\Frontend\Event_Speakers\get_form_value as get_event_speakers_form_value;
+use function WordCamp\Groups\Frontend\Event_Speakers\set_event_speakers;
 use function WordCamp\Groups\Frontend\Event_Language\get_event_language;
 use function WordCamp\Groups\Frontend\Event_Language\get_options as get_language_options;
 use function WordCamp\Groups\Frontend\Event_Language\set_event_language;
@@ -862,6 +864,13 @@ function event_args_schema(): array {
 			'required' => false,
 			'items'    => array( 'type' => 'integer' ),
 		),
+		// Speaker user IDs, the same way as the hosts: an absent parameter
+		// leaves them alone, and `set_event_speakers()` keeps members only.
+		'speakers'          => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array( 'type' => 'integer' ),
+		),
 		// The attendee limit, 0 for none. No `default`, like the topics: an
 		// absent parameter leaves the limit alone.
 		'capacity'          => array(
@@ -934,6 +943,20 @@ function maybe_save_hosts( int $event_id, WP_REST_Request $request ): void {
 
 	if ( is_array( $hosts ) ) {
 		set_event_hosts( $event_id, $hosts );
+	}
+}
+
+/**
+ * Write the event's speakers, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_speakers( int $event_id, WP_REST_Request $request ): void {
+	$speakers = $request->get_param( 'speakers' );
+
+	if ( is_array( $speakers ) ) {
+		set_event_speakers( $event_id, $speakers );
 	}
 }
 
@@ -1047,6 +1070,10 @@ function get_existing_event_fields( int $event_id ): array {
 
 	$fields['hosts'] = get_event_hosts_form_value( $event_id );
 
+	// Carried into a copy, which is the same event on another day, but not
+	// into an event started from a template; see `get_template_event_fields()`.
+	$fields['speakers'] = get_event_speakers_form_value( $event_id );
+
 	// Carried into a new event started from this one too: a group's venue
 	// holds the same number of people next month.
 	$fields['capacity'] = (int) get_post_meta( $event_id, 'gatherpress_capacity', true );
@@ -1080,8 +1107,9 @@ function get_template_event_fields( int $template_id, array $defaults ): array {
 	$duration = get_event_duration_minutes( $template_id );
 
 	// Hosts don't carry over: a new event is hosted by whoever creates it
-	// until they say otherwise, the same as one started from scratch.
-	unset( $fields['date'], $fields['time_start'], $fields['time_end'], $fields['hosts'] );
+	// until they say otherwise, the same as one started from scratch. Nor do
+	// speakers: next month's talks are given by someone else.
+	unset( $fields['date'], $fields['time_start'], $fields['time_end'], $fields['hosts'], $fields['speakers'] );
 
 	if ( null !== $duration && preg_match( '/^(\d{2}):(\d{2})$/', (string) $defaults['time_start'], $m ) ) {
 		$end_minutes        = ( (int) $m[1] * 60 + (int) $m[2] + $duration ) % ( 24 * 60 );
@@ -1202,6 +1230,7 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$fields['rsvp_questions']     = $fields['rsvp_questions'] ?? array();
 	$fields['topics']             = $fields['topics'] ?? array();
 	$fields['hosts']              = $fields['hosts'] ?? get_default_hosts();
+	$fields['speakers']           = $fields['speakers'] ?? array();
 
 	/**
 	 * Filters the fields returned to the frontend event form.
@@ -1397,6 +1426,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	set_event_language( $saved_id, (string) $request->get_param( 'language' ) );
 	maybe_save_topics( $saved_id, $request );
 	maybe_save_hosts( $saved_id, $request );
+	maybe_save_speakers( $saved_id, $request );
 	maybe_save_capacity( $saved_id, $request );
 
 	// Featured image.
@@ -1658,6 +1688,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	set_event_language( $saved_id, $fields['language'] );
 	maybe_save_topics( $saved_id, $request );
 	maybe_save_hosts( $saved_id, $request );
+	maybe_save_speakers( $saved_id, $request );
 	maybe_save_capacity( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see

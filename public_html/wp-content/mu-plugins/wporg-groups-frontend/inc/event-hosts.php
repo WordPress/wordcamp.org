@@ -38,13 +38,15 @@ const MAX_HOSTS = 10;
  * Normalize a submitted list of host user IDs.
  *
  * Keeps members of the current group only, drops duplicates (the first one
- * wins) and keeps the first `MAX_HOSTS`. Enforced here rather than trusted
- * from the form, since the REST endpoint is the real write path.
+ * wins) and keeps the first `$max`. Enforced here rather than trusted from
+ * the form, since the REST endpoint is the real write path. Speakers are
+ * picked the same way, so they share it.
  *
  * @param mixed $ids Submitted user IDs.
+ * @param int   $max The most IDs to keep.
  * @return int[] Clean user IDs, in the order given.
  */
-function sanitize_ids( $ids ): array {
+function sanitize_ids( $ids, int $max = MAX_HOSTS ): array {
 	if ( ! is_array( $ids ) ) {
 		return array();
 	}
@@ -64,7 +66,7 @@ function sanitize_ids( $ids ): array {
 
 		$clean[] = $id;
 
-		if ( count( $clean ) >= MAX_HOSTS ) {
+		if ( count( $clean ) >= $max ) {
 			break;
 		}
 	}

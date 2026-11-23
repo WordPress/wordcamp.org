@@ -72,14 +72,16 @@ function get_form_value( int $event_id ): array {
 /**
  * Replace an event's speakers.
  *
- * Keeps group members only, through the same rules as the hosts. An empty
- * list, after sanitizing, clears them.
+ * A newly named speaker has to be a group member, through the same rules as
+ * the hosts. One already on the event stays even after leaving the group:
+ * they still gave the talk, and the form sends the whole list back on every
+ * save. An empty list, after sanitizing, clears them.
  *
  * @param int   $event_id Event post ID.
  * @param mixed $ids      User IDs.
  */
 function set_event_speakers( int $event_id, $ids ): void {
-	$ids = sanitize_ids( $ids, MAX_SPEAKERS );
+	$ids = sanitize_ids( $ids, MAX_SPEAKERS, wp_list_pluck( get_event_speakers( $event_id ), 'ID' ) );
 
 	if ( $ids ) {
 		update_post_meta( $event_id, META_KEY, $ids );

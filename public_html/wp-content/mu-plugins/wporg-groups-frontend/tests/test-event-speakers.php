@@ -176,6 +176,37 @@ class Test_Groups_Event_Speakers extends Groups_TestCase {
 	}
 
 	/**
+	 * A speaker who has since left the group stays on the event when it's
+	 * saved again, but can't be newly added to another one, and isn't
+	 * offered on a copy of it.
+	 */
+	public function test_speaker_who_left_the_group_is_kept_on_their_event() {
+		list( $ana, $bo ) = $this->member_ids;
+
+		$event_id = $this->create_event( array( 'speakers' => array( $ana, $bo ) ) );
+		remove_user_from_blog( $ana, get_current_blog_id() );
+
+		update_event(
+			$this->request(
+				$this->base_event_params() + array(
+					'id'       => $event_id,
+					'speakers' => array( $ana, $bo ),
+				)
+			)
+		);
+		$this->assertSame( array( $ana, $bo ), get_post_meta( $event_id, META_KEY, true ) );
+
+		$other_id = $this->create_event( array( 'speakers' => array( $ana, $bo ) ) );
+		$this->assertSame( array( $bo ), get_post_meta( $other_id, META_KEY, true ) );
+
+		$copy = array(
+			'template_id' => $event_id,
+			'copy'        => true,
+		);
+		$this->assertSame( array( $bo ), $this->form_speaker_ids( $copy ) );
+	}
+
+	/**
 	 * The modal's autosave keeps the speakers on the draft.
 	 */
 	public function test_save_draft_stores_the_speakers() {

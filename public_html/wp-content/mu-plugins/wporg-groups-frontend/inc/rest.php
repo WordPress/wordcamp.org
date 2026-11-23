@@ -870,6 +870,9 @@ function event_args_schema(): array {
 			'type'     => 'array',
 			'required' => false,
 			'items'    => array( 'type' => 'integer' ),
+			// Well above `MAX_SPEAKERS`, so a longer list from before the cap
+			// is trimmed rather than rejected, but bounds the member lookups.
+			'maxItems' => 100,
 		),
 		// The attendee limit, 0 for none. No `default`, like the topics: an
 		// absent parameter leaves the limit alone.
@@ -1133,6 +1136,12 @@ function get_template_event_fields( int $template_id, array $defaults ): array {
 function get_copied_event_fields( int $copy_id ): array {
 	$fields         = get_existing_event_fields( $copy_id );
 	$fields['date'] = '';
+
+	// A copy is a new event, so it can only name current members; one who
+	// has left the group would be dropped on save, so don't show them.
+	$fields['speakers'] = array_values(
+		array_filter( $fields['speakers'], static fn( array $speaker ): bool => is_user_member_of_blog( $speaker['id'] ) )
+	);
 
 	// The language is a choice its organizer made, so it carries over like
 	// the venue does. With none set, the new-event default stands.

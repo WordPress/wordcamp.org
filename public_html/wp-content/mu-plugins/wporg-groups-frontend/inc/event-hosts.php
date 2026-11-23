@@ -42,11 +42,12 @@ const MAX_HOSTS = 10;
  * the form, since the REST endpoint is the real write path. Speakers are
  * picked the same way, so they share it.
  *
- * @param mixed $ids Submitted user IDs.
- * @param int   $max The most IDs to keep.
+ * @param mixed $ids  Submitted user IDs.
+ * @param int   $max  The most IDs to keep.
+ * @param int[] $keep IDs to keep even if they're no longer members.
  * @return int[] Clean user IDs, in the order given.
  */
-function sanitize_ids( $ids, int $max = MAX_HOSTS ): array {
+function sanitize_ids( $ids, int $max = MAX_HOSTS, array $keep = array() ): array {
 	if ( ! is_array( $ids ) ) {
 		return array();
 	}
@@ -60,7 +61,11 @@ function sanitize_ids( $ids, int $max = MAX_HOSTS ): array {
 
 		$id = (int) $id;
 
-		if ( $id <= 0 || in_array( $id, $clean, true ) || ! is_user_member_of_blog( $id ) ) {
+		if ( $id <= 0 || in_array( $id, $clean, true ) ) {
+			continue;
+		}
+
+		if ( ! in_array( $id, $keep, true ) && ! is_user_member_of_blog( $id ) ) {
 			continue;
 		}
 

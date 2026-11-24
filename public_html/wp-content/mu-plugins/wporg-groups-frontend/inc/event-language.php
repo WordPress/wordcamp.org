@@ -63,7 +63,7 @@ function register_meta(): void {
  * groups on.
  *
  * Sorted by localized name the way `wcorg_get_countries()` sorts territories,
- * through the same ASCII transliteration so accents do not sink a language to
+ * with accents folded to plain letters so they do not sink a language to
  * the bottom of the list.
  *
  * @return array<string, string> Language subtag => localized language name.
@@ -86,11 +86,6 @@ function get_options(): array {
 		ARRAY_FILTER_USE_KEY
 	);
 
-	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
-	// See https://www.php.net/manual/en/function.iconv.php#74101.
-	$orig_locale = setlocale( LC_CTYPE, 0 );
-	setlocale( LC_CTYPE, 'en_US.UTF-8' );
-
 	uasort(
 		$options,
 		static function ( string $first, string $second ): int {
@@ -98,24 +93,20 @@ function get_options(): array {
 		}
 	);
 
-	setlocale( LC_CTYPE, $orig_locale );
-
 	return $options;
 }
 
 /**
- * Fold a language name down to ASCII so the sort ignores its accents.
+ * Fold a language name's accented letters to plain ones so the sort ignores them.
  *
- * Returns the name unchanged when it holds nothing `iconv()` can transliterate,
- * which keeps the comparison total rather than collapsing to the empty string.
+ * `remove_accents()` rather than `iconv()` transliteration, which depends on the
+ * process locale and the platform's iconv: macOS turns "Võro" into "V~oro".
+ * Letters with no plain equivalent, such as Cyrillic, are left as they are.
  *
  * @param string $name Localized language name.
  */
 function transliterate( string $name ): string {
-	$encoding       = mb_detect_encoding( $name ) ?: 'UTF-8';
-	$transliterated = iconv( $encoding, 'ascii//TRANSLIT', $name );
-
-	return false === $transliterated ? $name : $transliterated;
+	return remove_accents( $name );
 }
 
 /**

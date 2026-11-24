@@ -4,7 +4,7 @@ namespace WordPressdotorg\Theme\Events_2023\Tests;
 
 use WordCamp\Tests\Database_TestCase;
 use WP_Error;
-use function WordPressdotorg\Events_2023\{ compute_stats, fetch_meetup_groups, fetch_member_count, format_stat, get_stats, query_member_count, refresh_stats, schedule_stats_cron };
+use function WordPressdotorg\Events_2023\{ compute_stats, fetch_meetup_groups, fetch_member_count, format_stat, get_stats, query_member_count, refresh_stats, schedule_stats_cron, usable_meetup_client };
 use function WordPressdotorg\Theme\Events_2023\Events_Stat\render as render_stat;
 use const WordPressdotorg\Events_2023\{ STATS_CRON_HOOK, STATS_OPTION };
 
@@ -183,6 +183,38 @@ class Test_Stats extends Database_TestCase {
 		foreach ( $responses as $response ) {
 			$this->assertWPError( query_member_count( $this->client_returning( $response ) ) );
 		}
+	}
+
+	/**
+	 * A client that already failed, when Meetup refused to refresh an expired token in its constructor, is
+	 * never used. Using it would send a request without a token, and the client's reset would then delete
+	 * Central's token.
+	 *
+	 * The real client can't be created here (no Meetup credentials in the test environment), so this uses
+	 * a stand-in with the same `error` property.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\usable_meetup_client
+	 */
+	public function test_a_client_that_failed_to_refresh_its_token_is_not_used() {
+		$client        = new \stdClass();
+		$client->error = new WP_Error( 'invalid_grant', 'The refresh token was refused.' );
+
+		$result = usable_meetup_client( $client );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'invalid_grant', $result->get_error_code() );
+	}
+
+	/**
+	 * A client without errors is used as it is.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\usable_meetup_client
+	 */
+	public function test_a_client_without_errors_is_used() {
+		$client        = new \stdClass();
+		$client->error = new WP_Error();
+
+		$this->assertSame( $client, usable_meetup_client( $client ) );
 	}
 
 	/**

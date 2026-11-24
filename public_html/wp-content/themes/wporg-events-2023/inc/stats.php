@@ -165,7 +165,26 @@ function get_meetup_client() {
 		return new WP_Error( 'no_meetup_client', 'The Meetup client is not available.' );
 	}
 
-	return new Meetup_Client();
+	return usable_meetup_client( new Meetup_Client() );
+}
+
+/**
+ * The client, unless it already failed.
+ *
+ * `Meetup_Client` refreshes an expired token in its constructor. When Meetup refuses the refresh, the
+ * client keeps the error, and using it anyway sends a request without a token; the client's reset then
+ * deletes Central's token. This is the same check the Groups importer makes.
+ *
+ * @param Meetup_Client|object $client Anything with the client's `error` property.
+ *
+ * @return Meetup_Client|object|WP_Error
+ */
+function usable_meetup_client( $client ) {
+	if ( $client->error->has_errors() ) {
+		return $client->error;
+	}
+
+	return $client;
 }
 
 /**

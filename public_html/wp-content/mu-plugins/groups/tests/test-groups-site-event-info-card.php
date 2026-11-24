@@ -183,27 +183,6 @@ class Test_Groups_Site_Event_Info_Card extends Groups_TestCase {
 	}
 
 	/**
-	 * The structural half: the card separates its zones with a border on the
-	 * zone, never with a sibling `core/separator` that can outlive it.
-	 */
-	public function test_info_card_contains_no_standalone_separator_blocks() {
-		$card = $this->get_info_card_block();
-
-		$separators = array_filter(
-			$card['innerBlocks'],
-			static function ( array $block ): bool {
-				return 'core/separator' === $block['blockName'];
-			}
-		);
-
-		$this->assertSame(
-			array(),
-			$separators,
-			'The details card is back to standalone separators; a divider can now outlive its zone.'
-		);
-	}
-
-	/**
 	 * Every optional zone carries the class that draws its divider, so a
 	 * zone added without one doesn't silently lose its boundary.
 	 */

@@ -41,15 +41,15 @@ browser interaction, cross-plugin capability leaks, exploratory checks.
   match `groups-site-*` classes only the theme emits, so changes confined to
   either used to skip E2E. When a spec starts depending on a new path, add it
   there in the same PR.
-  Covers the anonymous front page, an author creating an event through the
-  real UI, per-event messaging, the auto-publish-notification email, the
-  member directory, and Reply → Cancel on a group news post's comment form.
-  Accounts (all `password`): `organiser1`–`4`, `eventorganiser1`–`7`,
-  `member1`. **Every test that logs in has its own account, not just every
-  spec file**: `organiser2`/`3`/`4` (editor tier) are `event-form.spec.js`'s,
-  one per test, and `event-manage-messaging.spec.js` needs
-  `eventorganiser2`/`4`/`5` because its three tests run concurrently under
-  `fullyParallel`. Don't consolidate them onto shared accounts.
+  The specs in `tests/e2e/` are the list of what it covers.
+  Accounts (all `password`) are created by the user-setup step in
+  `.github/workflows/e2e-tests.yml`: `organiser1` (editor tier),
+  `eventorganiser1` (author tier) and `member1`, one per role.
+  `tests/e2e/auth.setup.js` logs each in once and the specs share that
+  session through `storageState`, so a spec never logs in itself.
+  `organiser2` never logs in: it keeps `organiser1` from being the group's
+  only organizer (which adds a step-down note to the sidebar) and is the
+  speaker `event-form-edit.spec.js` picks.
 
 ### Reading an E2E failure
 
@@ -59,18 +59,18 @@ so don't reach for `--workers=1`. Every failure writes an `error-context.md`
 moment of timeout. Read it first. These deterministic bugs were all first
 mistaken for flakiness:
 
-- **Starter-pattern dialog.** "Choose a pattern" opens on every fresh
-  `post-new.php` for a post type with starter patterns (`gatherpress_event`
-  has them). Unlike the "Welcome to the editor" guide, its Close button and
-  Escape don't dismiss it. It sat over the sidebar and hung every later
-  interaction. Every spec creating an event must call
-  `tests/e2e/utils/dismiss-editor-onboarding.js`.
-- **Shared logins.** This environment allows one active session per user
-  (see `tests/e2e/utils/login.js`), so one worker's login can invalidate
-  another's established session mid-test; `error-context.md` shows a login
-  form instead of the editor. `login()`'s retry only covers a collision
-  during the login request itself. The only fix is one account per
-  concurrently running test, including within one spec file.
+- **Editor onboarding dialogs.** "Welcome to the editor" and "Choose a
+  pattern" (`gatherpress_event` has starter patterns) open over a fresh
+  `post-new.php` and hang every later interaction. Closing them from a spec
+  is a race, so `tests/e2e/auth.setup.js` turns both off in each test
+  account's editor preferences. A new account needs to go through that setup.
+- **Concurrent logins.** WordPress keeps all of a user's sessions in one
+  `session_tokens` user meta row and rewrites the whole row on login, so two
+  logins as the same user that overlap drop one of the sessions;
+  `error-context.md` shows a login form instead of the editor. A session
+  that already exists is safe. Reuse the saved login from
+  `tests/e2e/auth.setup.js` instead of logging in inside a spec, and never
+  log out in one: that ends the session every other spec is using.
 - **Collapsed "Event settings" panel.** The panel holding
   `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start" button is a
   `PanelBody` whose open state is a per-user preference persisted
@@ -146,10 +146,11 @@ which tests publish through the same hook.
 - **Find every pinned copy of the version** (there is no single source of
   truth):
   `grep -rln "<old-version>" . --include="*.yml" --include="*.php" --include="*.md" --include="*.sh" | grep -v "plugins/gatherpress"`.
-  At the 0.35.0 bump: `.github/workflows/e2e-tests.yml`,
-  `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`
-  (already stale at an older version than the workflows, so don't assume
-  they agree), and this skill's install commands below.
+  Expect at least `.github/workflows/e2e-tests.yml`,
+  `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`,
+  the rollout snippet in `GROUPS.md`, and this skill's install commands
+  below. They have drifted apart before, so check each rather than assuming
+  they agree.
 
 ## 1. Environment setup
 
@@ -183,9 +184,6 @@ Environment gotchas:
   Re-add named callbacks in `setUp()`.
 - `go_to( get_permalink( $id ) )` doesn't establish a singular query in this
   fixture. Use `go_to( home_url( "?p={$id}&post_type={$type}" ) )`.
-- If a new test account's first E2E run fails in `dismissEditorOnboarding`,
-  rerun once, and only when `error-context.md` shows the Welcome dialog
-  reinitializing.
 - `is_admin()` is true throughout the PHPUnit suite, so any gate that skips
   admin screens (GatherPress 0.36.1's `leave_password_protected_events_out()`,
   core term classes in `get_post_class()`) silently doesn't run. Call
@@ -220,7 +218,7 @@ Create one user per role tier with **both** a login password (browser pass)
 and an application password (REST pass):
 
 ```bash
-for pair in "organiser1:editor" eventorganiser{1..7}:author "member1:subscriber"; do
+for pair in "organiser1:editor" "organiser2:editor" "eventorganiser1:author" "member1:subscriber"; do
   u="${pair%%:*}"; role="${pair##*:}"
   docker compose exec wordcamp.test wp user create "$u" "$u@example.test" \
     --role="$role" --user_pass=password \
@@ -741,8 +739,6 @@ current status before treating any as new:
 
 | Symptom | Exercised by | Notes |
 |---|---|---|
-| Join/leave silently 403s via the UI (front-end nonce lookup finds nothing) | Section 3 join/leave | Front-end only; REST works with a valid nonce (section 2). |
-| `wporg/event-manage` registered but in no template | Section 3/4 grep, or a `wp eval` block-registry dump | Dead code; Event Organizers manage events via wp-admin. |
 | `/members` fully public | Section 5 | Open product/privacy question, not a bug in itself. |
 | `my-events` empty for a creator who never RSVP'd | Section 3 as an event creator | RSVP-based by design; confirm it still matches the product decision. |
 | A departed member's RSVP still in `wp_comments` with `comment_approved = trash` | Section 3 leave-group, then inspect the comment rows | Expected. `Leave_Cleanup\cancel_future_rsvps()` uses `wp_delete_comment()` without force, matching GatherPress's `no_status` path (`Rsvp\Storage::save()`), so with trash enabled (default) it trashes. The seat is released either way (RSVP counts read approved comments only). `deleted_comment` doesn't fire, so the recurring-events occurrence mapping is cleaned when the trash is emptied. Past RSVPs kept on purpose (attendance history). |

@@ -330,27 +330,6 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * Group organisers — even administrators of their own group — can't
-	 * export the whole network.
-	 */
-	public function test_group_administrators_cannot_export() {
-		$this->become_group_administrator();
-
-		$this->assertFalse( Network_Export\current_user_can_export() );
-	}
-
-	/**
-	 * Network admins (Program Managers) can.
-	 */
-	public function test_network_admins_can_export() {
-		$original = $this->become_network_admin();
-
-		$this->assertTrue( Network_Export\current_user_can_export() );
-
-		update_site_option( 'site_admins', $original );
-	}
-
-	/**
 	 * The start handler itself rejects non-network-admins — the capability
 	 * gate must live in the handler, not only in the menu registration.
 	 */

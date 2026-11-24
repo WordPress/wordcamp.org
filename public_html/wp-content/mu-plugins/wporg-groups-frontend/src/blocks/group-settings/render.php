@@ -3,8 +3,9 @@
  * Server-side rendering for the wporg/group-settings block.
  *
  * Renders the settings trigger button for users who can manage events.
- * On singular event pages, also renders an "Edit this event" button.
- * The React settings app mounts via the view script.
+ * On event pages it renders no button: Edit is in the event's organizer
+ * tools, which open the settings app mounted here. The React settings app
+ * mounts via the view script.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -43,16 +44,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<?php if ( $is_single_event ) : ?>
-		<div class="wp-block-button is-style-outline">
-			<button
-				type="button"
-				class="wp-block-button__link wp-element-button"
-				data-wporg-settings-open="events"
-				data-wporg-settings-event-id="<?php echo (int) $event_post_id; ?>"
-			>&#9998; <?php esc_html_e( 'Edit this event', 'wordcamporg' ); ?></button>
-		</div>
-	<?php else : ?>
+	<?php if ( ! $is_single_event ) : ?>
 		<div class="wp-block-button<?php echo $needs_setup ? '' : ' is-style-outline'; ?>">
 			<button
 				type="button"

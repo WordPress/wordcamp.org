@@ -199,4 +199,62 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 
 		$this->assertStringNotContainsString( 'data-wporg-groups-modal="check-in"', do_blocks( '<!-- wp:wporg/event-manage /-->' ) );
 	}
+
+	/**
+	 * An Event Organizer can copy someone else's published event (#2398),
+	 * without getting the actions that need edit rights.
+	 */
+	public function test_copy_offered_on_others_event() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$event_id = $this->go_to_event_owned_by( $owner_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
+
+		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-event-id="' . $event_id . '"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="edit"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-all"', $output );
+	}
+
+	/**
+	 * A draft isn't offered for copying, and nor is anything to a Member.
+	 */
+	public function test_copy_absent_on_draft_and_for_member() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$event_id = $this->go_to_event_owned_by( $owner_id );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertSame( '', trim( (string) do_blocks( '<!-- wp:wporg/event-manage /-->' ) ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'draft',
+			)
+		);
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+
+		$this->assertSame( '', trim( (string) do_blocks( '<!-- wp:wporg/event-manage /-->' ) ) );
+	}
+
+	/**
+	 * A group admin's Edit opens the settings app, on the row after the
+	 * messaging actions, and the settings block no longer adds a second one.
+	 */
+	public function test_admin_edit_opens_settings_app() {
+		$event_id = $this->go_to_event_owned_by( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage /--><!-- wp:wporg/group-settings /-->' );
+
+		$this->assertSame( 1, substr_count( $output, 'Edit this event' ) );
+		$this->assertStringContainsString( 'data-wporg-settings-open="events"', $output );
+		$this->assertStringContainsString( 'data-wporg-settings-event-id="' . $event_id . '"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
+		$this->assertLessThan(
+			strpos( $output, 'data-wporg-settings-open="events"' ),
+			strpos( $output, 'data-wporg-groups-modal="message-attendees"' )
+		);
+	}
 }

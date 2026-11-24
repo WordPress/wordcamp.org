@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * Withdrawing from an event without hunting for the action.
@@ -15,11 +15,11 @@ const { login } = require( './utils/login' );
  * API reveals and hides it as the status changes, and that pressing it
  * actually withdraws.
  *
- * Requires the `organiser6` / `password` editor-tier test user. One account
- * per test: this environment only supports a single active session per user
- * and specs run concurrently under `fullyParallel` (see utils/login.js).
+ * Requires the `organiser1` / `password` editor-tier test user.
  */
 test.describe( 'cancelling an RSVP', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-03-04'; // 2099-03-04 is a Wednesday.
@@ -27,8 +27,6 @@ test.describe( 'cancelling an RSVP', () => {
 
 	test( 'the event page offers it while attending, and it withdraws', async ( { page } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
-
-		await login( page, 'organiser6', 'password' );
 
 		// Publish an event of our own: CI seeds none, and an event another
 		// spec created could already carry RSVPs that aren't ours.

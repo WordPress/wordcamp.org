@@ -101,11 +101,12 @@ class Test_Groups_Site_GatherPress_Blocks extends Groups_TestCase {
 	 * when that matches. A renamed variation would leave the loops listing
 	 * events by publish date with past ones mixed in.
 	 *
-	 * Loops that inherit the main query are the exception, and must not carry
-	 * the name: GatherPress answers an inheriting loop by swapping its own
+	 * Loops that inherit the main query are the exception, and carry a name of
+	 * their own: GatherPress answers an inheriting loop by swapping its own
 	 * query in for the global one, which makes core lazy-load every card
-	 * image. The events archive inherits and gets its event query from
-	 * `apply_event_archive_main_query()` instead.
+	 * image, and its editor rewrites a loop with no name into a custom query
+	 * as soon as the template is opened. The events archive inherits and gets
+	 * its event query from `apply_event_archive_main_query()` instead.
 	 */
 	public function test_query_loops_name_gatherpress_event_variation() {
 		$namespaces = array();
@@ -132,7 +133,7 @@ class Test_Groups_Site_GatherPress_Blocks extends Groups_TestCase {
 		}
 
 		foreach ( $inheriting as $file => $namespace ) {
-			$this->assertSame( '', $namespace, "`{$file}`'s event Query Loop inherits the main query, so GatherPress would replace it." );
+			$this->assertSame( 'groups-site-events-archive', $namespace, "`{$file}`'s event Query Loop inherits the main query, so GatherPress must not claim it." );
 		}
 
 		$this->assertNotEmpty( $namespaces, 'Expected the theme to have event Query Loops.' );

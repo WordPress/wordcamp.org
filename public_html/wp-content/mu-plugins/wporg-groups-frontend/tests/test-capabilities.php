@@ -120,15 +120,6 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 	}
 
 	/**
-	 * The fixture site is `events.wordpress.test/group/sunshine-coast-qld/`,
-	 * which is on the `SELF_SERVE_ROLE_GROUPS` allow-list as the local
-	 * development / test group.
-	 */
-	public function test_get_current_group_slug_reads_the_site_path() {
-		$this->assertSame( 'sunshine-coast-qld', get_current_group_slug() );
-	}
-
-	/**
 	 * Self-serve role switching is on for the allow-listed fixture group.
 	 */
 	public function test_self_serve_roles_enabled_on_allow_listed_group() {

@@ -91,6 +91,15 @@ use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
 const NAMESPACE_V1 = 'wporg-groups/v1';
 
 /**
+ * Post meta holding a draft's times and timezone while it has no date.
+ *
+ * GatherPress stores an event's times only as full datetimes, and fills in
+ * a default one for an event saved without. So a draft saved before its
+ * date is picked, like a copy (#2398), keeps them here.
+ */
+const UNDATED_SCHEDULE_META = '_wporg_groups_undated_schedule';
+
+/**
  * Hook the REST routes into rest_api_init.
  */
 function bootstrap(): void {
@@ -119,6 +128,11 @@ function register_routes(): void {
 					'type'              => 'integer',
 					'required'          => false,
 					'sanitize_callback' => 'absint',
+				),
+				// With `template_id`, fill the form as a copy (#2398).
+				'copy'        => array(
+					'type'     => 'boolean',
+					'required' => false,
 				),
 			),
 		)
@@ -485,7 +499,9 @@ function event_templates_permissions_check(): bool {
  * Whether an event can be used as a template for a new one.
  *
  * Only published events: a draft is someone's unfinished work, and the
- * modal already offers the user's own drafts separately.
+ * modal already offers the user's own drafts separately. A password-protected
+ * event only once its password is entered, or to someone who can edit it,
+ * since `read_post` doesn't check the password.
  */
 function is_event_template( int $event_id ): bool {
 	$post = get_post( $event_id );
@@ -493,7 +509,20 @@ function is_event_template( int $event_id ): bool {
 	return $post
 		&& Event::POST_TYPE === $post->post_type
 		&& 'publish' === $post->post_status
-		&& current_user_can( 'read_post', $event_id );
+		&& current_user_can( 'read_post', $event_id )
+		&& ( ! post_password_required( $post ) || current_user_can( 'edit_post', $event_id ) );
+}
+
+/**
+ * Whether the current user can copy an event into a new one (#2398).
+ *
+ * A copy starts a new event, so it's offered on any event that could be a
+ * template, including one the user can't edit.
+ */
+function current_user_can_copy_event( int $event_id ): bool {
+	return current_user_can_manage_events()
+		&& current_user_can_create_event()
+		&& is_event_template( $event_id );
 }
 
 /**
@@ -711,6 +740,12 @@ function draft_args_schema(): array {
 	$schema['date']['required']       = false;
 	$schema['time_start']['required'] = false;
 	$schema['time_end']['required']   = false;
+
+	// A copy (#2398) has no date until the organizer picks one, and its
+	// draft is saved without one in the meantime; see `save_draft()`.
+	$validate_date                       = $schema['date']['validate_callback'];
+	$schema['date']['validate_callback'] = static fn( $param ) => '' === $param || $validate_date( $param );
+
 	return $schema;
 }
 
@@ -976,6 +1011,15 @@ function get_existing_event_fields( int $event_id ): array {
 		$fields['time_end'] = $m[1];
 	}
 
+	// A draft saved without a date keeps it unset, along with its times.
+	// This wins over the stored datetimes: GatherPress fills in a default
+	// one for an event saved without, at the end of the request. A real
+	// date, saved through this form, removes it.
+	$undated = get_post_meta( $event_id, UNDATED_SCHEDULE_META, true );
+	if ( is_array( $undated ) ) {
+		$fields = array_merge( $fields, array( 'date' => '' ), $undated );
+	}
+
 	$fields['venue_id']          = get_event_venue_post_id( $event_id );
 	$fields['is_online']         = ( new Event( $event_id ) )->is_online();
 	$fields['online_event_link'] = (string) get_post_meta(
@@ -987,7 +1031,7 @@ function get_existing_event_fields( int $event_id ): array {
 	// An event with no usable stored zone reads back as '', which the
 	// form shows as the site default rather than as a blank option.
 	$stored_timezone = get_event_timezone( $event_id );
-	if ( '' !== $stored_timezone ) {
+	if ( '' !== $stored_timezone && ! isset( $fields['timezone'] ) ) {
 		$fields['timezone'] = $stored_timezone;
 	}
 
@@ -1031,7 +1075,7 @@ function get_existing_event_fields( int $event_id ): array {
  * @return array Form fields.
  */
 function get_template_event_fields( int $template_id, array $defaults ): array {
-	$fields = get_existing_event_fields( $template_id );
+	$fields = get_copied_event_fields( $template_id );
 
 	$duration = get_event_duration_minutes( $template_id );
 
@@ -1044,8 +1088,26 @@ function get_template_event_fields( int $template_id, array $defaults ): array {
 		$fields['time_end'] = sprintf( '%02d:%02d', intdiv( $end_minutes, 60 ), $end_minutes % 60 );
 	}
 
-	// A template's language is a choice its organizer made, so it carries
-	// over like the venue does. With none set, the new-event default stands.
+	return $fields;
+}
+
+/**
+ * Read an event's values into the fields for a copy of it (#2398).
+ *
+ * Unlike a template, a copy is the same event on another day: the time of
+ * day and the hosts carry over too, and only the date is left for the
+ * organizer to pick. The series, if any, isn't: a copy is a one-off.
+ *
+ * @param int $copy_id The event to copy.
+ *
+ * @return array Form fields.
+ */
+function get_copied_event_fields( int $copy_id ): array {
+	$fields         = get_existing_event_fields( $copy_id );
+	$fields['date'] = '';
+
+	// The language is a choice its organizer made, so it carries over like
+	// the venue does. With none set, the new-event default stands.
 	if ( '' === $fields['language'] ) {
 		unset( $fields['language'] );
 	}
@@ -1122,6 +1184,8 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 
 	if ( $is_editing ) {
 		$fields = array_merge( $fields, get_existing_event_fields( $event_id ) );
+	} elseif ( $template_id > 0 && $request->get_param( 'copy' ) ) {
+		$fields = array_merge( $fields, get_copied_event_fields( $template_id ) );
 	} elseif ( $template_id > 0 ) {
 		$fields = array_merge( $fields, get_template_event_fields( $template_id, $fields ) );
 	} else {
@@ -1288,6 +1352,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
 	) {
 		clear_all_day( $saved_id );
+		delete_post_meta( $saved_id, UNDATED_SCHEDULE_META );
 
 		$event = new Event( $saved_id );
 		$event->save_datetimes(
@@ -1299,6 +1364,19 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			)
 		);
 		sync_block_editor_datetime( $saved_id );
+	} elseif ( '' === $date
+		&& preg_match( '/^\d{2}:\d{2}$/', $time_start )
+		&& preg_match( '/^\d{2}:\d{2}$/', $time_end )
+	) {
+		update_post_meta(
+			$saved_id,
+			UNDATED_SCHEDULE_META,
+			array(
+				'time_start' => $time_start,
+				'time_end'   => $time_end,
+				'timezone'   => storable_timezone( (string) $request->get_param( 'timezone' ) ),
+			)
+		);
 	}
 
 	// Physical and online venues — same path as the publish flow.
@@ -1560,6 +1638,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
 	clear_all_day( $saved_id );
+	delete_post_meta( $saved_id, UNDATED_SCHEDULE_META );
 
 	$event = new Event( $saved_id );
 	$event->save_datetimes(

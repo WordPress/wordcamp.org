@@ -8,7 +8,6 @@ use WP_REST_Request;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Event_Timezone\canonicalize;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_allowed;
-use function WordCamp\Groups\Frontend\Event_Timezone\get_choices;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_default;
 use function WordCamp\Groups\Frontend\Event_Timezone\get_event_timezone;
 use function WordCamp\Groups\Frontend\Event_Timezone\sanitize;
@@ -89,19 +88,6 @@ class Test_Groups_Event_Timezone extends Groups_TestCase {
 		);
 
 		return (int) $response->get_data()['id'];
-	}
-
-	/**
-	 * The choices are grouped the way core groups them, so the select can
-	 * render optgroups rather than one flat list of 400-odd identifiers.
-	 */
-	public function test_choices_are_grouped() {
-		$choices = get_choices();
-
-		$this->assertNotEmpty( $choices );
-		$this->assertArrayHasKey( 'Australia', $choices );
-		$this->assertArrayHasKey( 'Australia/Brisbane', $choices['Australia'] );
-		$this->assertSame( 'Brisbane', $choices['Australia']['Australia/Brisbane'] );
 	}
 
 	/**

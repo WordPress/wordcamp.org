@@ -1,7 +1,8 @@
 /**
  * Group Settings — Members tab.
  *
- * Lists group members with role management, search, and pagination.
+ * Lists group members with role management, removal, search, and pagination,
+ * and lets organizers message every member (#2409).
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -20,9 +21,10 @@ import {
 	Notice,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 import OwnershipTransferPanel from './ownership-transfer-panel';
+import MessageMembersModal from '../../event-manage/message-members-modal';
 
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wordcamporg' ), value: 'subscriber' },
@@ -33,6 +35,9 @@ const ROLE_OPTIONS = [
 const PER_PAGE = 20;
 const ASSIGNABLE_ROLES = ROLE_OPTIONS.map( ( option ) => option.value );
 
+// Mirrors the PHP `ORGANIZER_ROLES`: these are changed to Member before they can be removed.
+const ORGANIZER_ROLES = [ 'administrator', 'editor' ];
+
 export default function MembersTab( { canManageRoles = false } ) {
 	const [ members, setMembers ] = useState( [] );
 	const [ total, setTotal ] = useState( 0 );
@@ -41,6 +46,8 @@ export default function MembersTab( { canManageRoles = false } ) {
 	const [ notice, setNotice ] = useState( '' );
 	const [ search, setSearch ] = useState( '' );
 	const [ page, setPage ] = useState( 1 );
+	const [ removingId, setRemovingId ] = useState( 0 );
+	const [ messaging, setMessaging ] = useState( false );
 
 	useEffect( () => {
 		let isMounted = true;
@@ -89,6 +96,13 @@ export default function MembersTab( { canManageRoles = false } ) {
 		};
 	}, [ page, search ] );
 
+	// Removals can empty the page you're on, so go back one rather than show an empty list.
+	useEffect( () => {
+		if ( ! loading && page > 1 && members.length === 0 ) {
+			setPage( ( currentPage ) => currentPage - 1 );
+		}
+	}, [ loading, page, members.length ] );
+
 	const updateRole = useCallback( async ( userId, newRole ) => {
 		setNotice( '' );
 		try {
@@ -108,6 +122,43 @@ export default function MembersTab( { canManageRoles = false } ) {
 			setNotice( __( 'Role updated.', 'wordcamporg' ) );
 		} catch ( err ) {
 			setNotice( err.message || __( 'Could not update role.', 'wordcamporg' ) );
+		}
+	}, [] );
+
+	const removeMember = useCallback( async ( member ) => {
+		const message = sprintf(
+			/* translators: %s: member name. */
+			__( 'Remove %s from this group? Their RSVPs to upcoming events will be cancelled.', 'wordcamporg' ),
+			member.name
+		);
+
+		// eslint-disable-next-line no-alert
+		if ( ! window.confirm( message ) ) {
+			return;
+		}
+
+		setNotice( '' );
+		setRemovingId( member.id );
+
+		try {
+			await apiFetch( {
+				path: `/wporg-groups/v1/members/${ member.id }`,
+				method: 'DELETE',
+			} );
+
+			setMembers( ( prev ) => prev.filter( ( m ) => m.id !== member.id ) );
+			setTotal( ( prev ) => prev - 1 );
+			setNotice(
+				sprintf(
+					/* translators: %s: member name. */
+					__( '%s was removed from the group.', 'wordcamporg' ),
+					member.name
+				)
+			);
+		} catch ( err ) {
+			setNotice( err.message || __( 'Could not remove member.', 'wordcamporg' ) );
+		} finally {
+			setRemovingId( 0 );
 		}
 	}, [] );
 
@@ -139,12 +190,28 @@ export default function MembersTab( { canManageRoles = false } ) {
 			h( 'span', { className: 'wporg-members-tab__count' },
 				total.toLocaleString() + ' ' + ( total === 1 ? __( 'member', 'wordcamporg' ) : __( 'members', 'wordcamporg' ) )
 			),
+			canManageRoles &&
+				h(
+					Button,
+					{
+						variant: 'secondary',
+						className: 'wporg-members-tab__message',
+						onClick: () => setMessaging( true ),
+					},
+					__( 'Message all members', 'wordcamporg' )
+				),
 		),
+		messaging &&
+			h( MessageMembersModal, {
+				recipientMode: 'message-group',
+				onClose: () => setMessaging( false ),
+			} ),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__list' },
 			members.map( ( member ) => {
 				const canEditRole = canManageRoles && ASSIGNABLE_ROLES.includes( member.role );
+				const canRemove = canManageRoles && ! ORGANIZER_ROLES.includes( member.role );
 
 				return h(
 					'div',
@@ -169,6 +236,30 @@ export default function MembersTab( { canManageRoles = false } ) {
 						} )
 						: h( 'span', { className: 'wporg-members-tab__role-readonly' },
 							member.roleLabel || __( 'Organizer', 'wordcamporg' )
+						),
+					// Every row gets the slot, so the role controls line up.
+					canManageRoles &&
+						h( 'div', { className: 'wporg-members-tab__actions' },
+							canRemove &&
+								h(
+									Button,
+									{
+										variant: 'tertiary',
+										isDestructive: true,
+										isSmall: true,
+										isBusy: removingId === member.id,
+										'aria-busy': removingId === member.id,
+										// One removal at a time, so a finished request can't re-enable another's button.
+										disabled: removingId !== 0,
+										onClick: () => removeMember( member ),
+										label: sprintf(
+											/* translators: %s: member name. */
+											__( 'Remove %s', 'wordcamporg' ),
+											member.name
+										),
+									},
+									__( 'Remove', 'wordcamporg' )
+								)
 						)
 				);
 			} )

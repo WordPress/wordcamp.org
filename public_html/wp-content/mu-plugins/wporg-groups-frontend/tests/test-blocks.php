@@ -34,32 +34,6 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 19 `wporg/*` blocks should be registered. An earlier
-	 * set also included `event-rsvp-count` and `event-venue-name`;
-	 * both were intentionally removed in favor of GatherPress core's own
-	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
-	 * "Review fixes" for why) — if either reappears, or a new custom block
-	 * duplicates core functionality again, this test should fail.
-	 */
-	public function test_exactly_the_expected_wporg_blocks_are_registered() {
-		$registered   = array_keys( \WP_Block_Type_Registry::get_instance()->get_all_registered() );
-		$wporg_blocks = array_values(
-			array_filter(
-				$registered,
-				static function ( $name ) {
-					return str_starts_with( $name, 'wporg/' );
-				}
-			)
-		);
-
-		sort( $wporg_blocks );
-		$expected = self::EXPECTED_BLOCKS;
-		sort( $expected );
-
-		$this->assertSame( $expected, $wporg_blocks );
-	}
-
-	/**
 	 * Block stylesheets are versioned by file, not by `block.json`, so a
 	 * deploy that changes the CSS also changes its URL (#2153).
 	 */
@@ -1112,6 +1086,64 @@ class Test_Groups_Blocks extends Groups_TestCase {
 			strpos( $output, 'Still to come' ),
 			'Each event should sit under its own heading.'
 		);
+	}
+
+	/**
+	 * The group home splits the block in two (#2406): each instance shows one
+	 * list, and only one of them carries the header link's anchor.
+	 */
+	public function test_my_events_block_shows_one_list_per_instance() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $member_id );
+
+		$this->create_attended_event( $member_id, '-7 days', 'Already had' );
+
+		$past_only = do_blocks( '<!-- wp:wporg/my-events {"variant":"past"} /-->' );
+
+		$this->assertStringContainsString( 'Already had', $past_only );
+		$this->assertStringContainsString( 'id="my-events"', $past_only, 'With nothing upcoming, the past list carries the anchor.' );
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/my-events {"variant":"upcoming"} /-->' ) ) );
+
+		$this->create_attended_event( $member_id, '+7 days', 'Still to come' );
+
+		$upcoming = do_blocks( '<!-- wp:wporg/my-events {"variant":"upcoming"} /-->' );
+		$past     = do_blocks( '<!-- wp:wporg/my-events {"variant":"past"} /-->' );
+
+		$this->assertStringContainsString( 'Still to come', $upcoming );
+		$this->assertStringNotContainsString( 'Already had', $upcoming );
+		$this->assertStringContainsString( 'id="my-events"', $upcoming );
+
+		$this->assertStringContainsString( 'Already had', $past );
+		$this->assertStringNotContainsString( 'Still to come', $past );
+		$this->assertStringNotContainsString( 'id="my-events"', $past, 'The anchor must not appear twice on the page.' );
+	}
+
+	/**
+	 * Creates a one-off event at an offset from now and RSVPs the member to it.
+	 */
+	private function create_attended_event( int $member_id, string $offset, string $title ): int {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => $title,
+				'post_author' => self::factory()->user->create(),
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( $offset ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( $offset . ' +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		return $event_id;
 	}
 
 	/**

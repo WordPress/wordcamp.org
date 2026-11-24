@@ -7,6 +7,13 @@
 	"category": "widgets",
 	"icon": "calendar-alt",
 	"description": "Shows a logged-in member their upcoming RSVPed events.",
+	"attributes": {
+		"variant": {
+			"type": "string",
+			"enum": [ "combined", "upcoming", "past" ],
+			"default": "combined"
+		}
+	},
 	"supports": {
 		"html": false,
 		"inserter": false

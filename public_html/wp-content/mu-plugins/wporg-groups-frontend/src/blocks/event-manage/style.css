@@ -5,6 +5,67 @@
 @import "../../components/recurrence-controls.css";
 @import "../../components/component-accents.css";
 
+/* === Organizer tools on an event === */
+
+.wporg-event-manage--tools {
+	box-sizing: border-box;
+	width: 100%;
+	padding-bottom: var(--wp--preset--spacing--20);
+	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.wporg-event-manage__label {
+	margin: 0 0 var(--wp--preset--spacing--10);
+	color: var(--wp--preset--color--charcoal-4);
+	font-size: var(--wp--preset--font-size--extra-small);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.wporg-event-manage__tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--wp--preset--spacing--10) var(--wp--preset--spacing--30);
+}
+
+.wporg-event-manage__tools + .wporg-event-manage__tools {
+	margin-top: var(--wp--preset--spacing--10);
+}
+
+.wporg-event-manage__tool {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 2px;
+	background: none;
+	color: var(--wp--preset--color--charcoal-3);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	text-align: start;
+	cursor: pointer;
+}
+
+.wporg-event-manage__tool svg {
+	flex: none;
+	fill: currentcolor;
+}
+
+.wporg-event-manage__tool:hover {
+	color: var(--wp--preset--color--blueberry-1);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.wporg-event-manage__tool:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+}
+
 /* === Message members modal === */
 
 .wporg-groups-message-modal .components-modal__content {

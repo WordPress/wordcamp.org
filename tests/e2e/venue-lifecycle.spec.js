@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * Creating a venue, reusing it on a second event, and editing it afterwards.
@@ -24,11 +24,11 @@ const { login } = require( './utils/login' );
  * `X-WP-Nonce` for cookie auth, which isn't localized on the event page, and
  * the Venues tab is the surface this is meant to cover anyway.
  *
- * Requires the `organiser11` / `password` editor-tier test user. One account
- * per test: this environment only supports a single active session per user
- * and specs run concurrently under `fullyParallel` (see utils/login.js).
+ * Requires the `organiser1` / `password` editor-tier test user.
  */
 test.describe( 'venue lifecycle', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-07-01'; // 2099-07-01 is a Wednesday.
@@ -72,8 +72,6 @@ test.describe( 'venue lifecycle', () => {
 
 	test( 'a venue is created once, reused by ID, and stays editable', async ( { page } ) => {
 		test.slow(); // Several cold boots of the inline block editor behind the modal.
-
-		await login( page, 'organiser11', 'password' );
 
 		// Unique per run: these specs share a site and CI reruns the suite
 		// against the same database.

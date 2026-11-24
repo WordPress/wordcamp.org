@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * The surface "Edit this event" opens.
@@ -10,17 +10,13 @@ const { login } = require( './utils/login' );
  * that event's own editing surface, while the group page's Settings button
  * still opens the tabbed one.
  *
- * Requires the `organiser8` / `password` editor-tier test user. One account
- * per spec: this environment only supports a single active session per user
- * and specs run concurrently under `fullyParallel` (see utils/login.js).
- * These two tests share that one account, so they run serially rather than
- * against each other.
+ * Requires the `organiser1` / `password` editor-tier test user.
  *
  * Both tests read: the first publishes an event to have one to edit, and
  * neither saves a change.
  */
 test.describe( 'event editing surface', () => {
-	test.describe.configure( { mode: 'serial' } );
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
 
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
@@ -28,8 +24,6 @@ test.describe( 'event editing surface', () => {
 	const START = '12:00';
 	test( 'edits one event without the group-wide tabs', async ( { page } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
-
-		await login( page, 'organiser8', 'password' );
 
 		/*
 		 * Publish an event of our own rather than reading whatever the archive
@@ -66,8 +60,6 @@ test.describe( 'event editing surface', () => {
 	} );
 
 	test( 'keeps the tabs on the group Settings button', async ( { page } ) => {
-		await login( page, 'organiser8', 'password' );
-
 		await page.goto( '' );
 		await page.locator( '[data-wporg-settings-open]' ).click();
 

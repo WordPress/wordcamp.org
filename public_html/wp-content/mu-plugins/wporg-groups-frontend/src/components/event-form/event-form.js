@@ -68,6 +68,7 @@ const EMPTY_FORM = {
  * @param {Object}   props
  * @param {string}   props.mode              `'create'` or `'edit'`.
  * @param {number}   props.eventId           Post id to load; 0 loads the create defaults.
+ * @param {number}   props.copyId            Optional; the post id to prefill a new event from as a copy.
  * @param {string}   props.classPrefix       BEM block prefix of the host surface.
  * @param {string}   props.className         Class of the `<form>` element.
  * @param {Function} props.onSubmitPayload   Receives the payload, returns a promise; a rejection's message is shown as the save error.
@@ -85,6 +86,7 @@ function EventForm(
 	{
 		mode,
 		eventId,
+		copyId = 0,
 		classPrefix,
 		className,
 		onSubmitPayload,
@@ -148,7 +150,8 @@ function EventForm(
 		markChanged();
 	};
 
-	const loadFormData = ( id, templateId = 0 ) => {
+	// `query` names what to load, e.g. `event_id=12`; empty loads the create defaults.
+	const loadFormData = ( query ) => {
 		cancelLoadRef.current();
 		let cancelled = false;
 		cancelLoadRef.current = () => {
@@ -157,12 +160,7 @@ function EventForm(
 		setLoading( true );
 		setError( '' );
 
-		let path = `/${ NS }/event-form-data`;
-		if ( id ) {
-			path += `?event_id=${ id }`;
-		} else if ( templateId ) {
-			path += `?template_id=${ templateId }`;
-		}
+		const path = `/${ NS }/event-form-data` + ( query ? `?${ query }` : '' );
 
 		apiFetch( { path } )
 			.then( ( res ) => {
@@ -217,10 +215,10 @@ function EventForm(
 	// Initial mount: register core blocks + fetch the form data.
 	useEffect( () => {
 		ensureCoreBlocksRegistered();
-		loadFormData( eventId );
+		loadFormData( copyId ? `template_id=${ copyId }&copy=1` : eventId && `event_id=${ eventId }` );
 		return () => cancelLoadRef.current();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ eventId ] );
+	}, [ eventId, copyId ] );
 
 	const buildPayload = () => buildEventPayload( {
 		form,
@@ -232,10 +230,10 @@ function EventForm(
 	useImperativeHandle( ref, () => ( {
 		getPayload: buildPayload,
 		loadEvent: ( id ) => {
-			loadFormData( id );
+			loadFormData( id && `event_id=${ id }` );
 		},
 		loadTemplate: ( templateId ) => {
-			loadFormData( 0, templateId );
+			loadFormData( `template_id=${ templateId }` );
 		},
 		selectVenue: ( venue ) => {
 			updateField( 'venue_select', String( venue.id ) );

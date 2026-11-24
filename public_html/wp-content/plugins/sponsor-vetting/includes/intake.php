@@ -214,6 +214,28 @@ function get_mes_company( int $mes_id ): int {
 }
 
 /**
+ * Gets the Multi-Event Sponsors linked to a company. Runs on Central.
+ *
+ * @param int $company_id The company.
+ * @return int[] The IDs of the `mes` posts: one, unless a link was written around link_mes().
+ */
+function get_company_mes( int $company_id ): array {
+	$mes = get_posts(
+		array(
+			'post_type'      => 'mes',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_key'       => '_sv_company_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One company's link.
+			'meta_value'     => $company_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- One company's link.
+		)
+	);
+
+	return array_map( 'intval', $mes );
+}
+
+/**
  * Links a new sponsorship to its company where that's certain, and otherwise leaves it for a reviewer.
  *
  * - A Multi-Event Sponsor's copy resolves to the company its `mes` post is linked to, read now rather than stamped

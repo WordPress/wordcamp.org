@@ -3,7 +3,8 @@
  * A record of who used the Groups tools in Network Admin.
  *
  * Every create, archive, reactivate, transfer decision, message and export
- * run is logged with who did it, when, and to which group. It's an audit
+ * run is logged with who did it, when, and to which group. So is an
+ * organizer removing a member (#2395) or messaging their whole group (#2409). It's an audit
  * trail now that Program Supporters use these tools as well as network admins
  * (#2294), and the source for crediting that work on WordPress.org profiles
  * later (#2075, #2076).
@@ -45,6 +46,8 @@ add_action( 'init', __NAMESPACE__ . '\register_log_post_type' );
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page', 12 );
 add_action( 'wporg_groups_ownership_transfer_executed', __NAMESPACE__ . '\record_transfer_approved', 10, 2 );
 add_action( 'wporg_groups_ownership_transfer_rejected', __NAMESPACE__ . '\record_transfer_rejected', 10, 3 );
+add_action( 'wporg_groups_member_removed', __NAMESPACE__ . '\record_member_removed', 10, 3 );
+add_action( 'wporg_groups_group_message_queued', __NAMESPACE__ . '\record_group_message', 10, 2 );
 
 /**
  * The actions that can be logged, and how the Activity screen describes them.
@@ -60,6 +63,8 @@ function get_action_labels(): array {
 		'transfer_rejected' => __( 'Rejected an ownership transfer', 'wordcamporg' ),
 		'message_queued'    => __( 'Sent a message', 'wordcamporg' ),
 		'export_started'    => __( 'Started a network export', 'wordcamporg' ),
+		'member_removed'    => __( 'Removed a member', 'wordcamporg' ),
+		'group_messaged'    => __( 'Messaged their group', 'wordcamporg' ),
 	);
 }
 
@@ -188,6 +193,34 @@ function record_transfer_decision( string $action, int $site_id, array $record, 
 }
 
 /**
+ * Log an organizer removing a member from their group.
+ *
+ * @param int $site_id   Group site ID.
+ * @param int $user_id   The removed member.
+ * @param int $cancelled How many upcoming RSVPs were cancelled.
+ */
+function record_member_removed( int $site_id, int $user_id, int $cancelled ): void {
+	record(
+		'member_removed',
+		$site_id,
+		array(
+			'removed_user_id' => $user_id,
+			'rsvps_cancelled' => $cancelled,
+		)
+	);
+}
+
+/**
+ * Log an organizer messaging their whole group.
+ *
+ * @param int    $site_id Group site ID.
+ * @param string $subject Message subject.
+ */
+function record_group_message( int $site_id, string $subject ): void {
+	record( 'group_messaged', $site_id, array( 'subject' => $subject ) );
+}
+
+/**
  * Get a page of entries, newest first.
  *
  * @param int $page 1-based page number.
@@ -302,6 +335,21 @@ function format_details( array $entry ): string {
 				_n( '%1$s of %2$d group: "%3$s"', '%1$s of %2$d groups: "%3$s"', (int) ( $context['group_count'] ?? 0 ), 'wordcamporg' ),
 				Messaging\AUDIENCE_MEMBERS === ( $context['audience'] ?? '' ) ? __( 'All members', 'wordcamporg' ) : __( 'Organizers', 'wordcamporg' ),
 				(int) ( $context['group_count'] ?? 0 ),
+				$context['subject'] ?? ''
+			);
+
+		case 'member_removed':
+			return sprintf(
+				/* translators: 1: removed member, 2: number of RSVPs cancelled. */
+				_n( '%1$s, %2$d upcoming RSVP cancelled', '%1$s, %2$d upcoming RSVPs cancelled', (int) ( $context['rsvps_cancelled'] ?? 0 ), 'wordcamporg' ),
+				format_user( (int) ( $context['removed_user_id'] ?? 0 ) ),
+				(int) ( $context['rsvps_cancelled'] ?? 0 )
+			);
+
+		case 'group_messaged':
+			return sprintf(
+				/* translators: %s: email subject. */
+				__( '"%s"', 'wordcamporg' ),
 				$context['subject'] ?? ''
 			);
 

@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * Recurrence controls in the organizer-facing group settings block.
@@ -8,8 +8,9 @@ const { login } = require( './utils/login' );
  * environment setup.
  */
 test.describe( 'recurring events frontend', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	test( 'an organizer can configure a weekly recurrence', async ( { page } ) => {
-		await login( page, 'organiser1', 'password' );
 		await page.goto( '' );
 
 		await page.locator( '[data-wporg-settings-open]' ).click();

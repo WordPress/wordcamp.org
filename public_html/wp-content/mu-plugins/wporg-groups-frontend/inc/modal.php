@@ -88,8 +88,6 @@ function enqueue_supplementary_assets(): void {
  * @return string Unmodified block HTML.
  */
 function localize_block_script( string $content, array $block ): string {
-	static $localized_handles = array();
-
 	$handles = array(
 		'wporg/event-manage'   => 'wporg-event-manage-view-script',
 		'wporg/group-settings' => 'wporg-group-settings-view-script',
@@ -98,7 +96,7 @@ function localize_block_script( string $content, array $block ): string {
 	$block_name = (string) ( $block['blockName'] ?? '' );
 	$handle     = $handles[ $block_name ] ?? '';
 
-	if ( ! $handle || ! empty( $localized_handles[ $handle ] ) ) {
+	if ( ! $handle || str_contains( (string) wp_scripts()->get_data( $handle, 'data' ), 'var wporgGroupsEventModal =' ) ) {
 		return $content;
 	}
 
@@ -117,9 +115,7 @@ function localize_block_script( string $content, array $block ): string {
 		'uploadSpace'         => $upload_space,
 	);
 
-	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {
-		$localized_handles[ $handle ] = true;
-	}
+	wp_localize_script( $handle, 'wporgGroupsEventModal', $config );
 
 	return $content;
 }

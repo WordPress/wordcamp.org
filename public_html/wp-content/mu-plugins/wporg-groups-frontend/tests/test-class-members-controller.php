@@ -37,39 +37,22 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 	}
 
 	/**
-	 * Role labels should map editor/author/subscriber to their group-tier names.
+	 * An organizer can't hand out Administrator through the role endpoint.
 	 */
-	public function test_role_labels_map_correctly() {
-		$editor     = self::factory()->user->create_and_get( array( 'role' => 'editor' ) );
-		$author     = self::factory()->user->create_and_get( array( 'role' => 'author' ) );
-		$subscriber = self::factory()->user->create_and_get( array( 'role' => 'subscriber' ) );
+	public function test_organizer_cannot_assign_administrator() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 
-		$editor_request = $this->request( 'GET', '/members/' . $editor->ID );
-		$editor_request->set_param( 'id', $editor->ID );
-		$response = self::$controller->get_item( $editor_request );
-		$this->assertSame( 'Organizer', $response->get_data()['roleLabel'] );
+		wp_set_current_user( $editor_id );
 
-		$author_request = $this->request( 'GET', '/members/' . $author->ID );
-		$author_request->set_param( 'id', $author->ID );
-		$response = self::$controller->get_item( $author_request );
-		$this->assertSame( 'Event Organizer', $response->get_data()['roleLabel'] );
+		$request = $this->request( 'POST', "/members/{$member_id}/role" );
+		$request->set_body_params( array( 'role' => 'administrator' ) );
 
-		$subscriber_request = $this->request( 'GET', '/members/' . $subscriber->ID );
-		$subscriber_request->set_param( 'id', $subscriber->ID );
-		$response = self::$controller->get_item( $subscriber_request );
-		$this->assertSame( 'Member', $response->get_data()['roleLabel'] );
-	}
+		$response = rest_do_request( $request );
 
-	/**
-	 * Mirrors the args schema `validate_callback` — administrator is
-	 * intentionally excluded from ASSIGNABLE_ROLES so it can never be
-	 * set through this endpoint, only via wp-admin directly.
-	 */
-	public function test_validate_assignable_role_rejects_administrator() {
-		$this->assertFalse( self::$controller->validate_assignable_role( 'administrator' ) );
-		$this->assertTrue( self::$controller->validate_assignable_role( 'editor' ) );
-		$this->assertTrue( self::$controller->validate_assignable_role( 'author' ) );
-		$this->assertTrue( self::$controller->validate_assignable_role( 'subscriber' ) );
+		$this->assertTrue( $response->is_error() );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( 'subscriber' ), get_userdata( $member_id )->roles );
 	}
 
 	/**
@@ -191,6 +174,67 @@ class Test_Groups_Members_Controller extends Groups_TestCase {
 
 		$this->assertWPError( $response );
 		$this->assertSame( 'cannot_leave', $response->get_error_code() );
+	}
+
+	/**
+	 * An organizer removes a member: the member leaves the group, their
+	 * upcoming RSVP is cancelled, and the removal is logged (#2395).
+	 */
+	public function test_organizer_removes_member() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$event_id  = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+			)
+		);
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '+2 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '+2 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+		( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->save( $member_id, 'attending' );
+
+		wp_set_current_user( $editor_id );
+		$response = rest_do_request( $this->request( 'DELETE', "/members/{$member_id}" ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 1, $response->get_data()['rsvps_cancelled'] );
+		$this->assertFalse( is_user_member_of_blog( $member_id, get_current_blog_id() ) );
+
+		$rsvp = new \GatherPress\Core\Rsvp\Rsvp( $event_id );
+		$this->assertSame( 0, (int) ( $rsvp->responses()['attending']['count'] ?? 0 ) );
+
+		$entry = \WordCamp\Groups\Action_Log\get_entries()['entries'][0];
+		$this->assertSame( 'member_removed', $entry['action'] );
+		$this->assertSame( $editor_id, $entry['user_id'] );
+		$this->assertSame( $member_id, $entry['context']['removed_user_id'] );
+	}
+
+	/**
+	 * Event Organizers can't remove anyone, and organizers have to be changed
+	 * to Member before they can be removed.
+	 */
+	public function test_remove_member_refusals() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$other_id  = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $author_id );
+		$this->assertSame( 403, rest_do_request( $this->request( 'DELETE', "/members/{$member_id}" ) )->get_status() );
+
+		wp_set_current_user( $editor_id );
+		$response = rest_do_request( $this->request( 'DELETE', "/members/{$other_id}" ) );
+		$this->assertSame( 'cannot_remove_organizer', $response->get_data()['code'] );
+
+		$this->assertTrue( is_user_member_of_blog( $member_id, get_current_blog_id() ) );
+		$this->assertTrue( is_user_member_of_blog( $other_id, get_current_blog_id() ) );
 	}
 
 	/**

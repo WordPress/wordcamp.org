@@ -1,5 +1,5 @@
 const { test, expect } = require( '@playwright/test' );
-const { login } = require( './utils/login' );
+const { STORAGE_STATE } = require( './utils/accounts' );
 
 /**
  * The front-end event form is one shared component rendered on two surfaces:
@@ -9,12 +9,12 @@ const { login } = require( './utils/login' );
  * regression class behind #1909, where an event could be published before its
  * datetimes were saved.
  *
- * Requires the `organiser2`/`organiser3`/`organiser4` (`password`) editor-tier
- * test users, one per test (editors can use both surfaces). This environment
- * only supports one active session per user, and tests run concurrently under
- * `fullyParallel` (see tests/e2e/utils/login.js).
+ * Requires the `organiser1` (`password`) editor-tier test user (editors can
+ * use both surfaces).
  */
 test.describe( 'event form surfaces', () => {
+	test.use( { storageState: STORAGE_STATE.organiser1 } );
+
 	// Far enough out to stay clear of the front page's capped "Upcoming events"
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-03-04'; // 2099-03-04 is a Wednesday.
@@ -74,8 +74,6 @@ test.describe( 'event form surfaces', () => {
 	test( 'publishes with the entered datetimes from both the modal and the settings tab', async ( { page } ) => {
 		test.slow(); // Two cold boots of the inline block editor.
 
-		await login( page, 'organiser2', 'password' );
-
 		const modalTitle = `Event form modal E2E ${ Date.now() }`;
 		await page.goto( '' );
 		await page.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
@@ -101,8 +99,6 @@ test.describe( 'event form surfaces', () => {
 	 */
 	test( 'publishes a draft continued from the modal picker', async ( { page } ) => {
 		test.slow();
-
-		await login( page, 'organiser3', 'password' );
 
 		const title = `Event form draft E2E ${ Date.now() }`;
 		const pastDate = '2020-01-01';
@@ -154,8 +150,6 @@ test.describe( 'event form surfaces', () => {
 	 */
 	test( 'keeps the description across the settings-tab venue editor', async ( { page } ) => {
 		test.slow();
-
-		await login( page, 'organiser4', 'password' );
 
 		const title = `Event form venue round-trip E2E ${ Date.now() }`;
 		const description = `Description kept ${ Date.now() }`;

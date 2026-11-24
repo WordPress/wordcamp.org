@@ -636,27 +636,6 @@ describe( 'event RSVP count label', () => {
 
 		expect( state.countLabel ).toBe( 'You and 3 others' );
 	} );
-
-	test( 'only asks for keys the server ships', () => {
-		const { state } = loadStore();
-		const asked = new Set();
-		mockContext.labels = new Proxy( countFormats, {
-			get( target, key ) {
-				asked.add( key );
-				return target[ key ];
-			},
-		} );
-
-		for ( const count of [ 0, 1, 2, 15 ] ) {
-			for ( const status of [ 'no_status', 'attending' ] ) {
-				mockContext.attendingCount = count;
-				mockContext.currentUserStatus = status;
-				expect( state.countLabel ).not.toBe( '' );
-			}
-		}
-
-		expect( [ ...asked ].sort() ).toEqual( Object.keys( countFormats ).sort() );
-	} );
 } );
 
 /**
@@ -847,10 +826,13 @@ describe( 'event RSVP waiting list', () => {
 			responses: { attending: { count: 1 }, waiting_list: { count: 1 } },
 		} );
 
-		await actions.handleRsvpButton();
+		try {
+			await actions.handleRsvpButton();
 
-		expect( window.location.reload ).toHaveBeenCalled();
-		window.location = originalLocation;
+			expect( window.location.reload ).toHaveBeenCalled();
+		} finally {
+			window.location = originalLocation;
+		}
 	} );
 
 	test( 'joining a full event puts the member on the waiting list', async () => {

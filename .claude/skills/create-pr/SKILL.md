@@ -77,10 +77,10 @@ fixtures afterward.
 
 1. `gh api repos/<owner>/<repo> --jq '.permissions'`: branch off upstream if
    `push: true`, else fork.
-2. Branch off main as `<area>/<feature>`. Stage only files belonging to the change.
-3. Commit message explains *why*; end with
-   `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`. If a heredoc
-   fails on quoting, write the message to a temp file and `git commit -F <file>`.
+2. Branch off `production` as `<area>/<feature>`. Stage only files belonging to the change.
+3. Commit message explains *why*; end with the session's own
+   `Co-Authored-By` trailer. If a heredoc fails on quoting, write the
+   message to a temp file and `git commit -F <file>`.
 4. `gh pr create --draft` with:
 
 ```markdown

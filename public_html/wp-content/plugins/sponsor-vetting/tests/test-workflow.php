@@ -11,6 +11,7 @@ namespace WordCamp\Sponsor_Vetting\Tests;
 
 use WP_UnitTestCase;
 use function WordCamp\Sponsor_Vetting\approve_sponsorship;
+use function WordCamp\Sponsor_Vetting\get_approval_summary;
 use function WordCamp\Sponsor_Vetting\get_vetting_state;
 use function WordCamp\Sponsor_Vetting\link_sponsorship;
 use function WordCamp\Sponsor_Vetting\register_types;
@@ -19,6 +20,8 @@ use const WordCamp\Sponsor_Vetting\GOOD_FAITH_DAYS;
 use const WordCamp\Sponsor_Vetting\SPONSORSHIP_POST_TYPE;
 
 defined( 'WPINC' ) || die();
+
+require_once dirname( __DIR__ ) . '/includes/records.php';
 
 /**
  * @group sponsor-vetting
@@ -105,6 +108,8 @@ class Test_Workflow extends WP_UnitTestCase {
 	public function data_status_changes(): array {
 		return array(
 			'allowed'               => array( 'sv-in-progress', array( 'post_status' => 'sv-compliance-req' ), 'sv-compliance-req' ),
+			'put on hold in review' => array( 'sv-in-progress', array( 'post_status' => 'sv-on-hold' ), 'sv-on-hold' ),
+			'on hold once decided'  => array( 'sv-compliant', array( 'post_status' => 'sv-on-hold' ), 'sv-compliant' ),
 			'not in the workflow'   => array( 'sv-compliance-req', array( 'post_status' => 'sv-needs-vetting' ), 'sv-compliance-req' ),
 			'a core status'         => array( 'sv-compliant', array( 'post_status' => 'publish' ), 'sv-compliant' ),
 			'from a stale screen'   => array(
@@ -323,6 +328,44 @@ class Test_Workflow extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( 'trash', get_post_status( $sponsorship_id ) );
+	}
+
+	/**
+	 * Canceling an approved sponsorship forgets the approval: reopened, it doesn't read as approved, and approved
+	 * again once its company is Compliant, it isn't one given in good faith.
+	 */
+	public function test_canceling_forgets_the_approval(): void {
+		$company_id     = $this->create_company( 'sv-compliance-req', (int) strtotime( '-1 month' ) );
+		$sponsorship_id = $this->create_sponsorship( $company_id );
+
+		$this->assertTrue( approve_sponsorship( $sponsorship_id, true ) );
+
+		foreach ( array( 'svs-canceled', 'svs-pending' ) as $status ) {
+			wp_update_post(
+				array(
+					'ID'          => $sponsorship_id,
+					'post_status' => $status,
+				)
+			);
+		}
+
+		$this->assertSame( '—', get_approval_summary( $sponsorship_id ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $company_id,
+				'post_status' => 'sv-compliant',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'          => $sponsorship_id,
+				'post_status' => 'svs-approved',
+			)
+		);
+
+		$this->assertSame( 'svs-approved', get_post_status( $sponsorship_id ) );
+		$this->assertSame( '', get_post_meta( $sponsorship_id, '_sv_good_faith', true ) );
 	}
 
 	/**

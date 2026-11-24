@@ -17,6 +17,11 @@ on:
     - tests/e2e/**
     - playwright.config.js
     - .github/workflows/e2e-tests.yml
+    - .github/bin/background.sh
+    # Dependency bumps (Playwright, @wordpress/scripts) change what the specs run against.
+    - .nvmrc
+    - package.json
+    - package-lock.json
   workflow_dispatch: {}
 
 concurrency:
@@ -33,14 +38,45 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # A normal run takes 3-6 minutes; without a limit a stall holds the check for 6 hours. A run where every
+    # spec times out and retries takes about 27, and a timed-out job skips the trace upload, so allow 35.
+    timeout-minutes: 35
+
     env:
       # Every `docker compose` call in this job should see only the base
       # file -- not docker-compose.override.yml, which is what makes local
       # dev's `docker compose up --build` rebuild from Dockerfile.php-fpm.
       COMPOSE_FILE: docker-compose.yaml
 
+    # Independent setup runs in the background; see .github/bin/background.sh.
     steps:
     - uses: actions/checkout@v4
+
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      run: |
+        repo=$( echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]' )
+        echo "WORDCAMP_TEST_IMAGE=ghcr.io/$repo/e2e-php-fpm:latest" >> "$GITHUB_ENV"
+        echo "WORDCAMP_DB_IMAGE=ghcr.io/$repo/e2e-mariadb:latest" >> "$GITHUB_ENV"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull the images and start the database
+      # Pulls the prebuilt images published by e2e-image.yml instead of
+      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
+      # former does apt-get + PHP extension compilation) on every run --
+      # see that workflow for the image builds, including the baked-in TLS
+      # cert for local hostnames.
+      #
+      # Only the database starts this early. wordcamp.test's entrypoint creates mu-plugins/blocks/build/ as root
+      # when it is missing, which would stop the npm build below from writing there.
+      run: bash .github/bin/background.sh start docker bash -c 'docker compose pull && docker compose up -d wordcamp.db'
 
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
@@ -63,20 +99,29 @@ jobs:
         restore-keys: |
           composer-${{ runner.os }}-
 
-    - name: Install PHP dependencies
+    - name: Start installing PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
       # post-install script — see composer-dev.json's installer-paths) is loaded
       # unconditionally by load-other-mu-plugins.php; without it every
       # request, including wp-cli, fatals.
-      run: |
-        rm composer.lock || true
-        composer install
+      run: bash .github/bin/background.sh start composer composer install
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
+
+    - name: Hash the workspace manifests
+      id: npm-manifests
+      # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
+      # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
+      # Assigned first so a jq error fails the step, unquoted so Bash expands globs like routes/*, and pipefail so
+      # a manifest that can't be read fails the step instead of being left out of the hash.
+      run: |
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules
       id: node-modules-cache
@@ -85,12 +130,8 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        # Includes package.json (root + every workspace), not just the
-        # lockfile: a manifest edited without a matching lockfile update
-        # must invalidate the cache too, so `npm ci` runs and rejects the
-        # mismatch instead of a stale cache hit silently skipping install
-        # (and any changed lifecycle scripts) entirely.
-        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+        # Includes the manifests, so a package.json edit without a lockfile update reaches `npm ci`, which rejects it.
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json') }}-${{ steps.npm-manifests.outputs.hash }}
 
     - name: Install dependencies
       run: |
@@ -98,27 +139,11 @@ jobs:
           npm ci --no-audit --no-fund
         fi
 
-    - name: Get installed Playwright version
-      id: playwright-version
-      run: echo "version=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> "$GITHUB_OUTPUT"
-
-    - name: Cache Playwright browsers
-      id: playwright-cache
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-    - name: Install Playwright browsers
-      # On a cache hit the browser binaries are already present, but the
-      # runner's OS-level deps (apt packages) still need installing --
-      # `install-deps` alone skips the (slow) browser download.
-      run: |
-        if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = 'true' ]; then
-          npx playwright install-deps chromium
-        else
-          npx playwright install --with-deps chromium
-        fi
+    - name: Start installing the Playwright browser
+      # No `--with-deps`: the runner image already has Chromium's libraries, so apt only added fonts the specs
+      # don't need, and a slow mirror once stalled this step for over 7 minutes. Not cached: the download takes
+      # about 10 seconds, against 4 for a cache restore, and a cache PRs could share would need a run on production.
+      run: bash .github/bin/background.sh start playwright npx playwright install chromium
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's
@@ -138,29 +163,13 @@ jobs:
         unzip -q /tmp/wordpress.zip -d /tmp
         mv /tmp/wordpress public_html/mu
 
-    - name: Lowercase the image repository path
-      # GHCR requires lowercase image references; github.repository
-      # preserves the repo's actual casing (WordPress/wordcamp.org).
-      id: image
-      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-
-    - name: Log in to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Boot the docker environment
-      # Pulls the prebuilt images published by e2e-image.yml instead of
-      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
-      # former does apt-get + PHP extension compilation) on every run --
-      # see that workflow for the image builds, including the baked-in TLS
-      # cert for local hostnames.
-      env:
-        WORDCAMP_TEST_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
-        WORDCAMP_DB_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-mariadb:latest
-      run: docker compose up -d
+      run: |
+        bash .github/bin/background.sh wait docker
+        docker compose up -d
+
+    - name: Wait for the PHP dependencies
+      run: bash .github/bin/background.sh wait composer
 
     - name: Wait for the site to respond
       run: |
@@ -190,77 +199,18 @@ jobs:
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
-      # Users are independent rows (different usernames), so creating them
-      # concurrently is safe -- backgrounded rather than sequential to avoid
-      # paying `docker compose exec`'s per-call overhead 8 times over.
+      # One account per role: tests/e2e/auth.setup.js logs each in once and
+      # the specs share that session. organiser2 never logs in: it is the
+      # group's second organizer, and the speaker organiser1 picks. Keep the
+      # list in step with tests/e2e/utils/accounts.js and the
+      # groups-gatherpress-compat-test skill.
       run: |
         SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
-        create_user() {
-          if docker compose exec -T wordcamp.test wp user get "$1" --field=ID --url="$SITE_URL" >/dev/null 2>&1; then
-            echo "User $1 already exists."
-            return 0
-          fi
-          docker compose exec -T wordcamp.test wp user create "$1" "$1@example.test" \
-            --role="$2" --user_pass=password --url="$SITE_URL"
-        }
-        pids=()
-        create_user organiser1 editor & pids+=( "$!" )
-        # event-form.spec.js exercises both event-form surfaces, which
-        # needs the editor tier; one account per test for the same reason
-        # as the per-spec author accounts below.
-        create_user organiser2 editor & pids+=( "$!" )
-        create_user organiser3 editor & pids+=( "$!" )
-        create_user organiser4 editor & pids+=( "$!" )
-        # event-card-clickability.spec.js publishes its own event through the
-        # front-end modal rather than reading whatever the archive holds: no
-        # events are seeded here, and the specs that create them run
-        # concurrently with it.
-        create_user organiser5 editor & pids+=( "$!" )
-        # event-rsvp-cancel.spec.js publishes its own event through the
-        # front-end modal and then RSVPs to it, so it needs the editor tier
-        # and an account no concurrent spec is logged into.
-        create_user organiser6 editor & pids+=( "$!" )
-        # add-to-calendar.spec.js publishes its own event through the
-        # front-end modal, for the same reason as organiser5's spec: no
-        # events are seeded here.
-        create_user organiser7 editor & pids+=( "$!" )
-        # event-edit-surface.spec.js publishes its own event through the
-        # front-end modal and then opens it from the event page, so it needs
-        # the editor tier and an account of its own.
-        create_user organiser8 editor & pids+=( "$!" )
-        # event-rsvp-lifecycle.spec.js publishes its own events through the
-        # front-end modal and RSVPs to them, so it needs the editor tier. Its
-        # two tests get one account each, for the same reason
-        # event-manage-messaging.spec.js needs three: under `fullyParallel`
-        # the tests within a file also run concurrently, so sharing would let
-        # one test's login invalidate the other's session mid-run.
-        create_user organiser9 editor & pids+=( "$!" )
-        create_user organiser10 editor & pids+=( "$!" )
-        # venue-lifecycle.spec.js creates a venue, reuses it on a second
-        # event, and then edits it from the group settings modal, which needs
-        # the editor tier for the settings surface as well as the events.
-        create_user organiser11 editor & pids+=( "$!" )
-        create_user eventorganiser1 author & pids+=( "$!" )
-        # Dedicated per-spec accounts, not a shared eventorganiser1, for
-        # every spec that logs in as an author and can run concurrently
-        # under fullyParallel — this environment only supports one active
-        # session per user, so sharing an account risks one worker's login
-        # invalidating another's already-established session mid-test (see
-        # the comment in tests/e2e/utils/login.js). event-manage-messaging.spec.js
-        # needs THREE of its own (eventorganiser2/4/5) since its own three
-        # tests also run concurrently against each other.
-        create_user eventorganiser2 author & pids+=( "$!" )
-        create_user eventorganiser3 author & pids+=( "$!" )
-        create_user eventorganiser4 author & pids+=( "$!" )
-        create_user eventorganiser5 author & pids+=( "$!" )
-        create_user eventorganiser6 author & pids+=( "$!" )
-        create_user eventorganiser7 author & pids+=( "$!" )
-        create_user member1 subscriber & pids+=( "$!" )
-        status=0
-        for pid in "${pids[@]}"; do
-          wait "$pid" || status=1
+        for pair in organiser1:editor organiser2:editor eventorganiser1:author member1:subscriber; do
+          user="${pair%%:*}"
+          docker compose exec -T wordcamp.test wp user create "$user" "$user@example.test" \
+            --role="${pair##*:}" --user_pass=password --url="$SITE_URL"
         done
-        exit "$status"
 
     - name: Create required pages
       # `page-members.html` (public_html/wp-content/themes/groups-site/templates/)
@@ -278,6 +228,11 @@ jobs:
             --post_title="$2" --post_name="$1" --post_status=publish --url="$SITE_URL"
         }
         create_page members Members
+
+    - name: Wait for the Playwright browser
+      # A slow mirror once stalled the download for over 7 minutes.
+      timeout-minutes: 5
+      run: bash .github/bin/background.sh wait playwright
 
     - name: Run Playwright tests
       run: npx playwright test

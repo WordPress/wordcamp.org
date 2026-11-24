@@ -20,7 +20,7 @@ function add_import_page(): void {
 	}
 
 	$hook = add_submenu_page(
-		'edit.php?post_type=' . COMPANY_POST_TYPE,
+		APP_PAGE,
 		__( 'Import Sponsors', 'wordcamporg' ),
 		__( 'Import Sponsors', 'wordcamporg' ),
 		CAPABILITY,
@@ -54,7 +54,7 @@ function handle_import(): void {
 
 	check_admin_referer( 'sv_import' );
 
-	$page = admin_url( 'edit.php?post_type=' . COMPANY_POST_TYPE . '&page=sv-import' );
+	$page = admin_url( 'admin.php?page=sv-import' );
 
 	if ( isset( $_POST['sv_upload'] ) ) {
 		$file = $_FILES['sv_csv']['tmp_name'] ?? ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A temporary path PHP chose, only read.
@@ -156,7 +156,7 @@ function render_import_results( array $results ): void {
 						<strong><?php echo esc_html( $labels[ $result['result'] ] ?? '' ); ?></strong>:
 						<?php echo esc_html( $result['message'] ); ?>
 						<?php if ( $result['sponsorship_id'] ) : ?>
-							<a href="<?php echo esc_url( (string) get_edit_post_link( $result['sponsorship_id'] ) ); ?>"><?php esc_html_e( 'Sponsorship', 'wordcamporg' ); ?></a>
+							<a href="<?php echo esc_url( get_app_url( 'sponsorship', (int) $result['sponsorship_id'] ) ); ?>"><?php esc_html_e( 'Sponsorship', 'wordcamporg' ); ?></a>
 						<?php endif; ?>
 					</td>
 				</tr>

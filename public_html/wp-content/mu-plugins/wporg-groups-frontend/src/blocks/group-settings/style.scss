@@ -407,15 +407,17 @@
 
 .wporg-members-tab {
 
+	// Wraps on narrow screens, so the message button doesn't squeeze search.
 	&__controls {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 16px;
 		margin-bottom: 16px;
 	}
 
 	&__search {
-		flex: 1;
+		flex: 1 1 200px;
 		max-width: 300px;
 	}
 
@@ -432,6 +434,7 @@
 
 	&__item {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 12px;
 		padding: 8px 12px;
@@ -447,8 +450,9 @@
 		flex: 0 0 auto;
 	}
 
+	// On narrow screens the role control and Remove wrap below the name.
 	&__info {
-		flex: 1;
+		flex: 1 1 140px;
 		min-width: 0;
 	}
 
@@ -464,6 +468,12 @@
 		select {
 			min-height: 32px;
 		}
+	}
+
+	&__actions {
+		display: flex;
+		flex: 0 0 72px;
+		justify-content: flex-end;
 	}
 
 	&__pagination {

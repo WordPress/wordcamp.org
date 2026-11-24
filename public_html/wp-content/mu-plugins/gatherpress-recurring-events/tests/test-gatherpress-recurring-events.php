@@ -563,7 +563,9 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
-	/** A past date says that date ended while the series still meets (#2406). */
+	/**
+	 * A past date says that date ended while the series still meets (#2406).
+	 */
 	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
 		global $wpdb;
 
@@ -613,7 +615,9 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
-	/** A series whose dates all happened, none cancelled, has ended. */
+	/**
+	 * A series whose dates all happened, none cancelled, has ended.
+	 */
 	public function test_past_date_notice_names_the_series_once_its_dates_ran_out(): void {
 		$post_id = $this->create_projected_weekly_series( 'Finished series', 2, 22 );
 		$this->assertSame( array(), Occurrences::all( $post_id, 'upcoming' ), 'The series should have no upcoming dates.' );

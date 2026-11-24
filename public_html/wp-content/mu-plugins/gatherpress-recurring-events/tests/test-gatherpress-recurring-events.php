@@ -572,9 +572,10 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
 		global $wpdb;
 
-		$post_id = $this->create_projected_weekly_series( 'Weekly series', 9 );
+		// Off today's weekday, so no date is today and the counts hold all day.
+		$post_id = $this->create_projected_weekly_series( 'Weekly series', 9, 8 );
 		$past    = Occurrences::all( $post_id, 'past', 1 );
-		$this->assertCount( 1, $past, 'The series should have one past date.' );
+		$this->assertCount( 1, $past, 'The series should have a past date.' );
 		Context::set( $past[0] );
 
 		try {
@@ -584,7 +585,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 			// A break longer than the selector's six dates: the series still meets after it.
 			$upcoming = Occurrences::all( $post_id, 'upcoming' );
-			$this->assertCount( 8, $upcoming, 'The series should have eight upcoming dates.' );
+			$this->assertCount( 7, $upcoming, 'The series should have seven upcoming dates.' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query(
 				$wpdb->prepare(
@@ -611,6 +612,25 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 				)
 			);
 
+			$this->assertStringContainsString( 'This event series has ended.', Context::selector( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/**
+	 * A series whose dates have all happened has ended, with no cancelled
+	 * dates involved: its last date is scheduled but over.
+	 */
+	public function test_past_date_notice_names_the_series_once_its_dates_ran_out(): void {
+		$post_id = $this->create_projected_weekly_series( 'Finished series', 2, 22 );
+		$this->assertSame( array(), Occurrences::all( $post_id, 'upcoming' ), 'The series should have no upcoming dates.' );
+		$this->assertSame( array(), Occurrences::cancelled( $post_id ), 'The series should have no cancelled dates.' );
+
+		$past = Occurrences::all( $post_id, 'past', 1 );
+		Context::set( $past[0] );
+
+		try {
 			$this->assertStringContainsString( 'This event series has ended.', Context::selector( $post_id ) );
 		} finally {
 			Context::set( null );
@@ -2043,11 +2063,12 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	 * Creates a published weekly series that started a week ago, with its
 	 * occurrences projected.
 	 *
-	 * @param string $title Event title.
-	 * @param int    $count Number of dates in the series.
+	 * @param string $title    Event title.
+	 * @param int    $count    Number of dates in the series.
+	 * @param int    $days_ago How many days ago the first date was.
 	 * @return int Event post ID.
 	 */
-	private function create_projected_weekly_series( string $title, int $count = 6 ): int {
+	private function create_projected_weekly_series( string $title, int $count = 6, int $days_ago = 7 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'  => $title,
@@ -2055,7 +2076,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 				'post_status' => 'draft',
 			)
 		);
-		$start   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-7 days' )->setTime( 10, 0 );
+		$start   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( "-{$days_ago} days" )->setTime( 10, 0 );
 		( new Event( $post_id ) )->save_datetimes(
 			array(
 				'post_id'        => $post_id,

@@ -563,12 +563,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
-	/**
-	 * A past date of a series that still meets says that date ended, not the
-	 * series: members read "This event series has ended" on last week's date
-	 * as the group having stopped meeting (#2406). Once no dates are left,
-	 * the series has ended.
-	 */
+	/** A past date says that date ended while the series still meets (#2406). */
 	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
 		global $wpdb;
 
@@ -618,10 +613,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		}
 	}
 
-	/**
-	 * A series whose dates have all happened has ended, with no cancelled
-	 * dates involved: its last date is scheduled but over.
-	 */
+	/** A series whose dates all happened, none cancelled, has ended. */
 	public function test_past_date_notice_names_the_series_once_its_dates_ran_out(): void {
 		$post_id = $this->create_projected_weekly_series( 'Finished series', 2, 22 );
 		$this->assertSame( array(), Occurrences::all( $post_id, 'upcoming' ), 'The series should have no upcoming dates.' );

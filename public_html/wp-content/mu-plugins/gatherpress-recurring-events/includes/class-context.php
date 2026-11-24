@@ -235,10 +235,7 @@ final class Context {
 		$occurrences  = Occurrences::around( $post_id, 6 );
 		$items        = '';
 
-		/*
-		 * The next date that hasn't ended, scheduled ones first. Dates left after
-		 * "End series after" are kept as cancelled rows; they aren't upcoming.
-		 */
+		// Cancelled dates, like those "End series after" leaves, aren't upcoming.
 		$next         = Occurrences::select_for_series( $post_id );
 		$has_upcoming = $next && 'scheduled' === $next->status && $next->datetime_end_gmt >= current_time( 'mysql', true );
 
@@ -281,11 +278,7 @@ final class Context {
 		if ( 'cancelled' === self::$occurrence->status ) {
 			$notice = '<p class="gpre-cancelled-notice" role="status">' . esc_html__( 'This occurrence has been canceled.', 'wordcamporg' ) . '</p>';
 		} elseif ( self::$occurrence->datetime_end_gmt < current_time( 'mysql', true ) ) {
-			/*
-			 * A past date of a series that still has upcoming dates has ended on
-			 * its own; saying the series ended reads as the group having stopped
-			 * meeting (#2406).
-			 */
+			// Only this date ended while later ones are scheduled (#2406).
 			$message = $has_upcoming
 				? __( 'This event has ended.', 'wordcamporg' )
 				: __( 'This event series has ended.', 'wordcamporg' );

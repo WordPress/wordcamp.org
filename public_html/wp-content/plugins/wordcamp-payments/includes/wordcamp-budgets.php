@@ -56,6 +56,10 @@ class WordCamp_Budgets {
 		add_filter( 'default_title',          array( $this, 'set_default_payments_title' ),        10, 2 );
 		add_action( 'pre_get_posts',          array( __CLASS__, 'restrict_payment_queries' )             );
 		add_filter( 'post_row_actions',       array( __CLASS__, 'remove_quick_edit' ),             10, 2 );
+
+		foreach ( self::PAYMENT_POST_TYPES as $post_type ) {
+			add_filter( "bulk_actions-edit-$post_type", array( __CLASS__, 'remove_bulk_edit' ) );
+		}
 	}
 
 	/**
@@ -74,6 +78,25 @@ class WordCamp_Budgets {
 		if ( in_array( $post->post_type, self::PAYMENT_POST_TYPES, true ) ) {
 			unset( $actions['inline hide-if-no-js'] );
 		}
+
+		return $actions;
+	}
+
+	/**
+	 * Don't offer Bulk Edit on the budget post types.
+	 *
+	 * It has the same status dropdown as Quick Edit. Left at "No change" it doesn't help either: a bulk save of
+	 * sponsor invoices still runs `set_invoice_status()`, which checks a sponsor the request doesn't name, and can
+	 * turn each invoice into a draft.
+	 *
+	 * Hooked to `bulk_actions-edit-{$post_type}` for each of `PAYMENT_POST_TYPES` only.
+	 *
+	 * @param array $actions The bulk actions.
+	 *
+	 * @return array
+	 */
+	public static function remove_bulk_edit( $actions ) {
+		unset( $actions['edit'] );
 
 		return $actions;
 	}

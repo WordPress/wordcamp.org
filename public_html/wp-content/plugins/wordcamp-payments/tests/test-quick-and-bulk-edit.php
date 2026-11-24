@@ -9,17 +9,20 @@ use WordCamp_Budgets;
 defined( 'WPINC' ) || die();
 
 /**
- * Quick Edit isn't offered on the budget post types.
+ * Quick Edit and Bulk Edit aren't offered on the budget post types.
  *
  * Quick Edit's status dropdown only knows the core statuses. On a request or an invoice in one of the budget
  * statuses ("Invoice sent to sponsor", "Paid", ...) nothing in it matches, so it shows "Published", and saving
  * moves the post out of its budget status. A sent sponsor invoice then never shows as paid.
  *
+ * Bulk Edit has the same dropdown. Even left at "No change", a bulk save of sponsor invoices runs their status
+ * filter without the sponsor, which can turn each one into a draft.
+ *
  * @see https://github.com/WordPress/wordcamp.org/issues/2441
  *
  * @group budgets
  */
-class Test_Quick_Edit extends WP_UnitTestCase {
+class Test_Quick_And_Bulk_Edit extends WP_UnitTestCase {
 	/**
 	 * The row actions core gives a post in the list table.
 	 */
@@ -27,6 +30,14 @@ class Test_Quick_Edit extends WP_UnitTestCase {
 		'edit'                 => '<a href="#">Edit</a>',
 		'inline hide-if-no-js' => '<button type="button">Quick&nbsp;Edit</button>',
 		'trash'                => '<a href="#">Trash</a>',
+	);
+
+	/**
+	 * The bulk actions core gives the posts list table.
+	 */
+	const CORE_BULK_ACTIONS = array(
+		'edit'  => 'Edit',
+		'trash' => 'Move to Trash',
 	);
 
 	/**
@@ -109,5 +120,44 @@ class Test_Quick_Edit extends WP_UnitTestCase {
 		$actions = apply_filters( 'post_row_actions', self::CORE_ROW_ACTIONS, $this->make_post( 'post', 'publish' ) );
 
 		$this->assertSame( self::CORE_ROW_ACTIONS, $actions );
+	}
+
+	/**
+	 * The budget post types.
+	 *
+	 * @return array[]
+	 */
+	public function data_budget_post_types() {
+		return array(
+			'sponsor invoices' => array( 'wcb_sponsor_invoice' ),
+			'vendor payments'  => array( 'wcp_payment_request' ),
+			'reimbursements'   => array( 'wcb_reimbursement' ),
+		);
+	}
+
+	/**
+	 * The list table's bulk actions have no Edit on a budget post type, and still have Move to Trash.
+	 *
+	 * @dataProvider data_budget_post_types
+	 *
+	 * @covers \WordCamp_Budgets::remove_bulk_edit
+	 *
+	 * @param string $post_type
+	 */
+	public function test_budget_post_types_have_no_bulk_edit( $post_type ) {
+		$actions = apply_filters( "bulk_actions-edit-$post_type", self::CORE_BULK_ACTIONS ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- core's hook name.
+
+		$this->assertSame( array( 'trash' => 'Move to Trash' ), $actions );
+	}
+
+	/**
+	 * Other post types keep Bulk Edit.
+	 *
+	 * @covers \WordCamp_Budgets::remove_bulk_edit
+	 */
+	public function test_other_post_types_keep_bulk_edit() {
+		$actions = apply_filters( 'bulk_actions-edit-post', self::CORE_BULK_ACTIONS ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores -- core's hook name.
+
+		$this->assertSame( self::CORE_BULK_ACTIONS, $actions );
 	}
 }

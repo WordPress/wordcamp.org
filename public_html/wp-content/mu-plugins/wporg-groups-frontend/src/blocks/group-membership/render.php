@@ -110,6 +110,12 @@ if ( $shows_count ) {
 }
 
 if ( $offers_join ) {
+	global $wp;
+
+	// On the group home the global post is the latest news post, so
+	// `get_permalink()` would send visitors there after logging in.
+	$current_url = home_url( empty( $wp->request ) ? '/' : trailingslashit( $wp->request ) );
+
 	$context = array_merge(
 		$context,
 		array(
@@ -119,7 +125,7 @@ if ( $offers_join ) {
 			'leaveConfirm' => __( 'Leave this group?', 'wordcamporg' ),
 			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
 			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
-			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
+			'loginUrl'     => wp_login_url( $current_url ),
 			'joinError'    => __( 'You could not join this group. Please try again.', 'wordcamporg' ),
 			'loading'      => false,
 			'errorMessage' => '',

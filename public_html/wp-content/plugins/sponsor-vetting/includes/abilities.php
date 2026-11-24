@@ -844,7 +844,7 @@ function get_company( array $input ): array|\WP_Error {
 	$sponsorships = array();
 	$page         = 1;
 
-	// A Multi-Event Sponsor can have more sponsorships than one page holds.
+	// A Multi-Event Sponsor can outgrow one page. By ID, which is unique, so none lands on two pages.
 	do {
 		$response = ask_rest(
 			'GET',
@@ -852,6 +852,8 @@ function get_company( array $input ): array|\WP_Error {
 			array(
 				'parent'   => array( $id ),
 				'status'   => array_keys( get_sponsorship_statuses() ),
+				'orderby'  => 'id',
+				'order'    => 'asc',
 				'page'     => $page,
 				'per_page' => 100,
 				'_fields'  => 'id,title,status,event,domain,approved,approvable',

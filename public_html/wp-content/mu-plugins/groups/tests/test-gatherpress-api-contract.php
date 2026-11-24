@@ -67,6 +67,7 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 			'methods'   => array(
 				'save_datetimes',
 				'get_venue_information',
+				'get_public_venue_information',
 				'has_event_past',
 				'has_event_started',
 				'get_datetime',

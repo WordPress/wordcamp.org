@@ -89,6 +89,39 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 	}
 
 	/**
+	 * Hold an event at a newly created, published venue.
+	 *
+	 * GatherPress links the two with a shadow term in `_gatherpress_venue`
+	 * whose slug is the venue's `post_name` prefixed with an underscore.
+	 *
+	 * @param int    $event_id   Event post ID.
+	 * @param string $venue_name The venue's title.
+	 * @param string $password   The venue's post password, or '' for none.
+	 */
+	private function hold_at_venue( int $event_id, string $venue_name, string $password = '' ): void {
+		$venue_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_venue',
+				'post_status'   => 'publish',
+				'post_title'    => $venue_name,
+				'post_name'     => sanitize_title( $venue_name ),
+				'post_password' => $password,
+			)
+		);
+
+		$slug = '_' . get_post_field( 'post_name', $venue_id );
+		$term = get_term_by( 'slug', $slug, '_gatherpress_venue' );
+
+		if ( ! $term ) {
+			$inserted = wp_insert_term( $venue_name, '_gatherpress_venue', array( 'slug' => $slug ) );
+			$this->assertNotWPError( $inserted, 'Could not create the venue shadow term.' );
+			$term = get_term( $inserted['term_id'], '_gatherpress_venue' );
+		}
+
+		wp_set_object_terms( $event_id, array( (int) $term->term_id ), '_gatherpress_venue', false );
+	}
+
+	/**
 	 * A group member who can RSVP, acting as themselves.
 	 *
 	 * The current user matters, not just the `$user_id` passed to
@@ -156,6 +189,38 @@ class Test_Groups_RSVP_Confirmation extends Groups_TestCase {
 
 		$this->assertStringContainsString( '2031', $message, 'Expected the event date in the body.' );
 		$this->assertStringContainsString( get_permalink( $event_id ), $message );
+	}
+
+	/**
+	 * The venue makes it into the body, so the member knows where to go.
+	 */
+	public function test_confirmation_names_the_venue() {
+		$event_id = $this->create_dated_event();
+		$this->hold_at_venue( $event_id, 'Salty Spaces' );
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail );
+		$this->assertStringContainsString( 'Where: Salty Spaces', $this->sent_mail[0]['message'] );
+	}
+
+	/**
+	 * A venue with a password stays out of the body, as it stays off the
+	 * event page. The rest of the confirmation still goes out.
+	 */
+	public function test_confirmation_leaves_out_a_password_protected_venue() {
+		$event_id = $this->create_dated_event();
+		$this->hold_at_venue( $event_id, 'Hidden Hall', 'venue-pass' );
+
+		( new Rsvp( $event_id ) )->save( $this->create_member(), 'attending' );
+
+		$this->assertCount( 1, $this->sent_mail, 'The confirmation itself should still go out.' );
+
+		$message = $this->sent_mail[0]['message'];
+
+		$this->assertStringNotContainsString( 'Hidden Hall', $message );
+		$this->assertStringNotContainsString( 'Where:', $message );
+		$this->assertStringContainsString( 'Confirmation Test Event', $message );
 	}
 
 	/**

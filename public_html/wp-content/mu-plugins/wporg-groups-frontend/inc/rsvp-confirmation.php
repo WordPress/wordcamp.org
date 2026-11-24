@@ -231,7 +231,13 @@ function send_email( array $recipient, int $event_id ): void {
 	 */
 	$when      = $event->get_display_datetime();
 	$permalink = get_permalink( $event_id );
-	$venue     = plain_text( $event->get_venue_information()['name'] ?? '' );
+
+	/*
+	 * The public shape, as the event page, its feeds and its calendars use: a
+	 * password-protected venue is left out of all of them, so it stays out of
+	 * the email too.
+	 */
+	$venue = plain_text( $event->get_public_venue_information()['name'] ?? '' );
 
 	$lines = array(
 		sprintf(

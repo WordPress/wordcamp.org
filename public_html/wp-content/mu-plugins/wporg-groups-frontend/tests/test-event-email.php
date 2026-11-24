@@ -4,6 +4,7 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Event_Email\fix_event_email_markup;
 use function WordCamp\Groups\Frontend\Event_Email\fix_featured_image;
+use function WordCamp\Groups\Frontend\Event_Email\hide_protected_venue;
 use function WordCamp\Groups\Frontend\Event_Email\add_missing_button;
 use function WordCamp\Groups\Frontend\Event_Email\make_button_bulletproof;
 use function WordCamp\Groups\Frontend\Event_Email\sanitize_message;
@@ -231,9 +232,10 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 	 *
 	 * @param string $start        Event start, site time.
 	 * @param int    $thumbnail_id Optional featured image.
+	 * @param array  $venue        Optional venue to hold the event at: `name`, and `password` ('' for none).
 	 * @return array `wp_mail()` arguments for the member's copy.
 	 */
-	private function send_member_email( string $start, int $thumbnail_id = 0 ): array {
+	private function send_member_email( string $start, int $thumbnail_id = 0, array $venue = array() ): array {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -243,6 +245,10 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 
 		if ( $thumbnail_id ) {
 			set_post_thumbnail( $event_id, $thumbnail_id );
+		}
+
+		if ( $venue ) {
+			$this->hold_at_venue( $event_id, $venue['name'], $venue['password'] ?? '' );
 		}
 
 		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
@@ -288,6 +294,77 @@ class Test_Groups_Event_Email extends Groups_TestCase {
 		}
 
 		$this->fail( 'The member did not get the email.' );
+	}
+
+	/**
+	 * Hold an event at a newly created, published venue.
+	 *
+	 * GatherPress links the two with a shadow term in `_gatherpress_venue`
+	 * whose slug is the venue's `post_name` prefixed with an underscore.
+	 *
+	 * @param int    $event_id   Event post ID.
+	 * @param string $venue_name The venue's title.
+	 * @param string $password   The venue's post password, or '' for none.
+	 */
+	private function hold_at_venue( int $event_id, string $venue_name, string $password ): void {
+		$venue_id = self::factory()->post->create(
+			array(
+				'post_type'     => 'gatherpress_venue',
+				'post_status'   => 'publish',
+				'post_title'    => $venue_name,
+				'post_name'     => sanitize_title( $venue_name ),
+				'post_password' => $password,
+			)
+		);
+
+		$slug = '_' . get_post_field( 'post_name', $venue_id );
+		$term = get_term_by( 'slug', $slug, '_gatherpress_venue' );
+
+		if ( ! $term ) {
+			$inserted = wp_insert_term( $venue_name, '_gatherpress_venue', array( 'slug' => $slug ) );
+			$this->assertNotWPError( $inserted, 'Could not create the venue shadow term.' );
+			$term = get_term( $inserted['term_id'], '_gatherpress_venue' );
+		}
+
+		wp_set_object_terms( $event_id, array( (int) $term->term_id ), '_gatherpress_venue', false );
+	}
+
+	/**
+	 * The real template names an ordinary venue, and nothing here takes it out.
+	 */
+	public function test_email_names_the_venue() {
+		$mail = $this->send_member_email( '2031-05-20 10:00:00', 0, array( 'name' => 'Salty Spaces' ) );
+
+		$this->assertStringContainsString( 'Salty Spaces', $mail['message'] );
+	}
+
+	/**
+	 * A venue with a password stays out of the email, as it stays off the
+	 * event page. This goes through GatherPress's real template, because the
+	 * line is found by its marker comment, and a marker the template stops
+	 * writing would leave the venue in with nothing else failing.
+	 */
+	public function test_email_leaves_out_a_password_protected_venue() {
+		$mail = $this->send_member_email(
+			'2031-05-20 10:00:00',
+			0,
+			array(
+				'name'     => 'Hidden Hall',
+				'password' => 'venue-pass',
+			)
+		);
+
+		$this->assertStringNotContainsString( 'Hidden Hall', $mail['message'] );
+		$this->assertStringContainsString( 'RSVP Now', $mail['message'], 'The rest of the email should be untouched.' );
+	}
+
+	/**
+	 * Without the event, there is no venue to check, so the body is left alone.
+	 */
+	public function test_venue_is_left_alone_without_an_event() {
+		$body = '<!-- Venue --><p style="text-align: center;">Venue: Somewhere</p>';
+
+		$this->assertSame( $body, hide_protected_venue( $body, 0 ) );
 	}
 
 	/**

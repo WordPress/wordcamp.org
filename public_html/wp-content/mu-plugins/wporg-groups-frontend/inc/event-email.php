@@ -7,6 +7,8 @@
 
 namespace WordCamp\Groups\Frontend\Event_Email;
 
+use GatherPress\Core\Event\Event;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -24,6 +26,7 @@ defined( 'WPINC' ) || die();
 const IMAGE_MARKER          = '<!-- Featured Image -->';
 const BUTTON_MARKER         = '<!-- RSVP Button';
 const BUTTON_MARKER_PATTERN = '<!-- RSVP Button\b[^>]*-->';
+const VENUE_MARKER          = '<!-- Venue -->';
 
 /**
  * A button email clients actually render.
@@ -132,6 +135,9 @@ function current_event_id( ?int $event_id = null ): int {
  * "Message all members" and "Message attendees" actions render the same
  * template and had the same two problems.
  *
+ * On the way it also takes out a password-protected venue's line; see
+ * `hide_protected_venue()`.
+ *
  * @param array $atts `wp_mail()` arguments.
  * @return array
  */
@@ -147,13 +153,51 @@ function fix_event_email_markup( array $atts ): array {
 	}
 
 	// Cheap rejection first: this filter sees every email the site sends.
-	if ( ! str_contains( $message, IMAGE_MARKER ) && ! str_contains( $message, BUTTON_MARKER ) ) {
+	if (
+		! str_contains( $message, IMAGE_MARKER )
+		&& ! str_contains( $message, BUTTON_MARKER )
+		&& ! str_contains( $message, VENUE_MARKER )
+	) {
 		return $atts;
 	}
+
+	$message = hide_protected_venue( $message, $event_id );
 
 	$atts['message'] = add_missing_button( make_button_bulletproof( fix_featured_image( $message ) ), $event_id );
 
 	return $atts;
+}
+
+/**
+ * Leave a password-protected venue out of the email.
+ *
+ * The template names the event's venue whatever its password, where the
+ * event page, its REST response, its feeds and its calendars all leave such
+ * a venue out. `Event::get_public_venue_information()` is the shape those
+ * use, and it comes back blank for a protected venue, so the venue line goes
+ * when it is blank. An event with no venue has no line to remove.
+ *
+ * @param string $message  Rendered email body.
+ * @param int    $event_id Event the email is about, or 0 when unknown.
+ * @return string
+ */
+function hide_protected_venue( string $message, int $event_id ): string {
+	if ( ! $event_id || ! str_contains( $message, VENUE_MARKER ) ) {
+		return $message;
+	}
+
+	if ( '' !== ( new Event( $event_id ) )->get_public_venue_information()['name'] ) {
+		return $message;
+	}
+
+	$fixed = preg_replace(
+		'#(' . preg_quote( VENUE_MARKER, '#' ) . ')\s*<p\b[^>]*>.*?</p>#s',
+		'$1',
+		$message,
+		1
+	);
+
+	return null === $fixed ? $message : $fixed;
 }
 
 /**

@@ -564,6 +564,76 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A past date says that date ended while the series still meets (#2406).
+	 */
+	public function test_past_date_notice_names_the_date_while_the_series_continues(): void {
+		global $wpdb;
+
+		// Off today's weekday, so no date is today and the counts hold all day.
+		$post_id = $this->create_projected_weekly_series( 'Weekly series', 9, 8 );
+		$past    = Occurrences::all( $post_id, 'past', 1 );
+		$this->assertCount( 1, $past, 'The series should have a past date.' );
+		Context::set( $past[0] );
+
+		try {
+			$selector = Context::selector( $post_id );
+			$this->assertStringContainsString( 'This event has ended.', $selector );
+			$this->assertStringNotContainsString( 'This event series has ended.', $selector );
+
+			// A break longer than the selector's six dates: the series still meets after it.
+			$upcoming = Occurrences::all( $post_id, 'upcoming' );
+			$this->assertCount( 7, $upcoming, 'The series should have seven upcoming dates.' );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = 'cancelled' WHERE series_post_id = %d AND datetime_start_gmt >= %s AND datetime_start_gmt < %s",
+					Database::occurrences_table(),
+					$post_id,
+					current_time( 'mysql', true ),
+					end( $upcoming )->datetime_start_gmt
+				)
+			);
+
+			$selector = Context::selector( $post_id );
+			$this->assertStringContainsString( 'This event has ended.', $selector );
+			$this->assertStringNotContainsString( 'This event series has ended.', $selector );
+
+			// Ending the series keeps its later dates as cancelled rows.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = 'cancelled' WHERE series_post_id = %d AND datetime_start_gmt >= %s",
+					Database::occurrences_table(),
+					$post_id,
+					current_time( 'mysql', true )
+				)
+			);
+
+			$this->assertStringContainsString( 'This event series has ended.', Context::selector( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/**
+	 * A series whose dates all happened, none cancelled, has ended.
+	 */
+	public function test_past_date_notice_names_the_series_once_its_dates_ran_out(): void {
+		$post_id = $this->create_projected_weekly_series( 'Finished series', 2, 22 );
+		$this->assertSame( array(), Occurrences::all( $post_id, 'upcoming' ), 'The series should have no upcoming dates.' );
+		$this->assertSame( array(), Occurrences::cancelled( $post_id ), 'The series should have no cancelled dates.' );
+
+		$past = Occurrences::all( $post_id, 'past', 1 );
+		Context::set( $past[0] );
+
+		try {
+			$this->assertStringContainsString( 'This event series has ended.', Context::selector( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/**
 	 * The selector's stylesheet and script load only where there's a
 	 * selector: a page with an active occurrence. Everywhere else they were
 	 * a render-blocking stylesheet and a script that did nothing.
@@ -1989,10 +2059,12 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	 * Creates a published weekly series that started a week ago, with its
 	 * occurrences projected.
 	 *
-	 * @param string $title Event title.
+	 * @param string $title    Event title.
+	 * @param int    $count    Number of dates in the series.
+	 * @param int    $days_ago How many days ago the first date was.
 	 * @return int Event post ID.
 	 */
-	private function create_projected_weekly_series( string $title ): int {
+	private function create_projected_weekly_series( string $title, int $count = 6, int $days_ago = 7 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'  => $title,
@@ -2000,7 +2072,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 				'post_status' => 'draft',
 			)
 		);
-		$start   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( '-7 days' )->setTime( 10, 0 );
+		$start   = ( new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) ) )->modify( "-{$days_ago} days" )->setTime( 10, 0 );
 		( new Event( $post_id ) )->save_datetimes(
 			array(
 				'post_id'        => $post_id,
@@ -2013,7 +2085,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
 		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( strtoupper( substr( $start->format( 'D' ), 0, 2 ) ) ) );
 		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
-		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 6 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', $count );
 		wp_update_post(
 			array(
 				'ID'          => $post_id,

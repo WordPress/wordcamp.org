@@ -152,6 +152,26 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	}
 
 	/**
+	 * Publishing a password-protected event emails nobody.
+	 */
+	public function test_protected_event_publish_sends_no_email() {
+		$this->create_member();
+		$event_id = $this->create_dated_event( 'draft' );
+
+		wp_update_post(
+			array(
+				'ID'            => $event_id,
+				'post_password' => 'secret',
+				'post_status'   => 'publish',
+			)
+		);
+		send_pending_new_event_notifications();
+
+		$this->assertEmpty( $this->sent_mail );
+		$this->assertFalse( $this->notification_was_sent( $event_id ) );
+	}
+
+	/**
 	 * The "already published" guard: an edit that keeps `post_status` at
 	 * `publish` (`$old_status` is also `publish`) must not send again.
 	 *

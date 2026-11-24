@@ -190,6 +190,11 @@ function send_pending_new_event_notifications(): void {
 			continue;
 		}
 
+		// The email carries the event's details, which a password keeps from members.
+		if ( '' !== get_post_field( 'post_password', $event_id ) ) {
+			continue;
+		}
+
 		$datetime = ( new \GatherPress\Core\Event\Event( $event_id ) )->get_datetime();
 
 		if ( empty( $datetime['datetime_start_gmt'] ) ) {

@@ -50,7 +50,7 @@ Avoid arbitrary gap and margin values when one of these tokens fits the composit
 | Card | 1px border using `light-grey-1`, 4px radius, 24px internal padding |
 | Input | 1px border, 2px radius, approximately 8px 12px padding |
 | Focus indicator | 2px `blueberry-1` outline with a 2px offset |
-| Modal | Approximately 520px maximum width, 8px radius, 24px 32px 32px content padding |
+| Modal | Approximately 520px maximum width, 8px radius, 24px 32px 32px content padding. The event modal is up to 704px wide and the full-height Group Settings modal up to 688px, so their 640px forms fit |
 | Organizer tools | Organizer-only actions on a page: a small uppercase label above a wrapping row of 20px icon + Inter 14px `charcoal-3` text buttons, `blueberry-1` with underline on hover. Not full buttons, so they don't compete with visitor actions such as RSVP |
 | Group home hero | Split layout on the plain page background: group details on the left; on the right, the 16:9 featured image in a white card with a share row, set on an 8px-radius color mat. The mat is a block background color (`pomegranate-3` by default), so it can be retinted without CSS |
 | Event hero | The same split on a `light-grey-2` band with a `light-grey-1` bottom border: title, host row, and “Part of {group}” on the left; the bare 16:9 image on the right |

@@ -62,9 +62,8 @@ function register_meta(): void {
  * What is left is the plain language subtags, which is also what the filter
  * groups on.
  *
- * Sorted by localized name the way `wcorg_get_countries()` sorts territories,
- * with accents folded to plain letters so they do not sink a language to
- * the bottom of the list.
+ * Sorted by localized name, with accents folded to plain letters so they do
+ * not sink a language to the bottom of the list.
  *
  * @return array<string, string> Language subtag => localized language name.
  */
@@ -104,6 +103,7 @@ function get_options(): array {
  * Letters with no plain equivalent, such as Cyrillic, are left as they are.
  *
  * @param string $name Localized language name.
+ * @return string The name with its accents removed.
  */
 function transliterate( string $name ): string {
 	return remove_accents( $name );

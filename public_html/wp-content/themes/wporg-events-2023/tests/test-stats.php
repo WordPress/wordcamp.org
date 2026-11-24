@@ -4,7 +4,7 @@ namespace WordPressdotorg\Theme\Events_2023\Tests;
 
 use WordCamp\Tests\Database_TestCase;
 use WP_Error;
-use function WordPressdotorg\Events_2023\{ compute_stats, format_stat, get_stats, refresh_stats, schedule_stats_cron };
+use function WordPressdotorg\Events_2023\{ compute_stats, fetch_meetup_groups, fetch_member_count, format_stat, get_stats, query_member_count, refresh_stats, schedule_stats_cron };
 use function WordPressdotorg\Theme\Events_2023\Events_Stat\render as render_stat;
 use const WordPressdotorg\Events_2023\{ STATS_CRON_HOOK, STATS_OPTION };
 
@@ -27,8 +27,16 @@ class Test_Stats extends Database_TestCase {
 
 		delete_option( STATS_OPTION );
 		remove_all_filters( 'wporg_events_stats_groups' );
+		remove_all_filters( 'wporg_events_stats_member_count' );
 		remove_all_filters( 'wporg_events_stats_wordcamp_count' );
 	}
+
+	/**
+	 * The unique member count the network reports for `groups()`.
+	 *
+	 * Less than the 151 the groups add up to, because some people are in more than one group.
+	 */
+	const UNIQUE_MEMBERS = 140;
 
 	/**
 	 * Three chapter groups the way `Meetup_Client::get_groups()` returns them.
@@ -84,24 +92,129 @@ class Test_Stats extends Database_TestCase {
 	 *
 	 * @param array|WP_Error $groups
 	 * @param int            $wordcamps
+	 * @param int|WP_Error   $members   The network's unique member count.
 	 */
-	protected function inject( $groups, int $wordcamps ): void {
+	protected function inject( $groups, int $wordcamps, $members = self::UNIQUE_MEMBERS ): void {
 		add_filter( 'wporg_events_stats_groups', fn() => $groups );
 		add_filter( 'wporg_events_stats_wordcamp_count', fn() => $wordcamps );
+		add_filter( 'wporg_events_stats_member_count', fn() => $members );
+	}
+
+	/**
+	 * A stand-in for the Meetup client that answers every query with `$result` and keeps the queries it got.
+	 *
+	 * @param array|WP_Error $result
+	 *
+	 * @return object
+	 */
+	protected function client_returning( $result ): object {
+		return new class( $result ) {
+			public array $queries = array();
+
+			/**
+			 * @param array|WP_Error $result What every query returns.
+			 */
+			public function __construct( private $result ) {}
+
+			/**
+			 * Keep the query and return the canned result.
+			 *
+			 * @param string     $query
+			 * @param array|null $variables
+			 *
+			 * @return array|WP_Error
+			 */
+			public function send_paginated_request( $query, $variables = null ) {
+				$this->queries[] = $query;
+
+				return $this->result;
+			}
+		};
 	}
 
 	/**
 	 * Events are the groups' past events plus the WordCamps; countries are counted once each, whatever the case.
 	 *
+	 * Members are the network's unique count as given, not the groups' counts added up, which would count
+	 * someone in two groups twice.
+	 *
 	 * @covers \WordPressdotorg\Events_2023\compute_stats
 	 */
 	public function test_compute_stats_sums_groups_and_wordcamps() {
-		$stats = compute_stats( $this->groups(), 3 );
+		$stats = compute_stats( $this->groups(), self::UNIQUE_MEMBERS, 3 );
 
 		$this->assertSame( 18, $stats['events'] );
 		$this->assertSame( 3, $stats['groups'] );
 		$this->assertSame( 2, $stats['countries'] );
-		$this->assertSame( 151, $stats['members'] );
+		$this->assertSame( self::UNIQUE_MEMBERS, $stats['members'] );
+	}
+
+	/**
+	 * The unique member count comes from the network's analytics, not from the groups.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\query_member_count
+	 */
+	public function test_query_member_count_reads_the_network_analytics() {
+		$client = $this->client_returning( array(
+			'proNetwork' => array(
+				'networkAnalytics' => array( 'totalMembers' => 515286 ),
+			),
+		) );
+
+		$this->assertSame( 515286, query_member_count( $client ) );
+		$this->assertCount( 1, $client->queries );
+		$this->assertMatchesRegularExpression( '/proNetwork\s*\(\s*urlname:\s*"wordpress"\s*\)/', $client->queries[0] );
+		$this->assertMatchesRegularExpression( '/networkAnalytics\s*\{\s*totalMembers\s*\}/', $client->queries[0] );
+	}
+
+	/**
+	 * An error, a missing field or a zero is an error, so a refresh never stores "0 meetup members".
+	 *
+	 * @covers \WordPressdotorg\Events_2023\query_member_count
+	 */
+	public function test_query_member_count_fails_without_a_usable_count() {
+		$responses = array(
+			new WP_Error( 'meetup', 'down' ),
+			array(),
+			array( 'proNetwork' => array( 'networkAnalytics' => null ) ),
+			array( 'proNetwork' => array( 'networkAnalytics' => array( 'totalMembers' => 0 ) ) ),
+		);
+
+		foreach ( $responses as $response ) {
+			$this->assertWPError( query_member_count( $this->client_returning( $response ) ) );
+		}
+	}
+
+	/**
+	 * Without a Meetup connection no client is created, so a stack without a token doesn't log warnings
+	 * from a failed request every hour.
+	 *
+	 * The test environment has no Meetup credentials, which is the unconnected case.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\fetch_meetup_groups
+	 * @covers \WordPressdotorg\Events_2023\fetch_member_count
+	 * @covers \WordPressdotorg\Events_2023\is_meetup_connected
+	 */
+	public function test_nothing_is_requested_without_a_meetup_connection() {
+		$requests = 0;
+		$count    = function ( $pre ) use ( &$requests ) {
+			++$requests;
+
+			return $pre;
+		};
+
+		add_filter( 'pre_http_request', $count );
+
+		$groups  = fetch_meetup_groups();
+		$members = fetch_member_count();
+		refresh_stats();
+
+		remove_filter( 'pre_http_request', $count );
+
+		$this->assertSame( 'meetup_not_connected', $groups->get_error_code() );
+		$this->assertSame( 'meetup_not_connected', $members->get_error_code() );
+		$this->assertSame( 0, $requests );
+		$this->assertFalse( get_option( STATS_OPTION ) );
 	}
 
 	/**
@@ -162,7 +275,7 @@ class Test_Stats extends Database_TestCase {
 
 		$this->assertFalse( $stats['fallback'] );
 		$this->assertSame( 18, $stats['events'] );
-		$this->assertSame( 151, $stats['members'] );
+		$this->assertSame( self::UNIQUE_MEMBERS, $stats['members'] );
 		$this->assertGreaterThan( 0, $stats['updated'] );
 	}
 
@@ -192,6 +305,7 @@ class Test_Stats extends Database_TestCase {
 		restore_current_blog();
 
 		add_filter( 'wporg_events_stats_groups', fn() => $this->groups() );
+		add_filter( 'wporg_events_stats_member_count', fn() => self::UNIQUE_MEMBERS );
 
 		do_action( STATS_CRON_HOOK );
 
@@ -234,7 +348,28 @@ class Test_Stats extends Database_TestCase {
 		refresh_stats();
 
 		$this->assertSame( 18, get_stats()['events'] );
-		$this->assertSame( 151, get_stats()['members'] );
+		$this->assertSame( self::UNIQUE_MEMBERS, get_stats()['members'] );
+	}
+
+	/**
+	 * When the unique member count can't be fetched, the last good figures stay, rather than a sum that
+	 * counts people twice or a zero.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\refresh_stats
+	 */
+	public function test_refresh_keeps_the_last_stats_when_the_member_count_fails() {
+		$this->inject( $this->groups(), 3 );
+		refresh_stats();
+
+		remove_all_filters( 'wporg_events_stats_groups' );
+		remove_all_filters( 'wporg_events_stats_member_count' );
+		add_filter( 'wporg_events_stats_groups', fn() => array_slice( $this->groups(), 0, 1 ) );
+		add_filter( 'wporg_events_stats_member_count', fn() => new WP_Error( 'meetup', 'down' ) );
+		refresh_stats();
+
+		$this->assertSame( 18, get_stats()['events'] );
+		$this->assertSame( 3, get_stats()['groups'] );
+		$this->assertSame( self::UNIQUE_MEMBERS, get_stats()['members'] );
 	}
 
 	/**
@@ -282,6 +417,7 @@ class Test_Stats extends Database_TestCase {
 		}
 
 		add_filter( 'wporg_events_stats_groups', fn() => $this->groups() );
+		add_filter( 'wporg_events_stats_member_count', fn() => self::UNIQUE_MEMBERS );
 
 		try {
 			do_action( STATS_CRON_HOOK );

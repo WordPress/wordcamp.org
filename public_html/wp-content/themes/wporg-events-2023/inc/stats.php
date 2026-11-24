@@ -15,6 +15,9 @@ defined( 'WPINC' ) || die();
  * plus the WordCamps on central, and are refreshed hourly from cron. The page only ever reads the stored
  * figures, so the Meetup API is never on a visitor's request, and until the first refresh has run it
  * shows the copy it launched with.
+ *
+ * Without a Meetup connection the refresh makes no request at all, so a stack without a token (a local or
+ * sandbox one, say) doesn't log a failed request every hour.
  */
 
 const STATS_OPTION    = 'wporg_events_stats';
@@ -47,8 +50,8 @@ function schedule_stats_cron(): void {
 /**
  * Fetch fresh figures and store them.
  *
- * When the groups can't be fetched, or come back without their analytics, the figures already stored stay,
- * so a Meetup outage or a missing token never puts zeros on the homepage.
+ * When the groups or the member count can't be fetched, or the groups come back without their analytics,
+ * the figures already stored stay, so a Meetup outage or a missing token never puts zeros on the homepage.
  */
 function refresh_stats(): void {
 	$groups = fetch_meetup_groups();
@@ -57,7 +60,13 @@ function refresh_stats(): void {
 		return;
 	}
 
-	$stats            = compute_stats( $groups, count_wordcamps() );
+	$members = fetch_member_count();
+
+	if ( is_wp_error( $members ) ) {
+		return;
+	}
+
+	$stats            = compute_stats( $groups, $members, count_wordcamps() );
 	$stats['updated'] = time();
 
 	update_option( STATS_OPTION, $stats, false );
@@ -78,13 +87,100 @@ function fetch_meetup_groups() {
 		return $groups;
 	}
 
+	$client = get_meetup_client();
+
+	if ( is_wp_error( $client ) ) {
+		return $client;
+	}
+
+	return $client->get_groups();
+}
+
+/**
+ * How many people are in the chapter program's groups, each counted once.
+ *
+ * Adding up the groups' own counts would count someone in two groups twice; on 2026-11-24 that was 581,350
+ * against 515,286 unique.
+ *
+ * The `wporg_events_stats_member_count` filter supplies the number instead when it returns anything but null.
+ *
+ * @return int|WP_Error
+ */
+function fetch_member_count() {
+	$count = apply_filters( 'wporg_events_stats_member_count', null );
+
+	if ( null !== $count ) {
+		return $count;
+	}
+
+	$client = get_meetup_client();
+
+	if ( is_wp_error( $client ) ) {
+		return $client;
+	}
+
+	return query_member_count( $client );
+}
+
+/**
+ * Ask the network's analytics for its unique member count.
+ *
+ * @param Meetup_Client|object $client Anything with the client's `send_paginated_request()`.
+ *
+ * @return int|WP_Error An error rather than 0, so a refresh never stores "0 meetup members".
+ */
+function query_member_count( $client ) {
+	$result = $client->send_paginated_request( '
+		query {
+			proNetwork( urlname: "wordpress" ) {
+				networkAnalytics { totalMembers }
+			}
+		}
+	' );
+
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	}
+
+	$members = absint( $result['proNetwork']['networkAnalytics']['totalMembers'] ?? 0 );
+
+	if ( ! $members ) {
+		return new WP_Error( 'no_member_count', 'The Meetup network did not report its member count.' );
+	}
+
+	return $members;
+}
+
+/**
+ * A Meetup client, if there's a connection to use.
+ *
+ * @return Meetup_Client|WP_Error
+ */
+function get_meetup_client() {
+	if ( ! is_meetup_connected() ) {
+		return new WP_Error( 'meetup_not_connected', 'Meetup is not connected.' );
+	}
+
 	if ( ! class_exists( Meetup_Client::class ) ) {
 		return new WP_Error( 'no_meetup_client', 'The Meetup client is not available.' );
 	}
 
-	$client = new Meetup_Client();
+	return new Meetup_Client();
+}
 
-	return $client->get_groups();
+/**
+ * Whether there are Meetup credentials and a token to make a request with.
+ *
+ * The same check as `WordCamp\Groups\Meetup_Import\is_meetup_connected()`, which is only loaded on the
+ * Groups network. On the Events network the token is read through to Central's, by
+ * `groups/meetup-shared-connection.php`.
+ *
+ * @return bool
+ */
+function is_meetup_connected(): bool {
+	return function_exists( 'WordCamp\Meetup_OAuth\has_credentials' )
+		&& \WordCamp\Meetup_OAuth\has_credentials()
+		&& ! empty( get_site_option( \WordCamp\Meetup_OAuth\TOKEN_SITE_OPTION ) );
 }
 
 /**
@@ -148,21 +244,20 @@ function count_wordcamps(): int {
 }
 
 /**
- * Turn the groups and the WordCamp count into the four figures the page shows.
+ * Turn the groups, the member count and the WordCamp count into the four figures the page shows.
  *
- * @param array[] $groups    Groups with `member_count`, `country` and `past_event_count`.
+ * @param array[] $groups    Groups with `country` and `past_event_count`.
+ * @param int     $members   The network's unique member count, from `fetch_member_count()`.
  * @param int     $wordcamps How many WordCamps there have been.
  *
  * @return array { events, groups, countries, members }
  */
-function compute_stats( array $groups, int $wordcamps ): array {
+function compute_stats( array $groups, int $members, int $wordcamps ): array {
 	$events    = $wordcamps;
-	$members   = 0;
 	$countries = array();
 
 	foreach ( $groups as $group ) {
-		$events  += absint( $group['past_event_count'] ?? 0 );
-		$members += absint( $group['member_count'] ?? 0 );
+		$events += absint( $group['past_event_count'] ?? 0 );
 
 		$country = strtoupper( trim( (string) ( $group['country'] ?? '' ) ) );
 

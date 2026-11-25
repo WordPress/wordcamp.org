@@ -890,6 +890,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	grid-row: 1;
 }
 
+/* Visitors without organizer tools get an empty wrapper, which on phones
+   would still take a flex gap under the discussion. */
+
+.groups-site-event-content > .groups-site-event-tools:not(:has(*)) {
+	display: none;
+}
+
 /* ----------  Venue extras (description + access) ---------- */
 .wporg-venue-extra {
 	margin-top: 12px;

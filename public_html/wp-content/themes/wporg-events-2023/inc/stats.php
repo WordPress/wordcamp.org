@@ -12,12 +12,12 @@ defined( 'WPINC' ) || die();
  *
  * The three figures on the front cover were hardcoded for the launch and bumped by hand since. They now
  * come from the chapter program's Meetup groups, through the same client the WordCamp Reports plugin uses,
- * plus the WordCamps on central, and are refreshed hourly from cron. The page only ever reads the stored
+ * plus the WordCamps on central, and are refreshed daily from cron. The page only ever reads the stored
  * figures, so the Meetup API is never on a visitor's request, and until the first refresh has run it
  * shows the copy it launched with.
  *
  * Without a Meetup connection the refresh makes no request at all, so a stack without a token (a local or
- * sandbox one, say) doesn't log a failed request every hour.
+ * sandbox one, say) doesn't log a failed request every day.
  */
 
 const STATS_OPTION    = 'wporg_events_stats';
@@ -39,12 +39,25 @@ add_action( 'init', __NAMESPACE__ . '\schedule_stats_cron' );
 add_action( STATS_CRON_HOOK, __NAMESPACE__ . '\refresh_stats' );
 
 /**
- * Refresh the stats every hour.
+ * Refresh the stats once a day.
+ *
+ * Daily is enough: the page shows events and members in steps of 1,000 and 10,000. An hourly run would also
+ * line up with the Meetup token's one-hour expiry.
+ *
+ * A stack that scheduled the hourly run of an earlier version is moved to daily.
  */
 function schedule_stats_cron(): void {
-	if ( ! wp_next_scheduled( STATS_CRON_HOOK ) ) {
-		wp_schedule_event( time(), 'hourly', STATS_CRON_HOOK );
+	$schedule = wp_get_schedule( STATS_CRON_HOOK );
+
+	if ( 'daily' === $schedule ) {
+		return;
 	}
+
+	if ( false !== $schedule ) {
+		wp_clear_scheduled_hook( STATS_CRON_HOOK );
+	}
+
+	wp_schedule_event( time(), 'daily', STATS_CRON_HOOK );
 }
 
 /**
@@ -169,17 +182,26 @@ function get_meetup_client() {
 }
 
 /**
- * The client, unless it already failed.
+ * The client, unless it already failed, with its token reset unhooked.
  *
  * `Meetup_Client` refreshes an expired token in its constructor. When Meetup refuses the refresh, the
- * client keeps the error, and using it anyway sends a request without a token; the client's reset then
- * deletes Central's token. This is the same check the Groups importer makes.
+ * client keeps the error, and using it anyway sends a request without a token. This is the same check the
+ * Groups importer makes.
  *
- * @param Meetup_Client|object $client Anything with the client's `error` property.
+ * Each client also hooks `maybe_reset_oauth_token()` globally, for every request in the run. When a later
+ * request gets a 401 `auth_fail`, or another refresh is refused, that reset deletes Central's token and then
+ * dies with an `ArgumentCountError`. The hooks are removed whether the client is used or not, so neither
+ * this refresh nor other code in the same run can trigger it. A request that's refused then just fails, and
+ * the refresh keeps the stored figures.
+ *
+ * @param Meetup_Client|object $client Anything with the client's `error` property and `maybe_reset_oauth_token()`.
  *
  * @return Meetup_Client|object|WP_Error
  */
 function usable_meetup_client( $client ) {
+	remove_action( 'api_client_tenacious_remote_request_attempt', array( $client, 'maybe_reset_oauth_token' ) );
+	remove_action( 'api_client_handle_error_response', array( $client, 'maybe_reset_oauth_token' ) );
+
 	if ( $client->error->has_errors() ) {
 		return $client->error;
 	}
@@ -316,7 +338,7 @@ function get_stats(): array {
  * One stat as the sentence the front cover shows.
  *
  * Events and members are rounded down to a clean figure with a plus, since the exact number changes
- * by the hour and a few hundred isn't the point; groups and countries are shown exactly.
+ * every day and a few hundred isn't the point; groups and countries are shown exactly.
  *
  * @param string $stat  `events`, `groups` or `members`.
  * @param array  $stats From `get_stats()`.

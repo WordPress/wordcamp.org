@@ -218,8 +218,65 @@ class Test_Stats extends Database_TestCase {
 	}
 
 	/**
+	 * A stand-in for `Meetup_Client` that hooks its token reset the way the real constructor does.
+	 *
+	 * @param WP_Error $error What the client's `error` holds after construction.
+	 *
+	 * @return object
+	 */
+	protected function client_with_reset_hooks( WP_Error $error ): object {
+		$client = new class( $error ) {
+			/**
+			 * @param WP_Error $error
+			 */
+			public function __construct( public WP_Error $error ) {
+				add_action( 'api_client_tenacious_remote_request_attempt', array( $this, 'maybe_reset_oauth_token' ) );
+				add_action( 'api_client_handle_error_response', array( $this, 'maybe_reset_oauth_token' ) );
+			}
+
+			/**
+			 * Stands in for the real reset, which deletes Central's token.
+			 */
+			public function maybe_reset_oauth_token( $response ) {}
+		};
+
+		return $client;
+	}
+
+	/**
+	 * The client the refresh uses can't reset Central's token later in the run.
+	 *
+	 * Each `Meetup_Client` hooks `maybe_reset_oauth_token` globally. When a request later in the run gets a 401
+	 * `auth_fail`, or a refresh is refused, that reset deletes Central's token and then dies with an
+	 * `ArgumentCountError`. With the hooks removed the request just fails, and the refresh keeps the stored figures.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\usable_meetup_client
+	 */
+	public function test_the_client_used_does_not_hook_the_token_reset() {
+		$client = $this->client_with_reset_hooks( new WP_Error() );
+
+		$this->assertSame( $client, usable_meetup_client( $client ) );
+		$this->assertFalse( has_action( 'api_client_tenacious_remote_request_attempt', array( $client, 'maybe_reset_oauth_token' ) ) );
+		$this->assertFalse( has_action( 'api_client_handle_error_response', array( $client, 'maybe_reset_oauth_token' ) ) );
+	}
+
+	/**
+	 * A client that failed isn't used, and doesn't stay hooked either, so a later request from other code in
+	 * the same run can't trigger its reset.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\usable_meetup_client
+	 */
+	public function test_a_client_that_failed_does_not_stay_hooked() {
+		$client = $this->client_with_reset_hooks( new WP_Error( 'invalid_grant', 'The refresh token was refused.' ) );
+
+		$this->assertWPError( usable_meetup_client( $client ) );
+		$this->assertFalse( has_action( 'api_client_tenacious_remote_request_attempt', array( $client, 'maybe_reset_oauth_token' ) ) );
+		$this->assertFalse( has_action( 'api_client_handle_error_response', array( $client, 'maybe_reset_oauth_token' ) ) );
+	}
+
+	/**
 	 * Without a Meetup connection no client is created, so a stack without a token doesn't log warnings
-	 * from a failed request every hour.
+	 * from a failed request every day.
 	 *
 	 * The test environment has no Meetup credentials, which is the unconnected case.
 	 *
@@ -461,11 +518,14 @@ class Test_Stats extends Database_TestCase {
 	}
 
 	/**
-	 * The refresh runs hourly from cron, so visitors never wait on the Meetup API.
+	 * The refresh runs daily from cron, so visitors never wait on the Meetup API.
+	 *
+	 * Daily rather than hourly: the figures are shown in steps of 1,000 and 10,000, and an hourly run lines up
+	 * with the token's one-hour expiry.
 	 *
 	 * @covers \WordPressdotorg\Events_2023\schedule_stats_cron
 	 */
-	public function test_refresh_is_scheduled_hourly() {
+	public function test_refresh_is_scheduled_daily() {
 		wp_clear_scheduled_hook( STATS_CRON_HOOK );
 
 		$this->assertNotFalse( has_action( 'init', 'WordPressdotorg\Events_2023\schedule_stats_cron' ) );
@@ -474,12 +534,29 @@ class Test_Stats extends Database_TestCase {
 		schedule_stats_cron();
 
 		$this->assertNotFalse( wp_next_scheduled( STATS_CRON_HOOK ) );
-		$this->assertSame( 'hourly', wp_get_schedule( STATS_CRON_HOOK ) );
+		$this->assertSame( 'daily', wp_get_schedule( STATS_CRON_HOOK ) );
 
 		// Running it again doesn't stack a second event.
 		$first = wp_next_scheduled( STATS_CRON_HOOK );
 		schedule_stats_cron();
 		$this->assertSame( $first, wp_next_scheduled( STATS_CRON_HOOK ) );
+	}
+
+	/**
+	 * A stack that already scheduled the hourly run (from an earlier version of this branch) moves to daily.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\schedule_stats_cron
+	 */
+	public function test_an_hourly_schedule_moves_to_daily() {
+		wp_clear_scheduled_hook( STATS_CRON_HOOK );
+
+		// Due later than the new event, so a daily event scheduled beside it wouldn't replace it.
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', STATS_CRON_HOOK );
+
+		schedule_stats_cron();
+
+		$this->assertSame( 'daily', wp_get_schedule( STATS_CRON_HOOK ) );
+		$this->assertCount( 1, array_filter( _get_cron_array(), fn( $hooks ) => isset( $hooks[ STATS_CRON_HOOK ] ) ) );
 	}
 
 	/**

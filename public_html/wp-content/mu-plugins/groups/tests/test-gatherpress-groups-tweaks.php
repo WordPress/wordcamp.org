@@ -451,14 +451,17 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Create a published event, optionally marked online.
+	 * Create a published event, online, at a venue, both, or neither.
 	 *
-	 * @param string $title     Event title.
-	 * @param bool   $is_online Whether to give it the `online-event` term.
+	 * @param string    $title     Event title.
+	 * @param bool      $is_online Whether to give it the `online-event` term.
+	 * @param bool|null $at_venue  Whether to give it a physical venue term.
+	 *                             Defaults to the opposite of `$is_online`,
+	 *                             since an in-person event is at a venue.
 	 *
 	 * @return int The event post ID.
 	 */
-	private function make_format_event( string $title, bool $is_online ): int {
+	private function make_format_event( string $title, bool $is_online, ?bool $at_venue = null ): int {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -467,12 +470,21 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 			)
 		);
 
-		if ( $is_online ) {
-			$taxonomy = \GatherPress\Core\Venue\Setup::get_instance()->taxonomy_for_event_post_type(
-				\GatherPress\Core\Event\Event::POST_TYPE
-			);
+		$taxonomy = \GatherPress\Core\Venue\Setup::get_instance()->taxonomy_for_event_post_type(
+			\GatherPress\Core\Event\Event::POST_TYPE
+		);
+		$terms    = array();
 
-			wp_set_object_terms( $event_id, 'online-event', $taxonomy );
+		if ( $is_online ) {
+			$terms[] = 'online-event';
+		}
+
+		if ( $at_venue ?? ! $is_online ) {
+			$terms[] = '_community-hall';
+		}
+
+		if ( $terms ) {
+			wp_set_object_terms( $event_id, $terms, $taxonomy );
 		}
 
 		return $event_id;
@@ -493,17 +505,108 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * "In person" is the absence of that term, so an event with no venue at
-	 * all counts as in person — it is certainly not online.
+	 * "In person" narrows to the events at a physical venue and not online.
+	 * An event with no venue yet isn't listed: its card shows no format
+	 * badge, so the filter would otherwise disagree with it (#2449). It still
+	 * shows under "All".
 	 */
-	public function test_event_format_filter_treats_a_venueless_event_as_in_person() {
-		$online = $this->make_format_event( 'Online office hours', true );
-		$this->make_format_event( 'Event with no venue', false );
+	public function test_event_format_filter_narrows_to_events_at_a_venue() {
+		$in_person = $this->make_format_event( 'Hall meetup', false );
+		$this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Hybrid meetup', true, true );
+		$this->make_format_event( 'Event with no venue', false, false );
 
 		$query_vars = $this->get_archive_query_vars( 'in-person' );
 
-		$this->assertSame( array( $online ), $query_vars['post__not_in'] );
-		$this->assertArrayNotHasKey( 'post__in', $query_vars );
+		$this->assertSame( array( $in_person ), $query_vars['post__in'] );
+		$this->assertArrayNotHasKey( 'post__not_in', $query_vars );
+	}
+
+	/**
+	 * A group with nothing at a venue gets an empty "In person" view, not its
+	 * whole archive.
+	 */
+	public function test_event_format_filter_shows_nothing_when_no_events_are_in_person() {
+		$this->make_format_event( 'Online office hours', true );
+		$this->make_format_event( 'Event with no venue', false, false );
+
+		$this->assertSame( array( 0 ), $this->get_archive_query_vars( 'in-person' )['post__in'] );
+	}
+
+	/**
+	 * An online link without the `online-event` term counts as online, as it
+	 * does for the card's badge. The event is under "Online" and, at a
+	 * venue, stays out of "In person" like any hybrid event.
+	 */
+	public function test_event_format_filters_count_an_online_link_as_online() {
+		$link_only      = $this->make_format_event( 'Call with a link', false, false );
+		$venue_and_link = $this->make_format_event( 'Hall meetup with a stream', false );
+		$in_person      = $this->make_format_event( 'Hall meetup', false );
+
+		foreach ( array( $link_only, $venue_and_link ) as $event_id ) {
+			update_post_meta( $event_id, 'gatherpress_online_event_link', 'https://meet.example.test/call' );
+		}
+
+		$online_ids = $this->get_archive_query_vars( 'online' )['post__in'];
+		sort( $online_ids );
+
+		$this->assertSame( array( $link_only, $venue_and_link ), $online_ids );
+		$this->assertSame( array( $in_person ), $this->get_archive_query_vars( 'in-person' )['post__in'] );
+	}
+
+	/**
+	 * Password-protected events stay under their format for visitors, as
+	 * they do under "All". GatherPress leaves them out of front-end queries
+	 * that filter by venue, so the format filters can't use one.
+	 */
+	public function test_event_format_filters_keep_password_protected_events() {
+		$in_person = $this->make_format_event( 'Members-only meetup', false );
+		$online    = $this->make_format_event( 'Members-only call', true );
+
+		foreach ( array( $in_person, $online ) as $event_id ) {
+			wp_update_post(
+				array(
+					'ID'            => $event_id,
+					'post_password' => 'secret',
+				)
+			);
+		}
+
+		wp_set_current_user( 0 );
+
+		$screen = $GLOBALS['current_screen'] ?? null;
+		set_current_screen( 'front' );
+
+		$in_person_ids = $this->get_archive_query_vars( 'in-person' )['post__in'];
+		$online_ids    = $this->get_archive_query_vars( 'online' )['post__in'];
+
+		$GLOBALS['current_screen'] = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores what this changed.
+
+		$this->assertSame( array( $in_person ), $in_person_ids );
+		$this->assertSame( array( $online ), $online_ids );
+	}
+
+	/**
+	 * A format filter that matches nothing says so and links back to every
+	 * event, rather than saying nothing is scheduled.
+	 */
+	public function test_empty_archive_under_a_format_filter_says_nothing_matches() {
+		$_GET['event_format'] = 'in-person';
+
+		ob_start();
+		include SUT_WP_CONTENT_DIR . 'themes/groups-site/patterns/archive-events-empty.php';
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'No events match.', $output );
+		$this->assertStringNotContainsString( 'scheduled the next event', $output );
+
+		$_GET = array();
+
+		ob_start();
+		include SUT_WP_CONTENT_DIR . 'themes/groups-site/patterns/archive-events-empty.php';
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'scheduled the next event', $output );
 	}
 
 	/**
@@ -1009,9 +1112,8 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 	/**
 	 * Language and format have to narrow each other. WP_Query treats
-	 * `post__in` and `post__not_in` as an if/elseif, so the in-person filter's
-	 * `post__not_in` would be dropped without a word if both were left to set
-	 * their own query var.
+	 * `post__in` and `post__not_in` as an if/elseif, so both have to resolve
+	 * into the one `post__in` rather than each setting its own query var.
 	 */
 	public function test_event_language_and_format_filters_narrow_together() {
 		$spanish_online    = $this->make_language_event( 'Charla en linea', 'es', true );

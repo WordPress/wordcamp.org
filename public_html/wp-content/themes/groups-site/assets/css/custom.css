@@ -167,6 +167,19 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
    Local navigation breadcrumbs
    ========================================================================== */
 
+/* Above 1440px, inset the bar to the templates' 1280px wide column; the 404 and parent-theme archives run full width. */
+
+@media (min-width: 1440px) {
+	body:not(.error404, .archive:not(.post-type-archive)) .wp-block-wporg-local-navigation-bar {
+		padding-left: max(var(--wp--preset--spacing--edge-space), calc((100% - 1280px) / 2));
+		padding-right: max(var(--wp--preset--spacing--edge-space), calc((100% - 1280px) / 2));
+	}
+
+	body:not(.error404, .archive:not(.post-type-archive)) .wp-block-wporg-local-navigation-bar .global-header__wporg-logo-mark {
+		inset-inline-start: max(0px, calc(50% - 720px));
+	}
+}
+
 /* The breadcrumb is a flex item in the bar's row, and a flex item's default
    `min-width: auto` floors it at its own content width — so a long event
    title pushed the whole row past the viewport, carrying the navigation off

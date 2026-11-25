@@ -730,6 +730,43 @@ describe( 'event RSVP announces the change to the rest of the page', () => {
 		expect( events[ 0 ].onlineEventLink ).toBeUndefined();
 	} );
 
+	// The Attendees block in the page body redraws its list from these. #2451.
+	test( 'passes on who is attending now', async () => {
+		const stop = listen();
+		const { actions } = loadStore();
+		const records = [
+			{ name: 'Ada', photo: 'https://example.test/ada.png', profile: 'https://example.test/ada' },
+			{ name: 'You', photo: 'https://example.test/you.png', profile: 'https://example.test/you' },
+		];
+
+		mockRsvp( {
+			success: true,
+			status: 'attending',
+			responses: { attending: { count: 2, records } },
+		} );
+
+		await actions.toggleRsvp();
+		stop();
+
+		expect( events[ 0 ].attending ).toEqual( records );
+	} );
+
+	test( 'says nothing about attendees when the response carries no records', async () => {
+		const stop = listen();
+		const { actions } = loadStore();
+
+		mockRsvp( {
+			success: true,
+			status: 'attending',
+			responses: { attending: { count: 1 } },
+		} );
+
+		await actions.toggleRsvp();
+		stop();
+
+		expect( events[ 0 ].attending ).toBeUndefined();
+	} );
+
 	test( 'stays quiet when the RSVP fails', async () => {
 		const stop = listen();
 		const { actions } = loadStore();

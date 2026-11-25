@@ -1615,15 +1615,79 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * With nobody attending, the section is left out; the sidebar already
-	 * covers the empty state.
+	 * With nobody attending, nothing shows; the sidebar already covers the
+	 * empty state. An upcoming event still gets a hidden section, so the first
+	 * RSVP made without a reload has a list to appear in (#2451).
 	 */
-	public function test_event_attendees_renders_nothing_without_attendees() {
+	public function test_event_attendees_hides_the_section_without_attendees() {
 		$event_id = $this->create_event_with_attendees( 0 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertMatchesRegularExpression( '#<section [^>]*\bhidden="hidden"#', $output );
+		$this->assertStringNotContainsString( 'class="wporg-event-attendees__item"', $output );
+	}
+
+	/**
+	 * A past event with nobody attending renders nothing: it can't take an
+	 * RSVP, so it never needs the hidden section.
+	 */
+	public function test_event_attendees_renders_nothing_for_past_events_without_attendees() {
+		$event_id = $this->create_event_with_attendees( 0 );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
 
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 
 		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/event-attendees /-->' ) ) );
+	}
+
+	/**
+	 * An upcoming event's list carries what `view.js` needs to redraw it after
+	 * an RSVP made without a reload: which event it is, the translated
+	 * heading and "Show all" formats, and how many to show before folding.
+	 */
+	public function test_event_attendees_opts_upcoming_events_into_live_updates() {
+		$event_id = $this->create_event_with_attendees( 1 );
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'data-post-id="' . $event_id . '"', $output );
+		$this->assertStringContainsString( 'data-heading-format="Attendees (%s)"', $output );
+		$this->assertStringContainsString( 'data-more-format="Show all %s attendees"', $output );
+		$this->assertStringContainsString( 'data-visible-limit="12"', $output );
+		$this->assertDoesNotMatchRegularExpression( '#<section [^>]*\bhidden=#', $output );
+	}
+
+	/**
+	 * A past event's list is final, so it doesn't opt in.
+	 */
+	public function test_event_attendees_leaves_past_events_static() {
+		$event_id = $this->create_event_with_attendees( 1 );
+
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+				'datetime_end'   => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days +2 hours' ) ),
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
+
+		$this->assertStringContainsString( 'Attended (1)', $output );
+		$this->assertStringNotContainsString( 'data-post-id=', $output );
 	}
 
 	/**

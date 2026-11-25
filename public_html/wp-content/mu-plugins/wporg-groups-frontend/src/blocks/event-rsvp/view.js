@@ -463,6 +463,9 @@ function announceRsvpChange( ctx, data ) {
 				// Absent rather than empty on an older response body, which
 				// tells a listener to leave what is on screen alone.
 				onlineEventLink: data.online_event_link,
+				// Who is attending now, for the Attendees block's list
+				// (#2451). Absent the same way when the response has none.
+				attending: data.responses?.attending?.records,
 			},
 		} )
 	);

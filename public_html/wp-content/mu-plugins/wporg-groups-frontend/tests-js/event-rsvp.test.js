@@ -741,6 +741,44 @@ describe( 'event RSVP announces the change to the rest of the page', () => {
 
 		expect( events ).toEqual( [] );
 	} );
+
+	test( 'shares the refreshed attendees with the Attendees block', async () => {
+		document.body.innerHTML =
+			'<div class="wp-block-wporg-event-rsvp"><button type="button">Attend</button></div>';
+		mockElement = document.querySelector( 'button' );
+
+		const shared = [];
+		const handler = ( event ) => shared.push( event.detail );
+		document.addEventListener( 'wporg-groups-rsvp-responses', handler );
+
+		const { actions } = loadStore();
+		const attending = {
+			count: 1,
+			records: [ { name: 'New attendee', photo: '', profile: 'https://example.com/new' } ],
+		};
+
+		global.fetch
+			.mockResolvedValueOnce( { ok: true, json: async () => ( { nonce: 'nonce' } ) } )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => ( {
+					success: true,
+					status: 'attending',
+					responses: { attending: { count: 1 } },
+				} ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: true, data: { attending } } ),
+			} );
+
+		await actions.toggleRsvp();
+		await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+		document.removeEventListener( 'wporg-groups-rsvp-responses', handler );
+
+		expect( shared ).toEqual( [ { postId: 12, attending } ] );
+	} );
 } );
 
 describe( 'event RSVP waiting list', () => {

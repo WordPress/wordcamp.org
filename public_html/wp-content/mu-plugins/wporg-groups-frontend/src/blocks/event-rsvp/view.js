@@ -538,6 +538,17 @@ async function refreshAttendees( ctx, actionElement ) {
 		const data = await resp.json();
 
 		if ( data.success && data.data?.attending?.records ) {
+			// The Attendees block in the main column renders the same list
+			// (#2451).
+			document.dispatchEvent(
+				new CustomEvent( 'wporg-groups-rsvp-responses', {
+					detail: {
+						postId: Number( ctx.postId ) || 0,
+						attending: data.data.attending,
+					},
+				} )
+			);
+
 			const list = block.querySelector( '.wporg-event-rsvp__attendee-list' );
 			if ( ! list ) {
 				return;

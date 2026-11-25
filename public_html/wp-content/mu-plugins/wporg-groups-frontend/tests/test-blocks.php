@@ -1633,15 +1633,22 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * With nobody attending, the section is left out; the sidebar already
-	 * covers the empty state.
+	 * With nobody attending, the section stays hidden; the sidebar already
+	 * covers the empty state. It is still in the page so the first RSVP,
+	 * made without a reload, has somewhere to appear (#2451).
 	 */
-	public function test_event_attendees_renders_nothing_without_attendees() {
+	public function test_event_attendees_is_hidden_without_attendees() {
 		$event_id = $this->create_event_with_attendees( 0 );
 
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-attendees /-->' );
 
-		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/event-attendees /-->' ) ) );
+		$tags = new \WP_HTML_Tag_Processor( $output );
+		$this->assertTrue( $tags->next_tag( 'section' ) );
+		$this->assertNotNull( $tags->get_attribute( 'hidden' ) );
+		$this->assertSame( (string) $event_id, $tags->get_attribute( 'data-post-id' ) );
+		$this->assertSame( 'Attendees (%s)', $tags->get_attribute( 'data-heading-format' ) );
+		$this->assertStringNotContainsString( 'wporg-event-attendees__item', $output );
 	}
 
 	/**

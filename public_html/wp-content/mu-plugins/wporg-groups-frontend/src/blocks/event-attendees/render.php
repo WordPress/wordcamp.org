@@ -57,7 +57,9 @@ $count = count( $records );
 
 // The sidebar already says "Be the first to RSVP", so an empty section here
 // would only repeat it.
-if ( ! $count ) {
+// An upcoming event still gets a hidden section, so the first RSVP made
+// without a reload has somewhere to appear (#2451).
+if ( ! $count && $is_past ) {
 	return;
 }
 
@@ -68,11 +70,12 @@ $visible_limit = 12;
 $visible       = array_slice( $records, 0, $visible_limit );
 $hidden        = array_slice( $records, $visible_limit );
 
-$heading = sprintf(
-	/* translators: %s: number of people. */
-	$is_past ? __( 'Attended (%s)', 'wordcamporg' ) : __( 'Attendees (%s)', 'wordcamporg' ),
-	number_format_i18n( $count )
-);
+/* translators: %s: number of people. */
+$heading_format = $is_past ? __( 'Attended (%s)', 'wordcamporg' ) : __( 'Attendees (%s)', 'wordcamporg' );
+$heading        = sprintf( $heading_format, number_format_i18n( $count ) );
+
+/* translators: %s: total number of attendees. */
+$show_all_format = __( 'Show all %s attendees', 'wordcamporg' );
 
 $render_attendee = static function ( array $record ): void {
 	?>
@@ -92,9 +95,22 @@ $render_attendee = static function ( array $record ): void {
 	<?php
 };
 
-$wrapper_attributes = get_block_wrapper_attributes(
-	array( 'class' => 'wporg-event-attendees' )
-);
+$extra_attributes = array( 'class' => 'wporg-event-attendees' );
+
+// Only an upcoming event can change without a reload, so only it carries what
+// `view.js` needs to rebuild the list.
+if ( ! $is_past ) {
+	$extra_attributes['data-post-id']         = (string) $event_post_id;
+	$extra_attributes['data-heading-format']  = $heading_format;
+	$extra_attributes['data-show-all-format'] = $show_all_format;
+	$extra_attributes['data-visible-limit']   = (string) $visible_limit;
+}
+
+if ( ! $count ) {
+	$extra_attributes['hidden'] = 'hidden';
+}
+
+$wrapper_attributes = get_block_wrapper_attributes( $extra_attributes );
 ?>
 <section <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes escapes. ?>>
 	<h2 class="wp-block-heading wporg-event-attendees__heading has-heading-4-font-size"><?php echo esc_html( $heading ); ?></h2>
@@ -107,13 +123,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<details class="wporg-event-attendees__more">
 			<summary class="wporg-event-attendees__toggle">
 				<?php
-				echo esc_html(
-					sprintf(
-						/* translators: %s: total number of attendees. */
-						__( 'Show all %s attendees', 'wordcamporg' ),
-						number_format_i18n( $count )
-					)
-				);
+				echo esc_html( sprintf( $show_all_format, number_format_i18n( $count ) ) );
 				?>
 			</summary>
 			<ul class="wporg-event-attendees__list">

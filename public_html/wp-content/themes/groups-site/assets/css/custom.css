@@ -890,6 +890,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	grid-row: 1;
 }
 
+/* Visitors without organizer tools get an empty wrapper, which on phones
+   would still take a flex gap under the discussion. */
+
+.groups-site-event-content > .groups-site-event-tools:not(:has(*)) {
+	display: none;
+}
+
 /* ----------  Venue extras (description + access) ---------- */
 .wporg-venue-extra {
 	margin-top: 12px;
@@ -902,10 +909,6 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 }
 
 /* ----------  Event info card  ---------- */
-.groups-site-event-info-card {
-	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.04),
-		0 2px 8px rgba(30, 30, 30, 0.04);
-}
 
 /*
  * The card reads as zones — When, Where, Add to calendar — rather than one

@@ -10,8 +10,8 @@
 .wporg-event-manage--tools {
 	box-sizing: border-box;
 	width: 100%;
-	padding-bottom: var(--wp--preset--spacing--20);
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+	padding-top: var(--wp--preset--spacing--20);
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
 .wporg-event-manage__label {

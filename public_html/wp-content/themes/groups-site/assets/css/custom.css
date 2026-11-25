@@ -185,10 +185,15 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
    title pushed the whole row past the viewport, carrying the navigation off
    the right edge and scrolling the page sideways, instead of the wrapper
    below clipping and scrolling within the space the bar can spare. Let it
-   shrink; the wrapper's own overflow then does the rest. */
+   shrink; the wrapper's own overflow then does the rest.
+
+   The block pulls itself 5px left so its links' 5px padding meets the edge,
+   but the breadcrumb starts with plain text, which then sat 5px left of the
+   page content at every width (#2443). */
 
 .wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
 	min-width: 0;
+	padding-inline-start: calc(var(--wp--preset--spacing--10) / 2);
 }
 
 /* Only the breadcrumb shrinks. A shrinking menu wraps its links into a column

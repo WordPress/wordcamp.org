@@ -735,6 +735,24 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * Logging in from Join returns the visitor to the page they were on, not
+	 * to the latest news post, which is the global post on the group home.
+	 */
+	public function test_group_membership_join_login_returns_to_the_current_page() {
+		$post_id = self::factory()->post->create();
+		$this->go_to( home_url( '/' ) );
+		wp_set_current_user( 0 );
+
+		$output = html_entity_decode( do_blocks( '<!-- wp:wporg/group-membership {"variant":"join"} /-->' ) );
+
+		$this->assertMatchesRegularExpression(
+			'/redirect_to=' . preg_quote( rawurlencode( home_url( '/' ) ), '/' ) . '(?![%\\w])/',
+			$output
+		);
+		$this->assertStringNotContainsString( rawurlencode( get_permalink( $post_id ) ), $output );
+	}
+
+	/**
 	 * The front page renders a `count` block in the hero and a `membership`
 	 * block in the sidebar, and only the first needs the total.
 	 * `count_users()` runs Core's usermeta aggregate, so a second block

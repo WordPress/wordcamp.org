@@ -176,7 +176,7 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	}
 
 	body:not(.error404, .archive:not(.post-type-archive)) .global-header__wporg-logo-mark {
-		left: calc(50% - 720px);
+		inset-inline-start: calc(50% - 720px);
 	}
 }
 

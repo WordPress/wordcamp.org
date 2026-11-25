@@ -549,6 +549,34 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The card names the event's time zone, as the event page and the
+	 * "My upcoming events" cards do, so the time isn't ambiguous for
+	 * members in other countries (#2450).
+	 */
+	public function test_card_shows_the_event_time_zone() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Zoned Meetup',
+			)
+		);
+
+		( new Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2030-05-20 18:30:00',
+				'datetime_end'   => '2030-05-20 20:00:00',
+				'timezone'       => 'Asia/Kolkata',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertMatchesRegularExpression( '/6:30 PM\s*(<[^>]+>\s*)*IST/', $output );
+	}
+
+	/**
 	 * Both grids draw the one shared card — which is also the condition that
 	 * makes the priming above necessary.
 	 */

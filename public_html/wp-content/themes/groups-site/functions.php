@@ -1123,15 +1123,19 @@ function defer_venue_map( $block_content ) {
 add_filter( 'render_block_gatherpress/venue-map', __NAMESPACE__ . '\defer_venue_map' );
 
 /**
- * Determine the event format: 'hybrid', 'online', or 'in-person'.
+ * Determine the event format: 'hybrid', 'online', 'in-person', or ''.
  *
  * GatherPress assigns the `online-event` sentinel term to `_gatherpress_venue`
  * for online and hybrid events. A hybrid event has both `online-event` and
  * a physical venue term; an online event has only `online-event`; and an
- * in-person event has no `online-event` term.
+ * in-person event has only a physical venue term.
+ *
+ * An event with neither a venue nor an online link has no format yet, rather
+ * than defaulting to in person: a badge saying "In person" tells attendees
+ * there's somewhere to go when there isn't (#2449).
  *
  * @param int $event_id Event post ID.
- * @return string 'hybrid', 'online', or 'in-person'.
+ * @return string 'hybrid', 'online', 'in-person', or '' without a location.
  */
 function get_event_format( int $event_id ): string {
 	$terms = get_the_terms( $event_id, '_gatherpress_venue' );
@@ -1164,7 +1168,7 @@ function get_event_format( int $event_id ): string {
 		return 'online';
 	}
 
-	return 'in-person';
+	return $has_physical ? 'in-person' : '';
 }
 
 /**
@@ -1209,7 +1213,13 @@ function render_event_format_block( array $attributes, string $content = '', ?\W
 	}
 
 	$format = get_event_format( (int) $post_id );
-	$label  = get_event_format_label( $format );
+
+	// No venue and no online link yet: no badge, rather than a guess.
+	if ( '' === $format ) {
+		return '';
+	}
+
+	$label = get_event_format_label( $format );
 
 	$wrapper_classes = array(
 		'wp-block-groups-site-event-format',

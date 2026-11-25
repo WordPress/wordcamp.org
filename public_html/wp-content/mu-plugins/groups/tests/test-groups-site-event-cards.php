@@ -706,12 +706,39 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	 * Test that event cards in the grid render the format badge correctly for in-person events.
 	 */
 	public function test_card_renders_event_format_badge_in_person() {
-		$this->create_event_post( 'In Person Card Event' );
+		$event_id = $this->create_event_post( 'In Person Card Event' );
+		$this->set_event_format_terms( $event_id, false, true );
 
 		$output = do_blocks( self::GRID );
 
 		$this->assertStringContainsString( 'is-format-in-person', $output );
 		$this->assertStringContainsString( 'In person', $output );
+	}
+
+	/**
+	 * An event with no venue and no online link has nowhere to go yet, so its
+	 * card shows no format badge rather than "In person" (#2449).
+	 */
+	public function test_card_renders_no_format_badge_without_a_location() {
+		$this->create_event_post( 'Location TBA Card Event' );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'Location TBA Card Event', $output );
+		$this->assertStringNotContainsString( 'groups-site-event-format', $output );
+		$this->assertStringNotContainsString( 'In person', $output );
+	}
+
+	/**
+	 * An online link alone still makes the event online.
+	 */
+	public function test_card_renders_online_badge_for_a_link_without_a_venue() {
+		$event_id = $this->create_event_post( 'Link Only Card Event' );
+		update_post_meta( $event_id, 'gatherpress_online_event_link', 'https://meet.example.test/link-only' );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'is-format-online', $output );
 	}
 
 	/**

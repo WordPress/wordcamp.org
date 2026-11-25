@@ -534,6 +534,27 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * An online link without the `online-event` term counts as online, as it
+	 * does for the card's badge. The event is under "Online" and, at a
+	 * venue, stays out of "In person" like any hybrid event.
+	 */
+	public function test_event_format_filters_count_an_online_link_as_online() {
+		$link_only      = $this->make_format_event( 'Call with a link', false, false );
+		$venue_and_link = $this->make_format_event( 'Hall meetup with a stream', false );
+		$in_person      = $this->make_format_event( 'Hall meetup', false );
+
+		foreach ( array( $link_only, $venue_and_link ) as $event_id ) {
+			update_post_meta( $event_id, 'gatherpress_online_event_link', 'https://meet.example.test/call' );
+		}
+
+		$online_ids = $this->get_archive_query_vars( 'online' )['post__in'];
+		sort( $online_ids );
+
+		$this->assertSame( array( $link_only, $venue_and_link ), $online_ids );
+		$this->assertSame( array( $in_person ), $this->get_archive_query_vars( 'in-person' )['post__in'] );
+	}
+
+	/**
 	 * Password-protected events stay under their format for visitors, as
 	 * they do under "All". GatherPress leaves them out of front-end queries
 	 * that filter by venue, so the format filters can't use one.

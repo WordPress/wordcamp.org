@@ -582,7 +582,8 @@ function get_event_format_filter(): string {
 }
 
 /**
- * The published events carrying GatherPress's `online-event` venue term.
+ * The published events carrying GatherPress's `online-event` venue term, or
+ * an online link.
  *
  * The "Online" format filter is `post__in` this list.
  *
@@ -623,8 +624,8 @@ function get_in_person_event_ids(): array {
 }
 
 /**
- * The published events with an online venue term, and those with a physical
- * one.
+ * The published events that are online (the `online-event` venue term, or an
+ * online link), and those with a physical venue term.
  *
  * Read from the term relationships rather than through a venue `tax_query`.
  * GatherPress's `leave_password_protected_events_out()` drops
@@ -650,10 +651,7 @@ function get_event_ids_by_venue_kind(): array {
 		'physical' => array(),
 	);
 
-	if ( ! is_array( $term_ids ) || ! $term_ids ) {
-		return $ids;
-	}
-
+	$term_ids          = is_array( $term_ids ) ? $term_ids : array();
 	$online_term_ids   = array_keys( $term_ids, 'online-event', true );
 	$physical_term_ids = array_diff( array_keys( $term_ids ), $online_term_ids );
 
@@ -681,6 +679,32 @@ function get_event_ids_by_venue_kind(): array {
 			)
 		);
 	}
+
+	/*
+	 * A saved online link counts as online too, as it does for the card's
+	 * format badge (`get_event_format()` in the groups-site theme). The link
+	 * can outlive the `online-event` term: switching off the online-event
+	 * block's toggle in wp-admin removes the term and keeps the link. Without
+	 * this, the card would say "Online" while neither filter listed the event.
+	 */
+	$linked_ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- A separate ID lookup, for the reasons `get_online_event_ids()` gives.
+				array(
+					'key'     => 'gatherpress_online_event_link',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		)
+	);
+
+	$ids['online'] = array_values( array_unique( array_merge( $ids['online'], array_map( 'intval', $linked_ids ) ) ) );
 
 	return $ids;
 }
@@ -861,6 +885,15 @@ add_filter(
  * @return array<string, string> Value => label, or an empty array to hide the filter.
  */
 function get_event_topic_filter_options(): array {
+	/*
+	 * Without GatherPress there are no topics, and no `Topic` class to read
+	 * the taxonomy from. The events empty state asks for the topic filter,
+	 * and the editor's pattern list renders that pattern on every group site.
+	 */
+	if ( ! class_exists( Topic::class ) ) {
+		return array();
+	}
+
 	$terms = get_terms(
 		array(
 			'taxonomy'   => Topic::TAXONOMY,

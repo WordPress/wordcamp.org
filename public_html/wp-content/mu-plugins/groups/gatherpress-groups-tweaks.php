@@ -601,25 +601,9 @@ function get_event_format_filter(): string {
  * @return int[] Event post IDs, empty when the group runs nothing online.
  */
 function get_online_event_ids(): array {
-	$online_ids = get_posts(
-		array(
-			'post_type'      => 'gatherpress_event',
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see the docblock for why it cannot ride on the main query.
-				array(
-					'taxonomy' => Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE ),
-					'field'    => 'slug',
-					'terms'    => array( 'online-event' ),
-					'operator' => 'IN',
-				),
-			),
-		)
-	);
+	$venue_ids = get_event_ids_by_venue_kind();
 
-	return array_map( 'intval', $online_ids );
+	return $venue_ids['online'];
 }
 
 /**
@@ -630,38 +614,75 @@ function get_online_event_ids(): array {
  * under "In person" would have the filter disagree with the card (#2449).
  * Hybrid events carry both terms and stay out, as they always have.
  *
- * A separate `fields => ids` query for the reasons `get_online_event_ids()`
- * gives.
- *
  * @return int[] Event post IDs, empty when the group runs nothing in person.
  */
 function get_in_person_event_ids(): array {
-	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+	$venue_ids = get_event_ids_by_venue_kind();
 
-	$in_person_ids = get_posts(
+	return array_values( array_diff( $venue_ids['physical'], $venue_ids['online'] ) );
+}
+
+/**
+ * The published events with an online venue term, and those with a physical
+ * one.
+ *
+ * Read from the term relationships rather than through a venue `tax_query`.
+ * GatherPress's `leave_password_protected_events_out()` drops
+ * password-protected events from any front-end query that filters by venue,
+ * so a format filter would hide them from visitors while "All" still lists
+ * them with their badge. See `get_online_event_ids()` for why this is a
+ * separate query.
+ *
+ * @return array{online: int[], physical: int[]} Event post IDs.
+ */
+function get_event_ids_by_venue_kind(): array {
+	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+	$term_ids = get_terms(
 		array(
-			'post_type'      => 'gatherpress_event',
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see `get_online_event_ids()` for why it cannot ride on the main query.
-				'relation' => 'AND',
-				array(
-					'taxonomy' => $taxonomy,
-					'operator' => 'EXISTS',
-				),
-				array(
-					'taxonomy' => $taxonomy,
-					'field'    => 'slug',
-					'terms'    => array( 'online-event' ),
-					'operator' => 'NOT IN',
-				),
-			),
+			'taxonomy'   => $taxonomy,
+			'hide_empty' => false,
+			'fields'     => 'id=>slug',
 		)
 	);
 
-	return array_map( 'intval', $in_person_ids );
+	$ids = array(
+		'online'   => array(),
+		'physical' => array(),
+	);
+
+	if ( ! is_array( $term_ids ) || ! $term_ids ) {
+		return $ids;
+	}
+
+	$online_term_ids   = array_keys( $term_ids, 'online-event', true );
+	$physical_term_ids = array_diff( array_keys( $term_ids ), $online_term_ids );
+
+	foreach ( array(
+		'online'   => $online_term_ids,
+		'physical' => $physical_term_ids,
+	) as $kind => $kind_term_ids ) {
+		$object_ids = $kind_term_ids ? get_objects_in_term( $kind_term_ids, $taxonomy ) : array();
+
+		if ( ! is_array( $object_ids ) || ! $object_ids ) {
+			continue;
+		}
+
+		$ids[ $kind ] = array_map(
+			'intval',
+			get_posts(
+				array(
+					'post_type'      => 'gatherpress_event',
+					'post_status'    => 'publish',
+					'post__in'       => array_map( 'intval', $object_ids ),
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+				)
+			)
+		);
+	}
+
+	return $ids;
 }
 
 /**

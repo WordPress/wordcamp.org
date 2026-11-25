@@ -534,6 +534,61 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
+	 * Password-protected events stay under their format for visitors, as
+	 * they do under "All". GatherPress leaves them out of front-end queries
+	 * that filter by venue, so the format filters can't use one.
+	 */
+	public function test_event_format_filters_keep_password_protected_events() {
+		$in_person = $this->make_format_event( 'Members-only meetup', false );
+		$online    = $this->make_format_event( 'Members-only call', true );
+
+		foreach ( array( $in_person, $online ) as $event_id ) {
+			wp_update_post(
+				array(
+					'ID'            => $event_id,
+					'post_password' => 'secret',
+				)
+			);
+		}
+
+		wp_set_current_user( 0 );
+
+		$screen = $GLOBALS['current_screen'] ?? null;
+		set_current_screen( 'front' );
+
+		$in_person_ids = $this->get_archive_query_vars( 'in-person' )['post__in'];
+		$online_ids    = $this->get_archive_query_vars( 'online' )['post__in'];
+
+		$GLOBALS['current_screen'] = $screen; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores what this changed.
+
+		$this->assertSame( array( $in_person ), $in_person_ids );
+		$this->assertSame( array( $online ), $online_ids );
+	}
+
+	/**
+	 * A format filter that matches nothing says so and links back to every
+	 * event, rather than saying nothing is scheduled.
+	 */
+	public function test_empty_archive_under_a_format_filter_says_nothing_matches() {
+		$_GET['event_format'] = 'in-person';
+
+		ob_start();
+		include SUT_WP_CONTENT_DIR . 'themes/groups-site/patterns/archive-events-empty.php';
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'No events match.', $output );
+		$this->assertStringNotContainsString( 'scheduled the next event', $output );
+
+		$_GET = array();
+
+		ob_start();
+		include SUT_WP_CONTENT_DIR . 'themes/groups-site/patterns/archive-events-empty.php';
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'scheduled the next event', $output );
+	}
+
+	/**
 	 * A group that runs nothing online should show an empty "Online" view, not
 	 * its whole archive. WP_Query ignores an empty `post__in`, so the filter
 	 * has to say "no posts" explicitly.

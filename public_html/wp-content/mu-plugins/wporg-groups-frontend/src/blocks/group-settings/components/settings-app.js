@@ -35,20 +35,10 @@ const TABS = [
 export default function SettingsApp( {
 	onClose,
 	initialTab,
-	eventId,
 	siteName,
 	canManageRoles,
 } ) {
 	const [ activeTab, setActiveTab ] = useState( initialTab || 'events' );
-
-	/*
-	 * An event id means the visitor arrived from "Edit this event" on the
-	 * event page, so the modal is that one event's editing surface and
-	 * nothing else. The group-wide tabs only invite a wander into unrelated
-	 * configuration there (#2073); the group page's Settings button is still
-	 * the route to them.
-	 */
-	const isSingleEvent = !! eventId;
 
 	// Global escape handler — prompt before closing if needed.
 	useEffect( () => {
@@ -73,7 +63,7 @@ export default function SettingsApp( {
 		( tab ) => {
 			switch ( tab.name ) {
 				case 'events':
-					return h( EventsTab, { eventId, onClose } );
+					return h( EventsTab );
 				case 'venues':
 					return h( VenuesTab );
 				case 'members':
@@ -88,35 +78,27 @@ export default function SettingsApp( {
 					return null;
 			}
 		},
-		[ eventId, onClose, canManageRoles ]
+		[ canManageRoles ]
 	);
 
 	return h(
 		Modal,
 		{
-			title: isSingleEvent
-				? __( 'Edit event', 'wordcamporg' )
-				: siteName || __( 'Group Settings', 'wordcamporg' ),
+			title: siteName || __( 'Group Settings', 'wordcamporg' ),
 			onRequestClose: onClose,
 			className: 'wporg-groups-modal-accent wporg-group-settings-modal',
 			isFullScreen: true,
 			shouldCloseOnClickOutside: false,
 		},
-		isSingleEvent
-			? h(
-				'div',
-				{ className: 'wporg-group-settings-modal__single' },
-				h( EventsTab, { eventId, onClose, singleEvent: true } )
-			)
-			: h(
-				TabPanel,
-				{
-					className: 'wporg-group-settings-modal__tabs',
-					tabs: TABS,
-					initialTabName: activeTab,
-					onSelect: setActiveTab,
-				},
-				renderTab
-			)
+		h(
+			TabPanel,
+			{
+				className: 'wporg-group-settings-modal__tabs',
+				tabs: TABS,
+				initialTabName: activeTab,
+				onSelect: setActiveTab,
+			},
+			renderTab
+		)
 	);
 }

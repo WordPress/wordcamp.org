@@ -12,6 +12,7 @@ const form = {
 	language: 'es',
 	topics: [ 'WordPress' ],
 	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
+	speakers: [ { id: 12, name: 'Cy', slug: 'cy' }, { id: 3, name: 'Ana', slug: 'ana' } ],
 	capacity: '25',
 	rsvp_organizer: true,
 	rsvp_questions: [],
@@ -72,6 +73,11 @@ describe( 'buildEventPayload', () => {
 	test( 'sends the hosts as user ids, in order', () => {
 		expect( build().hosts ).toEqual( [ 3, 9 ] );
 		expect( build( { form: { ...form, hosts: [] } } ).hosts ).toEqual( [] );
+	} );
+
+	test( 'sends the speakers as user ids, in order', () => {
+		expect( build().speakers ).toEqual( [ 12, 3 ] );
+		expect( build( { form: { ...form, speakers: [] } } ).speakers ).toEqual( [] );
 	} );
 
 	test( 'sends the timezone, and an empty string when it is unset', () => {

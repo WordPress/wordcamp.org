@@ -24,6 +24,7 @@ require_once __DIR__ . '/inc/event-language.php';
 require_once __DIR__ . '/inc/event-flyer.php';
 require_once __DIR__ . '/inc/event-topics.php';
 require_once __DIR__ . '/inc/event-hosts.php';
+require_once __DIR__ . '/inc/event-speakers.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
 require_once __DIR__ . '/inc/rsvp-confirmation.php';

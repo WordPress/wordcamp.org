@@ -27,6 +27,7 @@ export default function buildEventPayload( { form, description, featuredImageId,
 		language: form.language || '',
 		topics: form.topics || [],
 		hosts: ( form.hosts || [] ).map( ( host ) => host.id ),
+		speakers: ( form.speakers || [] ).map( ( speaker ) => speaker.id ),
 		// Empty means no limit, which GatherPress stores as 0.
 		capacity: Math.max( 0, parseInt( form.capacity, 10 ) || 0 ),
 		// Acted on only when this request publishes the event.

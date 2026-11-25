@@ -12,7 +12,6 @@ use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
-use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Check_In\is_open as check_in_is_open;
 use function WordCamp\Groups\Frontend\REST\current_user_can_copy_event;
 use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
@@ -90,8 +89,8 @@ endif;
 /*
  * The organizer's actions on an event, as small links rather than full
  * buttons: reaching people on the first row, changing the event on the
- * second. Group admins edit in the settings app, everyone else in the
- * event modal.
+ * second. Everyone edits in the event modal, the same one that creates
+ * events (#2424).
  */
 $people_tools = array();
 $event_tools  = array();
@@ -131,15 +130,10 @@ if ( $show_edit ) {
 	$event_tools[] = array(
 		'icon'  => 'pencil',
 		'label' => __( 'Edit this event', 'wordcamporg' ),
-		'attrs' => current_user_can_manage_group_settings()
-			? array(
-				'data-wporg-settings-open'     => 'events',
-				'data-wporg-settings-event-id' => $event_post_id,
-			)
-			: array(
-				'data-wporg-groups-modal'    => 'edit',
-				'data-wporg-groups-event-id' => $event_post_id,
-			),
+		'attrs' => array(
+			'data-wporg-groups-modal'    => 'edit',
+			'data-wporg-groups-event-id' => $event_post_id,
+		),
 	);
 }
 

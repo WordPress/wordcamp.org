@@ -255,11 +255,13 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 	}
 
 	/**
-	 * A copy carries over everything but the date, including the time of day
-	 * and the hosts, for an organizer who didn't create the event too.
+	 * A copy carries over everything but the date, including the time of day,
+	 * the hosts and the speakers, for an organizer who didn't create the event
+	 * too.
 	 */
 	public function test_copy_prefills_everything_but_the_date() {
-		$host_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		$host_id    = self::factory()->user->create( array( 'role' => 'author' ) );
+		$speaker_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 
 		$copy_id = $this->create_event(
 			array(
@@ -273,6 +275,7 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 				'language'          => 'fr',
 				'topics'            => array( 'Blocks' ),
 				'hosts'             => array( $host_id ),
+				'speakers'          => array( $speaker_id ),
 				'capacity'          => 25,
 				'rsvp_questions'    => array(
 					array(
@@ -308,6 +311,7 @@ class Test_Groups_Event_Templates extends Groups_TestCase {
 		$this->assertSame( 'fr', $fields['language'] );
 		$this->assertSame( array( 'Blocks' ), $fields['topics'] );
 		$this->assertSame( array( $host_id ), wp_list_pluck( $fields['hosts'], 'id' ) );
+		$this->assertSame( array( $speaker_id ), wp_list_pluck( $fields['speakers'], 'id' ) );
 		$this->assertSame( 25, $fields['capacity'] );
 		$this->assertSame( array( 'What do you want to learn?' ), wp_list_pluck( $fields['rsvp_questions'], 'label' ) );
 	}

@@ -17,7 +17,6 @@ import {
 import {
 	Button,
 	Spinner,
-	FormTokenField,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
@@ -31,29 +30,10 @@ import EventForm, { NS } from '../../../components/event-form/event-form';
 
 // === Event Form (inline) ===
 
-function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
+function InlineEventForm( { eventId, onDone, onCancel } ) {
 	const isEdit = !! eventId;
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
-	// null until loaded, so a save can't overwrite speakers with an empty list.
-	const [ speakers, setSpeakers ] = useState( null );
-	const [ memberOptions, setMemberOptions ] = useState( [] );
 	const formRef = useRef( null );
-
-	// Load speakers for this event and member list for autocomplete.
-	useEffect( () => {
-		Promise.all( [
-			eventId
-				? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?_fields=meta` } )
-					.then( ( ev ) => ev.meta?._event_speakers || [] )
-					.catch( () => [] )
-				: Promise.resolve( [] ),
-			apiFetch( { path: `/${ NS }/members?per_page=200` } )
-				.catch( () => [] ),
-		] ).then( ( [ speakerIds, members ] ) => {
-			setSpeakers( speakerIds );
-			setMemberOptions( members );
-		} );
-	}, [ eventId ] );
 
 	const submitPayload = async ( payload ) => {
 		const result = await apiFetch( {
@@ -61,15 +41,6 @@ function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 			method: 'POST',
 			data: payload,
 		} );
-
-		// Save speakers meta.
-		if ( result.id && speakers ) {
-			await apiFetch( {
-				path: `/wp/v2/gatherpress_events/${ result.id }`,
-				method: 'POST',
-				data: { meta: { _event_speakers: speakers } },
-			} ).catch( () => {} );
-		}
 
 		if ( result.permalink ) {
 			window.location.href = result.permalink;
@@ -104,39 +75,19 @@ function InlineEventForm( { eventId, backLabel, onDone, onCancel } ) {
 				onCancel,
 				onOpenVenueEditor: ( id ) => setVenueEditorId( id ),
 				header: h( 'div', { className: 'wporg-event-form__header' },
-					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, backLabel ),
+					h( Button, { variant: 'tertiary', onClick: onCancel, icon: 'arrow-left-alt2' }, __( 'Back to events', 'wordcamporg' ) ),
 				),
-			},
-				h( 'div', { className: 'wporg-event-form__field' },
-					h( FormTokenField, {
-						label: __( 'Speakers', 'wordcamporg' ),
-						value: ( speakers || [] ).map( ( id ) => {
-							const member = memberOptions.find( ( m ) => m.id === id );
-							return member ? member.name : String( id );
-						} ),
-						suggestions: memberOptions.map( ( m ) => m.name ),
-						onChange: ( tokens ) => {
-							const ids = tokens.map( ( token ) => {
-								const member = memberOptions.find( ( m ) => m.name === token );
-								return member ? member.id : null;
-							} ).filter( Boolean );
-							setSpeakers( ids );
-						},
-						__experimentalExpandOnFocus: true,
-						__nextHasNoMarginBottom: true,
-					} )
-				)
-			)
+			} )
 		)
 	);
 }
 
 // === Events Tab (list + form) ===
 
-export default function EventsTab( { eventId: initialEventId, onClose, singleEvent = false } ) {
+export default function EventsTab() {
 	const [ events, setEvents ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
-	const [ editingId, setEditingId ] = useState( initialEventId || null );
+	const [ editingId, setEditingId ] = useState( null );
 	const [ refreshKey, setRefreshKey ] = useState( 0 );
 	const [ cloning, setCloning ] = useState( false );
 
@@ -182,26 +133,13 @@ export default function EventsTab( { eventId: initialEventId, onClose, singleEve
 	}, [ refreshKey ] ); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const backToList = () => {
-		/*
-		 * There is no list behind the form in single-event mode: the modal is
-		 * that event's own editing surface (#2073), so backing out returns to
-		 * the event page it was opened from rather than to group settings.
-		 */
-		if ( singleEvent ) {
-			onClose();
-			return;
-		}
-
 		setEditingId( null );
 		setRefreshKey( ( k ) => k + 1 );
 	};
 
 	if ( editingId !== null ) {
 		return h( InlineEventForm, {
-			eventId: editingId === 0 ? 0 : editingId,
-			backLabel: singleEvent
-				? __( 'Back to event', 'wordcamporg' )
-				: __( 'Back to events', 'wordcamporg' ),
+			eventId: editingId,
 			onDone: backToList,
 			onCancel: backToList,
 		} );

@@ -43,6 +43,8 @@ import LanguageField from './language-field';
 import TopicsField from './topics-field';
 import HostsField from './hosts-field';
 import SpeakersField from './speakers-field';
+import RsvpWindowField from './rsvp-window-field';
+import { fromSeconds } from './rsvp-window-time';
 import { NS } from './constants';
 
 export { NS };
@@ -62,6 +64,8 @@ const EMPTY_FORM = {
 	hosts: [],
 	speakers: [],
 	capacity: '',
+	rsvp_opens: fromSeconds( null ),
+	rsvp_closes: fromSeconds( null ),
 	rsvp_organizer: true,
 	rsvp_questions: [],
 };
@@ -194,6 +198,8 @@ function EventForm(
 					speakers: res.fields.speakers || [],
 					// 0 is "no limit", shown as an empty field.
 					capacity: res.fields.capacity ? String( res.fields.capacity ) : '',
+					rsvp_opens: fromSeconds( res.fields.rsvp_opens_before ),
+					rsvp_closes: fromSeconds( res.fields.rsvp_closes_before ),
 					// Only a new event or a draft is published by this form.
 					rsvp_organizer: ! res.is_published,
 					rsvp_questions: res.fields.rsvp_questions || [],
@@ -419,6 +425,13 @@ function EventForm(
 				value={ form.capacity }
 				onChange={ ( v ) => updateField( 'capacity', v ) }
 				__nextHasNoMarginBottom
+			/>
+
+			<RsvpWindowField
+				opens={ form.rsvp_opens }
+				closes={ form.rsvp_closes }
+				onChange={ updateField }
+				classPrefix={ classPrefix }
 			/>
 
 			{ ! isPublished && (

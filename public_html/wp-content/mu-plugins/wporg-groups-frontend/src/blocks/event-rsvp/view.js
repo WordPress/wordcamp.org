@@ -60,6 +60,9 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.rsvpLoading ) {
 				return label( 'loading' );
 			}
+			if ( isUnavailable( ctx ) ) {
+				return label( unavailableLabelKey( ctx ) );
+			}
 			if ( isFull( ctx ) ) {
 				return label( 'joinWaitingList' );
 			}
@@ -108,7 +111,19 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.rsvpLoading ) {
 				return label( 'loading' );
 			}
+			if ( isUnavailable( ctx ) ) {
+				return label( unavailableLabelKey( ctx ) );
+			}
 			return isFull( ctx ) ? label( 'joinWaitingList' ) : label( 'attend' );
+		},
+
+		get isUnavailable() {
+			return isUnavailable( getContext() );
+		},
+
+		get isButtonDisabled() {
+			const ctx = getContext();
+			return ctx.rsvpLoading || isUnavailable( ctx );
 		},
 
 		get cancelLabel() {
@@ -401,6 +416,10 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 		return;
 	}
 
+	if ( newStatus === 'attending' && isUnavailable( ctx ) ) {
+		return;
+	}
+
 	ctx.rsvpNotice = '';
 	ctx.rsvpNoticeSuccess = false;
 	ctx.rsvpNoticeError = false;
@@ -499,7 +518,16 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 		const ours = error?.code?.startsWith?.( 'wporg_groups_' ) && error.message;
 		ctx.rsvpNotice = ours ? error.message : labelFromContext( ctx, 'rsvpError' );
 		ctx.rsvpNoticeError = true;
-		if ( ours ) {
+		const windowStates = { wporg_groups_rsvp_not_open: 'not_yet', wporg_groups_rsvp_closed: 'closed' };
+		if ( ours && windowStates[ error.code ] ) {
+			// The window moved while the page was open. Show the button as
+			// the next page load would, rather than asking for answers.
+			ctx.rsvpWindow = windowStates[ error.code ];
+			ctx.rsvpUnavailable = error.message;
+			if ( ctx.modalOpen ) {
+				ctx.questionsError = error.message;
+			}
+		} else if ( ours ) {
 			ctx.questionsError = error.message;
 			openRsvpModal( ctx, actionElement );
 		} else if ( ctx.modalOpen ) {
@@ -728,6 +756,16 @@ function hasResponse( ctx ) {
 
 function isWaiting( ctx ) {
 	return ctx.currentUserStatus === 'waiting_list';
+}
+
+// Outside the event's RSVP window, someone without an RSVP can't make one.
+// Cancelling stays possible (#2397).
+function isUnavailable( ctx ) {
+	return ! hasResponse( ctx ) && !! ctx.rsvpUnavailable;
+}
+
+function unavailableLabelKey( ctx ) {
+	return ctx.rsvpWindow === 'not_yet' ? 'rsvpNotOpen' : 'rsvpClosed';
 }
 
 function isFull( ctx ) {

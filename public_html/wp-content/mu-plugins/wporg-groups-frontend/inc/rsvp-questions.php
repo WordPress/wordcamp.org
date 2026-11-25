@@ -31,6 +31,8 @@ defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\RSVP_Window\check_rsvp;
+
 const SCHEMAS_META       = 'gatherpress_rsvp_form_schemas';
 const ANSWER_META_PREFIX = 'gatherpress_custom_';
 
@@ -119,6 +121,16 @@ function guard_gatherpress_rsvp_route( array $endpoints ): array {
 
 			if ( true !== $allowed ) {
 				return $allowed;
+			}
+
+			$in_window = check_rsvp(
+				(int) $request->get_param( 'post_id' ),
+				sanitize_key( (string) $request->get_param( 'status' ) ),
+				(int) $request->get_param( 'user_id' )
+			);
+
+			if ( true !== $in_window ) {
+				return $in_window;
 			}
 
 			return rsvp_answers_satisfied( $request );

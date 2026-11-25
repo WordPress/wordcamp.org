@@ -156,6 +156,25 @@ final class Rest_API {
 			return new WP_REST_Response( array( 'success' => false ), 400 );
 		}
 
+		/**
+		 * Filters whether this RSVP may be saved, once the occurrence is in context.
+		 *
+		 * @param true|WP_Error $allowed True to allow it, or an error to refuse it.
+		 * @param int           $post_id Series post ID.
+		 * @param string        $status  Requested RSVP status.
+		 */
+		$allowed = apply_filters( 'gpre_rsvp_allowed', true, $post_id, $status );
+		if ( is_wp_error( $allowed ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'code'    => $allowed->get_error_code(),
+					'message' => $allowed->get_error_message(),
+				),
+				400
+			);
+		}
+
 		$user_record = $rsvp->save( get_current_user_id(), $status );
 		Cache::delete( $post_id );
 		$responses = $rsvp->responses();

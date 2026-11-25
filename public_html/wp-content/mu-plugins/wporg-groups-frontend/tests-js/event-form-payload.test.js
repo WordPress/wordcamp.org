@@ -1,4 +1,5 @@
 import buildEventPayload from '../src/components/event-form/build-payload';
+import { fromSeconds, toSeconds } from '../src/components/event-form/rsvp-window-time';
 
 const form = {
 	title: 'Meetup',
@@ -14,6 +15,8 @@ const form = {
 	hosts: [ { id: 3, name: 'Ana', slug: 'ana' }, { id: 9, name: 'Bo', slug: 'bo' } ],
 	speakers: [ { id: 12, name: 'Cy', slug: 'cy' }, { id: 3, name: 'Ana', slug: 'ana' } ],
 	capacity: '25',
+	rsvp_opens: { amount: '2', unit: 'weeks' },
+	rsvp_closes: { amount: '', unit: 'days' },
 	rsvp_organizer: true,
 	rsvp_questions: [],
 };
@@ -63,6 +66,20 @@ describe( 'buildEventPayload', () => {
 		expect( build().capacity ).toBe( 25 );
 		expect( build( { form: { ...form, capacity: '' } } ).capacity ).toBe( 0 );
 		expect( build( { form: { ...form, capacity: '-3' } } ).capacity ).toBe( 0 );
+	} );
+
+	test( 'sends when RSVPs open and close in seconds, and an empty one as null', () => {
+		expect( build().rsvp_opens_before ).toBe( 14 * 24 * 60 * 60 );
+		expect( build().rsvp_closes_before ).toBeNull();
+		expect( build( { form: { ...form, rsvp_closes: { amount: '0', unit: 'hours' } } } ).rsvp_closes_before ).toBe( 0 );
+	} );
+
+	test( 'shows a saved RSVP window in the largest unit that fits', () => {
+		expect( fromSeconds( 14 * 24 * 60 * 60 ) ).toEqual( { amount: '2', unit: 'weeks' } );
+		expect( fromSeconds( 3 * 24 * 60 * 60 ) ).toEqual( { amount: '3', unit: 'days' } );
+		expect( fromSeconds( 36 * 60 * 60 ) ).toEqual( { amount: '36', unit: 'hours' } );
+		expect( fromSeconds( null ) ).toEqual( { amount: '', unit: 'days' } );
+		expect( toSeconds( fromSeconds( 36 * 60 * 60 ) ) ).toBe( 36 * 60 * 60 );
 	} );
 
 	test( 'sends whether to RSVP the organizer', () => {

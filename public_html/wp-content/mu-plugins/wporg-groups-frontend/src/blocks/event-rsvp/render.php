@@ -18,6 +18,8 @@ use function WordCamp\Groups\Frontend\RSVP_Questions\current_user_can_view_answe
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_labelled_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
+use function WordCamp\Groups\Frontend\RSVP_Window\get_state as get_rsvp_window_state;
+use function WordCamp\Groups\Frontend\RSVP_Window\get_unavailable_message;
 
 use const WordCamp\Groups\Frontend\RSVP_Questions\MAX_ANSWER_LENGTH;
 
@@ -44,6 +46,10 @@ $rsvp      = new Rsvp( $event_post_id );
 $is_past   = $event->has_event_past();
 $is_login  = is_user_logged_in();
 $is_member = $is_login && is_user_member_of_blog();
+
+// Outside the event's RSVP window, attending is refused but cancelling isn't (#2397).
+$rsvp_window    = $is_past ? '' : get_rsvp_window_state( $event_post_id );
+$window_message = $is_past ? '' : get_unavailable_message( $event_post_id );
 
 $responses = $rsvp->responses();
 $attending = $responses['attending'] ?? array(
@@ -155,6 +161,8 @@ $rsvp_labels = array_merge(
 		'joinWaitingList'            => __( 'Join waiting list', 'wordcamporg' ),
 		'leaveWaitingList'           => _x( 'Leave waiting list', 'button to give up a place on an event waiting list', 'wordcamporg' ),
 		'rsvp'                       => __( 'RSVP', 'wordcamporg' ),
+		'rsvpNotOpen'                => __( 'RSVPs not open yet', 'wordcamporg' ),
+		'rsvpClosed'                 => __( 'RSVPs closed', 'wordcamporg' ),
 		'joinRsvp'                   => __( 'Join & RSVP', 'wordcamporg' ),
 		'statusAttending'            => __( 'You are attending this event.', 'wordcamporg' ),
 		'statusWaiting'              => __( "You're on the waiting list. If a spot opens up, you'll move to attending automatically.", 'wordcamporg' ),
@@ -192,6 +200,12 @@ $cancel_label   = $rsvp_labels[ $is_waiting ? 'leaveWaitingList' : 'cancelRsvp' 
 $keep_label     = $rsvp_labels[ $is_waiting ? 'stayOnList' : 'keepSpot' ];
 $confirm_prompt = $rsvp_labels[ $is_waiting ? 'confirmLeaveWaiting' : 'confirmCancelAttending' ];
 
+$is_unavailable = ! $has_response && '' !== $window_message;
+if ( $is_unavailable ) {
+	$rsvp_button_label = $rsvp_labels[ 'not_yet' === $rsvp_window ? 'rsvpNotOpen' : 'rsvpClosed' ];
+	$modal_rsvp_label  = $rsvp_button_label;
+}
+
 $context = array(
 	'postId'            => (int) $event_post_id,
 	'isLoggedIn'        => $is_login,
@@ -219,6 +233,8 @@ $context = array(
 	'rsvpNoticeSuccess' => false,
 	'rsvpNoticeError'   => false,
 	'questionsError'    => '',
+	'rsvpWindow'        => $rsvp_window,
+	'rsvpUnavailable'   => $window_message,
 	'labels'            => $rsvp_labels,
 );
 
@@ -242,6 +258,8 @@ wp_interactivity_state(
 		'cancelLabel'       => $cancel_label,
 		'keepLabel'         => $keep_label,
 		'confirmPrompt'     => $confirm_prompt,
+		'isUnavailable'     => $is_unavailable,
+		'isButtonDisabled'  => $is_unavailable,
 	)
 );
 
@@ -285,8 +303,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php if ( ! $is_past ) : ?>
 		<?php // Only an offer to RSVP. Once you have, the status panel below takes its place. ?>
 		<div
-			class="wp-block-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
+			class="wp-block-button<?php echo $has_response ? ' is-hidden' : ''; ?><?php echo $is_unavailable ? ' is-style-outline' : ''; ?>"
 			data-wp-class--is-hidden="state.hasResponse"
+			data-wp-class--is-style-outline="state.isUnavailable"
 		>
 			<?php
 			/*
@@ -300,8 +319,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				class="wp-block-button__link wp-element-button wporg-event-rsvp__button"
 				data-wp-on--click="actions.handleRsvpButton"
 				data-wp-text="state.rsvpButtonLabel"
-				data-wp-bind--disabled="context.rsvpLoading"
+				data-wp-bind--disabled="state.isButtonDisabled"
 				data-wp-bind--aria-busy="context.rsvpLoading"
+				<?php disabled( $is_unavailable ); ?>
 			>
 				<?php echo esc_html( $rsvp_button_label ); ?>
 			</button>
@@ -404,6 +424,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				</div>
 			</div>
 		</div>
+	<?php endif; ?>
+
+	<?php if ( $window_message ) : ?>
+		<p
+			class="wporg-event-rsvp__window<?php echo $is_unavailable ? '' : ' is-hidden'; ?>"
+			data-wp-class--is-hidden="!state.isUnavailable"
+		><?php echo esc_html( $window_message ); ?></p>
 	<?php endif; ?>
 
 	<button
@@ -551,7 +578,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								data-wp-on--click="actions.toggleRsvp"
 								data-wp-text="state.modalRsvpLabel"
 								data-wp-class--is-hidden="state.hasResponse"
-								data-wp-bind--disabled="context.rsvpLoading"
+								data-wp-bind--disabled="state.isButtonDisabled"
+								<?php disabled( $is_unavailable ); ?>
 								data-wp-bind--aria-busy="context.rsvpLoading"
 							>
 								<?php echo esc_html( $modal_rsvp_label ); ?>

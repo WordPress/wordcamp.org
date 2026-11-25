@@ -584,10 +584,7 @@ function get_event_format_filter(): string {
 /**
  * The published events carrying GatherPress's `online-event` venue term.
  *
- * Both directions of the format filter are answered from this one list:
- * "Online" is `post__in` it, "In person" is `post__not_in` it. An event with
- * no venue at all is therefore in person, which is the right answer — it is
- * certainly not online.
+ * The "Online" format filter is `post__in` this list.
  *
  * Deliberately *not* a `tax_query` on the archive's own query. A tax query
  * joins `term_relationships`, which makes WP_Query select `DISTINCT` — and
@@ -623,6 +620,48 @@ function get_online_event_ids(): array {
 	);
 
 	return array_map( 'intval', $online_ids );
+}
+
+/**
+ * The published events at a physical venue and not online.
+ *
+ * The "In person" format filter is `post__in` this list. An event with no
+ * venue at all isn't on it: its card shows no format badge, so listing it
+ * under "In person" would have the filter disagree with the card (#2449).
+ * Hybrid events carry both terms and stay out, as they always have.
+ *
+ * A separate `fields => ids` query for the reasons `get_online_event_ids()`
+ * gives.
+ *
+ * @return int[] Event post IDs, empty when the group runs nothing in person.
+ */
+function get_in_person_event_ids(): array {
+	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+
+	$in_person_ids = get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The archive filters on it; see `get_online_event_ids()` for why it cannot ride on the main query.
+				'relation' => 'AND',
+				array(
+					'taxonomy' => $taxonomy,
+					'operator' => 'EXISTS',
+				),
+				array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'slug',
+					'terms'    => array( 'online-event' ),
+					'operator' => 'NOT IN',
+				),
+			),
+		)
+	);
+
+	return array_map( 'intval', $in_person_ids );
 }
 
 /**
@@ -1027,14 +1066,10 @@ function get_event_archive_query_vars( array $query_vars ): array {
 	 * Every ID filter has to resolve into the one `post__in`. WP_Query
 	 * treats `post__in` and `post__not_in` as an if/elseif (see
 	 * `parse_where()`), so a `post__not_in` left beside a `post__in`
-	 * would be dropped without a word. Each filter that narrows to a set
-	 * adds it to `$included`, and the sets are intersected in PHP; the
-	 * in-person filter's exclusion is subtracted from the result. Only
-	 * when nothing narrows to a set does the exclusion ride on
-	 * `post__not_in`.
+	 * would be dropped without a word. Each filter narrows to a set in
+	 * `$included`, and the sets are intersected in PHP.
 	 */
 	$included = array();
-	$excluded = array();
 
 	if ( 'all' !== $language_filter ) {
 		$included[] = get_event_ids_for_language( $language_filter );
@@ -1047,19 +1082,16 @@ function get_event_archive_query_vars( array $query_vars ): array {
 	if ( 'online' === $format_filter ) {
 		$included[] = get_online_event_ids();
 	} elseif ( 'in-person' === $format_filter ) {
-		$excluded = get_online_event_ids();
+		$included[] = get_in_person_event_ids();
 	}
 
 	if ( $included ) {
-		$ids = count( $included ) > 1 ? array_intersect( ...$included ) : $included[0];
-		$ids = array_values( array_diff( $ids, $excluded ) );
+		$ids = count( $included ) > 1 ? array_values( array_intersect( ...$included ) ) : $included[0];
 
 		// `array( 0 )` rather than an empty array: an empty `post__in` is
 		// ignored by WP_Query, which would show every event under a
 		// filter that matched none.
 		$query_vars['post__in'] = $ids ? $ids : array( 0 );
-	} elseif ( $excluded ) {
-		$query_vars['post__not_in'] = $excluded;
 	}
 
 	// Pass through search if present.

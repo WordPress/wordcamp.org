@@ -1498,6 +1498,10 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
 	margin: 0;
 }
 
+.groups-site-flyer__location:not(:has(.groups-site-event-format)) {
+	display: none;
+}
+
 /* The venue block renders an empty wrapper for an online-only event. */
 .groups-site-flyer__location .wp-block-gatherpress-venue:empty {
 	display: none;

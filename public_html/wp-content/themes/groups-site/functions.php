@@ -255,7 +255,7 @@ function archive_event_card_image_sizes(): string {
  * Measured from the templates' layouts, so they change when a hero's layout does.
  */
 const HERO_IMAGE_SIZES = array(
-	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
+	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1280px) 38vw, 480px',
 	'groups-site-home-hero-image'  => '(max-width: 781px) calc(100vw - 140px), (max-width: 1428px) 35vw, 500px',
 );
 

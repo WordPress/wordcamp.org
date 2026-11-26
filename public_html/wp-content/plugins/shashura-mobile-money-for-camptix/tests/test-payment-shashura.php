@@ -266,7 +266,7 @@ class Test_Camptix_Payment_Shashura extends WP_UnitTestCase {
 	 * Verify UGX currency exposure via CampTix currencies.
 	 */
 	public function test_ugx_currency_is_available() {
-		$currencies = CampTix_Currencies::get_currencies();
+		$currencies = $GLOBALS['camptix']->get_currencies();
 		$this->assertArrayHasKey( 'UGX', $currencies );
 		$this->assertSame( 0, $currencies['UGX']['decimal_point'] );
 	}

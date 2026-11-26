@@ -8,16 +8,23 @@
 use function WordCamp\Groups\Frontend\Groups_Directory\get_directory_url;
 use function WordCamp\Groups\Frontend\Groups_Directory\get_events_site_url;
 use function WordCamp\Groups\Frontend\Groups_Directory\get_groups;
+use function WordCamp\Groups\Frontend\Groups_Directory\get_page_number;
 use function WordCamp\Groups\Frontend\Groups_Directory\get_search_term;
+use function WordCamp\Groups\Frontend\Groups_Directory\render_map;
+use function WordCamp\Groups\Frontend\Groups_Directory\render_pagination;
 use function WordCamp\Groups\Frontend\Groups_Directory\render_search_form;
 use function WordCamp\Groups\Frontend\Groups_Directory\search_groups;
 
 use const WordCamp\Groups\Frontend\Groups_Directory\ANNOUNCEMENT_URL;
+use const WordCamp\Groups\Frontend\Groups_Directory\GROUPS_PER_PAGE;
 
 $search_term = get_search_term();
 $groups      = search_groups( get_groups(), $search_term );
 $group_count = count( $groups );
 $is_search   = '' !== $search_term;
+$page_count  = max( 1, (int) ceil( $group_count / GROUPS_PER_PAGE ) );
+$page_number = min( get_page_number(), $page_count );
+$page_groups = array_slice( $groups, ( $page_number - 1 ) * GROUPS_PER_PAGE, GROUPS_PER_PAGE );
 ?>
 <div <?php echo get_block_wrapper_attributes(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core. ?>>
 	<p class="wporg-groups-directory__notice">
@@ -40,6 +47,11 @@ $is_search   = '' !== $search_term;
 	<div class="wporg-groups-directory__search">
 		<?php echo render_search_form( $search_term ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core's Search block, with its attributes set through the HTML API. ?>
 	</div>
+
+	<?php
+	// Every match goes on the map, not only this page's.
+	echo render_map( $groups ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The map block's own markup.
+	?>
 
 	<h2 class="screen-reader-text"><?php esc_html_e( 'Group list', 'wordcamporg' ); ?></h2>
 
@@ -71,7 +83,7 @@ $is_search   = '' !== $search_term;
 		</p>
 
 		<ul class="wporg-groups-directory__list">
-			<?php foreach ( $groups as $group ) : ?>
+			<?php foreach ( $page_groups as $group ) : ?>
 				<li class="wporg-groups-directory__group">
 					<a class="wporg-groups-directory__name" href="<?php echo esc_url( $group['url'] ); ?>"><?php echo esc_html( $group['name'] ); ?></a>
 
@@ -87,6 +99,8 @@ $is_search   = '' !== $search_term;
 				</li>
 			<?php endforeach; ?>
 		</ul>
+
+		<?php echo render_pagination( $page_number, $page_count, $search_term ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built by `paginate_links()`, which escapes. ?>
 	<?php elseif ( $is_search ) : ?>
 		<div class="wporg-groups-directory__empty">
 			<p class="wporg-groups-directory__empty-title">

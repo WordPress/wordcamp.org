@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use WordCamp\Groups\Frontend\Group_Location;
 use WordCamp\Groups\Frontend\Groups_Directory;
 
 defined( 'WPINC' ) || die();
@@ -140,6 +141,9 @@ class Test_Groups_Directory extends Groups_TestCase {
 			array( 'GET', '/group/' ),
 			array( 'HEAD', '/group/' ),
 			array( 'GET', '/group/?' . Groups_Directory\SEARCH_QUERY_VAR . '=berlin' ),
+			array( 'GET', '/group/?' . Groups_Directory\PAGE_QUERY_VAR . '=2' ),
+			array( 'GET', '/group/?q=berlin&paged=2' ),
+			array( 'GET', '/group/?paged=two' ),
 		);
 
 		$redirected = array(
@@ -151,6 +155,7 @@ class Test_Groups_Directory extends Groups_TestCase {
 			array( 'GET', '/group/?feed=rss2' ),
 			array( 'GET', '/group/?p=1' ),
 			array( 'GET', '/group/?q[]=berlin' ),
+			array( 'GET', '/group/?paged[]=2' ),
 		);
 
 		foreach ( $allowed as list( $method, $uri ) ) {
@@ -252,5 +257,90 @@ class Test_Groups_Directory extends Groups_TestCase {
 
 		$this->assertSame( '">', $value );
 		$this->assertStringNotContainsString( '<script>', $html );
+	}
+
+	/**
+	 * The map marks every group that matches the search and has coordinates, linked by name.
+	 */
+	public function test_map_marks_matching_groups_with_coordinates() {
+		update_site_meta(
+			self::$groups['berlin'],
+			Group_Location\COORDINATES_META_KEY,
+			array(
+				'latitude'  => 52.52,
+				'longitude' => 13.405,
+			)
+		);
+
+		// Stands in for the shared block, to see what it's given.
+		$registry = \WP_Block_Type_Registry::get_instance();
+		$real     = $registry->is_registered( 'wporg/google-map' ) ? $registry->unregister( 'wporg/google-map' ) : null;
+		$markers  = null;
+
+		register_block_type(
+			'wporg/google-map',
+			array(
+				'render_callback' => static function ( array $attributes ) use ( &$markers ): string {
+					$markers = $attributes['markers'];
+					return '';
+				},
+			)
+		);
+
+		$this->render( '/group/' );
+		$all = $markers;
+
+		$markers = null;
+		$this->render( '/group/?q=istanbul' );
+		$none = $markers;
+
+		$registry->unregister( 'wporg/google-map' );
+
+		if ( $real ) {
+			$registry->register( $real );
+		}
+
+		$this->assertSame( array( 'WordPress Berlin' ), wp_list_pluck( $all, 'title' ) );
+		$this->assertSame( get_home_url( self::$groups['berlin'], '/' ), $all[0]['url'] );
+		$this->assertSame( 'Berlin, Germany', $all[0]['meetup'] );
+		$this->assertSame( 52.52, $all[0]['latitude'] );
+		$this->assertNull( $none, 'No map without a marker.' );
+	}
+
+	/**
+	 * A long list is split into pages that keep the search, and a page past the end shows the last one.
+	 */
+	public function test_long_list_is_paged() {
+		$groups = array();
+
+		for ( $i = 1; $i <= Groups_Directory\GROUPS_PER_PAGE + 1; $i++ ) {
+			$groups[] = array(
+				'id'          => $i,
+				'name'        => sprintf( 'Group %02d', $i ),
+				'url'         => "https://example.test/{$i}/",
+				'location'    => 'Berlin, Germany',
+				'coordinates' => null,
+			);
+		}
+
+		wp_cache_set( Groups_Directory\CACHE_KEY, $groups, Groups_Directory\CACHE_GROUP );
+
+		$last  = sprintf( 'Group %02d', Groups_Directory\GROUPS_PER_PAGE );
+		$extra = sprintf( 'Group %02d', Groups_Directory\GROUPS_PER_PAGE + 1 );
+		$url   = Groups_Directory\get_directory_url();
+
+		$first = $this->render( '/group/' );
+
+		$this->assertStringContainsString( $last, $first );
+		$this->assertStringNotContainsString( $extra, $first );
+		$this->assertStringContainsString( esc_url( $url . '?paged=2' ), $first );
+
+		$second = $this->render( '/group/?q=group&paged=2' );
+
+		$this->assertStringContainsString( $extra, $second );
+		$this->assertStringNotContainsString( 'Group 01', $second );
+		$this->assertStringContainsString( 'href="' . esc_url( $url . '?q=group' ) . '"', $second, 'Page 1 keeps the search.' );
+
+		$this->assertStringContainsString( $extra, $this->render( '/group/?paged=99' ) );
 	}
 }

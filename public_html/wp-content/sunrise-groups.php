@@ -179,7 +179,7 @@ function is_reachable_root_endpoint() {
  * Exact on purpose: the root's front page answers any public query var
  * (`?rest_route=`, `?feed=`, `?p=`), and WordPress reads those from a `POST`
  * body first. So only a `GET` or `HEAD` for `/group/` with nothing but the
- * list's search, `q`, gets through.
+ * list's search, `q`, and its page number, `paged`, gets through.
  *
  * @return bool
  */
@@ -195,7 +195,7 @@ function is_directory_request() {
 
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only inspected, never used.
 	foreach ( $_GET as $name => $value ) {
-		if ( 'q' !== $name || ! is_string( $value ) ) {
+		if ( ! in_array( $name, array( 'q', 'paged' ), true ) || ! is_string( $value ) ) {
 			return false;
 		}
 	}

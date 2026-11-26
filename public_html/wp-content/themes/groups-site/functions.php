@@ -453,6 +453,28 @@ function hide_event_info_card_for_protected_event( $block_content, $parsed_block
 add_filter( 'render_block_core/group', __NAMESPACE__ . '\hide_event_info_card_for_protected_event', 10, 2 );
 
 /**
+ * Drop the event's "Details" section when the event has no description.
+ *
+ * Post Content renders nothing for a blank description, see
+ * `strip_event_metadata_blocks()`, but the heading would still render.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The parsed block.
+ *
+ * @return string The block, or an empty string.
+ */
+function hide_empty_event_details( $block_content, $parsed_block ) {
+	$class_name = $parsed_block['attrs']['className'] ?? '';
+
+	if ( ! in_array( 'groups-site-event-details', explode( ' ', $class_name ), true ) ) {
+		return $block_content;
+	}
+
+	return false === strpos( $block_content, 'wp-block-post-content' ) ? '' : $block_content;
+}
+add_filter( 'render_block_core/group', __NAMESPACE__ . '\hide_empty_event_details', 10, 2 );
+
+/**
  * Describe the events archive's view state on `<body>` so the stylesheet can
  * react to it.
  *
@@ -834,13 +856,33 @@ const EVENT_TEMPLATE_BLOCKS = array(
 /**
  * Strip GatherPress metadata blocks from `the_content` on the single-event view,
  * so `post-content` only renders the organizer's description.
+ *
+ * A description left as blank blocks becomes empty, since the event form
+ * seeds new events with an empty paragraph.
  */
 function strip_event_metadata_blocks( $content ) {
 	if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
 
-	return serialize_blocks( strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS ) );
+	$blocks = strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS );
+
+	if ( ! array_filter( $blocks, fn( $block ) => ! is_blank_block( $block ) ) ) {
+		return '';
+	}
+
+	return serialize_blocks( $blocks );
+}
+
+/**
+ * Whether a parsed block is an empty paragraph or the whitespace between blocks.
+ */
+function is_blank_block( array $block ): bool {
+	if ( null === $block['blockName'] ) {
+		return '' === trim( $block['innerHTML'] );
+	}
+
+	return 'core/paragraph' === $block['blockName'] && preg_match( '#^\s*<p[^>]*>\s*</p>\s*$#', $block['innerHTML'] );
 }
 
 /**

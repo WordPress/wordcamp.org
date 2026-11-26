@@ -50,6 +50,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="CampTix Indonesian Payments">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/camptix-indonesian-payments/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="CampTix BD Payments">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/camptix-bd-payments/tests/

@@ -34,6 +34,9 @@ function wcorg_include_network_only_plugins() {
 	} elseif ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 		$network_folder = 'events';
 
+		// The homepage stats need Central's Meetup connection, which the Groups network already shares.
+		require_once __DIR__ . '/groups/meetup-shared-connection.php';
+
 	} else {
 		$network_folder = 'wordcamp';
 	}

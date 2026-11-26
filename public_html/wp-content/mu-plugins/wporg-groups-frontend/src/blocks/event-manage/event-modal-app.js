@@ -249,7 +249,6 @@ import EventForm, { NS } from '../../components/event-form/event-form';
 				title,
 				onRequestClose: handleClose,
 				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
-				size: 'large',
 				shouldCloseOnClickOutside: false,
 			},
 			h( EventForm, {

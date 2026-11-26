@@ -1,5 +1,5 @@
 /**
- * Helpers for the event form's host field.
+ * Helpers for the event form's host and speaker fields.
  *
  * Kept apart from the field so they can be tested without the component
  * library.
@@ -11,6 +11,11 @@
  * Kept in step with `Event_Hosts\MAX_HOSTS`.
  */
 export const MAX_HOSTS = 10;
+
+/**
+ * Kept in step with `Event_Speakers\MAX_SPEAKERS`.
+ */
+export const MAX_SPEAKERS = 20;
 
 
 /**

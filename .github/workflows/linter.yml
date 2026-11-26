@@ -52,7 +52,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
@@ -76,18 +75,20 @@ jobs:
           composer-${{ runner.os }}-
 
     - name: composer install
-      # The lock file is removed so that the latest wporg-mu-plugins dev-build is always installed.
-      run: |
-        rm composer.lock || true
-        composer install
+      # `--no-scripts` skips the chained `composer-dev.json` install: PHPCS only needs the root packages, not the
+      # WordPress plugins and themes local development uses.
+      run: composer install --no-scripts
 
     - name: Hash the workspace manifests
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      # Assigned first so a jq error fails the step, unquoted so Bash expands globs like routes/*, and pipefail so
+      # a manifest that can't be read fails the step instead of being left out of the hash.
       run: |
-        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules

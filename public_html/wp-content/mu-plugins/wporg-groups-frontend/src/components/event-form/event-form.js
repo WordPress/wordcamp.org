@@ -42,6 +42,7 @@ import TimezoneField from './timezone-field';
 import LanguageField from './language-field';
 import TopicsField from './topics-field';
 import HostsField from './hosts-field';
+import SpeakersField from './speakers-field';
 import { NS } from './constants';
 
 export { NS };
@@ -59,6 +60,7 @@ const EMPTY_FORM = {
 	language: '',
 	topics: [],
 	hosts: [],
+	speakers: [],
 	capacity: '',
 	rsvp_organizer: true,
 	rsvp_questions: [],
@@ -79,7 +81,6 @@ const EMPTY_FORM = {
  * @param {Function} props.onLoad            Optional; called once event data has been loaded into the form.
  * @param {*}        props.header            Rendered above the fields.
  * @param {*}        props.footerStart       Rendered at the start of the actions row.
- * @param {*}        props.children          Rendered after the RSVP questions.
  * @param {Object}   ref                     Exposes `getPayload()`, `loadEvent( id )`, `loadTemplate( id )`, `selectVenue( venue )`, `isLoading()`, `isSaving()`.
  */
 function EventForm(
@@ -97,7 +98,6 @@ function EventForm(
 		onLoad,
 		header,
 		footerStart,
-		children,
 	},
 	ref
 ) {
@@ -191,6 +191,7 @@ function EventForm(
 					language: res.fields.language || '',
 					topics: res.fields.topics || [],
 					hosts: res.fields.hosts || [],
+					speakers: res.fields.speakers || [],
 					// 0 is "no limit", shown as an empty field.
 					capacity: res.fields.capacity ? String( res.fields.capacity ) : '',
 					// Only a new event or a draft is published by this form.
@@ -403,6 +404,12 @@ function EventForm(
 				classPrefix={ classPrefix }
 			/>
 
+			<SpeakersField
+				value={ form.speakers }
+				onChange={ ( v ) => updateField( 'speakers', v ) }
+				classPrefix={ classPrefix }
+			/>
+
 			<TextControl
 				label={ __( 'Attendee limit', 'wordcamporg' ) }
 				help={ __( 'Leave empty for no limit. Once the event is full, new RSVPs go on a waiting list.', 'wordcamporg' ) }
@@ -429,7 +436,6 @@ function EventForm(
 				onChange={ ( value ) => updateField( 'rsvp_questions', value ) }
 			/>
 
-			{ children }
 
 			<div className={ `${ classPrefix }__actions` }>
 				{ footerStart }

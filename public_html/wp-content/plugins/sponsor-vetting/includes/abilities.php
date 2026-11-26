@@ -841,20 +841,31 @@ function get_company( array $input ): array|\WP_Error {
 		return $company;
 	}
 
-	$sponsorships = ask_rest(
-		'GET',
-		'/wp/v2/sv-sponsorships',
-		array(
-			'parent'   => array( $id ),
-			'status'   => array_keys( get_sponsorship_statuses() ),
-			'per_page' => 100,
-			'_fields'  => 'id,title,status,event,domain,approved,approvable',
-		)
-	);
+	$sponsorships = array();
+	$page         = 1;
 
-	if ( is_wp_error( $sponsorships ) ) {
-		return $sponsorships;
-	}
+	// A Multi-Event Sponsor can outgrow one page. By ID, which is unique, so none lands on two pages.
+	do {
+		$response = ask_rest(
+			'GET',
+			'/wp/v2/sv-sponsorships',
+			array(
+				'parent'   => array( $id ),
+				'status'   => array_keys( get_sponsorship_statuses() ),
+				'orderby'  => 'id',
+				'order'    => 'asc',
+				'page'     => $page,
+				'per_page' => 100,
+				'_fields'  => 'id,title,status,event,domain,approved,approvable',
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$sponsorships = array_merge( $sponsorships, $response->get_data() );
+	} while ( $page++ < (int) $response->get_headers()['X-WP-TotalPages'] );
 
 	$company = $company->get_data();
 
@@ -889,7 +900,7 @@ function get_company( array $input ): array|\WP_Error {
 				'approved'   => $sponsorship['approved'],
 				'approvable' => $sponsorship['approvable'],
 			),
-			$sponsorships->get_data()
+			$sponsorships
 		),
 		'url'                => get_app_url( 'company', $id ),
 	);

@@ -4,11 +4,10 @@ const { STORAGE_STATE } = require( './utils/accounts' );
 /**
  * The surface "Edit this event" opens.
  *
- * Editing one event used to open the whole group-settings modal — six
- * group-wide tabs with the event form inside the first one (#2073) — which
- * put unrelated configuration one click away from an edit. The modal is now
- * that event's own editing surface, while the group page's Settings button
- * still opens the tabbed one.
+ * Group admins used to edit in the group-settings modal and everyone else in
+ * the event modal, so the two roles got different forms (#2073, #2424). Every
+ * role now edits in the event modal, the same one that creates events, while
+ * the group page's Settings button still opens the tabbed one.
  *
  * Requires the `organiser1` / `password` editor-tier test user.
  *
@@ -22,7 +21,7 @@ test.describe( 'event editing surface', () => {
 	// ranking that other specs' events compete for (see utils/pin-event-far-future.js).
 	const DATE = '2099-03-04'; // 2099-03-04 is a Wednesday.
 	const START = '12:00';
-	test( 'edits one event without the group-wide tabs', async ( { page } ) => {
+	test( 'edits one event in the event modal', async ( { page } ) => {
 		test.slow(); // A cold boot of the inline block editor behind the modal.
 
 		/*
@@ -46,15 +45,13 @@ test.describe( 'event editing surface', () => {
 		await page.getByRole( 'button', { name: 'Edit this event' } ).click();
 
 		const dialog = page.getByRole( 'dialog' );
+		await expect( dialog ).toHaveClass( /wporg-groups-event-modal/ );
 		await expect( dialog.getByRole( 'heading', { name: 'Edit event' } ) ).toBeVisible();
 		await expect( dialog.getByRole( 'tablist' ) ).toHaveCount( 0 );
+		await expect( dialog.getByLabel( 'Event title' ) ).toHaveValue( title );
 
-		const form = page.locator( 'form.wporg-event-form' );
-		await expect( form.getByLabel( 'Event title' ) ).toHaveValue( title );
-
-		// Backing out of the form returns to the event, not to a list that
-		// was never behind it.
-		await dialog.getByRole( 'button', { name: 'Back to event' } ).click();
+		// Nothing was changed, so Cancel closes without asking.
+		await dialog.getByRole( 'button', { name: 'Cancel' } ).click();
 		await expect( dialog ).toHaveCount( 0 );
 		await expect( page ).toHaveURL( eventUrl );
 	} );

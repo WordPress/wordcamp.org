@@ -255,7 +255,7 @@ function archive_event_card_image_sizes(): string {
  * Measured from the templates' layouts, so they change when a hero's layout does.
  */
 const HERO_IMAGE_SIZES = array(
-	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1160px) 38vw, 441px',
+	'groups-site-event-hero-image' => '(max-width: 781px) calc(100vw - 40px), (max-width: 1280px) 38vw, 480px',
 	'groups-site-home-hero-image'  => '(max-width: 781px) calc(100vw - 140px), (max-width: 1428px) 35vw, 500px',
 );
 
@@ -451,6 +451,28 @@ function hide_event_info_card_for_protected_event( $block_content, $parsed_block
 	return post_password_required() ? '' : $block_content;
 }
 add_filter( 'render_block_core/group', __NAMESPACE__ . '\hide_event_info_card_for_protected_event', 10, 2 );
+
+/**
+ * Drop the event's "Details" section when the event has no description.
+ *
+ * Post Content renders nothing for a blank description, see
+ * `strip_event_metadata_blocks()`, but the heading would still render.
+ *
+ * @param string $block_content The rendered block.
+ * @param array  $parsed_block  The parsed block.
+ *
+ * @return string The block, or an empty string.
+ */
+function hide_empty_event_details( $block_content, $parsed_block ) {
+	$class_name = $parsed_block['attrs']['className'] ?? '';
+
+	if ( ! in_array( 'groups-site-event-details', explode( ' ', $class_name ), true ) ) {
+		return $block_content;
+	}
+
+	return false === strpos( $block_content, 'wp-block-post-content' ) ? '' : $block_content;
+}
+add_filter( 'render_block_core/group', __NAMESPACE__ . '\hide_empty_event_details', 10, 2 );
 
 /**
  * Describe the events archive's view state on `<body>` so the stylesheet can
@@ -834,13 +856,33 @@ const EVENT_TEMPLATE_BLOCKS = array(
 /**
  * Strip GatherPress metadata blocks from `the_content` on the single-event view,
  * so `post-content` only renders the organizer's description.
+ *
+ * A description left as blank blocks becomes empty, since the event form
+ * seeds new events with an empty paragraph.
  */
 function strip_event_metadata_blocks( $content ) {
 	if ( ! is_singular( 'gatherpress_event' ) || ! in_the_loop() || ! is_main_query() ) {
 		return $content;
 	}
 
-	return serialize_blocks( strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS ) );
+	$blocks = strip_blocks( parse_blocks( $content ), EVENT_TEMPLATE_BLOCKS );
+
+	if ( ! array_filter( $blocks, fn( $block ) => ! is_blank_block( $block ) ) ) {
+		return '';
+	}
+
+	return serialize_blocks( $blocks );
+}
+
+/**
+ * Whether a parsed block is an empty paragraph or the whitespace between blocks.
+ */
+function is_blank_block( array $block ): bool {
+	if ( null === $block['blockName'] ) {
+		return '' === trim( $block['innerHTML'] );
+	}
+
+	return 'core/paragraph' === $block['blockName'] && preg_match( '#^\s*<p[^>]*>\s*</p>\s*$#', $block['innerHTML'] );
 }
 
 /**
@@ -1123,15 +1165,19 @@ function defer_venue_map( $block_content ) {
 add_filter( 'render_block_gatherpress/venue-map', __NAMESPACE__ . '\defer_venue_map' );
 
 /**
- * Determine the event format: 'hybrid', 'online', or 'in-person'.
+ * Determine the event format: 'hybrid', 'online', 'in-person', or ''.
  *
  * GatherPress assigns the `online-event` sentinel term to `_gatherpress_venue`
  * for online and hybrid events. A hybrid event has both `online-event` and
  * a physical venue term; an online event has only `online-event`; and an
- * in-person event has no `online-event` term.
+ * in-person event has only a physical venue term.
+ *
+ * An event with neither a venue nor an online link has no format yet, rather
+ * than defaulting to in person: a badge saying "In person" tells attendees
+ * there's somewhere to go when there isn't (#2449).
  *
  * @param int $event_id Event post ID.
- * @return string 'hybrid', 'online', or 'in-person'.
+ * @return string 'hybrid', 'online', 'in-person', or '' without a location.
  */
 function get_event_format( int $event_id ): string {
 	$terms = get_the_terms( $event_id, '_gatherpress_venue' );
@@ -1164,7 +1210,7 @@ function get_event_format( int $event_id ): string {
 		return 'online';
 	}
 
-	return 'in-person';
+	return $has_physical ? 'in-person' : '';
 }
 
 /**
@@ -1209,7 +1255,13 @@ function render_event_format_block( array $attributes, string $content = '', ?\W
 	}
 
 	$format = get_event_format( (int) $post_id );
-	$label  = get_event_format_label( $format );
+
+	// No venue and no online link yet: no badge, rather than a guess.
+	if ( '' === $format ) {
+		return '';
+	}
+
+	$label = get_event_format_label( $format );
 
 	$wrapper_classes = array(
 		'wp-block-groups-site-event-format',

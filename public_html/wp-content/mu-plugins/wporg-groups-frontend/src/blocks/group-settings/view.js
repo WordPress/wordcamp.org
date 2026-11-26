@@ -29,13 +29,11 @@ import SettingsApp from './components/settings-app';
 	function SettingsRoot() {
 		const [ isOpen, setIsOpen ] = useState( false );
 		const [ initialTab, setInitialTab ] = useState( '' );
-		const [ eventId, setEventId ] = useState( 0 );
 
 		useEffect( () => {
 			const previousOpen = window.__wporgSettingsOpen;
-			const openSettings = ( tab, evId ) => {
+			const openSettings = ( tab ) => {
 				setInitialTab( tab );
-				setEventId( evId );
 				setIsOpen( true );
 			};
 			const handleClick = ( ev ) => {
@@ -45,10 +43,7 @@ import SettingsApp from './components/settings-app';
 					return;
 				}
 				ev.preventDefault();
-				openSettings(
-					trigger.dataset.wporgSettingsOpen || '',
-					parseInt( trigger.dataset.wporgSettingsEventId || '0', 10 )
-				);
+				openSettings( trigger.dataset.wporgSettingsOpen || '' );
 			};
 
 			window.__wporgSettingsOpen = openSettings;
@@ -72,7 +67,6 @@ import SettingsApp from './components/settings-app';
 
 		return h( SettingsApp, {
 			initialTab: initialTab || 'events',
-			eventId,
 			siteName,
 			canManageRoles,
 			onClose: () => setIsOpen( false ),

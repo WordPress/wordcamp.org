@@ -31,6 +31,17 @@ class Test_Groups_Site_Event_Content extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Re-add the hooks under test: `WP_UnitTestCase` restores its hook
+	 * snapshot after each test.
+	 */
+	protected function setUp(): void {
+		parent::setUp();
+
+		add_filter( 'the_content', 'WordCamp\\Groups\\Site\\strip_event_metadata_blocks', 5 );
+		add_filter( 'render_block_core/group', 'WordCamp\\Groups\\Site\\hide_empty_event_details', 10, 2 );
+	}
+
+	/**
 	 * Strip the template's blocks from markup and serialize what is left.
 	 *
 	 * @param string $content Block markup.
@@ -85,5 +96,75 @@ class Test_Groups_Site_Event_Content extends WP_UnitTestCase {
 			'<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph --><p>Bring a laptop</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
 			$output
 		);
+	}
+
+	/**
+	 * The "Details" section only renders when the event has a description.
+	 */
+	public function test_details_section_hides_for_a_blank_description(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as test-groups-site-more-events.php does.
+		$template = file_get_contents( SUT_WP_CONTENT_DIR . 'themes/groups-site/templates/single-event.html' );
+		$section  = $this->find_details_section( parse_blocks( $template ) );
+		$this->assertNotNull( $section, 'single-event.html no longer has the "Details" section.' );
+		$section = serialize_block( $section );
+
+		// The event form's empty paragraph, next to GatherPress's starter blocks.
+		$blank = "<!-- wp:gatherpress/event-date /-->\n\n<!-- wp:paragraph -->\n<p></p>\n<!-- /wp:paragraph -->";
+		$this->assertSame( '', $this->render_on_event_page( $section, $blank ) );
+
+		$output = $this->render_on_event_page( $section, '<!-- wp:paragraph --><p>Bring snacks.</p><!-- /wp:paragraph -->' );
+		$this->assertStringContainsString( 'groups-site-event-details', $output );
+		$this->assertStringContainsString( 'Bring snacks.', $output );
+	}
+
+	/**
+	 * Find the "Details" group inside a parsed block tree.
+	 *
+	 * @param array $blocks Parsed blocks.
+	 * @return array|null The group, or null when it's missing.
+	 */
+	private function find_details_section( array $blocks ): ?array {
+		foreach ( $blocks as $block ) {
+			if ( str_contains( $block['attrs']['className'] ?? '', 'groups-site-event-details' ) ) {
+				return $block;
+			}
+
+			$found = $this->find_details_section( $block['innerBlocks'] );
+			if ( $found ) {
+				return $found;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Render block markup on the single view of a new event with the given content.
+	 *
+	 * @param string $markup  Block markup to render.
+	 * @param string $content The event's content.
+	 * @return string The rendered markup.
+	 */
+	private function render_on_event_page( string $markup, string $content ): string {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'gatherpress_event',
+				'post_content' => $content,
+			)
+		);
+
+		// Not `go_to()`: its `wp` action reaches sites this suite doesn't create.
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the event; tear_down() resets the query.
+		$GLOBALS['wp_query']     = new \WP_Query(
+			array(
+				'p'         => $event_id,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+		$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		the_post();
+
+		return trim( do_blocks( $markup ) );
 	}
 }

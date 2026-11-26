@@ -549,6 +549,34 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	}
 
 	/**
+	 * The card names the event's time zone, as the event page and the
+	 * "My upcoming events" cards do, so the time isn't ambiguous for
+	 * members in other countries (#2450).
+	 */
+	public function test_card_shows_the_event_time_zone() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'Zoned Meetup',
+			)
+		);
+
+		( new Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2030-05-20 18:30:00',
+				'datetime_end'   => '2030-05-20 20:00:00',
+				'timezone'       => 'Asia/Kolkata',
+			)
+		);
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertMatchesRegularExpression( '/6:30 PM\s*(<[^>]+>\s*)*IST/', $output );
+	}
+
+	/**
 	 * Both grids draw the one shared card — which is also the condition that
 	 * makes the priming above necessary.
 	 */
@@ -706,12 +734,39 @@ class Test_Groups_Site_Event_Cards extends Groups_TestCase {
 	 * Test that event cards in the grid render the format badge correctly for in-person events.
 	 */
 	public function test_card_renders_event_format_badge_in_person() {
-		$this->create_event_post( 'In Person Card Event' );
+		$event_id = $this->create_event_post( 'In Person Card Event' );
+		$this->set_event_format_terms( $event_id, false, true );
 
 		$output = do_blocks( self::GRID );
 
 		$this->assertStringContainsString( 'is-format-in-person', $output );
 		$this->assertStringContainsString( 'In person', $output );
+	}
+
+	/**
+	 * An event with no venue and no online link has nowhere to go yet, so its
+	 * card shows no format badge rather than "In person" (#2449).
+	 */
+	public function test_card_renders_no_format_badge_without_a_location() {
+		$this->create_event_post( 'Location TBA Card Event' );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'Location TBA Card Event', $output );
+		$this->assertStringNotContainsString( 'groups-site-event-format', $output );
+		$this->assertStringNotContainsString( 'In person', $output );
+	}
+
+	/**
+	 * An online link alone still makes the event online.
+	 */
+	public function test_card_renders_online_badge_for_a_link_without_a_venue() {
+		$event_id = $this->create_event_post( 'Link Only Card Event' );
+		update_post_meta( $event_id, 'gatherpress_online_event_link', 'https://meet.example.test/link-only' );
+
+		$output = do_blocks( self::GRID );
+
+		$this->assertStringContainsString( 'is-format-online', $output );
 	}
 
 	/**

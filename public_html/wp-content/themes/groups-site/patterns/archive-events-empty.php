@@ -6,9 +6,10 @@
  * Inserter: no
  *
  * The no-results state for the events archive. The copy adapts to how the
- * visitor got here: a search or Time filter that matched nothing offers a
- * way back to the full upcoming list, while a group with genuinely nothing
- * scheduled points at its past events instead of a dead end.
+ * visitor got here: a search or a Time, Format, Language or Topic filter
+ * that matched nothing offers a way back to the full upcoming list, while a
+ * group with genuinely nothing scheduled points at its past events instead
+ * of a dead end.
  *
  * @package WordCamp\Groups\Site
  */
@@ -30,9 +31,20 @@ if ( function_exists( '\WordCamp\Groups\GatherPress_Tweaks\normalize_event_time_
 $archive_url = get_post_type_archive_link( 'gatherpress_event' );
 $is_filtered = '' !== $search_term || 'upcoming' !== $time_filter;
 
-if ( $is_filtered ) {
+$has_other_filters = false;
+foreach ( array( 'get_event_format_filter', 'get_event_language_filter', 'get_event_topic_filter' ) as $filter_getter ) {
+	$filter_getter = '\\WordCamp\\Groups\\GatherPress_Tweaks\\' . $filter_getter;
+
+	if ( function_exists( $filter_getter ) && 'all' !== $filter_getter() ) {
+		$has_other_filters = true;
+	}
+}
+
+if ( $is_filtered || $has_other_filters ) {
 	$message   = __( 'No events match.', 'wordcamporg' );
-	$hint      = __( 'Try a different search, or switch the time filter.', 'wordcamporg' );
+	$hint      = $has_other_filters
+		? __( 'Try a different search, or change the filters.', 'wordcamporg' )
+		: __( 'Try a different search, or switch the time filter.', 'wordcamporg' );
 	$link_url  = $archive_url;
 	$link_text = __( 'View all upcoming events', 'wordcamporg' );
 } else {

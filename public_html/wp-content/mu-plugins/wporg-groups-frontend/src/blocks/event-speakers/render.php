@@ -7,6 +7,8 @@
  * @package WordCamp\Groups\Frontend
  */
 
+use function WordCamp\Groups\Frontend\Event_Speakers\get_event_speakers;
+
 $event_post_id = $block->context['postId'] ?? get_the_ID();
 
 if ( ! $event_post_id ) {
@@ -19,20 +21,7 @@ if ( post_password_required( $event_post_id ) ) {
 	return;
 }
 
-$speaker_ids = get_post_meta( $event_post_id, '_event_speakers', true );
-
-if ( empty( $speaker_ids ) || ! is_array( $speaker_ids ) ) {
-	return;
-}
-
-$speakers = array();
-foreach ( $speaker_ids as $user_id ) {
-	$user = get_userdata( (int) $user_id );
-	if ( ! $user ) {
-		continue;
-	}
-	$speakers[] = $user;
-}
+$speakers = get_event_speakers( (int) $event_post_id );
 
 if ( empty( $speakers ) ) {
 	return;

@@ -10,8 +10,8 @@
 .wporg-event-manage--tools {
 	box-sizing: border-box;
 	width: 100%;
-	padding-bottom: var(--wp--preset--spacing--20);
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+	padding-top: var(--wp--preset--spacing--20);
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
 .wporg-event-manage__label {
@@ -211,6 +211,14 @@
 
 .wporg-groups-event-modal {
 	max-height: 90vh !important;
+}
+
+@media (min-width: 600px) {
+
+	.components-modal__frame.wporg-groups-event-modal {
+		width: 100%;
+		max-width: min(704px, calc(100% - 32px));
+	}
 }
 
 .wporg-groups-event-modal__form {

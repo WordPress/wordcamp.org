@@ -43,15 +43,17 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Hash the workspace manifests
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      # Assigned first so a jq error fails the step, unquoted so Bash expands globs like routes/*, and pipefail so
+      # a manifest that can't be read fails the step instead of being left out of the hash.
       run: |
-        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules
@@ -102,9 +104,9 @@ jobs:
         options: >-
           --tmpfs /var/lib/mysql
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=10s
+          --health-interval=2s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=25
 
     steps:
     - uses: actions/checkout@v4
@@ -159,23 +161,26 @@ jobs:
       uses: actions/cache@v4
       with:
         path: public_html/wp-content/mu-plugins/wporg-groups-frontend/build
-        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/build/**', '!public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules/**') }}
+        # Only the build's inputs, so a change to the PHP or the tests doesn't rebuild.
+        key: groups-blocks-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json', 'package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/package.json', 'public_html/wp-content/mu-plugins/wporg-groups-frontend/src/**') }}
 
     - name: Set up Node.js
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'
       uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Hash the workspace manifests
       if: steps.groups-blocks-cache.outputs.cache-hit != 'true'
       id: npm-manifests
       # Only the workspaces in package.json. A recursive glob also matches third-party plugins that Composer or
       # GatherPress add before this step, so jobs with the same npm inputs would get different cache keys.
-      # Assigned first, so a manifest that can't be read fails the step instead of hashing nothing.
+      # Assigned first so a jq error fails the step, unquoted so Bash expands globs like routes/*, and pipefail so
+      # a manifest that can't be read fails the step instead of being left out of the hash.
       run: |
-        hash=$( jq -r '.workspaces[] + "/package.json"' package.json | xargs sha256sum | sha256sum | cut -d' ' -f1 )
+        set -o pipefail
+        manifests=$( jq -r '.workspaces[] + "/package.json"' package.json )
+        hash=$( sha256sum $manifests | sha256sum | cut -d' ' -f1 )
         echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
     - name: Cache node_modules

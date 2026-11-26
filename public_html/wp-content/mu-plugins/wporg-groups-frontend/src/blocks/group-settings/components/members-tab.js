@@ -1,7 +1,8 @@
 /**
  * Group Settings — Members tab.
  *
- * Lists group members with role management, removal, search, and pagination.
+ * Lists group members with role management, removal, search, and pagination,
+ * and lets organizers message every member (#2409).
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -23,6 +24,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { __, sprintf } from '@wordpress/i18n';
 
 import OwnershipTransferPanel from './ownership-transfer-panel';
+import MessageMembersModal from '../../event-manage/message-members-modal';
 
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wordcamporg' ), value: 'subscriber' },
@@ -45,6 +47,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 	const [ search, setSearch ] = useState( '' );
 	const [ page, setPage ] = useState( 1 );
 	const [ removingId, setRemovingId ] = useState( 0 );
+	const [ messaging, setMessaging ] = useState( false );
 
 	useEffect( () => {
 		let isMounted = true;
@@ -187,7 +190,22 @@ export default function MembersTab( { canManageRoles = false } ) {
 			h( 'span', { className: 'wporg-members-tab__count' },
 				total.toLocaleString() + ' ' + ( total === 1 ? __( 'member', 'wordcamporg' ) : __( 'members', 'wordcamporg' ) )
 			),
+			canManageRoles &&
+				h(
+					Button,
+					{
+						variant: 'secondary',
+						className: 'wporg-members-tab__message',
+						onClick: () => setMessaging( true ),
+					},
+					__( 'Message all members', 'wordcamporg' )
+				),
 		),
+		messaging &&
+			h( MessageMembersModal, {
+				recipientMode: 'message-group',
+				onClose: () => setMessaging( false ),
+			} ),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__list' },

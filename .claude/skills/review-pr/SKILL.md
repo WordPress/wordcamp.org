@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Review a pull request in this repo the way we review here, including security fixes under private disclosure. The method, not the commands - what to distrust in a PR body, how to reproduce and mutate, how to drive the real UI with claude-in-chrome and read the raw response behind it, how to prove a finding before reporting it, how to merge a batch, and how to split public PR text from a private security issue. Use when reviewing a PR, a branch, or a batch of branches, and when reviewing or writing up a security fix.
+description: Review a pull request in this repo the way we review here, including security fixes under private disclosure. The method, not the commands - what to distrust in a PR body, how to reproduce and mutate, how to drive the real UI with claude-in-chrome and read the raw response behind it, how to prove a finding before reporting it, how to cross-check with Codex and Fable, how to merge a batch, and how to split public PR text from a private security issue. Use when reviewing a PR, a branch, or a batch of branches, and when reviewing or writing up a security fix.
 ---
 
 # How we review pull requests here
@@ -127,6 +127,14 @@ A review is an independent attempt to make the change fail.
 - `date_utc` and `end_date` hold local time, so `NOW()` cutoffs drift by the offset: #1120's `end_date >= NOW()` deletion pass loses a UTC−5 row 5h early, so a meetup unpublished that afternoon stays listed. Compare `DATE_SUB( end_date, INTERVAL date_utc_offset SECOND )` with `UTC_TIMESTAMP()`, and test an Americas fixture, not just Australian ones.
 - Rows reach the theme as fake `WP_Post`s from `inject_events_into_query()` (no date, content or real ID): rendered through core they get 404ing `/?p=<id>` links and empty `pubDate`s unless overridden (#1561's feed filters). Pretty filter URLs join values with `-`, special-casing only a lone `in-person`, so `in-person-online` parses as three: check the dropdown's ticked state on the redirected URL.
 
+## Second opinions
+
+- Every review gets two more independent reads: Codex and a Fable subagent (Mechanics). Start both in one message once the branch is checked out, then go reproduce. Wait for the completion notices; don't poll.
+- Give them the code, not your reasoning: a reviewer handed your suspicion returns it confirmed. Fable gets the PR body as a claim to test; `codex review --base` refuses a prompt and reads only the diff.
+- Their findings are leads. Each goes through the same proof as yours: read the line, reproduce, mutate. Both quote core and GatherPress from memory: check the shipping version. Kill what dies and write down why.
+- One finding per defect, however many raised it. Your report says who raised each (you, Codex, Fable) and what you killed. Only proved findings reach the PR; raw output stays local, outside the worktree.
+- After a fix round, run both on the new head ("addressed" is a claim). Two rounds at most. In a batch, one pair per branch, each in its own worktree: `codex review` reads the checked-out `HEAD`.
+
 ## Findings
 
 - Test your doubts before reporting them. An unverified concern costs the author more than it costs you.
@@ -231,7 +239,18 @@ curl -ksi -b 'tix_view_token=<value>' https://<site>/<path> | head -40
 # What the database does. Collation decides comparisons, not the code
 docker compose exec -T wordcamp.db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -t \
   wordcamp_dev -e "<query>"'
+
+# Codex second opinion: from the worktree, Bash `run_in_background`, output in
+# the session scratchpad. Model from ~/.codex/config.toml. If `review` fails:
+# codex exec -C <worktree> -s read-only -c model_reasoning_effort="max" \
+#   -o <scratchpad>/codex-<pr>.md "<the Fable prompt below>"
+cd <worktree> && codex review --base origin/production \
+  -c model_reasoning_effort="max" > <scratchpad>/codex-<pr>.md 2>&1
 ```
+
+- Fable second opinion: Agent tool, `subagent_type: "general-purpose"`, `model: "fable"`, `effort: "max"`, description "Fable PR review". If `fable` is rejected, run `claude -p --model claude-fable-5-2 --permission-mode plan "<prompt>" > <scratchpad>/fable-<pr>.md 2>&1` from the worktree, in the background. The prompt:
+
+  > Review PR #<n> in `<worktree>`, checked out at its head. Read only: don't edit, commit, push or post, and don't touch containers, the database or a browser. `gh pr view <n>` is the author's claim: test it, don't trust it. Read `git diff origin/production...HEAD` and the code around it; `.claude/skills/review-pr/SKILL.md` lists this repo's known traps. Report correctness bugs, regressions, missed edge cases, security issues, and anything the description claims that the code doesn't do. For each: file:line, the defect in one sentence, and a concrete failure (inputs or state, then the wrong result). Only what you confirmed in the code, no style nits. If nothing, say so.
 
 - Reproduce on the local multisite. Never against production.
 - Another local stack may hold 80/443 (`curl -ksi`, read the headers). Don't stop it: set `WORDCAMP_HTTP_PORT=8080` and `WORDCAMP_HTTPS_PORT=8443` in a gitignored `.env`, browse `https://…:8443/`, delete `.env` after. `mu-plugins/0-local-https-port.php` (tracked) adds the port to `siteurl`/`home`, so group sites' `admin_url()`/`rest_url()` reach this stack. nginx gives a request 60s: a slower one 504s while PHP continues, and the next within ~10s gets 502 "no live upstreams". That's the stack, not the PR.

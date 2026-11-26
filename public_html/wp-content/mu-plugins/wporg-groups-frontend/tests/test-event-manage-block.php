@@ -239,21 +239,23 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
-	 * A group admin's Edit opens the settings app, on the row after the
-	 * messaging actions, and the settings block no longer adds a second one.
+	 * A group admin's Edit opens the event modal, the same as everyone else's
+	 * (#2424), on the row after the messaging actions, and the settings block
+	 * doesn't add a second one.
 	 */
-	public function test_admin_edit_opens_settings_app() {
+	public function test_admin_edit_opens_event_modal() {
 		$event_id = $this->go_to_event_owned_by( self::factory()->user->create( array( 'role' => 'author' ) ) );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
 		$output = do_blocks( '<!-- wp:wporg/event-manage /--><!-- wp:wporg/group-settings /-->' );
 
 		$this->assertSame( 1, substr_count( $output, 'Edit this event' ) );
-		$this->assertStringContainsString( 'data-wporg-settings-open="events"', $output );
-		$this->assertStringContainsString( 'data-wporg-settings-event-id="' . $event_id . '"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-modal="edit"', $output );
+		$this->assertStringContainsString( 'data-wporg-groups-event-id="' . $event_id . '"', $output );
+		$this->assertStringNotContainsString( 'data-wporg-settings-event-id', $output );
 		$this->assertStringContainsString( 'data-wporg-groups-modal="copy"', $output );
 		$this->assertLessThan(
-			strpos( $output, 'data-wporg-settings-open="events"' ),
+			strpos( $output, 'data-wporg-groups-modal="edit"' ),
 			strpos( $output, 'data-wporg-groups-modal="message-attendees"' )
 		);
 	}

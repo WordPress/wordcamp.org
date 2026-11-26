@@ -741,6 +741,44 @@ describe( 'event RSVP announces the change to the rest of the page', () => {
 
 		expect( events ).toEqual( [] );
 	} );
+
+	test( 'shares the refreshed attendees with the Attendees block', async () => {
+		document.body.innerHTML =
+			'<div class="wp-block-wporg-event-rsvp"><button type="button">Attend</button></div>';
+		mockElement = document.querySelector( 'button' );
+
+		const shared = [];
+		const handler = ( event ) => shared.push( event.detail );
+		document.addEventListener( 'wporg-groups-rsvp-responses', handler );
+
+		const { actions } = loadStore();
+		const attending = {
+			count: 1,
+			records: [ { name: 'New attendee', photo: '', profile: 'https://example.com/new' } ],
+		};
+
+		global.fetch
+			.mockResolvedValueOnce( { ok: true, json: async () => ( { nonce: 'nonce' } ) } )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => ( {
+					success: true,
+					status: 'attending',
+					responses: { attending: { count: 1 } },
+				} ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: true, data: { attending } } ),
+			} );
+
+		await actions.toggleRsvp();
+		await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+		document.removeEventListener( 'wporg-groups-rsvp-responses', handler );
+
+		expect( shared ).toEqual( [ { postId: 12, attending } ] );
+	} );
 } );
 
 describe( 'event RSVP waiting list', () => {
@@ -755,7 +793,7 @@ describe( 'event RSVP waiting list', () => {
 		mockContext.labels = {
 			...mockContext.labels,
 			...waitingFormats,
-			waitingListed: 'On the waiting list',
+			statusTitleWaiting: "You're on the waiting list",
 			joinWaitingList: 'Join waiting list',
 			leaveWaitingList: 'Leave waiting list',
 			rsvpSuccessWaitingList: 'You have joined the event waiting list.',
@@ -835,6 +873,48 @@ describe( 'event RSVP waiting list', () => {
 		}
 	} );
 
+	test( 'cancelling on a full event asks first, and only withdraws once confirmed', async () => {
+		const { actions } = loadStore();
+		mockContext.currentUserStatus = 'attending';
+		mockContext.labels.rsvpSuccessNotAttending = 'Your RSVP has been canceled.';
+
+		await actions.requestCancel();
+
+		expect( mockContext.confirmingCancel ).toBe( true );
+		expect( global.fetch ).not.toHaveBeenCalled();
+
+		actions.dismissCancel();
+		expect( mockContext.confirmingCancel ).toBe( false );
+
+		await actions.requestCancel();
+		mockRsvp( {
+			success: true,
+			status: 'not_attending',
+			responses: { attending: { count: 0 }, waiting_list: { count: 0 } },
+		} );
+		await actions.toggleRsvp();
+
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).status ).toBe( 'not_attending' );
+		expect( mockContext.currentUserStatus ).toBe( 'not_attending' );
+		expect( mockContext.confirmingCancel ).toBe( false );
+	} );
+
+	test( 'cancelling with seats to spare withdraws straight away', async () => {
+		const { actions } = loadStore();
+		mockContext.currentUserStatus = 'attending';
+		mockContext.capacity = 5;
+
+		mockRsvp( {
+			success: true,
+			status: 'not_attending',
+			responses: { attending: { count: 0 }, waiting_list: { count: 0 } },
+		} );
+		await actions.requestCancel();
+
+		expect( mockContext.confirmingCancel ).toBeFalsy();
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).status ).toBe( 'not_attending' );
+	} );
+
 	test( 'joining a full event puts the member on the waiting list', async () => {
 		const { actions, state } = loadStore();
 
@@ -856,7 +936,7 @@ describe( 'event RSVP waiting list', () => {
 		expect( mockContext.attendingCount ).toBe( 1 );
 		expect( mockContext.waitingCount ).toBe( 1 );
 		expect( mockContext.rsvpNotice ).toBe( 'You have joined the event waiting list.' );
-		expect( state.rsvpButtonLabel ).toBe( 'On the waiting list' );
+		expect( state.statusTitle ).toBe( "You're on the waiting list" );
 		expect( state.waitingLabel ).toBe( 'Full · 1 on the waiting list' );
 	} );
 } );

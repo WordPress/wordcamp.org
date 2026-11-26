@@ -25,6 +25,7 @@ require_once __DIR__ . '/inc/event-language.php';
 require_once __DIR__ . '/inc/event-flyer.php';
 require_once __DIR__ . '/inc/event-topics.php';
 require_once __DIR__ . '/inc/event-hosts.php';
+require_once __DIR__ . '/inc/event-speakers.php';
 require_once __DIR__ . '/inc/rsvp-labels.php';
 require_once __DIR__ . '/inc/rsvp-questions.php';
 require_once __DIR__ . '/inc/rsvp-confirmation.php';
@@ -42,6 +43,7 @@ require_once __DIR__ . '/inc/member-joined.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
+require_once __DIR__ . '/inc/group-message.php';
 require_once __DIR__ . '/inc/sponsors.php';
 require_once __DIR__ . '/inc/upload-space.php';
 
@@ -85,6 +87,7 @@ function bootstrap(): void {
 	Modal\bootstrap();
 	Notifications\bootstrap();
 	Event_Email\bootstrap();
+	Group_Message\bootstrap();
 
 	add_action(
 		'rest_api_init',

@@ -152,8 +152,6 @@ $rsvp_labels = array_merge(
 	get_modal_title_formats(),
 	array(
 		'loading'                    => "\u{2026}",
-		'attending'                  => "\u{2713} " . __( 'Attending', 'wordcamporg' ),
-		'waitingListed'              => __( 'On the waiting list', 'wordcamporg' ),
 		'joinWaitingList'            => __( 'Join waiting list', 'wordcamporg' ),
 		'leaveWaitingList'           => _x( 'Leave waiting list', 'button to give up a place on an event waiting list', 'wordcamporg' ),
 		'rsvp'                       => __( 'RSVP', 'wordcamporg' ),
@@ -161,6 +159,13 @@ $rsvp_labels = array_merge(
 		'statusAttending'            => __( 'You are attending this event.', 'wordcamporg' ),
 		'statusWaiting'              => __( "You're on the waiting list. If a spot opens up, you'll move to attending automatically.", 'wordcamporg' ),
 		'statusNotAttending'         => __( 'You have not RSVPed to this event.', 'wordcamporg' ),
+		'statusTitleAttending'       => __( "You're attending", 'wordcamporg' ),
+		'statusTitleWaiting'         => __( "You're on the waiting list", 'wordcamporg' ),
+		'statusHintWaiting'          => __( "If a spot opens up, you'll move to attending automatically.", 'wordcamporg' ),
+		'confirmCancelAttending'     => __( 'This event is full, so you might not get your spot back.', 'wordcamporg' ),
+		'confirmLeaveWaiting'        => __( "You'll lose your place in line.", 'wordcamporg' ),
+		'keepSpot'                   => __( 'Keep my spot', 'wordcamporg' ),
+		'stayOnList'                 => __( 'Stay on the list', 'wordcamporg' ),
 		'cancelRsvp'                 => _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wordcamporg' ),
 		'attend'                     => __( 'Attend', 'wordcamporg' ),
 		'emptyAttendees'             => __( 'No attendees yet. Be the first to RSVP!', 'wordcamporg' ),
@@ -175,21 +180,17 @@ $rsvp_labels = array_merge(
 );
 
 // The SSR side of the same-named getters in view.js, picked by the same keys.
-if ( $is_attending ) {
-	$rsvp_button_label = $rsvp_labels['attending'];
-	$modal_rsvp_label  = $rsvp_labels['cancelRsvp'];
-	$status_text       = $rsvp_labels['statusAttending'];
-} elseif ( $is_waiting ) {
-	$rsvp_button_label = $rsvp_labels['waitingListed'];
-	$modal_rsvp_label  = $rsvp_labels['leaveWaitingList'];
-	$status_text       = $rsvp_labels['statusWaiting'];
-} else {
-	$rsvp_button_label = $rsvp_labels[ $is_full ? 'joinWaitingList' : ( $is_member ? 'rsvp' : 'joinRsvp' ) ];
-	$modal_rsvp_label  = $rsvp_labels[ $is_full ? 'joinWaitingList' : 'attend' ];
-	$status_text       = $rsvp_labels['statusNotAttending'];
-}
+// The RSVP buttons only show before you respond, so their labels ignore the status.
+$rsvp_button_label = $rsvp_labels[ $is_full ? 'joinWaitingList' : ( $is_member ? 'rsvp' : 'joinRsvp' ) ];
+$modal_rsvp_label  = $rsvp_labels[ $is_full ? 'joinWaitingList' : 'attend' ];
 
-$cancel_label = $rsvp_labels[ $is_waiting ? 'leaveWaitingList' : 'cancelRsvp' ];
+$status_text  = $rsvp_labels[ $is_attending ? 'statusAttending' : ( $is_waiting ? 'statusWaiting' : 'statusNotAttending' ) ];
+$status_title = $has_response ? $rsvp_labels[ $is_waiting ? 'statusTitleWaiting' : 'statusTitleAttending' ] : '';
+$status_hint  = $is_waiting ? $rsvp_labels['statusHintWaiting'] : '';
+
+$cancel_label   = $rsvp_labels[ $is_waiting ? 'leaveWaitingList' : 'cancelRsvp' ];
+$keep_label     = $rsvp_labels[ $is_waiting ? 'stayOnList' : 'keepSpot' ];
+$confirm_prompt = $rsvp_labels[ $is_waiting ? 'confirmLeaveWaiting' : 'confirmCancelAttending' ];
 
 $context = array(
 	'postId'            => (int) $event_post_id,
@@ -212,6 +213,7 @@ $context = array(
 	'canViewAnswers'    => $can_view_answers,
 	'canViewWaiting'    => $can_view_roster,
 	'modalOpen'         => false,
+	'confirmingCancel'  => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
 	'rsvpNoticeSuccess' => false,
@@ -225,7 +227,6 @@ $context = array(
 wp_interactivity_state(
 	'wporg/event-rsvp',
 	array(
-		'isAttending'       => $is_attending,
 		'isWaiting'         => $is_waiting,
 		'hasResponse'       => $has_response,
 		'hasNoAttendees'    => $has_no_attendees,
@@ -235,8 +236,12 @@ wp_interactivity_state(
 		'isMember'          => $is_member,
 		'rsvpButtonLabel'   => $rsvp_button_label,
 		'statusText'        => $status_text,
+		'statusTitle'       => $status_title,
+		'statusHint'        => $status_hint,
 		'modalRsvpLabel'    => $modal_rsvp_label,
 		'cancelLabel'       => $cancel_label,
+		'keepLabel'         => $keep_label,
+		'confirmPrompt'     => $confirm_prompt,
 	)
 );
 
@@ -278,10 +283,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes escapes. ?>>
 
 	<?php if ( ! $is_past ) : ?>
+		<?php // Only an offer to RSVP. Once you have, the status panel below takes its place. ?>
 		<div
-			class="wp-block-button<?php echo $has_response ? ' is-style-outline' : ''; ?><?php echo $is_waiting ? ' is-waiting' : ''; ?>"
-			data-wp-class--is-style-outline="state.hasResponse"
-			data-wp-class--is-waiting="state.isWaiting"
+			class="wp-block-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
+			data-wp-class--is-hidden="state.hasResponse"
 		>
 			<?php
 			/*
@@ -292,10 +297,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			?>
 			<button
 				type="button"
-				class="wp-block-button__link wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
+				class="wp-block-button__link wp-element-button wporg-event-rsvp__button"
 				data-wp-on--click="actions.handleRsvpButton"
 				data-wp-text="state.rsvpButtonLabel"
-				data-wp-class--is-attending="state.isAttending"
 				data-wp-bind--disabled="context.rsvpLoading"
 				data-wp-bind--aria-busy="context.rsvpLoading"
 			>
@@ -313,30 +317,93 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php if ( ! $is_past && $is_login ) : ?>
 		<?php
 		/*
-		 * Cancelling used to be reachable only by clicking the "Attending"
-		 * button, which says what your status is rather than what pressing it
-		 * will do, and then finding the action inside the modal it opens
-		 * (#2058). Say it on the page instead. Same `toggleRsvp` action the
-		 * modal's button calls, so there is one way to withdraw and both
-		 * doors lead to it.
+		 * Your RSVP as a status, with the ways to change it beside it. Being
+		 * attending is not an action, so it isn't a button (#2058).
 		 *
-		 * Rendered for every signed-in visitor and hidden until they are
-		 * attending or waiting, rather than rendered on demand: the button
-		 * above changes status without a reload, so the control has to
-		 * already be in the DOM for `state.hasResponse` to reveal it.
+		 * Rendered for every signed-in visitor and hidden until they respond:
+		 * RSVPing doesn't reload the page, so the panel has to already be in
+		 * the DOM for `state.hasResponse` to reveal it.
 		 */
+		$confirm_prompt_id = 'wporg-event-rsvp-confirm-' . $event_post_id;
 		?>
-		<button
-			type="button"
-			class="wporg-event-rsvp__cancel<?php echo $has_response ? '' : ' is-hidden'; ?>"
-			data-wp-on--click="actions.toggleRsvp"
-			data-wp-text="state.cancelLabel"
+		<div
+			class="wporg-event-rsvp__status<?php echo $has_response ? '' : ' is-hidden'; ?><?php echo $is_waiting ? ' is-waiting' : ''; ?>"
 			data-wp-class--is-hidden="!state.hasResponse"
-			data-wp-bind--disabled="context.rsvpLoading"
-			data-wp-bind--aria-busy="context.rsvpLoading"
+			data-wp-class--is-waiting="state.isWaiting"
+			tabindex="-1"
 		>
-			<?php echo esc_html( $cancel_label ); ?>
-		</button>
+			<p class="wporg-event-rsvp__status-title">
+				<svg class="wporg-event-rsvp__status-icon is-attending-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+					<circle cx="12" cy="12" r="12" />
+					<path d="M7 12.4l3.2 3.1L17 8.8" />
+				</svg>
+				<svg class="wporg-event-rsvp__status-icon is-waiting-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+					<circle cx="12" cy="12" r="11" />
+					<path d="M12 7v5.2l3.2 2" />
+				</svg>
+				<span data-wp-text="state.statusTitle"><?php echo esc_html( $status_title ); ?></span>
+			</p>
+			<p
+				class="wporg-event-rsvp__status-hint<?php echo '' === $status_hint ? ' is-hidden' : ''; ?>"
+				data-wp-text="state.statusHint"
+				data-wp-class--is-hidden="!state.statusHint"
+			><?php echo esc_html( $status_hint ); ?></p>
+
+			<div class="wporg-event-rsvp__status-actions" data-wp-class--is-hidden="context.confirmingCancel">
+				<?php if ( $questions ) : ?>
+					<button
+						type="button"
+						class="wporg-event-rsvp__status-button"
+						data-wp-on--click="actions.openModal"
+					>
+						<?php esc_html_e( 'Edit answers', 'wordcamporg' ); ?>
+					</button>
+				<?php endif; ?>
+				<button
+					type="button"
+					class="wporg-event-rsvp__status-button wporg-event-rsvp__cancel"
+					data-wp-on--click="actions.requestCancel"
+					data-wp-text="state.cancelLabel"
+					data-wp-bind--disabled="context.rsvpLoading"
+					data-wp-bind--aria-busy="context.rsvpLoading"
+				>
+					<?php echo esc_html( $cancel_label ); ?>
+				</button>
+			</div>
+
+			<?php // Only a full event asks first: there, giving up your spot can't be undone by RSVPing again. ?>
+			<div
+				class="wporg-event-rsvp__confirm is-hidden"
+				data-wp-class--is-hidden="!context.confirmingCancel"
+				data-wp-on--keydown="actions.handleConfirmKeydown"
+			>
+				<p class="wporg-event-rsvp__confirm-prompt" id="<?php echo esc_attr( $confirm_prompt_id ); ?>" data-wp-text="state.confirmPrompt">
+					<?php echo esc_html( $confirm_prompt ); ?>
+				</p>
+				<div class="wporg-event-rsvp__status-actions">
+					<button
+						type="button"
+						class="wporg-event-rsvp__status-button"
+						data-wp-on--click="actions.toggleRsvp"
+						data-wp-text="state.cancelLabel"
+						data-wp-bind--disabled="context.rsvpLoading"
+						data-wp-bind--aria-busy="context.rsvpLoading"
+					>
+						<?php echo esc_html( $cancel_label ); ?>
+					</button>
+					<button
+						type="button"
+						class="wporg-event-rsvp__status-button wporg-event-rsvp__keep"
+						data-wp-on--click="actions.dismissCancel"
+						data-wp-text="state.keepLabel"
+						data-wp-bind--disabled="context.rsvpLoading"
+						aria-describedby="<?php echo esc_attr( $confirm_prompt_id ); ?>"
+					>
+						<?php echo esc_html( $keep_label ); ?>
+					</button>
+				</div>
+			</div>
+		</div>
 	<?php endif; ?>
 
 	<button
@@ -475,12 +542,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								</button>
 							<?php endif; ?>
 
+							<?php // Cancelling lives in the status panel on the page, so this only RSVPs. ?>
 							<button
 								type="button"
-								class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $has_response ? ' is-attending' : ''; ?>"
+								class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
 								data-wp-on--click="actions.toggleRsvp"
 								data-wp-text="state.modalRsvpLabel"
-								data-wp-class--is-attending="state.hasResponse"
+								data-wp-class--is-hidden="state.hasResponse"
 								data-wp-bind--disabled="context.rsvpLoading"
 								data-wp-bind--aria-busy="context.rsvpLoading"
 							>

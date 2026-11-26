@@ -24,6 +24,10 @@
 	// Accent tokens and the header stacking fix come from
 	// `components/component-accents.css`.
 
+	&.components-modal__frame.is-full-screen {
+		max-width: 688px;
+	}
+
 	.components-modal__content {
 		padding: 0;
 		display: flex;
@@ -31,9 +35,9 @@
 	}
 
 	// The modal wraps its children in this container, which breaks the flex
-	// chain: without it the tab panel and single-event view grow to their
-	// content, the whole modal scrolls instead, and sticky children (the tab
-	// bar, the description editor's toolbar) scroll away with it.
+	// chain: without it the tab panel grows to its content, the whole modal
+	// scrolls instead, and sticky children (the tab bar, the description
+	// editor's toolbar) scroll away with it.
 	.components-modal__children-container {
 		display: flex;
 		flex-direction: column;
@@ -52,6 +56,7 @@
 			border-bottom: 1px solid #e0e0e0;
 			padding: 0 24px;
 			flex-shrink: 0;
+			flex-wrap: wrap;
 		}
 
 		.components-tab-panel__tab-content {
@@ -59,14 +64,6 @@
 			overflow-y: auto;
 			padding: 24px;
 		}
-	}
-
-	// Editing one event drops the tab bar (#2073), and with it the
-	// tab-content wrapper that padded and scrolled the panel.
-	&__single {
-		flex: 1;
-		overflow-y: auto;
-		padding: 24px;
 	}
 }
 
@@ -407,15 +404,17 @@
 
 .wporg-members-tab {
 
+	// Wraps on narrow screens, so the message button doesn't squeeze search.
 	&__controls {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 16px;
 		margin-bottom: 16px;
 	}
 
 	&__search {
-		flex: 1;
+		flex: 1 1 200px;
 		max-width: 300px;
 	}
 

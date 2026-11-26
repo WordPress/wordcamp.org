@@ -1,6 +1,6 @@
 <?php
 /**
- * Share the WordCamp network's Meetup connection with the Groups network.
+ * Share the WordCamp network's Meetup connection with the Groups and Events networks.
  *
  * The Meetup client keeps its OAuth token in a network option, so each network
  * would need its own connection -- and the Groups network can't get one by
@@ -15,7 +15,12 @@
  * also avoids two networks refreshing copies of the same token and
  * invalidating each other's.
  *
- * Only loaded on the Groups network, via
+ * The Events network gets the same window: the events.wordpress.org homepage
+ * stats (`wporg-events-2023/inc/stats.php`) read the groups' member and event
+ * counts, and without a token Meetup leaves those out.
+ *
+ * Loaded on the Groups network with the rest of its folder, and on the Events
+ * network by name, both via
  * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
  *
  * @package WordCamp\Groups
@@ -38,6 +43,16 @@ add_filter( 'pre_update_site_option_' . TOKEN_OPTION, __NAMESPACE__ . '\write_sh
 add_action( 'pre_delete_site_option_' . TOKEN_OPTION, __NAMESPACE__ . '\delete_shared_token', 10, 2 );
 
 /**
+ * Whether a network uses Central's token instead of keeping its own.
+ *
+ * @param int $network_id Network being read or written.
+ * @return bool
+ */
+function shares_central_token( $network_id ) {
+	return in_array( (int) $network_id, array( GROUPS_NETWORK_ID, EVENTS_NETWORK_ID ), true );
+}
+
+/**
  * Read the token from the WordCamp network instead of this one.
  *
  * The network check matters: reading Central's option runs this same filter,
@@ -49,7 +64,7 @@ add_action( 'pre_delete_site_option_' . TOKEN_OPTION, __NAMESPACE__ . '\delete_s
  * @return mixed
  */
 function read_shared_token( $pre, $option, $network_id ) {
-	if ( GROUPS_NETWORK_ID !== (int) $network_id ) {
+	if ( ! shares_central_token( $network_id ) ) {
 		return $pre;
 	}
 
@@ -69,7 +84,7 @@ function read_shared_token( $pre, $option, $network_id ) {
  * @return mixed
  */
 function write_shared_token( $value, $old_value, $option, $network_id ) {
-	if ( GROUPS_NETWORK_ID !== (int) $network_id ) {
+	if ( ! shares_central_token( $network_id ) ) {
 		return $value;
 	}
 
@@ -89,7 +104,7 @@ function write_shared_token( $value, $old_value, $option, $network_id ) {
  * @param int    $network_id Network being written.
  */
 function delete_shared_token( $option, $network_id ) {
-	if ( GROUPS_NETWORK_ID !== (int) $network_id ) {
+	if ( ! shares_central_token( $network_id ) ) {
 		return;
 	}
 

@@ -4,47 +4,130 @@
  * @package WordCamp\Groups\Frontend
  */
 
-/* === Cancel RSVP ===
-   Sits under the "Attending" button and only while that is what the button
-   says. Deliberately quiet — a text button rather than a second filled one,
-   so the card still reads as one primary action with a way out beneath it,
-   not as two competing choices. */
-.wporg-event-rsvp__cancel {
+/* === Status panel ===
+   Takes the RSVP button's place once you've responded, at about the same
+   height so the card doesn't jump. A status, not a control: the only things
+   to press are the small buttons beside it. */
+.wporg-event-rsvp__status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	padding: 12px 16px;
+	border-radius: 2px;
+	background: var(--wp--preset--color--acid-green-3, #e2ffed);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
 
-	/* Its own line — the attendee summary next to it is `inline-flex`, so an
-	   inline cancel sits down beside the avatars and reads as part of that
-	   row. `fit-content` keeps the click target the width of the words
-	   rather than the width of the card. */
+.wporg-event-rsvp__status.is-waiting {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+}
+
+/* The title and the buttons share a row when they fit, which is the case on
+   a full-width card, and the buttons wrap under it in the narrow sidebar.
+   The icon lives in the title, so the wrapped buttons get the full width. */
+.wporg-event-rsvp__status-title {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 4px 0;
+	font-size: var(--wp--preset--font-size--normal, 16px);
+	font-weight: 600;
+	line-height: 1.5;
+}
+
+.wporg-event-rsvp__status-icon {
+	flex: 0 0 auto;
+}
+
+.is-attending-icon circle {
+	fill: #007a2f;
+}
+
+.is-attending-icon path {
+	fill: none;
+	stroke: var(--wp--preset--color--white, #fff);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.is-waiting-icon circle,
+.is-waiting-icon path {
+	fill: none;
+	stroke: var(--wp--preset--color--charcoal-3, #40464d);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+}
+
+.wporg-event-rsvp__status .is-waiting-icon,
+.wporg-event-rsvp__status.is-waiting .is-attending-icon {
+	display: none;
+}
+
+.wporg-event-rsvp__status.is-waiting .is-waiting-icon {
 	display: block;
-	width: fit-content;
-	margin: 8px 0 0;
-	padding: 0;
-	border: 0;
-	background: transparent;
-	color: var(--wp--preset--color--charcoal-4, #646970);
+}
+
+.wporg-event-rsvp__status-hint,
+.wporg-event-rsvp__confirm {
+	flex: 1 0 100%;
+}
+
+.wporg-event-rsvp__status-hint,
+.wporg-event-rsvp__confirm-prompt {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-3, #40464d);
+}
+
+.wporg-event-rsvp__status-hint {
+	margin-top: -6px;
+}
+
+.wporg-event-rsvp__status-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.wporg-event-rsvp__confirm-prompt {
+	margin-bottom: 8px;
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+}
+
+/* Secondary buttons: white on the tinted panel, so they read as things to
+   press without competing with a primary RSVP button elsewhere on the page. */
+.wporg-event-rsvp__status-button {
+	min-height: 32px;
+	padding: 5px 12px;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
+	border-radius: 2px;
+	background: var(--wp--preset--color--white, #fff);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
 	font-family: inherit;
 	font-size: var(--wp--preset--font-size--small, 14px);
-	line-height: 1.5;
-	text-decoration: underline;
+	font-weight: 600;
+	line-height: 1.4;
+	text-align: left;
 	cursor: pointer;
-	border-radius: 2px;
 }
 
-.wporg-event-rsvp__cancel:hover {
-	color: var(--wp--preset--color--charcoal-1, #1e1e1e);
+.wporg-event-rsvp__status-button:hover {
+	border-color: var(--wp--preset--color--charcoal-4, #656a71);
 }
 
-.wporg-event-rsvp__cancel:focus-visible {
-	outline: 2px solid var(--wp--preset--color--blueberry-1, #3858e9);
-	outline-offset: 2px;
+.wporg-event-rsvp__status-button:disabled {
+	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
+	color: var(--wp--preset--color--charcoal-4, #656a71);
+	cursor: not-allowed;
 }
 
-.wporg-event-rsvp__cancel[disabled] {
-	cursor: default;
-	opacity: 0.6;
-}
-
-.wporg-event-rsvp__cancel.is-hidden {
+/* Everything the view toggles with `data-wp-class--is-hidden`. */
+.wp-block-wporg-event-rsvp .is-hidden {
 	display: none;
 }
 
@@ -139,10 +222,6 @@
 	color: var(--wp--preset--color--charcoal-4, #656a71);
 }
 
-.wporg-event-rsvp__waiting.is-hidden {
-	display: none;
-}
-
 /* === RSVP button === */
 .wp-block-wporg-event-rsvp .wp-block-button {
 	width: 100%;
@@ -152,28 +231,6 @@
 	width: 100%;
 	text-align: center;
 	justify-content: center;
-}
-
-/*
- * The site's one non-blue button. Attending reports a state instead of
- * offering an action, so green reads as "done", not "click me again".
- *
- * Set as an override of the parent theme's outline tokens rather than as a
- * competing rule — the same idiom the parent uses for its own
- * `is-style-fill-on-dark` variant. The wrapper carries `is-style-outline`
- * while the viewer is attending or waiting (`state.hasResponse`). Waiting
- * isn't done yet, so `is-waiting` keeps the theme's plain outline instead.
- */
-.wp-block-wporg-event-rsvp .wp-block-button.is-style-outline:not(.is-waiting) {
-	--wp--custom--button--outline--color--background: var(--wp--preset--color--acid-green-3, #e2ffed);
-	--wp--custom--button--outline--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
-	--wp--custom--button--outline--border--color: var(--wp--preset--color--acid-green-1, #33f078);
-	--wp--custom--button--outline--hover--color--background: #c8f5d9;
-	--wp--custom--button--outline--hover--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
-	--wp--custom--button--outline--hover--border--color: #17c257;
-	--wp--custom--button--outline--active--color--background: #c8f5d9;
-	--wp--custom--button--outline--active--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
-	--wp--custom--button--outline--active--border--color: #17c257;
 }
 
 /* A past event's button is `disabled`, so the theme's disabled treatment
@@ -308,10 +365,6 @@
 	min-width: 0;
 }
 
-.wporg-event-rsvp__questions.is-hidden {
-	display: none;
-}
-
 .wporg-event-rsvp__question {
 	display: flex;
 	flex-direction: column;
@@ -385,10 +438,6 @@
 	cursor: not-allowed;
 }
 
-.wporg-event-rsvp__save-answers.is-hidden {
-	display: none;
-}
-
 .wporg-event-rsvp__modal-rsvp-btn {
 	white-space: nowrap;
 	flex-shrink: 0;
@@ -396,17 +445,6 @@
 	font-size: var(--wp--preset--font-size--small, 14px);
 	font-weight: 600;
 	line-height: 1.4;
-}
-
-.wporg-event-rsvp__modal-rsvp-btn.is-attending {
-	background: transparent;
-	color: #656a71;
-	border: 1px solid #d9d9d9;
-}
-
-.wporg-event-rsvp__modal-rsvp-btn.is-attending:hover {
-	border-color: #979aa1;
-	color: #40464d;
 }
 
 /* === Attendee list === */

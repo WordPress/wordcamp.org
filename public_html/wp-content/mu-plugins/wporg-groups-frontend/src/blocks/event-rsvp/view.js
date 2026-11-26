@@ -228,17 +228,31 @@ function focusInBlock( ref, selector ) {
 	scheduleFocus( ref?.closest( '.wp-block-wporg-event-rsvp' )?.querySelector( selector ) );
 }
 
+// The page control for the current status: the status panel once you've responded, the RSVP button before.
+function rsvpControl( ctx, ref ) {
+	return ref
+		?.closest( '.wp-block-wporg-event-rsvp' )
+		?.querySelector( hasResponse( ctx ) ? '.wporg-event-rsvp__status' : '.wporg-event-rsvp__button' );
+}
+
 /**
  * Keep focus on the page control that replaced the one just pressed.
  *
- * RSVPing hides the RSVP button and cancelling hides the status panel, so
- * without this focus falls back to the top of the page.
+ * RSVPing hides the RSVP button and cancelling hides the status panel, which
+ * drops focus to the top of the page. Only steps in when focus went with
+ * them, never pulling someone back from wherever they've moved since.
  *
  * @param {Object}  ctx The block's interactivity context.
  * @param {Element} ref Any element inside the block.
  */
 function focusRsvpControl( ctx, ref ) {
-	focusInBlock( ref, hasResponse( ctx ) ? '.wporg-event-rsvp__status' : '.wporg-event-rsvp__button' );
+	window.requestAnimationFrame( () => {
+		const active = ref?.ownerDocument.activeElement;
+		if ( active && active !== ref.ownerDocument.body && ! active.closest( '.is-hidden' ) ) {
+			return;
+		}
+		rsvpControl( ctx, ref )?.focus();
+	} );
 }
 
 function openRsvpModal( ctx, trigger ) {
@@ -279,7 +293,13 @@ function closeRsvpModal( ctx ) {
 	activeModalState = null;
 	document.body.style.overflow = previousBodyOverflow;
 
-	scheduleFocus( trigger );
+	window.requestAnimationFrame( () => {
+		// The status change may have hidden the trigger, such as the RSVP button.
+		const target = trigger?.closest( '.is-hidden' ) ? rsvpControl( ctx, trigger ) : trigger;
+		if ( target && document.contains( target ) ) {
+			target.focus();
+		}
+	} );
 }
 
 function getFocusableElements( modal ) {
@@ -294,8 +314,7 @@ function scheduleFocus( element ) {
 	}
 
 	window.requestAnimationFrame( () => {
-		// Skips a control the status change just hid, such as the modal's trigger.
-		if ( document.contains( element ) && ! element.closest( '.is-hidden' ) ) {
+		if ( document.contains( element ) ) {
 			element.focus();
 		}
 	} );

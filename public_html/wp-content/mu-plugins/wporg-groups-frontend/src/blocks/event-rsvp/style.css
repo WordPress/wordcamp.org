@@ -138,6 +138,7 @@
    clickable area matches the visible content. */
 .wporg-event-rsvp__summary {
 	display: inline-flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 10px;
 	max-width: 100%;
@@ -200,7 +201,9 @@
 }
 
 /* Who's going, with how full the event is as a caption underneath, so the
-   avatars sit beside one block of text instead of two loose lines. */
+   avatars sit beside one block of text instead of two loose lines. In a
+   narrow card with a full avatar stack, the text drops below the avatars
+   rather than squeezing into a sliver beside them. */
 .wporg-event-rsvp__summary-text {
 	display: flex;
 	flex-direction: column;

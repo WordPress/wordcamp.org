@@ -29,9 +29,11 @@ export default function AboutTab() {
 	const [ notice, setNotice ] = useState( '' );
 	const [ noticeType, setNoticeType ] = useState( 'success' );
 	const [ countries, setCountries ] = useState( [] );
+	const [ siteLanguages, setSiteLanguages ] = useState( [] );
 	const [ form, setForm ] = useState( {
 		blogname: '',
 		blogdescription: '',
+		siteLanguage: '',
 		locationType: '',
 		city: '',
 		countryCode: '',
@@ -46,6 +48,7 @@ export default function AboutTab() {
 	// saved. Only an explicit edit — including "Clear location" — should
 	// submit a location change.
 	const [ locationDirty, setLocationDirty ] = useState( false );
+	const [ languageDirty, setLanguageDirty ] = useState( false );
 
 	useEffect( () => {
 		apiFetch( { path: '/wporg-groups/v1/group-info' } )
@@ -54,15 +57,20 @@ export default function AboutTab() {
 				const countryOptions = data.countries || [];
 				const storedCountry = location.countryCode || '';
 				const isKnownCountry = countryOptions.some( ( country ) => country.code === storedCountry );
+				const languageOptions = data.siteLanguages || [];
+				const storedLanguage = data.siteLanguage || '';
+				const isKnownLanguage = languageOptions.some( ( lang ) => lang.code === storedLanguage );
 
 				setForm( {
 					blogname: data.title || '',
 					blogdescription: data.description || '',
+					siteLanguage: isKnownLanguage ? storedLanguage : '',
 					locationType: location.type || '',
 					city: location.city || '',
 					countryCode: isKnownCountry ? storedCountry : '',
 				} );
 				setCountries( countryOptions );
+				setSiteLanguages( languageOptions );
 				setLoading( false );
 			} )
 			.catch( ( err ) => {
@@ -86,6 +94,10 @@ export default function AboutTab() {
 				description: form.blogdescription,
 			};
 
+			if ( languageDirty ) {
+				data.site_language = form.siteLanguage;
+			}
+
 			if ( locationDirty ) {
 				if ( 'online' === form.locationType ) {
 					data.location = { type: 'online' };
@@ -105,6 +117,7 @@ export default function AboutTab() {
 				method: 'POST',
 				data,
 			} );
+			setLanguageDirty( false );
 			setNoticeType( 'success' );
 			setNotice( __( 'Settings saved.', 'wordcamporg' ) );
 		} catch ( err ) {
@@ -153,6 +166,25 @@ export default function AboutTab() {
 			help: __( 'A short tagline for your group, used in the browser title and search results.', 'wordcamporg' ),
 			__nextHasNoMarginBottom: true,
 		} ),
+		siteLanguages.length > 1 &&
+			h( SelectControl, {
+				label: __( 'Site language', 'wordcamporg' ),
+				value: form.siteLanguage,
+				options: siteLanguages.map( ( lang ) => ( {
+					label: lang.name,
+					value: lang.code,
+				} ) ),
+				onChange: ( v ) => {
+					setLanguageDirty( true );
+					setForm( { ...form, siteLanguage: v } );
+				},
+				disabled: loadFailed,
+				help: __(
+					'The default language visitors see on your group site. Logged-in members who chose a language in their WordPress.org profile still see their own.',
+					'wordcamporg'
+				),
+				__nextHasNoMarginBottom: true,
+			} ),
 		h(
 			'div',
 			{ className: 'wporg-settings-tab__location' },

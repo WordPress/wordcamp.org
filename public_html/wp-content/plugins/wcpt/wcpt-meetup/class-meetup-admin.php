@@ -283,13 +283,23 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return WP_Site|null
 		 */
 		public static function get_group_site( $post_id ) {
-			$site = get_site( (int) get_post_meta( $post_id, self::GROUP_SITE_ID_KEY, true ) );
+			$site_id = (int) get_post_meta( $post_id, self::GROUP_SITE_ID_KEY, true );
+			$site    = $site_id ? get_site( $site_id ) : null;
 
-			if ( ! $site || GROUPS_NETWORK_ID !== (int) $site->network_id || $site->archived || $site->deleted || $site->spam ) {
-				return null;
-			}
+			return self::is_group_site( $site ) ? $site : null;
+		}
 
-			return $site;
+		/**
+		 * Whether a site is a live group site, and not the groups root.
+		 *
+		 * @param WP_Site|false|null $site Site.
+		 * @return bool
+		 */
+		protected static function is_group_site( $site ) {
+			return $site instanceof \WP_Site
+				&& GROUPS_NETWORK_ID === (int) $site->network_id
+				&& GROUPS_ROOT_BLOG_ID !== (int) $site->blog_id
+				&& ! $site->archived && ! $site->deleted && ! $site->spam;
 		}
 
 		/**
@@ -307,11 +317,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$site = get_site_by_path( $host, trailingslashit( (string) wp_parse_url( $url, PHP_URL_PATH ) ) );
 
-			if ( ! $site || GROUPS_NETWORK_ID !== (int) $site->network_id || GROUPS_ROOT_BLOG_ID === (int) $site->blog_id ) {
-				return 0;
-			}
-
-			return (int) $site->blog_id;
+			return self::is_group_site( $site ) ? (int) $site->blog_id : 0;
 		}
 
 		/**
@@ -324,7 +330,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return;
 			}
 
-			$url     = (string) get_post_meta( $post_id, self::GROUP_URL_KEY, true );
+			$url     = trim( (string) get_post_meta( $post_id, self::GROUP_URL_KEY, true ) );
 			$site_id = '' === $url ? 0 : self::resolve_group_site( $url );
 
 			if ( ! $site_id ) {
@@ -355,9 +361,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @param int $site_id Group site.
 		 */
 		public static function request_group_stats_refresh( $site_id ) {
-			switch_to_blog( GROUPS_ROOT_BLOG_ID );
-
 			try {
+				switch_to_blog( GROUPS_ROOT_BLOG_ID );
 				wp_schedule_single_event( time(), self::GROUP_REFRESH_HOOK, array( (int) $site_id ) );
 			} finally {
 				restore_current_blog();
@@ -396,7 +401,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$site  = self::get_group_site( $post->ID );
 			$stats = get_site_meta( $site->blog_id, self::GROUP_STATS_KEY, true );
 			$date  = static function ( $gmt ) {
-				return $gmt ? gmdate( 'Y-m-d', strtotime( $gmt . ' UTC' ) ) : '';
+				return $gmt ? gmdate( 'Y-m-d H:i', strtotime( $gmt . ' UTC' ) ) . ' UTC' : '';
 			};
 
 			if ( is_array( $stats ) ) {

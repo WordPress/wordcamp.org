@@ -123,9 +123,9 @@ class Test_Meetup_Group_Link extends WP_UnitTestCase {
 	 * @covers Meetup_Admin::update_group_site_link
 	 */
 	public function test_saving_a_group_url_links_the_group_site() {
-		$this->save( 'https://events.wordpress.test/group/joinville/events/' );
+		$this->save( ' https://events.wordpress.test/group/joinville/events/ ' );
 
-		$this->assertSame( self::$group_site_id, (int) get_post_meta( $this->post_id, Meetup_Admin::GROUP_SITE_ID_KEY, true ) );
+		$this->assertSame( self::$group_site_id, (int) get_post_meta( $this->post_id, Meetup_Admin::GROUP_SITE_ID_KEY, true ), 'A pasted URL with spaces still links.' );
 		$this->assertSame( self::$group_site_id, (int) Meetup_Admin::get_group_site( $this->post_id )->blog_id );
 
 		$this->save( 'https://www.meetup.com/wp-joinville/' );
@@ -136,6 +136,14 @@ class Test_Meetup_Group_Link extends WP_UnitTestCase {
 		$this->save( 'https://events.wordpress.test/group/' );
 
 		$this->assertNull( Meetup_Admin::get_group_site( $this->post_id ), 'The groups root is not a group.' );
+
+		update_blog_status( self::$group_site_id, 'archived', 1 );
+		$this->admin->active_admin_notices = array();
+		$this->save( 'https://events.wordpress.test/group/joinville/' );
+		update_blog_status( self::$group_site_id, 'archived', 0 );
+
+		$this->assertSame( '', get_post_meta( $this->post_id, Meetup_Admin::GROUP_SITE_ID_KEY, true ), 'An archived group is not linked.' );
+		$this->assertContains( 'invalid-group-url', $this->admin->active_admin_notices );
 	}
 
 	/**

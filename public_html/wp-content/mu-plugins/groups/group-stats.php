@@ -114,9 +114,9 @@ function build_summary( int $site_id ) {
 		return $rows;
 	}
 
-	switch_to_blog( $site_id );
-
 	try {
+		switch_to_blog( $site_id );
+
 		$event_ids = array_values( array_unique( array_map( 'intval', wp_list_pluck( $rows, 'event_id' ) ) ) );
 		update_postmeta_cache( $event_ids );
 

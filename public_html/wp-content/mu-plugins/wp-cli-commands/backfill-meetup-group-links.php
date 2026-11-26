@@ -10,7 +10,7 @@ class WordCamp_CLI_Backfill_Meetup_Group_Links extends WP_CLI_Command {
 	 * Link tracker records to group sites by their Meetup.com group name.
 	 *
 	 * A group site imported from Meetup.com stores the group's name; the tracker
-	 * record has it at the end of its Meetup URL. Records that already have a
+	 * record has it in its Meetup URL. Records that already have a
 	 * GatherPress group URL are left alone, so it's safe to run again.
 	 *
 	 * Run it on WordCamp Central.
@@ -37,8 +37,9 @@ class WordCamp_CLI_Backfill_Meetup_Group_Links extends WP_CLI_Command {
 		$linked  = array();
 
 		foreach ( $this->get_unlinked_records() as $post_id ) {
-			$path    = (string) wp_parse_url( (string) get_post_meta( $post_id, 'Meetup URL', true ), PHP_URL_PATH );
-			$urlname = strtolower( basename( untrailingslashit( $path ) ) );
+			// The group name is the first path segment, as in `meetup.com/wp-joinville/events/`.
+			$path    = (string) wp_parse_url( trim( (string) get_post_meta( $post_id, 'Meetup URL', true ) ), PHP_URL_PATH );
+			$urlname = strtolower( (string) strtok( $path, '/' ) );
 			$site_id = $groups[ $urlname ] ?? 0;
 
 			if ( ! $site_id ) {
@@ -96,7 +97,8 @@ class WordCamp_CLI_Backfill_Meetup_Group_Links extends WP_CLI_Command {
 	}
 
 	/**
-	 * Tracker records with a Meetup URL and no GatherPress group URL.
+	 * Tracker records with a Meetup URL and no GatherPress group URL, skipping
+	 * declined, canceled and removed ones.
 	 *
 	 * Saving a record stores every field, so an unset group URL can be empty
 	 * rather than missing; that's checked here instead of in the query.
@@ -107,7 +109,10 @@ class WordCamp_CLI_Backfill_Meetup_Group_Links extends WP_CLI_Command {
 		$post_ids = get_posts(
 			array(
 				'post_type'      => 'wp_meetup',
-				'post_status'    => 'any',
+				'post_status'    => array_diff(
+					array_keys( WordPress_Community\Applications\Meetup_Application::get_post_statuses() ),
+					array( 'wcpt-mtp-rejected', 'wcpt-mtp-canceled', 'wcpt-mtp-removed' )
+				),
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
 				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- A one-off command.

@@ -22,6 +22,8 @@ function getPostLabel( postType ) {
 			return __( 'Speaker', 'wordcamporg' );
 		case 'wcb_organizer':
 			return __( 'Organizer', 'wordcamporg' );
+		case 'wcb_volunteer':
+			return __( 'Volunteer', 'wordcamporg' );
 		default:
 			return __( 'post', 'wordcamporg' );
 	}

@@ -127,6 +127,11 @@ function get_options(): array {
 		);
 	}
 
+	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
+	// See https://www.php.net/manual/en/function.iconv.php#74101.
+	$orig_locale = setlocale( LC_CTYPE, 0 );
+	setlocale( LC_CTYPE, 'en_US.UTF-8' );
+
 	usort(
 		$options,
 		static function ( array $first, array $second ): int {
@@ -140,6 +145,8 @@ function get_options(): array {
 			return strcasecmp( $first_name, $second_name );
 		}
 	);
+
+	setlocale( LC_CTYPE, $orig_locale );
 
 	array_unshift(
 		$options,

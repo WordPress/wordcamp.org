@@ -100,6 +100,8 @@ class Test_Groups_Site_Language extends Groups_TestCase {
 	 * US English is represented as `''`, matching core's General Settings.
 	 */
 	public function test_defaults_to_empty_and_normalizes_en_us() {
+		add_filter( 'get_available_languages', array( $this, 'filter_available_languages' ) );
+
 		$this->assertSame( '', get_site_language() );
 
 		update_option( 'WPLANG', 'en_US' );

@@ -36,11 +36,9 @@ browser interaction, cross-plugin capability leaks, exploratory checks.
   role rules, REST permission/IDOR checks, draft flow, block registration.
 - **E2E (Playwright)**: `npx playwright test`, or the `e2e-tests.yml` Action
   (manual, or on any PR touching the paths it lists). **Check it actually ran
-  before trusting a green PR.** The path list is hand-maintained and has
-  lagged: specs reach the recurring-events plugin's occurrence pages and
-  match `groups-site-*` classes only the theme emits, so changes confined to
-  either used to skip E2E. When a spec starts depending on a new path, add it
-  there in the same PR.
+  before trusting a green PR.** The path list is hand-maintained: when a spec
+  starts depending on a new path, add it there in the same PR, or changes
+  confined to that path skip E2E.
   The specs in `tests/e2e/` are the list of what it covers.
   Accounts (all `password`) are created by the user-setup step in
   `.github/workflows/e2e-tests.yml`: `organiser1` (editor tier),
@@ -192,11 +190,11 @@ Environment gotchas:
   so test a venue class through `apply_filters( 'post_class', ... )` on a
   fixed list. GatherPress wires some REST filters on `rest_api_init`, which
   has already fired; call the registering method directly in the test.
-- Port 80/443 taken by another project's stack: start this one with
-  `WORDCAMP_HTTP_PORT=8080 WORDCAMP_HTTPS_PORT=8443 WORDCAMP_MAILCATCHER_PORT=1081 docker compose up -d`
-  and point curl at it with
-  `--connect-to events.wordpress.test:443:127.0.0.1:8443`. Site URLs stay
-  portless, so the browser pass still needs the real ports.
+- Port 80/443 taken by another project's stack: set `WORDCAMP_HTTP_PORT`,
+  `WORDCAMP_HTTPS_PORT` and `WORDCAMP_MAILCATCHER_PORT` in a gitignored `.env`
+  (`.docker/readme.md`, "Running alongside another local environment").
+  `mu-plugins/0-local-https-port.php` adds the HTTPS port to generated URLs,
+  so browse and curl `https://events.wordpress.test:<port>/…`.
 
 **After bumping the pin, install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
@@ -250,7 +248,7 @@ for r, v in sorted(d['routes'].items()):
 "
 ```
 
-Expect these 27 routes plus the root. Methods are POST unless noted:
+Expect these 28 routes plus the root. Methods are POST unless noted:
 
 - `rest.php`: `event-form-data` (GET), `event-templates` (GET), `event`,
   `event/{id}`, `event/{id}/rsvp`, `drafts` (GET), `draft`, `draft/{id}`,
@@ -259,6 +257,7 @@ Expect these 27 routes plus the root. Methods are POST unless noted:
   `event/{id}/check-in/{comment_id}`, `event/{id}/walk-in`,
   `event/{id}/walk-in-count`
 - `export.php`: `export` (GET)
+- `group-message.php`: `group-message`
 - `Members_Controller`: `members` (GET), `members/{id}` (GET),
   `members/{id}/role`, `members/me/role`, `members/join`, `members/leave`
   (DELETE), `members/notification-preference`
@@ -335,9 +334,7 @@ just check curl output:
   the console / PHP error log for fatals. Every block-editor load fetches
   `/wp/v2/block-patterns/patterns`, executing the PHP of *every* registered
   pattern, `Inserter: no` and unplaced ones included. A broken but unused
-  pattern only surfaces here: three `groups-site` event-card patterns
-  importing the wrong GatherPress class (fixed in #1874) went unnoticed
-  through several versions until a production rollout hit it.
+  pattern only surfaces here.
 - **RSVP** as Member and as Event Organizer.
 - **Group settings tabs** (Events / Venues / Members / Design / About /
   Export) load
@@ -399,9 +396,9 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   Each must grant only a plugin-scoped or clearly intentional capability
   (e.g. `edit_theme_options` for editors' Site Editor access), never an
   unscoped core capability reachable from stock wp-admin without a
-  plugin-level ceiling. That was the fixed escalation: editors got
-  `promote_users`, correct through our REST route but also unlocking stock
-  wp-admin's role screen. Regression check:
+  plugin-level ceiling. For example, `promote_users` for editors is correct
+  through our REST route but also unlocks stock wp-admin's role screen.
+  Regression check:
   `wp eval 'var_dump( user_can( <editor_id>, "promote_users" ) );' --url=$BASE`
   → `false`.
 - [ ] `GET /members` is public on purpose, a tracked product/privacy question
@@ -449,8 +446,6 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   or `$wpdb->num_queries`).
 
 ## 7. Production rollout notes
-
-Found the hard way during the 0.35.0 rollout on `events.wordpress.org`.
 
 - **`wp plugin update` alone isn't durable on production.**
   `wp-content/plugins` there is `svn:externals` pinned to a tag per plugin;
@@ -563,8 +558,7 @@ code is tested from there by including the real theme files):
   `Blocks\Event_Query::BLOCK_NAME`, the only thing that makes GatherPress
   apply its event query. Blocks placed from PHP strings outside those three
   directories aren't scanned.
-- **`test-groups-site-event-cards.php`** (successor to the removed
-  `test-groups-site-event-cards-patterns.php`) preserves thumbnail cache
+- **`test-groups-site-event-cards.php`** preserves thumbnail cache
   priming that core can't infer through a `core/pattern` reference. Directly
   include any future orphaned PHP pattern that normal template rendering
   can't exercise.
@@ -639,8 +633,6 @@ the browser and measure the `img` with `getBoundingClientRect()`; eyeballing
 misses aspect-ratio regressions.
 
 ## 11. Timezones, and series-level data reaching occurrences
-
-Found by a browser pass the automated suites passed clean (#2021).
 
 - **GatherPress spells a UTC offset two ways.** `Utility::timezone_choices()`
   (parsed from `wp_timezone_choice()`) says `UTC+10`; the events table,

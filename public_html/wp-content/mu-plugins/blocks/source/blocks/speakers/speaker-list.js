@@ -61,44 +61,50 @@ function SpeakerSessions( { speaker, tracks } ) {
 							{ session.title.rendered.trim() ||
 								__( '(Untitled)', 'wordcamporg' ) }
 						</a>
-						<span className="wordcamp-speakers__session-info">
-							{ session.session_track.length &&
-							Array.isArray( tracks )
-								? arrayTokenReplace(
-										tokenSplit(
-											/* translators: 1: A date; 2: A time; 3: A location. */
-											__(
-												'%1$s at %2$s in %3$s',
-												'wordcamporg'
-											)
-										),
-										[
-											session.session_date_time.date,
-											session.session_date_time.time,
-											get(
-												tracks.find( ( value ) => {
-													const [ firstTrackId ] =
-														session.session_track;
-													return (
-														parseInt( value.id ) ===
-														firstTrackId
-													);
-												} ),
-												'name'
+						{ session.session_date_time?.date && (
+							<span className="wordcamp-speakers__session-info">
+								{ session.session_track.length &&
+								Array.isArray( tracks )
+									? arrayTokenReplace(
+											tokenSplit(
+												/* translators: 1: A date; 2: A time; 3: A location. */
+												__(
+													'%1$s at %2$s in %3$s',
+													'wordcamporg'
+												)
 											),
-										]
-								  )
-								: arrayTokenReplace(
-										tokenSplit(
-											/* translators: 1: A date; 2: A time. */
-											__( '%1$s at %2$s', 'wordcamporg' )
-										),
-										[
-											session.session_date_time.date,
-											session.session_date_time.time,
-										]
-								  ) }
-						</span>
+											[
+												session.session_date_time.date,
+												session.session_date_time.time,
+												get(
+													tracks.find( ( value ) => {
+														const [ firstTrackId ] =
+															session.session_track;
+														return (
+															parseInt(
+																value.id
+															) === firstTrackId
+														);
+													} ),
+													'name'
+												),
+											]
+									  )
+									: arrayTokenReplace(
+											tokenSplit(
+												/* translators: 1: A date; 2: A time. */
+												__(
+													'%1$s at %2$s',
+													'wordcamporg'
+												)
+											),
+											[
+												session.session_date_time.date,
+												session.session_date_time.time,
+											]
+									  ) }
+							</span>
+						) }
 					</li>
 				) ) }
 			</ul>

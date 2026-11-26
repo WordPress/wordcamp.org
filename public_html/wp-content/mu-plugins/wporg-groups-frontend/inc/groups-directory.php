@@ -12,6 +12,7 @@ namespace WordCamp\Groups\Frontend\Groups_Directory;
 
 use function WordCamp\Groups\Archive\get_group_sites;
 use function WordCamp\Groups\Frontend\Blocks\register_block;
+use function WordCamp\Groups\Frontend\Group_Location\get_coordinates;
 use function WordCamp\Groups\Frontend\Group_Location\get_location_label;
 
 defined( 'WPINC' ) || die();
@@ -19,12 +20,16 @@ defined( 'WPINC' ) || die();
 const THEME        = 'groups-site';
 const PARENT_THEME = 'wporg-parent-2021';
 
-// `sunrise-groups.php` allows this query var and no other; keep the two in step.
+// `sunrise-groups.php` allows these query vars and no others; keep the two in step.
 const SEARCH_QUERY_VAR  = 'q';
+const PAGE_QUERY_VAR    = 'paged';
 const SEARCH_MAX_LENGTH = 100;
 
+const GROUPS_PER_PAGE = 30;
+
+// The key changes whenever the shape of a cached group does.
 const CACHE_GROUP = 'wporg-groups-directory';
-const CACHE_KEY   = 'groups';
+const CACHE_KEY   = 'groups-2';
 
 // Building the list switches to every group's site, which is too slow for every view.
 const CACHE_TTL = 15 * MINUTE_IN_SECONDS;
@@ -132,7 +137,7 @@ function get_events_site_url( string $path = '/' ): string {
 }
 
 /**
- * Every active, named group in alphabetical order, each with an `id`, `name`, `url` and `location`.
+ * Every active, named group in alphabetical order, each with an `id`, `name`, `url`, `location` and `coordinates`.
  */
 function get_groups(): array {
 	$groups = wp_cache_get( CACHE_KEY, CACHE_GROUP );
@@ -151,10 +156,11 @@ function get_groups(): array {
 
 		if ( '' !== $name ) {
 			$groups[] = array(
-				'id'       => (int) $site->blog_id,
-				'name'     => $name,
-				'url'      => home_url( '/' ),
-				'location' => get_location_label(),
+				'id'          => (int) $site->blog_id,
+				'name'        => $name,
+				'url'         => home_url( '/' ),
+				'location'    => get_location_label(),
+				'coordinates' => get_coordinates(),
 			);
 		}
 
@@ -185,6 +191,86 @@ function get_search_term(): string {
 	}
 
 	return mb_substr( trim( sanitize_text_field( wp_unslash( $term ) ) ), 0, SEARCH_MAX_LENGTH );
+}
+
+/**
+ * Which page of the list the visitor asked for, from 1.
+ */
+function get_page_number(): int {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A public, read-only list.
+	return max( 1, (int) ( $_GET[ PAGE_QUERY_VAR ] ?? 1 ) );
+}
+
+/**
+ * Links to the other pages of the list, keeping the search, or an empty string when it fits on one.
+ */
+function render_pagination( int $current, int $total, string $term ): string {
+	if ( $total < 2 ) {
+		return '';
+	}
+
+	$links = paginate_links(
+		array(
+			'base'      => get_directory_url() . '%_%',
+			'format'    => '?' . PAGE_QUERY_VAR . '=%#%',
+			'current'   => $current,
+			'total'     => $total,
+			'add_args'  => '' === $term ? array() : array( SEARCH_QUERY_VAR => rawurlencode( $term ) ),
+			'prev_text' => __( 'Previous Page', 'wordcamporg' ),
+			'next_text' => __( 'Next Page', 'wordcamporg' ),
+		)
+	);
+
+	// The query pagination block's classes, for the theme's page-number styles.
+	return sprintf(
+		'<nav class="wp-block-query-pagination wporg-groups-directory__pagination" aria-label="%s"><div class="wp-block-query-pagination-numbers">%s</div></nav>',
+		esc_attr__( 'Group list pages', 'wordcamporg' ),
+		$links
+	);
+}
+
+/**
+ * The shared WordPress.org map block, with a marker for each group that has coordinates, or an empty string if none do.
+ */
+function render_map( array $groups ): string {
+	$markers = array();
+
+	foreach ( $groups as $group ) {
+		if ( ! $group['coordinates'] ) {
+			continue;
+		}
+
+		// The block only knows event markers. A Meetup one, titled with the city, reads right alone and merged with others there.
+		$markers[] = array(
+			'id'        => $group['id'],
+			'type'      => 'meetup',
+			'meetup'    => $group['location'],
+			'title'     => $group['name'],
+			'url'       => $group['url'],
+			'location'  => $group['location'],
+			'latitude'  => $group['coordinates']['latitude'],
+			'longitude' => $group['coordinates']['longitude'],
+		);
+	}
+
+	if ( ! $markers ) {
+		return '';
+	}
+
+	return render_block(
+		array(
+			'blockName'    => 'wporg/google-map',
+			'attrs'        => array(
+				'id'         => 'groups-directory',
+				'markers'    => $markers,
+				'showList'   => false,
+				'showSearch' => false,
+			),
+			'innerBlocks'  => array(),
+			'innerHTML'    => '',
+			'innerContent' => array(),
+		)
+	);
 }
 
 /**

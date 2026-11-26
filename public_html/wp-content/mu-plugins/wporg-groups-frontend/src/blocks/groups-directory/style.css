@@ -17,6 +17,37 @@
 	margin-bottom: var(--wp--preset--spacing--30);
 }
 
+/* Sized as on the events.wordpress.org home page. */
+.wp-block-wporg-groups-directory .wp-block-wporg-google-map {
+	height: 430px;
+	margin-bottom: var(--wp--preset--spacing--30);
+}
+
+@media (max-width: 599px) {
+
+	.wp-block-wporg-groups-directory .wp-block-wporg-google-map {
+		height: 246px;
+	}
+}
+
+/* Outranks the block's 100vw on narrow screens, which overflows the padding. */
+.wp-block-wporg-groups-directory .wp-block-wporg-google-map .wporg-google-map__container {
+	width: 100%;
+	height: 100%;
+}
+
+.wp-block-wporg-groups-directory .wporg-map-marker__title {
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+}
+
+/* Event marker lines: the title is the city, and groups have no date. */
+.wp-block-wporg-groups-directory .wporg-map-marker__location,
+.wp-block-wporg-groups-directory .wporg-map-marker__date-time {
+	display: none;
+}
+
 .wporg-groups-directory__count {
 	margin: 0 0 var(--wp--preset--spacing--10);
 	color: var(--wp--preset--color--charcoal-4);
@@ -80,6 +111,21 @@
 	width: 1em;
 	height: 1em;
 	fill: currentcolor;
+}
+
+/* As theme.json sizes the query pagination block, which this mirrors. */
+.wporg-groups-directory__pagination {
+	display: flex;
+	justify-content: center;
+	margin-top: var(--wp--preset--spacing--30);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wporg-groups-directory__pagination .wp-block-query-pagination-numbers {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--wp--preset--spacing--10);
 }
 
 .wporg-groups-directory__empty {

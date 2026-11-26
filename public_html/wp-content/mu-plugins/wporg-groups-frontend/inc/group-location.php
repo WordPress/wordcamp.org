@@ -10,16 +10,25 @@
 
 namespace WordCamp\Groups\Frontend\Group_Location;
 
+use GatherPress\Core\Geocoding;
+use WordCamp\Logger;
 use WP_Error;
+
+use function WordCamp\Groups\Archive\get_group_sites;
 
 defined( 'WPINC' ) || die();
 
-const TYPE_META_KEY    = 'wporg_group_location_type';
-const CITY_META_KEY    = 'wporg_group_location_city';
-const COUNTRY_META_KEY = 'wporg_group_location_country';
+const TYPE_META_KEY        = 'wporg_group_location_type';
+const CITY_META_KEY        = 'wporg_group_location_city';
+const COUNTRY_META_KEY     = 'wporg_group_location_country';
+const COORDINATES_META_KEY = 'wporg_group_location_coordinates';
 
 const TYPE_PHYSICAL = 'physical';
 const TYPE_ONLINE   = 'online';
+
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	\WP_CLI::add_command( 'wc-groups geocode-locations', __NAMESPACE__ . '\cli_geocode_locations' );
+}
 
 /**
  * Missing metadata is treated as an unspecified location.
@@ -125,19 +134,26 @@ function normalize_location( array $location ): array|WP_Error {
  * Saving an online location removes any stale city and country metadata.
  */
 function save_location( array $location ): void {
-	$site_id = get_current_blog_id();
+	$site_id  = get_current_blog_id();
+	$previous = get_location( $site_id );
 
 	update_site_meta( $site_id, TYPE_META_KEY, $location['type'] );
 
 	if ( TYPE_ONLINE === $location['type'] ) {
 		delete_site_meta( $site_id, CITY_META_KEY );
 		delete_site_meta( $site_id, COUNTRY_META_KEY );
+		delete_site_meta( $site_id, COORDINATES_META_KEY );
 
 		return;
 	}
 
 	update_site_meta( $site_id, CITY_META_KEY, $location['city'] );
 	update_site_meta( $site_id, COUNTRY_META_KEY, $location['countryCode'] );
+
+	// A missing point is looked up again, so a lookup that failed isn't final.
+	if ( $previous !== $location || ! get_coordinates( $site_id ) ) {
+		geocode_location( $site_id, $location );
+	}
 }
 
 /**
@@ -149,6 +165,84 @@ function clear_location(): void {
 	delete_site_meta( $site_id, TYPE_META_KEY );
 	delete_site_meta( $site_id, CITY_META_KEY );
 	delete_site_meta( $site_id, COUNTRY_META_KEY );
+	delete_site_meta( $site_id, COORDINATES_META_KEY );
+}
+
+/**
+ * Where an in-person group's city is, as `latitude` and `longitude`, or null if it hasn't been found.
+ */
+function get_coordinates( int $site_id = 0 ): ?array {
+	$coordinates = get_site_meta( $site_id ?: get_current_blog_id(), COORDINATES_META_KEY, true );
+
+	return is_array( $coordinates ) ? $coordinates : null;
+}
+
+/**
+ * Look up where an in-person group's city is, for its marker on the groups list map, and return whether it was found.
+ */
+function geocode_location( int $site_id, array $location ): bool {
+	$country = (string) wcorg_get_country_name_from_code( $location['countryCode'] );
+	$result  = null;
+
+	// GatherPress's geocoder, which already places the groups' venues.
+	if ( '' !== $country && class_exists( Geocoding::class ) ) {
+		// It puts the address in the URL unencoded, where `&` or `#` would cut it short.
+		$address = str_replace( array( '&', '#' ), array( 'and', '' ), $location['city'] . ', ' . $country );
+		$result  = Geocoding::get_instance()->geocode_to_result( $address );
+	}
+
+	// The country check keeps a city name shared by several countries in the right one.
+	if ( ! is_array( $result ) || '' === $result['latitude'] || strtoupper( $result['country_code'] ) !== $location['countryCode'] ) {
+		delete_site_meta( $site_id, COORDINATES_META_KEY );
+		Logger\log( 'geocoding_failure', compact( 'site_id', 'result' ) );
+
+		return false;
+	}
+
+	update_site_meta(
+		$site_id,
+		COORDINATES_META_KEY,
+		array(
+			'latitude'  => round( (float) $result['latitude'], 4 ),
+			'longitude' => round( (float) $result['longitude'], 4 ),
+		)
+	);
+
+	return true;
+}
+
+/**
+ * Find the city of every in-person group that has no coordinates yet.
+ *
+ * ## EXAMPLES
+ *
+ *     wp wc-groups geocode-locations --url=events.wordpress.org/group/
+ *
+ * @when after_wp_load
+ */
+function cli_geocode_locations(): void {
+	if ( ! class_exists( Geocoding::class ) ) {
+		\WP_CLI::error( 'GatherPress is not loaded. Run this with --url set to the groups network.' );
+	}
+
+	foreach ( get_group_sites() as $site ) {
+		$site_id  = (int) $site->blog_id;
+		$location = get_location( $site_id );
+
+		if ( TYPE_PHYSICAL !== ( $location['type'] ?? '' ) || get_coordinates( $site_id ) ) {
+			continue;
+		}
+
+		$label = sprintf( '%d: %s, %s', $site_id, $location['city'], $location['countryCode'] );
+
+		if ( geocode_location( $site_id, $location ) ) {
+			\WP_CLI::log( "Found $label" );
+		} else {
+			\WP_CLI::warning( "Not found $label" );
+		}
+	}
+
+	\WP_CLI::success( 'Done.' );
 }
 
 /**

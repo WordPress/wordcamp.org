@@ -57,3 +57,26 @@ function manually_load_plugins() {
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );
+
+/**
+ * Answer GatherPress's geocoder with no match, so tests that save a location never reach Photon.
+ *
+ * @param false|array $preempt
+ * @param array       $args
+ * @param string      $url
+ * @return false|array
+ */
+function block_geocoder( $preempt, $args, $url ) {
+	if ( ! str_starts_with( $url, 'https://photon.komoot.io/' ) ) {
+		return $preempt;
+	}
+
+	return array(
+		'headers'  => array(),
+		'body'     => '{"features":[]}',
+		'response' => array( 'code' => 200 ),
+		'cookies'  => array(),
+	);
+}
+
+tests_add_filter( 'pre_http_request', __NAMESPACE__ . '\block_geocoder', 5, 3 );

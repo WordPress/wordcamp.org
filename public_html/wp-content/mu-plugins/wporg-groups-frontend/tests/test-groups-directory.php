@@ -342,5 +342,6 @@ class Test_Groups_Directory extends Groups_TestCase {
 		$this->assertStringContainsString( 'href="' . esc_url( $url . '?q=group' ) . '"', $second, 'Page 1 keeps the search.' );
 
 		$this->assertStringContainsString( $extra, $this->render( '/group/?paged=99' ) );
+		$this->assertStringContainsString( $last, $this->render( '/group/?paged=-99999999999999999999' ) );
 	}
 }

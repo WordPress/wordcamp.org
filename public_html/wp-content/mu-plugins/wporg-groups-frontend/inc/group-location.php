@@ -150,7 +150,8 @@ function save_location( array $location ): void {
 	update_site_meta( $site_id, CITY_META_KEY, $location['city'] );
 	update_site_meta( $site_id, COUNTRY_META_KEY, $location['countryCode'] );
 
-	if ( $previous !== $location ) {
+	// A missing point is looked up again, so a lookup that failed isn't final.
+	if ( $previous !== $location || ! get_coordinates( $site_id ) ) {
 		geocode_location( $site_id, $location );
 	}
 }
@@ -185,7 +186,9 @@ function geocode_location( int $site_id, array $location ): bool {
 
 	// GatherPress's geocoder, which already places the groups' venues.
 	if ( '' !== $country && class_exists( Geocoding::class ) ) {
-		$result = Geocoding::get_instance()->geocode_to_result( $location['city'] . ', ' . $country );
+		// It puts the address in the URL unencoded, where `&` or `#` would cut it short.
+		$address = str_replace( array( '&', '#' ), array( 'and', '' ), $location['city'] . ', ' . $country );
+		$result  = Geocoding::get_instance()->geocode_to_result( $address );
 	}
 
 	// The country check keeps a city name shared by several countries in the right one.
@@ -218,6 +221,10 @@ function geocode_location( int $site_id, array $location ): bool {
  * @when after_wp_load
  */
 function cli_geocode_locations(): void {
+	if ( ! class_exists( Geocoding::class ) ) {
+		\WP_CLI::error( 'GatherPress is not loaded. Run this with --url set to the groups network.' );
+	}
+
 	foreach ( get_group_sites() as $site ) {
 		$site_id  = (int) $site->blog_id;
 		$location = get_location( $site_id );

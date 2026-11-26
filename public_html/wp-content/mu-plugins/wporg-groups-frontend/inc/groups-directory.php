@@ -198,7 +198,7 @@ function get_search_term(): string {
  */
 function get_page_number(): int {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A public, read-only list.
-	return max( 1, absint( $_GET[ PAGE_QUERY_VAR ] ?? 1 ) );
+	return max( 1, (int) ( $_GET[ PAGE_QUERY_VAR ] ?? 1 ) );
 }
 
 /**

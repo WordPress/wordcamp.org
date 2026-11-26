@@ -21,8 +21,6 @@
 .wp-block-wporg-groups-directory .wp-block-wporg-google-map {
 	height: 430px;
 	margin-bottom: var(--wp--preset--spacing--30);
-	overflow: hidden;
-	border-radius: 4px;
 }
 
 @media (max-width: 599px) {

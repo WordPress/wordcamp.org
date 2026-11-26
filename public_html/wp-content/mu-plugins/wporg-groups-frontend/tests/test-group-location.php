@@ -24,12 +24,18 @@ class Test_Group_Location extends Groups_TestCase {
 	protected $features = array();
 
 	/**
+	 * @var int HTTP status the fake geocoder answers with.
+	 */
+	protected $status = 200;
+
+	/**
 	 * Answer geocoding requests from `$features`.
 	 */
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->requests = array();
+		$this->status   = 200;
 		$this->features = array( $this->feature( 52.520008, 13.404954, 'DE' ) );
 
 		add_filter( 'pre_http_request', array( $this, 'fake_geocoder' ), 10, 3 );
@@ -53,7 +59,7 @@ class Test_Group_Location extends Groups_TestCase {
 		return array(
 			'headers'  => array(),
 			'body'     => wp_json_encode( array( 'features' => $this->features ) ),
-			'response' => array( 'code' => 200 ),
+			'response' => array( 'code' => $this->status ),
 			'cookies'  => array(),
 		);
 	}
@@ -129,5 +135,31 @@ class Test_Group_Location extends Groups_TestCase {
 		$this->save_city( 'Berlin', 'TR' );
 
 		$this->assertNull( Group_Location\get_coordinates() );
+	}
+
+	/**
+	 * A lookup that failed is tried again on the next save of the same city.
+	 */
+	public function test_failed_lookup_is_retried() {
+		$this->status = 503;
+		$this->save_city( 'Berlin', 'DE' );
+
+		$this->assertNull( Group_Location\get_coordinates() );
+
+		$this->status = 200;
+		$this->save_city( 'Berlin', 'DE' );
+
+		$this->assertNotNull( Group_Location\get_coordinates() );
+	}
+
+	/**
+	 * A country name with an ampersand reaches the geocoder whole.
+	 */
+	public function test_ampersand_in_country_name_is_spelled_out() {
+		$this->features = array( $this->feature( 43.8563, 18.4131, 'BA' ) );
+		$this->save_city( 'Sarajevo', 'BA' );
+
+		$this->assertStringContainsString( 'q=Sarajevo, Bosnia and Herzegovina&', $this->requests[0] );
+		$this->assertNotNull( Group_Location\get_coordinates() );
 	}
 }

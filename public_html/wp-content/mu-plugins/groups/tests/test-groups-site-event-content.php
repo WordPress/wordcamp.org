@@ -31,6 +31,17 @@ class Test_Groups_Site_Event_Content extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Re-add the hooks under test: `WP_UnitTestCase` restores its hook
+	 * snapshot after each test.
+	 */
+	protected function setUp(): void {
+		parent::setUp();
+
+		add_filter( 'the_content', 'WordCamp\\Groups\\Site\\strip_event_metadata_blocks', 5 );
+		add_filter( 'render_block_core/group', 'WordCamp\\Groups\\Site\\hide_empty_event_details', 10, 2 );
+	}
+
+	/**
 	 * Strip the template's blocks from markup and serialize what is left.
 	 *
 	 * @param string $content Block markup.
@@ -91,18 +102,40 @@ class Test_Groups_Site_Event_Content extends WP_UnitTestCase {
 	 * The "Details" section only renders when the event has a description.
 	 */
 	public function test_details_section_hides_for_a_blank_description(): void {
-		$section = '<!-- wp:group {"className":"groups-site-event-details"} --><div class="wp-block-group groups-site-event-details">' .
-			'<!-- wp:heading --><h2 class="wp-block-heading">Details</h2><!-- /wp:heading -->' .
-			'<!-- wp:post-content /-->' .
-			'</div><!-- /wp:group -->';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a template file from disk, as test-groups-site-more-events.php does.
+		$template = file_get_contents( SUT_WP_CONTENT_DIR . 'themes/groups-site/templates/single-event.html' );
+		$section  = $this->find_details_section( parse_blocks( $template ) );
+		$this->assertNotNull( $section, 'single-event.html no longer has the "Details" section.' );
+		$section = serialize_block( $section );
 
 		// The event form's empty paragraph, next to GatherPress's starter blocks.
 		$blank = "<!-- wp:gatherpress/event-date /-->\n\n<!-- wp:paragraph -->\n<p></p>\n<!-- /wp:paragraph -->";
 		$this->assertSame( '', $this->render_on_event_page( $section, $blank ) );
 
 		$output = $this->render_on_event_page( $section, '<!-- wp:paragraph --><p>Bring snacks.</p><!-- /wp:paragraph -->' );
-		$this->assertStringContainsString( 'Details', $output );
+		$this->assertStringContainsString( 'groups-site-event-details', $output );
 		$this->assertStringContainsString( 'Bring snacks.', $output );
+	}
+
+	/**
+	 * Find the "Details" group inside a parsed block tree.
+	 *
+	 * @param array $blocks Parsed blocks.
+	 * @return array|null The group, or null when it's missing.
+	 */
+	private function find_details_section( array $blocks ): ?array {
+		foreach ( $blocks as $block ) {
+			if ( str_contains( $block['attrs']['className'] ?? '', 'groups-site-event-details' ) ) {
+				return $block;
+			}
+
+			$found = $this->find_details_section( $block['innerBlocks'] );
+			if ( $found ) {
+				return $found;
+			}
+		}
+
+		return null;
 	}
 
 	/**

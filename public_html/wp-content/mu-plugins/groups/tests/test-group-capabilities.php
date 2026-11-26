@@ -238,20 +238,24 @@ class Test_Group_Capabilities extends Groups_TestCase {
 	}
 
 	/**
-	 * Program Supporters message organizers only. "All members" stays with
-	 * network admins and deputies: the form doesn't offer it, and the handler
-	 * refuses a hand-made request for it.
+	 * Program Supporters message organizers only. The member audiences stay
+	 * with network admins and deputies: the form doesn't offer them, and the
+	 * handler refuses a hand-made request for them.
+	 *
+	 * @dataProvider data_member_audiences
+	 *
+	 * @param string $audience Audience the request asks for.
 	 */
-	public function test_program_supporter_can_only_message_organizers() {
+	public function test_program_supporter_can_only_message_organizers( string $audience ) {
 		$this->become_program_supporter();
 
 		$this->assertFalse( Messaging\current_user_can_message_members() );
-		$this->assertStringNotContainsString( 'value="' . Messaging\AUDIENCE_MEMBERS . '"', $this->render_messaging_form() );
+		$this->assertStringNotContainsString( 'value="' . $audience . '"', $this->render_messaging_form() );
 
 		$fields = array(
 			'subject'  => 'Hello everyone',
 			'body'     => 'To every member of every group.',
-			'audience' => Messaging\AUDIENCE_MEMBERS,
+			'audience' => $audience,
 			'scope'    => 'all',
 			'_wpnonce' => wp_create_nonce( Messaging\FORM_ACTION ),
 		);
@@ -277,6 +281,16 @@ class Test_Group_Capabilities extends Groups_TestCase {
 		}
 
 		$this->assertEmpty( get_site_option( Messaging\JOBS_OPTION ), 'Nothing should be queued.' );
+	}
+
+	/**
+	 * Audiences limited to network admins.
+	 */
+	public function data_member_audiences(): array {
+		return array(
+			'all members'      => array( Messaging\AUDIENCE_MEMBERS ),
+			'imported members' => array( Messaging\AUDIENCE_IMPORTED ),
+		);
 	}
 
 	/**

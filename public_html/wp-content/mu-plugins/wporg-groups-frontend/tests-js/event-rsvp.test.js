@@ -784,8 +784,8 @@ describe( 'event RSVP announces the change to the rest of the page', () => {
 describe( 'event RSVP waiting list', () => {
 	const waitingFormats = {
 		waitingFull: 'Full',
-		waitingSingular: 'Full · %s on the waiting list',
-		waitingPlural: 'Full · %s on the waiting list',
+		waitingSingular: 'Full, %s on the waiting list',
+		waitingPlural: 'Full, %s on the waiting list',
 	};
 
 	beforeEach( () => {
@@ -827,7 +827,7 @@ describe( 'event RSVP waiting list', () => {
 		expect( mockContext.attendingCount ).toBe( 1 );
 		expect( mockContext.waitingCount ).toBe( 2 );
 		expect( mockContext.rsvpNotice ).toBe( 'You left the waiting list.' );
-		expect( state.waitingLabel ).toBe( 'Full · 2 on the waiting list' );
+		expect( state.waitingLabel ).toBe( 'Full, 2 on the waiting list' );
 	} );
 
 	test( 'saves answers from the waiting list without leaving it', async () => {
@@ -937,6 +937,6 @@ describe( 'event RSVP waiting list', () => {
 		expect( mockContext.waitingCount ).toBe( 1 );
 		expect( mockContext.rsvpNotice ).toBe( 'You have joined the event waiting list.' );
 		expect( state.statusTitle ).toBe( "You're on the waiting list" );
-		expect( state.waitingLabel ).toBe( 'Full · 1 on the waiting list' );
+		expect( state.waitingLabel ).toBe( 'Full, 1 on the waiting list' );
 	} );
 } );

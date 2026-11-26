@@ -133,11 +133,12 @@
 
 /* === Summary (avatar stack + count) ===
    The button under the RSVP button that opens the attendee modal.
-   `inline-flex` keeps the avatars and the "N attending" label on a single
-   row, and shrinks the button to the width of that row instead of the full
-   column, so the clickable area matches the visible content. */
+   `inline-flex` keeps the avatars beside the block of text, and shrinks
+   the button to the width of that row instead of the full column, so the
+   clickable area matches the visible content. */
 .wporg-event-rsvp__summary {
 	display: inline-flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 10px;
 	max-width: 100%;
@@ -199,27 +200,35 @@
 	letter-spacing: -0.02em;
 }
 
+/* Who's going, with how full the event is as a caption underneath, so the
+   avatars sit beside one block of text instead of two loose lines. In a
+   narrow card with a full avatar stack, the text drops below the avatars
+   rather than squeezing into a sliver beside them. */
+.wporg-event-rsvp__summary-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	line-height: 1.4;
+}
+
 .wporg-event-rsvp__count {
-	font-size: 14px;
-	color: #656a71;
+	color: var(--wp--preset--color--charcoal-3, #40464d);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.wporg-event-rsvp__waiting {
+	color: var(--wp--preset--color--charcoal-4, #656a71);
 }
 
 /* Hovering anywhere on the button highlights only the count, not the avatars:
    the avatars are decorative (`aria-hidden`), so the count is the part that
    should read as the link into the attendee modal. */
 .wporg-event-rsvp__summary:hover .wporg-event-rsvp__count {
-	color: #1a1919;
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
 	text-decoration: underline;
-}
-
-/* === Waiting-list line === "Full · 12 on the waiting list" under the count. */
-.wporg-event-rsvp__waiting {
-	margin: 4px 0 0;
-	font-size: var(--wp--preset--font-size--small, 14px);
-	color: var(--wp--preset--color--charcoal-4, #656a71);
 }
 
 /* === RSVP button === */

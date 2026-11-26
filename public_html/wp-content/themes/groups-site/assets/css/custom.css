@@ -127,11 +127,13 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
    ties with the first on specificity and wins on source order. */
 
 .wp-element-button[aria-busy="true"],
+.wporg-event-rsvp__status-button[aria-busy="true"],
 .wp-block-button > .wp-block-button__link.wp-element-button[aria-busy="true"] {
 	cursor: progress;
 }
 
-.wp-element-button[aria-busy="true"]::after {
+.wp-element-button[aria-busy="true"]::after,
+.wporg-event-rsvp__status-button[aria-busy="true"]::after {
 	content: '';
 	display: inline-block;
 	width: 12px;
@@ -156,7 +158,8 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
  * and mute it instead: still legibly "working", with nothing moving.
  */
 @media (prefers-reduced-motion: reduce) {
-	.wp-element-button[aria-busy="true"]::after {
+	.wp-element-button[aria-busy="true"]::after,
+	.wporg-event-rsvp__status-button[aria-busy="true"]::after {
 		animation-name: none;
 		border-right-color: currentColor;
 		opacity: 0.5;

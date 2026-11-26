@@ -5,7 +5,7 @@ const { siteOrigin } = require( './utils/env' );
 /**
  * The full RSVP state machine, and the gate in front of it.
  *
- * event-rsvp-cancel.spec.js covers the outbound leg (RSVP → Attending →
+ * event-rsvp-cancel.spec.js covers the outbound leg (RSVP → attending →
  * cancelled). What nothing covered is the return leg: RSVPing *again* after
  * cancelling. That path is distinct in the code — after a cancellation the
  * context holds `currentUserStatus === 'not_attending'`, not the
@@ -64,8 +64,9 @@ test.describe( 'RSVP lifecycle', () => {
 
 		await publishEvent( page, `RSVP Lifecycle E2E ${ Date.now() }` );
 
-		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wp-block-button__link' );
-		const cancel = page.locator( '.wporg-event-rsvp__cancel' );
+		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wporg-event-rsvp__button' );
+		const status = page.locator( '.wporg-event-rsvp__status' );
+		const cancel = status.getByRole( 'button', { name: 'Cancel RSVP' } );
 		const count = page.locator( '.wporg-event-rsvp__count' );
 		const avatars = page.locator( '.wporg-event-rsvp__avatar' );
 
@@ -77,7 +78,7 @@ test.describe( 'RSVP lifecycle', () => {
 		// attendee who is you reads "First one in", not "1 going" — so it is
 		// worth following across the whole lifecycle, not just at the end.
 		await rsvpButton.click();
-		await expect( rsvpButton ).toHaveText( /Attending/ );
+		await expect( status ).toContainText( "You're attending" );
 		await expect( cancel ).toBeVisible();
 		await expect( count ).toHaveText( 'First one in' );
 
@@ -91,7 +92,7 @@ test.describe( 'RSVP lifecycle', () => {
 		// to submit rather than no-op now that the stored status is
 		// 'not_attending' rather than absent.
 		await rsvpButton.click();
-		await expect( rsvpButton ).toHaveText( /Attending/ );
+		await expect( status ).toContainText( "You're attending" );
 		await expect( cancel ).toBeVisible();
 		await expect( page.getByRole( 'status' ) ).toHaveText( /attending/i );
 
@@ -105,7 +106,7 @@ test.describe( 'RSVP lifecycle', () => {
 		// read Interactivity state that never left the browser, so a re-RSVP
 		// that updated the UI without persisting would still have passed.
 		await page.reload();
-		await expect( rsvpButton ).toHaveText( /Attending/ );
+		await expect( status ).toContainText( "You're attending" );
 		await expect( count ).toHaveText( 'First one in' );
 		await expect( avatars ).toHaveCount( 1 );
 	} );

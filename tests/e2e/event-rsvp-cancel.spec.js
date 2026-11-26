@@ -4,16 +4,9 @@ const { STORAGE_STATE } = require( './utils/accounts' );
 /**
  * Withdrawing from an event without hunting for the action.
  *
- * Cancelling used to be reachable only by pressing the "Attending" button —
- * which reports your status rather than offering an action — and then finding
- * "Cancel RSVP" in the modal that opened (#2058). The event page now carries
- * the control itself.
- *
- * It ships in the DOM and hidden rather than being rendered on demand,
- * because the RSVP button changes status without a reload. So the thing worth
- * testing in a browser is the part PHPUnit can't see: that the Interactivity
- * API reveals and hides it as the status changes, and that pressing it
- * actually withdraws.
+ * Once you RSVP, the button gives way to a status panel with Cancel RSVP
+ * beside it (#2058). Both ship in the DOM and the Interactivity API swaps
+ * them without a reload, which is the part PHPUnit can't see.
  *
  * Requires the `organiser1` / `password` editor-tier test user.
  */
@@ -45,28 +38,25 @@ test.describe( 'cancelling an RSVP', () => {
 		await modal.getByRole( 'button', { name: 'Create event' } ).click();
 		await page.waitForURL( /\/event\//, { timeout: 30000 } );
 
-		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wp-block-button__link' );
-		const cancel = page.locator( '.wporg-event-rsvp__cancel' );
+		const rsvpButton = page.locator( '.wp-block-wporg-event-rsvp .wporg-event-rsvp__button' );
+		const status = page.locator( '.wporg-event-rsvp__status' );
+		const cancel = status.getByRole( 'button', { name: 'Cancel RSVP' } );
 
 		// Unticked "I'm attending" leaves the organizer without an RSVP.
 		await expect( rsvpButton ).toHaveText( /^RSVP$/ );
-		await expect( cancel ).toHaveCount( 1 );
-		await expect( cancel ).toBeHidden();
+		await expect( status ).toBeHidden();
 
 		await rsvpButton.click();
 
-		await expect( rsvpButton ).toHaveText( /Attending/ );
+		await expect( rsvpButton ).toBeHidden();
+		await expect( status ).toContainText( "You're attending" );
 		await expect( cancel ).toBeVisible();
-		await expect( cancel ).toHaveText( 'Cancel RSVP' );
 
-		// A real button, not a styled span: it has to be reachable by keyboard
-		// and announced as an action.
-		expect( await cancel.evaluate( ( element ) => element.tagName ) ).toBe( 'BUTTON' );
-
+		// No capacity, so nobody else is waiting for the seat: no confirmation.
 		await cancel.click();
 
 		await expect( rsvpButton ).toHaveText( /^RSVP$/ );
-		await expect( cancel ).toBeHidden();
+		await expect( status ).toBeHidden();
 		await expect( page.getByRole( 'status' ) ).toHaveText( /canceled/i );
 	} );
 } );

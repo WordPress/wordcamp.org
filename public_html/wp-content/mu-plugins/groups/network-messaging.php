@@ -775,7 +775,7 @@ function render_page(): void {
 								<br />
 								<label>
 									<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_IMPORTED ); ?>" />
-									Members added by the Meetup import, not those who joined on their own
+									Members added by the Meetup import, even if their event emails are off
 								</label>
 							<?php else : ?>
 								<p class="description">Messaging all members of a group is limited to network admins.</p>

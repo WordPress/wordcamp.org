@@ -330,10 +330,15 @@ function format_details( array $entry ): string {
 			return $details;
 
 		case 'message_queued':
+			$audiences = array(
+				Messaging\AUDIENCE_MEMBERS  => __( 'All members', 'wordcamporg' ),
+				Messaging\AUDIENCE_IMPORTED => __( 'Imported members', 'wordcamporg' ),
+			);
+
 			return sprintf(
-				/* translators: 1: "Organizers" or "All members", 2: number of groups, 3: email subject. */
+				/* translators: 1: "Organizers", "All members" or "Imported members", 2: number of groups, 3: email subject. */
 				_n( '%1$s of %2$d group: "%3$s"', '%1$s of %2$d groups: "%3$s"', (int) ( $context['group_count'] ?? 0 ), 'wordcamporg' ),
-				Messaging\AUDIENCE_MEMBERS === ( $context['audience'] ?? '' ) ? __( 'All members', 'wordcamporg' ) : __( 'Organizers', 'wordcamporg' ),
+				$audiences[ $context['audience'] ?? '' ] ?? __( 'Organizers', 'wordcamporg' ),
 				(int) ( $context['group_count'] ?? 0 ),
 				$context['subject'] ?? ''
 			);

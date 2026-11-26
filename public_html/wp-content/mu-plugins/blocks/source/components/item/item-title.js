@@ -8,6 +8,7 @@ import PropTypes from 'prop-types';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 
 /**
  * Component for an entity title, optionally linked.
@@ -29,7 +30,8 @@ function ItemTitle( { align, className, headingLevel, link, title } ) {
 	}
 
 	const classes = [ 'wordcamp-block__item-title', className ];
-	const content = title || __( '(Untitled)', 'wordcamporg' );
+	const content =
+		decodeEntities( title || '' ) || __( '(Untitled)', 'wordcamporg' );
 
 	const style = {};
 	if ( align ) {

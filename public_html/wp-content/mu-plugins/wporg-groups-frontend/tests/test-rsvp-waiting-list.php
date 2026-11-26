@@ -93,10 +93,10 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 
 		$output = $this->render_rsvp_block( $event_id );
 
-		$this->assertSame( 'On the waiting list', $this->main_button_label( $output ) );
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__status is-waiting"', $output );
+		$this->assertMatchesRegularExpression( '/data-wp-text="state.statusTitle">You&#039;re on the waiting list</', $output );
 		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__cancel"[^>]*>\s*Leave waiting list\s*</', $output );
-		$this->assertMatchesRegularExpression( '/wporg-event-rsvp__modal-status"[^>]*>\s*You&#039;re on the waiting list\./', $output );
-		$this->assertStringContainsString( 'class="wp-block-button is-style-outline is-waiting"', $output );
+		$this->assertStringContainsString( 'class="wp-block-button is-hidden"', $output );
 	}
 
 	/**

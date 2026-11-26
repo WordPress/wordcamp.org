@@ -21,12 +21,8 @@ const focusableSelector = [
 
 store( 'wporg/event-rsvp', {
 	state: {
-		get isAttending() {
-			return getContext().currentUserStatus === 'attending';
-		},
-
 		get isWaiting() {
-			return getContext().currentUserStatus === 'waiting_list';
+			return isWaiting( getContext() );
 		},
 
 		get hasResponse() {
@@ -64,16 +60,32 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.rsvpLoading ) {
 				return label( 'loading' );
 			}
-			if ( ctx.currentUserStatus === 'attending' ) {
-				return label( 'attending' );
-			}
-			if ( ctx.currentUserStatus === 'waiting_list' ) {
-				return label( 'waitingListed' );
-			}
 			if ( isFull( ctx ) ) {
 				return label( 'joinWaitingList' );
 			}
 			return ctx.isMember ? label( 'rsvp' ) : label( 'joinRsvp' );
+		},
+
+		get statusTitle() {
+			const ctx = getContext();
+			if ( ctx.currentUserStatus === 'attending' ) {
+				return label( 'statusTitleAttending' );
+			}
+			return isWaiting( ctx ) ? label( 'statusTitleWaiting' ) : '';
+		},
+
+		// The confirmation prompt takes the hint's place while it's showing.
+		get statusHint() {
+			const ctx = getContext();
+			return isWaiting( ctx ) && ! ctx.confirmingCancel ? label( 'statusHintWaiting' ) : '';
+		},
+
+		get confirmPrompt() {
+			return isWaiting( getContext() ) ? label( 'confirmLeaveWaiting' ) : label( 'confirmCancelAttending' );
+		},
+
+		get keepLabel() {
+			return isWaiting( getContext() ) ? label( 'stayOnList' ) : label( 'keepSpot' );
 		},
 
 		get isMember() {
@@ -96,19 +108,11 @@ store( 'wporg/event-rsvp', {
 			if ( ctx.rsvpLoading ) {
 				return label( 'loading' );
 			}
-			if ( ctx.currentUserStatus === 'attending' ) {
-				return label( 'cancelRsvp' );
-			}
-			if ( ctx.currentUserStatus === 'waiting_list' ) {
-				return label( 'leaveWaitingList' );
-			}
 			return isFull( ctx ) ? label( 'joinWaitingList' ) : label( 'attend' );
 		},
 
 		get cancelLabel() {
-			return getContext().currentUserStatus === 'waiting_list'
-				? label( 'leaveWaitingList' )
-				: label( 'cancelRsvp' );
+			return isWaiting( getContext() ) ? label( 'leaveWaitingList' ) : label( 'cancelRsvp' );
 		},
 	},
 
@@ -173,9 +177,8 @@ store( 'wporg/event-rsvp', {
 				window.location.href = ctx.loginUrl;
 				return;
 			}
-			// Attending or waiting already, or there are questions to answer
-			// first — either way the modal is where the next step lives.
-			if ( hasResponse( ctx ) || ctx.hasQuestions ) {
+			// Questions to answer first: the modal is where they live.
+			if ( ctx.hasQuestions ) {
 				openRsvpModal( ctx, ref );
 				return;
 			}
@@ -187,12 +190,56 @@ store( 'wporg/event-rsvp', {
 			return doToggleRsvp( ctx, getElement().ref );
 		},
 
+		// On a full event the seat goes to someone else, so ask first.
+		async requestCancel() {
+			const ctx = getContext();
+			const { ref } = getElement();
+			if ( ! isFull( ctx ) ) {
+				return doToggleRsvp( ctx, ref );
+			}
+			ctx.confirmingCancel = true;
+			focusInBlock( ref, '.wporg-event-rsvp__keep' );
+		},
+
+		dismissCancel() {
+			dismissConfirm( getContext(), getElement().ref );
+		},
+
+		handleConfirmKeydown( event ) {
+			if ( event.key === 'Escape' ) {
+				event.preventDefault();
+				dismissConfirm( getContext(), getElement().ref );
+			}
+		},
+
 		async saveAnswers() {
 			const ctx = getContext();
 			return doSaveAnswers( ctx, getElement().ref );
 		},
 	},
 } );
+
+function dismissConfirm( ctx, ref ) {
+	ctx.confirmingCancel = false;
+	focusInBlock( ref, '.wporg-event-rsvp__cancel' );
+}
+
+function focusInBlock( ref, selector ) {
+	scheduleFocus( ref?.closest( '.wp-block-wporg-event-rsvp' )?.querySelector( selector ) );
+}
+
+/**
+ * Keep focus on the page control that replaced the one just pressed.
+ *
+ * RSVPing hides the RSVP button and cancelling hides the status panel, so
+ * without this focus falls back to the top of the page.
+ *
+ * @param {Object}  ctx The block's interactivity context.
+ * @param {Element} ref Any element inside the block.
+ */
+function focusRsvpControl( ctx, ref ) {
+	focusInBlock( ref, hasResponse( ctx ) ? '.wporg-event-rsvp__status' : '.wporg-event-rsvp__button' );
+}
 
 function openRsvpModal( ctx, trigger ) {
 	const block = trigger?.closest( '.wp-block-wporg-event-rsvp' );
@@ -247,7 +294,8 @@ function scheduleFocus( element ) {
 	}
 
 	window.requestAnimationFrame( () => {
-		if ( document.contains( element ) ) {
+		// Skips a control the status change just hid, such as the modal's trigger.
+		if ( document.contains( element ) && ! element.closest( '.is-hidden' ) ) {
 			element.focus();
 		}
 	} );
@@ -391,6 +439,9 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 	const oldWaiting = ctx.waitingCount;
 	if ( ! answersOnly ) {
 		applyOptimisticStatus( ctx, newStatus );
+		if ( ! ctx.modalOpen ) {
+			focusRsvpControl( ctx, block );
+		}
 	}
 	ctx.rsvpLoading = true;
 
@@ -437,6 +488,9 @@ async function submitRsvp( ctx, actionElement, newStatus, answersOnly = false ) 
 		}
 	} finally {
 		ctx.rsvpLoading = false;
+		if ( ! answersOnly && ! ctx.modalOpen ) {
+			focusRsvpControl( ctx, block );
+		}
 	}
 }
 
@@ -650,7 +704,11 @@ function getWaitingParts( waiting, full ) {
 }
 
 function hasResponse( ctx ) {
-	return ctx.currentUserStatus === 'attending' || ctx.currentUserStatus === 'waiting_list';
+	return ctx.currentUserStatus === 'attending' || isWaiting( ctx );
+}
+
+function isWaiting( ctx ) {
+	return ctx.currentUserStatus === 'waiting_list';
 }
 
 function isFull( ctx ) {
@@ -661,6 +719,7 @@ function isFull( ctx ) {
 // the waiting list frees no seat.
 function applyOptimisticStatus( ctx, newStatus ) {
 	const oldStatus = ctx.currentUserStatus;
+	ctx.confirmingCancel = false;
 
 	if ( newStatus === 'attending' && isFull( ctx ) ) {
 		ctx.currentUserStatus = 'waiting_list';

@@ -278,13 +278,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * An attendee can withdraw from the event page itself.
-	 *
-	 * Cancelling used to be reachable only by pressing the "Attending"
-	 * button — which reports status rather than offering an action — and
-	 * finding "Cancel RSVP" in the modal it opens (#2058).
+	 * Attending reads as a status with a Cancel button beside it, not as a button (#2058).
 	 */
-	public function test_event_rsvp_offers_cancelling_on_the_page_while_attending() {
+	public function test_event_rsvp_shows_attending_as_a_status_with_cancel() {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -303,28 +299,22 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
 
-		$cancel_position = strpos( $output, 'class="wporg-event-rsvp__cancel"' );
+		$this->assertStringContainsString( 'class="wp-block-button is-hidden"', $output, 'The RSVP button still shows for somebody who is attending.' );
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__status"', $output );
+		$this->assertMatchesRegularExpression( '/data-wp-text="state.statusTitle">You&#039;re attending</', $output );
+
+		$cancel_position = strpos( $output, 'data-wp-on--click="actions.requestCancel"' );
 		$modal_position  = strpos( $output, 'class="wporg-event-rsvp__modal"' );
 
 		$this->assertNotFalse( $cancel_position, 'No cancel control on the page for somebody who is attending.' );
-		$this->assertLessThan(
-			$modal_position,
-			$cancel_position,
-			'The cancel control is inside the modal again, which is what put it out of reach.'
-		);
-
-		// The same action the modal's own button calls, so there is one way
-		// to withdraw rather than two implementations of it.
-		$this->assertStringContainsString( 'data-wp-on--click="actions.toggleRsvp"', $output );
+		$this->assertLessThan( $modal_position, $cancel_position, 'The cancel control is inside the modal, out of reach.' );
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__modal-rsvp-btn wp-element-button is-hidden"', $output, 'The modal offers a second way to cancel.' );
 	}
 
 	/**
-	 * Somebody who isn't attending has nothing to cancel, so the control ships
-	 * hidden rather than absent: the RSVP button changes status without a
-	 * reload, and `state.hasResponse` can only reveal an element that is
-	 * already in the DOM.
+	 * The status panel ships hidden for a non-attendee: RSVPing doesn't reload, and `state.hasResponse` can only reveal what's in the DOM.
 	 */
-	public function test_event_rsvp_cancel_ships_hidden_for_a_non_attendee() {
+	public function test_event_rsvp_status_ships_hidden_for_a_non_attendee() {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -338,15 +328,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
 
-		$this->assertStringContainsString( 'class="wporg-event-rsvp__cancel is-hidden"', $output );
-		$this->assertStringContainsString( 'data-wp-class--is-hidden="!state.hasResponse"', $output );
+		$this->assertStringContainsString( 'class="wporg-event-rsvp__status is-hidden"', $output );
+		$this->assertStringContainsString( 'class="wp-block-button"', $output );
 	}
 
 	/**
-	 * A logged-out visitor has no RSVP to cancel and no way to make one
-	 * without leaving the page, so the control isn't rendered at all.
+	 * A logged-out visitor has no RSVP to show, so the status panel isn't rendered at all.
 	 */
-	public function test_event_rsvp_cancel_is_absent_for_a_logged_out_visitor() {
+	public function test_event_rsvp_status_is_absent_for_a_logged_out_visitor() {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
@@ -360,7 +349,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
 		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
 
-		$this->assertStringNotContainsString( 'wporg-event-rsvp__cancel', $output );
+		$this->assertStringNotContainsString( 'wporg-event-rsvp__status', $output );
 	}
 
 	/**

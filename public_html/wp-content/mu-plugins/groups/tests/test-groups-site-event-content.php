@@ -86,4 +86,52 @@ class Test_Groups_Site_Event_Content extends WP_UnitTestCase {
 			$output
 		);
 	}
+
+	/**
+	 * The "Details" section only renders when the event has a description.
+	 */
+	public function test_details_section_hides_for_a_blank_description(): void {
+		$section = '<!-- wp:group {"className":"groups-site-event-details"} --><div class="wp-block-group groups-site-event-details">' .
+			'<!-- wp:heading --><h2 class="wp-block-heading">Details</h2><!-- /wp:heading -->' .
+			'<!-- wp:post-content /-->' .
+			'</div><!-- /wp:group -->';
+
+		// The event form's empty paragraph, next to GatherPress's starter blocks.
+		$blank = "<!-- wp:gatherpress/event-date /-->\n\n<!-- wp:paragraph -->\n<p></p>\n<!-- /wp:paragraph -->";
+		$this->assertSame( '', $this->render_on_event_page( $section, $blank ) );
+
+		$output = $this->render_on_event_page( $section, '<!-- wp:paragraph --><p>Bring snacks.</p><!-- /wp:paragraph -->' );
+		$this->assertStringContainsString( 'Details', $output );
+		$this->assertStringContainsString( 'Bring snacks.', $output );
+	}
+
+	/**
+	 * Render block markup on the single view of a new event with the given content.
+	 *
+	 * @param string $markup  Block markup to render.
+	 * @param string $content The event's content.
+	 * @return string The rendered markup.
+	 */
+	private function render_on_event_page( string $markup, string $content ): string {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'gatherpress_event',
+				'post_content' => $content,
+			)
+		);
+
+		// Not `go_to()`: its `wp` action reaches sites this suite doesn't create.
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Viewing the event; tear_down() resets the query.
+		$GLOBALS['wp_query']     = new \WP_Query(
+			array(
+				'p'         => $event_id,
+				'post_type' => 'gatherpress_event',
+			)
+		);
+		$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
+		the_post();
+
+		return trim( do_blocks( $markup ) );
+	}
 }

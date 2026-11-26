@@ -345,7 +345,18 @@ function register_routes(): void {
 					'site_language' => array(
 						'type'              => 'string',
 						'required'          => false,
-						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => 'rest_validate_request_arg',
+						'sanitize_callback' => static function ( $value ) {
+							if ( ! is_string( $value ) ) {
+								return new WP_Error(
+									'wporg_groups_invalid_site_language',
+									__( 'Choose a valid site language.', 'wordcamporg' ),
+									array( 'status' => 400 )
+								);
+							}
+
+							return sanitize_text_field( $value );
+						},
 					),
 				),
 			),
@@ -435,7 +446,17 @@ function update_group_info( WP_REST_Request $request ) {
 	}
 
 	if ( $has_site_language ) {
-		$site_language = validate_site_language( (string) $request->get_param( 'site_language' ) );
+		$raw_site_language = $request->get_param( 'site_language' );
+
+		if ( ! is_string( $raw_site_language ) ) {
+			return new WP_Error(
+				'wporg_groups_invalid_site_language',
+				__( 'Choose a valid site language.', 'wordcamporg' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$site_language = validate_site_language( $raw_site_language );
 
 		if ( is_wp_error( $site_language ) ) {
 			return $site_language;

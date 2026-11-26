@@ -96,13 +96,37 @@ abstract class Groups_TestCase extends Database_TestCase {
 			'WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification',
 			10
 		);
+
+		delete_site_transient( 'available_translations' );
+		add_filter( 'translations_api', array( $this, 'stub_translations_api' ), 20, 2 );
 	}
 
 	/**
-	 * Restores the previously-current blog after each test.
+	 * Clears the translation API stub and restores the previously-current blog after each test.
 	 */
 	protected function tearDown(): void {
+		remove_filter( 'translations_api', array( $this, 'stub_translations_api' ), 20 );
+		delete_site_transient( 'available_translations' );
 		restore_current_blog();
 		parent::tearDown();
+	}
+
+	/**
+	 * Stub core's translation API so tests never make live requests to api.wordpress.org.
+	 *
+	 * Only supplies an empty response when no test-specific filter has already
+	 * provided one.
+	 *
+	 * @param false|array $result Filtered result.
+	 * @param string      $type   Translation type.
+	 *
+	 * @return false|array
+	 */
+	public function stub_translations_api( $result, string $type ) {
+		if ( 'core' !== $type || false !== $result ) {
+			return $result;
+		}
+
+		return array( 'translations' => array() );
 	}
 }

@@ -224,4 +224,32 @@ class Test_Groups_Site_Language extends Groups_TestCase {
 		$this->assertNotWPError( update_group_info( $clear ) );
 		$this->assertSame( '', get_option( 'WPLANG' ) );
 	}
+
+	/**
+	 * Non-string `site_language` payloads (`null` or `array`) return 400 instead of resetting to English.
+	 */
+	public function test_group_info_rejects_null_and_array_site_language() {
+		add_filter( 'get_available_languages', array( $this, 'filter_available_languages' ) );
+		wp_set_current_user( $this->editor_id );
+		save_site_language( 'pl_PL' );
+
+		foreach ( array( null, array( 'pl_PL' ) ) as $invalid_value ) {
+			$json_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+			$json_request->set_header( 'content-type', 'application/json' );
+			$json_request->set_body( wp_json_encode( array( 'site_language' => $invalid_value ) ) );
+			$json_response = rest_do_request( $json_request );
+
+			$this->assertSame( 400, $json_response->get_status() );
+			$this->assertSame( 'pl_PL', get_option( 'WPLANG' ) );
+
+			$direct_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+			$direct_request->set_param( 'site_language', $invalid_value );
+			$direct_error = update_group_info( $direct_request );
+
+			$this->assertInstanceOf( WP_Error::class, $direct_error );
+			$this->assertSame( 'wporg_groups_invalid_site_language', $direct_error->get_error_code() );
+			$this->assertSame( 400, $direct_error->get_error_data()['status'] );
+			$this->assertSame( 'pl_PL', get_option( 'WPLANG' ) );
+		}
+	}
 }

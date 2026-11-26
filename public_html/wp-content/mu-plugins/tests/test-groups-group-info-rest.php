@@ -50,6 +50,35 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_type' );
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
+
+		delete_site_transient( 'available_translations' );
+		add_filter( 'translations_api', array( $this, 'stub_translations_api' ), 20, 2 );
+	}
+
+	/**
+	 * Clears the translation API stub after each test.
+	 */
+	public function tear_down() {
+		remove_filter( 'translations_api', array( $this, 'stub_translations_api' ), 20 );
+		delete_site_transient( 'available_translations' );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Stub core's translation API so tests never make live requests to api.wordpress.org.
+	 *
+	 * @param false|array $result Filtered result.
+	 * @param string      $type   Translation type.
+	 *
+	 * @return false|array
+	 */
+	public function stub_translations_api( $result, string $type ) {
+		if ( 'core' !== $type || false !== $result ) {
+			return $result;
+		}
+
+		return array( 'translations' => array() );
 	}
 
 	/**

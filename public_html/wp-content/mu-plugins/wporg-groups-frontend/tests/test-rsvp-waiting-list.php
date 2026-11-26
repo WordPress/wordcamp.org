@@ -132,7 +132,7 @@ class Test_Groups_RSVP_Waiting_List extends Groups_TestCase {
 		$output = $this->render_rsvp_block( $event_id );
 
 		$this->assertSame( 'Join waiting list', $this->main_button_label( $output ) );
-		$this->assertMatchesRegularExpression( '/class="wporg-event-rsvp__waiting"[^>]*>Full · 1 on the waiting list</', $output );
+		$this->assertMatchesRegularExpression( '/class="wporg-event-rsvp__waiting"[^>]*>Full, 1 on the waiting list</', $output );
 	}
 
 	/**

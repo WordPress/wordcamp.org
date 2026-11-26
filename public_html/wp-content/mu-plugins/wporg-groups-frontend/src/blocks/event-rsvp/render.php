@@ -428,8 +428,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endif; ?>
 		</span>
 
-		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
-			<?php echo esc_html( $count_label ); ?>
+		<span class="wporg-event-rsvp__summary-text">
+			<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
+				<?php echo esc_html( $count_label ); ?>
+			</span>
+
+			<span
+				class="wporg-event-rsvp__waiting<?php echo '' === $waiting_line_label ? ' is-hidden' : ''; ?>"
+				data-wp-text="state.waitingLabel"
+				data-wp-class--is-hidden="!state.waitingLabel"
+			><?php echo esc_html( $waiting_line_label ); ?></span>
 		</span>
 
 		<?php
@@ -442,12 +450,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		?>
 		<span class="screen-reader-text"><?php esc_html_e( 'View attendees', 'wordcamporg' ); ?></span>
 	</button>
-
-	<p
-		class="wporg-event-rsvp__waiting<?php echo '' === $waiting_line_label ? ' is-hidden' : ''; ?>"
-		data-wp-text="state.waitingLabel"
-		data-wp-class--is-hidden="!state.waitingLabel"
-	><?php echo esc_html( $waiting_line_label ); ?></p>
 
 	<p
 		class="screen-reader-text wporg-event-rsvp__notice"

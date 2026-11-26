@@ -137,13 +137,13 @@ function get_count_formats(): array {
 const WAITING_FORMAT_KEYS = array( 'waitingFull', 'waitingSingular', 'waitingPlural' );
 
 /**
- * The format and number for the "Full · N on the waiting list" line; an empty format hides it.
+ * The format and number for the "Full, N on the waiting list" caption; an empty format hides it.
  */
 function get_waiting_parts( int $waiting, bool $is_full ): array {
 	if ( $waiting > 0 ) {
 		return array(
 			/* translators: %s: number of people on the event's waiting list. */
-			_n( 'Full · %s on the waiting list', 'Full · %s on the waiting list', $waiting, 'wordcamporg' ),
+			_n( 'Full, %s on the waiting list', 'Full, %s on the waiting list', $waiting, 'wordcamporg' ),
 			$waiting,
 		);
 	}

@@ -187,12 +187,15 @@ body.error404 :is(.wp-block-wporg-site-breadcrumbs, .groups-site-callout-links) 
    below clipping and scrolling within the space the bar can spare. Let it
    shrink; the wrapper's own overflow then does the rest.
 
-   The block pulls itself 5px left so its links' 5px padding meets the edge,
-   but the breadcrumb starts with plain text, which then sat 5px left of the
-   page content at every width (#2443). */
+   The block pulls itself 5px left so its links' 5px padding meets the edge.
+   When the first crumb is plain text (the group home and the directory) it
+   has no such padding and sat 5px left of the page content (#2443). */
 
 .wp-block-wporg-local-navigation-bar .wp-block-wporg-site-breadcrumbs {
 	min-width: 0;
+}
+
+.wp-block-wporg-local-navigation-bar .wporg-site-breadcrumbs__wrapper > .is-current-page:first-child {
 	padding-inline-start: calc(var(--wp--preset--spacing--10) / 2);
 }
 

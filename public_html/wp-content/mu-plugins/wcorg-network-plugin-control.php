@@ -77,6 +77,7 @@ function _get_network_plugin_state_list( $state ) {
 			'liveblog/liveblog.php',
 			'multi-event-sponsors/bootstrap.php',
 			'open-horizons/bootstrap.php',
+			'shashura-mobile-money-for-camptix/shashura-mobile-money-for-camptix.php',
 			'supportflow/supportflow.php',
 			'wordcamp-api/bootstrap.php',
 			'wordcamp-organizer-reminders/bootstrap.php',

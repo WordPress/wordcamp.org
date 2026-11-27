@@ -72,7 +72,7 @@ function render_email_banner_field() {
 		<button type="button" class="button camptix-email-banner-remove" <?php echo $banner_id ? '' : 'style="display: none;"'; ?>><?php esc_html_e( 'Remove image', 'wordcamporg' ); ?></button>
 
 		<p class="description">
-			<?php esc_html_e( 'Replaces the WordPress logo and event name at the top of ticket, receipt, refund and Notify emails. Emails show it 600 pixels wide, so use an image at least that wide.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Replaces the WordPress logo and event name at the top of ticket, receipt, refund and Notify emails. Use a JPEG, PNG or GIF at least 600 pixels wide, the width emails show it at.', 'wordcamporg' ); ?>
 		</p>
 	</div>
 	<?php

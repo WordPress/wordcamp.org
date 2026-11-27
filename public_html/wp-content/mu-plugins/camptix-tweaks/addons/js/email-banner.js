@@ -16,6 +16,12 @@ jQuery( function( $ ) {
 
 			frame.on( 'select', function() {
 				var attachment = frame.state().get( 'selection' ).first().toJSON();
+
+				// Uploads are auto-selected even when the library filter hides their type.
+				if ( -1 === camptixEmailBanner.types.indexOf( attachment.mime ) ) {
+					return;
+				}
+
 				var preview = attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium : attachment;
 
 				$field.find( '.camptix-email-banner-id' ).val( attachment.id );

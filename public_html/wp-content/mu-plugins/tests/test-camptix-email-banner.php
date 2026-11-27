@@ -113,6 +113,10 @@ class Test_CampTix_Email_Banner extends Database_TestCase {
 			validate_email_banner( array( 'email_banner_id' => $image_id ), array( 'email_banner_id' => (string) $webp_id ) )
 		);
 
+		update_option( 'camptix_options', array( 'email_banner_id' => $image_id ) );
+		$this->reload_camptix_options();
+		$this->assertNotSame( '', get_email_banner_url() );
+
 		update_option( 'camptix_options', array( 'email_banner_id' => $webp_id ) );
 		$this->reload_camptix_options();
 

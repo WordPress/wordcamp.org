@@ -10,7 +10,7 @@ jQuery( function( $ ) {
 			frame = wp.media( {
 				title: camptixEmailBanner.title,
 				button: { text: camptixEmailBanner.button },
-				library: { type: 'image' },
+				library: { type: camptixEmailBanner.types },
 				multiple: false,
 			} );
 

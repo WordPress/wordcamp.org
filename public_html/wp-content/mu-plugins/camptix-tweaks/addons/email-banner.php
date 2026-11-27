@@ -6,6 +6,9 @@ defined( 'WPINC' ) || die();
 
 const EMAIL_BANNER_OPTION = 'email_banner_id';
 
+// Outlook desktop and other clients can't render formats like WebP, AVIF or HEIC.
+const EMAIL_BANNER_MIME_TYPES = array( 'image/jpeg', 'image/png', 'image/gif' );
+
 add_action( 'admin_init',               __NAMESPACE__ . '\add_email_banner_setting', 11    );
 add_filter( 'camptix_validate_options', __NAMESPACE__ . '\validate_email_banner',    10, 2 );
 
@@ -52,6 +55,7 @@ function render_email_banner_field() {
 		array(
 			'title'  => __( 'Choose an email banner', 'wordcamporg' ),
 			'button' => __( 'Use this banner', 'wordcamporg' ),
+			'types'  => EMAIL_BANNER_MIME_TYPES,
 		)
 	);
 
@@ -75,7 +79,7 @@ function render_email_banner_field() {
 }
 
 /**
- * Save the email banner, keeping only image attachments.
+ * Save the email banner, keeping only images that email clients can display.
  *
  * @param array $output The sanitized options.
  * @param array $input  The submitted options.
@@ -89,7 +93,7 @@ function validate_email_banner( $output, $input ) {
 
 	$banner_id = absint( $input[ EMAIL_BANNER_OPTION ] );
 
-	if ( $banner_id && wp_attachment_is_image( $banner_id ) ) {
+	if ( is_email_banner_image( $banner_id ) ) {
 		$output[ EMAIL_BANNER_OPTION ] = $banner_id;
 	} else {
 		unset( $output[ EMAIL_BANNER_OPTION ] );
@@ -120,9 +124,20 @@ function get_email_banner_id() {
 function get_email_banner_url() {
 	$banner_id = get_email_banner_id();
 
-	if ( ! $banner_id || ! wp_attachment_is_image( $banner_id ) ) {
+	if ( ! is_email_banner_image( $banner_id ) ) {
 		return '';
 	}
 
 	return (string) wp_get_attachment_image_url( $banner_id, 'large' );
+}
+
+/**
+ * Check whether an attachment is an image that email clients can display.
+ *
+ * @param int $attachment_id
+ *
+ * @return bool
+ */
+function is_email_banner_image( $attachment_id ) {
+	return $attachment_id && in_array( get_post_mime_type( $attachment_id ), EMAIL_BANNER_MIME_TYPES, true );
 }

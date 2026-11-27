@@ -98,6 +98,28 @@ class Test_CampTix_Email_Banner extends Database_TestCase {
 	}
 
 	/**
+	 * Image formats that many email clients can't display are rejected.
+	 */
+	public function test_validate_rejects_images_email_clients_cannot_display() {
+		$image_id = $this->create_image();
+		$webp_id  = self::factory()->attachment->create_object(
+			'email-banner.webp',
+			0,
+			array( 'post_mime_type' => 'image/webp' )
+		);
+
+		$this->assertArrayNotHasKey(
+			'email_banner_id',
+			validate_email_banner( array( 'email_banner_id' => $image_id ), array( 'email_banner_id' => (string) $webp_id ) )
+		);
+
+		update_option( 'camptix_options', array( 'email_banner_id' => $webp_id ) );
+		$this->reload_camptix_options();
+
+		$this->assertSame( '', get_email_banner_url() );
+	}
+
+	/**
 	 * Saving another Setup tab, which doesn't submit the field, keeps the banner.
 	 */
 	public function test_validate_keeps_banner_when_field_not_submitted() {

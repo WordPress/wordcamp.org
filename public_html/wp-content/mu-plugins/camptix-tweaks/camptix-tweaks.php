@@ -608,6 +608,7 @@ function load_custom_addons() {
 	require_once __DIR__ . '/addons/ticket-types/ticket-types.php';
 	require_once __DIR__ . '/addons/wporg-profile-url.php';
 	require_once __DIR__ . '/addons/profile-tickets.php';
+	require_once __DIR__ . '/addons/email-banner.php';
 
 	// Payment options.
 	if (
@@ -872,7 +873,8 @@ function render_html_emails( $html_message, $phpmailer ) {
 		return $html_message;
 	}
 
-	$logo_url = plugins_url( '/images/wordpress-logo.png', __FILE__ );
+	$logo_url   = plugins_url( '/images/wordpress-logo.png', __FILE__ );
+	$banner_url = get_email_banner_url();
 
 	ob_start();
 	require( __DIR__ . '/views/html-mail-header.php' );

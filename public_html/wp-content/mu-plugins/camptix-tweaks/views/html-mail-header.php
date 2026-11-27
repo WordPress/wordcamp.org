@@ -372,6 +372,13 @@
 					<table border="0" cellpadding="0" cellspacing="0" width="100%" class="templateContainer" style="border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;border: 0;max-width: 600px !important;">
 						<tr>
 							<td valign="top" id="templateHeader" style="mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-color: #FFFFFF;border-top: 0;border-bottom: 0;padding-top: 0px;padding-bottom: 0;">
+								<?php if ( ! empty( $banner_url ) ) : ?>
+								<img
+									width="600"
+									src="<?php echo esc_url( $banner_url ); ?>"
+									alt="<?php echo esc_attr( get_wordcamp_name() ); ?>"
+									style="display: block;width: 100%;max-width: 600px;height: auto;margin: 0;border: 0;outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;">
+								<?php else : ?>
 								<table border="0" cellpadding="0" cellspacing="0" width="100%" class="mcnTextBlock" style="min-width: 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
 									<tbody class="mcnTextBlockOuter">
 										<tr>
@@ -403,6 +410,7 @@
 										</tr>
 									</tbody>
 								</table>
+								<?php endif; ?>
 							</td>
 						</tr>
 

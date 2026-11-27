@@ -208,6 +208,19 @@
 		}
 	}
 
+	&__rsvp-window-row {
+		display: grid;
+		grid-template-columns: minmax(0, 8em) minmax(0, 16em);
+		gap: 8px;
+		align-items: end;
+	}
+
+	&__rsvp-window-error {
+		margin: 0;
+		font-size: 13px;
+		color: #cc1818;
+	}
+
 	&__editor {
 		border: 1px solid #d9d9d9;
 		border-radius: 2px;

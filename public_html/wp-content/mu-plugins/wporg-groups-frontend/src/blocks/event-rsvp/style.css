@@ -231,6 +231,16 @@
 	text-decoration: underline;
 }
 
+.wporg-event-rsvp__window {
+	margin: 8px 0 0;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	color: var(--wp--preset--color--charcoal-3, #40464d);
+}
+
+.wporg-event-rsvp__window.is-hidden {
+	display: none;
+}
+
 /* === RSVP button === */
 .wp-block-wporg-event-rsvp .wp-block-button {
 	width: 100%;

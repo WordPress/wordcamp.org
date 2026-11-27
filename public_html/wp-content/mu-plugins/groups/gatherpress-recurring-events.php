@@ -51,6 +51,7 @@ add_action(
 		add_action( 'wporg_groups_frontend_event_draft_saved', __NAMESPACE__ . '\\save_recurring_event_draft', 10, 2 );
 		add_action( 'wporg_groups_frontend_event_saved', __NAMESPACE__ . '\\save_recurring_event', 10, 3 );
 		add_filter( 'wporg_groups_frontend_before_rsvp', __NAMESPACE__ . '\\set_rsvp_occurrence_context', 10, 3 );
+		add_filter( 'gpre_rsvp_allowed', __NAMESPACE__ . '\\check_rsvp_window', 10, 3 );
 		add_filter( 'wporg_groups_frontend_current_recurrence_id', array( Context::class, 'recurrence_id' ), 10, 0 );
 		add_filter( 'wporg_groups_frontend_is_recurring_event', __NAMESPACE__ . '\\is_recurring_event', 10, 2 );
 	},
@@ -320,6 +321,22 @@ function set_rsvp_occurrence_context( $error, int $event_id, WP_REST_Request $re
 	Context::set( $occurrence );
 
 	return $error;
+}
+
+/**
+ * Refuses an attending RSVP outside the date's RSVP window (#2397).
+ *
+ * @param true|WP_Error $allowed Whether an earlier filter allowed it.
+ * @param int           $post_id Series post ID.
+ * @param string        $status  Requested RSVP status.
+ * @return true|WP_Error True when the RSVP may be saved.
+ */
+function check_rsvp_window( $allowed, int $post_id, string $status ) {
+	if ( true !== $allowed ) {
+		return $allowed;
+	}
+
+	return \WordCamp\Groups\Frontend\RSVP_Window\check_rsvp( $post_id, $status );
 }
 
 /**

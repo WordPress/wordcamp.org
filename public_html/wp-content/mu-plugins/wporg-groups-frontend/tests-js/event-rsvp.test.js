@@ -940,3 +940,89 @@ describe( 'event RSVP waiting list', () => {
 		expect( state.waitingLabel ).toBe( 'Full, 1 on the waiting list' );
 	} );
 } );
+
+/**
+ * Outside the event's RSVP window, a new RSVP can't be made but an existing
+ * one can still be cancelled. #2397.
+ */
+describe( 'event RSVP window', () => {
+	beforeEach( () => {
+		mockContext = createContext();
+		mockContext.postId = 12;
+		mockContext.rsvpApi = '/wp-json/wporg-groups/v1/event/12/rsvp';
+		mockContext.labels = {
+			...mockContext.labels,
+			rsvp: 'RSVP',
+			rsvpNotOpen: 'RSVPs not open yet',
+			rsvpClosed: 'RSVPs closed',
+			attending: 'Attending',
+			cancelRsvp: 'Cancel RSVP',
+		};
+		mockElement = null;
+		mockStoreConfig = null;
+		global.fetch = jest.fn();
+	} );
+
+	afterEach( () => {
+		jest.restoreAllMocks();
+	} );
+
+	test( 'says RSVPs are not open yet and disables the button', () => {
+		const { state } = loadStore();
+		mockContext.rsvpWindow = 'not_yet';
+		mockContext.rsvpUnavailable = 'RSVPs open on Nov 30, 2026 at 6:00 PM IST.';
+
+		expect( state.rsvpButtonLabel ).toBe( 'RSVPs not open yet' );
+		expect( state.isButtonDisabled ).toBe( true );
+		expect( state.isUnavailable ).toBe( true );
+	} );
+
+	test( 'does not send a new RSVP once RSVPs are closed', async () => {
+		const { actions, state } = loadStore();
+		mockContext.rsvpWindow = 'closed';
+		mockContext.rsvpUnavailable = 'RSVPs for this event are closed.';
+
+		await actions.toggleRsvp();
+
+		expect( global.fetch ).not.toHaveBeenCalled();
+		expect( state.rsvpButtonLabel ).toBe( 'RSVPs closed' );
+	} );
+
+	test( 'keeps an attendee able to cancel after RSVPs close', () => {
+		const { state } = loadStore();
+		mockContext.currentUserStatus = 'attending';
+		mockContext.rsvpWindow = 'closed';
+		mockContext.rsvpUnavailable = 'RSVPs for this event are closed.';
+
+		expect( state.hasResponse ).toBe( true );
+		expect( state.cancelLabel ).toBe( 'Cancel RSVP' );
+		expect( state.isUnavailable ).toBe( false );
+
+		mockContext.currentUserStatus = 'not_attending';
+
+		expect( state.rsvpButtonLabel ).toBe( 'RSVPs closed' );
+		expect( state.isButtonDisabled ).toBe( true );
+	} );
+
+	test( 'shows the closed state when the server says RSVPs just closed', async () => {
+		const { actions, state } = loadStore();
+
+		global.fetch
+			.mockResolvedValueOnce( { ok: true, json: async () => ( { nonce: 'nonce' } ) } )
+			.mockResolvedValueOnce( {
+				ok: false,
+				status: 400,
+				json: async () => ( {
+					code: 'wporg_groups_rsvp_closed',
+					message: 'RSVPs for this event are closed.',
+				} ),
+			} );
+
+		await actions.toggleRsvp();
+
+		expect( mockContext.currentUserStatus ).toBe( 'no_status' );
+		expect( mockContext.rsvpNotice ).toBe( 'RSVPs for this event are closed.' );
+		expect( mockContext.modalOpen ).toBe( false );
+		expect( state.rsvpButtonLabel ).toBe( 'RSVPs closed' );
+	} );
+} );

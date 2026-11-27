@@ -47,6 +47,7 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 use WordCamp\Groups\Frontend\Member_Joined;
+use WordCamp\Groups\Frontend\RSVP_Window;
 
 use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
 
@@ -616,6 +617,11 @@ function save_rsvp( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_event_past', 'This event has already happened.', array( 'status' => 400 ) );
 	}
 
+	$window_error = RSVP_Window\check_rsvp( $event_id, $status );
+	if ( is_wp_error( $window_error ) ) {
+		return $window_error;
+	}
+
 	$user_id   = get_current_user_id();
 	$questions = get_questions( $event_id );
 
@@ -882,6 +888,20 @@ function event_args_schema(): array {
 			'minimum'           => 0,
 			'sanitize_callback' => 'absint',
 		),
+		// When RSVPs open and close, in seconds before the start (#2397).
+		// Null clears the setting; an absent parameter leaves it alone.
+		'rsvp_opens_before'  => array(
+			'type'     => array( 'integer', 'null' ),
+			'required' => false,
+			'minimum'  => 0,
+			'maximum'  => RSVP_Window\MAX_BEFORE,
+		),
+		'rsvp_closes_before' => array(
+			'type'     => array( 'integer', 'null' ),
+			'required' => false,
+			'minimum'  => 0,
+			'maximum'  => RSVP_Window\MAX_BEFORE,
+		),
 		// Custom registration questions. Deliberately has no `default` — an
 		// absent parameter means "leave the existing questions alone", which
 		// an empty-array default would turn into "delete them all".
@@ -1080,6 +1100,9 @@ function get_existing_event_fields( int $event_id ): array {
 	// Carried into a new event started from this one too: a group's venue
 	// holds the same number of people next month.
 	$fields['capacity'] = (int) get_post_meta( $event_id, 'gatherpress_capacity', true );
+
+	// So is when RSVPs open and close, which is set relative to the start.
+	$fields = array_merge( $fields, RSVP_Window\get_settings( $event_id ) );
 
 	$thumb_id = (int) get_post_thumbnail_id( $event_id );
 	if ( $thumb_id ) {
@@ -1437,6 +1460,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 	maybe_save_hosts( $saved_id, $request );
 	maybe_save_speakers( $saved_id, $request );
 	maybe_save_capacity( $saved_id, $request );
+	RSVP_Window\save_settings( $saved_id, $request );
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -1631,6 +1655,11 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		return $validation_error;
 	}
 
+	$window_error = RSVP_Window\validate_settings( $event_id, $request );
+	if ( is_wp_error( $window_error ) ) {
+		return $window_error;
+	}
+
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
 	}
@@ -1699,6 +1728,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	maybe_save_hosts( $saved_id, $request );
 	maybe_save_speakers( $saved_id, $request );
 	maybe_save_capacity( $saved_id, $request );
+	RSVP_Window\save_settings( $saved_id, $request );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).

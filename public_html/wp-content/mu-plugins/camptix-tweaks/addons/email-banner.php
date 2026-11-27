@@ -53,9 +53,10 @@ function render_email_banner_field() {
 		'camptix-email-banner',
 		'camptixEmailBanner',
 		array(
-			'title'  => __( 'Choose an email banner', 'wordcamporg' ),
-			'button' => __( 'Use this banner', 'wordcamporg' ),
-			'types'  => EMAIL_BANNER_MIME_TYPES,
+			'title'       => __( 'Choose an email banner', 'wordcamporg' ),
+			'button'      => __( 'Use this banner', 'wordcamporg' ),
+			'types'       => EMAIL_BANNER_MIME_TYPES,
+			'invalidType' => __( 'Email banners must be a JPEG, PNG or GIF image.', 'wordcamporg' ),
 		)
 	);
 

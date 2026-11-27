@@ -19,6 +19,8 @@ jQuery( function( $ ) {
 
 				// Uploads are auto-selected even when the library filter hides their type.
 				if ( -1 === camptixEmailBanner.types.indexOf( attachment.mime ) ) {
+					frame.state().get( 'selection' ).reset();
+					window.alert( camptixEmailBanner.invalidType );
 					return;
 				}
 

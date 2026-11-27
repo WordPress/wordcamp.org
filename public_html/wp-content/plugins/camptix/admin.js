@@ -72,6 +72,11 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 
 				this.template = _.template( $( '#camptix-tmpl-notify-segment-item' ).html(), null, camptix.template_options );
 				this.$el.html( this.template( data ) );
+
+				if ( data.type == 'date' ) {
+					this.$el.find( '.segment-value-date' ).datepicker( { dateFormat: 'yy-mm-dd' } );
+				}
+
 				return this;
 			},
 

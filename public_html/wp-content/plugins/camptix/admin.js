@@ -88,9 +88,15 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 					value: this.$el.find( '.segment-value' ).val()
 				};
 
-				// Reset the value if the field has changed.
-				if ( this.model.get( 'field' ) !== args.field )
+				// Reset the value if the field has changed, and the operator if the new field doesn't offer it.
+				if ( this.model.get( 'field' ) !== args.field ) {
+					var ops = camptix.collections.segmentFields.findWhere( { option_value: args.field } ).get( 'ops' );
+
 					args.value = null;
+					if ( ! _.contains( ops, args.op ) ) {
+						args.op = _.first( ops );
+					}
+				}
 
 				this.model.set( args );
 				return this;

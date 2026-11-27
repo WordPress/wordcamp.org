@@ -557,6 +557,14 @@ class CampTix_Admin_Tools {
 					</select>
 					<# } else if ( data.type == 'text' ) { #>
 					<input type="text" class="segment-value regular-text" value="{{ data.model.value }}" />
+					<# } else if ( data.type == 'date' ) { #>
+					<input type="text" class="segment-value segment-value-date regular-text" placeholder="YYYY-MM-DD" value="{{ data.model.value }}" />
+					<p class="description">
+						<?php
+						/* translators: %s: The date format, YYYY-MM-DD. */
+						printf( esc_html__( 'Date format: %s', 'wordcamporg' ), 'YYYY-MM-DD' );
+						?>
+					</p>
 					<# } #>
 				</div>
 
@@ -590,7 +598,7 @@ class CampTix_Admin_Tools {
 			camptix.collections.segmentFields.add( new camptix.models.SegmentField({
 				caption: 'Purchase date',
 				option_value: 'date',
-				type: 'text',
+				type: 'date',
 				ops: [ 'before', 'after' ]
 			}));
 

@@ -50,7 +50,8 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 			},
 
 			initialize: function() {
-				this.model.bind( 'change', this.render, this );
+				// Re-rendering on value changes would replace the input under an open date picker.
+				this.model.bind( 'change:field', this.render, this );
 				this.model.bind( 'destroy', this.remove, this );
 
 				Backbone.View.prototype.initialize.apply( this, arguments );
@@ -72,6 +73,11 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 
 				this.template = _.template( $( '#camptix-tmpl-notify-segment-item' ).html(), null, camptix.template_options );
 				this.$el.html( this.template( data ) );
+
+				if ( data.type == 'date' ) {
+					this.$el.find( '.segment-value-date' ).datepicker( { dateFormat: 'yy-mm-dd', firstDay: 1 } );
+				}
+
 				return this;
 			},
 
@@ -82,9 +88,15 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 					value: this.$el.find( '.segment-value' ).val()
 				};
 
-				// Reset the value if the field has changed.
-				if ( this.model.get( 'field' ) !== args.field )
+				// Reset the value if the field has changed, and the operator if the new field doesn't offer it.
+				if ( this.model.get( 'field' ) !== args.field ) {
+					var ops = camptix.collections.segmentFields.findWhere( { option_value: args.field } ).get( 'ops' );
+
 					args.value = null;
+					if ( ! _.contains( ops, args.op ) ) {
+						args.op = _.first( ops );
+					}
+				}
 
 				this.model.set( args );
 				return this;

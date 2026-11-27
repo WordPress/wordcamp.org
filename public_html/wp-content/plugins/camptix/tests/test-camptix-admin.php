@@ -2495,4 +2495,20 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		$this->assertSame( array( 'Your segment matched 2 recipients.' ), $messages );
 	}
+
+	/**
+	 * The Purchase date condition uses the date field type and shows the expected format.
+	 */
+	public function test_notify_purchase_date_condition_shows_date_format() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_POST = array();
+
+		ob_start();
+		self::$camptix->admin_tools->menu_tools_notify();
+		$output = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( "/caption: 'Purchase date',\\s*option_value: 'date',\\s*type: 'date',/", $output );
+		$this->assertStringContainsString( 'class="segment-value segment-value-date regular-text" placeholder="YYYY-MM-DD"', $output );
+		$this->assertStringContainsString( 'Date format: YYYY-MM-DD', $output );
+	}
 }

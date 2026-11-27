@@ -50,7 +50,8 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 			},
 
 			initialize: function() {
-				this.model.bind( 'change', this.render, this );
+				// Re-rendering on value changes would replace the input under an open date picker.
+				this.model.bind( 'change:field', this.render, this );
 				this.model.bind( 'destroy', this.remove, this );
 
 				Backbone.View.prototype.initialize.apply( this, arguments );
@@ -74,7 +75,7 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 				this.$el.html( this.template( data ) );
 
 				if ( data.type == 'date' ) {
-					this.$el.find( '.segment-value-date' ).datepicker( { dateFormat: 'yy-mm-dd' } );
+					this.$el.find( '.segment-value-date' ).datepicker( { dateFormat: 'yy-mm-dd', firstDay: 1 } );
 				}
 
 				return this;

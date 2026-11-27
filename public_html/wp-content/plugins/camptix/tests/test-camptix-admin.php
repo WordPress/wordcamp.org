@@ -2497,7 +2497,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The Purchase date condition tells organizers the date format and gets a date picker.
+	 * The Purchase date condition uses the date field type and shows the expected format.
 	 */
 	public function test_notify_purchase_date_condition_shows_date_format() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );

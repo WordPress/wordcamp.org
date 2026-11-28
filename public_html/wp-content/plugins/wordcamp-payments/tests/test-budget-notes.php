@@ -27,10 +27,22 @@ class Test_Budget_Notes extends WP_UnitTestCase {
 	/** @var int A network admin. */
 	protected static $network_admin;
 
+	/** @var int|null The ID of the root blog, if this class created it. */
+	protected static $created_root_blog = null;
+
 	/**
+	 * Create the users, and Central, where the default budget looks for the event's WordCamp post.
+	 *
 	 * @param \WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		if ( ! get_site( WORDCAMP_ROOT_BLOG_ID ) ) {
+			self::$created_root_blog = $factory->blog->create( array(
+				'blog_id'    => WORDCAMP_ROOT_BLOG_ID,
+				'network_id' => WORDCAMP_NETWORK_ID,
+			) );
+		}
+
 		self::$organizer     = $factory->user->create( array( 'role' => 'administrator' ) );
 		self::$deputy        = $factory->user->create(
 			array(
@@ -44,6 +56,16 @@ class Test_Budget_Notes extends WP_UnitTestCase {
 				'user_login' => 'budget-network-admin',
 			)
 		);
+	}
+
+	/**
+	 * Remove the root blog this class created.
+	 */
+	public static function wpTearDownAfterClass() {
+		if ( self::$created_root_blog ) {
+			wp_delete_site( self::$created_root_blog );
+			self::$created_root_blog = null;
+		}
 	}
 
 	/**

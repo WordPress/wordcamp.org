@@ -31,6 +31,10 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			add_filter( 'camptix_validate_options', array( $this, 'validate_options' ), 10, 2 );
 		}
 
+		// Registered before the early return, so a stale admin flag condition never falls back to every attendee.
+		add_filter( 'camptix_notify_segment_fields', array( $this, 'notify_segment_fields' ) );
+		add_filter( 'camptix_notify_segment_query', array( $this, 'notify_segment_query' ), 10, 2 );
+
 		$camptix_options = $camptix->get_options();
 
 		// No further actions if we don't have any configured flags.
@@ -66,10 +70,6 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 
 		// Add the Flags to the Attendance UI.
 		add_filter( 'camptix_attendance_ui_extras', array( $this, 'attendance_ui_extras' ), 10, 2 );
-
-		// Notify segments.
-		add_filter( 'camptix_notify_segment_fields', array( $this, 'notify_segment_fields' ) );
-		add_filter( 'camptix_notify_segment_query', array( $this, 'notify_segment_query' ), 10, 2 );
 	}
 
 	/**

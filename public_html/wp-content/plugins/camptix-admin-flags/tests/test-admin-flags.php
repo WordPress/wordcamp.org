@@ -141,7 +141,8 @@ class Test_CampTix_Admin_Flags extends WP_UnitTestCase {
 			'2024'    => 'Volunteer 2024',
 		) );
 
-		$fields = $this->get_addon()->notify_segment_fields( array() );
+		$fields = wp_list_filter( apply_filters( 'camptix_notify_segment_fields', array() ), array( 'option_value' => 'admin_flag' ) );
+		$fields = array_values( $fields );
 
 		$this->assertSame( array( 'admin_flag' ), wp_list_pluck( $fields, 'option_value' ) );
 		$this->assertSame( array( 'sponsor', 'speaker', '2024' ), wp_list_pluck( $fields[0]['values'], 'value' ) );
@@ -154,7 +155,9 @@ class Test_CampTix_Admin_Flags extends WP_UnitTestCase {
 	public function test_notify_segment_fields_skip_without_flags() {
 		$this->set_flags( array() );
 
-		$this->assertSame( array(), $this->get_addon()->notify_segment_fields( array() ) );
+		$fields = apply_filters( 'camptix_notify_segment_fields', array() );
+
+		$this->assertNotContains( 'admin_flag', wp_list_pluck( $fields, 'option_value' ) );
 	}
 
 	/**
@@ -163,8 +166,6 @@ class Test_CampTix_Admin_Flags extends WP_UnitTestCase {
 	public function test_notify_segment_matches_flagged_attendees() {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
-
-		add_filter( 'camptix_notify_segment_query', array( $this->get_addon(), 'notify_segment_query' ), 10, 2 );
 
 		$flags_by_attendee = array(
 			'sponsor' => array( 'sponsor' ),

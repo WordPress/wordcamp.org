@@ -456,6 +456,16 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
 		);
 
+		$wordcamp = get_wordcamp_post();
+		if ( $wordcamp && 'campusconnect' === ( $wordcamp->meta['event_subtype'][0] ?? '' ) ) {
+			// Finance needs the campus count to check the per-campus sponsorship limit.
+			foreach ( $default_budget as $key => $item ) {
+				if ( 'Community Sponsorships' === ( $item['note'] ?? '' ) ) {
+					$default_budget[ $key ]['note'] = 'Community Sponsorships (Max $300 USD per campus x [# of Campuses])';
+				}
+			}
+		}
+
 		if ( is_wordcamp_type('next-gen') ) {
 			// $extra_budget_for_next_gen should be positioned after the 'days' element for proper ordering.
 			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;

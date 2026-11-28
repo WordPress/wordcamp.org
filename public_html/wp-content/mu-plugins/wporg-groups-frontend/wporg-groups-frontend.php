@@ -39,6 +39,7 @@ require_once __DIR__ . '/inc/my-events.php';
 require_once __DIR__ . '/inc/check-in.php';
 require_once __DIR__ . '/inc/leave-cleanup.php';
 require_once __DIR__ . '/inc/member-joined.php';
+require_once __DIR__ . '/inc/member-bans.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/class-ownership-transfer-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
@@ -61,6 +62,7 @@ function bootstrap(): void {
 	// The Meetup import adds members from the network root site, which
 	// doesn't run GatherPress either.
 	Member_Joined\bootstrap();
+	Member_Bans\bootstrap();
 
 	// The list of groups is served from the network root, which may not run GatherPress.
 	Groups_Directory\bootstrap();
@@ -77,6 +79,7 @@ function bootstrap(): void {
 	Post_Titles\bootstrap();
 	Export\bootstrap();
 	RSVP_Questions\bootstrap();
+	Member_Bans\bootstrap_rsvp_guards();
 	Check_In\bootstrap();
 	Event_Date_Format\bootstrap();
 	Event_Language\bootstrap();

@@ -467,6 +467,27 @@
 		}
 	}
 
+	&__banned {
+		margin-top: 32px;
+	}
+
+	&__banned-heading {
+		margin: 0 0 4px;
+		font-size: 16px;
+	}
+
+	&__banned-help {
+		margin: 0 0 12px;
+		font-size: 13px;
+		color: #757575;
+	}
+
+	&__banned-meta {
+		display: block;
+		font-size: 13px;
+		color: #757575;
+	}
+
 	&__actions {
 		display: flex;
 		flex: 0 0 72px;

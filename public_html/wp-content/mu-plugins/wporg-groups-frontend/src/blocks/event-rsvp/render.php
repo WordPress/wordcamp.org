@@ -8,6 +8,8 @@
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\Member_Bans\get_message as get_banned_message;
+use function WordCamp\Groups\Frontend\Member_Bans\is_banned;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_formats;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_label;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_modal_title_formats;
@@ -44,6 +46,7 @@ $rsvp      = new Rsvp( $event_post_id );
 $is_past   = $event->has_event_past();
 $is_login  = is_user_logged_in();
 $is_member = $is_login && is_user_member_of_blog();
+$is_banned = $is_login && ! $is_member && is_banned( get_current_user_id() );
 
 $responses = $rsvp->responses();
 $attending = $responses['attending'] ?? array(
@@ -282,7 +285,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes escapes. ?>>
 
-	<?php if ( ! $is_past ) : ?>
+	<?php if ( ! $is_past && $is_banned ) : ?>
+		<p class="wporg-event-rsvp__banned"><?php echo esc_html( get_banned_message() ); ?></p>
+	<?php elseif ( ! $is_past ) : ?>
 		<?php // Only an offer to RSVP. Once you have, the status panel below takes its place. ?>
 		<div
 			class="wp-block-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
@@ -545,17 +550,19 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<?php endif; ?>
 
 							<?php // Cancelling lives in the status panel on the page, so this only RSVPs. ?>
-							<button
-								type="button"
-								class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
-								data-wp-on--click="actions.toggleRsvp"
-								data-wp-text="state.modalRsvpLabel"
-								data-wp-class--is-hidden="state.hasResponse"
-								data-wp-bind--disabled="context.rsvpLoading"
-								data-wp-bind--aria-busy="context.rsvpLoading"
-							>
-								<?php echo esc_html( $modal_rsvp_label ); ?>
-							</button>
+							<?php if ( ! $is_banned ) : ?>
+								<button
+									type="button"
+									class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $has_response ? ' is-hidden' : ''; ?>"
+									data-wp-on--click="actions.toggleRsvp"
+									data-wp-text="state.modalRsvpLabel"
+									data-wp-class--is-hidden="state.hasResponse"
+									data-wp-bind--disabled="context.rsvpLoading"
+									data-wp-bind--aria-busy="context.rsvpLoading"
+								>
+									<?php echo esc_html( $modal_rsvp_label ); ?>
+								</button>
+							<?php endif; ?>
 						</div>
 					<?php else : ?>
 						<p class="wporg-event-rsvp__modal-status">

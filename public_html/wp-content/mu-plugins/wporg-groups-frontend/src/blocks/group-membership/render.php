@@ -8,6 +8,8 @@
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_step_down;
 use function WordCamp\Groups\Frontend\Capabilities\get_role_tier_label;
 use function WordCamp\Groups\Frontend\Capabilities\is_only_organizer;
+use function WordCamp\Groups\Frontend\Member_Bans\get_message as get_banned_message;
+use function WordCamp\Groups\Frontend\Member_Bans\is_banned;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
@@ -25,6 +27,7 @@ $shows_count = in_array( $variant, array( 'combined', 'count' ), true );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
+$is_banned    = $is_logged_in && ! $is_member && is_banned( get_current_user_id() );
 $user_role    = '';
 $role_label   = '';
 
@@ -205,6 +208,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php echo esc_html( $role_label ); ?>
 				</span>
 			<?php endif; ?>
+		<?php elseif ( $is_banned ) : ?>
+			<p class="wporg-group-membership__note is-banned"><?php echo esc_html( get_banned_message() ); ?></p>
 		<?php else : ?>
 			<div class="wp-block-button">
 				<button
@@ -275,7 +280,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php endif; ?>
 	<?php endif; ?>
 
-	<?php if ( $renders_lone_join ) : ?>
+	<?php if ( $renders_lone_join && $is_banned ) : ?>
+		<p class="wporg-group-membership__note is-banned"><?php echo esc_html( get_banned_message() ); ?></p>
+	<?php elseif ( $renders_lone_join ) : ?>
 		<div class="wp-block-button">
 			<button
 				type="button"

@@ -138,13 +138,14 @@ class Test_CampTix_Admin_Flags extends WP_UnitTestCase {
 		$this->set_flags( array(
 			'sponsor' => 'Sponsor',
 			'speaker' => 'Speaker',
+			'2024'    => 'Volunteer 2024',
 		) );
 
 		$fields = $this->get_addon()->notify_segment_fields( array() );
 
 		$this->assertSame( array( 'admin_flag' ), wp_list_pluck( $fields, 'option_value' ) );
-		$this->assertSame( array( 'sponsor', 'speaker' ), wp_list_pluck( $fields[0]['values'], 'value' ) );
-		$this->assertSame( array( 'Sponsor', 'Speaker' ), wp_list_pluck( $fields[0]['values'], 'caption' ) );
+		$this->assertSame( array( 'sponsor', 'speaker', '2024' ), wp_list_pluck( $fields[0]['values'], 'value' ) );
+		$this->assertSame( array( 'Sponsor', 'Speaker', 'Volunteer 2024' ), wp_list_pluck( $fields[0]['values'], 'caption' ) );
 	}
 
 	/**

@@ -88,7 +88,8 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		foreach ( $this->flags as $key => $label ) {
 			$values[] = array(
 				'caption' => $label,
-				'value'   => $key,
+				// PHP makes all-digit keys ints, which admin.js's strict check against the select's string rejects.
+				'value'   => (string) $key,
 			);
 		}
 

@@ -48,7 +48,6 @@ class Test_Default_Budget extends WP_UnitTestCase {
 	 */
 	protected function get_default_budget() {
 		$method = new ReflectionMethod( WordCamp_Budget_Tool::class, '_get_default_budget' );
-		$method->setAccessible( true );
 
 		return $method->invoke( null );
 	}

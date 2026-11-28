@@ -130,4 +130,80 @@ class Test_CampTix_Admin_Flags extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Fish &amp; &lt;b&gt;Chips&lt;/b&gt; <span class="count">(1)</span>', $views['vip'] );
 		$this->assertStringNotContainsString( '<b>', $views['vip'] );
 	}
+
+	/**
+	 * The Notify screen offers each configured flag as a segment value (#1511).
+	 */
+	public function test_notify_segment_fields_list_flags() {
+		$this->set_flags( array(
+			'sponsor' => 'Sponsor',
+			'speaker' => 'Speaker',
+			'2024'    => 'Volunteer 2024',
+		) );
+
+		$fields = wp_list_filter( apply_filters( 'camptix_notify_segment_fields', array() ), array( 'option_value' => 'admin_flag' ) );
+		$fields = array_values( $fields );
+
+		$this->assertSame( array( 'admin_flag' ), wp_list_pluck( $fields, 'option_value' ) );
+		$this->assertSame( array( 'sponsor', 'speaker', '2024' ), wp_list_pluck( $fields[0]['values'], 'value' ) );
+		$this->assertSame( array( 'Sponsor', 'Speaker', 'Volunteer 2024' ), wp_list_pluck( $fields[0]['values'], 'caption' ) );
+	}
+
+	/**
+	 * Without configured flags, there's nothing to segment by.
+	 */
+	public function test_notify_segment_fields_skip_without_flags() {
+		$this->set_flags( array() );
+
+		$fields = apply_filters( 'camptix_notify_segment_fields', array() );
+
+		$this->assertNotContains( 'admin_flag', wp_list_pluck( $fields, 'option_value' ) );
+	}
+
+	/**
+	 * A Notify segment by admin flag matches attendees with that flag, including those with several flags.
+	 */
+	public function test_notify_segment_matches_flagged_attendees() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$flags_by_attendee = array(
+			'sponsor' => array( 'sponsor' ),
+			'both'    => array( 'sponsor', 'speaker' ),
+			'speaker' => array( 'speaker' ),
+			'none'    => array(),
+		);
+
+		$ids = array();
+		foreach ( $flags_by_attendee as $name => $flags ) {
+			$ids[ $name ] = self::factory()->post->create( array(
+				'post_type'   => 'tix_attendee',
+				'post_status' => 'publish',
+			) );
+			foreach ( $flags as $flag ) {
+				add_post_meta( $ids[ $name ], 'camptix-admin-flag', $flag );
+			}
+		}
+
+		$condition = function ( $flag ) {
+			return array(
+				'field' => 'admin_flag',
+				'op'    => 'is',
+				'value' => $flag,
+			);
+		};
+
+		$this->assertSame(
+			array( $ids['sponsor'], $ids['both'] ),
+			$camptix->get_segment( 'and', array( $condition( 'sponsor' ) ) )
+		);
+		$this->assertSame(
+			array( $ids['both'] ),
+			$camptix->get_segment( 'and', array( $condition( 'sponsor' ), $condition( 'speaker' ) ) )
+		);
+		$this->assertSame(
+			array( $ids['sponsor'], $ids['both'], $ids['speaker'] ),
+			$camptix->get_segment( 'or', array( $condition( 'sponsor' ), $condition( 'speaker' ) ) )
+		);
+	}
 }

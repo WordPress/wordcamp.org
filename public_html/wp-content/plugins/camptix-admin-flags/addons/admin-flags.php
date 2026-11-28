@@ -31,6 +31,10 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			add_filter( 'camptix_validate_options', array( $this, 'validate_options' ), 10, 2 );
 		}
 
+		// Registered before the early return, so a stale admin flag condition never falls back to every attendee.
+		add_filter( 'camptix_notify_segment_fields', array( $this, 'notify_segment_fields' ) );
+		add_filter( 'camptix_notify_segment_query', array( $this, 'notify_segment_query' ), 10, 2 );
+
 		$camptix_options = $camptix->get_options();
 
 		// No further actions if we don't have any configured flags.
@@ -66,6 +70,63 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 
 		// Add the Flags to the Attendance UI.
 		add_filter( 'camptix_attendance_ui_extras', array( $this, 'attendance_ui_extras' ), 10, 2 );
+	}
+
+	/**
+	 * Let the Notify screen segment attendees by admin flag.
+	 *
+	 * @param array $segments The extra segment fields.
+	 *
+	 * @return array
+	 */
+	public function notify_segment_fields( $segments ) {
+		if ( empty( $this->flags ) ) {
+			return $segments;
+		}
+
+		$values = array();
+		foreach ( $this->flags as $key => $label ) {
+			$values[] = array(
+				'caption' => $label,
+				// PHP makes all-digit keys ints, which admin.js's strict check against the select's string rejects.
+				'value'   => (string) $key,
+			);
+		}
+
+		$segments[] = array(
+			'caption'      => __( 'Admin Flag', 'wordcamporg' ),
+			'option_value' => 'admin_flag',
+			'type'         => 'select',
+			'ops'          => array( 'is' ),
+			'values'       => $values,
+		);
+
+		return $segments;
+	}
+
+	/**
+	 * Limit a Notify segment to attendees with the chosen admin flag.
+	 *
+	 * @param array $query      The attendee query arguments.
+	 * @param array $conditions The segment conditions.
+	 *
+	 * @return array
+	 */
+	public function notify_segment_query( $query, $conditions ) {
+		foreach ( $conditions as $condition ) {
+			if ( 'admin_flag' !== ( $condition['field'] ?? '' ) || ! isset( $condition['value'] ) ) {
+				continue;
+			}
+
+			$query['meta_query'][] = array(
+				'key'     => 'camptix-admin-flag',
+				'value'   => (string) $condition['value'],
+				'compare' => '=',
+				'type'    => 'CHAR',
+			);
+		}
+
+		return $query;
 	}
 
 	/**

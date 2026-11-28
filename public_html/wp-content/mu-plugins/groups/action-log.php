@@ -47,6 +47,8 @@ add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page', 12 );
 add_action( 'wporg_groups_ownership_transfer_executed', __NAMESPACE__ . '\record_transfer_approved', 10, 2 );
 add_action( 'wporg_groups_ownership_transfer_rejected', __NAMESPACE__ . '\record_transfer_rejected', 10, 3 );
 add_action( 'wporg_groups_member_removed', __NAMESPACE__ . '\record_member_removed', 10, 3 );
+add_action( 'wporg_groups_member_banned', __NAMESPACE__ . '\record_member_banned', 10, 2 );
+add_action( 'wporg_groups_member_unbanned', __NAMESPACE__ . '\record_member_unbanned', 10, 2 );
 add_action( 'wporg_groups_group_message_queued', __NAMESPACE__ . '\record_group_message', 10, 2 );
 
 /**
@@ -64,6 +66,8 @@ function get_action_labels(): array {
 		'message_queued'    => __( 'Sent a message', 'wordcamporg' ),
 		'export_started'    => __( 'Started a network export', 'wordcamporg' ),
 		'member_removed'    => __( 'Removed a member', 'wordcamporg' ),
+		'member_banned'     => __( 'Banned a member', 'wordcamporg' ),
+		'member_unbanned'   => __( 'Lifted a ban', 'wordcamporg' ),
 		'group_messaged'    => __( 'Messaged their group', 'wordcamporg' ),
 	);
 }
@@ -211,6 +215,26 @@ function record_member_removed( int $site_id, int $user_id, int $cancelled ): vo
 }
 
 /**
+ * Log an organizer banning a member from their group.
+ *
+ * @param int $site_id Group site ID.
+ * @param int $user_id The banned member.
+ */
+function record_member_banned( int $site_id, int $user_id ): void {
+	record( 'member_banned', $site_id, array( 'banned_user_id' => $user_id ) );
+}
+
+/**
+ * Log an organizer lifting a ban.
+ *
+ * @param int $site_id Group site ID.
+ * @param int $user_id The person whose ban was lifted.
+ */
+function record_member_unbanned( int $site_id, int $user_id ): void {
+	record( 'member_unbanned', $site_id, array( 'banned_user_id' => $user_id ) );
+}
+
+/**
  * Log an organizer messaging their whole group.
  *
  * @param int    $site_id Group site ID.
@@ -350,6 +374,10 @@ function format_details( array $entry ): string {
 				format_user( (int) ( $context['removed_user_id'] ?? 0 ) ),
 				(int) ( $context['rsvps_cancelled'] ?? 0 )
 			);
+
+		case 'member_banned':
+		case 'member_unbanned':
+			return format_user( (int) ( $context['banned_user_id'] ?? 0 ) );
 
 		case 'group_messaged':
 			return sprintf(

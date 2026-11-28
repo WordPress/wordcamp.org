@@ -2,7 +2,8 @@
  * Group Settings — Members tab.
  *
  * Lists group members with role management, removal, search, and pagination,
- * and lets organizers message every member (#2409).
+ * lets organizers message every member (#2409), and ban people and lift bans
+ * (#2395).
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -25,6 +26,8 @@ import { __, sprintf } from '@wordpress/i18n';
 
 import OwnershipTransferPanel from './ownership-transfer-panel';
 import MessageMembersModal from '../../event-manage/message-members-modal';
+import RemoveMemberModal from './remove-member-modal';
+import BannedList from './banned-list';
 
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wordcamporg' ), value: 'subscriber' },
@@ -46,8 +49,9 @@ export default function MembersTab( { canManageRoles = false } ) {
 	const [ notice, setNotice ] = useState( '' );
 	const [ search, setSearch ] = useState( '' );
 	const [ page, setPage ] = useState( 1 );
-	const [ removingId, setRemovingId ] = useState( 0 );
+	const [ removing, setRemoving ] = useState( null );
 	const [ messaging, setMessaging ] = useState( false );
+	const [ bannedKey, setBannedKey ] = useState( 0 );
 
 	useEffect( () => {
 		let isMounted = true;
@@ -125,40 +129,26 @@ export default function MembersTab( { canManageRoles = false } ) {
 		}
 	}, [] );
 
-	const removeMember = useCallback( async ( member ) => {
-		const message = sprintf(
-			/* translators: %s: member name. */
-			__( 'Remove %s from this group? Their RSVPs to upcoming events will be cancelled.', 'wordcamporg' ),
-			member.name
+	const onRemoved = useCallback( ( member, banned ) => {
+		setRemoving( null );
+		setMembers( ( prev ) => prev.filter( ( m ) => m.id !== member.id ) );
+		setTotal( ( prev ) => prev - 1 );
+		setNotice(
+			banned
+				? sprintf(
+						/* translators: %s: member name. */
+						__( '%s was removed from the group and banned.', 'wordcamporg' ),
+						member.name
+				  )
+				: sprintf(
+						/* translators: %s: member name. */
+						__( '%s was removed from the group.', 'wordcamporg' ),
+						member.name
+				  )
 		);
 
-		// eslint-disable-next-line no-alert
-		if ( ! window.confirm( message ) ) {
-			return;
-		}
-
-		setNotice( '' );
-		setRemovingId( member.id );
-
-		try {
-			await apiFetch( {
-				path: `/wporg-groups/v1/members/${ member.id }`,
-				method: 'DELETE',
-			} );
-
-			setMembers( ( prev ) => prev.filter( ( m ) => m.id !== member.id ) );
-			setTotal( ( prev ) => prev - 1 );
-			setNotice(
-				sprintf(
-					/* translators: %s: member name. */
-					__( '%s was removed from the group.', 'wordcamporg' ),
-					member.name
-				)
-			);
-		} catch ( err ) {
-			setNotice( err.message || __( 'Could not remove member.', 'wordcamporg' ) );
-		} finally {
-			setRemovingId( 0 );
+		if ( banned ) {
+			setBannedKey( ( key ) => key + 1 );
 		}
 	}, [] );
 
@@ -206,6 +196,12 @@ export default function MembersTab( { canManageRoles = false } ) {
 				recipientMode: 'message-group',
 				onClose: () => setMessaging( false ),
 			} ),
+		removing &&
+			h( RemoveMemberModal, {
+				member: removing,
+				onClose: () => setRemoving( null ),
+				onRemoved,
+			} ),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__list' },
@@ -247,11 +243,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 										variant: 'tertiary',
 										isDestructive: true,
 										isSmall: true,
-										isBusy: removingId === member.id,
-										'aria-busy': removingId === member.id,
-										// One removal at a time, so a finished request can't re-enable another's button.
-										disabled: removingId !== 0,
-										onClick: () => removeMember( member ),
+										onClick: () => setRemoving( member ),
 										label: sprintf(
 											/* translators: %s: member name. */
 											__( 'Remove %s', 'wordcamporg' ),
@@ -291,6 +283,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 					},
 					__( 'Next', 'wordcamporg' )
 				)
-			)
+			),
+		canManageRoles && h( BannedList, { refreshKey: bannedKey, onNotice: setNotice } )
 	);
 }

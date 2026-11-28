@@ -11,6 +11,7 @@
 namespace WordCamp\Groups\Frontend\Members;
 
 use WordCamp\Groups\Frontend\Leave_Cleanup;
+use WordCamp\Groups\Frontend\Member_Bans;
 use WordCamp\Groups\Frontend\Member_Joined;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
@@ -22,6 +23,9 @@ defined( 'WPINC' ) || die();
  * Routes:
  *   GET    /wporg-groups/v1/members       — list group members (logged in)
  *   GET    /wporg-groups/v1/members/{id}  — single member (logged in)
+ *   DELETE /wporg-groups/v1/members/{id}  — remove a member, optionally banning them (organizers)
+ *   GET    /wporg-groups/v1/members/banned      — people banned from the group (organizers)
+ *   DELETE /wporg-groups/v1/members/banned/{id} — lift a ban (organizers)
  *   POST   /wporg-groups/v1/members/me/role — step down to Member; any role change on beta groups
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
@@ -122,6 +126,40 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				array(
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'remove_member' ),
+					'permission_callback' => array( $this, 'update_member_role_permissions_check' ),
+					'args'                => array(
+						'id'  => array(
+							'sanitize_callback' => 'absint',
+						),
+						'ban' => array(
+							'type'    => 'boolean',
+							'default' => false,
+						),
+					),
+				),
+			)
+		);
+
+		// Bans: GET /members/banned, and DELETE /members/banned/{id} to lift one.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/banned',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_banned' ),
+					'permission_callback' => array( $this, 'update_member_role_permissions_check' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/banned/(?P<id>[\d]+)',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::DELETABLE,
+					'callback'            => array( $this, 'unban_member' ),
 					'permission_callback' => array( $this, 'update_member_role_permissions_check' ),
 					'args'                => array(
 						'id' => array(
@@ -571,6 +609,8 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	/**
 	 * Remove a member from the current group, cancelling their upcoming RSVPs like leaving does.
 	 *
+	 * With `ban`, they're also banned from joining or RSVPing again (#2395).
+	 *
 	 * @param \WP_REST_Request $request Full details about the request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
@@ -596,6 +636,21 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
+		$banned = (bool) $request->get_param( 'ban' );
+
+		// Banned first, so the ban is in place before they stop being a member.
+		if ( $banned ) {
+			Member_Bans\ban( $user_id, get_current_user_id() );
+
+			/**
+			 * Fires after an organizer bans a member from a group.
+			 *
+			 * @param int $blog_id Group site ID.
+			 * @param int $user_id The banned member.
+			 */
+			do_action( 'wporg_groups_member_banned', $blog_id, $user_id );
+		}
+
 		$cancelled = Leave_Cleanup\remove_from_group( $user_id );
 
 		/**
@@ -611,8 +666,47 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			array(
 				'success'         => true,
 				'rsvps_cancelled' => $cancelled,
+				'banned'          => $banned,
 			)
 		);
+	}
+
+	/**
+	 * List the people banned from the current group.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function get_banned() {
+		return rest_ensure_response( Member_Bans\get_banned_users() );
+	}
+
+	/**
+	 * Lift a ban. The person isn't added back; they can join again themselves.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function unban_member( $request ) {
+		$user_id = (int) $request->get_param( 'id' );
+		$blog_id = get_current_blog_id();
+
+		if ( ! Member_Bans\unban( $user_id ) ) {
+			return new \WP_Error(
+				'wporg_groups_not_banned',
+				__( "This person isn't banned from this group.", 'wordcamporg' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		/**
+		 * Fires after an organizer lifts a member's ban from a group.
+		 *
+		 * @param int $blog_id Group site ID.
+		 * @param int $user_id The person whose ban was lifted.
+		 */
+		do_action( 'wporg_groups_member_unbanned', $blog_id, $user_id );
+
+		return rest_ensure_response( array( 'success' => true ) );
 	}
 
 	/**

@@ -46,6 +46,7 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
+use WordCamp\Groups\Frontend\Member_Bans;
 use WordCamp\Groups\Frontend\Member_Joined;
 
 use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
@@ -601,6 +602,12 @@ function save_rsvp( WP_REST_Request $request ) {
 	$context_error = apply_filters( 'wporg_groups_frontend_before_rsvp', null, $event_id, $request );
 	if ( is_wp_error( $context_error ) ) {
 		return $context_error;
+	}
+
+	// The join below fails for a banned person, but the RSVP would still be saved.
+	$ban_error = Member_Bans\check_rsvp( get_current_user_id(), $status );
+	if ( is_wp_error( $ban_error ) ) {
+		return $ban_error;
 	}
 
 	$event = new Event( $event_id );
